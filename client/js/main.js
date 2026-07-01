@@ -1509,13 +1509,14 @@
         return "dynamic_" + toolId + "_" + key;
     }
 
-    function renderDynamicField(toolId, field) {
+    function renderSchemaField(field, toolDef) {
         var row = document.createElement("label");
         var label = document.createElement("span");
         var wrap = document.createElement("span");
         var input;
         var i;
         var option;
+        var toolId = toolDef && toolDef.id ? toolDef.id : "";
 
         row.className = field.type === "checkbox" ? "switch-row" : "control-row";
         label.className = "control-label";
@@ -1568,32 +1569,114 @@
         return row;
     }
 
-    function collectDynamicToolParams(toolId) {
-        var tool = DynamicTools[toolId];
-        var schema = tool && tool.uiSchema ? tool.uiSchema : [];
+    function renderDynamicField(toolId, field) {
+        return renderSchemaField(field, { id: toolId });
+    }
+
+    function getToolSections(toolDef) {
+        if (toolDef && toolDef.sections && toolDef.sections.length) {
+            return toolDef.sections;
+        }
+        if (toolDef && toolDef.uiSchema && toolDef.uiSchema.length) {
+            return [
+                {
+                    id: "parameters",
+                    labelKey: toolDef.parametersSectionKey || "common.parameters",
+                    fields: toolDef.uiSchema
+                }
+            ];
+        }
+        return [];
+    }
+
+    function renderToolSection(section, toolDef) {
+        var card = document.createElement("section");
+        var heading;
+        var headingWrap;
+        var headingTitle;
+        var fields = section && section.fields ? section.fields : [];
+        var i;
+
+        card.className = "panel-card control-card registry-params-card";
+
+        if (section && section.labelKey) {
+            heading = document.createElement("div");
+            heading.className = "card-heading";
+            headingWrap = document.createElement("div");
+            headingTitle = document.createElement("h3");
+            headingTitle.textContent = tr(section.labelKey);
+            headingWrap.appendChild(headingTitle);
+            heading.appendChild(headingWrap);
+            card.appendChild(heading);
+        }
+
+        for (i = 0; i < fields.length; i++) {
+            card.appendChild(renderSchemaField(fields[i], toolDef));
+        }
+
+        return card;
+    }
+
+    function collectSchemaValues(toolDef) {
+        var sections = getToolSections(toolDef);
         var params = {};
         var i;
+        var j;
+        var fields;
         var field;
         var input;
 
-        for (i = 0; i < schema.length; i++) {
-            field = schema[i];
-            if (!field || !field.key) {
-                continue;
-            }
-            input = byId(dynamicFieldId(toolId, field.key));
-            if (!input) {
-                continue;
-            }
-            if (field.type === "checkbox") {
-                params[field.key] = !!input.checked;
-            } else if (field.type === "number") {
-                params[field.key] = Number(input.value);
-            } else {
-                params[field.key] = input.value;
+        for (i = 0; i < sections.length; i++) {
+            fields = sections[i] && sections[i].fields ? sections[i].fields : [];
+            for (j = 0; j < fields.length; j++) {
+                field = fields[j];
+                if (!field || !field.key) {
+                    continue;
+                }
+                input = byId(dynamicFieldId(toolDef.id, field.key));
+                if (!input) {
+                    continue;
+                }
+                if (field.type === "checkbox") {
+                    params[field.key] = !!input.checked;
+                } else if (field.type === "number") {
+                    params[field.key] = Number(input.value);
+                } else {
+                    params[field.key] = input.value;
+                }
             }
         }
+
         return params;
+    }
+
+    function collectDynamicToolParams(toolId) {
+        return collectSchemaValues(DynamicTools[toolId] || { id: toolId, uiSchema: [] });
+    }
+
+    function renderToolActions(actions, toolDef) {
+        var fragment = document.createDocumentFragment();
+        var i;
+        var action;
+        var button;
+
+        for (i = 0; actions && i < actions.length; i++) {
+            action = actions[i];
+            if (!action || !action.id) {
+                continue;
+            }
+            button = document.createElement("button");
+            button.type = "button";
+            button.className = action.style === "secondary" ? "panel-button secondary-action" : "primary-action";
+            button.textContent = tr(action.labelKey || action.id);
+            button.setAttribute("data-dynamic-action", action.id);
+            button.addEventListener("click", function () {
+                runDynamicToolAction(toolDef.id, this.getAttribute("data-dynamic-action"));
+            });
+            fragment.appendChild(button);
+        }
+
+        return fragment;
     }
 
     function runDynamicToolAction(toolId, actionId) {
@@ -1605,21 +1688,15 @@
         });
     }
 
-    function renderDynamicToolDetail(toolId) {
-        var tool = DynamicTools[toolId];
+    function renderRegistryToolDetail(toolDef) {
+        var tool = toolDef;
         var panel = byId("registryToolPanel");
         var actions = byId("registryToolActions");
         var intro;
         var title;
         var desc;
-        var card;
-        var heading;
-        var headingWrap;
-        var headingOverline;
-        var headingTitle;
+        var sections;
         var i;
-        var action;
-        var button;
         var oldMenus;
 
         if (!tool || !panel || !actions) {
@@ -1644,39 +1721,18 @@
         intro.appendChild(desc);
         panel.appendChild(intro);
 
-        card = document.createElement("section");
-        card.className = "panel-card control-card";
-        heading = document.createElement("div");
-        heading.className = "card-heading";
-        headingWrap = document.createElement("div");
-        headingOverline = document.createElement("p");
-        headingOverline.className = "overline";
-        headingOverline.textContent = tr(tool.registrySectionKey || "common.registry");
-        headingTitle = document.createElement("h3");
-        headingTitle.textContent = tr(tool.parametersSectionKey || "common.parameters");
-        headingWrap.appendChild(headingOverline);
-        headingWrap.appendChild(headingTitle);
-        heading.appendChild(headingWrap);
-        card.appendChild(heading);
-        for (i = 0; tool.uiSchema && i < tool.uiSchema.length; i++) {
-            card.appendChild(renderDynamicField(toolId, tool.uiSchema[i]));
+        sections = getToolSections(tool);
+        for (i = 0; i < sections.length; i++) {
+            panel.appendChild(renderToolSection(sections[i], tool));
         }
-        panel.appendChild(card);
 
-        for (i = 0; tool.actions && i < tool.actions.length; i++) {
-            action = tool.actions[i];
-            button = document.createElement("button");
-            button.type = "button";
-            button.className = action.style === "secondary" ? "panel-button secondary-action" : "primary-action";
-            button.textContent = tr(action.labelKey || action.id);
-            button.setAttribute("data-dynamic-action", action.id);
-            button.addEventListener("click", function () {
-                runDynamicToolAction(toolId, this.getAttribute("data-dynamic-action"));
-            });
-            actions.appendChild(button);
-        }
+        actions.appendChild(renderToolActions(tool.actions || [], tool));
 
         setupCustomSelectInputs();
+    }
+
+    function renderDynamicToolDetail(toolId) {
+        renderRegistryToolDetail(DynamicTools[toolId]);
     }
 
     function configureToolDetail(toolId) {

@@ -17,6 +17,7 @@ This project follows simple semantic versioning for development handoff:
 - Added automatic host scanning for `host/tools/*.tool.jsx` only.
 - Added a dynamic frontend detail renderer for minimal registry `uiSchema` fields and action buttons.
 - Added `host/tools/registryProbe.tool.jsx` as a minimal registry sample tool.
+- Added the Registry Tool UI Contract documentation and stabilized the generic registry renderer structure.
 
 ### Changed
 
