@@ -41,7 +41,7 @@
         textBackgroundBox: {
             titleKey: "tools.textBackgroundBox.title",
             descriptionKey: "tools.textBackgroundBox.description",
-            selectionMode: "text"
+            selectionMode: "layers"
         },
         selectionInfo: {
             titleKey: "tools.selectionInfo.title",

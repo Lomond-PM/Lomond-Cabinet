@@ -1538,8 +1538,14 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .detail-header {
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
     padding: var(--view-inset) var(--view-inset) 0;
+}
+
+.detail-header .back-button {
+    justify-self: start;
 }
 
 .home-content,
@@ -1928,11 +1934,22 @@ p {
 }
 
 .detail-title {
+    grid-column: 2;
+    justify-self: center;
     min-width: 0;
-    flex: 1 1 auto;
+    text-align: center;
+}
+
+.detail-title h2 {
+    max-width: min(46vw, calc(260px * var(--ui-scale)));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .selection-chip {
+    grid-column: 3;
+    justify-self: end;
     flex: 0 0 auto;
     max-width: calc(116px * var(--ui-scale));
     overflow: hidden;
@@ -2703,7 +2720,11 @@ p {
     }
 
     .detail-header {
-        flex-wrap: wrap;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    }
+
+    .detail-title h2 {
+        max-width: min(42vw, calc(220px * var(--ui-scale)));
     }
 
     .selection-chip {

@@ -143,7 +143,7 @@ var AEToolbox = AEToolbox || {};
 
     function buildShapeContents(layer, rect, opt) {
         var contents = U.prop(layer, MN.ROOT_VECTORS);
-        var group = SH.addVectorItem(contents, MN.VECTOR_GROUP, "Text BG Group");
+        var group = SH.addVectorItem(contents, MN.VECTOR_GROUP, "Rounded Rect Group");
         var vectors = U.prop(group, MN.VECTORS_GROUP);
 
         var rectPath = SH.addVectorItem(vectors, MN.RECT, "Rectangle Path");
@@ -174,6 +174,158 @@ var AEToolbox = AEToolbox || {};
         } else if (opt.strokeMode === "Gradient Stroke") {
             bindGradientGraphic(SH.addVectorItem(vectors, MN.GSTROKE, "Gradient Stroke"), false, opt.strokeOpacity);
         }
+    }
+
+    function layerVisualBoundsInComp(layer, t) {
+        var rect = null;
+        var points = [];
+        var compPoints = [];
+        var left;
+        var right;
+        var top;
+        var bottom;
+        var i;
+        var p;
+
+        try {
+            if (layer.sourceRectAtTime) {
+                rect = layer.sourceRectAtTime(t, false);
+            }
+        } catch (e1) {
+            rect = null;
+        }
+
+        if (!rect || rect.width <= 0 || rect.height <= 0) {
+            try {
+                if (layer.width && layer.height) {
+                    rect = {
+                        left: 0,
+                        top: 0,
+                        width: layer.width,
+                        height: layer.height
+                    };
+                }
+            } catch (e2) {
+                rect = null;
+            }
+        }
+
+        if (!rect || rect.width <= 0 || rect.height <= 0) {
+            return null;
+        }
+
+        points[0] = [rect.left, rect.top, 0];
+        points[1] = [rect.left + rect.width, rect.top, 0];
+        points[2] = [rect.left + rect.width, rect.top + rect.height, 0];
+        points[3] = [rect.left, rect.top + rect.height, 0];
+
+        for (i = 0; i < points.length; i++) {
+            try {
+                compPoints[i] = layer.toComp(points[i]);
+            } catch (e3) {
+                return null;
+            }
+        }
+
+        left = compPoints[0][0];
+        right = compPoints[0][0];
+        top = compPoints[0][1];
+        bottom = compPoints[0][1];
+
+        for (i = 1; i < compPoints.length; i++) {
+            p = compPoints[i];
+            left = Math.min(left, p[0]);
+            right = Math.max(right, p[0]);
+            top = Math.min(top, p[1]);
+            bottom = Math.max(bottom, p[1]);
+        }
+
+        return {
+            left: left,
+            top: top,
+            width: right - left,
+            height: bottom - top,
+            centerX: (left + right) / 2,
+            centerY: (top + bottom) / 2
+        };
+    }
+
+    function createCenteredRoundedRect(comp, name, centerX, centerY, width, height, opt, sourceLayer) {
+        var rect = {
+            left: -width / 2,
+            top: -height / 2,
+            width: width,
+            height: height
+        };
+        var bg = comp.layers.addShape();
+        var tr = U.prop(bg, MN.TRANSFORM);
+        var pos = U.prop(tr, MN.POSITION);
+        var anchor = U.prop(tr, MN.ANCHOR);
+
+        bg.name = AE.uniqueLayerName(comp, name);
+
+        if (sourceLayer) {
+            try {
+                bg.startTime = sourceLayer.startTime;
+                bg.inPoint = sourceLayer.inPoint;
+                bg.outPoint = sourceLayer.outPoint;
+            } catch (e1) {}
+        }
+
+        U.setValueSafe(anchor, AE.fitValueToTarget([0, 0, 0], anchor));
+        U.setValueSafe(pos, AE.fitValueToTarget([centerX, centerY, 0], pos));
+
+        addControls(bg, rect, opt);
+        buildShapeContents(bg, rect, opt);
+
+        if (sourceLayer) {
+            try {
+                bg.moveAfter(sourceLayer);
+            } catch (e2) {}
+        }
+
+        return bg;
+    }
+
+    function createForVisualLayer(comp, sourceLayer, opt) {
+        var t = comp.time;
+        var bounds = layerVisualBoundsInComp(sourceLayer, t);
+        if (!bounds) {
+            throw new Error("Unable to read visual bounds.");
+        }
+        return createCenteredRoundedRect(
+            comp,
+            sourceLayer.name + "_BG",
+            bounds.centerX,
+            bounds.centerY,
+            bounds.width,
+            bounds.height,
+            opt,
+            sourceLayer
+        );
+    }
+
+    function createDefaultRoundedRect(comp, opt) {
+        var defaultOpt = {};
+        var k;
+        for (k in opt) {
+            if (opt.hasOwnProperty(k)) {
+                defaultOpt[k] = opt[k];
+            }
+        }
+        defaultOpt.paddingX = 0;
+        defaultOpt.paddingY = 0;
+        defaultOpt.roundness = 15;
+        return createCenteredRoundedRect(
+            comp,
+            "Background Rounded Rectangle",
+            comp.width / 2,
+            comp.height / 2,
+            100,
+            100,
+            defaultOpt,
+            null
+        );
     }
 
     function setLayerPositionAtVisualCenter(layer, textLayer, center, t) {
@@ -261,12 +413,19 @@ var AEToolbox = AEToolbox || {};
         return bg;
     }
 
-    function parentBackgroundsToTexts(pairs) {
+    function createForSelectedLayer(comp, layer, opt) {
+        if (AE.isTextLayer(layer)) {
+            return createForTextLayer(comp, layer, opt);
+        }
+        return createForVisualLayer(comp, layer, opt);
+    }
+
+    function parentBackgroundsToSources(pairs) {
         var i;
         for (i = 0; i < pairs.length; i++) {
             try {
-                if (pairs[i].bg && pairs[i].text) {
-                    pairs[i].bg.parent = pairs[i].text;
+                if (pairs[i].bg && pairs[i].source) {
+                    pairs[i].bg.parent = pairs[i].source;
                 }
             } catch (e) {}
         }
@@ -282,23 +441,6 @@ var AEToolbox = AEToolbox || {};
             });
         }
 
-        if (!comp.selectedLayers || comp.selectedLayers.length === 0) {
-            return AEToolbox.toJson({
-                ok: false,
-                message: "Error: Please select at least one text layer.",
-                selectionLabel: "No selection"
-            });
-        }
-
-        var textLayers = AE.getSelectedTextLayers(comp);
-        if (textLayers.length === 0) {
-            return AEToolbox.toJson({
-                ok: false,
-                message: "Error: Selection contains no text layers.",
-                selectionLabel: "No text layers"
-            });
-        }
-
         var opt;
         try {
             opt = sanitizeOptions(AEToolbox.parseJson(paramsJson));
@@ -306,30 +448,36 @@ var AEToolbox = AEToolbox || {};
             return AEToolbox.toJson({
                 ok: false,
                 message: "Error: Invalid parameters JSON.",
-                selectionLabel: textLayers.length + " text layer(s)"
+                selectionLabel: "Invalid params"
             });
         }
 
+        var selectedLayers = comp.selectedLayers || [];
         var errors = [];
         var created = 0;
         var parentPairs = [];
         var bgLayer;
+        var i;
 
-        app.beginUndoGroup("Create Text Background Box");
+        app.beginUndoGroup("Create Background Rounded Rectangle");
         try {
-            for (var i = 0; i < textLayers.length; i++) {
+            if (selectedLayers.length === 0) {
+                createDefaultRoundedRect(comp, opt);
+                created = 1;
+            }
+            for (i = 0; i < selectedLayers.length; i++) {
                 try {
-                    bgLayer = createForTextLayer(comp, textLayers[i], opt);
+                    bgLayer = createForSelectedLayer(comp, selectedLayers[i], opt);
                     parentPairs[parentPairs.length] = {
-                        text: textLayers[i],
+                        source: selectedLayers[i],
                         bg: bgLayer
                     };
                     created++;
                 } catch (e1) {
-                    errors[errors.length] = textLayers[i].name + ": " + e1.toString();
+                    errors[errors.length] = selectedLayers[i].name + ": " + e1.toString();
                 }
             }
-            parentBackgroundsToTexts(parentPairs);
+            parentBackgroundsToSources(parentPairs);
         } catch (e2) {
             errors[errors.length] = e2.toString();
         } finally {
@@ -339,23 +487,26 @@ var AEToolbox = AEToolbox || {};
         if (errors.length > 0) {
             return AEToolbox.toJson({
                 ok: false,
-                message: "Created " + created + " box(es), with " + errors.length + " error(s).",
-                selectionLabel: textLayers.length + " text layer(s)"
+                message: "Created " + created + " rounded rectangle(s), with " + errors.length + " error(s).",
+                count: created,
+                selectionLabel: selectedLayers.length ? selectedLayers.length + " layer(s)" : "No selection"
             });
         }
 
-        if (textLayers.length < comp.selectedLayers.length) {
+        if (selectedLayers.length === 0) {
             return AEToolbox.toJson({
                 ok: true,
-                message: "Created " + created + " background box(es). Non-text layers were ignored.",
-                selectionLabel: textLayers.length + " text layer(s)"
+                message: "Created default 100x100 rounded rectangle.",
+                count: created,
+                selectionLabel: "Default 100x100"
             });
         }
 
         return AEToolbox.toJson({
             ok: true,
-            message: "Created " + created + " background box(es).",
-            selectionLabel: textLayers.length + " text layer(s)"
+            message: "Created " + created + " background rounded rectangle(s).",
+            count: created,
+            selectionLabel: selectedLayers.length + " layer(s)"
         });
     };
 })();
