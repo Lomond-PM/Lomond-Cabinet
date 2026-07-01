@@ -8,6 +8,20 @@ This project follows simple semantic versioning for development handoff:
 - `MINOR`: new tools or substantial user-facing capabilities.
 - `PATCH`: fixes, UI adjustments, and documentation updates.
 
+## Unreleased
+
+### Added
+
+- Added progressive Tool Registry Phase 1 infrastructure.
+- Added host APIs for `AEToolbox.registerTool`, `AEToolbox.getRegisteredTools`, and `AEToolbox.runRegisteredToolAction`.
+- Added automatic host scanning for `host/tools/*.tool.jsx` only.
+- Added a dynamic frontend detail renderer for minimal registry `uiSchema` fields and action buttons.
+- Added `host/tools/registryProbe.tool.jsx` as a minimal registry sample tool.
+
+### Changed
+
+- Legacy tools are still statically registered and have not been migrated to the registry.
+
 ## [0.1.1] - 2026-07-01
 
 ### Fixed

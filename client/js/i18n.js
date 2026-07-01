@@ -566,6 +566,27 @@
             return this.currentLanguage;
         },
 
+        mergeDictionaries: function (bundle) {
+            var lang;
+            var key;
+            if (!bundle) {
+                return;
+            }
+            for (lang in bundle) {
+                if (!Object.prototype.hasOwnProperty.call(bundle, lang)) {
+                    continue;
+                }
+                if (!this.dictionaries[lang]) {
+                    this.dictionaries[lang] = {};
+                }
+                for (key in bundle[lang]) {
+                    if (Object.prototype.hasOwnProperty.call(bundle[lang], key)) {
+                        this.dictionaries[lang][key] = bundle[lang][key];
+                    }
+                }
+            }
+        },
+
         applyToDOM: function (root) {
             var scope = root || document;
             var nodes;

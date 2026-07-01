@@ -12,6 +12,7 @@ Confirmed entry points:
 - i18n dictionaries: `client/js/i18n.js`
 - Host entry: `host/index.jsx`
 - Host tool modules: `host/tools/*.jsx`
+- Phase 1 registry tool modules: `host/tools/*.tool.jsx`
 
 `manifest.xml` currently points `MainPath` to:
 
@@ -37,6 +38,26 @@ Confirmed from current code:
 - AE color picker integration through host JSX.
 
 ## Current Tool List
+
+### Registry Probe
+
+Frontend source:
+
+```text
+Dynamic Tool Registry Phase 1
+```
+
+Host module:
+
+```text
+host/tools/registryProbe.tool.jsx
+```
+
+Purpose:
+
+- Minimal test tool for dynamic `.tool.jsx` registration.
+- Verifies host metadata, i18n merge, generic UI rendering, and `AEToolbox.runRegisteredToolAction(...)`.
+- This is a sample registry tool and does not replace Selection Info.
 
 ### Text Background Box
 
@@ -159,6 +180,7 @@ Home contains a disabled More Tools card. It is not an active tool.
   - Selection Info
   - Ad Component Kit
   - Shape Add
+  - Registry Probe, when `host/tools/registryProbe.tool.jsx` exists and host JSX loads successfully
   - disabled More Tools
 - Home background is procedural and configurable.
 - Home icon order is persisted with key:
@@ -173,6 +195,27 @@ aeToolbox.homeToolOrder
 - Header includes Home/back button, tool title, and selection chip.
 - Tool-specific panels are switched through `data-tool-panel`.
 - Tool action footers are switched through `data-tool-actions`.
+- Phase 1 registry tools use a generic dynamic detail panel and generic dynamic action footer.
+
+## Tool Registry Phase 1
+
+Current status:
+
+- `host/index.jsx` provides `AEToolbox.registerTool(toolDef)`.
+- `host/index.jsx` provides `AEToolbox.getRegisteredTools()`.
+- `host/index.jsx` provides `AEToolbox.runRegisteredToolAction(toolId, actionId, paramsJson)`.
+- Only files matching `host/tools/*.tool.jsx` are scanned automatically.
+- Existing legacy files matching `host/tools/*.jsx` are not scanned dynamically and remain on the static include path.
+- The frontend appends dynamic tools to Home without changing existing legacy tool cards.
+- The generic dynamic renderer currently supports `text`, `number`, `checkbox`, `select`, and action buttons.
+
+Legacy tools not migrated:
+
+- Text Background Box / Background Rounded Rectangle.
+- Selection Info.
+- Ad Component Kit.
+- Shape Add.
+- The preserved `ecommerceLayout.jsx` host module.
 
 ### Settings
 
