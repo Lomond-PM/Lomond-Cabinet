@@ -1509,43 +1509,198 @@
         return "dynamic_" + toolId + "_" + key;
     }
 
+    function schemaDefaultValue(field) {
+        if (field && typeof field.defaultValue !== "undefined") {
+            return field.defaultValue;
+        }
+        if (field && field.type === "checkbox") {
+            return false;
+        }
+        if (field && (field.type === "number" || field.type === "range")) {
+            return 0;
+        }
+        if (field && field.type === "color") {
+            return "#ffffff";
+        }
+        return "";
+    }
+
+    function syncRegistryColorField(hexInput, colorInput, swatch, fallback) {
+        var normalized = normalizeHex(hexInput.value, fallback || "#ffffff").toLowerCase();
+        hexInput.value = normalized;
+        colorInput.value = normalized;
+        swatch.style.backgroundColor = normalized;
+    }
+
+    function syncRegistryRangeField(rangeInput, numberInput) {
+        if (numberInput) {
+            numberInput.value = rangeInput.value;
+        }
+    }
+
     function renderSchemaField(field, toolDef) {
-        var row = document.createElement("label");
-        var label = document.createElement("span");
-        var wrap = document.createElement("span");
+        var row;
+        var label;
+        var wrap;
         var input;
+        var numberInput;
+        var colorInput;
+        var swatch;
+        var colorValue;
         var i;
         var option;
         var toolId = toolDef && toolDef.id ? toolDef.id : "";
+        var fieldType = field && field.type ? field.type : "text";
+        var fieldId = field && field.key ? dynamicFieldId(toolId, field.key) : "";
 
-        row.className = field.type === "checkbox" ? "switch-row" : "control-row";
+        if (!field) {
+            return document.createDocumentFragment();
+        }
+
+        if (fieldType === "divider" || fieldType === "separator") {
+            row = document.createElement("div");
+            row.className = "registry-field-divider";
+            return row;
+        }
+
+        if (fieldType === "info" || fieldType === "note") {
+            row = document.createElement("div");
+            row.className = "registry-info-note";
+            row.textContent = tr(field.labelKey || field.textKey || field.text || "");
+            return row;
+        }
+
+        row = document.createElement(fieldType === "checkbox" ? "div" : "label");
+        row.className = fieldType === "checkbox" ? "switch-row registry-switch-row" : "control-row registry-field-row";
+        label = document.createElement("span");
+        wrap = document.createElement("span");
         label.className = "control-label";
         label.textContent = tr(field.labelKey || field.key || "");
         wrap.className = "control-inputs";
 
-        if (field.type === "checkbox") {
+        if (fieldType === "checkbox") {
             input = document.createElement("input");
             input.type = "checkbox";
-            input.id = dynamicFieldId(toolId, field.key);
-            input.checked = !!field.defaultValue;
-        } else if (field.type === "select") {
+            input.id = fieldId;
+            input.checked = !!schemaDefaultValue(field);
+
+            swatch = document.createElement("label");
+            swatch.className = "switch registry-switch";
+            swatch.setAttribute("for", fieldId);
+            colorValue = document.createElement("span");
+            colorValue.className = "switch-track";
+            swatch.appendChild(input);
+            swatch.appendChild(colorValue);
+            wrap.appendChild(swatch);
+        } else if (fieldType === "select") {
             input = document.createElement("select");
             input.className = "select-input";
-            input.id = dynamicFieldId(toolId, field.key);
+            input.id = fieldId;
             for (i = 0; field.options && i < field.options.length; i++) {
                 option = document.createElement("option");
                 option.value = field.options[i].value;
                 option.textContent = tr(field.options[i].labelKey || field.options[i].value);
-                if (field.options[i].value === field.defaultValue) {
+                if (field.options[i].value === schemaDefaultValue(field)) {
                     option.selected = true;
                 }
                 input.appendChild(option);
             }
-        } else {
+            wrap.appendChild(input);
+        } else if (fieldType === "textarea") {
+            input = document.createElement("textarea");
+            input.id = fieldId;
+            input.className = "registry-textarea";
+            input.rows = field.rows || 3;
+            if (field.placeholderKey) {
+                input.placeholder = tr(field.placeholderKey);
+            } else if (field.placeholder) {
+                input.placeholder = field.placeholder;
+            }
+            input.value = schemaDefaultValue(field);
+            wrap.appendChild(input);
+        } else if (fieldType === "range") {
             input = document.createElement("input");
-            input.id = dynamicFieldId(toolId, field.key);
-            input.className = field.type === "number" ? "num-input" : "text-input";
-            input.type = field.type === "number" ? "number" : "text";
+            input.id = fieldId;
+            input.className = "pill-slider registry-range";
+            input.type = "range";
+            numberInput = document.createElement("input");
+            numberInput.className = "num-input registry-range-number";
+            numberInput.type = "number";
+            numberInput.id = fieldId + "_number";
+            if (typeof field.min !== "undefined") {
+                input.min = field.min;
+                numberInput.min = field.min;
+            }
+            if (typeof field.max !== "undefined") {
+                input.max = field.max;
+                numberInput.max = field.max;
+            }
+            if (typeof field.step !== "undefined") {
+                input.step = field.step;
+                numberInput.step = field.step;
+            }
+            input.value = schemaDefaultValue(field);
+            numberInput.value = input.value;
+            input.addEventListener("input", function () {
+                syncRegistryRangeField(this, byId(this.id + "_number"));
+            });
+            numberInput.addEventListener("input", function () {
+                var range = byId(this.id.replace(/_number$/, ""));
+                if (range) {
+                    range.value = this.value;
+                }
+            });
+            wrap.appendChild(input);
+            wrap.appendChild(numberInput);
+        } else if (fieldType === "color") {
+            colorValue = normalizeHex(schemaDefaultValue(field), "#ffffff").toLowerCase();
+            input = document.createElement("input");
+            input.id = fieldId;
+            input.className = "registry-color-hex";
+            input.type = "text";
+            input.value = colorValue;
+            input.setAttribute("spellcheck", "false");
+
+            colorInput = document.createElement("input");
+            colorInput.id = fieldId + "_picker";
+            colorInput.className = "registry-native-color";
+            colorInput.type = "color";
+            colorInput.value = colorValue;
+
+            swatch = document.createElement("button");
+            swatch.type = "button";
+            swatch.className = "registry-color-swatch";
+            swatch.style.backgroundColor = colorValue;
+            swatch.setAttribute("aria-label", tr(field.labelKey || field.key || ""));
+            swatch.addEventListener("click", function () {
+                var picker = this.parentNode.querySelector(".registry-native-color");
+                if (picker) {
+                    picker.click();
+                }
+            });
+            colorInput.addEventListener("input", function () {
+                var parent = this.parentNode;
+                var hex = parent.querySelector(".registry-color-hex");
+                var chip = parent.querySelector(".registry-color-swatch");
+                hex.value = normalizeHex(this.value, colorValue).toLowerCase();
+                chip.style.backgroundColor = hex.value;
+            });
+            input.addEventListener("change", function () {
+                var parent = this.parentNode;
+                syncRegistryColorField(this, parent.querySelector(".registry-native-color"), parent.querySelector(".registry-color-swatch"), colorValue);
+            });
+            wrap.classList.add("registry-color-control");
+            wrap.appendChild(swatch);
+            wrap.appendChild(input);
+            wrap.appendChild(colorInput);
+        } else {
+            if (fieldType !== "text" && window.console && console.warn) {
+                console.warn("[AE Toolbox] Unsupported registry field type:", fieldType, field);
+            }
+            input = document.createElement("input");
+            input.id = fieldId;
+            input.className = fieldType === "number" ? "num-input" : "registry-text-input";
+            input.type = fieldType === "number" ? "number" : "text";
             if (typeof field.min !== "undefined") {
                 input.min = field.min;
             }
@@ -1560,10 +1715,10 @@
             } else if (field.placeholder) {
                 input.placeholder = field.placeholder;
             }
-            input.value = typeof field.defaultValue !== "undefined" ? field.defaultValue : "";
+            input.value = schemaDefaultValue(field);
+            wrap.appendChild(input);
         }
 
-        wrap.appendChild(input);
         row.appendChild(label);
         row.appendChild(wrap);
         return row;
@@ -1639,8 +1794,10 @@
                 }
                 if (field.type === "checkbox") {
                     params[field.key] = !!input.checked;
-                } else if (field.type === "number") {
+                } else if (field.type === "number" || field.type === "range") {
                     params[field.key] = Number(input.value);
+                } else if (field.type === "color") {
+                    params[field.key] = normalizeHex(input.value, schemaDefaultValue(field)).toLowerCase();
                 } else {
                     params[field.key] = input.value;
                 }

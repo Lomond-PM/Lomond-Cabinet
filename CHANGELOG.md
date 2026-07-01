@@ -18,11 +18,14 @@ This project follows simple semantic versioning for development handoff:
 - Added a dynamic frontend detail renderer for minimal registry `uiSchema` fields and action buttons.
 - Added `host/tools/registryProbe.tool.jsx` as a minimal registry sample tool.
 - Added the Registry Tool UI Contract documentation and stabilized the generic registry renderer structure.
+- Added `host/tools/registryControlLab.tool.jsx` to validate shared registry controls.
+- Added registry renderer support for textarea, range, color, info, and divider fields.
 
 ### Changed
 
 - Most legacy tools are still statically registered and have not been migrated to the registry.
 - Migrated Selection Info from the legacy static Home/detail path to `host/tools/selectionInfo.tool.jsx`.
+- Improved registry renderer control styling with a minimal adapter that reuses the existing black-gold UI system.
 
 ## [0.1.1] - 2026-07-01
 
