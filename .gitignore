@@ -1,0 +1,73 @@
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# Backup / scratch folders
+backup/
+backups/
+_backup/
+_backups/
+scratch/
+tmp/
+temp/
+
+# Build / package outputs
+build/
+dist/
+release/
+releases/
+out/
+output/
+*.zip
+*.7z
+*.rar
+
+# Node tooling, if introduced later
+node_modules/
+.npm/
+.pnpm-store/
+
+# CEP / runtime cache
+.cep-cache/
+cep-cache/
+
+# Codex / agent scratch files
+.codex/
+.openclaw/
+.clawhub/
+codex-scratch/
+*.codex.patch
+*.ai.tmp
+
+# Keep project source and handoff files tracked:
+# CSXS/
+# client/
+# host/
+# docs/
+# AGENTS.md
+# README.md
+# CHANGELOG.md
+# VERSION

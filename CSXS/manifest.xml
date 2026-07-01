@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExtensionManifest Version="7.0"
+    ExtensionBundleId="com.kevin.aetoolbox"
+    ExtensionBundleVersion="0.1.0"
+    ExtensionBundleName="AE Toolbox"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <ExtensionList>
+        <Extension Id="com.kevin.aetoolbox.panel" Version="0.1.0" />
+    </ExtensionList>
+    <ExecutionEnvironment>
+        <HostList>
+            <Host Name="AEFT" Version="[13.0,99.9]" />
+        </HostList>
+        <LocaleList>
+            <Locale Code="All" />
+        </LocaleList>
+        <RequiredRuntimeList>
+            <RequiredRuntime Name="CSXS" Version="7.0" />
+        </RequiredRuntimeList>
+    </ExecutionEnvironment>
+    <DispatchInfoList>
+        <Extension Id="com.kevin.aetoolbox.panel">
+            <DispatchInfo>
+                <Resources>
+                    <MainPath>./client/index.html</MainPath>
+                    <CEFCommandLine>
+                        <Parameter>--enable-nodejs</Parameter>
+                        <Parameter>--mixed-context</Parameter>
+                    </CEFCommandLine>
+                </Resources>
+                <Lifecycle>
+                    <AutoVisible>true</AutoVisible>
+                </Lifecycle>
+                <UI>
+                    <Type>Panel</Type>
+                    <Menu>AE Toolbox</Menu>
+                    <Geometry>
+                        <Size>
+                            <Width>420</Width>
+                            <Height>640</Height>
+                        </Size>
+                        <MinSize>
+                            <Width>320</Width>
+                            <Height>460</Height>
+                        </MinSize>
+                        <MaxSize>
+                            <Width>1200</Width>
+                            <Height>1600</Height>
+                        </MaxSize>
+                    </Geometry>
+                </UI>
+            </DispatchInfo>
+        </Extension>
+    </DispatchInfoList>
+</ExtensionManifest>
