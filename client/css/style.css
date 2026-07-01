@@ -1809,6 +1809,21 @@ p {
     background-color: var(--tool-icon-hover-bg);
 }
 
+.registry-tool-icon {
+    color: var(--gold-hot);
+    font-size: calc(24px * var(--ui-scale));
+    font-weight: 800;
+}
+
+.registry-tool-panel {
+    flex-direction: column;
+    gap: calc(12px * var(--ui-scale));
+}
+
+.registry-tool-panel .dynamic-tool-intro {
+    align-items: flex-start;
+}
+
 .tool-icon.small {
     width: var(--tool-icon-small-size);
     height: var(--tool-icon-small-size);

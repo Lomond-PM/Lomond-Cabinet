@@ -43,11 +43,6 @@
             descriptionKey: "tools.textBackgroundBox.description",
             selectionMode: "layers"
         },
-        selectionInfo: {
-            titleKey: "tools.selectionInfo.title",
-            descriptionKey: "tools.selectionInfo.description",
-            selectionMode: "layers"
-        },
         ecommerceLayout: {
             titleKey: "tools.adComponentKit.title",
             descriptionKey: "tools.adComponentKit.description",
@@ -59,6 +54,8 @@
             selectionMode: "shape"
         }
     };
+    var DynamicTools = {};
+    var DynamicToolOrder = [];
     var DefaultToolParams = {
         paddingX: 40,
         paddingY: 20,
@@ -969,6 +966,108 @@
         }
     }
 
+    function getToolMeta(toolId) {
+        return DynamicTools[toolId] || ToolRegistry[toolId] || ToolRegistry.textBackgroundBox;
+    }
+
+    function isDynamicTool(toolId) {
+        return !!DynamicTools[toolId];
+    }
+
+    function renderDynamicToolHome() {
+        var grid = byId("toolGrid");
+        var more = grid ? grid.querySelector(".tool-app.is-disabled") : null;
+        var oldTools;
+        var i;
+        var tool;
+        var button;
+        var icon;
+        var title;
+
+        if (!grid) {
+            return;
+        }
+
+        oldTools = grid.querySelectorAll(".tool-app[data-dynamic-tool='true']");
+        for (i = 0; i < oldTools.length; i++) {
+            oldTools[i].parentNode.removeChild(oldTools[i]);
+        }
+
+        for (i = 0; i < DynamicToolOrder.length; i++) {
+            tool = DynamicTools[DynamicToolOrder[i]];
+            if (!tool || tool.hidden) {
+                continue;
+            }
+            button = document.createElement("button");
+            button.type = "button";
+            button.className = "tool-app app-card";
+            button.setAttribute("data-tool", tool.id);
+            button.setAttribute("data-dynamic-tool", "true");
+
+            icon = document.createElement("span");
+            icon.className = "tool-icon registry-tool-icon";
+            icon.textContent = tool.iconText || (tr(tool.titleKey || "").charAt(0) || "T");
+
+            title = document.createElement("span");
+            title.className = "app-card-title";
+            title.setAttribute("data-tool-title", tool.id);
+            title.textContent = tr(tool.titleKey || tool.id);
+
+            button.appendChild(icon);
+            button.appendChild(title);
+            grid.insertBefore(button, more);
+        }
+    }
+
+    function mergeDynamicToolI18n(tool) {
+        if (tool && tool.i18n && window.I18n && window.I18n.mergeDictionaries) {
+            window.I18n.mergeDictionaries(tool.i18n);
+        }
+    }
+
+    function loadRegisteredToolsFromHost() {
+        evalHost("AEToolbox.getRegisteredTools()", function (raw) {
+            var result = parseResult(raw);
+            var tools = result.tools || [];
+            var loadErrors = result.loadErrors || [];
+            var i;
+            var tool;
+
+            DynamicTools = {};
+            DynamicToolOrder = [];
+
+            if (!result.ok) {
+                setStatus("Tool registry failed: " + (result.message || raw), "error");
+            } else if (tools.length) {
+                for (i = 0; i < tools.length; i++) {
+                    tool = tools[i];
+                    if (!tool || !tool.id) {
+                        continue;
+                    }
+                    DynamicTools[tool.id] = tool;
+                    DynamicToolOrder[DynamicToolOrder.length] = tool.id;
+                    mergeDynamicToolI18n(tool);
+                }
+                setStatus("Tool registry loaded " + DynamicToolOrder.length + " dynamic tool(s).", "ok");
+            } else {
+                setStatus("Tool registry loaded 0 tools" + (loadErrors.length ? ": " + loadErrors.join("; ") : "."), loadErrors.length ? "error" : "ok");
+                if (window.console && console.warn) {
+                    console.warn("[AE Toolbox] No dynamic registry tools loaded.", result);
+                }
+            }
+
+            renderDynamicToolHome();
+            HomeLayoutManager.loadOrder();
+            HomeLayoutManager.renderOrder();
+            HomeLayoutManager.bindIconEvents();
+            refreshLanguage();
+
+            if (window.console && console.log) {
+                console.log("[AE Toolbox] Dynamic tools:", DynamicToolOrder, result);
+            }
+        });
+    }
+
     function loadHost() {
         var extensionRoot = cs.getSystemPath(SystemPath.EXTENSION);
         var jsxPath = extensionRoot + "/host/index.jsx";
@@ -989,7 +1088,7 @@
                         console.log("[AE Toolbox] Host load info:", infoRaw);
                     }
                 });
-                setStatus(tr("status.ready"));
+                loadRegisteredToolsFromHost();
                 refreshSelection();
             });
         });
@@ -1406,20 +1505,199 @@
         return HomeLayoutManager.getButtonByToolId(activeToolId) || byId("openTextBgTool");
     }
 
+    function dynamicFieldId(toolId, key) {
+        return "dynamic_" + toolId + "_" + key;
+    }
+
+    function renderDynamicField(toolId, field) {
+        var row = document.createElement("label");
+        var label = document.createElement("span");
+        var wrap = document.createElement("span");
+        var input;
+        var i;
+        var option;
+
+        row.className = field.type === "checkbox" ? "switch-row" : "control-row";
+        label.className = "control-label";
+        label.textContent = tr(field.labelKey || field.key || "");
+        wrap.className = "control-inputs";
+
+        if (field.type === "checkbox") {
+            input = document.createElement("input");
+            input.type = "checkbox";
+            input.id = dynamicFieldId(toolId, field.key);
+            input.checked = !!field.defaultValue;
+        } else if (field.type === "select") {
+            input = document.createElement("select");
+            input.className = "select-input";
+            input.id = dynamicFieldId(toolId, field.key);
+            for (i = 0; field.options && i < field.options.length; i++) {
+                option = document.createElement("option");
+                option.value = field.options[i].value;
+                option.textContent = tr(field.options[i].labelKey || field.options[i].value);
+                if (field.options[i].value === field.defaultValue) {
+                    option.selected = true;
+                }
+                input.appendChild(option);
+            }
+        } else {
+            input = document.createElement("input");
+            input.id = dynamicFieldId(toolId, field.key);
+            input.className = field.type === "number" ? "num-input" : "text-input";
+            input.type = field.type === "number" ? "number" : "text";
+            if (typeof field.min !== "undefined") {
+                input.min = field.min;
+            }
+            if (typeof field.max !== "undefined") {
+                input.max = field.max;
+            }
+            if (typeof field.step !== "undefined") {
+                input.step = field.step;
+            }
+            if (field.placeholderKey) {
+                input.placeholder = tr(field.placeholderKey);
+            } else if (field.placeholder) {
+                input.placeholder = field.placeholder;
+            }
+            input.value = typeof field.defaultValue !== "undefined" ? field.defaultValue : "";
+        }
+
+        wrap.appendChild(input);
+        row.appendChild(label);
+        row.appendChild(wrap);
+        return row;
+    }
+
+    function collectDynamicToolParams(toolId) {
+        var tool = DynamicTools[toolId];
+        var schema = tool && tool.uiSchema ? tool.uiSchema : [];
+        var params = {};
+        var i;
+        var field;
+        var input;
+
+        for (i = 0; i < schema.length; i++) {
+            field = schema[i];
+            if (!field || !field.key) {
+                continue;
+            }
+            input = byId(dynamicFieldId(toolId, field.key));
+            if (!input) {
+                continue;
+            }
+            if (field.type === "checkbox") {
+                params[field.key] = !!input.checked;
+            } else if (field.type === "number") {
+                params[field.key] = Number(input.value);
+            } else {
+                params[field.key] = input.value;
+            }
+        }
+        return params;
+    }
+
+    function runDynamicToolAction(toolId, actionId) {
+        var json = JSON.stringify(collectDynamicToolParams(toolId));
+        setStatus(tr("status.loadingHost"), "busy", true);
+        evalHost("AEToolbox.runRegisteredToolAction('" + jsxQuote(toolId) + "','" + jsxQuote(actionId) + "','" + jsxQuote(json) + "')", function (raw) {
+            var result = parseResult(raw);
+            setStatus(resultMessage(result, "status.ready"), result.ok ? "ok" : "error");
+        });
+    }
+
+    function renderDynamicToolDetail(toolId) {
+        var tool = DynamicTools[toolId];
+        var panel = byId("registryToolPanel");
+        var actions = byId("registryToolActions");
+        var intro;
+        var title;
+        var desc;
+        var card;
+        var heading;
+        var headingWrap;
+        var headingOverline;
+        var headingTitle;
+        var i;
+        var action;
+        var button;
+        var oldMenus;
+
+        if (!tool || !panel || !actions) {
+            return;
+        }
+
+        oldMenus = document.querySelectorAll(".select-menu[data-select-menu-for^='dynamic_']");
+        for (i = 0; i < oldMenus.length; i++) {
+            oldMenus[i].parentNode.removeChild(oldMenus[i]);
+        }
+
+        panel.innerHTML = "";
+        actions.innerHTML = "";
+
+        intro = document.createElement("section");
+        intro.className = "info-panel intro-panel dynamic-tool-intro";
+        title = document.createElement("h3");
+        title.textContent = tr(tool.titleKey || tool.id);
+        desc = document.createElement("p");
+        desc.textContent = tr(tool.descriptionKey || "");
+        intro.appendChild(title);
+        intro.appendChild(desc);
+        panel.appendChild(intro);
+
+        card = document.createElement("section");
+        card.className = "panel-card control-card";
+        heading = document.createElement("div");
+        heading.className = "card-heading";
+        headingWrap = document.createElement("div");
+        headingOverline = document.createElement("p");
+        headingOverline.className = "overline";
+        headingOverline.textContent = tr(tool.registrySectionKey || "common.registry");
+        headingTitle = document.createElement("h3");
+        headingTitle.textContent = tr(tool.parametersSectionKey || "common.parameters");
+        headingWrap.appendChild(headingOverline);
+        headingWrap.appendChild(headingTitle);
+        heading.appendChild(headingWrap);
+        card.appendChild(heading);
+        for (i = 0; tool.uiSchema && i < tool.uiSchema.length; i++) {
+            card.appendChild(renderDynamicField(toolId, tool.uiSchema[i]));
+        }
+        panel.appendChild(card);
+
+        for (i = 0; tool.actions && i < tool.actions.length; i++) {
+            action = tool.actions[i];
+            button = document.createElement("button");
+            button.type = "button";
+            button.className = action.style === "secondary" ? "panel-button secondary-action" : "primary-action";
+            button.textContent = tr(action.labelKey || action.id);
+            button.setAttribute("data-dynamic-action", action.id);
+            button.addEventListener("click", function () {
+                runDynamicToolAction(toolId, this.getAttribute("data-dynamic-action"));
+            });
+            actions.appendChild(button);
+        }
+
+        setupCustomSelectInputs();
+    }
+
     function configureToolDetail(toolId) {
-        var meta = ToolRegistry[toolId] || ToolRegistry.textBackgroundBox;
+        var meta = getToolMeta(toolId);
         var panels = document.querySelectorAll(".tool-panel");
         var actions = document.querySelectorAll(".tool-actions");
         var i;
+        var dynamic = isDynamicTool(toolId);
 
         activeToolId = toolId || "textBackgroundBox";
         byId("detailHeading").textContent = tr(meta.titleKey || "tools.textBackgroundBox.title");
 
+        if (dynamic) {
+            renderDynamicToolDetail(activeToolId);
+        }
+
         for (i = 0; i < panels.length; i++) {
-            panels[i].classList.toggle("is-active", panels[i].getAttribute("data-tool-panel") === activeToolId);
+            panels[i].classList.toggle("is-active", panels[i].getAttribute("data-tool-panel") === (dynamic ? "__dynamic" : activeToolId));
         }
         for (i = 0; i < actions.length; i++) {
-            actions[i].classList.toggle("is-active", actions[i].getAttribute("data-tool-actions") === activeToolId);
+            actions[i].classList.toggle("is-active", actions[i].getAttribute("data-tool-actions") === (dynamic ? "__dynamic" : activeToolId));
         }
     }
 
@@ -1430,7 +1708,7 @@
         var meta;
         for (i = 0; i < labels.length; i++) {
             toolId = labels[i].getAttribute("data-tool-title") || labels[i].getAttribute("data-tool");
-            meta = ToolRegistry[toolId];
+            meta = getToolMeta(toolId);
             if (meta && meta.titleKey) {
                 labels[i].textContent = tr(meta.titleKey);
             }
@@ -1472,10 +1750,6 @@
     }
 
     function refreshActiveTool() {
-        if (activeToolId === "selectionInfo") {
-            refreshSelectionInfo();
-            return;
-        }
         if (activeToolId === "shapeAdd") {
             refreshShapeAddState();
             return;
@@ -2554,58 +2828,6 @@
             .replace(/"/g, "&quot;");
     }
 
-    function renderSelectionInfo(result) {
-        var box = byId("selectionInfoResult");
-        var html = "";
-        var layers;
-        var i;
-        var layer;
-
-        if (!box) {
-            return;
-        }
-
-        if (!result.ok) {
-            box.innerHTML = '<p class="empty-result">' + escapeHtml(resultMessage(result, "status.unableReadSelection")) + "</p>";
-            return;
-        }
-
-        layers = result.layers || [];
-        if (!layers.length) {
-            box.innerHTML = '<p class="empty-result">' + escapeHtml(tr("status.noSelectedLayers")) + "</p>";
-            return;
-        }
-
-        for (i = 0; i < layers.length; i++) {
-            layer = layers[i];
-            html += '<div class="selection-layer-row">' +
-                '<span class="selection-layer-main">' +
-                '<span class="selection-layer-name">' + escapeHtml(layer.name || "Layer") + "</span>" +
-                '<span class="selection-layer-meta">' + escapeHtml(layer.type || "Layer") + "</span>" +
-                "</span>" +
-                '<span class="selection-layer-index">#' + escapeHtml(layer.index) + "</span>" +
-                "</div>";
-        }
-        box.innerHTML = html;
-    }
-
-    function refreshSelectionInfo() {
-        if (!hostLoaded) {
-            setStatus(tr("status.hostLoading"), "busy", true);
-            return;
-        }
-
-        setStatus(tr("status.readingSelection"), "busy", true);
-        evalHost("AEToolbox.tools.selectionInfo.get()", function (raw) {
-            var result = parseResult(raw);
-            renderSelectionInfo(result);
-            if (result.ok) {
-                byId("selectionPill").textContent = tr("selection.layerCount", { count: result.count });
-            }
-            setStatus(resultMessage(result, "status.selectionUpdated"), result.ok ? "ok" : "error");
-        });
-    }
-
     function setColorValue(inputId, hex) {
         var input = byId(inputId);
         var shell = input.parentNode;
@@ -3468,7 +3690,6 @@
         });
         byId("createBtn").addEventListener("click", createBackgroundBox);
         byId("resetBtn").addEventListener("click", resetDefaults);
-        byId("refreshSelectionInfoBtn").addEventListener("click", refreshSelectionInfo);
         byId("createStrokeFillLayerBtn").addEventListener("click", createStrokeFillLayer);
         byId("createFeatureStackBtn").addEventListener("click", createFeatureStack);
         byId("createIconGridBtn").addEventListener("click", createIconGrid);

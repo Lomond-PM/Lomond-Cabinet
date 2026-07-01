@@ -48,6 +48,8 @@
                 "common.fitBox": "Fit Box",
                 "common.uniformHeight": "Uniform Height",
                 "common.uniformWidth": "Uniform Width",
+                "common.registry": "Registry",
+                "common.parameters": "Parameters",
 
                 "tools.textBackgroundBox.title": "Background Rounded Rectangle",
                 "tools.textBackgroundBox.description": "Create a rounded rectangle behind selected layers, or a default 100x100 rounded rectangle when nothing is selected.",
@@ -295,6 +297,8 @@
                 "common.fitBox": "\u9002\u914d\u6846",
                 "common.uniformHeight": "\u7edf\u4e00\u9ad8\u5ea6",
                 "common.uniformWidth": "\u7edf\u4e00\u5bbd\u5ea6",
+                "common.registry": "\u6ce8\u518c\u4fe1\u606f",
+                "common.parameters": "\u53c2\u6570",
 
                 "tools.textBackgroundBox.title": "\u80cc\u666f\u5706\u89d2\u77e9\u5f62",
                 "tools.textBackgroundBox.description": "\u4e3a\u9009\u4e2d\u56fe\u5c42\u521b\u5efa\u80cc\u666f\u5706\u89d2\u77e9\u5f62\uff1b\u672a\u9009\u4e2d\u56fe\u5c42\u65f6\u521b\u5efa 100x100 \u9ed8\u8ba4\u77e9\u5f62\u3002",
@@ -564,6 +568,42 @@
 
         getLanguage: function () {
             return this.currentLanguage;
+        },
+
+        mergeDictionaries: function (bundle) {
+            var lang;
+            var key;
+            var flatten;
+            if (!bundle) {
+                return;
+            }
+            flatten = function (target, prefix, value) {
+                var childKey;
+                var nextPrefix;
+                if (value && typeof value === "object" && Object.prototype.toString.call(value) !== "[object Array]") {
+                    for (childKey in value) {
+                        if (Object.prototype.hasOwnProperty.call(value, childKey)) {
+                            nextPrefix = prefix ? prefix + "." + childKey : childKey;
+                            flatten(target, nextPrefix, value[childKey]);
+                        }
+                    }
+                } else if (prefix) {
+                    target[prefix] = value;
+                }
+            };
+            for (lang in bundle) {
+                if (!Object.prototype.hasOwnProperty.call(bundle, lang)) {
+                    continue;
+                }
+                if (!this.dictionaries[lang]) {
+                    this.dictionaries[lang] = {};
+                }
+                for (key in bundle[lang]) {
+                    if (Object.prototype.hasOwnProperty.call(bundle[lang], key)) {
+                        flatten(this.dictionaries[lang], key, bundle[lang][key]);
+                    }
+                }
+            }
         },
 
         applyToDOM: function (root) {
