@@ -39,13 +39,6 @@
                         <span class="app-card-title" data-tool-title="textBackgroundBox">Background Rounded Rectangle</span>
                     </button>
 
-                    <button class="tool-app app-card" id="openSelectionInfoTool" data-tool="selectionInfo">
-                        <span class="tool-icon info-tool-icon">
-                            <span class="info-glyph">i</span>
-                        </span>
-                        <span class="app-card-title" data-tool-title="selectionInfo">Selection Info</span>
-                    </button>
-
                     <button class="tool-app app-card" id="openEcommerceLayoutTool" data-tool="ecommerceLayout">
                         <span class="tool-icon ecommerce-tool-icon">
                             <span class="commerce-glyph">A</span>
@@ -214,30 +207,6 @@
                     </label>
                 </section>
 
-                <section class="info-panel intro-panel tool-panel" data-tool-panel="selectionInfo">
-                    <div class="mini-icon-wrap">
-                        <span class="tool-icon info-tool-icon small">
-                            <span class="info-glyph">i</span>
-                        </span>
-                    </div>
-                    <div>
-                        <h3 data-i18n="tools.selectionInfo.introTitle">Read selected layers</h3>
-                        <p data-i18n="tools.selectionInfo.description">Ask the After Effects host for the current comp selection and show a compact layer summary.</p>
-                    </div>
-                </section>
-
-                <section class="panel-card control-card tool-panel" data-tool-panel="selectionInfo">
-                    <div class="card-heading">
-                        <div>
-                            <p class="overline" data-i18n="section.selection">Selection</p>
-                            <h3 data-i18n="section.layerInfo">Layer Info</h3>
-                        </div>
-                    </div>
-                    <div class="selection-result" id="selectionInfoResult">
-                        <p class="empty-result" data-i18n="helper.refreshSelectionPrompt">Click Refresh Selection to inspect the current comp selection.</p>
-                    </div>
-                </section>
-
                 <section class="shape-add-panel tool-panel" data-tool-panel="shapeAdd">
                     <section class="panel-card control-card collapsible-card" id="shapeAddItemsCard">
                         <button class="collapsible-heading card-heading" id="shapeAddItemsToggle" type="button" aria-expanded="true">
@@ -401,11 +370,6 @@
                 </button>
                 <button class="primary-action" id="createBtn">
                     <span class="button-glyph" data-i18n="button.createBackgroundBox">Create Background Box</span>
-                </button>
-            </footer>
-            <footer class="action-sheet tool-actions" data-tool-actions="selectionInfo">
-                <button class="primary-action" id="refreshSelectionInfoBtn">
-                    <span class="button-glyph" data-i18n="button.refreshSelection">Refresh Selection</span>
                 </button>
             </footer>
             <footer class="action-sheet tool-actions" data-tool-actions="ecommerceLayout">

@@ -286,7 +286,6 @@ AEToolbox.ping = function () {
 #include "effectUtils.jsx"
 #include "shapeUtils.jsx"
 #include "tools/textBackgroundBox.jsx"
-#include "tools/selectionInfo.jsx"
 #include "tools/ecommerceLayout.jsx"
 #include "tools/adComponentKit.jsx"
 #include "tools/shapeAdd.jsx"

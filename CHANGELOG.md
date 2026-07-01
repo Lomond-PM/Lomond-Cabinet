@@ -20,7 +20,8 @@ This project follows simple semantic versioning for development handoff:
 
 ### Changed
 
-- Legacy tools are still statically registered and have not been migrated to the registry.
+- Most legacy tools are still statically registered and have not been migrated to the registry.
+- Migrated Selection Info from the legacy static Home/detail path to `host/tools/selectionInfo.tool.jsx`.
 
 ## [0.1.1] - 2026-07-01
 

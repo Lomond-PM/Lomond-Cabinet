@@ -57,7 +57,7 @@ Purpose:
 
 - Minimal test tool for dynamic `.tool.jsx` registration.
 - Verifies host metadata, i18n merge, generic UI rendering, and `AEToolbox.runRegisteredToolAction(...)`.
-- This is a sample registry tool and does not replace Selection Info.
+- This is a sample registry tool.
 
 ### Text Background Box
 
@@ -90,13 +90,14 @@ selectionInfo
 Host function:
 
 ```js
-AEToolbox.tools.selectionInfo.get()
+AEToolbox.tools.selectionInfo.run(paramsJson)
 ```
 
 Purpose:
 
 - Inspect active comp selected layers.
 - Return compact layer names, indexes, and type labels.
+- Migrated to the `.tool.jsx` registry path in `host/tools/selectionInfo.tool.jsx`.
 
 ### Ad Component Kit
 
@@ -177,7 +178,7 @@ Home contains a disabled More Tools card. It is not an active tool.
 - Header includes `Edit Home` and Settings buttons.
 - Tool grid includes:
   - Text Background Box
-  - Selection Info
+  - Selection Info, when `host/tools/selectionInfo.tool.jsx` exists and host JSX loads successfully
   - Ad Component Kit
   - Shape Add
   - Registry Probe, when `host/tools/registryProbe.tool.jsx` exists and host JSX loads successfully
@@ -212,7 +213,6 @@ Current status:
 Legacy tools not migrated:
 
 - Text Background Box / Background Rounded Rectangle.
-- Selection Info.
 - Ad Component Kit.
 - Shape Add.
 - The preserved `ecommerceLayout.jsx` host module.

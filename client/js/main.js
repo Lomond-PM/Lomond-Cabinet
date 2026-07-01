@@ -43,11 +43,6 @@
             descriptionKey: "tools.textBackgroundBox.description",
             selectionMode: "layers"
         },
-        selectionInfo: {
-            titleKey: "tools.selectionInfo.title",
-            descriptionKey: "tools.selectionInfo.description",
-            selectionMode: "layers"
-        },
         ecommerceLayout: {
             titleKey: "tools.adComponentKit.title",
             descriptionKey: "tools.adComponentKit.description",
@@ -1559,6 +1554,11 @@
             if (typeof field.step !== "undefined") {
                 input.step = field.step;
             }
+            if (field.placeholderKey) {
+                input.placeholder = tr(field.placeholderKey);
+            } else if (field.placeholder) {
+                input.placeholder = field.placeholder;
+            }
             input.value = typeof field.defaultValue !== "undefined" ? field.defaultValue : "";
         }
 
@@ -1614,6 +1614,9 @@
         var desc;
         var card;
         var heading;
+        var headingWrap;
+        var headingOverline;
+        var headingTitle;
         var i;
         var action;
         var button;
@@ -1645,7 +1648,15 @@
         card.className = "panel-card control-card";
         heading = document.createElement("div");
         heading.className = "card-heading";
-        heading.innerHTML = '<div><p class="overline">Registry</p><h3>Parameters</h3></div>';
+        headingWrap = document.createElement("div");
+        headingOverline = document.createElement("p");
+        headingOverline.className = "overline";
+        headingOverline.textContent = tr(tool.registrySectionKey || "common.registry");
+        headingTitle = document.createElement("h3");
+        headingTitle.textContent = tr(tool.parametersSectionKey || "common.parameters");
+        headingWrap.appendChild(headingOverline);
+        headingWrap.appendChild(headingTitle);
+        heading.appendChild(headingWrap);
         card.appendChild(heading);
         for (i = 0; tool.uiSchema && i < tool.uiSchema.length; i++) {
             card.appendChild(renderDynamicField(toolId, tool.uiSchema[i]));
@@ -1739,10 +1750,6 @@
     }
 
     function refreshActiveTool() {
-        if (activeToolId === "selectionInfo") {
-            refreshSelectionInfo();
-            return;
-        }
         if (activeToolId === "shapeAdd") {
             refreshShapeAddState();
             return;
@@ -2821,58 +2828,6 @@
             .replace(/"/g, "&quot;");
     }
 
-    function renderSelectionInfo(result) {
-        var box = byId("selectionInfoResult");
-        var html = "";
-        var layers;
-        var i;
-        var layer;
-
-        if (!box) {
-            return;
-        }
-
-        if (!result.ok) {
-            box.innerHTML = '<p class="empty-result">' + escapeHtml(resultMessage(result, "status.unableReadSelection")) + "</p>";
-            return;
-        }
-
-        layers = result.layers || [];
-        if (!layers.length) {
-            box.innerHTML = '<p class="empty-result">' + escapeHtml(tr("status.noSelectedLayers")) + "</p>";
-            return;
-        }
-
-        for (i = 0; i < layers.length; i++) {
-            layer = layers[i];
-            html += '<div class="selection-layer-row">' +
-                '<span class="selection-layer-main">' +
-                '<span class="selection-layer-name">' + escapeHtml(layer.name || "Layer") + "</span>" +
-                '<span class="selection-layer-meta">' + escapeHtml(layer.type || "Layer") + "</span>" +
-                "</span>" +
-                '<span class="selection-layer-index">#' + escapeHtml(layer.index) + "</span>" +
-                "</div>";
-        }
-        box.innerHTML = html;
-    }
-
-    function refreshSelectionInfo() {
-        if (!hostLoaded) {
-            setStatus(tr("status.hostLoading"), "busy", true);
-            return;
-        }
-
-        setStatus(tr("status.readingSelection"), "busy", true);
-        evalHost("AEToolbox.tools.selectionInfo.get()", function (raw) {
-            var result = parseResult(raw);
-            renderSelectionInfo(result);
-            if (result.ok) {
-                byId("selectionPill").textContent = tr("selection.layerCount", { count: result.count });
-            }
-            setStatus(resultMessage(result, "status.selectionUpdated"), result.ok ? "ok" : "error");
-        });
-    }
-
     function setColorValue(inputId, hex) {
         var input = byId(inputId);
         var shell = input.parentNode;
@@ -3735,7 +3690,6 @@
         });
         byId("createBtn").addEventListener("click", createBackgroundBox);
         byId("resetBtn").addEventListener("click", resetDefaults);
-        byId("refreshSelectionInfoBtn").addEventListener("click", refreshSelectionInfo);
         byId("createStrokeFillLayerBtn").addEventListener("click", createStrokeFillLayer);
         byId("createFeatureStackBtn").addEventListener("click", createFeatureStack);
         byId("createIconGridBtn").addEventListener("click", createIconGrid);
