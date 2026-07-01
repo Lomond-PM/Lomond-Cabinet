@@ -180,3 +180,41 @@ Do not break existing tools while adding a new one.
   - `CSXS/manifest.xml` extension `Version`
 - Do not commit generated archives, logs, backup folders, runtime cache, or dependency folders.
 - Keep `.gitignore` focused on generated files only; do not ignore source directories such as `CSXS/`, `client/`, `host/`, or `docs/`.
+
+## Git Workflow
+
+Default branch for development is `dev`.
+
+All future code changes, bug fixes, new tools, UI updates, i18n changes, documentation changes, and refactors must start from `dev`, unless the user explicitly says otherwise.
+
+Before starting any task:
+
+1. Run `git status`.
+2. Confirm the working tree is clean.
+3. Checkout `dev`.
+4. Pull latest changes from origin if remote is available.
+5. Create a task branch from `dev`.
+
+Use branch prefixes:
+
+- `feat/` for new features
+- `fix/` for bug fixes
+- `docs/` for documentation
+- `style/` for UI/CSS-only changes
+- `refactor/` for refactors
+- `chore/` for configuration or maintenance
+- `i18n/` for language text updates
+
+Do not commit automatically unless the user asks.
+
+Do not merge branches unless the user explicitly asks.
+
+Do not push unless the user explicitly asks.
+
+Do not modify `main` unless the user explicitly asks.
+
+Do not create or update version tags unless the user explicitly asks.
+
+If the working tree is not clean, stop and report the changed files before doing anything.
+
+If a task requires merging, releasing, tagging, or version bumping, wait for explicit user instruction.
