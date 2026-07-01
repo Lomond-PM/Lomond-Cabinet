@@ -8,6 +8,21 @@ This project follows simple semantic versioning for development handoff:
 - `MINOR`: new tools or substantial user-facing capabilities.
 - `PATCH`: fixes, UI adjustments, and documentation updates.
 
+## [0.1.1] - 2026-07-01
+
+### Fixed
+
+- Centered tool detail titles between the left navigation button and right status chip.
+- Renamed Text Background Box behavior to Background Rounded Rectangle in the UI.
+- Expanded Background Rounded Rectangle creation to support selected non-text layers.
+- Added default 100x100 rounded rectangle creation when no layer is selected.
+- Updated selection summary text to report generic selected layers instead of text-only status.
+
+### Changed
+
+- Added development install path rules to `AGENTS.md`.
+- Synchronized manifest and `VERSION` to `0.1.1`.
+
 ## [0.1.0] - 2026-07-01
 
 ### Added

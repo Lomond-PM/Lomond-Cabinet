@@ -172,9 +172,8 @@ AEToolbox.ping = function () {
         }
 
         var selectedCount = comp.selectedLayers ? comp.selectedLayers.length : 0;
-        var textCount = AEToolbox.AE.getSelectedTextLayers(comp).length;
-        var message = "Selected " + selectedCount + " layer(s), " + textCount + " text layer(s).";
-        var label = textCount > 0 ? textCount + " text layer(s)" : "No text layers";
+        var message = selectedCount > 0 ? "Selected " + selectedCount + " layer(s)." : "No selected layers.";
+        var label = selectedCount > 0 ? selectedCount + " layer(s)" : "No selection";
 
         return AEToolbox.toJson({
             ok: true,

@@ -218,3 +218,25 @@ Do not create or update version tags unless the user explicitly asks.
 If the working tree is not clean, stop and report the changed files before doing anything.
 
 If a task requires merging, releasing, tagging, or version bumping, wait for explicit user instruction.
+
+## Development Install Path
+
+The source of truth is the workspace Git repository:
+
+`C:\Users\Administrator\.openclaw\workspace\com.kevin.aetoolbox`
+
+Codex must modify files only in this workspace repository.
+
+The After Effects CEP extensions directory should point to this workspace through a Windows junction or symlink:
+
+`%APPDATA%\Adobe\CEP\extensions\com.kevin.aetoolbox`
+-> `C:\Users\Administrator\.openclaw\workspace\com.kevin.aetoolbox`
+
+Do not manually edit files inside the CEP extensions directory if it is not the workspace repository.
+
+Do not copy files between workspace and extensions during normal development.
+
+After modifying frontend files, reload the CEP panel.
+After modifying host JSX files, restart After Effects if changes do not take effect.
+
+Git is used only in the workspace repository for version control.
