@@ -228,3 +228,101 @@ When adding a tool:
 - Add i18n keys for every label.
 - Do not create a visually separate mini-design system inside one tool.
 
+## Registry Tool UI Contract
+
+Registry tools must be declarative. A `.tool.jsx` file may provide only tool metadata, i18n dictionaries, sections, fields, actions, and host action references.
+
+Registry tools must not:
+
+- Define custom page structure.
+- Define custom CSS.
+- Hard-code user-visible English or Chinese.
+- Render their own controls.
+- Add debug metadata to the normal user interface.
+- Override Home, Detail, Settings, App Launch, Close, or status behavior.
+
+All user-visible registry text must use i18n keys:
+
+- `titleKey`
+- `descriptionKey`
+- `section.labelKey`
+- `field.labelKey`
+- `field.placeholderKey`
+- `action.labelKey`
+- host result `messageKey`
+
+The frontend registry renderer is the only place that creates UI for registry tools. It must reuse the existing design-system classes:
+
+- `info-panel`
+- `intro-panel`
+- `panel-card`
+- `control-card`
+- `card-heading`
+- `control-row`
+- `switch-row`
+- `select-input` / custom select overlay
+- `num-input`
+- `text-input`
+- `color-shell`
+- `primary-action`
+- `secondary-action`
+
+Current registry schema shape:
+
+```js
+{
+  id: "toolId",
+  titleKey: "tools.toolId.title",
+  descriptionKey: "tools.toolId.description",
+  category: "layout",
+  iconText: "T",
+  sections: [
+    {
+      id: "main",
+      labelKey: "tools.toolId.sections.main",
+      fields: [
+        {
+          type: "number",
+          key: "amount",
+          labelKey: "tools.toolId.fields.amount",
+          defaultValue: 10,
+          min: 0,
+          max: 100,
+          step: 1
+        }
+      ]
+    }
+  ],
+  actions: [
+    {
+      id: "create",
+      labelKey: "tools.toolId.actions.create",
+      hostFunction: "AEToolbox.tools.toolId.create",
+      style: "primary"
+    }
+  ],
+  i18n: {
+    en: {},
+    "zh-CN": {}
+  }
+}
+```
+
+`uiSchema` remains supported as a compatibility shortcut and is treated as one `Parameters` section. New registry tools should prefer `sections`.
+
+Supported field types in the current generic renderer:
+
+- `text`
+- `number`
+- `checkbox`
+- `select`
+
+Action buttons are rendered from `actions`. A registry tool should not create its own footer.
+
+Debug information may only be shown when:
+
+```js
+window.AETOOLBOX_DEBUG_REGISTRY === true
+```
+
+By default, registry tools must not show `Registry`, tool id, host function, raw schema, or other implementation details in the user-facing detail page.
