@@ -23,6 +23,11 @@ This project follows simple semantic versioning for development handoff:
 - Added core registry renderer support for tabs / option card fields.
 - Added `visibleWhen` conditional display support for registry fields.
 - Extended Registry Control Lab to cover full-width buttons, center-axis bilingual button text, tabs, and conditional fields.
+- Documented the Shape Add registry migration audit and deferred formal migration until core registry action/state support is expanded.
+
+### Migration Notes
+
+- Shape Add remains a legacy compound tool. Direct same-id replacement with `shapeAdd.tool.jsx` is deferred because it risks conflicts between the static Home entry, dynamic registry entry, saved Home layout order, legacy detail panel, registry detail panel, host state refresh, and multi-action button payloads.
 
 ## [0.2.0] - 2026-07-02
 

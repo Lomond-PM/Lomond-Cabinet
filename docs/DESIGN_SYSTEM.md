@@ -349,6 +349,41 @@ The renderer aligns primary text to the right side of the button center axis and
 
 `uiSchema` remains supported as a compatibility shortcut and is treated as one `Parameters` section. New registry tools should prefer `sections`.
 
+## Shape Add Registry Migration Constraint
+
+Shape Add is currently a legacy compound tool. It must not be treated as a normal parameter-only registry tool.
+
+Do not migrate Shape Add by directly adding a same-id `host/tools/shapeAdd.tool.jsx` replacement. That approach can conflict with:
+
+- Static Home entry and dynamic registry entry using the same `shapeAdd` id.
+- `HomeLayoutManager` saved order.
+- Legacy detail panel and registry detail panel switching.
+- Continuous host state refresh through `shapeAdd_getState()`.
+- The 19 native shape item buttons, which require action-specific payloads.
+- Button disabled/enabled state, which depends on host state.
+- Plain host `message` strings that may need `messageKey` normalization.
+- Stroke / Fill subtool parameters and local persistence.
+
+Before formal Shape Add migration, extend the core registry renderer with:
+
+- Standard action payload support.
+- Host-state query support.
+- State-driven action/button disabled states.
+- A standard status/target card.
+- After-action state refresh hooks.
+
+Recommended migration phases:
+
+1. Phase 1: core renderer action/state capability.
+2. Phase 2: hidden `shapeAddProbe.tool.jsx`.
+3. Phase 3: migrate one minimal action.
+4. Phase 4: migrate the 19 native shape item buttons.
+5. Phase 5: migrate Stroke / Fill subtool.
+6. Phase 6: same-id replacement.
+7. Phase 7: remove legacy code.
+
+Do not add Shape Add-specific CSS or custom page structure during this process. Any capability needed by Shape Add should become a reusable core registry renderer capability first.
+
 Supported field types in the current generic renderer:
 
 - `text`
