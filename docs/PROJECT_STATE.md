@@ -177,6 +177,13 @@ Purpose:
 - Resolve target as selected shape layer or selected group where possible.
 - Create a linked Stroke / Fill Shape Layer with defaults and effect controls.
 
+Migration status:
+
+- Formal registry migration is paused.
+- Shape Add is a legacy compound tool, not a normal parameter-only registry tool.
+- A direct same-id `shapeAdd.tool.jsx` replacement is high risk because it can conflict with the static Home entry, dynamic registry entry, saved Home layout order, legacy detail panel, registry detail panel, and host state refresh.
+- Migration must be phased and should not start by replacing the existing `shapeAdd` id.
+
 ### More Tools
 
 Home contains a disabled More Tools card. It is not an active tool.
@@ -235,6 +242,34 @@ Legacy tools not migrated:
 - Ad Component Kit.
 - Shape Add.
 - The preserved `ecommerceLayout.jsx` host module.
+
+### Shape Add Registry Migration Audit
+
+Current decision:
+
+- Shape Add remains legacy for now.
+- Do not add `host/tools/shapeAdd.tool.jsx` as a same-id replacement until the core registry renderer has the required action/state capabilities.
+
+Key risks:
+
+- Static Home entry and dynamic registry tool with the same `shapeAdd` id can conflict.
+- `HomeLayoutManager` saved order may be affected by replacing static entries with dynamic entries.
+- Legacy detail panel and registry detail panel can coexist and conflict.
+- Shape Add depends on `shapeAdd_getState()` and continuous host-state refresh.
+- The 19 native shape item buttons require action payloads such as `key` and `matchName`.
+- Button disabled state depends on host state.
+- Host messages should move toward `messageKey` to avoid plain message/i18n/mojibake issues.
+- Stroke / Fill parameters and persistence are too complex to migrate as part of the first step.
+
+Recommended migration route:
+
+1. Phase 1: core registry renderer action/state capability.
+2. Phase 2: hidden `shapeAddProbe.tool.jsx`.
+3. Phase 3: migrate one minimal action.
+4. Phase 4: migrate the 19 native shape item buttons.
+5. Phase 5: migrate Stroke / Fill subtool.
+6. Phase 6: same-id replacement.
+7. Phase 7: remove legacy code.
 
 ### Settings
 
@@ -307,6 +342,7 @@ These are based on current code and recent project history. Verify visually afte
 - `client/js/main.js` and `client/css/style.css` are large and have accumulated multiple iterations. Avoid broad rewrites.
 - CEP/AE may cache old JS or JSX; always hard-refresh/reopen panel or restart AE when behavior does not match code.
 - If a change appears to have no effect, confirm the active JS and host JSX path before editing algorithms.
+- Shape Add registry migration is deferred. Do not attempt one-pass migration or direct same-id replacement; see `docs/KNOWN_ISSUES.md`.
 
 ## Later Development Suggestions
 
