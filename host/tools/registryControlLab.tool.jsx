@@ -32,6 +32,7 @@
             {
                 id: "basic",
                 labelKey: "tools.registryControlLab.sections.basic",
+                descriptionKey: "tools.registryControlLab.sections.basicDescription",
                 fields: [
                     {
                         type: "info",
@@ -41,12 +42,14 @@
                         type: "text",
                         key: "textValue",
                         labelKey: "tools.registryControlLab.fields.textValue",
+                        hintKey: "tools.registryControlLab.hints.textValue",
                         defaultValue: "Sample text"
                     },
                     {
                         type: "textarea",
                         key: "noteValue",
                         labelKey: "tools.registryControlLab.fields.noteValue",
+                        hintKey: "tools.registryControlLab.hints.noteValue",
                         defaultValue: "Multiline note"
                     },
                     {
@@ -56,6 +59,7 @@
                         type: "number",
                         key: "numberValue",
                         labelKey: "tools.registryControlLab.fields.numberValue",
+                        hintKey: "tools.registryControlLab.hints.numberValue",
                         defaultValue: 12,
                         min: 0,
                         max: 100,
@@ -65,6 +69,7 @@
                         type: "range",
                         key: "rangeValue",
                         labelKey: "tools.registryControlLab.fields.rangeValue",
+                        hintKey: "tools.registryControlLab.hints.rangeValue",
                         defaultValue: 42,
                         min: 0,
                         max: 100,
@@ -75,17 +80,20 @@
             {
                 id: "options",
                 labelKey: "tools.registryControlLab.sections.options",
+                descriptionKey: "tools.registryControlLab.sections.optionsDescription",
                 fields: [
                     {
                         type: "checkbox",
                         key: "enabled",
                         labelKey: "tools.registryControlLab.fields.enabled",
+                        hintKey: "tools.registryControlLab.hints.enabled",
                         defaultValue: true
                     },
                     {
                         type: "select",
                         key: "mode",
                         labelKey: "tools.registryControlLab.fields.mode",
+                        hintKey: "tools.registryControlLab.hints.mode",
                         defaultValue: "solid",
                         options: [
                             {
@@ -107,17 +115,20 @@
             {
                 id: "colors",
                 labelKey: "tools.registryControlLab.sections.colors",
+                descriptionKey: "tools.registryControlLab.sections.colorsDescription",
                 fields: [
                     {
                         type: "color",
                         key: "fillColor",
                         labelKey: "tools.registryControlLab.fields.fillColor",
+                        hintKey: "tools.registryControlLab.hints.fillColor",
                         defaultValue: "#c9a452"
                     },
                     {
                         type: "color",
                         key: "strokeColor",
                         labelKey: "tools.registryControlLab.fields.strokeColor",
+                        hintKey: "tools.registryControlLab.hints.strokeColor",
                         defaultValue: "#ffffff"
                     }
                 ]
@@ -136,8 +147,11 @@
                 "tools.registryControlLab.title": "Registry Control Lab",
                 "tools.registryControlLab.description": "Test the shared registry renderer with every standard control type.",
                 "tools.registryControlLab.sections.basic": "Basic Controls",
+                "tools.registryControlLab.sections.basicDescription": "Text, textarea, numeric entry, and slider behavior.",
                 "tools.registryControlLab.sections.colors": "Colors",
+                "tools.registryControlLab.sections.colorsDescription": "Color pills, hex values, and the HSV picker.",
                 "tools.registryControlLab.sections.options": "Options",
+                "tools.registryControlLab.sections.optionsDescription": "Switch and select controls using the shared black-gold UI.",
                 "tools.registryControlLab.fields.textValue": "Text",
                 "tools.registryControlLab.fields.noteValue": "Note",
                 "tools.registryControlLab.fields.numberValue": "Number",
@@ -148,14 +162,25 @@
                 "tools.registryControlLab.fields.strokeColor": "Stroke Color",
                 "tools.registryControlLab.actions.previewValues": "Preview Values",
                 "tools.registryControlLab.status.previewed": "Received registry control values.",
-                "tools.registryControlLab.notes.basic": "This lab validates shared controls only. It does not modify After Effects layers."
+                "tools.registryControlLab.notes.basic": "This lab validates shared controls only. It does not modify After Effects layers.",
+                "tools.registryControlLab.hints.textValue": "Single-line text input.",
+                "tools.registryControlLab.hints.noteValue": "Multiline text area.",
+                "tools.registryControlLab.hints.numberValue": "Type a value or drag horizontally.",
+                "tools.registryControlLab.hints.rangeValue": "Number box and slider stay synchronized.",
+                "tools.registryControlLab.hints.enabled": "Keeps the existing switch visual style.",
+                "tools.registryControlLab.hints.mode": "Uses the existing custom select menu.",
+                "tools.registryControlLab.hints.fillColor": "Opens the custom HSV color picker.",
+                "tools.registryControlLab.hints.strokeColor": "Returns a normalized #rrggbb value."
             },
             "zh-CN": {
                 "tools.registryControlLab.title": "\u63a7\u4ef6\u6d4b\u8bd5\u5b9e\u9a8c\u5ba4",
                 "tools.registryControlLab.description": "\u7528\u4e8e\u9a8c\u8bc1\u5171\u7528 registry renderer \u7684\u6240\u6709\u6807\u51c6\u63a7\u4ef6\u7c7b\u578b\u3002",
                 "tools.registryControlLab.sections.basic": "\u57fa\u7840\u63a7\u4ef6",
+                "tools.registryControlLab.sections.basicDescription": "\u9a8c\u8bc1\u6587\u672c\u3001\u591a\u884c\u6587\u672c\u3001\u6570\u503c\u8f93\u5165\u548c\u6ed1\u6746\u884c\u4e3a\u3002",
                 "tools.registryControlLab.sections.colors": "\u989c\u8272",
+                "tools.registryControlLab.sections.colorsDescription": "\u9a8c\u8bc1\u8272\u5757\u3001Hex \u503c\u548c HSV \u53d6\u8272\u5668\u3002",
                 "tools.registryControlLab.sections.options": "\u9009\u9879",
+                "tools.registryControlLab.sections.optionsDescription": "\u4f7f\u7528\u5171\u7528\u9ed1\u91d1 UI \u7684\u5f00\u5173\u548c\u4e0b\u62c9\u63a7\u4ef6\u3002",
                 "tools.registryControlLab.fields.textValue": "\u6587\u672c",
                 "tools.registryControlLab.fields.noteValue": "\u5907\u6ce8",
                 "tools.registryControlLab.fields.numberValue": "\u6570\u503c",
@@ -166,7 +191,15 @@
                 "tools.registryControlLab.fields.strokeColor": "\u63cf\u8fb9\u989c\u8272",
                 "tools.registryControlLab.actions.previewValues": "\u9884\u89c8\u53c2\u6570",
                 "tools.registryControlLab.status.previewed": "\u5df2\u63a5\u6536 registry \u63a7\u4ef6\u53c2\u6570\u3002",
-                "tools.registryControlLab.notes.basic": "\u8be5\u5b9e\u9a8c\u5ba4\u53ea\u9a8c\u8bc1\u5171\u7528\u63a7\u4ef6\uff0c\u4e0d\u4fee\u6539 After Effects \u56fe\u5c42\u3002"
+                "tools.registryControlLab.notes.basic": "\u8be5\u5b9e\u9a8c\u5ba4\u53ea\u9a8c\u8bc1\u5171\u7528\u63a7\u4ef6\uff0c\u4e0d\u4fee\u6539 After Effects \u56fe\u5c42\u3002",
+                "tools.registryControlLab.hints.textValue": "\u5355\u884c\u6587\u672c\u8f93\u5165\u3002",
+                "tools.registryControlLab.hints.noteValue": "\u591a\u884c\u6587\u672c\u533a\u57df\u3002",
+                "tools.registryControlLab.hints.numberValue": "\u53ef\u8f93\u5165\u6570\u503c\uff0c\u4e5f\u53ef\u6a2a\u5411\u62d6\u52a8\u4fee\u6539\u3002",
+                "tools.registryControlLab.hints.rangeValue": "\u6570\u503c\u6846\u548c\u6ed1\u6746\u4fdd\u6301\u540c\u6b65\u3002",
+                "tools.registryControlLab.hints.enabled": "\u4fdd\u7559\u73b0\u6709\u5f00\u5173\u89c6\u89c9\u98ce\u683c\u3002",
+                "tools.registryControlLab.hints.mode": "\u4f7f\u7528\u73b0\u6709\u81ea\u5b9a\u4e49\u4e0b\u62c9\u83dc\u5355\u3002",
+                "tools.registryControlLab.hints.fillColor": "\u6253\u5f00\u81ea\u5b9a\u4e49 HSV \u53d6\u8272\u5668\u3002",
+                "tools.registryControlLab.hints.strokeColor": "\u8fd4\u56de\u6807\u51c6\u5316\u7684 #rrggbb \u503c\u3002"
             }
         }
     });
