@@ -10,6 +10,8 @@ This project follows simple semantic versioning for development handoff:
 
 ## Unreleased
 
+## [0.2.0] - 2026-07-02
+
 ### Added
 
 - Added progressive Tool Registry Phase 1 infrastructure.
@@ -20,12 +22,17 @@ This project follows simple semantic versioning for development handoff:
 - Added the Registry Tool UI Contract documentation and stabilized the generic registry renderer structure.
 - Added `host/tools/registryControlLab.tool.jsx` to validate shared registry controls.
 - Added registry renderer support for textarea, range, color, info, and divider fields.
+- Added standard registry renderer controls for text, textarea, number, range, checkbox, select, color, info, and divider fields.
+- Added a custom color control with hex input and HSV picker support for registry tools.
+- Defined registry renderer design rules for tool-owned metadata and core-owned UI behavior.
 
 ### Changed
 
 - Most legacy tools are still statically registered and have not been migrated to the registry.
 - Migrated Selection Info from the legacy static Home/detail path to `host/tools/selectionInfo.tool.jsx`.
 - Improved registry renderer control styling with a minimal adapter that reuses the existing black-gold UI system.
+- Improved registry tool detail layout to match the existing black-gold Apple-like panel design.
+- Preserved Home, Settings, App Launch / Close motion, and existing legacy tool behavior while extending registry UI support.
 
 ## [0.1.1] - 2026-07-01
 
