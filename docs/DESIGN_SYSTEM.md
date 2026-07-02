@@ -280,6 +280,9 @@ Current registry schema shape:
     {
       id: "main",
       labelKey: "tools.toolId.sections.main",
+      toggleKey: "enableMain",
+      defaultEnabled: true,
+      collapsible: true,
       fields: [
         {
           type: "number",
@@ -307,6 +310,42 @@ Current registry schema shape:
   }
 }
 ```
+
+Section-level toggles are part of the core renderer contract:
+
+- `toggleKey` adds a shared switch in the section header.
+- `defaultEnabled` controls the initial enabled state.
+- `collapsible: true` allows the section body to collapse.
+- Disabled sections must still collect their toggle value.
+- Tools must let host actions decide how disabled section data affects execution.
+
+Registry tool values are persisted by the core renderer:
+
+- Storage key: `aeToolbox.registryToolValues.<toolId>`.
+- Tools only provide `defaultValue`, `toggleKey`, and `defaultEnabled`.
+- The renderer merges schema defaults with saved values when opening a tool.
+- Field values, section toggles, and section collapse state are saved automatically.
+- Tools must not implement their own `localStorage` handling.
+
+Registry renderer standard controls now include:
+
+- `button` / `actionButton` fields with `variant`, `fullWidth`, `actionId`, and optional center-axis bilingual text.
+- `tabs` fields rendered as option cards with `iconText`, translated title, and translated description.
+- `visibleWhen` on any field for conditional display based on another field value.
+
+For bilingual / matchName button text, tools may declare:
+
+```js
+{
+  type: "button",
+  labelKey: "tools.example.actions.rectangle",
+  secondaryText: "rectangle",
+  secondaryTextType: "matchName",
+  textLayout: "centerAxisPair"
+}
+```
+
+The renderer aligns primary text to the right side of the button center axis and matchName text to the left side of the same axis. Tools must not implement this alignment themselves.
 
 `uiSchema` remains supported as a compatibility shortcut and is treated as one `Parameters` section. New registry tools should prefer `sections`.
 
