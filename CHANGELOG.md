@@ -25,6 +25,14 @@ This project follows simple semantic versioning for development handoff:
 - Extended Registry Control Lab to cover full-width buttons, center-axis bilingual button text, tabs, and conditional fields.
 - Documented the Shape Add registry migration audit and deferred formal migration until core registry action/state support is expanded.
 
+### Fixed
+
+- Fixed the Home Edit toggle flow so the first click enters Home editing mode and only the Done click saves the layout.
+
+### Notes / Known Issues
+
+- Deferred: Settings Background Engine preset dropdown may trigger a render/layout glitch after closing. The issue is documented in `docs/KNOWN_ISSUES.md` for a future UI stabilization pass.
+
 ### Migration Notes
 
 - Shape Add remains a legacy compound tool. Direct same-id replacement with `shapeAdd.tool.jsx` is deferred because it risks conflicts between the static Home entry, dynamic registry entry, saved Home layout order, legacy detail panel, registry detail panel, host state refresh, and multi-action button payloads.

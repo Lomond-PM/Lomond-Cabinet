@@ -238,10 +238,13 @@ Current status:
 
 Legacy tools not migrated:
 
-- Text Background Box / Background Rounded Rectangle.
 - Ad Component Kit.
 - Shape Add.
 - The preserved `ecommerceLayout.jsx` host module.
+
+Legacy host implementations still reused by registry tools:
+
+- Text Background Box / Background Rounded Rectangle keeps the legacy host creation implementation while using the registry metadata/detail path.
 
 ### Shape Add Registry Migration Audit
 
@@ -333,6 +336,7 @@ These are based on current code and recent project history. Verify visually afte
 - Icon Grid active path diagnosis: current host code returns version data for icon grid.
 - Native select appearance: current code uses custom select overlays appended to `body`.
 - Shape Add text alignment: current CSS aligns native shape item buttons around a fixed center axis.
+- Home Edit toggle flow: current code uses `HomeLayoutManager.isEditing`; the first click enters edit mode and Done saves the layout.
 
 ## Known Issues / Areas To Watch
 
@@ -343,6 +347,7 @@ These are based on current code and recent project history. Verify visually afte
 - CEP/AE may cache old JS or JSX; always hard-refresh/reopen panel or restart AE when behavior does not match code.
 - If a change appears to have no effect, confirm the active JS and host JSX path before editing algorithms.
 - Shape Add registry migration is deferred. Do not attempt one-pass migration or direct same-id replacement; see `docs/KNOWN_ISSUES.md`.
+- Deferred: Settings Background Engine preset dropdown can trigger a render/layout glitch after closing. See `docs/KNOWN_ISSUES.md`.
 
 ## Later Development Suggestions
 

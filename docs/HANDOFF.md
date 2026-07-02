@@ -234,6 +234,16 @@ This project has legacy or preserved functions, especially around ecommerce layo
 - Confirm `host/index.jsx` includes the expected module.
 - Add a debug `version` in the returned JSON.
 
+### Deferred Settings Dropdown Render Glitch
+
+Settings Background Engine preset dropdown has a deferred render/layout glitch. The issue appears related to dropdown close state, popover cleanup, or Settings scroll container layout.
+
+Do not claim this is fixed unless verified in AE. See:
+
+```text
+docs/KNOWN_ISSUES.md
+```
+
 ## Current Active Tool Bridge Summary
 
 Text Background Box:
