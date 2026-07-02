@@ -96,6 +96,7 @@ Purpose:
 - Validate shared registry renderer controls.
 - Includes a section-level toggle test panel for enable/collapse behavior.
 - Uses shared registry value persistence to verify saved field and toggle state.
+- Covers full-width button fields, primary/secondary variants, center-axis bilingual button text, tabs / option cards, and `visibleWhen` conditional fields.
 
 ### Selection Info
 

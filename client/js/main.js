@@ -1746,14 +1746,51 @@
     }
 
     function setupRegistryNumberDrag(input, field, onUpdate) {
+        var suppressNextClick = false;
+
+        input.classList.add("registry-number-input", "is-drag-ready");
+
+        input.addEventListener("focus", function () {
+            input.classList.add("is-editing-number");
+        });
+
+        input.addEventListener("blur", function () {
+            input.classList.remove("is-editing-number");
+        });
+
+        input.addEventListener("click", function (event) {
+            if (suppressNextClick) {
+                suppressNextClick = false;
+                event.preventDefault();
+                return;
+            }
+            input.classList.add("is-editing-number");
+            try {
+                input.select();
+            } catch (err) {
+            }
+        });
+
+        input.addEventListener("keydown", function (event) {
+            if (event.keyCode === 13) {
+                input.blur();
+            } else if (event.keyCode === 27) {
+                input.blur();
+            }
+        });
+
         input.addEventListener("mousedown", function (event) {
             var startX;
             var startValue;
             var step;
             var dragging = false;
             var previousUserSelect;
+            var wasEditing = input.classList.contains("is-editing-number") || document.activeElement === input;
 
             if (event.button !== 0) {
+                return;
+            }
+            if (wasEditing) {
                 return;
             }
 
@@ -1768,10 +1805,13 @@
             function move(moveEvent) {
                 var delta = moveEvent.clientX - startX;
                 var next;
-                if (Math.abs(delta) < 3 && !dragging) {
+                if (Math.abs(delta) < 4 && !dragging) {
                     return;
                 }
                 dragging = true;
+                input.blur();
+                input.classList.remove("is-editing-number");
+                input.classList.add("is-dragging-number");
                 document.body.style.userSelect = "none";
                 moveEvent.preventDefault();
                 next = startValue + (delta / 8) * step;
@@ -1785,6 +1825,16 @@
                 document.removeEventListener("mousemove", move);
                 document.removeEventListener("mouseup", up);
                 document.body.style.userSelect = previousUserSelect;
+                input.classList.remove("is-dragging-number");
+                if (dragging) {
+                    suppressNextClick = true;
+                    window.setTimeout(function () {
+                        suppressNextClick = false;
+                    }, 0);
+                    if (onUpdate) {
+                        onUpdate(input.value);
+                    }
+                }
             }
 
             document.addEventListener("mousemove", move);
@@ -1802,6 +1852,85 @@
     function syncRegistryRangeField(rangeInput, numberInput) {
         if (numberInput) {
             numberInput.value = rangeInput.value;
+        }
+    }
+
+    function currentSchemaValue(toolDef, key) {
+        var input = byId(dynamicFieldId(toolDef.id, key));
+        if (input) {
+            if (input.type === "checkbox") {
+                return !!input.checked;
+            }
+            return input.value;
+        }
+        return (RegistryToolState[toolDef.id] && RegistryToolState[toolDef.id].values) ? RegistryToolState[toolDef.id].values[key] : undefined;
+    }
+
+    function visibleWhenMatches(field, toolDef) {
+        var rule = field && field.visibleWhen;
+        var value;
+        var i;
+
+        if (!rule || !rule.key) {
+            return true;
+        }
+
+        value = currentSchemaValue(toolDef, rule.key);
+        if (typeof rule.equals !== "undefined") {
+            return value === rule.equals;
+        }
+        if (rule["in"] && rule["in"] instanceof Array) {
+            for (i = 0; i < rule["in"].length; i++) {
+                if (value === rule["in"][i]) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return true;
+    }
+
+    function applyVisibleWhenMetadata(row, field) {
+        var values;
+        if (!row || !field || !field.visibleWhen || !field.visibleWhen.key) {
+            return;
+        }
+        row.setAttribute("data-visible-key", field.visibleWhen.key);
+        if (typeof field.visibleWhen.equals !== "undefined") {
+            row.setAttribute("data-visible-equals", field.visibleWhen.equals);
+        }
+        if (field.visibleWhen["in"] && field.visibleWhen["in"] instanceof Array) {
+            values = [];
+            for (var i = 0; i < field.visibleWhen["in"].length; i++) {
+                values[values.length] = field.visibleWhen["in"][i];
+            }
+            row.setAttribute("data-visible-in", values.join("|"));
+        }
+    }
+
+    function updateRegistryVisibleFields(toolDef) {
+        var rows = document.querySelectorAll(".registry-schema-field[data-visible-key]");
+        var i;
+        var row;
+        var key;
+        var equalsValue;
+        var inValue;
+        var current;
+        var visible;
+
+        for (i = 0; i < rows.length; i++) {
+            row = rows[i];
+            key = row.getAttribute("data-visible-key");
+            equalsValue = row.getAttribute("data-visible-equals");
+            inValue = row.getAttribute("data-visible-in");
+            current = currentSchemaValue(toolDef, key);
+            visible = true;
+            if (equalsValue !== null) {
+                visible = current === equalsValue;
+            } else if (inValue) {
+                visible = ("|" + inValue + "|").indexOf("|" + current + "|") >= 0;
+            }
+            row.classList.toggle("is-registry-hidden", !visible);
         }
     }
 
@@ -2017,19 +2146,62 @@
 
         if (fieldType === "divider" || fieldType === "separator") {
             row = document.createElement("div");
-            row.className = "registry-field-divider";
+            row.className = "registry-field-divider registry-schema-field";
+            applyVisibleWhenMetadata(row, field);
+            row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
             return row;
         }
 
         if (fieldType === "info" || fieldType === "note") {
             row = document.createElement("div");
-            row.className = "registry-info-note";
+            row.className = "registry-info-note registry-schema-field";
             row.textContent = tr(field.labelKey || field.textKey || field.text || "");
+            applyVisibleWhenMetadata(row, field);
+            row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
+            return row;
+        }
+
+        if (fieldType === "button" || fieldType === "actionButton") {
+            row = document.createElement("div");
+            row.className = "registry-button-row registry-schema-field";
+            applyVisibleWhenMetadata(row, field);
+            row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
+
+            input = document.createElement("button");
+            input.type = "button";
+            input.className = field.variant === "primary" ? "primary-action registry-large-button" : "panel-button registry-large-button";
+            if (field.fullWidth !== false) {
+                input.className += " is-full-width";
+            }
+            if (field.textLayout === "bilingualMatchName" || field.textLayout === "centerAxisPair" || field.matchName || field.secondaryText) {
+                input.className += " registry-large-button--bilingual";
+                var pair = document.createElement("span");
+                var primaryText = document.createElement("span");
+                var secondaryText = document.createElement("span");
+                pair.className = "button-text-pair";
+                primaryText.className = "button-text-primary";
+                secondaryText.className = "button-text-secondary";
+                primaryText.textContent = tr(field.labelKey || field.key || "");
+                secondaryText.textContent = field.matchName || field.secondaryText || "";
+                pair.appendChild(primaryText);
+                pair.appendChild(secondaryText);
+                input.appendChild(pair);
+            } else {
+                input.textContent = tr(field.labelKey || field.key || "");
+            }
+            input.addEventListener("click", function () {
+                if (field.actionId) {
+                    runDynamicToolAction(toolDef.id, field.actionId);
+                }
+            });
+            row.appendChild(input);
             return row;
         }
 
         row = document.createElement("div");
-        row.className = fieldType === "checkbox" ? "switch-row registry-switch-row" : "control-row registry-field-row";
+        row.className = fieldType === "checkbox" ? "switch-row registry-switch-row registry-schema-field" : "control-row registry-field-row registry-schema-field";
+        applyVisibleWhenMetadata(row, field);
+        row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
         labelColumn = document.createElement("span");
         label = document.createElement("span");
         wrap = document.createElement("span");
@@ -2078,6 +2250,48 @@
             }
             input.addEventListener("change", scheduleSave);
             wrap.appendChild(input);
+        } else if (fieldType === "tabs") {
+            input = document.createElement("input");
+            input.type = "hidden";
+            input.id = fieldId;
+            input.value = value;
+            wrap.classList.add("registry-tabs-control");
+            wrap.appendChild(input);
+            for (i = 0; field.options && i < field.options.length; i++) {
+                option = document.createElement("button");
+                option.type = "button";
+                option.className = "registry-option-card";
+                option.setAttribute("data-tab-value", field.options[i].value);
+                option.classList.toggle("is-active", field.options[i].value === value);
+                if (field.options[i].iconText) {
+                    swatch = document.createElement("span");
+                    swatch.className = "registry-option-icon";
+                    swatch.textContent = field.options[i].iconText;
+                    option.appendChild(swatch);
+                }
+                colorValue = document.createElement("span");
+                colorValue.className = "registry-option-copy";
+                label = document.createElement("strong");
+                label.textContent = tr(field.options[i].labelKey || field.options[i].value);
+                colorValue.appendChild(label);
+                if (field.options[i].descriptionKey || field.options[i].description) {
+                    hint = document.createElement("small");
+                    hint.textContent = tr(field.options[i].descriptionKey || field.options[i].description);
+                    colorValue.appendChild(hint);
+                }
+                option.appendChild(colorValue);
+                option.addEventListener("click", function () {
+                    var buttons = wrap.querySelectorAll(".registry-option-card");
+                    var k;
+                    input.value = this.getAttribute("data-tab-value");
+                    for (k = 0; k < buttons.length; k++) {
+                        buttons[k].classList.toggle("is-active", buttons[k] === this);
+                    }
+                    scheduleSave();
+                    updateRegistryVisibleFields(toolDef);
+                });
+                wrap.appendChild(option);
+            }
         } else if (fieldType === "textarea") {
             input = document.createElement("textarea");
             input.id = fieldId;
@@ -2358,6 +2572,9 @@
                 if (!field || !field.key) {
                     continue;
                 }
+                if (field.type === "button" || field.type === "actionButton") {
+                    continue;
+                }
                 input = byId(dynamicFieldId(toolDef.id, field.key));
                 if (!input) {
                     params[field.key] = registryFieldValue(toolDef, field);
@@ -2464,6 +2681,7 @@
         actions.appendChild(renderToolActions(tool.actions || [], tool));
 
         setupCustomSelectInputs();
+        updateRegistryVisibleFields(tool);
     }
 
     function renderDynamicToolDetail(toolId) {

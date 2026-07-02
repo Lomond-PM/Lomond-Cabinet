@@ -327,6 +327,26 @@ Registry tool values are persisted by the core renderer:
 - Field values, section toggles, and section collapse state are saved automatically.
 - Tools must not implement their own `localStorage` handling.
 
+Registry renderer standard controls now include:
+
+- `button` / `actionButton` fields with `variant`, `fullWidth`, `actionId`, and optional center-axis bilingual text.
+- `tabs` fields rendered as option cards with `iconText`, translated title, and translated description.
+- `visibleWhen` on any field for conditional display based on another field value.
+
+For bilingual / matchName button text, tools may declare:
+
+```js
+{
+  type: "button",
+  labelKey: "tools.example.actions.rectangle",
+  secondaryText: "rectangle",
+  secondaryTextType: "matchName",
+  textLayout: "centerAxisPair"
+}
+```
+
+The renderer aligns primary text to the right side of the button center axis and matchName text to the left side of the same axis. Tools must not implement this alignment themselves.
+
 `uiSchema` remains supported as a compatibility shortcut and is treated as one `Parameters` section. New registry tools should prefer `sections`.
 
 Supported field types in the current generic renderer:

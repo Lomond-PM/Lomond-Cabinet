@@ -19,6 +19,10 @@ This project follows simple semantic versioning for development handoff:
 - Added a Registry Control Lab section-toggle test panel.
 - Added shared registry tool parameter persistence under `aeToolbox.registryToolValues.<toolId>`.
 - Added a shared registry Restore Defaults action for schema-driven tools.
+- Added core registry renderer support for full-width button fields and primary/secondary variants.
+- Added core registry renderer support for tabs / option card fields.
+- Added `visibleWhen` conditional display support for registry fields.
+- Extended Registry Control Lab to cover full-width buttons, center-axis bilingual button text, tabs, and conditional fields.
 
 ## [0.2.0] - 2026-07-02
 
