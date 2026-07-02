@@ -1509,62 +1509,502 @@
         return "dynamic_" + toolId + "_" + key;
     }
 
+    function schemaDefaultValue(field) {
+        if (field && typeof field.defaultValue !== "undefined") {
+            return field.defaultValue;
+        }
+        if (field && field.type === "checkbox") {
+            return false;
+        }
+        if (field && (field.type === "number" || field.type === "range")) {
+            return 0;
+        }
+        if (field && field.type === "color") {
+            return "#ffffff";
+        }
+        return "";
+    }
+
+    function schemaHintText(field) {
+        if (!field) {
+            return "";
+        }
+        if (field.hintKey) {
+            return tr(field.hintKey);
+        }
+        if (field.descriptionKey) {
+            return tr(field.descriptionKey);
+        }
+        if (field.helpTextKey) {
+            return tr(field.helpTextKey);
+        }
+        return field.hint || field.description || field.helpText || "";
+    }
+
+    function applySchemaNumberAttributes(input, field) {
+        if (typeof field.min !== "undefined") {
+            input.min = field.min;
+        }
+        if (typeof field.max !== "undefined") {
+            input.max = field.max;
+        }
+        if (typeof field.step !== "undefined") {
+            input.step = field.step;
+        }
+    }
+
+    function normalizeSchemaNumber(value, field, fallback) {
+        var numeric = Number(value);
+        var min = typeof field.min !== "undefined" ? Number(field.min) : null;
+        var max = typeof field.max !== "undefined" ? Number(field.max) : null;
+
+        if (isNaN(numeric)) {
+            numeric = Number(fallback);
+        }
+        if (isNaN(numeric)) {
+            numeric = Number(schemaDefaultValue(field));
+        }
+        if (isNaN(numeric)) {
+            numeric = 0;
+        }
+        if (min !== null && !isNaN(min)) {
+            numeric = Math.max(min, numeric);
+        }
+        if (max !== null && !isNaN(max)) {
+            numeric = Math.min(max, numeric);
+        }
+        return numeric;
+    }
+
+    function setSchemaNumberValue(input, value, field) {
+        var step = typeof field.step !== "undefined" ? Number(field.step) : 1;
+        var numeric = normalizeSchemaNumber(value, field, input.value);
+        var decimals = 0;
+        var stepText;
+
+        if (!isNaN(step) && step > 0) {
+            stepText = String(step);
+            if (stepText.indexOf(".") >= 0) {
+                decimals = stepText.length - stepText.indexOf(".") - 1;
+            }
+        }
+        input.value = decimals > 0 ? numeric.toFixed(decimals) : String(Math.round(numeric));
+    }
+
+    function setupRegistryNumberDrag(input, field, onUpdate) {
+        input.addEventListener("mousedown", function (event) {
+            var startX;
+            var startValue;
+            var step;
+            var dragging = false;
+            var previousUserSelect;
+
+            if (event.button !== 0) {
+                return;
+            }
+
+            startX = event.clientX;
+            startValue = normalizeSchemaNumber(input.value, field, schemaDefaultValue(field));
+            step = Number(field.step);
+            if (isNaN(step) || step <= 0) {
+                step = 1;
+            }
+            previousUserSelect = document.body.style.userSelect;
+
+            function move(moveEvent) {
+                var delta = moveEvent.clientX - startX;
+                var next;
+                if (Math.abs(delta) < 3 && !dragging) {
+                    return;
+                }
+                dragging = true;
+                document.body.style.userSelect = "none";
+                moveEvent.preventDefault();
+                next = startValue + (delta / 8) * step;
+                setSchemaNumberValue(input, next, field);
+                if (onUpdate) {
+                    onUpdate(input.value);
+                }
+            }
+
+            function up() {
+                document.removeEventListener("mousemove", move);
+                document.removeEventListener("mouseup", up);
+                document.body.style.userSelect = previousUserSelect;
+            }
+
+            document.addEventListener("mousemove", move);
+            document.addEventListener("mouseup", up);
+        });
+    }
+
+    function syncRegistryColorField(hexInput, swatch, fallback) {
+        var normalized = normalizeHex(hexInput.value, fallback || "#ffffff").toLowerCase();
+        hexInput.value = normalized;
+        swatch.style.backgroundColor = normalized;
+        return normalized;
+    }
+
+    function syncRegistryRangeField(rangeInput, numberInput) {
+        if (numberInput) {
+            numberInput.value = rangeInput.value;
+        }
+    }
+
+    function hexToRgb(hex) {
+        var normalized = normalizeHex(hex, "#ffffff").replace("#", "");
+        return {
+            r: parseInt(normalized.substr(0, 2), 16),
+            g: parseInt(normalized.substr(2, 2), 16),
+            b: parseInt(normalized.substr(4, 2), 16)
+        };
+    }
+
+    function rgbToHex(r, g, b) {
+        var value = ((Math.max(0, Math.min(255, Math.round(r))) << 16) |
+            (Math.max(0, Math.min(255, Math.round(g))) << 8) |
+            Math.max(0, Math.min(255, Math.round(b)))).toString(16);
+        while (value.length < 6) {
+            value = "0" + value;
+        }
+        return "#" + value.toLowerCase();
+    }
+
+    function rgbToHsv(rgb) {
+        var r = rgb.r / 255;
+        var g = rgb.g / 255;
+        var b = rgb.b / 255;
+        var max = Math.max(r, g, b);
+        var min = Math.min(r, g, b);
+        var d = max - min;
+        var h = 0;
+        var s = max === 0 ? 0 : d / max;
+        var v = max;
+
+        if (d !== 0) {
+            if (max === r) {
+                h = ((g - b) / d) % 6;
+            } else if (max === g) {
+                h = (b - r) / d + 2;
+            } else {
+                h = (r - g) / d + 4;
+            }
+            h = Math.round(h * 60);
+            if (h < 0) {
+                h += 360;
+            }
+        }
+        return { h: h, s: s, v: v };
+    }
+
+    function hsvToHex(hsv) {
+        var h = ((hsv.h % 360) + 360) % 360;
+        var s = Math.max(0, Math.min(1, hsv.s));
+        var v = Math.max(0, Math.min(1, hsv.v));
+        var c = v * s;
+        var x = c * (1 - Math.abs((h / 60) % 2 - 1));
+        var m = v - c;
+        var r = 0;
+        var g = 0;
+        var b = 0;
+
+        if (h < 60) {
+            r = c; g = x; b = 0;
+        } else if (h < 120) {
+            r = x; g = c; b = 0;
+        } else if (h < 180) {
+            r = 0; g = c; b = x;
+        } else if (h < 240) {
+            r = 0; g = x; b = c;
+        } else if (h < 300) {
+            r = x; g = 0; b = c;
+        } else {
+            r = c; g = 0; b = x;
+        }
+        return rgbToHex((r + m) * 255, (g + m) * 255, (b + m) * 255);
+    }
+
+    function closeRegistryColorPicker() {
+        var picker = document.querySelector(".registry-color-picker-popover");
+        if (picker && picker.parentNode) {
+            picker.parentNode.removeChild(picker);
+        }
+    }
+
+    function openRegistryColorPicker(hexInput, swatch, fallback) {
+        var hsv = rgbToHsv(hexToRgb(hexInput.value || fallback || "#ffffff"));
+        var popover;
+        var sv;
+        var svHandle;
+        var hue;
+        var preview;
+        var hexEdit;
+        var rect;
+
+        function applyColor(nextHsv) {
+            var hex;
+            hsv = nextHsv || hsv;
+            hex = hsvToHex(hsv);
+            hexInput.value = hex;
+            hexEdit.value = hex;
+            swatch.style.backgroundColor = hex;
+            preview.style.backgroundColor = hex;
+            sv.style.backgroundColor = hsvToHex({ h: hsv.h, s: 1, v: 1 });
+            svHandle.style.left = (hsv.s * 100) + "%";
+            svHandle.style.top = ((1 - hsv.v) * 100) + "%";
+            hue.value = hsv.h;
+        }
+
+        function setSvFromEvent(event) {
+            var box = sv.getBoundingClientRect();
+            var s = Math.max(0, Math.min(1, (event.clientX - box.left) / box.width));
+            var v = 1 - Math.max(0, Math.min(1, (event.clientY - box.top) / box.height));
+            applyColor({ h: hsv.h, s: s, v: v });
+        }
+
+        function beginSvDrag(event) {
+            function move(moveEvent) {
+                moveEvent.preventDefault();
+                setSvFromEvent(moveEvent);
+            }
+            function up() {
+                document.removeEventListener("mousemove", move);
+                document.removeEventListener("mouseup", up);
+            }
+            event.preventDefault();
+            setSvFromEvent(event);
+            document.addEventListener("mousemove", move);
+            document.addEventListener("mouseup", up);
+        }
+
+        closeRegistryColorPicker();
+        popover = document.createElement("div");
+        popover.className = "registry-color-picker-popover";
+
+        sv = document.createElement("div");
+        sv.className = "registry-hsv-sv";
+        svHandle = document.createElement("span");
+        svHandle.className = "registry-hsv-handle";
+        sv.appendChild(svHandle);
+        sv.addEventListener("mousedown", beginSvDrag);
+
+        hue = document.createElement("input");
+        hue.type = "range";
+        hue.className = "registry-hsv-hue";
+        hue.min = "0";
+        hue.max = "359";
+        hue.step = "1";
+        hue.addEventListener("input", function () {
+            applyColor({ h: Number(this.value), s: hsv.s, v: hsv.v });
+        });
+
+        preview = document.createElement("span");
+        preview.className = "registry-hsv-preview";
+
+        hexEdit = document.createElement("input");
+        hexEdit.className = "registry-color-hex registry-hsv-hex";
+        hexEdit.type = "text";
+        hexEdit.setAttribute("spellcheck", "false");
+        hexEdit.addEventListener("change", function () {
+            hsv = rgbToHsv(hexToRgb(normalizeHex(this.value, fallback || "#ffffff")));
+            applyColor(hsv);
+        });
+
+        popover.appendChild(sv);
+        popover.appendChild(hue);
+        popover.appendChild(preview);
+        popover.appendChild(hexEdit);
+        document.body.appendChild(popover);
+
+        rect = swatch.getBoundingClientRect();
+        popover.style.left = Math.max(10, Math.min(window.innerWidth - 230, rect.left)) + "px";
+        popover.style.top = Math.max(10, Math.min(window.innerHeight - 230, rect.bottom + 8)) + "px";
+        applyColor(hsv);
+
+        window.setTimeout(function () {
+            function outside(event) {
+                if (!popover.contains(event.target) && event.target !== swatch) {
+                    closeRegistryColorPicker();
+                    document.removeEventListener("mousedown", outside);
+                }
+            }
+            document.addEventListener("mousedown", outside);
+        }, 0);
+    }
+
     function renderSchemaField(field, toolDef) {
-        var row = document.createElement("label");
-        var label = document.createElement("span");
-        var wrap = document.createElement("span");
+        var row;
+        var labelColumn;
+        var label;
+        var hint;
+        var wrap;
         var input;
+        var numberInput;
+        var swatch;
+        var colorValue;
+        var hintText;
         var i;
         var option;
         var toolId = toolDef && toolDef.id ? toolDef.id : "";
+        var fieldType = field && field.type ? field.type : "text";
+        var fieldId = field && field.key ? dynamicFieldId(toolId, field.key) : "";
 
-        row.className = field.type === "checkbox" ? "switch-row" : "control-row";
-        label.className = "control-label";
+        if (!field) {
+            return document.createDocumentFragment();
+        }
+
+        if (fieldType === "divider" || fieldType === "separator") {
+            row = document.createElement("div");
+            row.className = "registry-field-divider";
+            return row;
+        }
+
+        if (fieldType === "info" || fieldType === "note") {
+            row = document.createElement("div");
+            row.className = "registry-info-note";
+            row.textContent = tr(field.labelKey || field.textKey || field.text || "");
+            return row;
+        }
+
+        row = document.createElement("div");
+        row.className = fieldType === "checkbox" ? "switch-row registry-switch-row" : "control-row registry-field-row";
+        labelColumn = document.createElement("span");
+        label = document.createElement("span");
+        wrap = document.createElement("span");
+        labelColumn.className = "registry-label-column";
+        label.className = "control-label registry-text-body";
         label.textContent = tr(field.labelKey || field.key || "");
+        hintText = schemaHintText(field);
+        if (hintText) {
+            hint = document.createElement("small");
+            hint.className = "registry-field-hint registry-text-muted";
+            hint.textContent = hintText;
+        }
         wrap.className = "control-inputs";
+        labelColumn.appendChild(label);
+        if (hint) {
+            labelColumn.appendChild(hint);
+        }
 
-        if (field.type === "checkbox") {
+        if (fieldType === "checkbox") {
             input = document.createElement("input");
             input.type = "checkbox";
-            input.id = dynamicFieldId(toolId, field.key);
-            input.checked = !!field.defaultValue;
-        } else if (field.type === "select") {
+            input.id = fieldId;
+            input.checked = !!schemaDefaultValue(field);
+
+            swatch = document.createElement("label");
+            swatch.className = "switch registry-switch";
+            swatch.setAttribute("for", fieldId);
+            colorValue = document.createElement("span");
+            colorValue.className = "switch-track";
+            swatch.appendChild(input);
+            swatch.appendChild(colorValue);
+            wrap.appendChild(swatch);
+        } else if (fieldType === "select") {
             input = document.createElement("select");
             input.className = "select-input";
-            input.id = dynamicFieldId(toolId, field.key);
+            input.id = fieldId;
             for (i = 0; field.options && i < field.options.length; i++) {
                 option = document.createElement("option");
                 option.value = field.options[i].value;
                 option.textContent = tr(field.options[i].labelKey || field.options[i].value);
-                if (field.options[i].value === field.defaultValue) {
+                if (field.options[i].value === schemaDefaultValue(field)) {
                     option.selected = true;
                 }
                 input.appendChild(option);
             }
-        } else {
+            wrap.appendChild(input);
+        } else if (fieldType === "textarea") {
+            input = document.createElement("textarea");
+            input.id = fieldId;
+            input.className = "registry-textarea";
+            input.rows = field.rows || 3;
+            if (field.placeholderKey) {
+                input.placeholder = tr(field.placeholderKey);
+            } else if (field.placeholder) {
+                input.placeholder = field.placeholder;
+            }
+            input.value = schemaDefaultValue(field);
+            wrap.appendChild(input);
+        } else if (fieldType === "range") {
             input = document.createElement("input");
-            input.id = dynamicFieldId(toolId, field.key);
-            input.className = field.type === "number" ? "num-input" : "text-input";
-            input.type = field.type === "number" ? "number" : "text";
-            if (typeof field.min !== "undefined") {
-                input.min = field.min;
+            input.id = fieldId;
+            input.className = "pill-slider registry-range";
+            input.type = "range";
+            numberInput = document.createElement("input");
+            numberInput.className = "num-input registry-range-number";
+            numberInput.type = "number";
+            numberInput.id = fieldId + "_number";
+            applySchemaNumberAttributes(input, field);
+            applySchemaNumberAttributes(numberInput, field);
+            input.value = schemaDefaultValue(field);
+            numberInput.value = input.value;
+            input.addEventListener("input", function () {
+                syncRegistryRangeField(this, byId(this.id + "_number"));
+            });
+            numberInput.addEventListener("input", function () {
+                var range = byId(this.id.replace(/_number$/, ""));
+                if (range) {
+                    setSchemaNumberValue(this, this.value, field);
+                    range.value = this.value;
+                }
+            });
+            setupRegistryNumberDrag(numberInput, field, function (value) {
+                input.value = value;
+            });
+            wrap.classList.add("registry-range-control");
+            wrap.appendChild(numberInput);
+            wrap.appendChild(input);
+        } else if (fieldType === "color") {
+            colorValue = normalizeHex(schemaDefaultValue(field), "#ffffff").toLowerCase();
+            input = document.createElement("input");
+            input.id = fieldId;
+            input.className = "registry-color-hex";
+            input.type = "text";
+            input.value = colorValue;
+            input.setAttribute("spellcheck", "false");
+
+            swatch = document.createElement("button");
+            swatch.type = "button";
+            swatch.className = "registry-color-swatch";
+            swatch.style.backgroundColor = colorValue;
+            swatch.setAttribute("aria-label", tr(field.labelKey || field.key || ""));
+            swatch.addEventListener("click", function () {
+                var hex = this.parentNode.querySelector(".registry-color-hex");
+                openRegistryColorPicker(hex, this, colorValue);
+            });
+            input.addEventListener("change", function () {
+                var parent = this.parentNode;
+                syncRegistryColorField(this, parent.querySelector(".registry-color-swatch"), colorValue);
+            });
+            wrap.classList.add("registry-color-control");
+            wrap.appendChild(swatch);
+            wrap.appendChild(input);
+        } else {
+            if (fieldType !== "text" && window.console && console.warn) {
+                console.warn("[AE Toolbox] Unsupported registry field type:", fieldType, field);
             }
-            if (typeof field.max !== "undefined") {
-                input.max = field.max;
-            }
-            if (typeof field.step !== "undefined") {
-                input.step = field.step;
+            input = document.createElement("input");
+            input.id = fieldId;
+            input.className = fieldType === "number" ? "num-input" : "registry-text-input";
+            input.type = fieldType === "number" ? "number" : "text";
+            if (fieldType === "number") {
+                applySchemaNumberAttributes(input, field);
+                setupRegistryNumberDrag(input, field);
+                input.addEventListener("change", function () {
+                    setSchemaNumberValue(this, this.value, field);
+                });
             }
             if (field.placeholderKey) {
                 input.placeholder = tr(field.placeholderKey);
             } else if (field.placeholder) {
                 input.placeholder = field.placeholder;
             }
-            input.value = typeof field.defaultValue !== "undefined" ? field.defaultValue : "";
+            input.value = schemaDefaultValue(field);
+            wrap.appendChild(input);
         }
 
-        wrap.appendChild(input);
-        row.appendChild(label);
+        row.appendChild(labelColumn);
         row.appendChild(wrap);
         return row;
     }
@@ -1594,6 +2034,7 @@
         var heading;
         var headingWrap;
         var headingTitle;
+        var headingDesc;
         var fields = section && section.fields ? section.fields : [];
         var i;
 
@@ -1601,11 +2042,18 @@
 
         if (section && section.labelKey) {
             heading = document.createElement("div");
-            heading.className = "card-heading";
+            heading.className = "card-heading registry-section-heading";
             headingWrap = document.createElement("div");
             headingTitle = document.createElement("h3");
+            headingTitle.className = "registry-title-primary";
             headingTitle.textContent = tr(section.labelKey);
             headingWrap.appendChild(headingTitle);
+            if (section.descriptionKey || section.hintKey || section.description) {
+                headingDesc = document.createElement("p");
+                headingDesc.className = "registry-section-description registry-text-muted";
+                headingDesc.textContent = tr(section.descriptionKey || section.hintKey || section.description);
+                headingWrap.appendChild(headingDesc);
+            }
             heading.appendChild(headingWrap);
             card.appendChild(heading);
         }
@@ -1639,8 +2087,10 @@
                 }
                 if (field.type === "checkbox") {
                     params[field.key] = !!input.checked;
-                } else if (field.type === "number") {
+                } else if (field.type === "number" || field.type === "range") {
                     params[field.key] = Number(input.value);
+                } else if (field.type === "color") {
+                    params[field.key] = normalizeHex(input.value, schemaDefaultValue(field)).toLowerCase();
                 } else {
                     params[field.key] = input.value;
                 }
@@ -1693,7 +2143,6 @@
         var panel = byId("registryToolPanel");
         var actions = byId("registryToolActions");
         var intro;
-        var title;
         var desc;
         var sections;
         var i;
@@ -1703,6 +2152,7 @@
             return;
         }
 
+        closeRegistryColorPicker();
         oldMenus = document.querySelectorAll(".select-menu[data-select-menu-for^='dynamic_']");
         for (i = 0; i < oldMenus.length; i++) {
             oldMenus[i].parentNode.removeChild(oldMenus[i]);
@@ -1713,11 +2163,9 @@
 
         intro = document.createElement("section");
         intro.className = "info-panel intro-panel dynamic-tool-intro";
-        title = document.createElement("h3");
-        title.textContent = tr(tool.titleKey || tool.id);
         desc = document.createElement("p");
+        desc.className = "registry-text-muted";
         desc.textContent = tr(tool.descriptionKey || "");
-        intro.appendChild(title);
         intro.appendChild(desc);
         panel.appendChild(intro);
 
@@ -3786,6 +4234,7 @@
         byId("autoStatus").addEventListener("change", saveSettings);
         document.addEventListener("keydown", function (event) {
             if (event.keyCode === 27) {
+                closeRegistryColorPicker();
                 closeSettingsPanel();
             }
         });
