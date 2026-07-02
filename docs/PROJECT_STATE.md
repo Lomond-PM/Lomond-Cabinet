@@ -288,6 +288,7 @@ These are based on current code and recent project history. Verify visually afte
 - `client/js/main.js` and `client/css/style.css` are large and have accumulated multiple iterations. Avoid broad rewrites.
 - CEP/AE may cache old JS or JSX; always hard-refresh/reopen panel or restart AE when behavior does not match code.
 - If a change appears to have no effect, confirm the active JS and host JSX path before editing algorithms.
+- Deferred: Settings Background Engine preset dropdown can trigger a render/layout glitch after closing. See `docs/KNOWN_ISSUES.md`.
 
 ## Later Development Suggestions
 

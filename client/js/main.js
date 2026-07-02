@@ -292,10 +292,21 @@
         return false;
     }
 
+    function uiDebug(message, data) {
+        if (window.AETOOLBOX_DEBUG_UI === true && window.console && console.log) {
+            if (typeof data !== "undefined") {
+                console.log("[AE Toolbox UI] " + message, data);
+            } else {
+                console.log("[AE Toolbox UI] " + message);
+            }
+        }
+    }
+
     var HomeLayoutManager = {
         toolOrder: [],
         isEditing: false,
         dragState: null,
+        globalEventsBound: false,
 
         init: function () {
             this.loadOrder();
@@ -398,6 +409,7 @@
             if (this.isEditing) {
                 return;
             }
+            uiDebug("enterHomeEditMode");
             this.isEditing = true;
             home.classList.add("home-editing");
             if (editButton) {
@@ -407,12 +419,15 @@
             setStatus(tr("status.homeEditing"));
         },
 
-        exitEditMode: function () {
+        exitEditMode: function (options) {
             var home = byId("homeView");
             var tools = this.getToolButtons();
             var editButton = byId("editHomeBtn");
+            var save = options && options.save === true;
+            var announce = !options || options.announce !== false;
             var i;
 
+            uiDebug("exitHomeEditMode", { save: save });
             this.isEditing = false;
             home.classList.remove("home-editing");
             if (editButton) {
@@ -423,8 +438,19 @@
                 tools[i].classList.remove("is-dragging", "is-reordering");
                 tools[i].style.transform = "";
             }
-            this.saveOrder();
-            setStatus(tr("status.homeLayoutSaved"));
+            if (save) {
+                this.saveOrder();
+                if (announce) {
+                    setStatus(tr("status.homeLayoutSaved"));
+                }
+            } else if (announce) {
+                setStatus(tr("status.ready"));
+            }
+        },
+
+        commitEditMode: function () {
+            uiDebug("saveHomeLayout");
+            this.exitEditMode({ save: true, announce: true });
         },
 
         bindIconEvents: function () {
@@ -437,6 +463,10 @@
             var i;
 
             for (i = 0; i < tools.length; i++) {
+                if (tools[i].getAttribute("data-home-events-bound") === "true") {
+                    continue;
+                }
+                tools[i].setAttribute("data-home-events-bound", "true");
                 tools[i].addEventListener(startEvent, function (event) {
                     self.startDrag(event, event.currentTarget);
                 });
@@ -445,9 +475,17 @@
                 });
             }
 
-            byId("editHomeBtn").addEventListener("click", function () {
+            if (this.globalEventsBound) {
+                return;
+            }
+            this.globalEventsBound = true;
+
+            byId("editHomeBtn").addEventListener("click", function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                uiDebug("Edit Home click", { isEditing: self.isEditing });
                 if (self.isEditing) {
-                    self.exitEditMode();
+                    self.commitEditMode();
                 } else {
                     self.enterEditMode();
                 }
@@ -461,7 +499,7 @@
                         hasAncestorWithClass(event.target, "settings-entry", this)) {
                     return;
                 }
-                self.exitEditMode();
+                self.exitEditMode({ save: false, announce: true });
             });
             document.addEventListener(moveEvent, function (event) {
                 self.updateDrag(event);

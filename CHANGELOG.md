@@ -10,6 +10,10 @@ This project follows simple semantic versioning for development handoff:
 
 ## Unreleased
 
+### Notes / Known Issues
+
+- Deferred: Settings Background Engine preset dropdown may trigger a render/layout glitch after closing. The issue is documented in `docs/KNOWN_ISSUES.md` for a future UI stabilization pass.
+
 ## [0.2.0] - 2026-07-02
 
 ### Added
