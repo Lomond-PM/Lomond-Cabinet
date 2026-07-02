@@ -37,6 +37,137 @@ AEToolbox.ping = function () {
         return "{" + parts.join(",") + "}";
     };
 
+    AEToolbox.stringify = function (value) {
+        var parts = [];
+        var k;
+        var i;
+
+        if (value === null || typeof value === "undefined") {
+            return "null";
+        }
+        if (typeof value === "number") {
+            return isFinite(value) ? String(value) : "0";
+        }
+        if (typeof value === "boolean") {
+            return value ? "true" : "false";
+        }
+        if (typeof value === "string") {
+            return "\"" + AEToolbox.jsonEscape(value) + "\"";
+        }
+        if (value instanceof Array) {
+            for (i = 0; i < value.length; i++) {
+                parts[parts.length] = AEToolbox.stringify(value[i]);
+            }
+            return "[" + parts.join(",") + "]";
+        }
+        if (typeof value === "object") {
+            for (k in value) {
+                if (value.hasOwnProperty(k) && typeof value[k] !== "function" && k.charAt(0) !== "_") {
+                    parts[parts.length] = "\"" + AEToolbox.jsonEscape(k) + "\":" + AEToolbox.stringify(value[k]);
+                }
+            }
+            return "{" + parts.join(",") + "}";
+        }
+        return "\"\"";
+    };
+
+    AEToolbox._registeredTools = [];
+    AEToolbox._registeredToolMap = {};
+    AEToolbox._registeredToolLoadErrors = [];
+
+    AEToolbox.registerTool = function (toolDef) {
+        var id;
+        var i;
+        if (!toolDef || !toolDef.id) {
+            return false;
+        }
+        id = String(toolDef.id);
+        toolDef.id = id;
+        if (AEToolbox._registeredToolMap.hasOwnProperty(id)) {
+            for (i = 0; i < AEToolbox._registeredTools.length; i++) {
+                if (AEToolbox._registeredTools[i].id === id) {
+                    AEToolbox._registeredTools[i] = toolDef;
+                    break;
+                }
+            }
+        } else {
+            AEToolbox._registeredTools[AEToolbox._registeredTools.length] = toolDef;
+        }
+        AEToolbox._registeredToolMap[id] = toolDef;
+        return true;
+    };
+
+    AEToolbox.getRegisteredTools = function () {
+        return AEToolbox.stringify({
+            ok: true,
+            tools: AEToolbox._registeredTools,
+            loadErrors: AEToolbox._registeredToolLoadErrors
+        });
+    };
+
+    AEToolbox.resolveFunction = function (path) {
+        var parts = String(path || "").split(".");
+        var current = $.global;
+        var i;
+        for (i = 0; i < parts.length; i++) {
+            if (!parts[i]) {
+                continue;
+            }
+            current = current[parts[i]];
+            if (!current) {
+                return null;
+            }
+        }
+        return typeof current === "function" ? current : null;
+    };
+
+    AEToolbox.runRegisteredToolAction = function (toolId, actionId, paramsJson) {
+        var tool = AEToolbox._registeredToolMap[String(toolId || "")];
+        var actions;
+        var action = null;
+        var fn;
+        var i;
+
+        if (!tool) {
+            return AEToolbox.toJson({
+                ok: false,
+                message: "Registered tool not found."
+            });
+        }
+
+        actions = tool.actions || [];
+        for (i = 0; i < actions.length; i++) {
+            if (actions[i] && actions[i].id === actionId) {
+                action = actions[i];
+                break;
+            }
+        }
+
+        if (!action || !action.hostFunction) {
+            return AEToolbox.toJson({
+                ok: false,
+                message: "Registered tool action not found."
+            });
+        }
+
+        fn = AEToolbox.resolveFunction(action.hostFunction);
+        if (!fn) {
+            return AEToolbox.toJson({
+                ok: false,
+                message: "Registered tool host function not found."
+            });
+        }
+
+        try {
+            return fn(paramsJson || "{}");
+        } catch (e) {
+            return AEToolbox.toJson({
+                ok: false,
+                message: "Registered tool action failed: " + e.toString()
+            });
+        }
+    };
+
     AEToolbox.parseJson = function (json) {
         if (typeof JSON !== "undefined" && JSON.parse) {
             return JSON.parse(json);
@@ -155,10 +286,54 @@ AEToolbox.ping = function () {
 #include "effectUtils.jsx"
 #include "shapeUtils.jsx"
 #include "tools/textBackgroundBox.jsx"
-#include "tools/selectionInfo.jsx"
 #include "tools/ecommerceLayout.jsx"
 #include "tools/adComponentKit.jsx"
 #include "tools/shapeAdd.jsx"
+
+(function () {
+    function sortFiles(files) {
+        try {
+            files.sort(function (a, b) {
+                var an = String(a.name).toLowerCase();
+                var bn = String(b.name).toLowerCase();
+                if (an < bn) {
+                    return -1;
+                }
+                if (an > bn) {
+                    return 1;
+                }
+                return 0;
+            });
+        } catch (e) {}
+        return files;
+    }
+
+    AEToolbox.loadRegisteredToolFiles = function () {
+        var baseFile = File($.fileName);
+        var toolsFolder = Folder(baseFile.parent.fsName + "/tools");
+        var files;
+        var i;
+
+        if (!toolsFolder.exists) {
+            return false;
+        }
+
+        files = sortFiles(toolsFolder.getFiles(function (file) {
+            return file instanceof File && /\.tool\.jsx$/i.test(file.name);
+        }));
+        for (i = 0; i < files.length; i++) {
+            try {
+                $.evalFile(files[i]);
+            } catch (e) {
+                AEToolbox._registeredToolLoadErrors[AEToolbox._registeredToolLoadErrors.length] = files[i].name + ": " + e.toString();
+            }
+        }
+
+        return true;
+    };
+
+    AEToolbox.loadRegisteredToolFiles();
+})();
 
 (function () {
     AEToolbox.getSelectionSummary = function () {
@@ -187,6 +362,8 @@ AEToolbox.ping = function () {
             ok: true,
             message: "Host load info ready.",
             hostFile: "host/index.jsx",
+            registeredToolCount: AEToolbox._registeredTools ? AEToolbox._registeredTools.length : 0,
+            registeredToolLoadErrors: AEToolbox._registeredToolLoadErrors ? AEToolbox._registeredToolLoadErrors.join("; ") : "",
             includesAdComponentKit: true,
             hasAdComponentKitCreateIconGrid: !!(AEToolbox.tools && AEToolbox.tools.adComponentKit && AEToolbox.tools.adComponentKit.createIconGrid)
         });
