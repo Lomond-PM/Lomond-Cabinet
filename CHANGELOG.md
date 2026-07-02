@@ -10,6 +10,16 @@ This project follows simple semantic versioning for development handoff:
 
 ## Unreleased
 
+### Changed
+
+- Migrated Background Rounded Rectangle / Text Background Box to the `.tool.jsx` registry path while keeping existing host creation behavior.
+- Legacy and registry tools continue to coexist during the incremental migration.
+- Added core registry renderer support for section-level enable toggles and collapsible section bodies.
+- Updated Background Rounded Rectangle to use section toggles for Fill and Stroke enablement.
+- Added a Registry Control Lab section-toggle test panel.
+- Added shared registry tool parameter persistence under `aeToolbox.registryToolValues.<toolId>`.
+- Added a shared registry Restore Defaults action for schema-driven tools.
+
 ## [0.2.0] - 2026-07-02
 
 ### Added

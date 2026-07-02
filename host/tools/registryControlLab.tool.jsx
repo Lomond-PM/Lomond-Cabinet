@@ -132,6 +132,33 @@
                         defaultValue: "#ffffff"
                     }
                 ]
+            },
+            {
+                id: "togglePanel",
+                labelKey: "tools.registryControlLab.sections.togglePanel",
+                descriptionKey: "tools.registryControlLab.sections.togglePanelDescription",
+                toggleKey: "enableTogglePanel",
+                defaultEnabled: true,
+                collapsible: true,
+                fields: [
+                    {
+                        type: "text",
+                        key: "toggleText",
+                        labelKey: "tools.registryControlLab.fields.toggleText",
+                        hintKey: "tools.registryControlLab.hints.toggleText",
+                        defaultValue: "Enabled section"
+                    },
+                    {
+                        type: "number",
+                        key: "toggleNumber",
+                        labelKey: "tools.registryControlLab.fields.toggleNumber",
+                        hintKey: "tools.registryControlLab.hints.toggleNumber",
+                        defaultValue: 8,
+                        min: 0,
+                        max: 20,
+                        step: 1
+                    }
+                ]
             }
         ],
         actions: [
@@ -152,6 +179,8 @@
                 "tools.registryControlLab.sections.colorsDescription": "Color pills, hex values, and the HSV picker.",
                 "tools.registryControlLab.sections.options": "Options",
                 "tools.registryControlLab.sections.optionsDescription": "Switch and select controls using the shared black-gold UI.",
+                "tools.registryControlLab.sections.togglePanel": "Toggle Section",
+                "tools.registryControlLab.sections.togglePanelDescription": "Tests section-level enable and collapse behavior.",
                 "tools.registryControlLab.fields.textValue": "Text",
                 "tools.registryControlLab.fields.noteValue": "Note",
                 "tools.registryControlLab.fields.numberValue": "Number",
@@ -160,6 +189,8 @@
                 "tools.registryControlLab.fields.mode": "Mode",
                 "tools.registryControlLab.fields.fillColor": "Fill Color",
                 "tools.registryControlLab.fields.strokeColor": "Stroke Color",
+                "tools.registryControlLab.fields.toggleText": "Toggle Text",
+                "tools.registryControlLab.fields.toggleNumber": "Toggle Number",
                 "tools.registryControlLab.actions.previewValues": "Preview Values",
                 "tools.registryControlLab.status.previewed": "Received registry control values.",
                 "tools.registryControlLab.notes.basic": "This lab validates shared controls only. It does not modify After Effects layers.",
@@ -170,7 +201,9 @@
                 "tools.registryControlLab.hints.enabled": "Keeps the existing switch visual style.",
                 "tools.registryControlLab.hints.mode": "Uses the existing custom select menu.",
                 "tools.registryControlLab.hints.fillColor": "Opens the custom HSV color picker.",
-                "tools.registryControlLab.hints.strokeColor": "Returns a normalized #rrggbb value."
+                "tools.registryControlLab.hints.strokeColor": "Returns a normalized #rrggbb value.",
+                "tools.registryControlLab.hints.toggleText": "This field is muted while the section is disabled.",
+                "tools.registryControlLab.hints.toggleNumber": "The toggle value is still collected with form values."
             },
             "zh-CN": {
                 "tools.registryControlLab.title": "\u63a7\u4ef6\u6d4b\u8bd5\u5b9e\u9a8c\u5ba4",
@@ -181,6 +214,8 @@
                 "tools.registryControlLab.sections.colorsDescription": "\u9a8c\u8bc1\u8272\u5757\u3001Hex \u503c\u548c HSV \u53d6\u8272\u5668\u3002",
                 "tools.registryControlLab.sections.options": "\u9009\u9879",
                 "tools.registryControlLab.sections.optionsDescription": "\u4f7f\u7528\u5171\u7528\u9ed1\u91d1 UI \u7684\u5f00\u5173\u548c\u4e0b\u62c9\u63a7\u4ef6\u3002",
+                "tools.registryControlLab.sections.togglePanel": "\u5206\u533a\u5f00\u5173",
+                "tools.registryControlLab.sections.togglePanelDescription": "\u9a8c\u8bc1\u5206\u533a\u7ea7\u542f\u7528\u548c\u6298\u53e0\u884c\u4e3a\u3002",
                 "tools.registryControlLab.fields.textValue": "\u6587\u672c",
                 "tools.registryControlLab.fields.noteValue": "\u5907\u6ce8",
                 "tools.registryControlLab.fields.numberValue": "\u6570\u503c",
@@ -189,6 +224,8 @@
                 "tools.registryControlLab.fields.mode": "\u6a21\u5f0f",
                 "tools.registryControlLab.fields.fillColor": "\u586b\u5145\u989c\u8272",
                 "tools.registryControlLab.fields.strokeColor": "\u63cf\u8fb9\u989c\u8272",
+                "tools.registryControlLab.fields.toggleText": "\u5f00\u5173\u6587\u672c",
+                "tools.registryControlLab.fields.toggleNumber": "\u5f00\u5173\u6570\u503c",
                 "tools.registryControlLab.actions.previewValues": "\u9884\u89c8\u53c2\u6570",
                 "tools.registryControlLab.status.previewed": "\u5df2\u63a5\u6536 registry \u63a7\u4ef6\u53c2\u6570\u3002",
                 "tools.registryControlLab.notes.basic": "\u8be5\u5b9e\u9a8c\u5ba4\u53ea\u9a8c\u8bc1\u5171\u7528\u63a7\u4ef6\uff0c\u4e0d\u4fee\u6539 After Effects \u56fe\u5c42\u3002",
@@ -199,7 +236,9 @@
                 "tools.registryControlLab.hints.enabled": "\u4fdd\u7559\u73b0\u6709\u5f00\u5173\u89c6\u89c9\u98ce\u683c\u3002",
                 "tools.registryControlLab.hints.mode": "\u4f7f\u7528\u73b0\u6709\u81ea\u5b9a\u4e49\u4e0b\u62c9\u83dc\u5355\u3002",
                 "tools.registryControlLab.hints.fillColor": "\u6253\u5f00\u81ea\u5b9a\u4e49 HSV \u53d6\u8272\u5668\u3002",
-                "tools.registryControlLab.hints.strokeColor": "\u8fd4\u56de\u6807\u51c6\u5316\u7684 #rrggbb \u503c\u3002"
+                "tools.registryControlLab.hints.strokeColor": "\u8fd4\u56de\u6807\u51c6\u5316\u7684 #rrggbb \u503c\u3002",
+                "tools.registryControlLab.hints.toggleText": "\u5206\u533a\u5173\u95ed\u65f6\u8be5\u5b57\u6bb5\u4f1a\u5f31\u5316\u663e\u793a\u3002",
+                "tools.registryControlLab.hints.toggleNumber": "\u5206\u533a\u5f00\u5173\u503c\u4f1a\u968f\u8868\u5355\u53c2\u6570\u4e00\u8d77\u6536\u96c6\u3002"
             }
         }
     });

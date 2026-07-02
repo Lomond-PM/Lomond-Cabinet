@@ -280,6 +280,9 @@ Current registry schema shape:
     {
       id: "main",
       labelKey: "tools.toolId.sections.main",
+      toggleKey: "enableMain",
+      defaultEnabled: true,
+      collapsible: true,
       fields: [
         {
           type: "number",
@@ -307,6 +310,22 @@ Current registry schema shape:
   }
 }
 ```
+
+Section-level toggles are part of the core renderer contract:
+
+- `toggleKey` adds a shared switch in the section header.
+- `defaultEnabled` controls the initial enabled state.
+- `collapsible: true` allows the section body to collapse.
+- Disabled sections must still collect their toggle value.
+- Tools must let host actions decide how disabled section data affects execution.
+
+Registry tool values are persisted by the core renderer:
+
+- Storage key: `aeToolbox.registryToolValues.<toolId>`.
+- Tools only provide `defaultValue`, `toggleKey`, and `defaultEnabled`.
+- The renderer merges schema defaults with saved values when opening a tool.
+- Field values, section toggles, and section collapse state are saved automatically.
+- Tools must not implement their own `localStorage` handling.
 
 `uiSchema` remains supported as a compatibility shortcut and is treated as one `Parameters` section. New registry tools should prefer `sections`.
 

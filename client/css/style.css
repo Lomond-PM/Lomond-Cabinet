@@ -2806,12 +2806,59 @@ p {
 
 .registry-section-heading {
     align-items: flex-start;
-    justify-content: flex-start;
+    justify-content: space-between;
     margin-bottom: calc(14px * var(--ui-scale));
+    gap: calc(12px * var(--ui-scale));
 }
 
 .registry-section-description {
     margin: calc(5px * var(--ui-scale)) 0 0;
+}
+
+.registry-section-actions {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-end;
+    gap: calc(8px * var(--ui-scale));
+}
+
+.registry-section-toggle {
+    flex: 0 0 auto;
+}
+
+.registry-section-body {
+    display: block;
+}
+
+.registry-params-card.is-section-collapsed .registry-section-body {
+    display: none;
+}
+
+.registry-params-card.is-section-disabled .registry-section-body {
+    opacity: 0.45;
+}
+
+.registry-params-card.is-section-disabled .registry-section-heading {
+    color: var(--text-tertiary);
+}
+
+.registry-params-card.is-registry-collapsible .registry-section-heading {
+    cursor: pointer;
+}
+
+.registry-section-chevron {
+    display: inline-block;
+    width: calc(8px * var(--ui-scale));
+    height: calc(8px * var(--ui-scale));
+    border-right: 2px solid var(--gold-soft);
+    border-bottom: 2px solid var(--gold-soft);
+    transform: rotate(45deg);
+    transition: transform var(--dur-fast) var(--ease-apple-standard);
+}
+
+.registry-params-card.is-section-collapsed .registry-section-chevron {
+    transform: rotate(-45deg);
 }
 
 .registry-field-row,

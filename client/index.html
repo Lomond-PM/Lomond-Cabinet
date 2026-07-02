@@ -31,14 +31,6 @@
 
             <main class="home-content">
                 <div class="tool-grid" id="toolGrid" aria-label="Tool grid">
-                    <button class="tool-app app-card" id="openTextBgTool" data-tool="textBackgroundBox">
-                        <span class="tool-icon text-bg-icon">
-                            <span class="icon-layer icon-layer-back"></span>
-                            <span class="icon-layer icon-layer-front"></span>
-                        </span>
-                        <span class="app-card-title" data-tool-title="textBackgroundBox">Background Rounded Rectangle</span>
-                    </button>
-
                     <button class="tool-app app-card" id="openEcommerceLayoutTool" data-tool="ecommerceLayout">
                         <span class="tool-icon ecommerce-tool-icon">
                             <span class="commerce-glyph">A</span>
@@ -79,133 +71,6 @@
 
             <main class="detail-content">
                 <section class="registry-tool-panel tool-panel" id="registryToolPanel" data-tool-panel="__dynamic"></section>
-
-                <section class="info-panel intro-panel tool-panel" data-tool-panel="textBackgroundBox">
-                    <div class="mini-icon-wrap">
-                        <span class="tool-icon text-bg-icon small">
-                            <span class="icon-layer icon-layer-back"></span>
-                            <span class="icon-layer icon-layer-front"></span>
-                        </span>
-                    </div>
-                    <div>
-                        <h3 data-i18n="tools.textBackgroundBox.introTitle">Create rounded backgrounds</h3>
-                        <p data-i18n="tools.textBackgroundBox.description">Create a rounded rectangle behind selected layers, or a default 100x100 rounded rectangle when nothing is selected.</p>
-                    </div>
-                </section>
-
-                <section class="panel-card control-card tool-panel" data-tool-panel="textBackgroundBox">
-                    <div class="card-heading">
-                        <div>
-                            <p class="overline" data-i18n="section.geometry">Geometry</p>
-                            <h3 data-i18n="section.bounds">Bounds</h3>
-                        </div>
-                    </div>
-
-                    <label class="control-row">
-                        <span class="control-label" data-i18n="label.paddingX">Padding X</span>
-                        <span class="control-inputs">
-                            <input id="paddingX" class="pill-slider" type="range" min="0" max="300" value="40">
-                            <input id="paddingXNumber" class="num-input" type="number" min="0" value="40">
-                        </span>
-                    </label>
-
-                    <label class="control-row">
-                        <span class="control-label" data-i18n="label.paddingY">Padding Y</span>
-                        <span class="control-inputs">
-                            <input id="paddingY" class="pill-slider" type="range" min="0" max="300" value="20">
-                            <input id="paddingYNumber" class="num-input" type="number" min="0" value="20">
-                        </span>
-                    </label>
-
-                    <label class="control-row">
-                        <span class="control-label" data-i18n="label.roundness">Roundness</span>
-                        <span class="control-inputs">
-                            <input id="roundness" class="pill-slider" type="range" min="0" max="300" value="20">
-                            <input id="roundnessNumber" class="num-input" type="number" min="0" value="20">
-                        </span>
-                    </label>
-                </section>
-
-                <section class="panel-card control-card tool-panel" data-tool-panel="textBackgroundBox">
-                    <div class="card-heading">
-                        <div>
-                            <p class="overline" data-i18n="section.fill">Fill</p>
-                            <h3 data-i18n="section.surface">Surface</h3>
-                        </div>
-                    </div>
-
-                    <div class="segmented segmented-control" data-name="fillMode">
-                        <button data-value="None" data-i18n="common.none">None</button>
-                        <button class="is-active" data-value="Solid Fill" data-i18n="common.solid">Solid</button>
-                        <button data-value="Gradient Fill" data-i18n="common.gradient">Gradient</button>
-                    </div>
-
-                    <label class="control-row color-row" id="fillColorField">
-                        <span class="control-label" data-i18n="label.fillColor">Fill Color</span>
-                        <span class="color-shell" role="button" tabindex="0" data-color-target="fillColor" aria-label="Choose fill color" data-i18n-aria-label="label.fillColor">
-                            <input id="fillColor" class="native-color-input" type="hidden" value="#202020">
-                        </span>
-                    </label>
-
-                    <label class="control-row" id="fillOpacityField">
-                        <span class="control-label" data-i18n="label.fillOpacity">Fill Opacity</span>
-                        <span class="control-inputs">
-                            <input id="fillOpacity" class="pill-slider" type="range" min="0" max="100" value="80">
-                            <input id="fillOpacityNumber" class="num-input" type="number" min="0" max="100" value="80">
-                        </span>
-                    </label>
-                </section>
-
-                <section class="panel-card control-card tool-panel" data-tool-panel="textBackgroundBox">
-                    <div class="card-heading">
-                        <div>
-                            <p class="overline" data-i18n="section.stroke">Stroke</p>
-                            <h3 data-i18n="section.outline">Outline</h3>
-                        </div>
-                    </div>
-
-                    <div class="segmented segmented-control" data-name="strokeMode">
-                        <button class="is-active" data-value="None" data-i18n="common.none">None</button>
-                        <button data-value="Solid Stroke" data-i18n="common.solid">Solid</button>
-                        <button data-value="Gradient Stroke" data-i18n="common.gradient">Gradient</button>
-                    </div>
-
-                    <label class="control-row color-row" id="strokeColorField">
-                        <span class="control-label" data-i18n="label.strokeColor">Stroke Color</span>
-                        <span class="color-shell" role="button" tabindex="0" data-color-target="strokeColor" aria-label="Choose stroke color" data-i18n-aria-label="label.strokeColor">
-                            <input id="strokeColor" class="native-color-input" type="hidden" value="#ffffff">
-                        </span>
-                    </label>
-
-                    <label class="control-row" id="strokeWidthField">
-                        <span class="control-label" data-i18n="label.strokeWidth">Stroke Width</span>
-                        <span class="control-inputs">
-                            <input id="strokeWidth" class="pill-slider" type="range" min="0" max="80" value="2">
-                            <input id="strokeWidthNumber" class="num-input" type="number" min="0" value="2">
-                        </span>
-                    </label>
-
-                    <label class="control-row" id="strokeOpacityField">
-                        <span class="control-label" data-i18n="label.strokeOpacity">Stroke Opacity</span>
-                        <span class="control-inputs">
-                            <input id="strokeOpacity" class="pill-slider" type="range" min="0" max="100" value="100">
-                            <input id="strokeOpacityNumber" class="num-input" type="number" min="0" max="100" value="100">
-                        </span>
-                    </label>
-                </section>
-
-                <section class="panel-card compact-card tool-panel" data-tool-panel="textBackgroundBox">
-                    <label class="switch-row">
-                        <span>
-                            <strong data-i18n="label.autoSelectionStatus">Auto selection status</strong>
-                            <small data-i18n="helper.autoSelectionStatus">Refresh selected text layer count while the panel is open.</small>
-                        </span>
-                        <span class="switch">
-                            <input id="autoStatus" type="checkbox" checked>
-                            <span class="switch-track"></span>
-                        </span>
-                    </label>
-                </section>
 
                 <section class="shape-add-panel tool-panel" data-tool-panel="shapeAdd">
                     <section class="panel-card control-card collapsible-card" id="shapeAddItemsCard">
@@ -364,14 +229,6 @@
 
             <footer class="action-sheet tool-actions" id="registryToolActions" data-tool-actions="__dynamic"></footer>
 
-            <footer class="action-sheet tool-actions" data-tool-actions="textBackgroundBox">
-                <button class="panel-button secondary-action" id="resetBtn">
-                    <span class="button-glyph" data-i18n="common.reset">Reset</span>
-                </button>
-                <button class="primary-action" id="createBtn">
-                    <span class="button-glyph" data-i18n="button.createBackgroundBox">Create Background Box</span>
-                </button>
-            </footer>
             <footer class="action-sheet tool-actions" data-tool-actions="ecommerceLayout">
                 <button class="primary-action component-action-button is-active" id="createFeatureStackBtn" type="button" data-component-action="featureStack">
                     <span class="button-glyph" data-i18n="button.createFeatureStack">Create Feature Stack</span>

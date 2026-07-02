@@ -78,6 +78,24 @@ Purpose:
 - Create shape backgrounds behind selected text layers.
 - Uses selected text layer visual bounds and creation-time padding.
 - Supports fill/stroke mode choices.
+- Migrated to the `.tool.jsx` registry path in `host/tools/textBackgroundBox.tool.jsx`.
+- The legacy host implementation remains in `host/tools/textBackgroundBox.jsx` and is reused by the registry action.
+- Fill and Stroke are controlled by registry section-level toggles instead of using `None` as the primary enable switch.
+- Registry field values and section UI state persist through the core renderer using `aeToolbox.registryToolValues.textBackgroundBox`.
+
+### Registry Control Lab
+
+Host module:
+
+```text
+host/tools/registryControlLab.tool.jsx
+```
+
+Purpose:
+
+- Validate shared registry renderer controls.
+- Includes a section-level toggle test panel for enable/collapse behavior.
+- Uses shared registry value persistence to verify saved field and toggle state.
 
 ### Selection Info
 

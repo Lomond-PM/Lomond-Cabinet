@@ -24,17 +24,22 @@ var AEToolbox = AEToolbox || {};
 
     function sanitizeOptions(raw) {
         raw = raw || {};
-        var fillMode = raw.fillMode === "Gradient Fill" || raw.fillMode === "Solid Fill" ? raw.fillMode : "None";
-        var strokeMode = raw.strokeMode === "Gradient Stroke" || raw.strokeMode === "Solid Stroke" ? raw.strokeMode : "None";
+        var enableFill = raw.enableFill === false ? false : true;
+        var enableStroke = raw.enableStroke === true ? true : false;
+        var fillMode = raw.fillMode === "Gradient Fill" || raw.fillMode === "Solid Fill" ? raw.fillMode : "Solid Fill";
+        var strokeMode = raw.strokeMode === "Gradient Stroke" || raw.strokeMode === "Solid Stroke" ? raw.strokeMode : "Solid Stroke";
+        var roundnessValue = typeof raw.cornerRadius !== "undefined" ? raw.cornerRadius : raw.roundness;
 
         return {
             paddingX: Math.max(0, U.number(raw.paddingX, 40)),
             paddingY: Math.max(0, U.number(raw.paddingY, 20)),
-            roundness: Math.max(0, U.number(raw.roundness, 20)),
-            fillMode: fillMode,
+            roundness: Math.max(0, U.number(roundnessValue, 20)),
+            enableFill: enableFill,
+            fillMode: enableFill ? fillMode : "None",
             fillColor: U.hexToColor(U.normalizeHex(raw.fillColor, "#202020")),
             fillOpacity: U.clamp(U.number(raw.fillOpacity, 80), 0, 100),
-            strokeMode: strokeMode,
+            enableStroke: enableStroke,
+            strokeMode: enableStroke ? strokeMode : "None",
             strokeColor: U.hexToColor(U.normalizeHex(raw.strokeColor, "#FFFFFF")),
             strokeWidth: Math.max(0, U.number(raw.strokeWidth, 2)),
             strokeOpacity: U.clamp(U.number(raw.strokeOpacity, 100), 0, 100)
@@ -496,6 +501,7 @@ var AEToolbox = AEToolbox || {};
         if (selectedLayers.length === 0) {
             return AEToolbox.toJson({
                 ok: true,
+                messageKey: "tools.textBackgroundBox.status.noLayerSelected",
                 message: "Created default 100x100 rounded rectangle.",
                 count: created,
                 selectionLabel: "Default 100x100"
@@ -504,6 +510,7 @@ var AEToolbox = AEToolbox || {};
 
         return AEToolbox.toJson({
             ok: true,
+            messageKey: "tools.textBackgroundBox.status.created",
             message: "Created " + created + " background rounded rectangle(s).",
             count: created,
             selectionLabel: selectedLayers.length + " layer(s)"
