@@ -31,6 +31,7 @@
         descriptionKey: "tools.registryProbe.description",
         category: "debug",
         iconText: "R",
+        debugOnly: true,
         uiSchema: [
             {
                 type: "text",

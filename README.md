@@ -12,6 +12,12 @@ The current manifest menu name is:
 AE Toolbox
 ```
 
+Current project version:
+
+```text
+0.2.1
+```
+
 ## Project Type
 
 This is an **After Effects CEP Extension**.
@@ -63,12 +69,18 @@ com.kevin.aetoolbox/
 
 Confirmed active frontend tools:
 
-- Text Background Box
+- Background Rounded Rectangle / Text Background Box
 - Selection Info
 - Ad Component Kit
-- Shape Add
+- Shape Add / Shape Builder
 
 The Home view also contains a disabled More Tools card.
+
+Developer Mode tools are hidden from the normal Home view and appear only when the Developer Mode setting is enabled:
+
+- Registry Control Lab
+- Registry Probe
+- Shape Add Probe
 
 `host/tools/ecommerceLayout.jsx` is still included by `host/index.jsx`, but the current active ecommerce-facing UI is Ad Component Kit.
 

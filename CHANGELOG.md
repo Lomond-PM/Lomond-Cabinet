@@ -10,6 +10,12 @@ This project follows simple semantic versioning for development handoff:
 
 ## Unreleased
 
+### Notes
+
+- No unreleased changes yet.
+
+## [0.2.1] - 2026-07-03
+
 ### Changed
 
 - Migrated Background Rounded Rectangle / Text Background Box to the `.tool.jsx` registry path while keeping existing host creation behavior.
@@ -27,7 +33,14 @@ This project follows simple semantic versioning for development handoff:
 - Extended Registry Control Lab to cover action payloads, host state display, state-gated buttons, after-run state refresh, and action-specific status fallback behavior.
 - Added a Developer Mode / registry debug tools setting for showing debug-only registry probe tools.
 - Added a debug-only Shape Add Probe registry tool to validate action payload, stateAction, state-driven disabled state, state card, and after-run state refresh against the legacy Shape Add host action.
-- Documented the Shape Add registry migration audit and kept formal migration deferred for a phased AE-tested migration path.
+- Documented the Shape Add registry migration audit before continuing with a phased AE-tested migration path.
+- Migrated the formal Shape Add native item buttons to the `.tool.jsx` registry path using action payloads, host state, state-driven disabled buttons, and after-run state refresh.
+- Migrated the Shape Add Stroke / Fill Shape Layer subtool UI into registry sections while reusing the existing `shapeAdd_createStrokeFillLayer(paramsJson)` host logic.
+- Moved Stroke / Fill parameters into a collapsible registry settings section under the create button and added a section-local reset defaults button.
+- Removed the legacy static Home card for Shape Add so the registry Shape Add entry owns the Home card and saved `toolId` order can continue using `shapeAdd`.
+- Added hidden / field-only registry actions so schema button fields can resolve host functions without creating duplicate footer buttons.
+- Added tool-local Shape Add i18n for title, description, and 19 native shape item labels.
+- Developer Mode now owns debug/probe/lab registry tools such as Registry Control Lab, Registry Probe, and Shape Add Probe.
 
 ### Fixed
 
@@ -39,7 +52,7 @@ This project follows simple semantic versioning for development handoff:
 
 ### Migration Notes
 
-- Shape Add remains a legacy compound tool. Direct same-id replacement with `shapeAdd.tool.jsx` is deferred because it risks conflicts between the static Home entry, dynamic registry entry, saved Home layout order, legacy detail panel, registry detail panel, host state refresh, and multi-action button payloads.
+- Shape Add phase migration is now the active formal path. The 19 native shape item buttons and Stroke / Fill Shape Layer UI use the registry path, while the legacy host execution module remains preserved for AE layer operations.
 
 ## [0.2.0] - 2026-07-02
 

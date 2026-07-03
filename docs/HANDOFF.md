@@ -275,3 +275,11 @@ shapeAdd_getState()
 shapeAdd_add(matchName, key)
 shapeAdd_createStrokeFillLayer(paramsJson)
 ```
+
+In 0.2.1, Shape Add / Shape Builder is the formal registry Home entry, but it still reuses the preserved legacy `host/tools/shapeAdd.jsx` host actions. Do not delete the legacy host module during handoff cleanup.
+
+Developer Mode-only registry tools are hidden from normal users and appear only when Settings > Developer Mode is enabled:
+
+- Registry Control Lab
+- Registry Probe
+- Shape Add Probe
