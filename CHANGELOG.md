@@ -25,6 +25,8 @@ This project follows simple semantic versioning for development handoff:
 - Extended Registry Control Lab to cover full-width buttons, center-axis bilingual button text, tabs, and conditional fields.
 - Added core registry action/state capabilities: action payloads, host state queries, state-driven disabled buttons/actions, state status cards, after-run state refresh, and action-specific status fallbacks.
 - Extended Registry Control Lab to cover action payloads, host state display, state-gated buttons, after-run state refresh, and action-specific status fallback behavior.
+- Added a Developer Mode / registry debug tools setting for showing debug-only registry probe tools.
+- Added a debug-only Shape Add Probe registry tool to validate action payload, stateAction, state-driven disabled state, state card, and after-run state refresh against the legacy Shape Add host action.
 - Documented the Shape Add registry migration audit and kept formal migration deferred for a phased AE-tested migration path.
 
 ### Fixed
