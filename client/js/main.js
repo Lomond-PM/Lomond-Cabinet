@@ -132,7 +132,8 @@
         homeBackground: "#050403",
         toolIconColor: "#15120c",
         toolIconLine: "#fff0be",
-        autoStatus: true
+        autoStatus: true,
+        registryDebugTools: false
     };
     var BackgroundEngine = {
         defaults: {
@@ -305,11 +306,13 @@
         isEditing: false,
         dragState: null,
         globalEventsBound: false,
+        initialized: false,
 
         init: function () {
             this.loadOrder();
             this.renderOrder();
             this.bindIconEvents();
+            this.initialized = true;
         },
 
         getToolButtons: function () {
@@ -1031,7 +1034,7 @@
 
         for (i = 0; i < DynamicToolOrder.length; i++) {
             tool = DynamicTools[DynamicToolOrder[i]];
-            if (!tool || tool.hidden) {
+            if (!tool || tool.hidden || (tool.debugOnly && window.AETOOLBOX_DEBUG_REGISTRY !== true)) {
                 continue;
             }
             button = document.createElement("button");
@@ -1052,6 +1055,22 @@
             button.appendChild(icon);
             button.appendChild(title);
             grid.insertBefore(button, more);
+        }
+    }
+
+    function applyRegistryDebugTools(enabled) {
+        window.AETOOLBOX_DEBUG_REGISTRY = enabled === true;
+        if (byId("registryDebugTools")) {
+            byId("registryDebugTools").checked = window.AETOOLBOX_DEBUG_REGISTRY === true;
+        }
+        if (!HomeLayoutManager || !HomeLayoutManager.initialized) {
+            return;
+        }
+        renderDynamicToolHome();
+        if (HomeLayoutManager && HomeLayoutManager.loadOrder) {
+            HomeLayoutManager.loadOrder();
+            HomeLayoutManager.renderOrder();
+            HomeLayoutManager.bindIconEvents();
         }
     }
 
@@ -4788,6 +4807,7 @@
 
     function collectSettings() {
         var autoStatus = byId("autoStatus");
+        var registryDebugTools = byId("registryDebugTools");
         return {
             motionSpeed: clampNumber(byId("motionSpeedNumber").value, DefaultSettings.motionSpeed, 0.75, 1.35),
             uiScale: clampNumber(byId("uiScaleNumber").value, DefaultSettings.uiScale, 0.62, 1.18),
@@ -4795,7 +4815,8 @@
             homeBackground: normalizeHex(byId("homeBackground").value, DefaultSettings.homeBackground),
             toolIconColor: normalizeHex(byId("toolIconColor").value, DefaultSettings.toolIconColor),
             toolIconLine: normalizeHex(byId("toolIconLine").value, DefaultSettings.toolIconLine),
-            autoStatus: autoStatus ? !!autoStatus.checked : true
+            autoStatus: autoStatus ? !!autoStatus.checked : true,
+            registryDebugTools: registryDebugTools ? !!registryDebugTools.checked : false
         };
     }
 
@@ -4813,6 +4834,7 @@
         if (byId("autoStatus")) {
             byId("autoStatus").checked = data.autoStatus !== false;
         }
+        applyRegistryDebugTools(data.registryDebugTools === true);
         applyThemeAccent(data.themeAccent || DefaultSettings.themeAccent);
         applyHomeBackground(data.homeBackground || DefaultSettings.homeBackground);
         applyToolIconTheme(data.toolIconColor || DefaultSettings.toolIconColor, data.toolIconLine || DefaultSettings.toolIconLine);
@@ -5123,6 +5145,12 @@
         }
         if (byId("autoStatus")) {
             byId("autoStatus").addEventListener("change", saveSettings);
+        }
+        if (byId("registryDebugTools")) {
+            byId("registryDebugTools").addEventListener("change", function () {
+                applyRegistryDebugTools(!!this.checked);
+                saveSettings();
+            });
         }
         document.addEventListener("keydown", function (event) {
             if (event.keyCode === 27) {
