@@ -333,6 +333,19 @@ Registry renderer standard controls now include:
 - `tabs` fields rendered as option cards with `iconText`, translated title, and translated description.
 - `visibleWhen` on any field for conditional display based on another field value.
 
+Registry action/state capabilities:
+
+- Button fields and footer actions may declare `actionPayload`; the renderer merges that payload into only the clicked action params.
+- `actionPayload` is transient. It is not persisted and does not become a user-editable field value.
+- If `actionPayload` and schema values use the same key, payload wins for that action call.
+- Tools may declare `stateAction.hostFunction` and optional `stateAction.intervalMs`.
+- Host state is runtime-only and must not be written to `localStorage`.
+- Fields and actions may use `disabledWhen` / `enabledWhen` with `stateKey` and `equals` to control availability.
+- `stateCard` displays translated state values through the shared renderer.
+- `refreshStateAfterRun` refreshes host state after a successful action without creating another polling interval.
+- `pendingMessageKey`, `successMessageKey`, and `errorMessageKey` are frontend fallbacks. Host `messageKey` still has priority.
+- Registry tools must not write tool-specific DOM for state display or disabled buttons.
+
 For bilingual / matchName button text, tools may declare:
 
 ```js

@@ -5,6 +5,29 @@
 
     AEToolbox.tools = AEToolbox.tools || {};
     AEToolbox.tools.registryControlLab = AEToolbox.tools.registryControlLab || {};
+    AEToolbox.tools.registryControlLab._stateCount = AEToolbox.tools.registryControlLab._stateCount || 0;
+
+    AEToolbox.tools.registryControlLab.getState = function () {
+        var comp = app.project && app.project.activeItem;
+        var hasComp = !!(comp && comp instanceof CompItem);
+        var selectedCount = 0;
+
+        AEToolbox.tools.registryControlLab._stateCount += 1;
+        if (hasComp && comp.selectedLayers) {
+            selectedCount = comp.selectedLayers.length;
+        }
+
+        return AEToolbox.stringify({
+            ok: true,
+            messageKey: "tools.registryControlLab.status.stateRefreshed",
+            state: {
+                hasComp: hasComp,
+                compName: hasComp ? comp.name : "",
+                selectedCount: selectedCount,
+                refreshCount: AEToolbox.tools.registryControlLab._stateCount
+            }
+        });
+    };
 
     AEToolbox.tools.registryControlLab.previewValues = function (paramsJson) {
         var params = {};
@@ -13,6 +36,20 @@
             params = AEToolbox.parseJson(paramsJson || "{}");
         } catch (err) {
             params = {};
+        }
+
+        if (params.forceError) {
+            return AEToolbox.stringify({
+                ok: false,
+                received: params
+            });
+        }
+
+        if (params.omitMessageKey) {
+            return AEToolbox.stringify({
+                ok: true,
+                received: params
+            });
         }
 
         return AEToolbox.stringify({
@@ -28,6 +65,27 @@
         descriptionKey: "tools.registryControlLab.description",
         category: "debug",
         iconText: "C",
+        stateAction: {
+            hostFunction: "AEToolbox.tools.registryControlLab.getState",
+            intervalMs: 1200
+        },
+        stateCard: {
+            titleKey: "tools.registryControlLab.sections.state",
+            fields: [
+                {
+                    stateKey: "compName",
+                    labelKey: "tools.registryControlLab.state.compName"
+                },
+                {
+                    stateKey: "selectedCount",
+                    labelKey: "tools.registryControlLab.state.selectedCount"
+                },
+                {
+                    stateKey: "refreshCount",
+                    labelKey: "tools.registryControlLab.state.refreshCount"
+                }
+            ]
+        },
         sections: [
             {
                 id: "basic",
@@ -195,6 +253,80 @@
                 ]
             },
             {
+                id: "actionState",
+                labelKey: "tools.registryControlLab.sections.actionState",
+                descriptionKey: "tools.registryControlLab.sections.actionStateDescription",
+                fields: [
+                    {
+                        type: "info",
+                        labelKey: "tools.registryControlLab.notes.actionState"
+                    },
+                    {
+                        type: "button",
+                        key: "payloadButton",
+                        labelKey: "tools.registryControlLab.actions.payloadButton",
+                        secondaryText: "payload",
+                        textLayout: "centerAxisPair",
+                        variant: "secondary",
+                        fullWidth: true,
+                        actionId: "previewValues",
+                        actionPayload: {
+                            payloadKey: "rectangle",
+                            matchName: "ADBE Vector Shape - Rect",
+                            omitMessageKey: true
+                        },
+                        pendingMessageKey: "tools.registryControlLab.status.payloadPending",
+                        successMessageKey: "tools.registryControlLab.status.payloadReceived",
+                        errorMessageKey: "tools.registryControlLab.status.payloadFailed"
+                    },
+                    {
+                        type: "button",
+                        key: "stateDisabledButton",
+                        labelKey: "tools.registryControlLab.actions.stateDisabledButton",
+                        variant: "secondary",
+                        fullWidth: true,
+                        actionId: "previewValues",
+                        enabledWhen: {
+                            stateKey: "hasComp",
+                            equals: true
+                        },
+                        actionPayload: {
+                            source: "stateDisabledButton"
+                        },
+                        pendingMessageKey: "tools.registryControlLab.status.stateButtonPending",
+                        successMessageKey: "tools.registryControlLab.status.stateButtonSuccess"
+                    },
+                    {
+                        type: "button",
+                        key: "fallbackErrorButton",
+                        labelKey: "tools.registryControlLab.actions.fallbackErrorButton",
+                        variant: "secondary",
+                        fullWidth: true,
+                        actionId: "previewValues",
+                        actionPayload: {
+                            source: "fallbackErrorButton",
+                            forceError: true
+                        },
+                        pendingMessageKey: "tools.registryControlLab.status.fallbackErrorPending",
+                        errorMessageKey: "tools.registryControlLab.status.fallbackErrorShown"
+                    },
+                    {
+                        type: "button",
+                        key: "refreshAfterRunButton",
+                        labelKey: "tools.registryControlLab.actions.refreshAfterRunButton",
+                        variant: "primary",
+                        fullWidth: true,
+                        actionId: "previewValues",
+                        refreshStateAfterRun: true,
+                        actionPayload: {
+                            source: "refreshAfterRunButton"
+                        },
+                        pendingMessageKey: "tools.registryControlLab.status.refreshAfterRunPending",
+                        successMessageKey: "tools.registryControlLab.status.refreshAfterRunSuccess"
+                    }
+                ]
+            },
+            {
                 id: "tabs",
                 labelKey: "tools.registryControlLab.sections.tabs",
                 descriptionKey: "tools.registryControlLab.sections.tabsDescription",
@@ -253,7 +385,11 @@
                 id: "previewValues",
                 labelKey: "tools.registryControlLab.actions.previewValues",
                 hostFunction: "AEToolbox.tools.registryControlLab.previewValues",
-                style: "primary"
+                style: "primary",
+                refreshStateAfterRun: true,
+                pendingMessageKey: "tools.registryControlLab.status.previewPending",
+                successMessageKey: "tools.registryControlLab.status.previewed",
+                errorMessageKey: "tools.registryControlLab.status.previewFailed"
             }
         ],
         i18n: {
@@ -272,6 +408,9 @@
                 "tools.registryControlLab.sections.actionsDescription": "Tests full-width registry action buttons and center-axis text layout.",
                 "tools.registryControlLab.sections.tabs": "Tabs",
                 "tools.registryControlLab.sections.tabsDescription": "Tests option cards and conditional field visibility.",
+                "tools.registryControlLab.sections.state": "Host State",
+                "tools.registryControlLab.sections.actionState": "Action and State",
+                "tools.registryControlLab.sections.actionStateDescription": "Action payloads, state-driven disabled buttons, and state refresh hooks.",
                 "tools.registryControlLab.fields.textValue": "Text",
                 "tools.registryControlLab.fields.noteValue": "Note",
                 "tools.registryControlLab.fields.numberValue": "Number",
@@ -289,12 +428,32 @@
                 "tools.registryControlLab.actions.secondaryButton": "Secondary Full-width Button",
                 "tools.registryControlLab.actions.primaryButton": "Primary Full-width Button",
                 "tools.registryControlLab.actions.bilingualButton": "Rectangle",
+                "tools.registryControlLab.actions.payloadButton": "Send Payload",
+                "tools.registryControlLab.actions.stateDisabledButton": "Requires Active Comp",
+                "tools.registryControlLab.actions.fallbackErrorButton": "Test Error Fallback",
+                "tools.registryControlLab.actions.refreshAfterRunButton": "Run and Refresh State",
                 "tools.registryControlLab.options.feature": "Feature",
                 "tools.registryControlLab.options.grid": "Grid",
                 "tools.registryControlLab.options.featureDescription": "Show feature-only fields.",
                 "tools.registryControlLab.options.gridDescription": "Show grid-only fields.",
                 "tools.registryControlLab.status.previewed": "Received registry control values.",
+                "tools.registryControlLab.status.previewPending": "Sending registry control values...",
+                "tools.registryControlLab.status.previewFailed": "Registry control preview failed.",
+                "tools.registryControlLab.status.stateRefreshed": "Registry host state refreshed.",
+                "tools.registryControlLab.status.payloadPending": "Sending action payload...",
+                "tools.registryControlLab.status.payloadReceived": "Action payload received.",
+                "tools.registryControlLab.status.payloadFailed": "Action payload failed.",
+                "tools.registryControlLab.status.stateButtonPending": "Running state-gated action...",
+                "tools.registryControlLab.status.stateButtonSuccess": "State-gated action completed.",
+                "tools.registryControlLab.status.fallbackErrorPending": "Testing error fallback...",
+                "tools.registryControlLab.status.fallbackErrorShown": "Action-specific error fallback shown.",
+                "tools.registryControlLab.status.refreshAfterRunPending": "Running action and refreshing state...",
+                "tools.registryControlLab.status.refreshAfterRunSuccess": "Action completed and state refreshed.",
+                "tools.registryControlLab.state.compName": "Comp",
+                "tools.registryControlLab.state.selectedCount": "Selected Layers",
+                "tools.registryControlLab.state.refreshCount": "Refresh Count",
                 "tools.registryControlLab.notes.basic": "This lab validates shared controls only. It does not modify After Effects layers.",
+                "tools.registryControlLab.notes.actionState": "Open a composition to enable the state-gated button. Payload values are sent only with that action and are not persisted.",
                 "tools.registryControlLab.hints.textValue": "Single-line text input.",
                 "tools.registryControlLab.hints.noteValue": "Multiline text area.",
                 "tools.registryControlLab.hints.numberValue": "Type a value or drag horizontally.",
@@ -322,6 +481,9 @@
                 "tools.registryControlLab.sections.actionsDescription": "\u9a8c\u8bc1\u6a2a\u5411\u586b\u6ee1\u7684 registry action button \u548c\u4e2d\u8f74\u53cc\u6587\u672c\u5e03\u5c40\u3002",
                 "tools.registryControlLab.sections.tabs": "\u6807\u7b7e\u9875",
                 "tools.registryControlLab.sections.tabsDescription": "\u9a8c\u8bc1\u9009\u9879\u5361\u548c\u6761\u4ef6\u5b57\u6bb5\u663e\u9690\u3002",
+                "tools.registryControlLab.sections.state": "Host \u72b6\u6001",
+                "tools.registryControlLab.sections.actionState": "\u64cd\u4f5c\u4e0e\u72b6\u6001",
+                "tools.registryControlLab.sections.actionStateDescription": "\u9a8c\u8bc1 action payload\u3001\u72b6\u6001\u9a71\u52a8\u7684\u7981\u7528\u6309\u94ae\u548c\u6267\u884c\u540e\u72b6\u6001\u5237\u65b0\u3002",
                 "tools.registryControlLab.fields.textValue": "\u6587\u672c",
                 "tools.registryControlLab.fields.noteValue": "\u5907\u6ce8",
                 "tools.registryControlLab.fields.numberValue": "\u6570\u503c",
@@ -339,12 +501,32 @@
                 "tools.registryControlLab.actions.secondaryButton": "\u6b21\u8981\u6a2a\u5411\u6309\u94ae",
                 "tools.registryControlLab.actions.primaryButton": "\u4e3b\u8981\u6a2a\u5411\u6309\u94ae",
                 "tools.registryControlLab.actions.bilingualButton": "\u77e9\u5f62",
+                "tools.registryControlLab.actions.payloadButton": "\u53d1\u9001 Payload",
+                "tools.registryControlLab.actions.stateDisabledButton": "\u9700\u8981\u6fc0\u6d3b\u5408\u6210",
+                "tools.registryControlLab.actions.fallbackErrorButton": "\u6d4b\u8bd5\u9519\u8bef Fallback",
+                "tools.registryControlLab.actions.refreshAfterRunButton": "\u6267\u884c\u5e76\u5237\u65b0\u72b6\u6001",
                 "tools.registryControlLab.options.feature": "\u5356\u70b9",
                 "tools.registryControlLab.options.grid": "\u7f51\u683c",
                 "tools.registryControlLab.options.featureDescription": "\u663e\u793a\u5356\u70b9\u4e13\u5c5e\u5b57\u6bb5\u3002",
                 "tools.registryControlLab.options.gridDescription": "\u663e\u793a\u7f51\u683c\u4e13\u5c5e\u5b57\u6bb5\u3002",
                 "tools.registryControlLab.status.previewed": "\u5df2\u63a5\u6536 registry \u63a7\u4ef6\u53c2\u6570\u3002",
+                "tools.registryControlLab.status.previewPending": "\u6b63\u5728\u53d1\u9001 registry \u63a7\u4ef6\u53c2\u6570...",
+                "tools.registryControlLab.status.previewFailed": "Registry \u63a7\u4ef6\u9884\u89c8\u5931\u8d25\u3002",
+                "tools.registryControlLab.status.stateRefreshed": "Registry host \u72b6\u6001\u5df2\u5237\u65b0\u3002",
+                "tools.registryControlLab.status.payloadPending": "\u6b63\u5728\u53d1\u9001 action payload...",
+                "tools.registryControlLab.status.payloadReceived": "Action payload \u5df2\u63a5\u6536\u3002",
+                "tools.registryControlLab.status.payloadFailed": "Action payload \u5931\u8d25\u3002",
+                "tools.registryControlLab.status.stateButtonPending": "\u6b63\u5728\u6267\u884c\u72b6\u6001\u9650\u5236\u64cd\u4f5c...",
+                "tools.registryControlLab.status.stateButtonSuccess": "\u72b6\u6001\u9650\u5236\u64cd\u4f5c\u5df2\u5b8c\u6210\u3002",
+                "tools.registryControlLab.status.fallbackErrorPending": "\u6b63\u5728\u6d4b\u8bd5\u9519\u8bef fallback...",
+                "tools.registryControlLab.status.fallbackErrorShown": "\u5df2\u663e\u793a action \u4e13\u5c5e\u9519\u8bef fallback\u3002",
+                "tools.registryControlLab.status.refreshAfterRunPending": "\u6b63\u5728\u6267\u884c\u5e76\u5237\u65b0\u72b6\u6001...",
+                "tools.registryControlLab.status.refreshAfterRunSuccess": "\u64cd\u4f5c\u5df2\u5b8c\u6210\uff0c\u72b6\u6001\u5df2\u5237\u65b0\u3002",
+                "tools.registryControlLab.state.compName": "\u5408\u6210",
+                "tools.registryControlLab.state.selectedCount": "\u9009\u4e2d\u56fe\u5c42",
+                "tools.registryControlLab.state.refreshCount": "\u5237\u65b0\u6b21\u6570",
                 "tools.registryControlLab.notes.basic": "\u8be5\u5b9e\u9a8c\u5ba4\u53ea\u9a8c\u8bc1\u5171\u7528\u63a7\u4ef6\uff0c\u4e0d\u4fee\u6539 After Effects \u56fe\u5c42\u3002",
+                "tools.registryControlLab.notes.actionState": "\u6253\u5f00\u5408\u6210\u540e\uff0c\u72b6\u6001\u9650\u5236\u6309\u94ae\u4f1a\u53d8\u4e3a\u53ef\u7528\u3002Payload \u53ea\u968f\u672c\u6b21 action \u53d1\u9001\uff0c\u4e0d\u4f1a\u6301\u4e45\u5316\u3002",
                 "tools.registryControlLab.hints.textValue": "\u5355\u884c\u6587\u672c\u8f93\u5165\u3002",
                 "tools.registryControlLab.hints.noteValue": "\u591a\u884c\u6587\u672c\u533a\u57df\u3002",
                 "tools.registryControlLab.hints.numberValue": "\u53ef\u8f93\u5165\u6570\u503c\uff0c\u4e5f\u53ef\u6a2a\u5411\u62d6\u52a8\u4fee\u6539\u3002",
