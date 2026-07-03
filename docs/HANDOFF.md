@@ -234,6 +234,16 @@ This project has legacy or preserved functions, especially around ecommerce layo
 - Confirm `host/index.jsx` includes the expected module.
 - Add a debug `version` in the returned JSON.
 
+### Deferred Settings Dropdown Render Glitch
+
+Settings Background Engine preset dropdown has a deferred render/layout glitch. The issue appears related to dropdown close state, popover cleanup, or Settings scroll container layout.
+
+Do not claim this is fixed unless verified in AE. See:
+
+```text
+docs/KNOWN_ISSUES.md
+```
+
 ## Current Active Tool Bridge Summary
 
 Text Background Box:
@@ -265,3 +275,11 @@ shapeAdd_getState()
 shapeAdd_add(matchName, key)
 shapeAdd_createStrokeFillLayer(paramsJson)
 ```
+
+In 0.2.1, Shape Add / Shape Builder is the formal registry Home entry, but it still reuses the preserved legacy `host/tools/shapeAdd.jsx` host actions. Do not delete the legacy host module during handoff cleanup.
+
+Developer Mode-only registry tools are hidden from normal users and appear only when Settings > Developer Mode is enabled:
+
+- Registry Control Lab
+- Registry Probe
+- Shape Add Probe

@@ -4,6 +4,12 @@
 
 This is an After Effects CEP Extension panel. The visible UI title is **Lomond Cabinet**. The extension id and folder are still `com.kevin.aetoolbox`.
 
+Current version candidate:
+
+```text
+0.2.1
+```
+
 Confirmed entry points:
 
 - CEP manifest: `CSXS/manifest.xml`
@@ -57,7 +63,7 @@ Purpose:
 
 - Minimal test tool for dynamic `.tool.jsx` registration.
 - Verifies host metadata, i18n merge, generic UI rendering, and `AEToolbox.runRegisteredToolAction(...)`.
-- This is a sample registry tool.
+- This is a Developer Mode-only sample registry tool and should not appear in the normal Home view.
 
 ### Text Background Box
 
@@ -78,6 +84,27 @@ Purpose:
 - Create shape backgrounds behind selected text layers.
 - Uses selected text layer visual bounds and creation-time padding.
 - Supports fill/stroke mode choices.
+- Migrated to the `.tool.jsx` registry path in `host/tools/textBackgroundBox.tool.jsx`.
+- The legacy host implementation remains in `host/tools/textBackgroundBox.jsx` and is reused by the registry action.
+- Fill and Stroke are controlled by registry section-level toggles instead of using `None` as the primary enable switch.
+- Registry field values and section UI state persist through the core renderer using `aeToolbox.registryToolValues.textBackgroundBox`.
+
+### Registry Control Lab
+
+Host module:
+
+```text
+host/tools/registryControlLab.tool.jsx
+```
+
+Purpose:
+
+- Validate shared registry renderer controls.
+- Includes a section-level toggle test panel for enable/collapse behavior.
+- Uses shared registry value persistence to verify saved field and toggle state.
+- Covers full-width button fields, primary/secondary variants, center-axis bilingual button text, tabs / option cards, and `visibleWhen` conditional fields.
+- Covers action payloads, host state display, state-gated buttons/actions, after-run state refresh, and action-specific status fallbacks.
+- This is a Developer Mode-only lab tool and should not appear in the normal Home view.
 
 ### Selection Info
 
@@ -158,6 +185,18 @@ Purpose:
 - Resolve target as selected shape layer or selected group where possible.
 - Create a linked Stroke / Fill Shape Layer with defaults and effect controls.
 
+Migration status:
+
+- Shape Add is now on the phased registry path for formal use.
+- `host/tools/shapeAddProbe.tool.jsx` remains a Developer Mode-only probe for testing one rectangle action through registry action/state capability.
+- `host/tools/shapeAdd.tool.jsx` now registers the formal `shapeAdd` registry tool for the 19 native shape item buttons.
+- The registry tool reuses the legacy host execution functions instead of rewriting AE layer creation logic.
+- The static Home card has been removed so Home resolves `shapeAdd` through the dynamic registry entry and still uses the same `toolId` for saved order.
+- The Stroke / Fill Shape Layer subtool UI is now declared as registry sections using range, color, and full-width button fields.
+- Stroke / Fill settings are grouped in a collapsible registry settings section under the create button and include a local reset defaults button for only those fields.
+- Stroke / Fill creation still reuses the existing legacy host implementation and global wrapper path instead of rewriting AE layer creation logic.
+- The old Shape Add detail DOM has been removed from `client/index.html`; obsolete frontend helper functions remain guarded until a later cleanup pass.
+
 ### More Tools
 
 Home contains a disabled More Tools card. It is not an active tool.
@@ -180,9 +219,12 @@ Home contains a disabled More Tools card. It is not an active tool.
   - Text Background Box
   - Selection Info, when `host/tools/selectionInfo.tool.jsx` exists and host JSX loads successfully
   - Ad Component Kit
-  - Shape Add
-  - Registry Probe, when `host/tools/registryProbe.tool.jsx` exists and host JSX loads successfully
+  - Shape Add, through `host/tools/shapeAdd.tool.jsx` when host registry loading succeeds
   - disabled More Tools
+- Developer Mode adds debug/probe/lab registry tools to Home:
+  - Registry Control Lab
+  - Registry Probe
+  - Shape Add Probe
 - Home background is procedural and configurable.
 - Home icon order is persisted with key:
 
@@ -208,14 +250,49 @@ Current status:
 - Only files matching `host/tools/*.tool.jsx` are scanned automatically.
 - Existing legacy files matching `host/tools/*.jsx` are not scanned dynamically and remain on the static include path.
 - The frontend appends dynamic tools to Home without changing existing legacy tool cards.
-- The generic dynamic renderer currently supports `text`, `number`, `checkbox`, `select`, and action buttons.
+- The generic dynamic renderer supports schema sections, `text`, `textarea`, `number`, `range`, `checkbox`, `select`, `color`, `info`, `divider`, `button` / `actionButton`, `tabs`, `visibleWhen`, section toggles, and action buttons.
+- The registry renderer supports transient `actionPayload` on button/action schema entries.
+- The registry renderer supports `stateAction` host state queries, runtime-only state storage, state-driven disabled buttons/actions, `stateCard`, and `refreshStateAfterRun`.
 
 Legacy tools not migrated:
 
-- Text Background Box / Background Rounded Rectangle.
 - Ad Component Kit.
-- Shape Add.
 - The preserved `ecommerceLayout.jsx` host module.
+
+Legacy host implementations still reused by registry tools:
+
+- Text Background Box / Background Rounded Rectangle keeps the legacy host creation implementation while using the registry metadata/detail path.
+- Shape Add native item buttons keep the legacy host add implementation while using the registry metadata/detail path.
+- Shape Add Stroke / Fill keeps the legacy host creation implementation while using registry metadata/detail sections for its parameters and action button.
+
+### Shape Add Registry Migration Audit
+
+Current decision:
+
+- Shape Add native item buttons are on the registry path after the action/state capability work.
+- Shape Add Stroke / Fill parameter UI is on the registry path, while host execution remains in the legacy `shapeAdd.jsx` module.
+- Do not delete `host/tools/shapeAdd.jsx` or the global wrappers while registry Shape Add still reuses them.
+
+Key risks:
+
+- Static Home entry and dynamic registry tool with the same `shapeAdd` id can conflict; the current migration removes the static Home card.
+- `HomeLayoutManager` saved order may be affected by replacing static entries with dynamic entries, so the migrated registry tool keeps the same `shapeAdd` id.
+- Legacy detail panel and registry detail panel can coexist and conflict; the legacy panel is preserved but no longer opened for dynamic `shapeAdd`.
+- Shape Add depends on `shapeAdd_getState()` and continuous host-state refresh.
+- The 19 native shape item buttons require action payloads such as `key` and `matchName`.
+- Button disabled state depends on host state.
+- Host messages should move toward `messageKey` to avoid plain message/i18n/mojibake issues.
+- Stroke / Fill host execution still depends on the preserved legacy implementation.
+
+Recommended migration route:
+
+1. Phase 1: core registry renderer action/state capability. Completed.
+2. Phase 2: hidden `shapeAddProbe.tool.jsx`. Completed.
+3. Phase 3: migrate one minimal action. Covered by the probe.
+4. Phase 4: migrate the 19 native shape item buttons. Completed on the registry path.
+5. Phase 5: migrate Stroke / Fill subtool UI to registry while reusing the legacy host action. Completed on the registry path.
+6. Phase 6: remove or simplify remaining obsolete frontend helper code after AE verification.
+7. Phase 7: remove legacy host wrappers only if no registered or global path uses them.
 
 ### Settings
 
@@ -279,6 +356,7 @@ These are based on current code and recent project history. Verify visually afte
 - Icon Grid active path diagnosis: current host code returns version data for icon grid.
 - Native select appearance: current code uses custom select overlays appended to `body`.
 - Shape Add text alignment: current CSS aligns native shape item buttons around a fixed center axis.
+- Home Edit toggle flow: current code uses `HomeLayoutManager.isEditing`; the first click enters edit mode and Done saves the layout.
 
 ## Known Issues / Areas To Watch
 
@@ -288,6 +366,8 @@ These are based on current code and recent project history. Verify visually afte
 - `client/js/main.js` and `client/css/style.css` are large and have accumulated multiple iterations. Avoid broad rewrites.
 - CEP/AE may cache old JS or JSX; always hard-refresh/reopen panel or restart AE when behavior does not match code.
 - If a change appears to have no effect, confirm the active JS and host JSX path before editing algorithms.
+- Shape Add is now on the phased registry path. Do not attempt a one-pass rewrite or remove the preserved legacy host actions; see `docs/KNOWN_ISSUES.md`.
+- Deferred: Settings Background Engine preset dropdown can trigger a render/layout glitch after closing. See `docs/KNOWN_ISSUES.md`.
 
 ## Later Development Suggestions
 

@@ -280,6 +280,9 @@ Current registry schema shape:
     {
       id: "main",
       labelKey: "tools.toolId.sections.main",
+      toggleKey: "enableMain",
+      defaultEnabled: true,
+      collapsible: true,
       fields: [
         {
           type: "number",
@@ -308,14 +311,111 @@ Current registry schema shape:
 }
 ```
 
+Section-level toggles are part of the core renderer contract:
+
+- `toggleKey` adds a shared switch in the section header.
+- `defaultEnabled` controls the initial enabled state.
+- `collapsible: true` allows the section body to collapse.
+- Disabled sections must still collect their toggle value.
+- Tools must let host actions decide how disabled section data affects execution.
+
+Registry tool values are persisted by the core renderer:
+
+- Storage key: `aeToolbox.registryToolValues.<toolId>`.
+- Tools only provide `defaultValue`, `toggleKey`, and `defaultEnabled`.
+- The renderer merges schema defaults with saved values when opening a tool.
+- Field values, section toggles, and section collapse state are saved automatically.
+- Tools must not implement their own `localStorage` handling.
+
+Registry renderer standard controls now include:
+
+- `button` / `actionButton` fields with `variant`, `fullWidth`, `actionId`, and optional center-axis bilingual text.
+- `tabs` fields rendered as option cards with `iconText`, translated title, and translated description.
+- `visibleWhen` on any field for conditional display based on another field value.
+- Developer Mode-only tools may use `debugOnly: true`, `developerOnly: true`, or `category: "debug"` and are hidden from the normal Home view.
+
+Registry action/state capabilities:
+
+- Button fields and footer actions may declare `actionPayload`; the renderer merges that payload into only the clicked action params.
+- `actionPayload` is transient. It is not persisted and does not become a user-editable field value.
+- If `actionPayload` and schema values use the same key, payload wins for that action call.
+- Field-triggered actions must still exist in the tool `actions` list so the host registry can resolve `hostFunction`.
+- Actions may use `hidden: true` or `fieldOnly: true` when they are intended only for schema button fields and should not appear in the footer action sheet.
+- Button fields may use `clientAction: "resetFields"` with `resetKeys` to restore a specific group of registry field values without resetting the whole tool.
+- Tools may declare `stateAction.hostFunction` and optional `stateAction.intervalMs`.
+- Host state is runtime-only and must not be written to `localStorage`.
+- Fields and actions may use `disabledWhen` / `enabledWhen` with `stateKey` and `equals` to control availability.
+- `stateCard` displays translated state values through the shared renderer.
+- `refreshStateAfterRun` refreshes host state after a successful action without creating another polling interval.
+- `pendingMessageKey`, `successMessageKey`, and `errorMessageKey` are frontend fallbacks. Host `messageKey` still has priority.
+- Registry tools must not write tool-specific DOM for state display or disabled buttons.
+
+For bilingual / matchName button text, tools may declare:
+
+```js
+{
+  type: "button",
+  labelKey: "tools.example.actions.rectangle",
+  secondaryText: "rectangle",
+  secondaryTextType: "matchName",
+  textLayout: "centerAxisPair"
+}
+```
+
+The renderer aligns primary text to the right side of the button center axis and matchName text to the left side of the same axis. Tools must not implement this alignment themselves.
+
 `uiSchema` remains supported as a compatibility shortcut and is treated as one `Parameters` section. New registry tools should prefer `sections`.
+
+## Shape Add Registry Migration Constraint
+
+Shape Add is a compound tool. It must not be treated as a normal parameter-only registry tool.
+
+The phased migration path is:
+
+1. Add core renderer action/state capability.
+2. Add hidden `shapeAddProbe.tool.jsx`.
+3. Validate one minimal rectangle action.
+4. Migrate the 19 native shape item buttons. Completed.
+5. Migrate Stroke / Fill Shape Layer subtool UI through registry schema while preserving the legacy host implementation. Completed.
+6. Remove or simplify remaining obsolete frontend helper code only after AE verification.
+7. Remove legacy host wrappers only when no registered or global caller uses them.
+
+The formal registry Shape Add uses:
+
+- `host/tools/shapeAdd.tool.jsx` with id `shapeAdd`.
+- Full-width secondary registry buttons for the 19 native shape item actions.
+- `textLayout: "centerAxisPair"` with AE matchName text for bilingual / matchName alignment.
+- `actionPayload` to pass each item's `key` and `matchName`.
+- `stateAction` and `stateCard` to show the current target.
+- `enabledWhen` / `disabledWhen` style state checks so buttons do not fire without a valid target.
+- `refreshStateAfterRun` after each add action.
+- Existing legacy host execution in `host/tools/shapeAdd.jsx`; do not rewrite AE layer creation logic for this migration step.
+- Registry range/color/full-width button fields for the Stroke / Fill Shape Layer subtool, calling the existing `shapeAdd_createStrokeFillLayer(paramsJson)` behavior through a registry action wrapper.
+- A collapsible Stroke / Fill settings section below the create button, with a local reset button that affects only Stroke / Fill defaults.
+
+Known constraints remain:
+
+- The static Home Shape Add card must not coexist with the dynamic registry `shapeAdd` card.
+- The registry tool keeps the same `shapeAdd` id so saved Home layout order remains meaningful.
+- The legacy detail panel may remain in markup while the registry detail path owns the active `shapeAdd` page.
+- The Stroke / Fill Shape Layer subtool UI is registry-rendered, but host execution remains in legacy `shapeAdd.jsx` until a later cleanup pass.
+- Plain host `message` strings should continue moving toward `messageKey` normalization.
+
+Do not add Shape Add-specific CSS or custom page structure during this process. Any capability needed by Shape Add should become a reusable core registry renderer capability first.
 
 Supported field types in the current generic renderer:
 
 - `text`
+- `textarea`
 - `number`
+- `range`
 - `checkbox`
 - `select`
+- `color`
+- `info`
+- `divider`
+- `button` / `actionButton`
+- `tabs`
 
 Action buttons are rendered from `actions`. A registry tool should not create its own footer.
 
