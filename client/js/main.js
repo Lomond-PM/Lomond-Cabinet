@@ -1603,7 +1603,7 @@
                 values[section.toggleKey] = section.defaultEnabled !== false;
             }
             if (section.id) {
-                uiState.collapsedSections[section.id] = !!(section.collapsible && section.defaultEnabled === false);
+                uiState.collapsedSections[section.id] = !!(section.collapsible && (section.defaultCollapsed === true || section.defaultEnabled === false));
             }
             fields = section.fields || [];
             for (j = 0; j < fields.length; j++) {
@@ -1735,6 +1735,47 @@
         }
         delete RegistryToolState[toolId];
         renderRegistryToolDetail(tool);
+        setStatus(tr("common.valuesReset"), "ok");
+    }
+
+    function findSchemaFieldByKey(toolDef, key) {
+        var sections = getToolSections(toolDef);
+        var i;
+        var j;
+        var fields;
+        for (i = 0; i < sections.length; i++) {
+            fields = sections[i] && sections[i].fields ? sections[i].fields : [];
+            for (j = 0; j < fields.length; j++) {
+                if (fields[j] && fields[j].key === key) {
+                    return fields[j];
+                }
+            }
+        }
+        return null;
+    }
+
+    function resetRegistryToolFields(toolDef, keys) {
+        var state;
+        var i;
+        var field;
+        if (!toolDef || !toolDef.id || !keys || !keys.length) {
+            return;
+        }
+        state = {
+            version: 1,
+            toolId: toolDef.id,
+            values: collectSchemaValues(toolDef),
+            uiState: collectRegistryUiState(toolDef)
+        };
+        for (i = 0; i < keys.length; i++) {
+            field = findSchemaFieldByKey(toolDef, keys[i]);
+            if (field) {
+                state.values[keys[i]] = schemaDefaultValue(field);
+            }
+        }
+        RegistryToolState[toolDef.id] = state;
+        saveStoredJson(registryToolStorageKey(toolDef.id), state);
+        renderRegistryToolDetail(toolDef);
         setStatus(tr("common.valuesReset"), "ok");
     }
 
@@ -2522,6 +2563,10 @@
                 if (this.disabled) {
                     return;
                 }
+                if (field.clientAction === "resetFields") {
+                    resetRegistryToolFields(toolDef, field.resetKeys || field.keys || []);
+                    return;
+                }
                 if (field.actionId) {
                     runDynamicToolAction(toolDef.id, field.actionId, field.actionPayload || {}, field);
                 }
@@ -2945,14 +2990,16 @@
         var action;
         var button;
 
-        button = document.createElement("button");
-        button.type = "button";
-        button.className = "panel-button secondary-action";
-        button.textContent = tr("common.restoreDefaults");
-        button.addEventListener("click", function () {
-            resetRegistryToolValues(toolDef.id);
-        });
-        fragment.appendChild(button);
+        if (!toolDef || toolDef.hideRestoreDefaults !== true) {
+            button = document.createElement("button");
+            button.type = "button";
+            button.className = "panel-button secondary-action";
+            button.textContent = tr("common.restoreDefaults");
+            button.addEventListener("click", function () {
+                resetRegistryToolValues(toolDef.id);
+            });
+            fragment.appendChild(button);
+        }
 
         for (i = 0; actions && i < actions.length; i++) {
             action = actions[i];
@@ -3102,30 +3149,18 @@
         var actions = document.querySelectorAll(".tool-actions");
         var i;
         var dynamic = isDynamicTool(toolId);
-        var showLegacyShapeAddExtras = dynamic && toolId === "shapeAdd";
-        var shapeAddItemsCard = byId("shapeAddItemsCard");
 
         activeToolId = toolId || "shapeAdd";
         byId("detailHeading").textContent = tr(meta.titleKey || "app.title");
 
         if (dynamic) {
             renderDynamicToolDetail(activeToolId);
-            if (showLegacyShapeAddExtras) {
-                refreshShapeAddState();
-            }
         } else {
             stopRegistryStatePolling();
         }
 
-        if (shapeAddItemsCard) {
-            shapeAddItemsCard.style.display = showLegacyShapeAddExtras ? "none" : "";
-        }
-
         for (i = 0; i < panels.length; i++) {
-            panels[i].classList.toggle("is-active",
-                panels[i].getAttribute("data-tool-panel") === (dynamic ? "__dynamic" : activeToolId) ||
-                (showLegacyShapeAddExtras && panels[i].getAttribute("data-tool-panel") === "shapeAdd")
-            );
+            panels[i].classList.toggle("is-active", panels[i].getAttribute("data-tool-panel") === (dynamic ? "__dynamic" : activeToolId));
         }
         for (i = 0; i < actions.length; i++) {
             actions[i].classList.toggle("is-active", actions[i].getAttribute("data-tool-actions") === (dynamic ? "__dynamic" : activeToolId));
@@ -3857,6 +3892,10 @@
         var range = byId(rangeId);
         var number = byId(numberId);
 
+        if (!range || !number) {
+            return;
+        }
+
         function notify() {
             if (onChange) {
                 onChange();
@@ -4018,6 +4057,23 @@
     }
 
     function collectShapeStrokeFillParams() {
+        if (!byId("sfStrokeWidthNumber")) {
+            return {
+                strokeWidth: DefaultShapeStrokeFillParams.strokeWidth,
+                miterLimit: DefaultShapeStrokeFillParams.miterLimit,
+                trimStart: DefaultShapeStrokeFillParams.trimStart,
+                trimEnd: DefaultShapeStrokeFillParams.trimEnd,
+                trimOffset: DefaultShapeStrokeFillParams.trimOffset,
+                taperStartLength: DefaultShapeStrokeFillParams.taperStartLength,
+                taperEndLength: DefaultShapeStrokeFillParams.taperEndLength,
+                taperStartWidth: DefaultShapeStrokeFillParams.taperStartWidth,
+                taperEndWidth: DefaultShapeStrokeFillParams.taperEndWidth,
+                taperStartEase: DefaultShapeStrokeFillParams.taperStartEase,
+                taperEndEase: DefaultShapeStrokeFillParams.taperEndEase,
+                strokeColor: DefaultShapeStrokeFillParams.strokeColor,
+                fillColor: DefaultShapeStrokeFillParams.fillColor
+            };
+        }
         return {
             strokeWidth: clampNumber(byId("sfStrokeWidthNumber").value, DefaultShapeStrokeFillParams.strokeWidth, 0),
             miterLimit: clampNumber(byId("sfMiterLimitNumber").value, DefaultShapeStrokeFillParams.miterLimit, 0),
@@ -4264,9 +4320,14 @@
 
     function setColorValue(inputId, hex) {
         var input = byId(inputId);
-        var shell = input.parentNode;
+        var shell;
         var normalized = normalizeHex(hex, "#ffffff");
 
+        if (!input) {
+            return;
+        }
+
+        shell = input.parentNode;
         input.value = normalized;
         if (shell) {
             shell.style.backgroundColor = normalized;
@@ -5121,7 +5182,9 @@
         byId("backBtn").addEventListener("click", function () {
             closeToolWithLaunchTransition();
         });
-        byId("createStrokeFillLayerBtn").addEventListener("click", createStrokeFillLayer);
+        if (byId("createStrokeFillLayerBtn")) {
+            byId("createStrokeFillLayerBtn").addEventListener("click", createStrokeFillLayer);
+        }
         byId("createFeatureStackBtn").addEventListener("click", createFeatureStack);
         byId("createIconGridBtn").addEventListener("click", createIconGrid);
         byId("refreshComponentBtn").addEventListener("click", refreshSelectedComponent);

@@ -26,7 +26,7 @@ Current conclusion:
 - Do not migrate Shape Add in one pass.
 - Core registry action/state capability has been added.
 - A phased migration is being attempted by moving only the 19 native shape item buttons to `shapeAdd.tool.jsx`.
-- Stroke / Fill Shape Layer creation remains legacy and should not be migrated until the native item path has been AE-tested.
+- Stroke / Fill Shape Layer UI is being migrated after native item testing, but host creation logic remains legacy.
 
 Main risks:
 
@@ -37,7 +37,7 @@ Main risks:
 - The 19 native shape item buttons need action-specific payloads such as `key` and `matchName`.
 - Button disabled/enabled state depends on host state, not only local schema.
 - Host messages may return plain `message` strings and mojibake; registry migration should prefer `messageKey`.
-- Stroke / Fill subtool parameters and local persistence are more complex than a simple action.
+- Stroke / Fill subtool parameters are now expected to use registry persistence, while host creation remains on the preserved legacy path.
 - The tool should not be migrated all at once.
 
 Recommended migration route:
@@ -46,8 +46,8 @@ Recommended migration route:
 2. Phase 2: Add a hidden `shapeAddProbe.tool.jsx`. Completed.
 3. Phase 3: Migrate one minimal action. Covered by the probe.
 4. Phase 4: Migrate the 19 native shape item buttons. In progress.
-5. Phase 5: Migrate the Stroke / Fill subtool. Deferred.
-6. Phase 6: Remove obsolete legacy UI only after AE verification.
+5. Phase 5: Migrate the Stroke / Fill subtool UI to registry while preserving legacy host execution. In progress.
+6. Phase 6: Remove or simplify remaining obsolete frontend helper code only after AE verification.
 7. Phase 7: Remove legacy host wrappers only if no caller uses them.
 
 Future investigation notes:
@@ -56,7 +56,7 @@ Future investigation notes:
 - Extend core registry support for action payloads, host-state controlled disabled states, state/status cards, and after-action state refresh.
 - Test each phase in AE before continuing.
 
-Do not mark this issue as fixed until the phased Shape Add registry migration is tested in After Effects without Home/detail regressions.
+Do not mark this issue as fixed until the phased Shape Add registry migration, including Stroke / Fill UI, is tested in After Effects without Home/detail regressions.
 
 ## Settings background preset dropdown render glitch
 

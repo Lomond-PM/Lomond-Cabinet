@@ -65,58 +65,6 @@
             <main class="detail-content">
                 <section class="registry-tool-panel tool-panel" id="registryToolPanel" data-tool-panel="__dynamic"></section>
 
-                <section class="shape-add-panel tool-panel" data-tool-panel="shapeAdd">
-                    <section class="panel-card control-card collapsible-card" id="shapeAddItemsCard">
-                        <button class="collapsible-heading card-heading" id="shapeAddItemsToggle" type="button" aria-expanded="true">
-                            <span>
-                                <p class="overline" data-i18n="section.contentsAdd">Contents Add</p>
-                                <h3 data-i18n="section.nativeShapeItems">Native shape items</h3>
-                            </span>
-                            <span class="collapse-chevron" aria-hidden="true"></span>
-                        </button>
-                        <div class="collapsible-body" id="shapeAddItemsBody">
-                            <div class="shape-add-status-card" id="shapeAddStatus" data-i18n="status.selectShapeLayer">Please select a shape layer</div>
-                            <div class="shape-add-list" id="shapeAddButtonList" aria-label="Shape Add items"></div>
-                        </div>
-                    </section>
-
-                    <section class="panel-card control-card shape-add-special-card">
-                        <div class="shape-add-special">
-                            <button class="panel-button shape-add-special-button" id="createStrokeFillLayerBtn" type="button">
-                                <span data-i18n="label.strokeFillLayer">New Stroke / Fill Shape Layer</span>
-                            </button>
-                        </div>
-                        <section class="shape-add-stroke-fill-settings collapsible-card is-collapsed" id="strokeFillSettingsCard">
-                            <button class="collapsible-heading shape-add-settings-heading" id="strokeFillSettingsToggle" type="button" aria-expanded="false">
-                                <span>
-                                    <p class="overline" data-i18n="section.defaults">Defaults</p>
-                                    <h3 data-i18n="section.strokeFillDefaults">Stroke / Fill defaults</h3>
-                                </span>
-                                <span class="collapse-chevron" aria-hidden="true"></span>
-                            </button>
-                            <div class="collapsible-body" id="strokeFillSettingsBody">
-                                <label class="control-row"><span class="control-label" data-i18n="label.strokeWidth">Stroke Width</span><span class="control-inputs"><input id="sfStrokeWidth" class="pill-slider" type="range" min="0" max="200" step="0.1" value="7"><input id="sfStrokeWidthNumber" class="num-input" type="number" min="0" step="0.1" value="7"></span></label>
-                                <label class="control-row"><span class="control-label" data-i18n="label.miterLimit">Miter Limit</span><span class="control-inputs"><input id="sfMiterLimit" class="pill-slider" type="range" min="0" max="100" step="0.1" value="14"><input id="sfMiterLimitNumber" class="num-input" type="number" min="0" step="0.1" value="14"></span></label>
-                                <label class="control-row color-row"><span class="control-label" data-i18n="label.strokeColor">Stroke Color</span><span class="color-shell" role="button" tabindex="0" data-color-target="sfStrokeColor" aria-label="Choose stroke color" data-i18n-aria-label="label.strokeColor"><input id="sfStrokeColor" class="native-color-input" type="hidden" value="#ffffff"></span></label>
-                                <label class="control-row color-row"><span class="control-label" data-i18n="label.fillColor">Fill Color</span><span class="color-shell" role="button" tabindex="0" data-color-target="sfFillColor" aria-label="Choose fill color" data-i18n-aria-label="label.fillColor"><input id="sfFillColor" class="native-color-input" type="hidden" value="#d6b25e"></span></label>
-
-                                <p class="settings-subtitle" data-i18n="section.trimPaths">Trim Paths</p>
-                                <label class="control-row"><span class="control-label" data-i18n="label.trimStart">Trim Start</span><span class="control-inputs"><input id="sfTrimStart" class="pill-slider" type="range" min="0" max="100" step="0.1" value="0"><input id="sfTrimStartNumber" class="num-input" type="number" min="0" max="100" step="0.1" value="0"></span></label>
-                                <label class="control-row"><span class="control-label" data-i18n="label.trimEnd">Trim End</span><span class="control-inputs"><input id="sfTrimEnd" class="pill-slider" type="range" min="0" max="100" step="0.1" value="100"><input id="sfTrimEndNumber" class="num-input" type="number" min="0" max="100" step="0.1" value="100"></span></label>
-                                <label class="control-row"><span class="control-label" data-i18n="label.trimOffset">Trim Offset</span><span class="control-inputs"><input id="sfTrimOffset" class="pill-slider" type="range" min="-360" max="360" step="0.1" value="0"><input id="sfTrimOffsetNumber" class="num-input" type="number" min="-360" max="360" step="0.1" value="0"></span></label>
-
-                                <p class="settings-subtitle" data-i18n="section.strokeTaper">Stroke Taper</p>
-                                <label class="control-row"><span class="control-label" data-i18n="label.startLength">Start Length</span><span class="control-inputs"><input id="sfTaperStartLength" class="pill-slider" type="range" min="0" max="100" step="0.1" value="15"><input id="sfTaperStartLengthNumber" class="num-input" type="number" min="0" step="0.1" value="15"></span></label>
-                                <label class="control-row"><span class="control-label" data-i18n="label.endLength">End Length</span><span class="control-inputs"><input id="sfTaperEndLength" class="pill-slider" type="range" min="0" max="100" step="0.1" value="15"><input id="sfTaperEndLengthNumber" class="num-input" type="number" min="0" step="0.1" value="15"></span></label>
-                                <label class="control-row"><span class="control-label" data-i18n="label.startWidth">Start Width</span><span class="control-inputs"><input id="sfTaperStartWidth" class="pill-slider" type="range" min="0" max="100" step="0.1" value="0"><input id="sfTaperStartWidthNumber" class="num-input" type="number" min="0" step="0.1" value="0"></span></label>
-                                <label class="control-row"><span class="control-label" data-i18n="label.endWidth">End Width</span><span class="control-inputs"><input id="sfTaperEndWidth" class="pill-slider" type="range" min="0" max="100" step="0.1" value="0"><input id="sfTaperEndWidthNumber" class="num-input" type="number" min="0" step="0.1" value="0"></span></label>
-                                <label class="control-row"><span class="control-label" data-i18n="label.startEase">Start Ease</span><span class="control-inputs"><input id="sfTaperStartEase" class="pill-slider" type="range" min="0" max="100" step="0.1" value="30"><input id="sfTaperStartEaseNumber" class="num-input" type="number" min="0" max="100" step="0.1" value="30"></span></label>
-                                <label class="control-row"><span class="control-label" data-i18n="label.endEase">End Ease</span><span class="control-inputs"><input id="sfTaperEndEase" class="pill-slider" type="range" min="0" max="100" step="0.1" value="30"><input id="sfTaperEndEaseNumber" class="num-input" type="number" min="0" max="100" step="0.1" value="30"></span></label>
-                            </div>
-                        </section>
-                    </section>
-                </section>
-
                 <section class="component-kit tool-panel" data-tool-panel="ecommerceLayout">
                     <div class="component-hero panel-card">
                         <div class="mini-icon-wrap">

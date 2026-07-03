@@ -185,7 +185,10 @@ Migration status:
 - `host/tools/shapeAdd.tool.jsx` now registers the formal `shapeAdd` registry tool for the 19 native shape item buttons.
 - The registry tool reuses the legacy host execution functions instead of rewriting AE layer creation logic.
 - The static Home card has been removed so Home resolves `shapeAdd` through the dynamic registry entry and still uses the same `toolId` for saved order.
-- The Stroke / Fill Shape Layer subtool remains on the legacy path and is shown as the existing legacy card below the registry native item controls.
+- The Stroke / Fill Shape Layer subtool UI is now declared as registry sections using range, color, and full-width button fields.
+- Stroke / Fill settings are grouped in a collapsible registry settings section under the create button and include a local reset defaults button for only those fields.
+- Stroke / Fill creation still reuses the existing legacy host implementation and global wrapper path instead of rewriting AE layer creation logic.
+- The old Shape Add detail DOM has been removed from `client/index.html`; obsolete frontend helper functions remain guarded until a later cleanup pass.
 
 ### More Tools
 
@@ -244,20 +247,20 @@ Current status:
 Legacy tools not migrated:
 
 - Ad Component Kit.
-- Shape Add Stroke / Fill Shape Layer subtool.
 - The preserved `ecommerceLayout.jsx` host module.
 
 Legacy host implementations still reused by registry tools:
 
 - Text Background Box / Background Rounded Rectangle keeps the legacy host creation implementation while using the registry metadata/detail path.
 - Shape Add native item buttons keep the legacy host add implementation while using the registry metadata/detail path.
+- Shape Add Stroke / Fill keeps the legacy host creation implementation while using registry metadata/detail sections for its parameters and action button.
 
 ### Shape Add Registry Migration Audit
 
 Current decision:
 
 - Shape Add native item buttons are on the registry path after the action/state capability work.
-- Continue to treat the Stroke / Fill Shape Layer subtool as legacy until it receives a separate migration and AE test pass; its existing card remains available from the Shape Add detail page.
+- Shape Add Stroke / Fill parameter UI is on the registry path, while host execution remains in the legacy `shapeAdd.jsx` module.
 - Do not delete `host/tools/shapeAdd.jsx` or the global wrappers while registry Shape Add still reuses them.
 
 Key risks:
@@ -269,7 +272,7 @@ Key risks:
 - The 19 native shape item buttons require action payloads such as `key` and `matchName`.
 - Button disabled state depends on host state.
 - Host messages should move toward `messageKey` to avoid plain message/i18n/mojibake issues.
-- Stroke / Fill parameters and persistence are too complex to migrate as part of the first step.
+- Stroke / Fill host execution still depends on the preserved legacy implementation.
 
 Recommended migration route:
 
@@ -277,8 +280,8 @@ Recommended migration route:
 2. Phase 2: hidden `shapeAddProbe.tool.jsx`. Completed.
 3. Phase 3: migrate one minimal action. Covered by the probe.
 4. Phase 4: migrate the 19 native shape item buttons. In progress on the registry path.
-5. Phase 5: migrate Stroke / Fill subtool. Deferred.
-6. Phase 6: remove obsolete legacy UI code after AE verification.
+5. Phase 5: migrate Stroke / Fill subtool UI to registry while reusing the legacy host action. In progress on this branch.
+6. Phase 6: remove or simplify remaining obsolete frontend helper code after AE verification.
 7. Phase 7: remove legacy host wrappers only if no registered or global path uses them.
 
 ### Settings

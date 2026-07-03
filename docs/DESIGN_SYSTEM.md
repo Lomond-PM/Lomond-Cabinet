@@ -340,6 +340,7 @@ Registry action/state capabilities:
 - If `actionPayload` and schema values use the same key, payload wins for that action call.
 - Field-triggered actions must still exist in the tool `actions` list so the host registry can resolve `hostFunction`.
 - Actions may use `hidden: true` or `fieldOnly: true` when they are intended only for schema button fields and should not appear in the footer action sheet.
+- Button fields may use `clientAction: "resetFields"` with `resetKeys` to restore a specific group of registry field values without resetting the whole tool.
 - Tools may declare `stateAction.hostFunction` and optional `stateAction.intervalMs`.
 - Host state is runtime-only and must not be written to `localStorage`.
 - Fields and actions may use `disabledWhen` / `enabledWhen` with `stateKey` and `equals` to control availability.
@@ -374,8 +375,8 @@ The phased migration path is:
 2. Add hidden `shapeAddProbe.tool.jsx`.
 3. Validate one minimal rectangle action.
 4. Migrate the 19 native shape item buttons.
-5. Defer Stroke / Fill Shape Layer subtool migration.
-6. Remove obsolete legacy UI only after AE verification.
+5. Migrate Stroke / Fill Shape Layer subtool UI through registry schema while preserving the legacy host implementation.
+6. Remove or simplify remaining obsolete frontend helper code only after AE verification.
 7. Remove legacy host wrappers only when no registered or global caller uses them.
 
 The formal registry Shape Add uses:
@@ -388,13 +389,15 @@ The formal registry Shape Add uses:
 - `enabledWhen` / `disabledWhen` style state checks so buttons do not fire without a valid target.
 - `refreshStateAfterRun` after each add action.
 - Existing legacy host execution in `host/tools/shapeAdd.jsx`; do not rewrite AE layer creation logic for this migration step.
+- Registry range/color/full-width button fields for the Stroke / Fill Shape Layer subtool, calling the existing `shapeAdd_createStrokeFillLayer(paramsJson)` behavior through a registry action wrapper.
+- A collapsible Stroke / Fill settings section below the create button, with a local reset button that affects only Stroke / Fill defaults.
 
 Known constraints remain:
 
 - The static Home Shape Add card must not coexist with the dynamic registry `shapeAdd` card.
 - The registry tool keeps the same `shapeAdd` id so saved Home layout order remains meaningful.
 - The legacy detail panel may remain in markup while the registry detail path owns the active `shapeAdd` page.
-- The Stroke / Fill Shape Layer subtool is still legacy and should be migrated separately.
+- The Stroke / Fill Shape Layer subtool UI is registry-rendered, but host execution remains in legacy `shapeAdd.jsx` until a later cleanup pass.
 - Plain host `message` strings should continue moving toward `messageKey` normalization.
 
 Do not add Shape Add-specific CSS or custom page structure during this process. Any capability needed by Shape Add should become a reusable core registry renderer capability first.
