@@ -2959,6 +2959,9 @@
             if (!action || !action.id) {
                 continue;
             }
+            if (action.hidden || action.fieldOnly) {
+                continue;
+            }
             button = document.createElement("button");
             button.type = "button";
             button.className = action.style === "secondary" ? "panel-button secondary-action" : "primary-action";
@@ -3099,18 +3102,30 @@
         var actions = document.querySelectorAll(".tool-actions");
         var i;
         var dynamic = isDynamicTool(toolId);
+        var showLegacyShapeAddExtras = dynamic && toolId === "shapeAdd";
+        var shapeAddItemsCard = byId("shapeAddItemsCard");
 
         activeToolId = toolId || "shapeAdd";
         byId("detailHeading").textContent = tr(meta.titleKey || "app.title");
 
         if (dynamic) {
             renderDynamicToolDetail(activeToolId);
+            if (showLegacyShapeAddExtras) {
+                refreshShapeAddState();
+            }
         } else {
             stopRegistryStatePolling();
         }
 
+        if (shapeAddItemsCard) {
+            shapeAddItemsCard.style.display = showLegacyShapeAddExtras ? "none" : "";
+        }
+
         for (i = 0; i < panels.length; i++) {
-            panels[i].classList.toggle("is-active", panels[i].getAttribute("data-tool-panel") === (dynamic ? "__dynamic" : activeToolId));
+            panels[i].classList.toggle("is-active",
+                panels[i].getAttribute("data-tool-panel") === (dynamic ? "__dynamic" : activeToolId) ||
+                (showLegacyShapeAddExtras && panels[i].getAttribute("data-tool-panel") === "shapeAdd")
+            );
         }
         for (i = 0; i < actions.length; i++) {
             actions[i].classList.toggle("is-active", actions[i].getAttribute("data-tool-actions") === (dynamic ? "__dynamic" : activeToolId));
@@ -3166,7 +3181,7 @@
     }
 
     function refreshActiveTool() {
-        if (activeToolId === "shapeAdd") {
+        if (activeToolId === "shapeAdd" && !isDynamicTool(activeToolId)) {
             refreshShapeAddState();
             return;
         }

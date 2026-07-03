@@ -28,6 +28,10 @@ This project follows simple semantic versioning for development handoff:
 - Added a Developer Mode / registry debug tools setting for showing debug-only registry probe tools.
 - Added a debug-only Shape Add Probe registry tool to validate action payload, stateAction, state-driven disabled state, state card, and after-run state refresh against the legacy Shape Add host action.
 - Documented the Shape Add registry migration audit and kept formal migration deferred for a phased AE-tested migration path.
+- Migrated the formal Shape Add native item buttons to the `.tool.jsx` registry path using action payloads, host state, state-driven disabled buttons, and after-run state refresh.
+- Kept the Shape Add Stroke / Fill Shape Layer subtool on the legacy path and displayed its existing card below the registry native-item section.
+- Removed the legacy static Home card for Shape Add so the registry Shape Add entry owns the Home card and saved `toolId` order can continue using `shapeAdd`.
+- Added hidden / field-only registry actions so schema button fields can resolve host functions without creating duplicate footer buttons.
 
 ### Fixed
 
@@ -39,7 +43,7 @@ This project follows simple semantic versioning for development handoff:
 
 ### Migration Notes
 
-- Shape Add remains a legacy compound tool. Direct same-id replacement with `shapeAdd.tool.jsx` is deferred because it risks conflicts between the static Home entry, dynamic registry entry, saved Home layout order, legacy detail panel, registry detail panel, host state refresh, and multi-action button payloads.
+- Shape Add is being migrated in phases. The 19 native shape item buttons now use the registry path, while the Stroke / Fill Shape Layer subtool and legacy host execution module remain preserved.
 
 ## [0.2.0] - 2026-07-02
 

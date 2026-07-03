@@ -180,10 +180,12 @@ Purpose:
 
 Migration status:
 
-- Formal registry migration is paused.
-- Shape Add is a legacy compound tool, not a normal parameter-only registry tool.
-- A direct same-id `shapeAdd.tool.jsx` replacement is high risk because it can conflict with the static Home entry, dynamic registry entry, saved Home layout order, legacy detail panel, registry detail panel, and host state refresh.
-- Migration must be phased and should not start by replacing the existing `shapeAdd` id.
+- Shape Add is being migrated in phases.
+- `host/tools/shapeAddProbe.tool.jsx` remains a Developer Mode-only probe for testing one rectangle action through registry action/state capability.
+- `host/tools/shapeAdd.tool.jsx` now registers the formal `shapeAdd` registry tool for the 19 native shape item buttons.
+- The registry tool reuses the legacy host execution functions instead of rewriting AE layer creation logic.
+- The static Home card has been removed so Home resolves `shapeAdd` through the dynamic registry entry and still uses the same `toolId` for saved order.
+- The Stroke / Fill Shape Layer subtool remains on the legacy path and is shown as the existing legacy card below the registry native item controls.
 
 ### More Tools
 
@@ -207,7 +209,7 @@ Home contains a disabled More Tools card. It is not an active tool.
   - Text Background Box
   - Selection Info, when `host/tools/selectionInfo.tool.jsx` exists and host JSX loads successfully
   - Ad Component Kit
-  - Shape Add
+  - Shape Add, through `host/tools/shapeAdd.tool.jsx` when host registry loading succeeds
   - Registry Probe, when `host/tools/registryProbe.tool.jsx` exists and host JSX loads successfully
   - disabled More Tools
 - Home background is procedural and configurable.
@@ -242,25 +244,27 @@ Current status:
 Legacy tools not migrated:
 
 - Ad Component Kit.
-- Shape Add.
+- Shape Add Stroke / Fill Shape Layer subtool.
 - The preserved `ecommerceLayout.jsx` host module.
 
 Legacy host implementations still reused by registry tools:
 
 - Text Background Box / Background Rounded Rectangle keeps the legacy host creation implementation while using the registry metadata/detail path.
+- Shape Add native item buttons keep the legacy host add implementation while using the registry metadata/detail path.
 
 ### Shape Add Registry Migration Audit
 
 Current decision:
 
-- Shape Add remains legacy for now.
-- Do not add `host/tools/shapeAdd.tool.jsx` as a same-id replacement until the core registry renderer has the required action/state capabilities.
+- Shape Add native item buttons are on the registry path after the action/state capability work.
+- Continue to treat the Stroke / Fill Shape Layer subtool as legacy until it receives a separate migration and AE test pass; its existing card remains available from the Shape Add detail page.
+- Do not delete `host/tools/shapeAdd.jsx` or the global wrappers while registry Shape Add still reuses them.
 
 Key risks:
 
-- Static Home entry and dynamic registry tool with the same `shapeAdd` id can conflict.
-- `HomeLayoutManager` saved order may be affected by replacing static entries with dynamic entries.
-- Legacy detail panel and registry detail panel can coexist and conflict.
+- Static Home entry and dynamic registry tool with the same `shapeAdd` id can conflict; the current migration removes the static Home card.
+- `HomeLayoutManager` saved order may be affected by replacing static entries with dynamic entries, so the migrated registry tool keeps the same `shapeAdd` id.
+- Legacy detail panel and registry detail panel can coexist and conflict; the legacy panel is preserved but no longer opened for dynamic `shapeAdd`.
 - Shape Add depends on `shapeAdd_getState()` and continuous host-state refresh.
 - The 19 native shape item buttons require action payloads such as `key` and `matchName`.
 - Button disabled state depends on host state.
@@ -269,13 +273,13 @@ Key risks:
 
 Recommended migration route:
 
-1. Phase 1: core registry renderer action/state capability.
-2. Phase 2: hidden `shapeAddProbe.tool.jsx`.
-3. Phase 3: migrate one minimal action.
-4. Phase 4: migrate the 19 native shape item buttons.
-5. Phase 5: migrate Stroke / Fill subtool.
-6. Phase 6: same-id replacement.
-7. Phase 7: remove legacy code.
+1. Phase 1: core registry renderer action/state capability. Completed.
+2. Phase 2: hidden `shapeAddProbe.tool.jsx`. Completed.
+3. Phase 3: migrate one minimal action. Covered by the probe.
+4. Phase 4: migrate the 19 native shape item buttons. In progress on the registry path.
+5. Phase 5: migrate Stroke / Fill subtool. Deferred.
+6. Phase 6: remove obsolete legacy UI code after AE verification.
+7. Phase 7: remove legacy host wrappers only if no registered or global path uses them.
 
 ### Settings
 

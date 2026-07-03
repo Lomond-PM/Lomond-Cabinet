@@ -338,6 +338,8 @@ Registry action/state capabilities:
 - Button fields and footer actions may declare `actionPayload`; the renderer merges that payload into only the clicked action params.
 - `actionPayload` is transient. It is not persisted and does not become a user-editable field value.
 - If `actionPayload` and schema values use the same key, payload wins for that action call.
+- Field-triggered actions must still exist in the tool `actions` list so the host registry can resolve `hostFunction`.
+- Actions may use `hidden: true` or `fieldOnly: true` when they are intended only for schema button fields and should not appear in the footer action sheet.
 - Tools may declare `stateAction.hostFunction` and optional `stateAction.intervalMs`.
 - Host state is runtime-only and must not be written to `localStorage`.
 - Fields and actions may use `disabledWhen` / `enabledWhen` with `stateKey` and `equals` to control availability.
@@ -364,36 +366,36 @@ The renderer aligns primary text to the right side of the button center axis and
 
 ## Shape Add Registry Migration Constraint
 
-Shape Add is currently a legacy compound tool. It must not be treated as a normal parameter-only registry tool.
+Shape Add is a compound tool. It must not be treated as a normal parameter-only registry tool.
 
-Do not migrate Shape Add by directly adding a same-id `host/tools/shapeAdd.tool.jsx` replacement. That approach can conflict with:
+The phased migration path is:
 
-- Static Home entry and dynamic registry entry using the same `shapeAdd` id.
-- `HomeLayoutManager` saved order.
-- Legacy detail panel and registry detail panel switching.
-- Continuous host state refresh through `shapeAdd_getState()`.
-- The 19 native shape item buttons, which require action-specific payloads.
-- Button disabled/enabled state, which depends on host state.
-- Plain host `message` strings that may need `messageKey` normalization.
-- Stroke / Fill subtool parameters and local persistence.
+1. Add core renderer action/state capability.
+2. Add hidden `shapeAddProbe.tool.jsx`.
+3. Validate one minimal rectangle action.
+4. Migrate the 19 native shape item buttons.
+5. Defer Stroke / Fill Shape Layer subtool migration.
+6. Remove obsolete legacy UI only after AE verification.
+7. Remove legacy host wrappers only when no registered or global caller uses them.
 
-Before formal Shape Add migration, extend the core registry renderer with:
+The formal registry Shape Add uses:
 
-- Standard action payload support.
-- Host-state query support.
-- State-driven action/button disabled states.
-- A standard status/target card.
-- After-action state refresh hooks.
+- `host/tools/shapeAdd.tool.jsx` with id `shapeAdd`.
+- Full-width secondary registry buttons for the 19 native shape item actions.
+- `textLayout: "centerAxisPair"` with AE matchName text for bilingual / matchName alignment.
+- `actionPayload` to pass each item's `key` and `matchName`.
+- `stateAction` and `stateCard` to show the current target.
+- `enabledWhen` / `disabledWhen` style state checks so buttons do not fire without a valid target.
+- `refreshStateAfterRun` after each add action.
+- Existing legacy host execution in `host/tools/shapeAdd.jsx`; do not rewrite AE layer creation logic for this migration step.
 
-Recommended migration phases:
+Known constraints remain:
 
-1. Phase 1: core renderer action/state capability.
-2. Phase 2: hidden `shapeAddProbe.tool.jsx`.
-3. Phase 3: migrate one minimal action.
-4. Phase 4: migrate the 19 native shape item buttons.
-5. Phase 5: migrate Stroke / Fill subtool.
-6. Phase 6: same-id replacement.
-7. Phase 7: remove legacy code.
+- The static Home Shape Add card must not coexist with the dynamic registry `shapeAdd` card.
+- The registry tool keeps the same `shapeAdd` id so saved Home layout order remains meaningful.
+- The legacy detail panel may remain in markup while the registry detail path owns the active `shapeAdd` page.
+- The Stroke / Fill Shape Layer subtool is still legacy and should be migrated separately.
+- Plain host `message` strings should continue moving toward `messageKey` normalization.
 
 Do not add Shape Add-specific CSS or custom page structure during this process. Any capability needed by Shape Add should become a reusable core registry renderer capability first.
 
