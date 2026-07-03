@@ -17,6 +17,11 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Environment / local secrets
+.env
+.env.*
+!.env.example
+
 # Temporary files
 *.tmp
 *.temp

@@ -14,6 +14,17 @@ This project follows simple semantic versioning for development handoff:
 
 - No unreleased changes yet.
 
+## [0.2.2] - 2026-07-03
+
+### Changed
+
+- Expanded `AGENTS.md` into a full agent handoff and project maintenance guide.
+- Documented registry tool architecture, core renderer responsibilities, i18n rules, Developer Mode rules, testing checklist, and release workflow.
+- Clarified that registry tools should keep tool-local i18n in their `.tool.jsx` files instead of adding new tool strings to `client/js/i18n.js`.
+- Clarified Developer Mode behavior for probe, lab, test, and debug registry tools.
+- Documented runtime / AE CEP loading checks for workspace, junction / symlink installs, frontend reloads, and host JSX restarts.
+- Updated `.gitignore` for local `.env` files while keeping source directories tracked.
+
 ## [0.2.1] - 2026-07-03
 
 ### Changed
