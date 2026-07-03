@@ -3055,6 +3055,40 @@ p {
     text-align: left;
 }
 
+.registry-state-card {
+    display: flex;
+    flex-direction: column;
+    gap: calc(8px * var(--ui-scale));
+    margin-bottom: calc(14px * var(--ui-scale));
+}
+
+.registry-state-row {
+    display: grid;
+    grid-template-columns: minmax(90px, 1fr) minmax(0, 1.6fr);
+    gap: calc(10px * var(--ui-scale));
+    align-items: center;
+}
+
+.registry-state-row strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.registry-state-card.is-ready {
+    border-color: var(--gold-muted);
+}
+
+.registry-state-card.is-error {
+    border-color: rgba(255, 94, 94, 0.62);
+}
+
+.is-state-disabled {
+    opacity: 0.48;
+    cursor: not-allowed !important;
+}
+
 .registry-tabs-control {
     display: grid;
     width: 100%;

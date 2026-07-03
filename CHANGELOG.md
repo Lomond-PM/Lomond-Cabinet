@@ -23,7 +23,9 @@ This project follows simple semantic versioning for development handoff:
 - Added core registry renderer support for tabs / option card fields.
 - Added `visibleWhen` conditional display support for registry fields.
 - Extended Registry Control Lab to cover full-width buttons, center-axis bilingual button text, tabs, and conditional fields.
-- Documented the Shape Add registry migration audit and deferred formal migration until core registry action/state support is expanded.
+- Added core registry action/state capabilities: action payloads, host state queries, state-driven disabled buttons/actions, state status cards, after-run state refresh, and action-specific status fallbacks.
+- Extended Registry Control Lab to cover action payloads, host state display, state-gated buttons, after-run state refresh, and action-specific status fallback behavior.
+- Documented the Shape Add registry migration audit and kept formal migration deferred for a phased AE-tested migration path.
 
 ### Fixed
 

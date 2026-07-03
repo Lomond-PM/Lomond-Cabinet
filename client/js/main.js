@@ -53,6 +53,7 @@
     var DynamicToolOrder = [];
     var RegistryToolState = {};
     var RegistrySaveTimers = {};
+    var RegistryRuntimeStates = {};
     var DefaultToolParams = {
         paddingX: 40,
         paddingY: 20,
@@ -1527,6 +1528,7 @@
         var home = byId("homeView");
         var detail = byId("detailView");
 
+        stopRegistryStatePolling();
         resetDetailMorphStyles();
         clearDetailContentClasses();
         detail.classList.remove("is-active", "is-closing", "is-entering", "is-morphing");
@@ -1972,6 +1974,274 @@
         }
     }
 
+    function getRegistryRuntime(toolId) {
+        if (!toolId) {
+            return null;
+        }
+        if (!RegistryRuntimeStates[toolId]) {
+            RegistryRuntimeStates[toolId] = {
+                state: {},
+                lastResult: null,
+                timer: null,
+                pending: false
+            };
+        }
+        return RegistryRuntimeStates[toolId];
+    }
+
+    function stopRegistryStatePolling(toolId) {
+        var key;
+        var runtime;
+        if (toolId) {
+            runtime = RegistryRuntimeStates[toolId];
+            if (runtime && runtime.timer) {
+                window.clearInterval(runtime.timer);
+                runtime.timer = null;
+            }
+            return;
+        }
+        for (key in RegistryRuntimeStates) {
+            if (Object.prototype.hasOwnProperty.call(RegistryRuntimeStates, key)) {
+                stopRegistryStatePolling(key);
+            }
+        }
+    }
+
+    function normalizeRegistryStateResult(result) {
+        if (!result || typeof result !== "object") {
+            return {};
+        }
+        if (result.state && typeof result.state === "object") {
+            return result.state;
+        }
+        return result;
+    }
+
+    function registryStateValue(toolDef, key) {
+        var runtime = toolDef && toolDef.id ? getRegistryRuntime(toolDef.id) : null;
+        if (!runtime || !runtime.state) {
+            return undefined;
+        }
+        return runtime.state[key];
+    }
+
+    function stateValueMatches(value, expected) {
+        if (typeof expected === "undefined") {
+            return !!value;
+        }
+        if (typeof expected === "boolean") {
+            return !!value === expected;
+        }
+        if (typeof expected === "number") {
+            return Number(value) === expected;
+        }
+        return String(value) === String(expected);
+    }
+
+    function schemaStateDisabled(item, toolDef) {
+        var rule;
+        var value;
+        if (!item) {
+            return false;
+        }
+        rule = item.disabledWhen;
+        if (rule && rule.stateKey) {
+            value = registryStateValue(toolDef, rule.stateKey);
+            if (stateValueMatches(value, rule.equals)) {
+                return true;
+            }
+        }
+        rule = item.enabledWhen;
+        if (rule && rule.stateKey) {
+            value = registryStateValue(toolDef, rule.stateKey);
+            if (!stateValueMatches(value, rule.equals)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function applyStateConditionMetadata(element, item, toolDef) {
+        if (!element || !item) {
+            return;
+        }
+        if (toolDef && toolDef.id) {
+            element.setAttribute("data-registry-tool-id", toolDef.id);
+        }
+        if (item.disabledWhen && item.disabledWhen.stateKey) {
+            element.setAttribute("data-disabled-state-key", item.disabledWhen.stateKey);
+            if (typeof item.disabledWhen.equals !== "undefined") {
+                element.setAttribute("data-disabled-state-equals", String(item.disabledWhen.equals));
+            }
+        }
+        if (item.enabledWhen && item.enabledWhen.stateKey) {
+            element.setAttribute("data-enabled-state-key", item.enabledWhen.stateKey);
+            if (typeof item.enabledWhen.equals !== "undefined") {
+                element.setAttribute("data-enabled-state-equals", String(item.enabledWhen.equals));
+            }
+        }
+        if ((item.disabledWhen && item.disabledWhen.stateKey) || (item.enabledWhen && item.enabledWhen.stateKey)) {
+            element.setAttribute("data-registry-state-conditioned", "true");
+            element.disabled = schemaStateDisabled(item, toolDef);
+            element.classList.toggle("is-state-disabled", element.disabled);
+        }
+    }
+
+    function elementStateDisabled(element, toolDef) {
+        var key;
+        var expected;
+        var value;
+        var section = element.closest ? element.closest(".is-section-disabled") : null;
+
+        if (section) {
+            return true;
+        }
+
+        key = element.getAttribute("data-disabled-state-key");
+        if (key) {
+            expected = element.hasAttribute("data-disabled-state-equals") ? element.getAttribute("data-disabled-state-equals") : undefined;
+            value = registryStateValue(toolDef, key);
+            if (stateValueMatches(value, expected)) {
+                return true;
+            }
+        }
+        key = element.getAttribute("data-enabled-state-key");
+        if (key) {
+            expected = element.hasAttribute("data-enabled-state-equals") ? element.getAttribute("data-enabled-state-equals") : undefined;
+            value = registryStateValue(toolDef, key);
+            if (!stateValueMatches(value, expected)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function updateRegistryStateCard(toolDef) {
+        var card = toolDef && toolDef.id ? document.querySelector('[data-registry-state-card="' + toolDef.id + '"]') : null;
+        var runtime = toolDef && toolDef.id ? getRegistryRuntime(toolDef.id) : null;
+        var fields = toolDef && toolDef.stateCard && toolDef.stateCard.fields ? toolDef.stateCard.fields : [];
+        var i;
+        var valueNode;
+        var value;
+
+        if (!card || !runtime) {
+            return;
+        }
+
+        card.classList.toggle("is-ready", !!(runtime.lastResult && runtime.lastResult.ok));
+        card.classList.toggle("is-error", !!(runtime.lastResult && runtime.lastResult.ok === false));
+        for (i = 0; i < fields.length; i++) {
+            valueNode = card.querySelector('[data-state-card-value="' + fields[i].stateKey + '"]');
+            if (!valueNode) {
+                continue;
+            }
+            value = registryStateValue(toolDef, fields[i].stateKey);
+            valueNode.textContent = (typeof value === "undefined" || value === null || value === "") ?
+                tr(fields[i].fallbackKey || "common.unavailable") :
+                String(value);
+        }
+    }
+
+    function updateRegistryStateDependentUi(toolDef) {
+        var elements = toolDef && toolDef.id ? document.querySelectorAll('[data-registry-tool-id="' + toolDef.id + '"][data-registry-state-conditioned="true"]') : [];
+        var i;
+        var disabled;
+
+        for (i = 0; i < elements.length; i++) {
+            disabled = elementStateDisabled(elements[i], toolDef);
+            elements[i].disabled = disabled;
+            elements[i].classList.toggle("is-state-disabled", disabled);
+        }
+        updateRegistryStateCard(toolDef);
+    }
+
+    function refreshRegistryToolState(toolDef, callback) {
+        var runtime;
+        var hostFunction;
+
+        if (!toolDef || !toolDef.id || !toolDef.stateAction || !toolDef.stateAction.hostFunction) {
+            if (callback) {
+                callback(null);
+            }
+            return;
+        }
+
+        runtime = getRegistryRuntime(toolDef.id);
+        if (runtime.pending) {
+            return;
+        }
+
+        runtime.pending = true;
+        hostFunction = toolDef.stateAction.hostFunction;
+        evalHost(hostFunction + "()", function (raw) {
+            var result = parseResult(raw);
+            runtime.pending = false;
+            runtime.lastResult = result;
+            runtime.state = normalizeRegistryStateResult(result);
+            updateRegistryStateDependentUi(toolDef);
+            if (callback) {
+                callback(result);
+            }
+        });
+    }
+
+    function startRegistryStatePolling(toolDef) {
+        var runtime;
+        var intervalMs;
+
+        stopRegistryStatePolling();
+        if (!toolDef || !toolDef.id || !toolDef.stateAction || !toolDef.stateAction.hostFunction) {
+            return;
+        }
+
+        runtime = getRegistryRuntime(toolDef.id);
+        intervalMs = Number(toolDef.stateAction.intervalMs || 0);
+        refreshRegistryToolState(toolDef);
+        if (intervalMs > 0) {
+            runtime.timer = window.setInterval(function () {
+                if (activeToolId === toolDef.id) {
+                    refreshRegistryToolState(toolDef);
+                }
+            }, Math.max(350, intervalMs));
+        }
+    }
+
+    function mergeActionPayload(params, payload) {
+        var out = {};
+        var key;
+        params = params || {};
+        payload = payload || {};
+        for (key in params) {
+            if (Object.prototype.hasOwnProperty.call(params, key)) {
+                out[key] = params[key];
+            }
+        }
+        for (key in payload) {
+            if (Object.prototype.hasOwnProperty.call(payload, key)) {
+                out[key] = payload[key];
+            }
+        }
+        return out;
+    }
+
+    function findRegistryAction(toolDef, actionId) {
+        var actions = toolDef && toolDef.actions ? toolDef.actions : [];
+        var i;
+        for (i = 0; i < actions.length; i++) {
+            if (actions[i] && actions[i].id === actionId) {
+                return actions[i];
+            }
+        }
+        return null;
+    }
+
+    function dynamicActionMessage(result, fallbackKey) {
+        if (result && result.messageKey) {
+            return tr(result.messageKey, result);
+        }
+        return tr(fallbackKey || "status.ready", result || {});
+    }
+
     function hexToRgb(hex) {
         var normalized = normalizeHex(hex, "#ffffff").replace("#", "");
         return {
@@ -2168,6 +2438,8 @@
         var colorValue;
         var hintText;
         var i;
+        var controls;
+        var k;
         var option;
         var toolId = toolDef && toolDef.id ? toolDef.id : "";
         var fieldType = field && field.type ? field.type : "text";
@@ -2228,10 +2500,14 @@
                 input.textContent = tr(field.labelKey || field.key || "");
             }
             input.addEventListener("click", function () {
+                if (this.disabled) {
+                    return;
+                }
                 if (field.actionId) {
-                    runDynamicToolAction(toolDef.id, field.actionId);
+                    runDynamicToolAction(toolDef.id, field.actionId, field.actionPayload || {}, field);
                 }
             });
+            applyStateConditionMetadata(input, field, toolDef);
             row.appendChild(input);
             return row;
         }
@@ -2438,6 +2714,10 @@
 
         row.appendChild(labelColumn);
         row.appendChild(wrap);
+        controls = row.querySelectorAll("input, select, textarea, button");
+        for (k = 0; k < controls.length; k++) {
+            applyStateConditionMetadata(controls[k], field, toolDef);
+        }
         return row;
     }
 
@@ -2461,7 +2741,7 @@
         return [];
     }
 
-    function setRegistrySectionState(card, enabled, collapsed) {
+    function setRegistrySectionState(card, enabled, collapsed, toolDef) {
         var body = card ? card.querySelector(".registry-section-body") : null;
         var controls;
         var i;
@@ -2477,6 +2757,9 @@
         controls = body.querySelectorAll("input, select, textarea, button");
         for (i = 0; i < controls.length; i++) {
             controls[i].disabled = !enabled;
+        }
+        if (enabled && toolDef) {
+            updateRegistryStateDependentUi(toolDef);
         }
         setupCustomSelectInputs();
     }
@@ -2498,7 +2781,7 @@
         input.addEventListener("change", function (event) {
             var enabled = !!this.checked;
             event.stopPropagation();
-            setRegistrySectionState(card, enabled, section.collapsible && !enabled);
+            setRegistrySectionState(card, enabled, section.collapsible && !enabled, toolDef);
             scheduleRegistryToolSave(toolDef);
         });
 
@@ -2539,13 +2822,13 @@
                 heading.setAttribute("role", "button");
                 heading.setAttribute("tabindex", "0");
                 heading.addEventListener("click", function () {
-                    setRegistrySectionState(card, card.classList.contains("is-section-disabled") ? false : true, !card.classList.contains("is-section-collapsed"));
+                    setRegistrySectionState(card, card.classList.contains("is-section-disabled") ? false : true, !card.classList.contains("is-section-collapsed"), toolDef);
                     scheduleRegistryToolSave(toolDef);
                 });
                 heading.addEventListener("keydown", function (event) {
                     if (event.keyCode === 13 || event.keyCode === 32) {
                         event.preventDefault();
-                        setRegistrySectionState(card, card.classList.contains("is-section-disabled") ? false : true, !card.classList.contains("is-section-collapsed"));
+                        setRegistrySectionState(card, card.classList.contains("is-section-disabled") ? false : true, !card.classList.contains("is-section-collapsed"), toolDef);
                         scheduleRegistryToolSave(toolDef);
                     }
                 });
@@ -2585,7 +2868,7 @@
             body.appendChild(renderSchemaField(fields[i], toolDef));
         }
         card.appendChild(body);
-        setRegistrySectionState(card, enabled, collapsed);
+        setRegistrySectionState(card, enabled, collapsed, toolDef);
 
         return card;
     }
@@ -2662,8 +2945,12 @@
             button.className = action.style === "secondary" ? "panel-button secondary-action" : "primary-action";
             button.textContent = tr(action.labelKey || action.id);
             button.setAttribute("data-dynamic-action", action.id);
+            applyStateConditionMetadata(button, action, toolDef);
             button.addEventListener("click", function () {
-                runDynamicToolAction(toolDef.id, this.getAttribute("data-dynamic-action"));
+                if (this.disabled) {
+                    return;
+                }
+                runDynamicToolAction(toolDef.id, this.getAttribute("data-dynamic-action"), {}, findRegistryAction(toolDef, this.getAttribute("data-dynamic-action")));
             });
             fragment.appendChild(button);
         }
@@ -2671,12 +2958,65 @@
         return fragment;
     }
 
-    function runDynamicToolAction(toolId, actionId) {
-        var json = JSON.stringify(collectDynamicToolParams(toolId));
-        setStatus(tr("status.loadingHost"), "busy", true);
+    function renderRegistryStateCard(toolDef) {
+        var spec = toolDef ? toolDef.stateCard : null;
+        var card;
+        var title;
+        var fields;
+        var row;
+        var label;
+        var value;
+        var i;
+
+        if (!spec || !spec.fields || !spec.fields.length) {
+            return null;
+        }
+
+        card = document.createElement("section");
+        card.className = "info-panel registry-state-card";
+        card.setAttribute("data-registry-state-card", toolDef.id);
+
+        if (spec.titleKey || spec.title) {
+            title = document.createElement("h3");
+            title.className = "registry-title-primary";
+            title.textContent = tr(spec.titleKey || spec.title);
+            card.appendChild(title);
+        }
+
+        fields = spec.fields;
+        for (i = 0; i < fields.length; i++) {
+            row = document.createElement("div");
+            row.className = "registry-state-row";
+            label = document.createElement("span");
+            label.className = "registry-text-muted";
+            label.textContent = tr(fields[i].labelKey || fields[i].stateKey || "");
+            value = document.createElement("strong");
+            value.className = "registry-text-body";
+            value.setAttribute("data-state-card-value", fields[i].stateKey);
+            value.textContent = tr(fields[i].fallbackKey || "common.unavailable");
+            row.appendChild(label);
+            row.appendChild(value);
+            card.appendChild(row);
+        }
+
+        return card;
+    }
+
+    function runDynamicToolAction(toolId, actionId, actionPayload, actionDef) {
+        var toolDef = DynamicTools[toolId];
+        var action = actionDef || findRegistryAction(toolDef, actionId) || {};
+        var params = mergeActionPayload(collectDynamicToolParams(toolId), actionPayload || action.actionPayload || {});
+        var json = JSON.stringify(params);
+        setStatus(tr(action.pendingMessageKey || "status.loadingHost"), "busy", true);
         evalHost("AEToolbox.runRegisteredToolAction('" + jsxQuote(toolId) + "','" + jsxQuote(actionId) + "','" + jsxQuote(json) + "')", function (raw) {
             var result = parseResult(raw);
-            setStatus(resultMessage(result, "status.ready"), result.ok ? "ok" : "error");
+            var fallback = result.ok ? (action.successMessageKey || "status.ready") : (action.errorMessageKey || "status.ready");
+            setStatus(dynamicActionMessage(result, fallback), result.ok ? "ok" : "error");
+            if (toolDef && toolDef.stateAction && (action.refreshStateAfterRun || toolDef.refreshStateAfterRun)) {
+                if (result.ok || action.refreshStateAfterError) {
+                    refreshRegistryToolState(toolDef);
+                }
+            }
         });
     }
 
@@ -2686,6 +3026,7 @@
         var actions = byId("registryToolActions");
         var intro;
         var desc;
+        var stateCard;
         var sections;
         var i;
         var oldMenus;
@@ -2711,6 +3052,11 @@
         intro.appendChild(desc);
         panel.appendChild(intro);
 
+        stateCard = renderRegistryStateCard(tool);
+        if (stateCard) {
+            panel.appendChild(stateCard);
+        }
+
         sections = getToolSections(tool);
         for (i = 0; i < sections.length; i++) {
             panel.appendChild(renderToolSection(sections[i], tool));
@@ -2720,6 +3066,8 @@
 
         setupCustomSelectInputs();
         updateRegistryVisibleFields(tool);
+        updateRegistryStateDependentUi(tool);
+        startRegistryStatePolling(tool);
     }
 
     function renderDynamicToolDetail(toolId) {
@@ -2738,6 +3086,8 @@
 
         if (dynamic) {
             renderDynamicToolDetail(activeToolId);
+        } else {
+            stopRegistryStatePolling();
         }
 
         for (i = 0; i < panels.length; i++) {

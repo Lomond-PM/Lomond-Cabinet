@@ -97,6 +97,7 @@ Purpose:
 - Includes a section-level toggle test panel for enable/collapse behavior.
 - Uses shared registry value persistence to verify saved field and toggle state.
 - Covers full-width button fields, primary/secondary variants, center-axis bilingual button text, tabs / option cards, and `visibleWhen` conditional fields.
+- Covers action payloads, host state display, state-gated buttons/actions, after-run state refresh, and action-specific status fallbacks.
 
 ### Selection Info
 
@@ -235,6 +236,8 @@ Current status:
 - Existing legacy files matching `host/tools/*.jsx` are not scanned dynamically and remain on the static include path.
 - The frontend appends dynamic tools to Home without changing existing legacy tool cards.
 - The generic dynamic renderer currently supports `text`, `number`, `checkbox`, `select`, and action buttons.
+- The registry renderer supports transient `actionPayload` on button/action schema entries.
+- The registry renderer supports `stateAction` host state queries, runtime-only state storage, state-driven disabled buttons/actions, `stateCard`, and `refreshStateAfterRun`.
 
 Legacy tools not migrated:
 
