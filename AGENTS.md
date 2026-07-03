@@ -2,71 +2,182 @@
 
 ## Project Overview
 
-This project is an After Effects CEP Extension panel.
+This repository is the **Lomond Cabinet / AE CEP Toolbox** project.
 
-- Frontend: HTML, CSS, and browser JavaScript under `client/`.
-- Host logic: ExtendScript / JSX under `host/`.
+It is an After Effects CEP Extension panel:
+
+- Frontend: HTML, CSS, and browser JavaScript.
+- Host logic: ExtendScript / JSX executed by After Effects.
+- Bridge: `CSInterface.evalScript()`.
 - CEP entry: `CSXS/manifest.xml` points to `./client/index.html`.
-- Frontend calls After Effects operations through `CSInterface.evalScript()`.
+- Visible UI product name: `Lomond Cabinet`.
+- Extension bundle id: `com.kevin.aetoolbox`.
 
-The current product name shown in the UI is **Lomond Cabinet**. The extension bundle id remains `com.kevin.aetoolbox`.
-
-## Project Structure
+Main directories:
 
 ```text
-com.kevin.aetoolbox/
-  CSXS/
-    manifest.xml
-  client/
-    index.html
-    css/
-      style.css
-    js/
-      main.js
-      i18n.js
-      lib/
-        CSInterface.js
-  host/
-    index.jsx
-    aeUtils.jsx
-    effectUtils.jsx
-    shapeUtils.jsx
-    tools/
-      textBackgroundBox.jsx
-      selectionInfo.jsx
-      ecommerceLayout.jsx
-      adComponentKit.jsx
-      shapeAdd.jsx
-  docs/
+CSXS/              CEP manifest and extension metadata
+client/            Panel HTML, CSS, browser JavaScript, i18n, CSInterface
+host/              ExtendScript entry and shared AE host utilities
+host/tools/        Legacy host tools and registry `.tool.jsx` tools
+docs/              Project state, design system, handoff, known issues
+VERSION            Current project version
+CHANGELOG.md       Versioned project changes
 ```
 
-## Frontend / Host Responsibility Boundary
+Do not treat this repository as a generic web app. It is a CEP extension with a browser frontend and an ExtendScript host runtime.
+
+## Runtime / AE CEP Loading
+
+The workspace repository is the source of truth. The After Effects CEP extensions directory should point to this workspace through a junction or symlink during development.
+
+Expected workspace path:
+
+```text
+C:\Users\Administrator\.openclaw\workspace\com.kevin.aetoolbox
+```
+
+Expected CEP development install path:
+
+```text
+%APPDATA%\Adobe\CEP\extensions\com.kevin.aetoolbox
+```
+
+If a change does not appear in After Effects:
+
+1. Confirm AE is loading the workspace path, not a stale copied extension directory.
+2. Reload the CEP panel after frontend changes.
+3. Restart After Effects if host JSX changes do not take effect.
+4. Confirm `CSXS/manifest.xml` still points to `./client/index.html`.
+5. Confirm `host/index.jsx` is loading the expected tool files.
+
+Do not manually edit files inside the CEP extensions directory if it is not the workspace repository.
+
+## Git Workflow Rules
+
+Default development branch is `dev`.
+
+Before starting any task:
+
+1. Run `git status -sb`.
+2. Confirm the working tree is clean.
+3. Checkout `dev`.
+4. Pull latest `origin/dev` if a remote is available.
+5. Create a task branch from `dev`.
+
+Use branch prefixes:
+
+- `feat/` for new features.
+- `fix/` for bug fixes.
+- `docs/` for documentation.
+- `style/` for UI/CSS-only changes.
+- `refactor/` for refactors.
+- `chore/` for configuration or maintenance.
+- `i18n/` for language text updates.
+- `probe/` for temporary validation tools.
+- `audit/` for read-only or documentation audits.
+
+Do not:
+
+- Work directly on `main` unless the user explicitly asks.
+- Apply old stash entries unless the user explicitly asks.
+- Commit automatically unless the user asks.
+- Push automatically unless the user asks.
+- Merge branches unless the user asks.
+- Create or move tags unless the user asks.
+- Delete task branches unless the user asks.
+- Reset, rebase, squash, or discard changes unless the user asks.
+
+If the working tree is not clean, stop and report the changed files before doing anything else.
+
+Release flow:
+
+```text
+task branch -> dev -> main -> version tag
+```
+
+Feature and fix branches are tested first, then merged to `dev`. Only confirmed stable `dev` should be merged to `main`. Tags are created only from release commits on `main`.
+
+## Architecture Principles
+
+The current registry architecture follows this rule:
+
+```text
+Tool owns data and actions.
+Core owns UI and behavior.
+```
+
+Tools should describe what they are and what actions they expose. The frontend core renderer decides how those tools look and behave.
+
+Do not add tool-specific DOM, tool-specific CSS, or one-off UI behavior for ordinary registry tools. If a tool needs a new UI capability, add it to the core registry renderer as a reusable schema capability first.
 
 Frontend responsibilities:
 
-- Build and update the UI.
-- Manage Home view, tool detail view, settings, status pill, custom selects, colors, persisted settings, and i18n.
-- Collect parameters from UI controls.
-- Call host JSX with `CSInterface.evalScript()`.
-- Parse JSON strings returned by host JSX.
+- Render Home, tool detail pages, Settings, status, and shared controls.
+- Render registry schemas.
+- Collect field values and persist registry values.
+- Apply i18n.
+- Call host JSX through `CSInterface.evalScript()`.
+- Parse JSON returned from host JSX.
 
-Host JSX responsibilities:
+Host responsibilities:
 
 - Inspect and modify After Effects comps, layers, properties, effects, and shape contents.
-- Use matchName where possible for Chinese/English AE compatibility.
+- Use matchName where practical for AE language compatibility.
 - Wrap mutating operations in `app.beginUndoGroup()` / `app.endUndoGroup()`.
-- Return JSON strings to the frontend.
+- Return JSON strings with `ok`, `messageKey` when possible, and useful debug details.
 
-Do not mix browser JavaScript and ExtendScript responsibilities.
+## Registry Tool Contract
 
-## CEP / ExtendScript Rules
+Registry tools live in:
 
-- `index.html` must not directly load `.jsx` files.
-- Host JSX is loaded from `client/js/main.js` with `CSInterface.evalScript()` and `$.evalFile(...)`.
-- `host/index.jsx` includes shared host files and tool modules with `#include`.
-- Host JSX must stay ExtendScript-compatible.
+```text
+host/tools/*.tool.jsx
+```
 
-Do not use the following in host JSX:
+`host/index.jsx` scans `.tool.jsx` files and each tool registers itself with:
+
+```js
+AEToolbox.registerTool(toolDef)
+```
+
+A registry tool may declare:
+
+- `id`
+- `titleKey`
+- `descriptionKey`
+- `category`
+- `icon` / `iconText`
+- `sections`
+- `fields`
+- `actions`
+- `stateAction`
+- `stateCard`
+- `i18n`
+- host action functions under `AEToolbox.tools.<toolId>`
+
+Registry tools must not:
+
+- Create custom detail page DOM.
+- Add dedicated CSS.
+- Implement custom UI interaction for controls.
+- Write directly to `localStorage`.
+- Duplicate core renderer behavior.
+- Bypass `AEToolbox.runRegisteredToolAction(...)` for normal registry actions.
+
+Use `sections` for new tools. `uiSchema` exists as a compatibility shortcut but should not be the default for new work.
+
+Each action should map to a host function:
+
+```js
+{
+  id: "create",
+  labelKey: "tools.example.actions.create",
+  hostFunction: "AEToolbox.tools.example.create"
+}
+```
+
+Host JSX must remain ExtendScript-compatible. In `host/`, do not use:
 
 - `let`
 - `const`
@@ -78,7 +189,52 @@ Do not use the following in host JSX:
 - spread / destructuring
 - trailing commas that can break older ExtendScript engines
 
-Use `var` and ES3-style code in `host/`.
+Use `var` and ES3-style code in host JSX.
+
+## Core Renderer Rules
+
+The core registry renderer in `client/js/main.js` owns:
+
+- Home card rendering for dynamic tools.
+- Tool detail page rendering.
+- Section and field rendering.
+- Field value collection.
+- Registry tool value persistence.
+- i18n application.
+- Shared status handling.
+- Action execution.
+- Host state refresh lifecycle.
+
+Supported shared controls and behaviors include:
+
+- `text`
+- `textarea`
+- `number`
+- `range`
+- `checkbox` / switch
+- `select`
+- `color`
+- `info`
+- `divider`
+- `button` / `actionButton`
+- `tabs` / option cards
+- full-width primary/secondary buttons
+- center-axis bilingual / matchName button layout
+- `visibleWhen`
+- section toggle / collapse
+- `actionPayload`
+- `stateAction`
+- `enabledWhen` / `disabledWhen`
+- `stateCard`
+- `refreshStateAfterRun`
+- action fallback messages with `pendingMessageKey`, `successMessageKey`, and `errorMessageKey`
+- per-tool value persistence under `aeToolbox.registryToolValues.<toolId>`
+
+`actionPayload` is transient. It is merged into the clicked action params and must not be persisted as user settings.
+
+`stateAction` state is runtime-only. It must not be written to `localStorage`.
+
+If a migrated tool needs a missing control type, report or add the missing control as a generic core renderer capability. Do not create a tool-specific workaround.
 
 ## i18n Rules
 
@@ -87,156 +243,214 @@ The panel supports:
 - `en`
 - `zh-CN`
 
-Rules:
+Current direction:
 
-- Add user-visible frontend strings to `client/js/i18n.js`.
-- Use `data-i18n`, `data-i18n-title`, `data-i18n-aria-label`, or `I18n.t(...)`.
-- New tools must define `titleKey` and `descriptionKey` in `ToolRegistry`.
-- Host JSX should return `messageKey` when practical; the frontend may fall back to `message`.
-- Avoid hard-coded user-visible text in HTML and `main.js`.
+- `client/js/i18n.js` should mainly contain core, global, Settings, Home, and legacy strings.
+- Registry tool-specific text should live in that tool's `.tool.jsx` `i18n` object.
+- Do not keep adding new registry tool strings to `client/js/i18n.js`.
+- New registry tools should ship their own `en` and `zh-CN` dictionaries.
+- Tool metadata must use `titleKey` and `descriptionKey`.
+- User-visible action labels, section titles, field labels, hints, status messages, and option labels must use i18n keys.
+- Host JSX should return `messageKey` when practical.
 
-## UI And Motion Rules
+When editing existing i18n:
 
-Keep the current direction:
+- Do not rename keys unless the task explicitly requires it.
+- Prefer changing values only.
+- If a `.jsx` file currently uses Unicode escape strings, keep that style in the same file.
+- Do not hard-code user-visible Chinese or English in renderer logic.
 
-- Black Gold minimal professional UI.
-- Apple-inspired fast-start / slow-stop motion.
-- Home page uses app-icon style tool cards.
-- Tool details use cards and a bottom action sheet.
-- Settings are a separate panel with morph transition.
-- Status feedback uses the bottom status pill.
+## Developer Mode Rules
 
-Do not casually change these systems:
+Developer Mode is a general switch for debug, probe, lab, and renderer validation tools.
 
-- App Launch / Close morph transition.
-- Settings open / close transition.
-- Home icon drag reorder behavior.
-- Status pill behavior.
-- Custom select overlay behavior.
+Developer Mode tools are hidden from normal Home by default and appear only when the Settings Developer Mode switch is enabled.
 
-Avoid restoring deprecated heavy visuals:
+Examples:
 
-- Liquid Glass layering
-- `backdrop-filter`
-- SVG filters
-- Houdini / paint worklets
-- large area blur
-- mouse-following glow
-- expensive nested shadows
+- `Registry Control Lab`
+- `Registry Probe`
+- `shapeAddProbe`
+- tools whose id/title/description contains `probe`, `lab`, `test`, `debug`, or `controlLab`
+- tools with `debugOnly: true`
+- tools with `developerOnly: true`
+- tools with `category: "debug"`
 
-## Performance Rules
+Formal production tools must not depend on Developer Mode.
 
-- Prefer `transform` and `opacity` for animation.
-- Do not animate layout properties such as `left`, `top`, `width`, `height`, margin, or padding except where already intentionally implemented and verified.
-- Do not keep broad `will-change` active permanently.
-- Do not add high-frequency `mousemove` effects.
-- Do not introduce React, Vue, or other large frontend frameworks.
-- Do not use external CDNs.
-- Keep CSS and JS changes scoped; `style.css` and `main.js` are large and should not be rewritten wholesale.
+Do not delete Developer Mode tools just because they are hidden. They are used to validate the core registry renderer and migration paths.
 
-## New Tool Rules
+## Current Tool Status
 
-When adding a tool:
+### Shape Add / Shape Builder
 
-1. Add a Home tool card in `client/index.html`.
-2. Add a `toolId` entry in `ToolRegistry` in `client/js/main.js`.
-3. Add `titleKey` and `descriptionKey` to `client/js/i18n.js`.
-4. Add the tool detail UI in `client/index.html`.
-5. Add bottom action buttons if needed.
-6. Wire events and parameter collection in `client/js/main.js`.
-7. Add host logic in `host/tools/<toolName>.jsx`.
-8. Include the host module from `host/index.jsx`.
-9. Return JSON strings from host functions.
-10. Support clear `ok`, `message` / `messageKey`, and useful debug fields.
+Status: formal registry tool.
 
-Do not break existing tools while adding a new one.
+- `host/tools/shapeAdd.tool.jsx` owns registry metadata, sections, fields, actions, and tool-local i18n.
+- The formal Home entry uses tool id `shapeAdd`.
+- The legacy static Home card was removed to avoid duplicate Home entries.
+- The 19 native shape item buttons are available through registry full-width buttons.
+- Native item buttons use `actionPayload` for `key` and `matchName`.
+- Buttons use host state through `stateAction`, `stateCard`, and state-driven disabled rules.
+- Actions refresh state after running.
+- Stroke / Fill Shape Layer UI is registry-rendered.
+- Stroke / Fill parameters live under the create button in a collapsible registry section.
+- Stroke / Fill has a section-local reset defaults button.
+- `host/tools/shapeAdd.jsx` still contains necessary legacy host action logic and must remain for now.
+- `shapeAddProbe` is Developer Mode-only and does not replace the formal Shape Add tool.
 
-## Protection Rules
+### Text Background Box / Background Rounded Rectangle
 
-- Do not overwrite user config stored in `localStorage`.
-- Do not reset existing visual parameters unless the user explicitly asks.
-- Do not reset `Motion`, `StorageKeys`, or persisted defaults casually.
-- Do not remove old host tools unless the user explicitly asks; some may be unused but preserved.
-- Before editing, read the current implementation path and confirm the active code path.
-- If a bug is suspected in unused code, document it first instead of changing it.
+Status: registry tool.
 
-## Version Control Rules
+- `host/tools/textBackgroundBox.tool.jsx` owns registry metadata and schema.
+- The registry action reuses the existing host creation behavior.
+- Fill and Stroke are controlled by section toggles.
 
-- Before changing files, check `git status --short --branch`.
-- Do not rewrite large files without a specific reason and a narrow scope.
-- Keep each functional change in its own commit when practical.
-- Use clear commit message prefixes:
-  - `feat:`
-  - `fix:`
-  - `docs:`
-  - `style:`
-  - `refactor:`
-  - `chore:`
-- Update `CHANGELOG.md` for new features, user-facing fixes, and behavior changes.
-- If changing the plugin version, keep these synchronized:
-  - `VERSION`
-  - `CHANGELOG.md`
-  - `CSXS/manifest.xml` `ExtensionBundleVersion`
-  - `CSXS/manifest.xml` extension `Version`
-- Do not commit generated archives, logs, backup folders, runtime cache, or dependency folders.
-- Keep `.gitignore` focused on generated files only; do not ignore source directories such as `CSXS/`, `client/`, `host/`, or `docs/`.
+### Selection Info
 
-## Git Workflow
+Status: registry tool.
 
-Default branch for development is `dev`.
+- `host/tools/selectionInfo.tool.jsx` owns metadata, action, and i18n.
 
-All future code changes, bug fixes, new tools, UI updates, i18n changes, documentation changes, and refactors must start from `dev`, unless the user explicitly says otherwise.
+### Ad Component Kit
 
-Before starting any task:
+Status: legacy tool.
 
-1. Run `git status`.
-2. Confirm the working tree is clean.
-3. Checkout `dev`.
-4. Pull latest changes from origin if remote is available.
-5. Create a task branch from `dev`.
+- Feature Stack and Icon Grid remain in the legacy UI/host path.
+- Do not refactor these unless explicitly requested.
 
-Use branch prefixes:
+### Registry Control Lab
 
-- `feat/` for new features
-- `fix/` for bug fixes
-- `docs/` for documentation
-- `style/` for UI/CSS-only changes
-- `refactor/` for refactors
-- `chore/` for configuration or maintenance
-- `i18n/` for language text updates
+Status: Developer Mode tool.
 
-Do not commit automatically unless the user asks.
+- Used to validate renderer controls, persistence, action/state behavior, and status behavior.
 
-Do not merge branches unless the user explicitly asks.
+### Preserved / Legacy Host Modules
 
-Do not push unless the user explicitly asks.
+Some host files may remain included for compatibility or future work. Do not delete preserved host modules unless all call paths are verified.
 
-Do not modify `main` unless the user explicitly asks.
+## Testing Checklist
 
-Do not create or update version tags unless the user explicitly asks.
+Before asking the user to verify a major UI/tool change in AE, run or provide this checklist.
 
-If the working tree is not clean, stop and report the changed files before doing anything.
+Developer Mode:
 
-If a task requires merging, releasing, tagging, or version bumping, wait for explicit user instruction.
+- Developer Mode off: Registry Control Lab is hidden.
+- Developer Mode off: Registry Probe is hidden.
+- Developer Mode off: shapeAddProbe is hidden.
+- Developer Mode on: debug/probe/lab tools are visible.
+- Developer Mode on/off does not break saved Home order.
+
+Shape Add:
+
+- Home shows Shape Add / Shape Builder only once.
+- No target: native item buttons are disabled.
+- Valid shape target: native item buttons are enabled.
+- All 19 native shape item buttons can add their item.
+- State card refreshes after add actions.
+- Stroke / Fill Shape Layer creation works.
+- Stroke / Fill settings persist.
+- Stroke / Fill section-local reset affects only Stroke / Fill defaults.
+- Chinese/English switching works.
+
+Other tools:
+
+- Text Background Box / Background Rounded Rectangle works.
+- Selection Info works.
+- Ad Component Kit Feature Stack works.
+- Ad Component Kit Icon Grid works.
+- Home Edit enter/edit/done flow works.
+- Settings opens normally.
+- App Launch / Close transitions still work.
+- No untranslated i18n keys are visible.
+- No `null.addEventListener` errors appear.
+
+## Known Issues / Do Not Fix Casually
+
+### Settings Background Engine preset dropdown render glitch
+
+Status: Deferred.
+
+Opening the Settings Background Engine preset dropdown and closing it by clicking elsewhere can cause a Settings layout/render glitch. This is documented in `docs/KNOWN_ISSUES.md`.
+
+Do not fix this opportunistically. It needs a dedicated UI state stabilization pass.
+
+### HomeLayoutManager
+
+Home ordering is sensitive because static and dynamic tools share saved `toolId` order.
+
+Do not refactor `HomeLayoutManager` casually.
+
+Do not save absolute icon positions. Home order should remain a `toolId` order array.
+
+### Shape Add legacy host actions
+
+Do not delete `host/tools/shapeAdd.jsx` or global Shape Add wrappers casually.
+
+The registry Shape Add UI still reuses these host actions:
+
+```js
+shapeAdd_getState()
+shapeAdd_add(matchName, key)
+shapeAdd_createStrokeFillLayer(paramsJson)
+```
+
+Remove them only after all registry callers and any global bridge callers are audited.
+
+## Release Workflow
+
+Release flow:
+
+```text
+task branch -> dev -> main -> tag
+```
+
+Before preparing a release:
+
+1. Confirm the task branch has been tested.
+2. Merge the task branch into `dev`.
+3. Test `dev` in AE.
+4. Update release metadata only after the user asks.
+5. Merge stable `dev` into `main`.
+6. Create the version tag from `main`.
+
+When changing the version, keep these synchronized:
+
+- `VERSION`
+- `CSXS/manifest.xml` `ExtensionBundleVersion`
+- `CSXS/manifest.xml` extension `Version`
+- `package.json`, if it exists
+- `README.md` / docs, if they explicitly state the current version
+- `CHANGELOG.md`
+
+`v0.2.1` has been published and must not be moved. `v0.2.2` is the agent handoff guide / project maintainability release.
+
+Do not move existing tags unless the user explicitly asks.
 
 ## Development Install Path
 
 The source of truth is the workspace Git repository:
 
-`C:\Users\Administrator\.openclaw\workspace\com.kevin.aetoolbox`
+```text
+C:\Users\Administrator\.openclaw\workspace\com.kevin.aetoolbox
+```
 
 Codex must modify files only in this workspace repository.
 
 The After Effects CEP extensions directory should point to this workspace through a Windows junction or symlink:
 
-`%APPDATA%\Adobe\CEP\extensions\com.kevin.aetoolbox`
--> `C:\Users\Administrator\.openclaw\workspace\com.kevin.aetoolbox`
+```text
+%APPDATA%\Adobe\CEP\extensions\com.kevin.aetoolbox
+-> C:\Users\Administrator\.openclaw\workspace\com.kevin.aetoolbox
+```
 
 Do not manually edit files inside the CEP extensions directory if it is not the workspace repository.
 
 Do not copy files between workspace and extensions during normal development.
 
 After modifying frontend files, reload the CEP panel.
+
 After modifying host JSX files, restart After Effects if changes do not take effect.
 
 Git is used only in the workspace repository for version control.

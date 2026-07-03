@@ -7,7 +7,7 @@ This is an After Effects CEP Extension panel. The visible UI title is **Lomond C
 Current version candidate:
 
 ```text
-0.2.1
+0.2.2
 ```
 
 Confirmed entry points:
