@@ -332,6 +332,7 @@ Registry renderer standard controls now include:
 - `button` / `actionButton` fields with `variant`, `fullWidth`, `actionId`, and optional center-axis bilingual text.
 - `tabs` fields rendered as option cards with `iconText`, translated title, and translated description.
 - `visibleWhen` on any field for conditional display based on another field value.
+- Developer Mode-only tools may use `debugOnly: true`, `developerOnly: true`, or `category: "debug"` and are hidden from the normal Home view.
 
 Registry action/state capabilities:
 
@@ -374,8 +375,8 @@ The phased migration path is:
 1. Add core renderer action/state capability.
 2. Add hidden `shapeAddProbe.tool.jsx`.
 3. Validate one minimal rectangle action.
-4. Migrate the 19 native shape item buttons.
-5. Migrate Stroke / Fill Shape Layer subtool UI through registry schema while preserving the legacy host implementation.
+4. Migrate the 19 native shape item buttons. Completed.
+5. Migrate Stroke / Fill Shape Layer subtool UI through registry schema while preserving the legacy host implementation. Completed.
 6. Remove or simplify remaining obsolete frontend helper code only after AE verification.
 7. Remove legacy host wrappers only when no registered or global caller uses them.
 
@@ -405,9 +406,16 @@ Do not add Shape Add-specific CSS or custom page structure during this process. 
 Supported field types in the current generic renderer:
 
 - `text`
+- `textarea`
 - `number`
+- `range`
 - `checkbox`
 - `select`
+- `color`
+- `info`
+- `divider`
+- `button` / `actionButton`
+- `tabs`
 
 Action buttons are rendered from `actions`. A registry tool should not create its own footer.
 

@@ -65,6 +65,7 @@
         descriptionKey: "tools.registryControlLab.description",
         category: "debug",
         iconText: "C",
+        debugOnly: true,
         stateAction: {
             hostFunction: "AEToolbox.tools.registryControlLab.getState",
             intervalMs: 1200

@@ -1013,6 +1013,30 @@
         return !!DynamicTools[toolId];
     }
 
+    function isDeveloperRegistryTool(tool) {
+        var id;
+        var titleKey;
+        var descriptionKey;
+        var haystack;
+
+        if (!tool) {
+            return false;
+        }
+        if (tool.debugOnly === true || tool.developerOnly === true || tool.category === "debug") {
+            return true;
+        }
+
+        id = String(tool.id || "");
+        titleKey = String(tool.titleKey || "");
+        descriptionKey = String(tool.descriptionKey || "");
+        haystack = (id + " " + titleKey + " " + descriptionKey).toLowerCase();
+        return haystack.indexOf("probe") !== -1 ||
+            haystack.indexOf("lab") !== -1 ||
+            haystack.indexOf("test") !== -1 ||
+            haystack.indexOf("debug") !== -1 ||
+            haystack.indexOf("controllab") !== -1;
+    }
+
     function renderDynamicToolHome() {
         var grid = byId("toolGrid");
         var more = grid ? grid.querySelector(".tool-app.is-disabled") : null;
@@ -1034,7 +1058,7 @@
 
         for (i = 0; i < DynamicToolOrder.length; i++) {
             tool = DynamicTools[DynamicToolOrder[i]];
-            if (!tool || tool.hidden || (tool.debugOnly && window.AETOOLBOX_DEBUG_REGISTRY !== true)) {
+            if (!tool || tool.hidden || (isDeveloperRegistryTool(tool) && window.AETOOLBOX_DEBUG_REGISTRY !== true)) {
                 continue;
             }
             button = document.createElement("button");
