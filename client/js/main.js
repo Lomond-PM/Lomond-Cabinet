@@ -1115,6 +1115,18 @@
         return null;
     }
 
+    function findSettingsSchemaSection(id) {
+        var schema = window.AEToolboxSettingsSchema;
+        var sections = schema && schema.sections ? schema.sections : [];
+        var i;
+        for (i = 0; i < sections.length; i++) {
+            if (sections[i] && sections[i].id === id) {
+                return sections[i];
+            }
+        }
+        return null;
+    }
+
     function renderSettingsLanguage() {
         var mount = byId("settingsLanguageMount");
         var field = findSettingsSchemaField("language");
@@ -1233,6 +1245,91 @@
         row.appendChild(switchWrap);
         mount.appendChild(heading);
         mount.appendChild(row);
+    }
+
+    function renderSettingsRangeRow(field, numberId) {
+        var row;
+        var copy;
+        var label;
+        var hint;
+        var controls;
+        var range;
+        var number;
+
+        row = document.createElement("label");
+        row.className = "switch-row motion-row";
+        copy = document.createElement("span");
+        label = document.createElement("strong");
+        label.setAttribute("data-i18n", field.labelKey);
+        label.textContent = tr(field.labelKey);
+        hint = document.createElement("small");
+        hint.setAttribute("data-i18n", field.descriptionKey);
+        hint.textContent = tr(field.descriptionKey);
+        copy.appendChild(label);
+        copy.appendChild(hint);
+
+        controls = document.createElement("span");
+        controls.className = "setting-inline-control";
+        range = document.createElement("input");
+        range.id = field.key;
+        range.className = "pill-slider";
+        range.type = "range";
+        range.min = String(field.min);
+        range.max = String(field.max);
+        range.step = String(field.step);
+        range.value = String(field.defaultValue);
+        number = document.createElement("input");
+        number.id = numberId;
+        number.className = "num-input";
+        number.type = "number";
+        number.min = String(field.min);
+        number.max = String(field.max);
+        number.step = String(field.step);
+        number.value = String(field.defaultValue);
+        controls.appendChild(range);
+        controls.appendChild(number);
+
+        row.appendChild(copy);
+        row.appendChild(controls);
+        return row;
+    }
+
+    function renderSettingsMotion() {
+        var mount = byId("settingsMotionMount");
+        var section = findSettingsSchemaSection("motion");
+        var heading;
+        var overline;
+        var title;
+        var fields;
+        var i;
+
+        if (!mount || !section) {
+            return;
+        }
+
+        mount.innerHTML = "";
+
+        heading = document.createElement("div");
+        heading.className = "settings-card-heading";
+        overline = document.createElement("p");
+        overline.className = "overline";
+        overline.setAttribute("data-i18n", "section.motion");
+        overline.textContent = tr("section.motion");
+        title = document.createElement("h3");
+        title.setAttribute("data-i18n", "section.animation");
+        title.textContent = tr("section.animation");
+        heading.appendChild(overline);
+        heading.appendChild(title);
+        mount.appendChild(heading);
+
+        fields = section.fields || [];
+        for (i = 0; i < fields.length; i++) {
+            if (fields[i] && fields[i].key === "motionSpeed") {
+                mount.appendChild(renderSettingsRangeRow(fields[i], "motionSpeedNumber"));
+            } else if (fields[i] && fields[i].key === "uiScale") {
+                mount.appendChild(renderSettingsRangeRow(fields[i], "uiScaleNumber"));
+            }
+        }
     }
 
     function mergeDynamicToolI18n(tool) {
@@ -5333,6 +5430,7 @@
         setupSegmentedControls();
         renderShapeAddButtons();
         setupColorControls();
+        renderSettingsMotion();
         setupMotionSpeed();
         setupUiScale();
         renderSettingsLanguage();
