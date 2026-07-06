@@ -333,10 +333,13 @@ Current implementation status:
 - An app-level Settings schema exists at `client/js/settingsSchema.js`.
 - `client/index.html` loads the schema so migrated production Settings sections can be rendered from data.
 - Language, Developer Mode / `registryDebugTools`, Motion Speed, UI Scale, Theme colors, and Background Engine controls are currently connected to the production Settings UI through the schema renderer path.
+- Settings internal content is rendered through `renderSettingsContent()` plus section renderers using the `settings-renderer` / `settings-section` / `settings-field` visual structure.
+- The outer Settings morph shell remains in `client/index.html` and still uses `#settingsView`, `.settings-panel`, `.settings-ui-layer`, and `.settings-content`.
 - Background Engine UI is schema-rendered, while `BackgroundEngine.applyPreset(...)`, `BackgroundEngine.save(...)`, and `BackgroundEngine.syncControls(...)` remain the behavior layer.
 - A Developer Mode-only Settings Renderer Lab exists at `host/tools/settingsRendererLab.tool.jsx` for testing renderer capabilities before formal Settings migration.
 - The target direction remains an app-level Settings Schema with phased production adoption after lab validation.
 - Settings i18n remains core/global i18n and should stay in `client/js/i18n.js`.
+- Legacy Settings DOM/CSS cleanup has not yet been performed; this is a separate Phase 6B task.
 
 Current Settings storage:
 
@@ -437,7 +440,7 @@ These are based on current code and recent project history. Verify visually afte
 - If a change appears to have no effect, confirm the active JS and host JSX path before editing algorithms.
 - Shape Add is now on the phased registry path. Do not attempt a one-pass rewrite or remove the preserved legacy host actions; see `docs/KNOWN_ISSUES.md`.
 - Deferred: Settings Background Engine preset dropdown can trigger a render/layout glitch after closing. See `docs/KNOWN_ISSUES.md`.
-- Settings schema migration is phased. Do not replace remaining behavior layers such as `BackgroundEngine` without a dedicated migration and AE regression pass.
+- Settings schema migration is phased. The internal UI shell is now on the Settings Renderer path, but do not replace remaining behavior layers such as `BackgroundEngine` without a dedicated migration and AE regression pass.
 
 ## Later Development Suggestions
 

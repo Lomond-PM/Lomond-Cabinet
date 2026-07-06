@@ -95,6 +95,7 @@ Current decision:
 - Stop direct legacy dropdown debugging.
 - Keep the issue documented until the migrated Settings schema-rendered Background Engine UI is tested repeatedly in AE.
 - Background Engine UI migration now routes the preset control through the shared Settings renderer/custom select lifecycle while preserving the existing `BackgroundEngine` behavior layer.
+- Settings internal UI shell migration keeps using the shared portal-style select lifecycle; this issue remains pending extended regression verification.
 - Do not mark this issue fixed until repeated open/close, ESC, outside click, resize, and language-switch tests show no recurrence.
 
 Future investigation notes:
