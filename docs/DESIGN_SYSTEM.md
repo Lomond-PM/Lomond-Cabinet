@@ -101,12 +101,12 @@ Settings are an app-level core panel, not a registry tool.
 
 Current state:
 
-- The production Settings panel remains the legacy static DOM in `client/index.html`.
+- The production Settings panel keeps its static shell in `client/index.html`, but migrated sections are rendered from the app-level Settings schema.
 - The current behavior remains in `client/js/main.js`.
 - `BackgroundEngine` remains legacy behavior and should not be replaced opportunistically.
 - `client/js/settingsSchema.js` is the draft app-level data model.
-- The production panel currently renders Language, Developer Mode, Motion Speed, UI Scale, and Theme colors from the Settings schema.
-- Background Engine remains legacy UI until a dedicated migration phase.
+- The production panel currently renders Language, Developer Mode, Motion Speed, UI Scale, Theme colors, and Background Engine controls from the Settings schema.
+- Background Engine behavior remains owned by the existing `BackgroundEngine` runtime; the schema renderer preserves the legacy control IDs and storage keys.
 
 Future direction:
 
@@ -116,7 +116,7 @@ Future direction:
 - Settings i18n belongs to core/global dictionaries in `client/js/i18n.js`.
 - Developer Mode is a core setting that controls debug/probe/lab registry tool visibility.
 - Developer Mode must not be implemented as a tool-specific condition such as `shapeAddProbe` only.
-- Background Engine preset selection requires a stable portal select before migration.
+- Background Engine preset selection should continue using the shared portal-style custom select lifecycle and requires repeated regression testing because the old legacy preset dropdown had a deferred render glitch.
 
 ## i18n Copy Rules
 

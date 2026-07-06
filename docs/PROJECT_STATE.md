@@ -326,16 +326,16 @@ Settings are persisted with `localStorage`.
 
 Current implementation status:
 
-- Settings remains a legacy static UI in `client/index.html`.
+- Settings remains an app-level panel with a static shell in `client/index.html`.
 - Settings behavior is still implemented in `client/js/main.js`.
 - `BackgroundEngine` remains the authoritative runtime behavior for procedural background settings.
 - Settings should not be treated as a normal registry tool.
-- A draft app-level Settings schema exists at `client/js/settingsSchema.js`.
-- `client/index.html` loads the schema so the production Settings panel can render the Developer Mode field from it.
-- Language, Developer Mode / `registryDebugTools`, Motion Speed, UI Scale, and Theme colors are currently connected to the production Settings UI through the schema renderer path.
-- Background Engine remains legacy Settings UI.
+- An app-level Settings schema exists at `client/js/settingsSchema.js`.
+- `client/index.html` loads the schema so migrated production Settings sections can be rendered from data.
+- Language, Developer Mode / `registryDebugTools`, Motion Speed, UI Scale, Theme colors, and Background Engine controls are currently connected to the production Settings UI through the schema renderer path.
+- Background Engine UI is schema-rendered, while `BackgroundEngine.applyPreset(...)`, `BackgroundEngine.save(...)`, and `BackgroundEngine.syncControls(...)` remain the behavior layer.
 - A Developer Mode-only Settings Renderer Lab exists at `host/tools/settingsRendererLab.tool.jsx` for testing renderer capabilities before formal Settings migration.
-- The target direction is an app-level Settings Schema and future Settings Renderer Lab before any formal Settings UI replacement.
+- The target direction remains an app-level Settings Schema with phased production adoption after lab validation.
 - Settings i18n remains core/global i18n and should stay in `client/js/i18n.js`.
 
 Current Settings storage:
@@ -370,6 +370,12 @@ Theme color storage:
 
 - Theme colors continue to use `AEToolbox.settings.v1`.
 - Existing `applyThemeAccent(...)`, `applyHomeBackground(...)`, `applyToolIconTheme(...)`, `setupColorControls()`, and AE host color picker behavior remain in place.
+
+Background Engine storage:
+
+- Background Engine continues to use `AEToolbox.background.v1`.
+- Background Engine collapse state continues to use `AEToolbox.backgroundSettingsCollapsed.v1`.
+- The production UI is now generated from the Settings schema, but it preserves the existing `bgPreset`, color, range, switch, randomize, and reset control IDs so the existing `BackgroundEngine` behavior layer remains intact.
 
 ### i18n
 
@@ -431,7 +437,7 @@ These are based on current code and recent project history. Verify visually afte
 - If a change appears to have no effect, confirm the active JS and host JSX path before editing algorithms.
 - Shape Add is now on the phased registry path. Do not attempt a one-pass rewrite or remove the preserved legacy host actions; see `docs/KNOWN_ISSUES.md`.
 - Deferred: Settings Background Engine preset dropdown can trigger a render/layout glitch after closing. See `docs/KNOWN_ISSUES.md`.
-- Settings schema migration is in draft-only state. Do not replace the legacy Settings DOM or BackgroundEngine behavior without a dedicated Settings Renderer Lab phase.
+- Settings schema migration is phased. Do not replace remaining behavior layers such as `BackgroundEngine` without a dedicated migration and AE regression pass.
 
 ## Later Development Suggestions
 

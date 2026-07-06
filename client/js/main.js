@@ -1404,6 +1404,298 @@
         }
     }
 
+    function findSettingsSectionField(section, key) {
+        var fields = section && section.fields ? section.fields : [];
+        var i;
+        for (i = 0; i < fields.length; i++) {
+            if (fields[i] && fields[i].key === key) {
+                return fields[i];
+            }
+        }
+        return null;
+    }
+
+    function renderSettingsBackgroundRange(field, controlId, minValue, maxValue) {
+        var row;
+        var label;
+        var controls;
+        var range;
+        var number;
+
+        row = document.createElement("label");
+        row.className = "control-row bg-control-row";
+        label = document.createElement("span");
+        label.className = "control-label";
+        label.setAttribute("data-i18n", field.labelKey);
+        label.textContent = tr(field.labelKey);
+
+        controls = document.createElement("span");
+        controls.className = "control-inputs";
+
+        range = document.createElement("input");
+        range.id = controlId;
+        range.className = "pill-slider bg-param";
+        range.type = "range";
+        range.min = String(minValue);
+        range.max = String(maxValue);
+        range.step = String(field.step);
+        range.value = String(field.defaultValue);
+
+        number = document.createElement("input");
+        number.id = controlId + "Number";
+        number.className = "num-input bg-param-number";
+        number.type = "number";
+        number.min = String(minValue);
+        number.max = String(maxValue);
+        number.step = String(field.step);
+        number.value = String(field.defaultValue);
+
+        controls.appendChild(range);
+        controls.appendChild(number);
+        row.appendChild(label);
+        row.appendChild(controls);
+        return row;
+    }
+
+    function renderSettingsBackgroundColor(field, inputId) {
+        var label;
+        var text;
+        var shell;
+        var input;
+
+        label = document.createElement("label");
+        text = document.createElement("span");
+        text.setAttribute("data-i18n", field.labelKey);
+        text.textContent = tr(field.labelKey);
+        shell = document.createElement("span");
+        shell.className = "color-shell small-color-shell";
+        shell.setAttribute("role", "button");
+        shell.setAttribute("tabindex", "0");
+        shell.setAttribute("data-color-target", inputId);
+        shell.setAttribute("aria-label", tr(field.labelKey));
+        input = document.createElement("input");
+        input.id = inputId;
+        input.className = "native-color-input";
+        input.type = "hidden";
+        input.value = normalizeHex(field.defaultValue, "#050403");
+        shell.appendChild(input);
+        label.appendChild(text);
+        label.appendChild(shell);
+        return label;
+    }
+
+    function renderSettingsBackgroundEngine() {
+        var mount = byId("backgroundSettingsCard");
+        var section = findSettingsSchemaSection("backgroundEngine");
+        var toggle;
+        var toggleCopy;
+        var overline;
+        var title;
+        var chevron;
+        var body;
+        var field;
+        var row;
+        var copy;
+        var label;
+        var hint;
+        var select;
+        var option;
+        var subtitle;
+        var colorGrid;
+        var colors;
+        var ranges;
+        var motionFields;
+        var switchWrap;
+        var switchInput;
+        var switchTrack;
+        var actions;
+        var button;
+        var i;
+
+        if (!mount || !section) {
+            return;
+        }
+
+        mount.innerHTML = "";
+        mount.className = "settings-card nested-settings-card collapsible-card";
+
+        toggle = document.createElement("button");
+        toggle.className = "collapsible-heading";
+        toggle.id = "backgroundSettingsToggle";
+        toggle.type = "button";
+        toggle.setAttribute("aria-expanded", "true");
+        toggleCopy = document.createElement("span");
+        overline = document.createElement("p");
+        overline.className = "overline";
+        overline.setAttribute("data-i18n", "section.procedural");
+        overline.textContent = tr("section.procedural");
+        title = document.createElement("h3");
+        title.setAttribute("data-i18n", section.titleKey);
+        title.textContent = tr(section.titleKey);
+        toggleCopy.appendChild(overline);
+        toggleCopy.appendChild(title);
+        chevron = document.createElement("span");
+        chevron.className = "collapse-chevron";
+        chevron.setAttribute("aria-hidden", "true");
+        toggle.appendChild(toggleCopy);
+        toggle.appendChild(chevron);
+
+        body = document.createElement("div");
+        body.className = "collapsible-body";
+        body.id = "backgroundSettingsBody";
+
+        field = findSettingsSectionField(section, "preset");
+        if (field) {
+            row = document.createElement("label");
+            row.className = "switch-row motion-row";
+            copy = document.createElement("span");
+            label = document.createElement("strong");
+            label.setAttribute("data-i18n", field.labelKey);
+            label.textContent = tr(field.labelKey);
+            hint = document.createElement("small");
+            hint.setAttribute("data-i18n", field.descriptionKey);
+            hint.textContent = tr(field.descriptionKey);
+            copy.appendChild(label);
+            copy.appendChild(hint);
+
+            select = document.createElement("select");
+            select.id = "bgPreset";
+            select.className = "select-input";
+            for (i = 0; field.options && i < field.options.length; i++) {
+                option = document.createElement("option");
+                option.value = field.options[i].value;
+                option.setAttribute("data-i18n", field.options[i].labelKey);
+                option.textContent = tr(field.options[i].labelKey);
+                select.appendChild(option);
+            }
+            row.appendChild(copy);
+            row.appendChild(select);
+            body.appendChild(row);
+        }
+
+        subtitle = document.createElement("div");
+        subtitle.className = "settings-subtitle";
+        subtitle.setAttribute("data-i18n", "section.color");
+        subtitle.textContent = tr("section.color");
+        body.appendChild(subtitle);
+
+        colorGrid = document.createElement("div");
+        colorGrid.className = "color-grid";
+        colors = [
+            ["baseColor", "bgBaseColor"],
+            ["secondaryColor", "bgSecondaryColor"],
+            ["accentColor", "bgAccentColor"],
+            ["accent2Color", "bgAccent2Color"],
+            ["lineColor", "bgLineColor"],
+            ["glowColor", "bgGlowColor"]
+        ];
+        for (i = 0; i < colors.length; i++) {
+            field = findSettingsSectionField(section, colors[i][0]);
+            if (field) {
+                colorGrid.appendChild(renderSettingsBackgroundColor(field, colors[i][1]));
+            }
+        }
+        body.appendChild(colorGrid);
+
+        subtitle = document.createElement("div");
+        subtitle.className = "settings-subtitle";
+        subtitle.setAttribute("data-i18n", "section.shape");
+        subtitle.textContent = tr("section.shape");
+        body.appendChild(subtitle);
+
+        ranges = [
+            ["glowOpacity", "bgGlowOpacity"],
+            ["glowSize", "bgGlowSize"],
+            ["glowX", "bgGlowX"],
+            ["glowY", "bgGlowY"],
+            ["gridOpacity", "bgGridOpacity"],
+            ["gridSize", "bgGridSize"],
+            ["lineOpacity", "bgLineOpacity"],
+            ["ringOpacity", "bgRingOpacity"],
+            ["ringScale", "bgRingScale"],
+            ["accentAngle", "bgAccentAngle"],
+            ["patternDensity", "bgPatternDensity"],
+            ["contrast", "bgContrast"]
+        ];
+        for (i = 0; i < ranges.length; i++) {
+            field = findSettingsSectionField(section, ranges[i][0]);
+            if (field) {
+                body.appendChild(renderSettingsBackgroundRange(field, ranges[i][1], field.min, field.max));
+            }
+        }
+
+        subtitle = document.createElement("div");
+        subtitle.className = "settings-subtitle";
+        subtitle.setAttribute("data-i18n", "section.motion");
+        subtitle.textContent = tr("section.motion");
+        body.appendChild(subtitle);
+
+        field = findSettingsSectionField(section, "motionEnable");
+        if (field) {
+            row = document.createElement("label");
+            row.className = "switch-row motion-row";
+            copy = document.createElement("span");
+            label = document.createElement("strong");
+            label.setAttribute("data-i18n", field.labelKey);
+            label.textContent = tr(field.labelKey);
+            hint = document.createElement("small");
+            hint.setAttribute("data-i18n", field.descriptionKey);
+            hint.textContent = tr(field.descriptionKey);
+            copy.appendChild(label);
+            copy.appendChild(hint);
+            switchWrap = document.createElement("span");
+            switchWrap.className = "switch";
+            switchInput = document.createElement("input");
+            switchInput.id = "bgMotionEnable";
+            switchInput.type = "checkbox";
+            switchTrack = document.createElement("span");
+            switchTrack.className = "switch-track";
+            switchWrap.appendChild(switchInput);
+            switchWrap.appendChild(switchTrack);
+            row.appendChild(copy);
+            row.appendChild(switchWrap);
+            body.appendChild(row);
+        }
+
+        motionFields = [
+            ["motionSpeed", "bgMotionSpeed"],
+            ["motionAmount", "bgMotionAmount"]
+        ];
+        for (i = 0; i < motionFields.length; i++) {
+            field = findSettingsSectionField(section, motionFields[i][0]);
+            if (field) {
+                body.appendChild(renderSettingsBackgroundRange(field, motionFields[i][1], field.min, field.max));
+            }
+        }
+
+        actions = document.createElement("div");
+        actions.className = "settings-actions";
+        field = findSettingsSectionField(section, "randomize");
+        if (field) {
+            button = document.createElement("button");
+            button.className = "panel-button";
+            button.id = "bgRandomizeBtn";
+            button.type = "button";
+            button.setAttribute("data-i18n", field.labelKey);
+            button.textContent = tr(field.labelKey);
+            actions.appendChild(button);
+        }
+        field = findSettingsSectionField(section, "reset");
+        if (field) {
+            button = document.createElement("button");
+            button.className = "panel-button";
+            button.id = "bgResetBtn";
+            button.type = "button";
+            button.setAttribute("data-i18n", field.labelKey);
+            button.textContent = tr(field.labelKey);
+            actions.appendChild(button);
+        }
+        body.appendChild(actions);
+
+        mount.appendChild(toggle);
+        mount.appendChild(body);
+    }
+
     function mergeDynamicToolI18n(tool) {
         if (tool && tool.i18n && window.I18n && window.I18n.mergeDictionaries) {
             window.I18n.mergeDictionaries(tool.i18n);
@@ -5502,6 +5794,7 @@
         setupSegmentedControls();
         renderShapeAddButtons();
         renderSettingsTheme();
+        renderSettingsBackgroundEngine();
         setupColorControls();
         renderSettingsMotion();
         setupMotionSpeed();

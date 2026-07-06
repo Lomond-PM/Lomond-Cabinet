@@ -63,7 +63,7 @@ Do not remove this note until several future Shape Add changes have been tested 
 
 Status:
 
-Deferred / To be handled in future UI stabilization pass.
+Deferred / Pending extended regression testing after Background Engine Settings schema migration.
 
 Area:
 
@@ -92,10 +92,10 @@ Attempted fixes:
 
 Current decision:
 
-- Stop active debugging for now.
-- Keep the issue documented.
-- Revisit later in a dedicated UI stabilization pass.
-- Settings schema work may document the Background Engine fields, but it must not replace the production preset dropdown until the dropdown/popover lifecycle is stabilized.
+- Stop direct legacy dropdown debugging.
+- Keep the issue documented until the migrated Settings schema-rendered Background Engine UI is tested repeatedly in AE.
+- Background Engine UI migration now routes the preset control through the shared Settings renderer/custom select lifecycle while preserving the existing `BackgroundEngine` behavior layer.
+- Do not mark this issue fixed until repeated open/close, ESC, outside click, resize, and language-switch tests show no recurrence.
 
 Future investigation notes:
 
@@ -105,8 +105,7 @@ Future investigation notes:
 - Check scroll container height / overflow state.
 - Check stale open / active classes.
 - Check whether the dropdown popover should be rendered in a portal layer instead of inside the scroll container.
-- Consider replacing Settings preset dropdown with the same standardized registry select component if appropriate.
-- Consider testing a stable portal select in a Settings Renderer Lab before touching the production Settings panel.
+- Continue validating that the shared portal-style custom select used by the migrated Settings renderer does not reproduce the old layout glitch.
 - Consider building a small UI state stress test before further fixes.
 
 Do not claim the issue is fixed.
