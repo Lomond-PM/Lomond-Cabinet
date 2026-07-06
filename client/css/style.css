@@ -382,6 +382,110 @@ body:not(.i18n-ready) .app-shell {
     padding-right: 6px;
 }
 
+.settings-renderer {
+    display: flex;
+    flex-direction: column;
+    gap: calc(12px * var(--ui-scale));
+}
+
+.settings-section {
+    max-width: 100%;
+    padding: var(--card-pad);
+    border: 1px solid var(--separator);
+    border-radius: var(--radius-lg);
+    background:
+        linear-gradient(180deg, rgba(214, 178, 94, 0.035), rgba(5, 4, 3, 0) 48%),
+        #0b0a08;
+    overflow: hidden;
+}
+
+.settings-section-header {
+    display: flex;
+    width: 100%;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: calc(12px * var(--ui-scale));
+    margin-bottom: calc(11px * var(--ui-scale));
+}
+
+.settings-section-toggle {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+}
+
+.settings-section-copy {
+    min-width: 0;
+}
+
+.settings-section-description,
+.settings-field-description {
+    display: block;
+    margin-top: calc(2px * var(--ui-scale));
+    color: var(--text-muted);
+    font-size: var(--font-small);
+    line-height: 1.25;
+}
+
+.settings-field {
+    display: flex;
+    min-height: calc(38px * var(--ui-scale));
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(12px * var(--ui-scale));
+    padding: calc(7px * var(--ui-scale)) 0;
+}
+
+.settings-field + .settings-field {
+    border-top: 1px solid rgba(214, 178, 94, 0.085);
+}
+
+.settings-field-copy {
+    min-width: 0;
+    flex: 1 1 150px;
+}
+
+.settings-field-label {
+    display: block;
+    color: var(--text-primary);
+    font-size: var(--font-body);
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.settings-field-control,
+.settings-field > .switch,
+.settings-field > .theme-color-shell,
+.settings-field > .select-input,
+.settings-field > .custom-select {
+    flex: 0 1 158px;
+    min-width: 0;
+}
+
+.settings-field--range .settings-field-control {
+    display: flex;
+    align-items: center;
+    gap: calc(8px * var(--ui-scale));
+}
+
+.settings-section .color-grid {
+    padding: calc(4px * var(--ui-scale)) 0 calc(2px * var(--ui-scale));
+}
+
+.settings-action-row {
+    display: flex;
+    gap: calc(8px * var(--ui-scale));
+    margin-top: calc(12px * var(--ui-scale));
+    flex-wrap: wrap;
+}
+
+.settings-action-row .panel-button {
+    flex: 1 1 0;
+}
+
 .settings-card {
     max-width: 100%;
     margin-bottom: calc(12px * var(--ui-scale));
@@ -557,7 +661,8 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .settings-card *,
-.nested-settings-card * {
+.nested-settings-card *,
+.settings-section * {
     max-width: 100%;
 }
 
@@ -2667,8 +2772,23 @@ p {
     }
 
     .settings-card,
-    .nested-settings-card {
+    .nested-settings-card,
+    .settings-section {
         padding: calc(10px * var(--ui-scale));
+    }
+
+    .settings-field {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .settings-field-control,
+    .settings-field > .switch,
+    .settings-field > .theme-color-shell,
+    .settings-field > .select-input,
+    .settings-field > .custom-select {
+        flex-basis: 100%;
+        width: 100%;
     }
 
     .settings-card .switch-row > .setting-inline-control,

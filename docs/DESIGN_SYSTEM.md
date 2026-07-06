@@ -106,12 +106,14 @@ Current state:
 - `BackgroundEngine` remains legacy behavior and should not be replaced opportunistically.
 - `client/js/settingsSchema.js` is the draft app-level data model.
 - The production panel currently renders Language, Developer Mode, Motion Speed, UI Scale, Theme colors, and Background Engine controls from the Settings schema.
+- Settings internal content should render through a single content pass and use Settings-specific visual classes such as `settings-renderer`, `settings-section`, `settings-section-header`, `settings-field`, and `settings-action-row`.
+- The outer morph shell classes such as `settings-view`, `settings-panel`, and `settings-ui-layer` are shell infrastructure and should not be removed during visual migration.
 - Background Engine behavior remains owned by the existing `BackgroundEngine` runtime; the schema renderer preserves the legacy control IDs and storage keys.
 
 Future direction:
 
 - Settings should migrate through an app-level Settings Schema, not through `host/tools/*.tool.jsx`.
-- Settings UI should be tested first in a Settings Renderer Lab before replacing the production Settings DOM.
+- Settings UI should continue migrating in phases: renderer shell first, then legacy DOM/CSS cleanup after AE verification.
 - The Settings Renderer Lab is Developer Mode-only and uses sandbox storage; it must not write production Settings keys.
 - Settings i18n belongs to core/global dictionaries in `client/js/i18n.js`.
 - Developer Mode is a core setting that controls debug/probe/lab registry tool visibility.

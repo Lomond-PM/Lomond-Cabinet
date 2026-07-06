@@ -54,6 +54,7 @@
     var RegistryToolState = {};
     var RegistrySaveTimers = {};
     var RegistryRuntimeStates = {};
+    var CustomSelectGlobalListenersBound = false;
     var DefaultToolParams = {
         paddingX: 40,
         paddingY: 20,
@@ -1127,16 +1128,87 @@
         return null;
     }
 
+    function createSettingsSectionMount(id, className) {
+        var section = document.createElement("section");
+        section.id = id;
+        section.className = className || "settings-section";
+        return section;
+    }
+
+    function renderSettingsContent() {
+        var content = document.querySelector(".settings-content");
+        var renderer;
+        if (!content) {
+            return;
+        }
+        content.innerHTML = "";
+        content.classList.remove("settings-renderer");
+        renderer = document.createElement("div");
+        renderer.className = "settings-renderer";
+        renderer.appendChild(createSettingsSectionMount("settingsLanguageMount", "settings-section"));
+        renderer.appendChild(createSettingsSectionMount("settingsDeveloperModeMount", "settings-section"));
+        renderer.appendChild(createSettingsSectionMount("settingsMotionMount", "settings-section"));
+        renderer.appendChild(createSettingsSectionMount("settingsThemeMount", "settings-section"));
+        renderer.appendChild(createSettingsSectionMount("backgroundSettingsCard", "settings-section settings-section--background settings-section--collapsible collapsible-card"));
+        content.appendChild(renderer);
+    }
+
+    function createSettingsSectionHeader(overlineKey, titleKey, descriptionKey) {
+        var heading = document.createElement("div");
+        var copy = document.createElement("span");
+        var overline = document.createElement("p");
+        var title = document.createElement("h3");
+        var description;
+
+        heading.className = "settings-section-header";
+        copy.className = "settings-section-copy";
+        overline.className = "overline";
+        overline.setAttribute("data-i18n", overlineKey);
+        overline.textContent = tr(overlineKey);
+        title.setAttribute("data-i18n", titleKey);
+        title.textContent = tr(titleKey);
+        copy.appendChild(overline);
+        copy.appendChild(title);
+        if (descriptionKey) {
+            description = document.createElement("small");
+            description.className = "settings-section-description";
+            description.setAttribute("data-i18n", descriptionKey);
+            description.textContent = tr(descriptionKey);
+            copy.appendChild(description);
+        }
+        heading.appendChild(copy);
+        return heading;
+    }
+
+    function createSettingsFieldCopy(labelKey, descriptionKey, fallbackDescription) {
+        var copy = document.createElement("span");
+        var label = document.createElement("strong");
+        var hint = document.createElement("small");
+
+        copy.className = "settings-field-copy";
+        label.className = "settings-field-label";
+        label.setAttribute("data-i18n", labelKey);
+        label.textContent = tr(labelKey);
+        hint.className = "settings-field-description";
+        if (descriptionKey) {
+            hint.setAttribute("data-i18n", descriptionKey);
+            hint.textContent = tr(descriptionKey);
+        } else {
+            hint.textContent = fallbackDescription || "";
+        }
+        copy.appendChild(label);
+        if (descriptionKey || fallbackDescription) {
+            copy.appendChild(hint);
+        }
+        return copy;
+    }
+
     function renderSettingsLanguage() {
         var mount = byId("settingsLanguageMount");
         var field = findSettingsSchemaField("language");
         var heading;
-        var overline;
-        var title;
         var row;
         var copy;
-        var label;
-        var hint;
         var select;
         var option;
         var i;
@@ -1146,29 +1218,13 @@
         }
 
         mount.innerHTML = "";
+        mount.className = "settings-section";
 
-        heading = document.createElement("div");
-        heading.className = "settings-card-heading";
-        overline = document.createElement("p");
-        overline.className = "overline";
-        overline.setAttribute("data-i18n", "common.global");
-        overline.textContent = tr("common.global");
-        title = document.createElement("h3");
-        title.setAttribute("data-i18n", field.labelKey);
-        title.textContent = tr(field.labelKey);
-        heading.appendChild(overline);
-        heading.appendChild(title);
+        heading = createSettingsSectionHeader("common.global", field.labelKey, null);
 
         row = document.createElement("label");
-        row.className = "switch-row motion-row";
-        copy = document.createElement("span");
-        label = document.createElement("strong");
-        label.setAttribute("data-i18n", field.labelKey);
-        label.textContent = tr(field.labelKey);
-        hint = document.createElement("small");
-        hint.textContent = "English / \u7b80\u4f53\u4e2d\u6587";
-        copy.appendChild(label);
-        copy.appendChild(hint);
+        row.className = "settings-field settings-field--select";
+        copy = createSettingsFieldCopy(field.labelKey, null, "English / \u7b80\u4f53\u4e2d\u6587");
 
         select = document.createElement("select");
         select.id = "languageSelect";
@@ -1190,12 +1246,8 @@
         var mount = byId("settingsDeveloperModeMount");
         var field = findSettingsSchemaField("registryDebugTools");
         var heading;
-        var overline;
-        var title;
         var row;
         var copy;
-        var label;
-        var hint;
         var switchWrap;
         var input;
         var track;
@@ -1205,30 +1257,13 @@
         }
 
         mount.innerHTML = "";
+        mount.className = "settings-section";
 
-        heading = document.createElement("div");
-        heading.className = "settings-card-heading";
-        overline = document.createElement("p");
-        overline.className = "overline";
-        overline.setAttribute("data-i18n", "section.debug");
-        overline.textContent = tr("section.debug");
-        title = document.createElement("h3");
-        title.setAttribute("data-i18n", "section.developerTools");
-        title.textContent = tr("section.developerTools");
-        heading.appendChild(overline);
-        heading.appendChild(title);
+        heading = createSettingsSectionHeader("section.debug", "section.developerTools", null);
 
         row = document.createElement("label");
-        row.className = "switch-row motion-row";
-        copy = document.createElement("span");
-        label = document.createElement("strong");
-        label.setAttribute("data-i18n", field.labelKey);
-        label.textContent = tr(field.labelKey);
-        hint = document.createElement("small");
-        hint.setAttribute("data-i18n", field.descriptionKey);
-        hint.textContent = tr(field.descriptionKey);
-        copy.appendChild(label);
-        copy.appendChild(hint);
+        row.className = "settings-field settings-field--switch";
+        copy = createSettingsFieldCopy(field.labelKey, field.descriptionKey, "");
 
         switchWrap = document.createElement("span");
         switchWrap.className = "switch";
@@ -1257,19 +1292,11 @@
         var number;
 
         row = document.createElement("label");
-        row.className = "switch-row motion-row";
-        copy = document.createElement("span");
-        label = document.createElement("strong");
-        label.setAttribute("data-i18n", field.labelKey);
-        label.textContent = tr(field.labelKey);
-        hint = document.createElement("small");
-        hint.setAttribute("data-i18n", field.descriptionKey);
-        hint.textContent = tr(field.descriptionKey);
-        copy.appendChild(label);
-        copy.appendChild(hint);
+        row.className = "settings-field settings-field--range";
+        copy = createSettingsFieldCopy(field.labelKey, field.descriptionKey, "");
 
         controls = document.createElement("span");
-        controls.className = "setting-inline-control";
+        controls.className = "settings-field-control setting-inline-control";
         range = document.createElement("input");
         range.id = field.key;
         range.className = "pill-slider";
@@ -1308,18 +1335,9 @@
         }
 
         mount.innerHTML = "";
+        mount.className = "settings-section";
 
-        heading = document.createElement("div");
-        heading.className = "settings-card-heading";
-        overline = document.createElement("p");
-        overline.className = "overline";
-        overline.setAttribute("data-i18n", "section.motion");
-        overline.textContent = tr("section.motion");
-        title = document.createElement("h3");
-        title.setAttribute("data-i18n", "section.animation");
-        title.textContent = tr("section.animation");
-        heading.appendChild(overline);
-        heading.appendChild(title);
+        heading = createSettingsSectionHeader("section.motion", "section.animation", null);
         mount.appendChild(heading);
 
         fields = section.fields || [];
@@ -1353,18 +1371,9 @@
         }
 
         mount.innerHTML = "";
+        mount.className = "settings-section";
 
-        heading = document.createElement("div");
-        heading.className = "settings-card-heading";
-        overline = document.createElement("p");
-        overline.className = "overline";
-        overline.setAttribute("data-i18n", "section.color");
-        overline.textContent = tr("section.color");
-        title = document.createElement("h3");
-        title.setAttribute("data-i18n", section.titleKey);
-        title.textContent = tr(section.titleKey);
-        heading.appendChild(overline);
-        heading.appendChild(title);
+        heading = createSettingsSectionHeader("section.color", section.titleKey, null);
         mount.appendChild(heading);
 
         fields = section.fields || [];
@@ -1374,16 +1383,8 @@
                 continue;
             }
             row = document.createElement("label");
-            row.className = "switch-row motion-row";
-            copy = document.createElement("span");
-            label = document.createElement("strong");
-            label.setAttribute("data-i18n", field.labelKey);
-            label.textContent = tr(field.labelKey);
-            hint = document.createElement("small");
-            hint.setAttribute("data-i18n", field.descriptionKey);
-            hint.textContent = tr(field.descriptionKey);
-            copy.appendChild(label);
-            copy.appendChild(hint);
+            row.className = "settings-field settings-field--color";
+            copy = createSettingsFieldCopy(field.labelKey, field.descriptionKey, "");
 
             shell = document.createElement("span");
             shell.className = "color-shell theme-color-shell";
@@ -1423,14 +1424,14 @@
         var number;
 
         row = document.createElement("label");
-        row.className = "control-row bg-control-row";
+        row.className = "settings-field settings-field--range bg-control-row";
         label = document.createElement("span");
-        label.className = "control-label";
+        label.className = "settings-field-label control-label";
         label.setAttribute("data-i18n", field.labelKey);
         label.textContent = tr(field.labelKey);
 
         controls = document.createElement("span");
-        controls.className = "control-inputs";
+        controls.className = "settings-field-control control-inputs";
 
         range = document.createElement("input");
         range.id = controlId;
@@ -1517,10 +1518,10 @@
         }
 
         mount.innerHTML = "";
-        mount.className = "settings-card nested-settings-card collapsible-card";
+        mount.className = "settings-section settings-section--background settings-section--collapsible collapsible-card";
 
         toggle = document.createElement("button");
-        toggle.className = "collapsible-heading";
+        toggle.className = "settings-section-header settings-section-toggle collapsible-heading";
         toggle.id = "backgroundSettingsToggle";
         toggle.type = "button";
         toggle.setAttribute("aria-expanded", "true");
@@ -1547,16 +1548,8 @@
         field = findSettingsSectionField(section, "preset");
         if (field) {
             row = document.createElement("label");
-            row.className = "switch-row motion-row";
-            copy = document.createElement("span");
-            label = document.createElement("strong");
-            label.setAttribute("data-i18n", field.labelKey);
-            label.textContent = tr(field.labelKey);
-            hint = document.createElement("small");
-            hint.setAttribute("data-i18n", field.descriptionKey);
-            hint.textContent = tr(field.descriptionKey);
-            copy.appendChild(label);
-            copy.appendChild(hint);
+            row.className = "settings-field settings-field--select";
+            copy = createSettingsFieldCopy(field.labelKey, field.descriptionKey, "");
 
             select = document.createElement("select");
             select.id = "bgPreset";
@@ -1633,16 +1626,8 @@
         field = findSettingsSectionField(section, "motionEnable");
         if (field) {
             row = document.createElement("label");
-            row.className = "switch-row motion-row";
-            copy = document.createElement("span");
-            label = document.createElement("strong");
-            label.setAttribute("data-i18n", field.labelKey);
-            label.textContent = tr(field.labelKey);
-            hint = document.createElement("small");
-            hint.setAttribute("data-i18n", field.descriptionKey);
-            hint.textContent = tr(field.descriptionKey);
-            copy.appendChild(label);
-            copy.appendChild(hint);
+            row.className = "settings-field settings-field--switch";
+            copy = createSettingsFieldCopy(field.labelKey, field.descriptionKey, "");
             switchWrap = document.createElement("span");
             switchWrap.className = "switch";
             switchInput = document.createElement("input");
@@ -1669,7 +1654,7 @@
         }
 
         actions = document.createElement("div");
-        actions.className = "settings-actions";
+        actions.className = "settings-action-row settings-actions";
         field = findSettingsSectionField(section, "randomize");
         if (field) {
             button = document.createElement("button");
@@ -5114,6 +5099,10 @@
         }
     }
 
+    function cleanupTransientUiState() {
+        closeCustomSelectMenus();
+    }
+
     function getCustomSelectMenu(control) {
         var selectId;
         if (!control) {
@@ -5359,14 +5348,19 @@
         for (i = 0; i < selects.length; i++) {
             createCustomSelect(selects[i], i);
         }
-        document.addEventListener("click", function (event) {
-            if (!hasAncestorWithClass(event.target, "custom-select", document) && !hasAncestorWithClass(event.target, "select-menu", document)) {
+        if (!CustomSelectGlobalListenersBound) {
+            CustomSelectGlobalListenersBound = true;
+            document.addEventListener("click", function (event) {
+                if (!hasAncestorWithClass(event.target, "custom-select", document) && !hasAncestorWithClass(event.target, "select-menu", document)) {
+                    closeCustomSelectMenus();
+                }
+            });
+            window.addEventListener("resize", function () {
                 closeCustomSelectMenus();
-            }
-        });
-        window.addEventListener("resize", function () {
-            closeCustomSelectMenus();
-        });
+            });
+            window.addEventListener("beforeunload", cleanupTransientUiState);
+            window.addEventListener("unload", cleanupTransientUiState);
+        }
     }
 
     function setCustomSelectValue(control, value, announce) {
@@ -5793,6 +5787,7 @@
 
         setupSegmentedControls();
         renderShapeAddButtons();
+        renderSettingsContent();
         renderSettingsTheme();
         renderSettingsBackgroundEngine();
         setupColorControls();
