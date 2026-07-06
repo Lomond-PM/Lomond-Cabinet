@@ -236,6 +236,29 @@ Supported shared controls and behaviors include:
 
 If a migrated tool needs a missing control type, report or add the missing control as a generic core renderer capability. Do not create a tool-specific workaround.
 
+## App-Level Settings Rules
+
+Settings is an app-level core panel, not a registry tool.
+
+Current production Settings behavior remains legacy:
+
+- Static Settings DOM lives in `client/index.html`.
+- Settings behavior lives in `client/js/main.js`.
+- `BackgroundEngine` remains the runtime owner for procedural background behavior.
+- Settings i18n belongs in `client/js/i18n.js` because it is core/global UI.
+
+The draft future data model lives in:
+
+```text
+client/js/settingsSchema.js
+```
+
+That file is a schema draft only unless a task explicitly connects it. Do not load it in `index.html`, replace the Settings DOM, migrate storage, or change `BackgroundEngine` behavior as a side effect of unrelated work.
+
+Settings must not be migrated as `host/tools/*.tool.jsx`. Future Settings work should proceed through an app-level Settings Schema and a separate Settings Renderer Lab before touching the production Settings panel.
+
+Developer Mode is a core Settings value. It controls debug/probe/lab registry tool visibility generically and must not be implemented as a tool-specific condition.
+
 ## i18n Rules
 
 The panel supports:

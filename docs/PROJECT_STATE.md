@@ -106,6 +106,22 @@ Purpose:
 - Covers action payloads, host state display, state-gated buttons/actions, after-run state refresh, and action-specific status fallbacks.
 - This is a Developer Mode-only lab tool and should not appear in the normal Home view.
 
+### Settings Renderer Lab
+
+Host module:
+
+```text
+host/tools/settingsRendererLab.tool.jsx
+```
+
+Purpose:
+
+- Developer Mode-only sandbox for testing future app-level Settings schema rendering.
+- Uses the shared registry/core renderer to test select, checkbox/switch, range, number, color, button, and collapsible section behavior.
+- Tests Background Engine-like preset select behavior without touching the production `BackgroundEngine`.
+- Uses sandbox storage key `AEToolbox.settingsLab.v1`.
+- Does not replace the production Settings panel or write production Settings storage keys.
+
 ### Selection Info
 
 Frontend tool id:
@@ -308,6 +324,31 @@ Current categories:
 
 Settings are persisted with `localStorage`.
 
+Current implementation status:
+
+- Settings remains a legacy static UI in `client/index.html`.
+- Settings behavior is still implemented in `client/js/main.js`.
+- `BackgroundEngine` remains the authoritative runtime behavior for procedural background settings.
+- Settings should not be treated as a normal registry tool.
+- A draft app-level Settings schema exists at `client/js/settingsSchema.js`.
+- The draft schema is not loaded by `client/index.html` and does not change runtime behavior.
+- A Developer Mode-only Settings Renderer Lab exists at `host/tools/settingsRendererLab.tool.jsx` for testing renderer capabilities before formal Settings migration.
+- The target direction is an app-level Settings Schema and future Settings Renderer Lab before any formal Settings UI replacement.
+- Settings i18n remains core/global i18n and should stay in `client/js/i18n.js`.
+
+Current Settings storage:
+
+- `AEToolbox.settings.v1`
+- `AEToolbox.background.v1`
+- `AEToolbox.backgroundSettingsCollapsed.v1`
+- `aeToolbox.language`
+
+Draft future Settings storage:
+
+- `AEToolbox.settings.v2`
+
+The v2 key is documented only. Runtime code still writes to the v1 and background legacy keys.
+
 ### i18n
 
 - `client/js/i18n.js` owns dictionaries.
@@ -368,6 +409,7 @@ These are based on current code and recent project history. Verify visually afte
 - If a change appears to have no effect, confirm the active JS and host JSX path before editing algorithms.
 - Shape Add is now on the phased registry path. Do not attempt a one-pass rewrite or remove the preserved legacy host actions; see `docs/KNOWN_ISSUES.md`.
 - Deferred: Settings Background Engine preset dropdown can trigger a render/layout glitch after closing. See `docs/KNOWN_ISSUES.md`.
+- Settings schema migration is in draft-only state. Do not replace the legacy Settings DOM or BackgroundEngine behavior without a dedicated Settings Renderer Lab phase.
 
 ## Later Development Suggestions
 

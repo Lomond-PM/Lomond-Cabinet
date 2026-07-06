@@ -97,6 +97,25 @@ Rules:
 - Custom selects should use the project overlay style, not system dropdown styling.
 - Persist settings in `localStorage`.
 
+Settings are an app-level core panel, not a registry tool.
+
+Current state:
+
+- The production Settings panel remains the legacy static DOM in `client/index.html`.
+- The current behavior remains in `client/js/main.js`.
+- `BackgroundEngine` remains legacy behavior and should not be replaced opportunistically.
+- `client/js/settingsSchema.js` is a draft data model only and is not loaded by the current panel.
+
+Future direction:
+
+- Settings should migrate through an app-level Settings Schema, not through `host/tools/*.tool.jsx`.
+- Settings UI should be tested first in a Settings Renderer Lab before replacing the production Settings DOM.
+- The Settings Renderer Lab is Developer Mode-only and uses sandbox storage; it must not write production Settings keys.
+- Settings i18n belongs to core/global dictionaries in `client/js/i18n.js`.
+- Developer Mode is a core setting that controls debug/probe/lab registry tool visibility.
+- Developer Mode must not be implemented as a tool-specific condition such as `shapeAddProbe` only.
+- Background Engine preset selection requires a stable portal select before migration.
+
 ## i18n Copy Rules
 
 - Use concise labels.
