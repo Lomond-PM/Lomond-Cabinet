@@ -331,7 +331,9 @@ Current implementation status:
 - `BackgroundEngine` remains the authoritative runtime behavior for procedural background settings.
 - Settings should not be treated as a normal registry tool.
 - A draft app-level Settings schema exists at `client/js/settingsSchema.js`.
-- The draft schema is not loaded by `client/index.html` and does not change runtime behavior.
+- `client/index.html` loads the schema so the production Settings panel can render the Developer Mode field from it.
+- Only Developer Mode / `registryDebugTools` is currently connected to the production Settings UI through the schema renderer path.
+- Language, Motion, Theme, and Background Engine remain legacy Settings UI.
 - A Developer Mode-only Settings Renderer Lab exists at `host/tools/settingsRendererLab.tool.jsx` for testing renderer capabilities before formal Settings migration.
 - The target direction is an app-level Settings Schema and future Settings Renderer Lab before any formal Settings UI replacement.
 - Settings i18n remains core/global i18n and should stay in `client/js/i18n.js`.
@@ -348,6 +350,11 @@ Draft future Settings storage:
 - `AEToolbox.settings.v2`
 
 The v2 key is documented only. Runtime code still writes to the v1 and background legacy keys.
+
+Developer Mode storage:
+
+- Developer Mode continues to use `AEToolbox.settings.v1.registryDebugTools` for compatibility with existing user settings.
+- It controls debug/probe/lab tool visibility generically through `window.AETOOLBOX_DEBUG_REGISTRY`.
 
 ### i18n
 
