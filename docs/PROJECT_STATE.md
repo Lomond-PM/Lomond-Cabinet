@@ -332,8 +332,8 @@ Current implementation status:
 - Settings should not be treated as a normal registry tool.
 - A draft app-level Settings schema exists at `client/js/settingsSchema.js`.
 - `client/index.html` loads the schema so the production Settings panel can render the Developer Mode field from it.
-- Language, Developer Mode / `registryDebugTools`, Motion Speed, and UI Scale are currently connected to the production Settings UI through the schema renderer path.
-- Theme and Background Engine remain legacy Settings UI.
+- Language, Developer Mode / `registryDebugTools`, Motion Speed, UI Scale, and Theme colors are currently connected to the production Settings UI through the schema renderer path.
+- Background Engine remains legacy Settings UI.
 - A Developer Mode-only Settings Renderer Lab exists at `host/tools/settingsRendererLab.tool.jsx` for testing renderer capabilities before formal Settings migration.
 - The target direction is an app-level Settings Schema and future Settings Renderer Lab before any formal Settings UI replacement.
 - Settings i18n remains core/global i18n and should stay in `client/js/i18n.js`.
@@ -365,6 +365,11 @@ Motion / UI Scale storage:
 
 - Motion Speed and UI Scale continue to use `AEToolbox.settings.v1`.
 - Existing `setupMotionSpeed()`, `setupUiScale()`, `applyUiScale(...)`, and `linkPersistedRange(...)` behavior remains in place.
+
+Theme color storage:
+
+- Theme colors continue to use `AEToolbox.settings.v1`.
+- Existing `applyThemeAccent(...)`, `applyHomeBackground(...)`, `applyToolIconTheme(...)`, `setupColorControls()`, and AE host color picker behavior remain in place.
 
 ### i18n
 

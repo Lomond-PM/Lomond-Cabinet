@@ -18,6 +18,7 @@ This project follows simple semantic versioning for development handoff:
 - Migrated the production Settings Developer Mode row to the app-level Settings schema renderer path while preserving the existing `AEToolbox.settings.v1.registryDebugTools` storage.
 - Migrated the production Settings Language row to the app-level Settings schema renderer path while preserving the existing `aeToolbox.language` storage.
 - Migrated the production Settings Motion Speed and UI Scale rows to the app-level Settings schema renderer path while preserving the existing `AEToolbox.settings.v1` storage.
+- Migrated the production Settings Theme color rows to the app-level Settings schema renderer path while preserving the existing `AEToolbox.settings.v1` storage and color application logic.
 
 ### Notes
 

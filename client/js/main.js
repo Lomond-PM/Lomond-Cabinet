@@ -1332,6 +1332,78 @@
         }
     }
 
+    function renderSettingsTheme() {
+        var mount = byId("settingsThemeMount");
+        var section = findSettingsSchemaSection("theme");
+        var heading;
+        var overline;
+        var title;
+        var fields;
+        var field;
+        var row;
+        var copy;
+        var label;
+        var hint;
+        var shell;
+        var input;
+        var i;
+
+        if (!mount || !section) {
+            return;
+        }
+
+        mount.innerHTML = "";
+
+        heading = document.createElement("div");
+        heading.className = "settings-card-heading";
+        overline = document.createElement("p");
+        overline.className = "overline";
+        overline.setAttribute("data-i18n", "section.color");
+        overline.textContent = tr("section.color");
+        title = document.createElement("h3");
+        title.setAttribute("data-i18n", section.titleKey);
+        title.textContent = tr(section.titleKey);
+        heading.appendChild(overline);
+        heading.appendChild(title);
+        mount.appendChild(heading);
+
+        fields = section.fields || [];
+        for (i = 0; i < fields.length; i++) {
+            field = fields[i];
+            if (!field || field.type !== "color" || !field.key) {
+                continue;
+            }
+            row = document.createElement("label");
+            row.className = "switch-row motion-row";
+            copy = document.createElement("span");
+            label = document.createElement("strong");
+            label.setAttribute("data-i18n", field.labelKey);
+            label.textContent = tr(field.labelKey);
+            hint = document.createElement("small");
+            hint.setAttribute("data-i18n", field.descriptionKey);
+            hint.textContent = tr(field.descriptionKey);
+            copy.appendChild(label);
+            copy.appendChild(hint);
+
+            shell = document.createElement("span");
+            shell.className = "color-shell theme-color-shell";
+            shell.setAttribute("role", "button");
+            shell.setAttribute("tabindex", "0");
+            shell.setAttribute("data-color-target", field.key);
+            shell.setAttribute("aria-label", tr(field.labelKey));
+            input = document.createElement("input");
+            input.id = field.key;
+            input.className = "native-color-input";
+            input.type = "hidden";
+            input.value = normalizeHex(field.defaultValue, "#ffffff");
+            shell.appendChild(input);
+
+            row.appendChild(copy);
+            row.appendChild(shell);
+            mount.appendChild(row);
+        }
+    }
+
     function mergeDynamicToolI18n(tool) {
         if (tool && tool.i18n && window.I18n && window.I18n.mergeDictionaries) {
             window.I18n.mergeDictionaries(tool.i18n);
@@ -5429,6 +5501,7 @@
 
         setupSegmentedControls();
         renderShapeAddButtons();
+        renderSettingsTheme();
         setupColorControls();
         renderSettingsMotion();
         setupMotionSpeed();

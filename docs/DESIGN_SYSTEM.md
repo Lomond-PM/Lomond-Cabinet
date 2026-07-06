@@ -105,8 +105,8 @@ Current state:
 - The current behavior remains in `client/js/main.js`.
 - `BackgroundEngine` remains legacy behavior and should not be replaced opportunistically.
 - `client/js/settingsSchema.js` is the draft app-level data model.
-- The production panel currently renders Language, Developer Mode, Motion Speed, and UI Scale from the Settings schema.
-- Theme and Background Engine remain legacy UI until dedicated migration phases.
+- The production panel currently renders Language, Developer Mode, Motion Speed, UI Scale, and Theme colors from the Settings schema.
+- Background Engine remains legacy UI until a dedicated migration phase.
 
 Future direction:
 
