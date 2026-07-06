@@ -1115,6 +1115,65 @@
         return null;
     }
 
+    function renderSettingsLanguage() {
+        var mount = byId("settingsLanguageMount");
+        var field = findSettingsSchemaField("language");
+        var heading;
+        var overline;
+        var title;
+        var row;
+        var copy;
+        var label;
+        var hint;
+        var select;
+        var option;
+        var i;
+
+        if (!mount || !field) {
+            return;
+        }
+
+        mount.innerHTML = "";
+
+        heading = document.createElement("div");
+        heading.className = "settings-card-heading";
+        overline = document.createElement("p");
+        overline.className = "overline";
+        overline.setAttribute("data-i18n", "common.global");
+        overline.textContent = tr("common.global");
+        title = document.createElement("h3");
+        title.setAttribute("data-i18n", field.labelKey);
+        title.textContent = tr(field.labelKey);
+        heading.appendChild(overline);
+        heading.appendChild(title);
+
+        row = document.createElement("label");
+        row.className = "switch-row motion-row";
+        copy = document.createElement("span");
+        label = document.createElement("strong");
+        label.setAttribute("data-i18n", field.labelKey);
+        label.textContent = tr(field.labelKey);
+        hint = document.createElement("small");
+        hint.textContent = "English / \u7b80\u4f53\u4e2d\u6587";
+        copy.appendChild(label);
+        copy.appendChild(hint);
+
+        select = document.createElement("select");
+        select.id = "languageSelect";
+        select.className = "select-input";
+        for (i = 0; field.options && i < field.options.length; i++) {
+            option = document.createElement("option");
+            option.value = field.options[i].value;
+            option.textContent = field.options[i].value === "zh-CN" ? "\u7b80\u4f53\u4e2d\u6587" : "English";
+            select.appendChild(option);
+        }
+
+        row.appendChild(copy);
+        row.appendChild(select);
+        mount.appendChild(heading);
+        mount.appendChild(row);
+    }
+
     function renderSettingsDeveloperMode() {
         var mount = byId("settingsDeveloperModeMount");
         var field = findSettingsSchemaField("registryDebugTools");
@@ -5276,6 +5335,7 @@
         setupColorControls();
         setupMotionSpeed();
         setupUiScale();
+        renderSettingsLanguage();
         renderSettingsDeveloperMode();
         loadPersistentState();
         setupLanguageSelector();
