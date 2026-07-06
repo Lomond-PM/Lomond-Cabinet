@@ -17,6 +17,7 @@ This project follows simple semantic versioning for development handoff:
 - Added a Developer Mode-only Settings Renderer Lab for sandbox testing the future app-level Settings schema controls.
 - Migrated the production Settings Developer Mode row to the app-level Settings schema renderer path while preserving the existing `AEToolbox.settings.v1.registryDebugTools` storage.
 - Migrated the production Settings Language row to the app-level Settings schema renderer path while preserving the existing `aeToolbox.language` storage.
+- Migrated the production Settings Motion Speed and UI Scale rows to the app-level Settings schema renderer path while preserving the existing `AEToolbox.settings.v1` storage.
 
 ### Notes
 
