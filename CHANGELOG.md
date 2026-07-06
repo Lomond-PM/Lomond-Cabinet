@@ -16,6 +16,7 @@ This project follows simple semantic versioning for development handoff:
 - Documented that Settings remains a legacy static UI and should not be migrated as a normal registry tool.
 - Added a Developer Mode-only Settings Renderer Lab for sandbox testing the future app-level Settings schema controls.
 - Migrated the production Settings Developer Mode row to the app-level Settings schema renderer path while preserving the existing `AEToolbox.settings.v1.registryDebugTools` storage.
+- Migrated the production Settings Language row to the app-level Settings schema renderer path while preserving the existing `aeToolbox.language` storage.
 
 ### Notes
 
