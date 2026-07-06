@@ -486,27 +486,6 @@ body:not(.i18n-ready) .app-shell {
     flex: 1 1 0;
 }
 
-.settings-card {
-    max-width: 100%;
-    margin-bottom: calc(12px * var(--ui-scale));
-    padding: var(--card-pad);
-    border: 1px solid var(--separator);
-    border-radius: var(--radius-lg);
-    background: #0b0a08;
-    overflow: hidden;
-}
-
-.nested-settings-card {
-    max-width: 100%;
-    margin: calc(14px * var(--ui-scale)) 0 0;
-    padding: var(--card-pad);
-    background: #080706;
-}
-
-.settings-card-heading {
-    margin-bottom: calc(10px * var(--ui-scale));
-}
-
 .collapsible-card {
     overflow: hidden;
 }
@@ -660,34 +639,8 @@ body:not(.i18n-ready) .app-shell {
     min-width: 58px;
 }
 
-.settings-card *,
-.nested-settings-card *,
 .settings-section * {
     max-width: 100%;
-}
-
-.settings-card .switch-row,
-.nested-settings-card .switch-row {
-    flex-wrap: wrap;
-    align-items: flex-start;
-}
-
-.settings-card .switch-row > span:first-child,
-.nested-settings-card .switch-row > span:first-child {
-    min-width: 0;
-    flex: 1 1 140px;
-}
-
-.settings-card .switch-row > .setting-inline-control,
-.settings-card .switch-row > .theme-color-shell,
-.settings-card .switch-row > .select-input,
-.settings-card .switch-row > .custom-select,
-.nested-settings-card .switch-row > .setting-inline-control,
-.nested-settings-card .switch-row > .theme-color-shell,
-.nested-settings-card .switch-row > .select-input,
-.nested-settings-card .switch-row > .custom-select {
-    flex: 0 1 150px;
-    min-width: 0;
 }
 
 .settings-actions {
@@ -2771,8 +2724,6 @@ p {
         margin-bottom: calc(12px * var(--ui-scale));
     }
 
-    .settings-card,
-    .nested-settings-card,
     .settings-section {
         padding: calc(10px * var(--ui-scale));
     }
@@ -2787,18 +2738,6 @@ p {
     .settings-field > .theme-color-shell,
     .settings-field > .select-input,
     .settings-field > .custom-select {
-        flex-basis: 100%;
-        width: 100%;
-    }
-
-    .settings-card .switch-row > .setting-inline-control,
-    .settings-card .switch-row > .theme-color-shell,
-    .settings-card .switch-row > .select-input,
-    .settings-card .switch-row > .custom-select,
-    .nested-settings-card .switch-row > .setting-inline-control,
-    .nested-settings-card .switch-row > .theme-color-shell,
-    .nested-settings-card .switch-row > .select-input,
-    .nested-settings-card .switch-row > .custom-select {
         flex-basis: 100%;
         width: 100%;
     }
