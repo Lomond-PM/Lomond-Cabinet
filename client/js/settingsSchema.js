@@ -1,10 +1,10 @@
 /*
- * Global Settings Schema Draft
+ * Global Settings Schema
  *
  * This file documents the future app-level Settings data model.
- * The production panel currently uses only the Developer Mode field from
- * this schema; the rest remains a draft and does not replace the legacy
- * Settings DOM, BackgroundEngine behavior, or storage.
+ * The production panel now uses this schema for the migrated Settings
+ * sections. Behavior adapters still preserve legacy storage and the
+ * BackgroundEngine runtime where required.
  */
 (function (global) {
     "use strict";
@@ -21,10 +21,10 @@
         ],
         notes: [
             "Settings is an app-level core panel, not a registry tool.",
-            "Only the Developer Mode field is connected to the current production UI.",
-            "Current legacy Settings DOM and BackgroundEngine behavior remain authoritative.",
+            "Migrated Settings fields are rendered from this app-level schema.",
+            "Behavior adapters preserve legacy storage keys where required.",
             "Developer Mode is a core setting for debug/probe/lab registry tool visibility.",
-            "Background Engine preset selection requires a stable portal select before migration."
+            "Background Engine UI is schema-rendered; BackgroundEngine behavior remains the runtime authority."
         ],
         sections: [
             {
@@ -122,10 +122,9 @@
                 collapsible: true,
                 legacyBehavior: "BackgroundEngine",
                 migrationRisk: [
-                    "preset select requires stablePortalSelect",
-                    "current BackgroundEngine.applyPreset remains legacy",
-                    "current BackgroundEngine.save remains legacy",
-                    "current BackgroundEngine.syncControls remains legacy"
+                    "BackgroundEngine.applyPreset remains the behavior layer",
+                    "BackgroundEngine.save remains the behavior layer",
+                    "BackgroundEngine.syncControls remains the behavior layer"
                 ],
                 fields: [
                     {
@@ -151,16 +150,16 @@
                     { key: "lineColor", type: "color", labelKey: "label.line", defaultValue: "#d6b25e" },
                     { key: "glowColor", type: "color", labelKey: "label.glow", defaultValue: "#c9a452" },
                     { key: "glowOpacity", type: "range", labelKey: "label.glowIntensity", defaultValue: 0.22, min: 0, max: 1, step: 0.01 },
-                    { key: "glowSize", type: "range", labelKey: "label.glowSize", defaultValue: 80, min: 20, max: 160, step: 1 },
+                    { key: "glowSize", type: "range", labelKey: "label.glowSize", defaultValue: 80, min: 20, max: 140, step: 1 },
                     { key: "glowX", type: "range", labelKey: "label.glowX", defaultValue: 74, min: 0, max: 100, step: 1 },
                     { key: "glowY", type: "range", labelKey: "label.glowY", defaultValue: 18, min: 0, max: 100, step: 1 },
                     { key: "gridOpacity", type: "range", labelKey: "label.gridOpacity", defaultValue: 0.12, min: 0, max: 1, step: 0.01 },
-                    { key: "gridSize", type: "range", labelKey: "label.gridSize", defaultValue: 36, min: 16, max: 80, step: 1 },
+                    { key: "gridSize", type: "range", labelKey: "label.gridSize", defaultValue: 36, min: 12, max: 96, step: 1 },
                     { key: "lineOpacity", type: "range", labelKey: "label.lineOpacity", defaultValue: 0.18, min: 0, max: 1, step: 0.01 },
                     { key: "ringOpacity", type: "range", labelKey: "label.ringOpacity", defaultValue: 0.1, min: 0, max: 1, step: 0.01 },
-                    { key: "ringScale", type: "range", labelKey: "label.ringScale", defaultValue: 1, min: 0.5, max: 2, step: 0.05 },
+                    { key: "ringScale", type: "range", labelKey: "label.ringScale", defaultValue: 1, min: 0.5, max: 2.5, step: 0.05 },
                     { key: "accentAngle", type: "range", labelKey: "label.accentAngle", defaultValue: 135, min: 0, max: 360, step: 1 },
-                    { key: "patternDensity", type: "range", labelKey: "label.patternDensity", defaultValue: 1, min: 0.2, max: 2, step: 0.05 },
+                    { key: "patternDensity", type: "range", labelKey: "label.patternDensity", defaultValue: 1, min: 0.4, max: 2, step: 0.05 },
                     { key: "contrast", type: "range", labelKey: "label.contrast", defaultValue: 0.45, min: 0, max: 1, step: 0.01 },
                     { key: "motionEnable", type: "switch", labelKey: "label.enableMotion", descriptionKey: "helper.enableMotion", defaultValue: false },
                     { key: "motionSpeed", type: "range", labelKey: "label.motionSpeed", defaultValue: 1, min: 0.5, max: 2, step: 0.05 },
