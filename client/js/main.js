@@ -1589,8 +1589,14 @@
         return "dynamic_" + toolId + "_" + key;
     }
 
-    function registryToolStorageKey(toolId) {
-        return "aeToolbox.registryToolValues." + toolId;
+    function registryToolStorageKey(toolOrId) {
+        if (toolOrId && typeof toolOrId === "object" && toolOrId.storageKey) {
+            return toolOrId.storageKey;
+        }
+        if (toolOrId && typeof toolOrId === "object" && toolOrId.id) {
+            return "aeToolbox.registryToolValues." + toolOrId.id;
+        }
+        return "aeToolbox.registryToolValues." + toolOrId;
     }
 
     function schemaDefaultValue(field) {
@@ -1646,7 +1652,7 @@
 
     function loadRegistryToolState(toolDef) {
         var defaults = registrySchemaDefaults(toolDef);
-        var saved = loadStoredJson(registryToolStorageKey(toolDef.id), null);
+        var saved = loadStoredJson(registryToolStorageKey(toolDef), null);
         var state = {
             version: 1,
             toolId: toolDef.id,
@@ -1732,7 +1738,7 @@
             uiState: collectRegistryUiState(toolDef)
         };
         RegistryToolState[toolDef.id] = state;
-        saveStoredJson(registryToolStorageKey(toolDef.id), state);
+        saveStoredJson(registryToolStorageKey(toolDef), state);
     }
 
     function scheduleRegistryToolSave(toolDef) {
@@ -1754,7 +1760,7 @@
             return;
         }
         try {
-            window.localStorage.removeItem(registryToolStorageKey(toolId));
+            window.localStorage.removeItem(registryToolStorageKey(tool));
         } catch (err) {
         }
         delete RegistryToolState[toolId];
@@ -1798,7 +1804,7 @@
             }
         }
         RegistryToolState[toolDef.id] = state;
-        saveStoredJson(registryToolStorageKey(toolDef.id), state);
+        saveStoredJson(registryToolStorageKey(toolDef), state);
         renderRegistryToolDetail(toolDef);
         setStatus(tr("common.valuesReset"), "ok");
     }

@@ -14,10 +14,12 @@ This project follows simple semantic versioning for development handoff:
 
 - Added an app-level Global Settings Schema draft in `client/js/settingsSchema.js`.
 - Documented that Settings remains a legacy static UI and should not be migrated as a normal registry tool.
+- Added a Developer Mode-only Settings Renderer Lab for sandbox testing the future app-level Settings schema controls.
 
 ### Notes
 
 - The Settings schema draft is not loaded by the current CEP panel and does not change existing Settings behavior.
+- Settings Renderer Lab uses sandbox storage key `AEToolbox.settingsLab.v1` and does not write production Settings keys.
 
 ## [0.2.2] - 2026-07-03
 

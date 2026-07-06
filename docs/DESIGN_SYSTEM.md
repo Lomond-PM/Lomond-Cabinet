@@ -110,6 +110,7 @@ Future direction:
 
 - Settings should migrate through an app-level Settings Schema, not through `host/tools/*.tool.jsx`.
 - Settings UI should be tested first in a Settings Renderer Lab before replacing the production Settings DOM.
+- The Settings Renderer Lab is Developer Mode-only and uses sandbox storage; it must not write production Settings keys.
 - Settings i18n belongs to core/global dictionaries in `client/js/i18n.js`.
 - Developer Mode is a core setting that controls debug/probe/lab registry tool visibility.
 - Developer Mode must not be implemented as a tool-specific condition such as `shapeAddProbe` only.
