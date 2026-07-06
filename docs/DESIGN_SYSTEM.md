@@ -104,7 +104,9 @@ Current state:
 - The production Settings panel remains the legacy static DOM in `client/index.html`.
 - The current behavior remains in `client/js/main.js`.
 - `BackgroundEngine` remains legacy behavior and should not be replaced opportunistically.
-- `client/js/settingsSchema.js` is a draft data model only and is not loaded by the current panel.
+- `client/js/settingsSchema.js` is the draft app-level data model.
+- The production panel currently renders only Developer Mode from the Settings schema.
+- Language, Motion, Theme, and Background Engine remain legacy UI until a dedicated migration phase.
 
 Future direction:
 

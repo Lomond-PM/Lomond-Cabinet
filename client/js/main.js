@@ -1098,6 +1098,84 @@
         }
     }
 
+    function findSettingsSchemaField(key) {
+        var schema = window.AEToolboxSettingsSchema;
+        var sections = schema && schema.sections ? schema.sections : [];
+        var i;
+        var j;
+        var fields;
+        for (i = 0; i < sections.length; i++) {
+            fields = sections[i] && sections[i].fields ? sections[i].fields : [];
+            for (j = 0; j < fields.length; j++) {
+                if (fields[j] && fields[j].key === key) {
+                    return fields[j];
+                }
+            }
+        }
+        return null;
+    }
+
+    function renderSettingsDeveloperMode() {
+        var mount = byId("settingsDeveloperModeMount");
+        var field = findSettingsSchemaField("registryDebugTools");
+        var heading;
+        var overline;
+        var title;
+        var row;
+        var copy;
+        var label;
+        var hint;
+        var switchWrap;
+        var input;
+        var track;
+
+        if (!mount || !field) {
+            return;
+        }
+
+        mount.innerHTML = "";
+
+        heading = document.createElement("div");
+        heading.className = "settings-card-heading";
+        overline = document.createElement("p");
+        overline.className = "overline";
+        overline.setAttribute("data-i18n", "section.debug");
+        overline.textContent = tr("section.debug");
+        title = document.createElement("h3");
+        title.setAttribute("data-i18n", "section.developerTools");
+        title.textContent = tr("section.developerTools");
+        heading.appendChild(overline);
+        heading.appendChild(title);
+
+        row = document.createElement("label");
+        row.className = "switch-row motion-row";
+        copy = document.createElement("span");
+        label = document.createElement("strong");
+        label.setAttribute("data-i18n", field.labelKey);
+        label.textContent = tr(field.labelKey);
+        hint = document.createElement("small");
+        hint.setAttribute("data-i18n", field.descriptionKey);
+        hint.textContent = tr(field.descriptionKey);
+        copy.appendChild(label);
+        copy.appendChild(hint);
+
+        switchWrap = document.createElement("span");
+        switchWrap.className = "switch";
+        input = document.createElement("input");
+        input.id = "registryDebugTools";
+        input.type = "checkbox";
+        input.checked = field.defaultValue === true;
+        track = document.createElement("span");
+        track.className = "switch-track";
+        switchWrap.appendChild(input);
+        switchWrap.appendChild(track);
+
+        row.appendChild(copy);
+        row.appendChild(switchWrap);
+        mount.appendChild(heading);
+        mount.appendChild(row);
+    }
+
     function mergeDynamicToolI18n(tool) {
         if (tool && tool.i18n && window.I18n && window.I18n.mergeDictionaries) {
             window.I18n.mergeDictionaries(tool.i18n);
@@ -5198,6 +5276,7 @@
         setupColorControls();
         setupMotionSpeed();
         setupUiScale();
+        renderSettingsDeveloperMode();
         loadPersistentState();
         setupLanguageSelector();
         setupCollapsibleSettings();

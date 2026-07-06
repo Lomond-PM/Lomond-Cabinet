@@ -1,9 +1,10 @@
 /*
  * Global Settings Schema Draft
  *
- * This file is intentionally not loaded by client/index.html yet.
- * It documents the future app-level Settings data model without changing
- * the current legacy Settings DOM, BackgroundEngine behavior, or storage.
+ * This file documents the future app-level Settings data model.
+ * The production panel currently uses only the Developer Mode field from
+ * this schema; the rest remains a draft and does not replace the legacy
+ * Settings DOM, BackgroundEngine behavior, or storage.
  */
 (function (global) {
     "use strict";
@@ -20,7 +21,7 @@
         ],
         notes: [
             "Settings is an app-level core panel, not a registry tool.",
-            "This schema is a draft only and is not connected to the current UI.",
+            "Only the Developer Mode field is connected to the current production UI.",
             "Current legacy Settings DOM and BackgroundEngine behavior remain authoritative.",
             "Developer Mode is a core setting for debug/probe/lab registry tool visibility.",
             "Background Engine preset selection requires a stable portal select before migration."
