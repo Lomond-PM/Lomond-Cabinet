@@ -95,6 +95,7 @@ Current decision:
 - Stop active debugging for now.
 - Keep the issue documented.
 - Revisit later in a dedicated UI stabilization pass.
+- Settings schema work may document the Background Engine fields, but it must not replace the production preset dropdown until the dropdown/popover lifecycle is stabilized.
 
 Future investigation notes:
 
@@ -105,6 +106,7 @@ Future investigation notes:
 - Check stale open / active classes.
 - Check whether the dropdown popover should be rendered in a portal layer instead of inside the scroll container.
 - Consider replacing Settings preset dropdown with the same standardized registry select component if appropriate.
+- Consider testing a stable portal select in a Settings Renderer Lab before touching the production Settings panel.
 - Consider building a small UI state stress test before further fixes.
 
 Do not claim the issue is fixed.

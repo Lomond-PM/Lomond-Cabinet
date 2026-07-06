@@ -10,9 +10,14 @@ This project follows simple semantic versioning for development handoff:
 
 ## Unreleased
 
+### Added
+
+- Added an app-level Global Settings Schema draft in `client/js/settingsSchema.js`.
+- Documented that Settings remains a legacy static UI and should not be migrated as a normal registry tool.
+
 ### Notes
 
-- No unreleased changes yet.
+- The Settings schema draft is not loaded by the current CEP panel and does not change existing Settings behavior.
 
 ## [0.2.2] - 2026-07-03
 
