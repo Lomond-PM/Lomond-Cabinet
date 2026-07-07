@@ -1156,22 +1156,18 @@
     function createSettingsSectionHeader(overlineKey, titleKey, descriptionKey) {
         var heading = document.createElement("div");
         var copy = document.createElement("span");
-        var overline = document.createElement("p");
         var title = document.createElement("h3");
         var description;
 
         heading.className = "settings-section-header";
         copy.className = "settings-section-copy";
-        overline.className = "overline";
-        overline.setAttribute("data-i18n", overlineKey);
-        overline.textContent = tr(overlineKey);
+        title.className = "registry-title-primary settings-section-title";
         title.setAttribute("data-i18n", titleKey);
         title.textContent = tr(titleKey);
-        copy.appendChild(overline);
         copy.appendChild(title);
         if (descriptionKey) {
             description = document.createElement("small");
-            description.className = "settings-section-description";
+            description.className = "registry-section-description registry-text-muted settings-section-description";
             description.setAttribute("data-i18n", descriptionKey);
             description.textContent = tr(descriptionKey);
             copy.appendChild(description);
@@ -1185,11 +1181,11 @@
         var label = document.createElement("strong");
         var hint = document.createElement("small");
 
-        copy.className = "settings-field-copy";
-        label.className = "settings-field-label";
+        copy.className = "registry-label-column settings-field-copy";
+        label.className = "control-label registry-text-body settings-field-label";
         label.setAttribute("data-i18n", labelKey);
         label.textContent = tr(labelKey);
-        hint.className = "settings-field-description";
+        hint.className = "registry-field-hint registry-text-muted settings-field-description";
         if (descriptionKey) {
             hint.setAttribute("data-i18n", descriptionKey);
             hint.textContent = tr(descriptionKey);
@@ -1203,15 +1199,211 @@
         return copy;
     }
 
+    function createSettingsGroupLabel(labelKey) {
+        var label = document.createElement("div");
+        label.className = "settings-group-label";
+        label.setAttribute("data-i18n", labelKey);
+        label.textContent = tr(labelKey);
+        return label;
+    }
+
+    function createSharedSettingsFieldRow(type, field, descriptionKey, fallbackDescription) {
+        var row = document.createElement(type === "checkbox" ? "label" : "div");
+        var copy = createSettingsFieldCopy(field.labelKey, descriptionKey || field.descriptionKey || field.hintKey, fallbackDescription || "");
+        var controls = document.createElement("span");
+
+        row.className = type === "checkbox" ? "switch-row registry-switch-row settings-field settings-field--switch" : "control-row registry-field-row settings-field settings-field--" + type;
+        controls.className = "control-inputs settings-field-control";
+        row.appendChild(copy);
+        row.appendChild(controls);
+        return {
+            row: row,
+            controls: controls
+        };
+    }
+
+    function createSharedSettingsSelect(id, field, selectedValue) {
+        var select = document.createElement("select");
+        var option;
+        var i;
+
+        select.id = id;
+        select.className = "select-input settings-select";
+        for (i = 0; field.options && i < field.options.length; i++) {
+            option = document.createElement("option");
+            option.value = field.options[i].value;
+            if (field.options[i].labelKey) {
+                option.setAttribute("data-i18n", field.options[i].labelKey);
+                option.textContent = tr(field.options[i].labelKey);
+            } else {
+                option.textContent = field.options[i].value === "zh-CN" ? "\u7b80\u4f53\u4e2d\u6587" : "English";
+            }
+            if (field.options[i].value === selectedValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        }
+        return select;
+    }
+
+    function createSharedSettingsSwitch(id, checked) {
+        var switchWrap = document.createElement("span");
+        var input = document.createElement("input");
+        var track = document.createElement("span");
+
+        switchWrap.className = "switch registry-switch settings-switch";
+        input.id = id;
+        input.type = "checkbox";
+        input.checked = checked === true;
+        track.className = "switch-track";
+        switchWrap.appendChild(input);
+        switchWrap.appendChild(track);
+        return switchWrap;
+    }
+
+    function dispatchSettingsControlEvent(element, type) {
+        var event;
+        if (!element) {
+            return;
+        }
+        event = document.createEvent("HTMLEvents");
+        event.initEvent(type, true, false);
+        element.dispatchEvent(event);
+    }
+
+    function createSharedSettingsRangeNumber(field, rangeId, numberId, minValue, maxValue, rangeHookClass, numberHookClass) {
+        var controls = document.createElement("span");
+        var range = document.createElement("input");
+        var number = document.createElement("input");
+        var dragField = {
+            min: minValue,
+            max: maxValue,
+            step: field.step,
+            defaultValue: field.defaultValue
+        };
+
+        controls.className = "control-inputs settings-field-control registry-range-control";
+        range.id = rangeId;
+        range.className = "pill-slider registry-range settings-slider" + (rangeHookClass ? " " + rangeHookClass : "");
+        range.type = "range";
+        range.min = String(minValue);
+        range.max = String(maxValue);
+        range.step = String(field.step);
+        range.value = String(field.defaultValue);
+
+        number.id = numberId;
+        number.className = "num-input registry-range-number settings-number" + (numberHookClass ? " " + numberHookClass : "");
+        number.type = "number";
+        number.min = String(minValue);
+        number.max = String(maxValue);
+        number.step = String(field.step);
+        number.value = String(field.defaultValue);
+
+        controls.appendChild(number);
+        controls.appendChild(range);
+        setupRegistryNumberDrag(number, dragField, function (value) {
+            range.value = value;
+            dispatchSettingsControlEvent(number, "input");
+            dispatchSettingsControlEvent(number, "change");
+        });
+        return controls;
+    }
+
+    function createSharedSettingsColorControl(field, inputId, fallbackColor, shellClassName) {
+        var controls = document.createElement("span");
+        var shell = document.createElement("button");
+        var input = document.createElement("input");
+        var hexInput = document.createElement("input");
+        var fallback = fallbackColor || "#ffffff";
+
+        controls.className = "control-inputs settings-field-control registry-color-control settings-color-control";
+        shell.className = "registry-color-swatch settings-color-pill" + (shellClassName ? " " + shellClassName : "");
+        shell.type = "button";
+        shell.setAttribute("aria-label", tr(field.labelKey));
+        shell.setAttribute("data-color-target", inputId);
+        input.id = inputId;
+        input.className = "native-color-input";
+        input.type = "hidden";
+        input.value = normalizeHex(field.defaultValue, fallback);
+        hexInput.id = inputId + "Hex";
+        hexInput.className = "registry-color-hex settings-color-hex";
+        hexInput.type = "text";
+        hexInput.value = input.value;
+        hexInput.setAttribute("spellcheck", "false");
+
+        function syncColorUi(value) {
+            var previous = input.value || fallback;
+            var normalized = normalizeHex(value, previous || fallback).toLowerCase();
+            input.value = normalized;
+            hexInput.value = normalized;
+            shell.style.backgroundColor = normalized;
+            return normalized;
+        }
+
+        function applyHex(value) {
+            var normalized = syncColorUi(value);
+            if (BackgroundEngine.handleColorChange(inputId, normalized)) {
+                return;
+            }
+            if (inputId === "themeAccent") {
+                applyThemeAccent(normalized);
+                saveSettings();
+            } else if (inputId === "homeBackground") {
+                applyHomeBackground(normalized);
+                saveSettings();
+            } else if (inputId === "toolIconColor" || inputId === "toolIconLine") {
+                if (inputId === "toolIconColor") {
+                    applyToolIconTheme(normalized, byId("toolIconLine").value);
+                } else {
+                    applyToolIconTheme(byId("toolIconColor").value, normalized);
+                }
+                saveSettings();
+            }
+        }
+
+        hexInput._registryOnValueChange = function () {
+            applyHex(hexInput.value);
+        };
+        hexInput.addEventListener("input", function () {
+            if (/^#?[0-9a-fA-F]{6}$/.test(this.value)) {
+                applyHex(this.value);
+            }
+        });
+        hexInput.addEventListener("change", function () {
+            applyHex(this.value);
+        });
+        hexInput.addEventListener("blur", function () {
+            applyHex(this.value);
+        });
+        hexInput.addEventListener("keydown", function (event) {
+            if (event.keyCode === 13) {
+                event.preventDefault();
+                applyHex(this.value);
+                this.blur();
+            } else if (event.keyCode === 27) {
+                event.preventDefault();
+                this.value = input.value || fallback;
+                this.blur();
+            }
+        });
+        shell.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            openRegistryColorPicker(hexInput, shell, fallback);
+        });
+        shell.appendChild(input);
+        controls.appendChild(shell);
+        controls.appendChild(hexInput);
+        syncColorUi(input.value);
+        return controls;
+    }
+
     function renderSettingsLanguage() {
         var mount = byId("settingsLanguageMount");
         var field = findSettingsSchemaField("language");
         var heading;
-        var row;
-        var copy;
+        var fieldRow;
         var select;
-        var option;
-        var i;
 
         if (!mount || !field) {
             return;
@@ -1222,35 +1414,19 @@
 
         heading = createSettingsSectionHeader("common.global", field.labelKey, null);
 
-        row = document.createElement("label");
-        row.className = "settings-field settings-field--select";
-        copy = createSettingsFieldCopy(field.labelKey, null, "English / \u7b80\u4f53\u4e2d\u6587");
-
-        select = document.createElement("select");
-        select.id = "languageSelect";
-        select.className = "select-input";
-        for (i = 0; field.options && i < field.options.length; i++) {
-            option = document.createElement("option");
-            option.value = field.options[i].value;
-            option.textContent = field.options[i].value === "zh-CN" ? "\u7b80\u4f53\u4e2d\u6587" : "English";
-            select.appendChild(option);
-        }
-
-        row.appendChild(copy);
-        row.appendChild(select);
+        fieldRow = createSharedSettingsFieldRow("select", field, null, "English / \u7b80\u4f53\u4e2d\u6587");
+        select = createSharedSettingsSelect("languageSelect", field, window.I18n && window.I18n.getLanguage ? window.I18n.getLanguage() : null);
+        fieldRow.controls.appendChild(select);
         mount.appendChild(heading);
-        mount.appendChild(row);
+        mount.appendChild(fieldRow.row);
     }
 
     function renderSettingsDeveloperMode() {
         var mount = byId("settingsDeveloperModeMount");
         var field = findSettingsSchemaField("registryDebugTools");
         var heading;
-        var row;
-        var copy;
+        var fieldRow;
         var switchWrap;
-        var input;
-        var track;
 
         if (!mount || !field) {
             return;
@@ -1261,72 +1437,29 @@
 
         heading = createSettingsSectionHeader("section.debug", "section.developerTools", null);
 
-        row = document.createElement("label");
-        row.className = "settings-field settings-field--switch";
-        copy = createSettingsFieldCopy(field.labelKey, field.descriptionKey, "");
-
-        switchWrap = document.createElement("span");
-        switchWrap.className = "switch";
-        input = document.createElement("input");
-        input.id = "registryDebugTools";
-        input.type = "checkbox";
-        input.checked = field.defaultValue === true;
-        track = document.createElement("span");
-        track.className = "switch-track";
-        switchWrap.appendChild(input);
-        switchWrap.appendChild(track);
-
-        row.appendChild(copy);
-        row.appendChild(switchWrap);
+        fieldRow = createSharedSettingsFieldRow("checkbox", field, field.descriptionKey, "");
+        switchWrap = createSharedSettingsSwitch("registryDebugTools", field.defaultValue === true);
+        fieldRow.controls.appendChild(switchWrap);
         mount.appendChild(heading);
-        mount.appendChild(row);
+        mount.appendChild(fieldRow.row);
     }
 
     function renderSettingsRangeRow(field, numberId) {
-        var row;
-        var copy;
-        var label;
-        var hint;
+        var fieldRow;
         var controls;
-        var range;
-        var number;
 
-        row = document.createElement("label");
-        row.className = "settings-field settings-field--range";
-        copy = createSettingsFieldCopy(field.labelKey, field.descriptionKey, "");
+        fieldRow = createSharedSettingsFieldRow("range", field, field.descriptionKey, "");
+        controls = createSharedSettingsRangeNumber(field, field.key, numberId, field.min, field.max, "", "");
+        fieldRow.row.removeChild(fieldRow.controls);
+        fieldRow.row.appendChild(controls);
 
-        controls = document.createElement("span");
-        controls.className = "settings-field-control setting-inline-control";
-        range = document.createElement("input");
-        range.id = field.key;
-        range.className = "pill-slider";
-        range.type = "range";
-        range.min = String(field.min);
-        range.max = String(field.max);
-        range.step = String(field.step);
-        range.value = String(field.defaultValue);
-        number = document.createElement("input");
-        number.id = numberId;
-        number.className = "num-input";
-        number.type = "number";
-        number.min = String(field.min);
-        number.max = String(field.max);
-        number.step = String(field.step);
-        number.value = String(field.defaultValue);
-        controls.appendChild(range);
-        controls.appendChild(number);
-
-        row.appendChild(copy);
-        row.appendChild(controls);
-        return row;
+        return fieldRow.row;
     }
 
     function renderSettingsMotion() {
         var mount = byId("settingsMotionMount");
         var section = findSettingsSchemaSection("motion");
         var heading;
-        var overline;
-        var title;
         var fields;
         var i;
 
@@ -1354,16 +1487,10 @@
         var mount = byId("settingsThemeMount");
         var section = findSettingsSchemaSection("theme");
         var heading;
-        var overline;
-        var title;
         var fields;
         var field;
-        var row;
-        var copy;
-        var label;
-        var hint;
-        var shell;
-        var input;
+        var fieldRow;
+        var controls;
         var i;
 
         if (!mount || !section) {
@@ -1382,26 +1509,11 @@
             if (!field || field.type !== "color" || !field.key) {
                 continue;
             }
-            row = document.createElement("label");
-            row.className = "settings-field settings-field--color";
-            copy = createSettingsFieldCopy(field.labelKey, field.descriptionKey, "");
-
-            shell = document.createElement("span");
-            shell.className = "color-shell theme-color-shell";
-            shell.setAttribute("role", "button");
-            shell.setAttribute("tabindex", "0");
-            shell.setAttribute("data-color-target", field.key);
-            shell.setAttribute("aria-label", tr(field.labelKey));
-            input = document.createElement("input");
-            input.id = field.key;
-            input.className = "native-color-input";
-            input.type = "hidden";
-            input.value = normalizeHex(field.defaultValue, "#ffffff");
-            shell.appendChild(input);
-
-            row.appendChild(copy);
-            row.appendChild(shell);
-            mount.appendChild(row);
+            fieldRow = createSharedSettingsFieldRow("color", field, field.descriptionKey, "");
+            controls = createSharedSettingsColorControl(field, field.key, "#ffffff", "theme-color-shell");
+            fieldRow.row.removeChild(fieldRow.controls);
+            fieldRow.row.appendChild(controls);
+            mount.appendChild(fieldRow.row);
         }
     }
 
@@ -1417,72 +1529,24 @@
     }
 
     function renderSettingsBackgroundRange(field, controlId, minValue, maxValue) {
-        var row;
-        var label;
+        var fieldRow;
         var controls;
-        var range;
-        var number;
 
-        row = document.createElement("label");
-        row.className = "settings-field settings-field--range bg-control-row";
-        label = document.createElement("span");
-        label.className = "settings-field-label control-label";
-        label.setAttribute("data-i18n", field.labelKey);
-        label.textContent = tr(field.labelKey);
-
-        controls = document.createElement("span");
-        controls.className = "settings-field-control control-inputs";
-
-        range = document.createElement("input");
-        range.id = controlId;
-        range.className = "pill-slider bg-param";
-        range.type = "range";
-        range.min = String(minValue);
-        range.max = String(maxValue);
-        range.step = String(field.step);
-        range.value = String(field.defaultValue);
-
-        number = document.createElement("input");
-        number.id = controlId + "Number";
-        number.className = "num-input bg-param-number";
-        number.type = "number";
-        number.min = String(minValue);
-        number.max = String(maxValue);
-        number.step = String(field.step);
-        number.value = String(field.defaultValue);
-
-        controls.appendChild(range);
-        controls.appendChild(number);
-        row.appendChild(label);
-        row.appendChild(controls);
-        return row;
+        fieldRow = createSharedSettingsFieldRow("range", field, null, "");
+        fieldRow.row.className += " bg-control-row";
+        controls = createSharedSettingsRangeNumber(field, controlId, controlId + "Number", minValue, maxValue, "bg-param", "bg-param-number");
+        fieldRow.row.removeChild(fieldRow.controls);
+        fieldRow.row.appendChild(controls);
+        return fieldRow.row;
     }
 
     function renderSettingsBackgroundColor(field, inputId) {
-        var label;
-        var text;
-        var shell;
-        var input;
-
-        label = document.createElement("label");
-        text = document.createElement("span");
-        text.setAttribute("data-i18n", field.labelKey);
-        text.textContent = tr(field.labelKey);
-        shell = document.createElement("span");
-        shell.className = "color-shell small-color-shell";
-        shell.setAttribute("role", "button");
-        shell.setAttribute("tabindex", "0");
-        shell.setAttribute("data-color-target", inputId);
-        shell.setAttribute("aria-label", tr(field.labelKey));
-        input = document.createElement("input");
-        input.id = inputId;
-        input.className = "native-color-input";
-        input.type = "hidden";
-        input.value = normalizeHex(field.defaultValue, "#050403");
-        shell.appendChild(input);
-        label.appendChild(text);
-        label.appendChild(shell);
-        return label;
+        var row = createSharedSettingsFieldRow("color", field, null, "");
+        var controls = createSharedSettingsColorControl(field, inputId, "#050403", "small-color-shell");
+        row.row.className += " settings-field--background-color";
+        row.row.removeChild(row.controls);
+        row.row.appendChild(controls);
+        return row.row;
     }
 
     function renderSettingsBackgroundEngine() {
@@ -1490,25 +1554,16 @@
         var section = findSettingsSchemaSection("backgroundEngine");
         var toggle;
         var toggleCopy;
-        var overline;
         var title;
         var chevron;
         var body;
         var field;
-        var row;
-        var copy;
-        var label;
-        var hint;
+        var fieldRow;
         var select;
-        var option;
-        var subtitle;
-        var colorGrid;
         var colors;
         var ranges;
         var motionFields;
         var switchWrap;
-        var switchInput;
-        var switchTrack;
         var actions;
         var button;
         var i;
@@ -1526,14 +1581,10 @@
         toggle.type = "button";
         toggle.setAttribute("aria-expanded", "true");
         toggleCopy = document.createElement("span");
-        overline = document.createElement("p");
-        overline.className = "overline";
-        overline.setAttribute("data-i18n", "section.procedural");
-        overline.textContent = tr("section.procedural");
         title = document.createElement("h3");
+        title.className = "registry-title-primary settings-section-title";
         title.setAttribute("data-i18n", section.titleKey);
         title.textContent = tr(section.titleKey);
-        toggleCopy.appendChild(overline);
         toggleCopy.appendChild(title);
         chevron = document.createElement("span");
         chevron.className = "collapse-chevron";
@@ -1547,33 +1598,14 @@
 
         field = findSettingsSectionField(section, "preset");
         if (field) {
-            row = document.createElement("label");
-            row.className = "settings-field settings-field--select";
-            copy = createSettingsFieldCopy(field.labelKey, field.descriptionKey, "");
-
-            select = document.createElement("select");
-            select.id = "bgPreset";
-            select.className = "select-input";
-            for (i = 0; field.options && i < field.options.length; i++) {
-                option = document.createElement("option");
-                option.value = field.options[i].value;
-                option.setAttribute("data-i18n", field.options[i].labelKey);
-                option.textContent = tr(field.options[i].labelKey);
-                select.appendChild(option);
-            }
-            row.appendChild(copy);
-            row.appendChild(select);
-            body.appendChild(row);
+            fieldRow = createSharedSettingsFieldRow("select", field, field.descriptionKey, "");
+            select = createSharedSettingsSelect("bgPreset", field, field.defaultValue);
+            fieldRow.controls.appendChild(select);
+            body.appendChild(fieldRow.row);
         }
 
-        subtitle = document.createElement("div");
-        subtitle.className = "settings-subtitle";
-        subtitle.setAttribute("data-i18n", "section.color");
-        subtitle.textContent = tr("section.color");
-        body.appendChild(subtitle);
+        body.appendChild(createSettingsGroupLabel("section.color"));
 
-        colorGrid = document.createElement("div");
-        colorGrid.className = "color-grid";
         colors = [
             ["baseColor", "bgBaseColor"],
             ["secondaryColor", "bgSecondaryColor"],
@@ -1585,16 +1617,11 @@
         for (i = 0; i < colors.length; i++) {
             field = findSettingsSectionField(section, colors[i][0]);
             if (field) {
-                colorGrid.appendChild(renderSettingsBackgroundColor(field, colors[i][1]));
+                body.appendChild(renderSettingsBackgroundColor(field, colors[i][1]));
             }
         }
-        body.appendChild(colorGrid);
 
-        subtitle = document.createElement("div");
-        subtitle.className = "settings-subtitle";
-        subtitle.setAttribute("data-i18n", "section.shape");
-        subtitle.textContent = tr("section.shape");
-        body.appendChild(subtitle);
+        body.appendChild(createSettingsGroupLabel("section.shape"));
 
         ranges = [
             ["glowOpacity", "bgGlowOpacity"],
@@ -1617,29 +1644,14 @@
             }
         }
 
-        subtitle = document.createElement("div");
-        subtitle.className = "settings-subtitle";
-        subtitle.setAttribute("data-i18n", "section.motion");
-        subtitle.textContent = tr("section.motion");
-        body.appendChild(subtitle);
+        body.appendChild(createSettingsGroupLabel("section.motion"));
 
         field = findSettingsSectionField(section, "motionEnable");
         if (field) {
-            row = document.createElement("label");
-            row.className = "settings-field settings-field--switch";
-            copy = createSettingsFieldCopy(field.labelKey, field.descriptionKey, "");
-            switchWrap = document.createElement("span");
-            switchWrap.className = "switch";
-            switchInput = document.createElement("input");
-            switchInput.id = "bgMotionEnable";
-            switchInput.type = "checkbox";
-            switchTrack = document.createElement("span");
-            switchTrack.className = "switch-track";
-            switchWrap.appendChild(switchInput);
-            switchWrap.appendChild(switchTrack);
-            row.appendChild(copy);
-            row.appendChild(switchWrap);
-            body.appendChild(row);
+            fieldRow = createSharedSettingsFieldRow("checkbox", field, field.descriptionKey, "");
+            switchWrap = createSharedSettingsSwitch("bgMotionEnable", field.defaultValue === true);
+            fieldRow.controls.appendChild(switchWrap);
+            body.appendChild(fieldRow.row);
         }
 
         motionFields = [
@@ -1658,7 +1670,7 @@
         field = findSettingsSectionField(section, "randomize");
         if (field) {
             button = document.createElement("button");
-            button.className = "panel-button";
+            button.className = "panel-button registry-large-button is-full-width settings-action-button";
             button.id = "bgRandomizeBtn";
             button.type = "button";
             button.setAttribute("data-i18n", field.labelKey);
@@ -1668,7 +1680,7 @@
         field = findSettingsSectionField(section, "reset");
         if (field) {
             button = document.createElement("button");
-            button.className = "panel-button";
+            button.className = "panel-button registry-large-button is-full-width settings-action-button";
             button.id = "bgResetBtn";
             button.type = "button";
             button.setAttribute("data-i18n", field.labelKey);
@@ -4934,6 +4946,7 @@
     function setColorValue(inputId, hex) {
         var input = byId(inputId);
         var shell;
+        var hexInput;
         var normalized = normalizeHex(hex, "#ffffff");
 
         if (!input) {
@@ -4941,9 +4954,13 @@
         }
 
         shell = input.parentNode;
+        hexInput = byId(inputId + "Hex");
         input.value = normalized;
         if (shell) {
             shell.style.backgroundColor = normalized;
+        }
+        if (hexInput) {
+            hexInput.value = normalized;
         }
     }
 
@@ -5245,6 +5262,9 @@
 
         control = document.createElement("span");
         control.className = "custom-select select-input-replacement";
+        if (select.classList && select.classList.contains("settings-select")) {
+            control.className += " settings-select-control";
+        }
         control.setAttribute("data-select-for", selectId);
 
         trigger = document.createElement("button");

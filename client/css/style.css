@@ -393,9 +393,7 @@ body:not(.i18n-ready) .app-shell {
     padding: var(--card-pad);
     border: 1px solid var(--separator);
     border-radius: var(--radius-lg);
-    background:
-        linear-gradient(180deg, rgba(214, 178, 94, 0.035), rgba(5, 4, 3, 0) 48%),
-        #0b0a08;
+    background: #0b0a08;
     overflow: hidden;
 }
 
@@ -554,6 +552,14 @@ body:not(.i18n-ready) .app-shell {
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+}
+
+.settings-group-label {
+    margin: calc(14px * var(--ui-scale)) 0 calc(6px * var(--ui-scale));
+    color: var(--text-secondary);
+    font-size: var(--font-body);
+    font-weight: 800;
+    line-height: 1.25;
 }
 
 .select-input {
