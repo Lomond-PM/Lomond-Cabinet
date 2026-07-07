@@ -179,6 +179,19 @@ Purpose:
 - Icon Grid: selected 2D layers become normalized grid items.
 - Uses layer comments as component metadata.
 
+Migration status:
+
+- Not formally migrated to the registry path yet.
+- Current frontend id remains `ecommerceLayout`.
+- Current active host module remains `host/tools/adComponentKit.jsx`.
+- `host/tools/ecommerceLayout.jsx` remains included and preserved as legacy / experimental host code; do not delete it without a separate audit.
+- The recommended future registry id is `ecommerceLayout` to preserve `aeToolbox.homeToolOrder` compatibility when the static Home card is eventually replaced.
+- The recommended future shape is one registry tool, not multiple Home tools. Feature Stack and Icon Grid should be represented by registry `tabs` / option cards and `visibleWhen` fields.
+- Existing `host/tools/adComponentKit.jsx` creation logic should be reused. Do not rewrite the AE layer creation algorithms during migration.
+- A draft registry schema is documented at `docs/schema-drafts/ad-component-kit.registry-schema-draft.md`.
+- A future `getState` wrapper should expose selection and component-controller state for `stateCard`, `enabledWhen`, and `disabledWhen`.
+- Migration must remain phased: schema draft, Developer Mode probe, minimal official action, full tabs migration, maintenance actions, same-id replacement, then legacy cleanup.
+
 ### Shape Add
 
 Frontend tool id:
@@ -274,6 +287,21 @@ Legacy tools not migrated:
 
 - Ad Component Kit.
 - The preserved `ecommerceLayout.jsx` host module.
+
+### Ad Component Kit Registry Migration Draft
+
+Current decision:
+
+- Keep Ad Component Kit as one registry tool with id `ecommerceLayout`.
+- Do not split Feature Stack and Icon Grid into separate Home entries at this stage.
+- Use `tabs` / option cards for `componentKind`.
+- Use `visibleWhen` for Feature Stack and Icon Grid field groups.
+- Use `stateAction` and `stateCard` to show active comp, selection count, valid text layer count, valid 2D layer count, and selected component controller type.
+- Use `enabledWhen` / `disabledWhen` for create, refresh, select, and detach actions.
+- Prefer preserving storage key `AEToolbox.ecommerceLayout.v1` during the first registry migration pass.
+- Keep tool-specific i18n in the future `.tool.jsx`; leave common/global labels in `client/js/i18n.js`.
+
+Do not remove the current static Ad Component Kit Home/detail path until a Developer Mode probe and at least one official registry action have both passed AE testing.
 
 Legacy host implementations still reused by registry tools:
 

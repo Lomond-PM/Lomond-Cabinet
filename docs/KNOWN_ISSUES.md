@@ -59,6 +59,54 @@ Future investigation notes:
 
 Do not remove this note until several future Shape Add changes have been tested in After Effects without Home/detail regressions.
 
+## Ad Component Kit registry migration risk
+
+Status:
+
+Migration planned / schema draft only.
+
+Area:
+
+- Ad Component Kit
+- Home tool list
+- Registry / legacy tool coexistence
+- Saved Home layout order
+- Tool detail panel switching
+- Feature Stack and Icon Grid host actions
+
+Current conclusion:
+
+- Ad Component Kit has not been formally migrated to the registry path.
+- The current frontend id is `ecommerceLayout`.
+- The current active host module is `host/tools/adComponentKit.jsx`.
+- `host/tools/ecommerceLayout.jsx` remains included but should be treated as retained legacy / experimental host code until separately audited.
+- Ad Component Kit is a compound tool: Feature Stack, Icon Grid, and component maintenance actions.
+- The recommended future registry id is `ecommerceLayout` to preserve `aeToolbox.homeToolOrder`.
+- The recommended future shape is one registry tool using tabs / option cards and `visibleWhen`, not multiple Home entries.
+- Existing AE creation logic in `host/tools/adComponentKit.jsx` should be reused, not rewritten.
+
+Main risks:
+
+- A static Home entry and a dynamic registry tool with the same `ecommerceLayout` id can conflict if they coexist.
+- Replacing the static card can affect `HomeLayoutManager` saved order unless the id stays stable.
+- Legacy detail DOM and registry detail panel can coexist and conflict during detail switching.
+- Feature Stack and Icon Grid have different valid-selection requirements and need host state.
+- Refresh, select component layers, and detach require selected controller metadata.
+- Host actions currently return plain `message` strings; registry migration should move toward `messageKey` fallbacks.
+- Existing user parameters are stored under `AEToolbox.ecommerceLayout.v1`; persistence migration must not lose values.
+
+Recommended migration route:
+
+1. Phase 1: migration notes and schema draft. In progress.
+2. Phase 2: Developer Mode probe with a non-production id such as `adComponentKitProbe`.
+3. Phase 3: validate one minimal official action.
+4. Phase 4: migrate Feature Stack and Icon Grid through tabs / visibleWhen.
+5. Phase 5: migrate maintenance actions and stateCard.
+6. Phase 6: same-id replacement using `id: "ecommerceLayout"`.
+7. Phase 7: remove legacy DOM, event bindings, CSS, and i18n after AE testing.
+
+Do not delete legacy Ad Component Kit DOM, CSS, host modules, or i18n keys during draft/probe phases.
+
 ## Settings background preset dropdown render glitch
 
 Status:

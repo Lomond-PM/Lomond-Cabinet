@@ -426,6 +426,39 @@ Known constraints remain:
 
 Do not add Shape Add-specific CSS or custom page structure during this process. Any capability needed by Shape Add should become a reusable core registry renderer capability first.
 
+## Ad Component Kit Registry Migration Constraint
+
+Ad Component Kit is also a compound tool, but its current scope is narrower than Shape Add:
+
+- Feature Stack builder.
+- Icon Grid builder.
+- Component maintenance actions for refresh, select child layers, and detach.
+
+The current production frontend id is `ecommerceLayout`, while the active host implementation is `host/tools/adComponentKit.jsx`. The included `host/tools/ecommerceLayout.jsx` file is retained legacy / experimental host code and must not be deleted as part of registry migration unless separately audited.
+
+Target registry design:
+
+- Keep one registry tool instead of splitting into multiple Home entries.
+- Use id `ecommerceLayout` so saved Home layout order remains compatible.
+- Use `tabs` / option cards for Feature Stack vs Icon Grid.
+- Use `visibleWhen` to switch fields by `componentKind`.
+- Use `stateAction` and `stateCard` for active comp, selection count, valid text layer count, valid 2D layer count, selected controller type, and action availability.
+- Use `enabledWhen` / `disabledWhen` for create, refresh, select, and detach actions.
+- Reuse the existing `host/tools/adComponentKit.jsx` AE creation logic.
+- Prefer preserving `AEToolbox.ecommerceLayout.v1` as the storage key during the first registry migration to avoid losing user parameters.
+
+Migration must be phased:
+
+1. Schema draft and migration notes.
+2. Developer Mode probe with a non-production id such as `adComponentKitProbe`.
+3. Minimal official action validation.
+4. Full tabs / visibleWhen migration.
+5. Maintenance actions and state card.
+6. Same-id replacement of the legacy Home/detail path.
+7. Legacy DOM, event, CSS, and i18n cleanup after AE verification.
+
+Do not add Ad Component Kit-specific DOM, CSS, or custom page structure during migration. Any missing UI behavior must become a generic core renderer capability first.
+
 Supported field types in the current generic renderer:
 
 - `text`

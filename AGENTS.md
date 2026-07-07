@@ -341,6 +341,13 @@ Status: registry tool.
 Status: legacy tool.
 
 - Feature Stack and Icon Grid remain in the legacy UI/host path.
+- Current frontend id is `ecommerceLayout`.
+- Current active host module is `host/tools/adComponentKit.jsx`.
+- `host/tools/ecommerceLayout.jsx` remains included but should be treated as retained legacy / experimental host code unless separately audited.
+- Future registry migration should keep id `ecommerceLayout` for HomeLayout saved-order compatibility.
+- Future registry migration should keep one tool and use tabs / visibleWhen for Feature Stack and Icon Grid, not split them into multiple Home tools.
+- Do not rewrite the AE creation algorithms in `host/tools/adComponentKit.jsx`.
+- Schema draft: `docs/schema-drafts/ad-component-kit.registry-schema-draft.md`.
 - Do not refactor these unless explicitly requested.
 
 ### Registry Control Lab
