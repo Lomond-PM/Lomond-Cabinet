@@ -434,20 +434,22 @@ Ad Component Kit is also a compound tool, but its current scope is narrower than
 - Icon Grid builder.
 - Component maintenance actions for refresh, select child layers, and detach.
 
-The current production frontend id is `ecommerceLayout`, while the active host implementation is `host/tools/adComponentKit.jsx`. The included `host/tools/ecommerceLayout.jsx` file is retained legacy / experimental host code and must not be deleted as part of registry migration unless separately audited.
+The current production registry id is `ecommerceLayout`, while the active host implementation is `host/tools/adComponentKit.jsx`. The included `host/tools/ecommerceLayout.jsx` file is retained legacy / experimental host code and must not be deleted as part of registry migration unless separately audited.
 
-Target registry design:
+Current registry design:
 
-- Keep one registry tool instead of splitting into multiple Home entries.
-- Use id `ecommerceLayout` so saved Home layout order remains compatible.
-- Use `tabs` / option cards for Feature Stack vs Icon Grid.
-- Use `visibleWhen` to switch fields by `componentKind`.
-- Use `stateAction` and `stateCard` for active comp, selection count, valid text layer count, valid 2D layer count, selected controller type, and action availability.
-- Use `enabledWhen` / `disabledWhen` for create, refresh, select, and detach actions.
-- Reuse the existing `host/tools/adComponentKit.jsx` AE creation logic.
-- Prefer preserving `AEToolbox.ecommerceLayout.v1` as the storage key during the first registry migration to avoid losing user parameters.
+- One registry tool owns Feature Stack, Icon Grid, and maintenance actions instead of splitting them into multiple Home entries.
+- Id is `ecommerceLayout` so saved Home layout order remains compatible.
+- `tabs` / option cards switch Feature Stack vs Icon Grid.
+- `visibleWhen` switches fields by `componentKind`.
+- `stateAction` and `stateCard` show active comp, selection count, valid text layer count, valid 2D layer count, selected controller type, and action availability.
+- `enabledWhen` / `disabledWhen` gate create, refresh, select, and detach actions.
+- The tool reuses the existing `host/tools/adComponentKit.jsx` AE creation logic.
+- `AEToolbox.ecommerceLayout.v1` remains the storage key to preserve user parameters.
+- The legacy Ad Component Kit detail DOM, footer actions, frontend event binding, and unused component/ecom CSS have been removed after AE verification.
+- The static Home card remains only as a saved-order-compatible Home entry for the same `ecommerceLayout` id; registry metadata owns the active detail page and actions.
 
-Migration must be phased:
+Migration was phased:
 
 1. Schema draft and migration notes.
 2. Developer Mode probe with a non-production id such as `adComponentKitProbe`.
@@ -455,7 +457,7 @@ Migration must be phased:
 4. Full tabs / visibleWhen migration.
 5. Maintenance actions and state card.
 6. Same-id replacement of the legacy Home/detail path.
-7. Legacy DOM, event, CSS, and i18n cleanup after AE verification.
+7. Legacy DOM, event, CSS, and i18n cleanup after AE verification. Completed for the frontend detail path.
 
 Do not add Ad Component Kit-specific DOM, CSS, or custom page structure during migration. Any missing UI behavior must become a generic core renderer capability first.
 

@@ -82,29 +82,6 @@
         strokeColor: "#FFFFFF",
         fillColor: "#D6B25E"
     };
-    var DefaultEcommerceParams = {
-        componentKind: "featureStack",
-        gap: 14,
-        paddingX: 24,
-        paddingY: 12,
-        cornerRadius: 28,
-        pillWidthMode: "auto",
-        fixedWidth: 320,
-        fillColor: "#d6b25e",
-        gradientEnable: false,
-        textAlign: "center",
-        sortMode: "yPosition",
-        columns: 4,
-        normalizeMode: "fitBox",
-        targetWidth: 72,
-        targetHeight: 72,
-        cellWidth: 100,
-        cellHeight: 118,
-        gapX: 28,
-        gapY: 24,
-        lastRowAlign: "center",
-        gridSortMode: "rowMajor"
-    };
     var ShapeAddItems = [
         { labelKey: "shapeAdd.item.group", key: "group", matchName: "ADBE Vector Group" },
         { labelKey: "shapeAdd.item.rectangle", key: "rectangle", matchName: "ADBE Vector Shape - Rect" },
@@ -4747,175 +4724,6 @@
         saveStoredJson(StorageKeys.shapeAddStrokeFill, collectShapeStrokeFillParams());
     }
 
-    function collectEcommerceParams() {
-        return {
-            componentKind: getActiveComponentKind(),
-            gap: clampNumber(byId("ackFeatureGapNumber").value, DefaultEcommerceParams.gap, 0),
-            paddingX: clampNumber(byId("ackFeaturePaddingXNumber").value, DefaultEcommerceParams.paddingX, 0),
-            paddingY: clampNumber(byId("ackFeaturePaddingYNumber").value, DefaultEcommerceParams.paddingY, 0),
-            cornerRadius: clampNumber(byId("ackFeatureRadiusNumber").value, DefaultEcommerceParams.cornerRadius, 0),
-            pillWidthMode: byId("ackFeatureWidthMode").value,
-            fixedWidth: clampNumber(byId("ackFeatureFixedWidthNumber").value, DefaultEcommerceParams.fixedWidth, 1),
-            fillColor: byId("ackFeatureFillColor").value,
-            gradientEnable: !!byId("ackFeatureGradient").checked,
-            textAlign: byId("ackFeatureTextAlign").value,
-            sortMode: byId("ackFeatureSort").value,
-            columns: clampNumber(byId("ackIconColumnsNumber").value, DefaultEcommerceParams.columns, 1, 12),
-            normalizeMode: byId("ackIconNormalizeMode").value,
-            targetWidth: clampNumber(byId("ackIconTargetWidthNumber").value, DefaultEcommerceParams.targetWidth, 1),
-            targetHeight: clampNumber(byId("ackIconTargetHeightNumber").value, DefaultEcommerceParams.targetHeight, 1),
-            cellWidth: clampNumber(byId("ackIconCellWidthNumber").value, DefaultEcommerceParams.cellWidth, 1),
-            cellHeight: clampNumber(byId("ackIconCellHeightNumber").value, DefaultEcommerceParams.cellHeight, 1),
-            gapX: clampNumber(byId("ackIconGapXNumber").value, DefaultEcommerceParams.gapX, 0),
-            gapY: clampNumber(byId("ackIconGapYNumber").value, DefaultEcommerceParams.gapY, 0),
-            lastRowAlign: byId("ackIconLastRowAlign").value,
-            gridSortMode: byId("ackIconSort").value
-        };
-    }
-
-    function setEcommerceParams(params) {
-        var data = params || DefaultEcommerceParams;
-        setLinkedRangeValue("ackFeatureGap", data.gap, DefaultEcommerceParams.gap);
-        setLinkedRangeValue("ackFeaturePaddingX", data.paddingX, DefaultEcommerceParams.paddingX);
-        setLinkedRangeValue("ackFeaturePaddingY", data.paddingY, DefaultEcommerceParams.paddingY);
-        setLinkedRangeValue("ackFeatureRadius", data.cornerRadius, DefaultEcommerceParams.cornerRadius);
-        setLinkedRangeValue("ackFeatureFixedWidth", data.fixedWidth, DefaultEcommerceParams.fixedWidth);
-        setLinkedRangeValue("ackIconColumns", data.columns, DefaultEcommerceParams.columns);
-        setLinkedRangeValue("ackIconTargetWidth", data.targetWidth, DefaultEcommerceParams.targetWidth);
-        setLinkedRangeValue("ackIconTargetHeight", data.targetHeight, DefaultEcommerceParams.targetHeight);
-        setLinkedRangeValue("ackIconCellWidth", data.cellWidth, DefaultEcommerceParams.cellWidth);
-        setLinkedRangeValue("ackIconCellHeight", data.cellHeight, DefaultEcommerceParams.cellHeight);
-        setLinkedRangeValue("ackIconGapX", data.gapX, DefaultEcommerceParams.gapX);
-        setLinkedRangeValue("ackIconGapY", data.gapY, DefaultEcommerceParams.gapY);
-        byId("ackFeatureWidthMode").value = data.pillWidthMode || DefaultEcommerceParams.pillWidthMode;
-        byId("ackFeatureTextAlign").value = data.textAlign || DefaultEcommerceParams.textAlign;
-        byId("ackFeatureSort").value = data.sortMode || DefaultEcommerceParams.sortMode;
-        byId("ackIconNormalizeMode").value = data.normalizeMode || DefaultEcommerceParams.normalizeMode;
-        byId("ackIconLastRowAlign").value = data.lastRowAlign || data.gridAlign || DefaultEcommerceParams.lastRowAlign;
-        byId("ackIconSort").value = data.gridSortMode || DefaultEcommerceParams.gridSortMode;
-        byId("ackFeatureGradient").checked = !!data.gradientEnable;
-        setColorValue("ackFeatureFillColor", data.fillColor || DefaultEcommerceParams.fillColor);
-        setActiveComponentKind(data.componentKind || DefaultEcommerceParams.componentKind, false);
-        syncAllCustomSelects();
-    }
-
-    function saveEcommerceParams() {
-        saveStoredJson(StorageKeys.ecommerce, collectEcommerceParams());
-    }
-
-    function getActiveComponentKind() {
-        var active = document.querySelector(".component-type-card.is-active");
-        return active ? active.getAttribute("data-component-kind") : DefaultEcommerceParams.componentKind;
-    }
-
-    function updateComponentActionButtons(kind) {
-        var selectedKind = kind === "iconGrid" ? "iconGrid" : "featureStack";
-        var buttons = document.querySelectorAll(".component-action-button[data-component-action]");
-        var i;
-        for (i = 0; i < buttons.length; i++) {
-            buttons[i].classList.toggle("is-active", buttons[i].getAttribute("data-component-action") === selectedKind);
-        }
-    }
-
-    function setActiveComponentKind(kind, announce) {
-        var selectedKind = kind === "iconGrid" ? "iconGrid" : "featureStack";
-        var cards = document.querySelectorAll(".component-type-card[data-component-kind]");
-        var builders = document.querySelectorAll(".component-builder[data-component-builder]");
-        var i;
-
-        for (i = 0; i < cards.length; i++) {
-            cards[i].classList.toggle("is-active", cards[i].getAttribute("data-component-kind") === selectedKind);
-            cards[i].setAttribute("aria-selected", cards[i].getAttribute("data-component-kind") === selectedKind ? "true" : "false");
-        }
-        for (i = 0; i < builders.length; i++) {
-            builders[i].classList.toggle("is-active", builders[i].getAttribute("data-component-builder") === selectedKind);
-        }
-        updateComponentActionButtons(selectedKind);
-        saveEcommerceParams();
-        if (announce !== false) {
-            if (selectedKind === "iconGrid") {
-                setComponentKitStatus("Icon Grid selected. Choose any 2D layers in AE.");
-            } else {
-                setComponentKitStatus("Feature Stack selected. Choose one or more text layers in AE.");
-            }
-        }
-    }
-
-    function setComponentKitStatus(message, isError) {
-        var card = byId("componentKitStatus");
-        if (!card) {
-            return;
-        }
-        card.textContent = message || tr("status.readyPeriod");
-        card.classList.toggle("is-error", !!isError);
-    }
-
-    function createFeatureStack() {
-        var json = JSON.stringify(collectEcommerceParams());
-        saveEcommerceParams();
-        setStatus(tr("status.creatingFeatureStack"), "busy", true);
-        evalHost("AEToolbox.tools.adComponentKit.createFeatureStack('" + jsxQuote(json) + "')", function (raw) {
-            var result = parseResult(raw);
-            var message = actionMessage(result, "status.createdFeatureStack");
-            setStatus(message, result.ok ? "ok" : "error");
-            setComponentKitStatus(message, !result.ok);
-        });
-    }
-
-    function createIconGrid() {
-        var json = JSON.stringify(collectEcommerceParams());
-        var script = "AEToolbox.tools.adComponentKit.createIconGrid('" + jsxQuote(json) + "')";
-        saveEcommerceParams();
-        setStatus(tr("status.creatingIconGrid"), "busy", true);
-        if (window.console && console.log) {
-            console.log("[AE Toolbox] Create Icon Grid evalScript:", script);
-            console.log("[AE Toolbox] Create Icon Grid params:", json);
-        }
-        evalHost(script, function (raw) {
-            var result = parseResult(raw);
-            var version = result.version ? " [" + result.version + "]" : " [NO ICON GRID VERSION]";
-            var message = actionMessage(result, "status.createdIconGrid") + version;
-            if (window.console && console.log) {
-                console.log("[AE Toolbox] Create Icon Grid raw result:", raw);
-                console.log("[AE Toolbox] Create Icon Grid parsed result:", result);
-            }
-            setStatus(message, result.ok ? "ok" : "error");
-            setComponentKitStatus(message, !result.ok);
-        });
-    }
-
-    function refreshSelectedComponent() {
-        var json = JSON.stringify(collectEcommerceParams());
-        saveEcommerceParams();
-        setStatus(tr("status.refreshingComponent"), "busy", true);
-        evalHost("AEToolbox.tools.adComponentKit.refreshSelectedComponent('" + jsxQuote(json) + "')", function (raw) {
-            var result = parseResult(raw);
-            var message = actionMessage(result, "status.componentRefreshed");
-            setStatus(message, result.ok ? "ok" : "error");
-            setComponentKitStatus(message, !result.ok);
-        });
-    }
-
-    function selectComponentLayers() {
-        setStatus(tr("status.selectingComponentLayers"), "busy", true);
-        evalHost("AEToolbox.tools.adComponentKit.selectComponentLayers()", function (raw) {
-            var result = parseResult(raw);
-            var message = actionMessage(result, "status.componentLayersSelected");
-            setStatus(message, result.ok ? "ok" : "error");
-            setComponentKitStatus(message, !result.ok);
-        });
-    }
-
-    function detachSelectedComponent() {
-        setStatus(tr("status.detachingComponent"), "busy", true);
-        evalHost("AEToolbox.tools.adComponentKit.detachSelectedComponent()", function (raw) {
-            var result = parseResult(raw);
-            var message = actionMessage(result, "status.componentDetached");
-            setStatus(message, result.ok ? "ok" : "error");
-            setComponentKitStatus(message, !result.ok);
-        });
-    }
-
     function createBackgroundBox() {
         var params = collectParams();
         var json = JSON.stringify(params);
@@ -5569,7 +5377,6 @@
 
     function loadPersistentState() {
         applySettings(loadStoredJson(StorageKeys.settings, DefaultSettings));
-        setEcommerceParams(loadStoredJson(StorageKeys.ecommerce, DefaultEcommerceParams));
         setShapeStrokeFillParams(loadStoredJson(StorageKeys.shapeAddStrokeFill, DefaultShapeStrokeFillParams));
     }
 
@@ -5774,29 +5581,9 @@
         var closeSettingsBtn;
         var settingsBackdrop;
         var refreshBtn;
-        var componentTypeCards;
-        var componentSelects;
-        var componentRangeIds;
         var strokeFillRangeIds;
         var i;
 
-        componentRangeIds = [
-            ["ackFeatureGap", 0, null],
-            ["ackFeaturePaddingX", 0, null],
-            ["ackFeaturePaddingY", 0, null],
-            ["ackFeatureRadius", 0, null],
-            ["ackFeatureFixedWidth", 1, null],
-            ["ackIconColumns", 1, 12],
-            ["ackIconTargetWidth", 1, null],
-            ["ackIconTargetHeight", 1, null],
-            ["ackIconCellWidth", 1, null],
-            ["ackIconCellHeight", 1, null],
-            ["ackIconGapX", 0, null],
-            ["ackIconGapY", 0, null]
-        ];
-        for (i = 0; i < componentRangeIds.length; i++) {
-            linkPersistedRange(componentRangeIds[i][0], componentRangeIds[i][0] + "Number", componentRangeIds[i][1], componentRangeIds[i][2], saveEcommerceParams);
-        }
         strokeFillRangeIds = [
             ["sfStrokeWidth", 0, null],
             ["sfMiterLimit", 0, null],
@@ -5842,24 +5629,6 @@
         if (byId("createStrokeFillLayerBtn")) {
             byId("createStrokeFillLayerBtn").addEventListener("click", createStrokeFillLayer);
         }
-        byId("createFeatureStackBtn").addEventListener("click", createFeatureStack);
-        byId("createIconGridBtn").addEventListener("click", createIconGrid);
-        byId("refreshComponentBtn").addEventListener("click", refreshSelectedComponent);
-        byId("selectComponentLayersBtn").addEventListener("click", selectComponentLayers);
-        byId("detachComponentBtn").addEventListener("click", detachSelectedComponent);
-
-        componentTypeCards = document.querySelectorAll(".component-type-card[data-component-kind]");
-        for (i = 0; i < componentTypeCards.length; i++) {
-            componentTypeCards[i].addEventListener("click", function () {
-                setActiveComponentKind(this.getAttribute("data-component-kind"), true);
-            });
-        }
-
-        componentSelects = document.querySelectorAll(".tool-panel[data-tool-panel='ecommerceLayout'] select");
-        for (i = 0; i < componentSelects.length; i++) {
-            componentSelects[i].addEventListener("change", saveEcommerceParams);
-        }
-        byId("ackFeatureGradient").addEventListener("change", saveEcommerceParams);
 
         settingsBtn = byId("settingsBtn");
         closeSettingsBtn = byId("closeSettingsBtn");

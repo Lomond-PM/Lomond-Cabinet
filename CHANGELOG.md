@@ -20,12 +20,14 @@ This project follows simple semantic versioning for development handoff:
 - Migrated the production Settings Motion Speed and UI Scale rows to the app-level Settings schema renderer path while preserving the existing `AEToolbox.settings.v1` storage.
 - Migrated the production Settings Theme color rows to the app-level Settings schema renderer path while preserving the existing `AEToolbox.settings.v1` storage and color application logic.
 - Added Ad Component Kit registry migration notes and a schema draft without connecting it to the production Home/detail path.
+- Migrated Ad Component Kit to the unified registry tool path with id `ecommerceLayout`, including Feature Stack, Icon Grid, and maintenance actions.
 
 ### Notes
 
 - The Settings schema draft is not loaded by the current CEP panel and does not change existing Settings behavior.
 - Settings Renderer Lab uses sandbox storage key `AEToolbox.settingsLab.v1` and does not write production Settings keys.
-- Ad Component Kit remains a legacy production tool for now. The draft recommends keeping registry id `ecommerceLayout`, preserving `AEToolbox.ecommerceLayout.v1`, and reusing `host/tools/adComponentKit.jsx`.
+- Ad Component Kit now uses registry metadata/detail rendering while preserving `AEToolbox.ecommerceLayout.v1` and reusing `host/tools/adComponentKit.jsx`.
+- Removed the legacy Ad Component Kit frontend detail DOM, action footer, event binding, unused component/ecom CSS, and obsolete global Ad Component Kit i18n entries. The static Home card remains as the saved-order anchor for `ecommerceLayout`.
 
 ## [0.2.2] - 2026-07-03
 

@@ -181,16 +181,15 @@ Purpose:
 
 Migration status:
 
-- Not formally migrated to the registry path yet.
-- Current frontend id remains `ecommerceLayout`.
-- Current active host module remains `host/tools/adComponentKit.jsx`.
+- Formally migrated to the `.tool.jsx` registry path in `host/tools/adComponentKit.tool.jsx`.
+- Registry id remains `ecommerceLayout` to preserve saved Home order compatibility.
+- Current active host module remains `host/tools/adComponentKit.jsx`; the registry action reuses that host logic instead of rewriting AE layer creation algorithms.
 - `host/tools/ecommerceLayout.jsx` remains included and preserved as legacy / experimental host code; do not delete it without a separate audit.
-- The recommended future registry id is `ecommerceLayout` to preserve `aeToolbox.homeToolOrder` compatibility when the static Home card is eventually replaced.
-- The recommended future shape is one registry tool, not multiple Home tools. Feature Stack and Icon Grid should be represented by registry `tabs` / option cards and `visibleWhen` fields.
-- Existing `host/tools/adComponentKit.jsx` creation logic should be reused. Do not rewrite the AE layer creation algorithms during migration.
-- A draft registry schema is documented at `docs/schema-drafts/ad-component-kit.registry-schema-draft.md`.
-- A future `getState` wrapper should expose selection and component-controller state for `stateCard`, `enabledWhen`, and `disabledWhen`.
-- Migration must remain phased: schema draft, Developer Mode probe, minimal official action, full tabs migration, maintenance actions, same-id replacement, then legacy cleanup.
+- The frontend legacy Ad Component Kit detail DOM, action footer, event binding, and unused component/ecom CSS have been removed after AE verification.
+- The static Home card is retained as the Home order anchor while dynamic registry metadata owns the detail page and actions for the same id.
+- Feature Stack, Icon Grid, and maintenance actions live in one registry tool using tabs / option cards, `visibleWhen`, `stateAction`, `stateCard`, `enabledWhen` / `disabledWhen`, and `refreshStateAfterRun`.
+- The draft registry schema remains documented at `docs/schema-drafts/ad-component-kit.registry-schema-draft.md` as historical migration context.
+- `host/tools/adComponentKitProbe.tool.jsx` remains a Developer Mode-only probe and must not appear in normal Home.
 
 ### Shape Add
 
@@ -254,6 +253,7 @@ Home contains a disabled More Tools card. It is not an active tool.
   - Registry Control Lab
   - Registry Probe
   - Shape Add Probe
+  - Ad Component Kit Probe
 - Home background is procedural and configurable.
 - Home icon order is persisted with key:
 
@@ -285,7 +285,6 @@ Current status:
 
 Legacy tools not migrated:
 
-- Ad Component Kit.
 - The preserved `ecommerceLayout.jsx` host module.
 
 ### Ad Component Kit Registry Migration Draft
@@ -301,7 +300,7 @@ Current decision:
 - Prefer preserving storage key `AEToolbox.ecommerceLayout.v1` during the first registry migration pass.
 - Keep tool-specific i18n in the future `.tool.jsx`; leave common/global labels in `client/js/i18n.js`.
 
-Do not remove the current static Ad Component Kit Home/detail path until a Developer Mode probe and at least one official registry action have both passed AE testing.
+Do not delete the static Ad Component Kit Home card unless the replacement plan preserves `aeToolbox.homeToolOrder` behavior. The old Ad Component Kit detail panel and footer have already been removed; the active detail page is the registry renderer.
 
 Legacy host implementations still reused by registry tools:
 
