@@ -268,6 +268,17 @@ AEToolbox.tools.adComponentKit.selectComponentLayers()
 AEToolbox.tools.adComponentKit.detachSelectedComponent()
 ```
 
+Ad Component Kit migration note:
+
+- The current frontend id is `ecommerceLayout`.
+- The active host implementation is `host/tools/adComponentKit.jsx`.
+- `host/tools/ecommerceLayout.jsx` is still included but is retained legacy / experimental host code relative to the active Ad Component Kit UI path.
+- Do not delete `host/tools/ecommerceLayout.jsx` without a separate audit.
+- The recommended future registry id is `ecommerceLayout` to preserve saved Home layout order.
+- Keep Ad Component Kit as one registry tool with Feature Stack and Icon Grid represented by tabs / option cards.
+- A schema draft exists at `docs/schema-drafts/ad-component-kit.registry-schema-draft.md`.
+- Future implementation should start with a Developer Mode probe before replacing the production Home/detail path.
+
 Shape Add:
 
 ```js
