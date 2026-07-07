@@ -106,7 +106,8 @@ Current state:
 - `BackgroundEngine` remains legacy behavior and should not be replaced opportunistically.
 - `client/js/settingsSchema.js` is the draft app-level data model.
 - The production panel currently renders Language, Developer Mode, Motion Speed, UI Scale, Theme colors, and Background Engine controls from the Settings schema.
-- Settings internal content should render through a single content pass and use Settings-specific visual classes such as `settings-renderer`, `settings-section`, `settings-section-header`, `settings-field`, and `settings-action-row`.
+- Settings internal content should render through a single content pass and use shared Settings/registry visual primitives such as `registry-field-row`, `registry-switch-row`, `registry-label-column`, `registry-range-control`, `registry-color-control`, `settings-renderer`, `settings-section`, and `settings-action-row`.
+- Production Settings and the Developer Mode Settings Renderer Lab should remain visually equivalent for the same control types. Settings may preserve exact IDs and legacy hook classes for behavior adapters, but the primary DOM structure should come from the shared Settings control helpers.
 - The outer morph shell classes such as `settings-view`, `settings-panel`, and `settings-ui-layer` are shell infrastructure and should not be removed during visual migration.
 - Background Engine behavior remains owned by the existing `BackgroundEngine` runtime; the schema renderer preserves the legacy control IDs and storage keys.
 

@@ -333,13 +333,13 @@ Current implementation status:
 - An app-level Settings schema exists at `client/js/settingsSchema.js`.
 - `client/index.html` loads the schema so migrated production Settings sections can be rendered from data.
 - Language, Developer Mode / `registryDebugTools`, Motion Speed, UI Scale, Theme colors, and Background Engine controls are currently connected to the production Settings UI through the schema renderer path.
-- Settings internal content is rendered through `renderSettingsContent()` plus section renderers using the `settings-renderer` / `settings-section` / `settings-field` visual structure.
+- Settings internal content is rendered through `renderSettingsContent()` plus section renderers using shared Settings control helpers. Production Settings now emits the same registry-style visual primitives used by Settings Renderer Lab, including `registry-field-row`, `registry-switch-row`, `registry-label-column`, `registry-range-control`, and `registry-color-control`, while keeping Settings-specific wrappers and exact IDs where behavior adapters require them.
 - The outer Settings morph shell remains in `client/index.html` and still uses `#settingsView`, `.settings-panel`, `.settings-ui-layer`, and `.settings-content`.
 - Background Engine UI is schema-rendered, while `BackgroundEngine.applyPreset(...)`, `BackgroundEngine.save(...)`, and `BackgroundEngine.syncControls(...)` remain the behavior layer.
-- A Developer Mode-only Settings Renderer Lab exists at `host/tools/settingsRendererLab.tool.jsx` for testing renderer capabilities before formal Settings migration.
+- A Developer Mode-only Settings Renderer Lab exists at `host/tools/settingsRendererLab.tool.jsx` for testing renderer capabilities. Production Settings should stay aligned with its validated control DOM and visual classes rather than reintroducing separate legacy field renderers.
 - The target direction remains an app-level Settings Schema with phased production adoption after lab validation.
 - Settings i18n remains core/global i18n and should stay in `client/js/i18n.js`.
-- Legacy Settings DOM/CSS cleanup has not yet been performed; this is a separate Phase 6B task.
+- Legacy Settings DOM/CSS cleanup has been performed for static internal Settings markup. Remaining legacy classes in production Settings are behavior hooks only and should not own the primary visual structure.
 
 Current Settings storage:
 
