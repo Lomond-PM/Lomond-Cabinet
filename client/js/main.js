@@ -1062,6 +1062,9 @@
             if (!tool || tool.hidden || (isDeveloperRegistryTool(tool) && window.AETOOLBOX_DEBUG_REGISTRY !== true)) {
                 continue;
             }
+            if (grid.querySelector(".tool-app[data-tool='" + tool.id + "']:not([data-dynamic-tool='true'])")) {
+                continue;
+            }
             button = document.createElement("button");
             button.type = "button";
             button.className = "tool-app app-card";
@@ -2260,6 +2263,12 @@
             for (key in defaults.values) {
                 if (defaults.values.hasOwnProperty(key) && saved.values.hasOwnProperty(key)) {
                     state.values[key] = saved.values[key];
+                }
+            }
+        } else if (saved) {
+            for (key in defaults.values) {
+                if (defaults.values.hasOwnProperty(key) && saved.hasOwnProperty(key)) {
+                    state.values[key] = saved[key];
                 }
             }
         }
