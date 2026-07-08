@@ -86,6 +86,12 @@ ExtensionBundleVersion
 4. Commit the handoff state.
 5. Package only source and documentation, not runtime cache, archives, logs, or scratch files.
 
+Current release-prep note:
+
+- `VERSION` remains `0.2.2` until the release task explicitly updates it.
+- `CHANGELOG.md` contains a `0.2.3` draft entry for the registry migration / cleanup release.
+- Do not create or move tags during documentation-only handoff work.
+
 On a new machine:
 
 1. Create a new development branch before coding:
@@ -244,6 +250,12 @@ Do not claim this is fixed unless verified in AE. See:
 docs/KNOWN_ISSUES.md
 ```
 
+### Deferred CEP Panel Close Freeze
+
+Closing the plugin window can still make After Effects appear frozen for several seconds to more than ten seconds. This is deferred to 0.2.4 and is not fixed by the 0.2.3 documentation/update pass.
+
+Future investigation should audit pending `evalScript` calls, registry state polling, document/window listeners, custom select cleanup, localStorage save paths, and close/unload callbacks.
+
 ## Current Active Tool Bridge Summary
 
 Text Background Box:
@@ -272,6 +284,8 @@ Ad Component Kit migration note:
 
 - The current registry/frontend id is `ecommerceLayout`.
 - The active host implementation is `host/tools/adComponentKit.jsx`.
+- The active registry schema is `host/tools/adComponentKit.tool.jsx`.
+- The storage key remains `AEToolbox.ecommerceLayout.v1`.
 - `host/tools/ecommerceLayout.jsx` was separately audited as unused legacy / experimental host code and removed.
 - Keep the registry id `ecommerceLayout` unless a dedicated HomeLayout / storage migration is planned.
 - Ad Component Kit is now one registry tool with Feature Stack, Icon Grid, and maintenance actions represented by tabs / option cards, state cards, and state-gated actions.
@@ -289,6 +303,19 @@ AEToolbox.runRegisteredToolAction("shapeAdd", actionId, paramsJson)
 Shape Add / Shape Builder is the formal registry Home entry. The registry schema is `host/tools/shapeAdd.tool.jsx`, and active host behavior remains in `host/tools/shapeAdd.jsx`.
 
 The old global wrappers `shapeAdd_getState()`, `shapeAdd_add(matchName, key)`, and `shapeAdd_createStrokeFillLayer(paramsJson)` have been removed after frontend cleanup. Do not add new client `evalScript` calls to those removed wrappers.
+
+Shape Add frontend cleanup completed before 0.2.3:
+
+- Legacy frontend adapter removed.
+- Duplicate `shapeAdd.item.*` global i18n keys removed.
+- Legacy Shape Add CSS removed except active Home/tool icon selectors.
+- Registry number/range typing bug fixed so input is normalized on commit instead of on every keystroke.
+
+Text Background Box:
+
+- Active registry schema is `host/tools/textBackgroundBox.tool.jsx`.
+- Active host behavior is `host/tools/textBackgroundBox.jsx`.
+- Legacy frontend adapter has been removed.
 
 Developer Mode-only registry tools are hidden from normal users and appear only when Settings > Developer Mode is enabled:
 
