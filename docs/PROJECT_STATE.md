@@ -203,10 +203,18 @@ shapeAdd
 Host functions:
 
 ```js
+AEToolbox.runRegisteredToolAction("shapeAdd", actionId, paramsJson)
+```
+
+The removed legacy global wrappers were:
+
+```js
 shapeAdd_getState()
 shapeAdd_add(matchName, key)
 shapeAdd_createStrokeFillLayer(paramsJson)
 ```
+
+Do not add new client `evalScript` calls to those removed wrappers.
 
 Purpose:
 
@@ -322,7 +330,7 @@ Key risks:
 - Static Home entry and dynamic registry tool with the same `shapeAdd` id can conflict; the current migration removes the static Home card.
 - `HomeLayoutManager` saved order may be affected by replacing static entries with dynamic entries, so the migrated registry tool keeps the same `shapeAdd` id.
 - Legacy detail panel and registry detail panel can coexist and conflict; the legacy panel is preserved but no longer opened for dynamic `shapeAdd`.
-- Shape Add depends on `shapeAdd_getState()` and continuous host-state refresh.
+- Shape Add depends on registry `stateAction` host-state refresh through `AEToolbox.tools.shapeAdd.getRegistryState()`.
 - The 19 native shape item buttons require action payloads such as `key` and `matchName`.
 - Button disabled state depends on host state.
 - Host messages should move toward `messageKey` to avoid plain message/i18n/mojibake issues.
@@ -336,7 +344,7 @@ Recommended migration route:
 4. Phase 4: migrate the 19 native shape item buttons. Completed on the registry path.
 5. Phase 5: migrate Stroke / Fill subtool UI to registry while reusing the legacy host action. Completed on the registry path.
 6. Phase 6: remove or simplify remaining obsolete frontend helper code after AE verification.
-7. Phase 7: remove legacy host wrappers only if no registered or global path uses them.
+7. Phase 7: remove legacy host wrappers after confirming no registered or global path uses them. Completed.
 
 ### Settings
 

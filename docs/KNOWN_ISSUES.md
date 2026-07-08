@@ -34,7 +34,7 @@ Main risks:
 - Static Home entry and dynamic registry tool with the same `shapeAdd` id can conflict; the phased migration removes the static Home card when the registry entry owns `shapeAdd`.
 - `HomeLayoutManager` saved order may be affected by replacing a static card with a dynamic card, so the registry tool must keep the same `shapeAdd` id.
 - Legacy detail panel and registry detail panel can coexist and conflict during panel switching; this must be tested in AE.
-- Shape Add depends on `shapeAdd_getState()` and continuous host-state refresh.
+- Shape Add depends on registry `stateAction` host-state refresh through `AEToolbox.tools.shapeAdd.getRegistryState()`.
 - The 19 native shape item buttons need action-specific payloads such as `key` and `matchName`.
 - Button disabled/enabled state depends on host state, not only local schema.
 - Host messages may return plain `message` strings and mojibake; registry migration should prefer `messageKey`.
@@ -49,7 +49,7 @@ Recommended migration route:
 4. Phase 4: Migrate the 19 native shape item buttons. Completed.
 5. Phase 5: Migrate the Stroke / Fill subtool UI to registry while preserving legacy host execution. Completed.
 6. Phase 6: Remove or simplify remaining obsolete frontend helper code only after AE verification.
-7. Phase 7: Remove legacy host wrappers only if no caller uses them.
+7. Phase 7: Remove legacy host wrappers only if no caller uses them. Completed.
 
 Future investigation notes:
 

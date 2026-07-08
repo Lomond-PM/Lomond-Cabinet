@@ -416,11 +416,19 @@ Do not refactor `HomeLayoutManager` casually.
 
 Do not save absolute icon positions. Home order should remain a `toolId` order array.
 
-### Shape Add legacy host actions
+### Shape Add host actions
 
-Do not delete `host/tools/shapeAdd.jsx` or global Shape Add wrappers casually.
+Do not delete `host/tools/shapeAdd.jsx` casually.
 
-The registry Shape Add UI still reuses these host actions:
+The registry Shape Add UI uses registered actions:
+
+```js
+AEToolbox.runRegisteredToolAction("shapeAdd", actionId, paramsJson)
+```
+
+Formal host behavior remains in `host/tools/shapeAdd.jsx`; formal registry schema remains in `host/tools/shapeAdd.tool.jsx`.
+
+Removed legacy global wrappers:
 
 ```js
 shapeAdd_getState()
@@ -428,7 +436,7 @@ shapeAdd_add(matchName, key)
 shapeAdd_createStrokeFillLayer(paramsJson)
 ```
 
-Remove them only after all registry callers and any global bridge callers are audited.
+Do not add new `client` evalScript calls to these removed wrappers. Use registry actions instead.
 
 ## Release Workflow
 
