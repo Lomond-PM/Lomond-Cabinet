@@ -9,10 +9,10 @@ This document records the proposed registry design for migrating the legacy Ad C
 - Frontend tool id: `ecommerceLayout`
 - Visible title: `Ad Component Kit`
 - Active host module: `host/tools/adComponentKit.jsx`
-- Preserved host module: `host/tools/ecommerceLayout.jsx`
+- Former legacy host module: `host/tools/ecommerceLayout.jsx` (removed after separate unused-path audit)
 - Current storage key: `AEToolbox.ecommerceLayout.v1`
 
-The current active creation path is `AEToolbox.tools.adComponentKit`. The included `host/tools/ecommerceLayout.jsx` file exposes older guide/template layout helpers and should be treated as retained legacy / experimental host code until separately audited.
+The current active creation path is `AEToolbox.tools.adComponentKit`. The old `host/tools/ecommerceLayout.jsx` file exposed guide/template layout helpers and was later removed after a separate unused-path audit.
 
 ## Migration Decision
 
@@ -346,7 +346,7 @@ Only after the registry tool is active and AE-tested:
 2. Remove `collectEcommerceParams`, `setEcommerceParams`, `saveEcommerceParams`, `setActiveComponentKind`, and related static event bindings from `client/js/main.js`.
 3. Remove unused `.component-*` and `.ecom-*` CSS.
 4. Move tool-local i18n out of `client/js/i18n.js` or leave compatibility keys until no caller uses them.
-5. Audit `host/tools/ecommerceLayout.jsx` separately before deleting or reactivating it.
+5. Completed: audit and remove unused `host/tools/ecommerceLayout.jsx`.
 
 ## Phased Migration Plan
 

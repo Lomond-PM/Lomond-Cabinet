@@ -76,10 +76,10 @@ Area:
 
 Current conclusion:
 
-- Ad Component Kit has not been formally migrated to the registry path.
+- Ad Component Kit has been formally migrated to the registry path.
 - The current frontend id is `ecommerceLayout`.
 - The current active host module is `host/tools/adComponentKit.jsx`.
-- `host/tools/ecommerceLayout.jsx` remains included but should be treated as retained legacy / experimental host code until separately audited.
+- `host/tools/ecommerceLayout.jsx` was audited as unused legacy / experimental host code and removed.
 - Ad Component Kit is a compound tool: Feature Stack, Icon Grid, and component maintenance actions.
 - The recommended future registry id is `ecommerceLayout` to preserve `aeToolbox.homeToolOrder`.
 - The recommended future shape is one registry tool using tabs / option cards and `visibleWhen`, not multiple Home entries.
@@ -105,7 +105,7 @@ Recommended migration route:
 6. Phase 6: same-id replacement using `id: "ecommerceLayout"`.
 7. Phase 7: remove legacy DOM, event bindings, CSS, and i18n after AE testing.
 
-Do not delete legacy Ad Component Kit DOM, CSS, host modules, or i18n keys during draft/probe phases.
+Do not rename the `ecommerceLayout` registry id or storage key without a dedicated HomeLayout / storage migration.
 
 ## Settings background preset dropdown render glitch
 

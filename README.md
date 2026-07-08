@@ -52,7 +52,6 @@ com.kevin.aetoolbox/
     tools/
       textBackgroundBox.jsx
       selectionInfo.jsx
-      ecommerceLayout.jsx
       adComponentKit.jsx
       shapeAdd.jsx
   docs/
@@ -82,7 +81,7 @@ Developer Mode tools are hidden from the normal Home view and appear only when t
 - Registry Probe
 - Shape Add Probe
 
-`host/tools/ecommerceLayout.jsx` is still included by `host/index.jsx`, but the current active ecommerce-facing UI is Ad Component Kit.
+Ad Component Kit uses registry id `ecommerceLayout` for HomeLayout and storage compatibility, but its active host implementation is `host/tools/adComponentKit.jsx`.
 
 ## Installation
 
