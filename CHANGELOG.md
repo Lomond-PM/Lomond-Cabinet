@@ -29,6 +29,7 @@ This project follows simple semantic versioning for development handoff:
 - Ad Component Kit now uses registry metadata/detail rendering while preserving `AEToolbox.ecommerceLayout.v1` and reusing `host/tools/adComponentKit.jsx`.
 - Removed the legacy Ad Component Kit frontend detail DOM, action footer, event binding, unused component/ecom CSS, and obsolete global Ad Component Kit i18n entries. The static Home card remains as the saved-order anchor for `ecommerceLayout`.
 - Removed the unused legacy / experimental `host/tools/ecommerceLayout.jsx` host module after confirming the active Ad Component Kit runtime path uses `host/tools/adComponentKit.jsx`.
+- Retired obsolete Developer Mode probes `registryProbe`, `shapeAddProbe`, and `adComponentKitProbe`; Registry Control Lab and Settings Renderer Lab remain available for renderer/settings validation.
 
 ## [0.2.2] - 2026-07-03
 

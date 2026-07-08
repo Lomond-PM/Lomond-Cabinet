@@ -19,13 +19,10 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | tool file | tool id | titleKey | descriptionKey | has en | has zh-CN | missing keys | hardcoded user-facing text | plain message / messageKey status | load status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | adComponentKit.tool.jsx | ecommerceLayout | tools.adComponentKit.title | tools.adComponentKit.description | yes | yes | none | none | messageKey-oriented | ok |
-| adComponentKitProbe.tool.jsx | adComponentKitProbe | tools.adComponentKitProbe.title | tools.adComponentKitProbe.description | yes | yes | none | none | messageKey-oriented | ok |
 | registryControlLab.tool.jsx | registryControlLab | tools.registryControlLab.title | tools.registryControlLab.description | yes | yes | none | none | messageKey-oriented | ok |
-| registryProbe.tool.jsx | registryProbe | tools.registryProbe.title | tools.registryProbe.description | yes | yes | none | none | messageKey-oriented | ok |
 | selectionInfo.tool.jsx | selectionInfo | tools.selectionInfo.title | tools.selectionInfo.description | yes | yes | none | none | messageKey-oriented | ok |
 | settingsRendererLab.tool.jsx | settingsRendererLab | tools.settingsRendererLab.title | tools.settingsRendererLab.description | yes | yes | label.registryDebugTools, section.motion, label.motionSpeed, label.uiScale, section.theme, label.accentColor, label.homeBackground, section.backgroundEngine ... | none | messageKey-oriented | ok |
 | shapeAdd.tool.jsx | shapeAdd | tools.shapeAdd.title | tools.shapeAdd.description | yes | yes | none | none | messageKey-oriented | ok |
-| shapeAddProbe.tool.jsx | shapeAddProbe | tools.shapeAddProbe.title | tools.shapeAddProbe.description | yes | yes | none | none | messageKey-oriented | ok |
 | textBackgroundBox.tool.jsx | textBackgroundBox | tools.textBackgroundBox.title | tools.textBackgroundBox.description | yes | yes | none | none | messageKey-oriented | ok |
 
 ## client/js/i18n.js Key Usage Table
@@ -38,24 +35,24 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | button.refreshSelection | button | Refresh Selection | 刷新选择 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | button.resetDefaults | button | Reset Defaults | 恢复默认 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.apply | common | Apply | 应用 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.auto | common | Auto | 自动 | host/tools/adComponentKit.tool.jsx, host/tools/adComponentKitProbe.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.auto | common | Auto | 自动 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.back | common | Back | 返回 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.cancel | common | Cancel | 取消 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.center | common | Center | 居中 | host/tools/adComponentKit.tool.jsx, host/tools/adComponentKitProbe.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.center | common | Center | 居中 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.create | common | Create | 创建 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.disabled | common | Disabled | 禁用 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.done | common | Done | 完成 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.editHome | common | Edit Home | 编辑主页 | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.enabled | common | Enabled | 启用 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.error | common | Error | 错误 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.fitBox | common | Fit Box | 适配框 | host/tools/adComponentKit.tool.jsx, host/tools/adComponentKitProbe.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.fixed | common | Fixed | 固定 | host/tools/adComponentKit.tool.jsx, host/tools/adComponentKitProbe.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.fitBox | common | Fit Box | 适配框 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.fixed | common | Fixed | 固定 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.global | common | Global | 全局 | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.gradient | common | Gradient | 渐变 | host/tools/registryControlLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.home | common | Home | 主页 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.language | common | Language | 语言 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.left | common | Left | 左对齐 | host/tools/adComponentKit.tool.jsx, host/tools/adComponentKitProbe.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.none | common | None | 无 | host/tools/adComponentKit.tool.jsx, host/tools/adComponentKitProbe.tool.jsx, host/tools/registryControlLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.left | common | Left | 左对齐 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.none | common | None | 无 | host/tools/adComponentKit.tool.jsx, host/tools/registryControlLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.parameters | common | Parameters | 参数 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.ready | common | Ready | 就绪 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.refresh | common | Refresh | 刷新 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -63,18 +60,18 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | common.reset | common | Reset | 重置 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.resetDefaults | common | Reset Defaults | 恢复默认值 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.restoreDefaults | common | Restore Defaults | 恢复默认 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.right | common | Right | 右对齐 | host/tools/adComponentKit.tool.jsx, host/tools/adComponentKitProbe.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.rowMajor | common | Row-Major | 行优先 | host/tools/adComponentKit.tool.jsx, host/tools/adComponentKitProbe.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.right | common | Right | 右对齐 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.rowMajor | common | Row-Major | 行优先 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.saved | common | Saved | 已保存 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.settings | common | Settings | 设置 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.solid | common | Solid | 纯色 | host/tools/registryControlLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.timeline | common | Timeline | 时间线 | host/tools/adComponentKit.tool.jsx, host/tools/adComponentKitProbe.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.timeline | common | Timeline | 时间线 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.unavailable | common | Unavailable | 不可用 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.uniformHeight | common | Uniform Height | 统一高度 | host/tools/adComponentKit.tool.jsx, host/tools/adComponentKitProbe.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.uniformWidth | common | Uniform Width | 统一宽度 | host/tools/adComponentKit.tool.jsx, host/tools/adComponentKitProbe.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.uniformHeight | common | Uniform Height | 统一高度 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.uniformWidth | common | Uniform Width | 统一宽度 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.valuesReset | common | Values reset to defaults. | 已恢复默认值。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.xPosition | common | X Position | X 位置 | host/tools/adComponentKit.tool.jsx, host/tools/adComponentKitProbe.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.yPosition | common | Y Position | Y 位置 | host/tools/adComponentKit.tool.jsx, host/tools/adComponentKitProbe.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.xPosition | common | X Position | X 位置 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.yPosition | common | Y Position | Y 位置 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | helper.accentColor | helper | Used selectively for highlights, borders, and primary actions. | 用于高亮、边框和主操作。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.autoSelectionStatus | helper | Refresh selected text layer count while the panel is open. | 面板打开时刷新选中文本层数量。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.enableMotion | helper | Uses slow opacity and transform only. | 仅使用缓慢的透明度和位移动画。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |

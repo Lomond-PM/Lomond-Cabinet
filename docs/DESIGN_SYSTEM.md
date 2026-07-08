@@ -399,8 +399,8 @@ Shape Add is a compound tool. It must not be treated as a normal parameter-only 
 The phased migration path is:
 
 1. Add core renderer action/state capability.
-2. Add hidden `shapeAddProbe.tool.jsx`.
-3. Validate one minimal rectangle action.
+2. Add hidden `shapeAddProbe.tool.jsx`. Completed and later retired after formal migration.
+3. Validate one minimal rectangle action. Completed through the retired probe.
 4. Migrate the 19 native shape item buttons. Completed.
 5. Migrate Stroke / Fill Shape Layer subtool UI through registry schema while preserving the legacy host implementation. Completed.
 6. Remove or simplify remaining obsolete frontend helper code only after AE verification.
@@ -456,7 +456,7 @@ Current registry design:
 Migration was phased:
 
 1. Schema draft and migration notes.
-2. Developer Mode probe with a non-production id such as `adComponentKitProbe`.
+2. Developer Mode probe with a non-production id such as `adComponentKitProbe`. Completed and later retired after formal migration.
 3. Minimal official action validation.
 4. Full tabs / visibleWhen migration.
 5. Maintenance actions and state card.

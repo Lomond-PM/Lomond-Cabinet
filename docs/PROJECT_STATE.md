@@ -45,25 +45,13 @@ Confirmed from current code:
 
 ## Current Tool List
 
-### Registry Probe
+### Retired Developer Mode probes
 
-Frontend source:
+The following temporary probe tools were removed before 0.2.3 after their validation value was replaced by formal tools or labs:
 
-```text
-Dynamic Tool Registry Phase 1
-```
-
-Host module:
-
-```text
-host/tools/registryProbe.tool.jsx
-```
-
-Purpose:
-
-- Minimal test tool for dynamic `.tool.jsx` registration.
-- Verifies host metadata, i18n merge, generic UI rendering, and `AEToolbox.runRegisteredToolAction(...)`.
-- This is a Developer Mode-only sample registry tool and should not appear in the normal Home view.
+- `host/tools/registryProbe.tool.jsx`: early minimal registry registration / host communication proof of concept, superseded by Registry Control Lab.
+- `host/tools/shapeAddProbe.tool.jsx`: Shape Add one-action probe, superseded by the formal `shapeAdd` registry tool.
+- `host/tools/adComponentKitProbe.tool.jsx`: Ad Component Kit Feature Stack / Icon Grid probe, superseded by the formal `ecommerceLayout` registry tool.
 
 ### Text Background Box
 
@@ -190,7 +178,7 @@ Migration status:
 - The static Home card is retained as the Home order anchor while dynamic registry metadata owns the detail page and actions for the same id.
 - Feature Stack, Icon Grid, and maintenance actions live in one registry tool using tabs / option cards, `visibleWhen`, `stateAction`, `stateCard`, `enabledWhen` / `disabledWhen`, and `refreshStateAfterRun`.
 - The draft registry schema remains documented at `docs/schema-drafts/ad-component-kit.registry-schema-draft.md` as historical migration context.
-- `host/tools/adComponentKitProbe.tool.jsx` remains a Developer Mode-only probe and must not appear in normal Home.
+- The obsolete `host/tools/adComponentKitProbe.tool.jsx` Developer Mode probe has been retired; the formal `ecommerceLayout` registry tool owns Feature Stack, Icon Grid, and maintenance action validation.
 
 ### Shape Add
 
@@ -225,7 +213,7 @@ Purpose:
 Migration status:
 
 - Shape Add is now on the phased registry path for formal use.
-- `host/tools/shapeAddProbe.tool.jsx` remains a Developer Mode-only probe for testing one rectangle action through registry action/state capability.
+- The obsolete `host/tools/shapeAddProbe.tool.jsx` Developer Mode probe has been retired; the formal `shapeAdd` registry tool owns Shape Add action/state validation.
 - `host/tools/shapeAdd.tool.jsx` now registers the formal `shapeAdd` registry tool for the 19 native shape item buttons.
 - The registry tool reuses the legacy host execution functions instead of rewriting AE layer creation logic.
 - The static Home card has been removed so Home resolves `shapeAdd` through the dynamic registry entry and still uses the same `toolId` for saved order.
@@ -258,11 +246,9 @@ Home contains a disabled More Tools card. It is not an active tool.
   - Ad Component Kit
   - Shape Add, through `host/tools/shapeAdd.tool.jsx` when host registry loading succeeds
   - disabled More Tools
-- Developer Mode adds debug/probe/lab registry tools to Home:
+- Developer Mode adds retained lab/debug registry tools to Home:
   - Registry Control Lab
-  - Registry Probe
-  - Shape Add Probe
-  - Ad Component Kit Probe
+  - Settings Renderer Lab
 - Home background is procedural and configurable.
 - Home icon order is persisted with key:
 
@@ -339,8 +325,8 @@ Key risks:
 Recommended migration route:
 
 1. Phase 1: core registry renderer action/state capability. Completed.
-2. Phase 2: hidden `shapeAddProbe.tool.jsx`. Completed.
-3. Phase 3: migrate one minimal action. Covered by the probe.
+2. Phase 2: hidden `shapeAddProbe.tool.jsx`. Completed; the temporary probe was later retired.
+3. Phase 3: migrate one minimal action. Covered by the retired probe and then by the formal registry tool.
 4. Phase 4: migrate the 19 native shape item buttons. Completed on the registry path.
 5. Phase 5: migrate Stroke / Fill subtool UI to registry while reusing the legacy host action. Completed on the registry path.
 6. Phase 6: remove or simplify remaining obsolete frontend helper code after AE verification.
