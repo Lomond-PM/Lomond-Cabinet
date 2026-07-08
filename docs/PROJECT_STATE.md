@@ -413,6 +413,9 @@ Background Engine storage:
 - `I18n.init()` is called before UI setup.
 - `body.i18n-ready` is used to avoid visible pre-i18n flashes.
 - Missing keys warn once in console.
+- i18n cleanup is currently in the report stage before 0.2.3. Use `scripts/report-i18n-usage.js` to generate `docs/reports/i18n-usage-report.md`.
+- Do not bulk-delete `client/js/i18n.js` keys. Registry tool copy should live in each `host/tools/*.tool.jsx`, but `client/js/i18n.js` still owns core/global/Settings/Home/fallback copy.
+- The next cleanup pass should start from low-risk candidate-delete keys in the generated report, then verify AE startup, Home fallback, tool detail rendering, and language switching.
 
 ## Current Motion State
 
