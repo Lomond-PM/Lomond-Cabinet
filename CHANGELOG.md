@@ -62,7 +62,7 @@ This project follows simple semantic versioning for development handoff:
 - Added a debug-only Shape Add Probe registry tool to validate action payload, stateAction, state-driven disabled state, state card, and after-run state refresh against the legacy Shape Add host action.
 - Documented the Shape Add registry migration audit before continuing with a phased AE-tested migration path.
 - Migrated the formal Shape Add native item buttons to the `.tool.jsx` registry path using action payloads, host state, state-driven disabled buttons, and after-run state refresh.
-- Migrated the Shape Add Stroke / Fill Shape Layer subtool UI into registry sections while reusing the existing `shapeAdd_createStrokeFillLayer(paramsJson)` host logic.
+- Migrated the Shape Add Stroke / Fill Shape Layer subtool UI into registry sections while routing through the registered `createStrokeFillLayer` action and preserving `host/tools/shapeAdd.jsx` behavior.
 - Moved Stroke / Fill parameters into a collapsible registry settings section under the create button and added a section-local reset defaults button.
 - Removed the legacy static Home card for Shape Add so the registry Shape Add entry owns the Home card and saved `toolId` order can continue using `shapeAdd`.
 - Added hidden / field-only registry actions so schema button fields can resolve host functions without creating duplicate footer buttons.

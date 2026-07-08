@@ -416,7 +416,7 @@ The formal registry Shape Add uses:
 - `enabledWhen` / `disabledWhen` style state checks so buttons do not fire without a valid target.
 - `refreshStateAfterRun` after each add action.
 - Existing legacy host execution in `host/tools/shapeAdd.jsx`; do not rewrite AE layer creation logic for this migration step.
-- Registry range/color/full-width button fields for the Stroke / Fill Shape Layer subtool, calling the existing `shapeAdd_createStrokeFillLayer(paramsJson)` behavior through a registry action wrapper.
+- Registry range/color/full-width button fields for the Stroke / Fill Shape Layer subtool, calling `AEToolbox.runRegisteredToolAction("shapeAdd", "createStrokeFillLayer", paramsJson)` through the registry action path.
 - A collapsible Stroke / Fill settings section below the create button, with a local reset button that affects only Stroke / Fill defaults.
 
 Known constraints remain:
@@ -424,7 +424,7 @@ Known constraints remain:
 - The static Home Shape Add card must not coexist with the dynamic registry `shapeAdd` card.
 - The registry tool keeps the same `shapeAdd` id so saved Home layout order remains meaningful.
 - The legacy detail panel may remain in markup while the registry detail path owns the active `shapeAdd` page.
-- The Stroke / Fill Shape Layer subtool UI is registry-rendered, but host execution remains in legacy `shapeAdd.jsx` until a later cleanup pass.
+- The Stroke / Fill Shape Layer subtool UI is registry-rendered, while host execution remains in `host/tools/shapeAdd.jsx`.
 - Plain host `message` strings should continue moving toward `messageKey` normalization.
 
 Do not add Shape Add-specific CSS or custom page structure during this process. Any capability needed by Shape Add should become a reusable core registry renderer capability first.

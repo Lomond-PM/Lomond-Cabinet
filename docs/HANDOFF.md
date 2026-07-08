@@ -283,12 +283,12 @@ Ad Component Kit migration note:
 Shape Add:
 
 ```js
-shapeAdd_getState()
-shapeAdd_add(matchName, key)
-shapeAdd_createStrokeFillLayer(paramsJson)
+AEToolbox.runRegisteredToolAction("shapeAdd", actionId, paramsJson)
 ```
 
-In 0.2.1, Shape Add / Shape Builder is the formal registry Home entry, but it still reuses the preserved legacy `host/tools/shapeAdd.jsx` host actions. Do not delete the legacy host module during handoff cleanup.
+Shape Add / Shape Builder is the formal registry Home entry. The registry schema is `host/tools/shapeAdd.tool.jsx`, and active host behavior remains in `host/tools/shapeAdd.jsx`.
+
+The old global wrappers `shapeAdd_getState()`, `shapeAdd_add(matchName, key)`, and `shapeAdd_createStrokeFillLayer(paramsJson)` have been removed after frontend cleanup. Do not add new client `evalScript` calls to those removed wrappers.
 
 Developer Mode-only registry tools are hidden from normal users and appear only when Settings > Developer Mode is enabled:
 

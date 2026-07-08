@@ -893,15 +893,3 @@ var AEToolbox = AEToolbox || {};
         return jsonResult(true, true, "已添加：" + item.label, resolved.targetLabel, "\"createdCount\":" + created.length);
     };
 })();
-
-function shapeAdd_getState() {
-    return AEToolbox.tools.shapeAdd.getState();
-}
-
-function shapeAdd_add(matchName, key) {
-    return AEToolbox.tools.shapeAdd.add(matchName, key);
-}
-
-function shapeAdd_createStrokeFillLayer(paramsJson) {
-    return AEToolbox.tools.shapeAdd.createStrokeFillLayer(paramsJson);
-}
