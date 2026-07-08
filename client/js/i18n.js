@@ -209,27 +209,7 @@
                 "selection.noSelection": "No selection",
                 "selection.noShapeTarget": "No shape target",
                 "selection.shapeTarget": "Shape target",
-                "selection.layerCount": "{count} layer(s)",
-
-                "shapeAdd.item.group": "Group",
-                "shapeAdd.item.rectangle": "Rectangle",
-                "shapeAdd.item.ellipse": "Ellipse",
-                "shapeAdd.item.star": "Polystar",
-                "shapeAdd.item.path": "Path",
-                "shapeAdd.item.fill": "Fill",
-                "shapeAdd.item.stroke": "Stroke",
-                "shapeAdd.item.gradientFill": "Gradient Fill",
-                "shapeAdd.item.gradientStroke": "Gradient Stroke",
-                "shapeAdd.item.mergePaths": "Merge Paths",
-                "shapeAdd.item.offsetPaths": "Offset Paths",
-                "shapeAdd.item.puckerBloat": "Pucker & Bloat",
-                "shapeAdd.item.repeater": "Repeater",
-                "shapeAdd.item.roundCorners": "Round Corners",
-                "shapeAdd.item.trimPaths": "Trim Paths",
-                "shapeAdd.item.twist": "Twist",
-                "shapeAdd.item.wigglePaths": "Wiggle Paths",
-                "shapeAdd.item.wiggleTransform": "Wiggle Transform",
-                "shapeAdd.item.zigZag": "Zig Zag"
+                "selection.layerCount": "{count} layer(s)"
             },
             "zh-CN": {
                 "app.title": "Lomond Cabinet",
@@ -426,27 +406,7 @@
                 "selection.noSelection": "\u672a\u9009\u62e9",
                 "selection.noShapeTarget": "\u65e0\u5f62\u72b6\u76ee\u6807",
                 "selection.shapeTarget": "\u5f62\u72b6\u76ee\u6807",
-                "selection.layerCount": "{count} \u4e2a\u56fe\u5c42",
-
-                "shapeAdd.item.group": "\u7ec4",
-                "shapeAdd.item.rectangle": "\u77e9\u5f62",
-                "shapeAdd.item.ellipse": "\u692d\u5706",
-                "shapeAdd.item.star": "\u591a\u8fb9\u661f\u5f62",
-                "shapeAdd.item.path": "\u8def\u5f84",
-                "shapeAdd.item.fill": "\u586b\u5145",
-                "shapeAdd.item.stroke": "\u63cf\u8fb9",
-                "shapeAdd.item.gradientFill": "\u6e10\u53d8\u586b\u5145",
-                "shapeAdd.item.gradientStroke": "\u6e10\u53d8\u63cf\u8fb9",
-                "shapeAdd.item.mergePaths": "\u5408\u5e76\u8def\u5f84",
-                "shapeAdd.item.offsetPaths": "\u4f4d\u79fb\u8def\u5f84",
-                "shapeAdd.item.puckerBloat": "\u6536\u7f29\u548c\u81a8\u80c0",
-                "shapeAdd.item.repeater": "\u4e2d\u7ee7\u5668",
-                "shapeAdd.item.roundCorners": "\u5706\u89d2",
-                "shapeAdd.item.trimPaths": "\u4fee\u526a\u8def\u5f84",
-                "shapeAdd.item.twist": "\u626d\u8f6c",
-                "shapeAdd.item.wigglePaths": "\u6446\u52a8\u8def\u5f84",
-                "shapeAdd.item.wiggleTransform": "\u6446\u52a8\u53d8\u6362",
-                "shapeAdd.item.zigZag": "\u4e4b\u5b57\u5f62"
+                "selection.layerCount": "{count} \u4e2a\u56fe\u5c42"
             }
         },
 
