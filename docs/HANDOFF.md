@@ -88,8 +88,8 @@ ExtensionBundleVersion
 
 Current release-prep note:
 
-- `VERSION` remains `0.2.2` until the release task explicitly updates it.
-- `CHANGELOG.md` contains a `0.2.3` draft entry for the registry migration / cleanup release.
+- `VERSION` is `0.2.3`.
+- `CHANGELOG.md` contains the `0.2.3` release entry for the registry migration / cleanup release.
 - Do not create or move tags during documentation-only handoff work.
 
 On a new machine:

@@ -15,13 +15,13 @@ AE Toolbox
 Current project version:
 
 ```text
-0.2.2
+0.2.3
 ```
 
 Current development track:
 
 ```text
-0.2.3 release candidate documentation is being prepared.
+0.2.3 is the current release.
 ```
 
 Do not update `VERSION` or `CSXS/manifest.xml` until the release task explicitly requests it.

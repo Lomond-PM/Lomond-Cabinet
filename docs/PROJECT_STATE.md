@@ -7,13 +7,13 @@ This is an After Effects CEP Extension panel. The visible UI title is **Lomond C
 Current project version:
 
 ```text
-0.2.2
+0.2.3
 ```
 
 Current release-prep track:
 
 ```text
-0.2.3 documentation / release notes candidate
+0.2.3 released registry migration / legacy cleanup baseline
 ```
 
 Do not update `VERSION` or `CSXS/manifest.xml` until the release task explicitly requests it.
