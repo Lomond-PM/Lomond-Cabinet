@@ -540,8 +540,7 @@ body:not(.i18n-ready) .app-shell {
     pointer-events: none;
 }
 
-.collapsible-card.is-collapsed .card-heading,
-.collapsible-card.is-collapsed .shape-add-settings-heading {
+.collapsible-card.is-collapsed .card-heading {
     margin-bottom: 0;
 }
 
@@ -658,136 +657,6 @@ body:not(.i18n-ready) .app-shell {
 
 .settings-actions .panel-button {
     flex: 1 1 0;
-}
-
-.shape-add-panel {
-    flex-direction: column;
-    gap: calc(12px * var(--ui-scale));
-}
-
-.shape-add-panel.tool-panel.is-active {
-    display: flex;
-}
-
-.shape-add-status-card {
-    margin-bottom: calc(10px * var(--ui-scale));
-    padding: calc(10px * var(--ui-scale)) calc(12px * var(--ui-scale));
-    border: 1px solid var(--separator);
-    border-radius: var(--radius-md);
-    background: #090806;
-    color: var(--text-secondary);
-    line-height: 1.35;
-}
-
-.shape-add-status-card.is-ready {
-    border-color: var(--gold-soft);
-    color: var(--text-primary);
-}
-
-.shape-add-list {
-    display: flex;
-    flex-direction: column;
-    gap: calc(8px * var(--ui-scale));
-}
-
-.shape-add-button {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
-    justify-content: center;
-    align-items: center;
-    column-gap: calc(7px * var(--ui-scale));
-    width: 100%;
-    min-height: calc(36px * var(--ui-scale));
-    text-align: center;
-}
-
-.shape-add-button .button-label {
-    grid-column: 1;
-    justify-self: end;
-    min-width: 0;
-    max-width: 100%;
-    text-align: right;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.shape-add-button .button-meta {
-    grid-column: 3;
-    justify-self: start;
-    min-width: 0;
-    max-width: 100%;
-    text-align: left;
-    color: var(--text-tertiary);
-    font-size: var(--font-small);
-    font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.shape-add-button:disabled {
-    cursor: default;
-    opacity: 0.42;
-}
-
-.shape-add-special-card {
-    display: flex;
-    flex-direction: column;
-    gap: calc(12px * var(--ui-scale));
-}
-
-.shape-add-special {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: 0;
-}
-
-.shape-add-special-button {
-    width: 100%;
-    justify-content: center;
-    min-height: calc(40px * var(--ui-scale));
-}
-
-.shape-add-special-button:not(:disabled) {
-    border-color: var(--gold-soft);
-    background: var(--gold-button);
-    color: #130f08;
-    font-weight: 800;
-}
-
-.shape-add-special-button:not(:disabled):hover {
-    background-color: var(--gold-hot);
-}
-
-.shape-add-special-button:disabled {
-    cursor: default;
-    opacity: 0.42;
-}
-
-.shape-add-stroke-fill-settings {
-    padding: calc(12px * var(--ui-scale));
-    border: 1px solid var(--separator);
-    border-radius: var(--radius-md);
-    background: #080706;
-}
-
-.shape-add-settings-heading {
-    margin-bottom: calc(10px * var(--ui-scale));
-}
-
-.shape-add-stroke-fill-settings .collapsible-body {
-    display: flex;
-    flex-direction: column;
-}
-
-.shape-add-stroke-fill-settings .control-label {
-    flex-basis: calc(112px * var(--ui-scale));
-}
-
-.shape-add-stroke-fill-settings .num-input {
-    width: calc(70px * var(--ui-scale));
-    min-width: 56px;
 }
 
 .view-detail.is-morphing {
