@@ -10,8 +10,8 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | --- | --- | --- |
 | A | Core / Global; keep | 64 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
-| C | Legacy fallback; temporarily keep | 23 |
-| D | Candidate delete; low-risk after AE test | 0 |
+| C | Legacy fallback; temporarily keep | 4 |
+| D | Candidate delete; low-risk after AE test | 19 |
 | E | Deferred / uncertain | 120 |
 
 ## Registry Tools i18n Table
@@ -175,35 +175,35 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | section.trimPaths | section | Trim Paths | 修剪路径 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | selection.layerCount | selection | {count} layer(s) | {count} 个图层 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | selection.noSelection | selection | No selection | 未选择 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| selection.noShapeTarget | selection | No shape target | 无形状目标 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| selection.shapeTarget | selection | Shape target | 形状目标 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| selection.noShapeTarget | selection | No shape target | 无形状目标 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| selection.shapeTarget | selection | Shape target | 形状目标 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.blackGold | settings | Black Gold Default | 黑金默认 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.custom | settings | Custom | 自定义 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.midnightBlueprint | settings | Midnight Blueprint | 午夜蓝图 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.minimalDark | settings | Minimal Dark | 极简深色 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.obsidianRings | settings | Obsidian Rings | 黑曜圆环 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.solarGrid | settings | Solar Grid | 太阳网格 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
-| shapeAdd.item.ellipse | shapeAdd | Ellipse | 椭圆 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.fill | shapeAdd | Fill | 填充 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.gradientFill | shapeAdd | Gradient Fill | 渐变填充 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.gradientStroke | shapeAdd | Gradient Stroke | 渐变描边 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.group | shapeAdd | Group | 组 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.mergePaths | shapeAdd | Merge Paths | 合并路径 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.offsetPaths | shapeAdd | Offset Paths | 位移路径 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.path | shapeAdd | Path | 路径 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.puckerBloat | shapeAdd | Pucker & Bloat | 收缩和膨胀 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.rectangle | shapeAdd | Rectangle | 矩形 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.repeater | shapeAdd | Repeater | 中继器 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.roundCorners | shapeAdd | Round Corners | 圆角 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.star | shapeAdd | Polystar | 多边星形 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.stroke | shapeAdd | Stroke | 描边 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.trimPaths | shapeAdd | Trim Paths | 修剪路径 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.twist | shapeAdd | Twist | 扭转 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.wigglePaths | shapeAdd | Wiggle Paths | 摆动路径 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.wiggleTransform | shapeAdd | Wiggle Transform | 摆动变换 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| shapeAdd.item.zigZag | shapeAdd | Zig Zag | 之字形 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| status.addedShape | status | Added: {label} | 已添加：{label} | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| status.addingShape | status | Adding {label}... | 正在添加 {label}... | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| shapeAdd.item.ellipse | shapeAdd | Ellipse | 椭圆 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.fill | shapeAdd | Fill | 填充 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.gradientFill | shapeAdd | Gradient Fill | 渐变填充 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.gradientStroke | shapeAdd | Gradient Stroke | 渐变描边 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.group | shapeAdd | Group | 组 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.mergePaths | shapeAdd | Merge Paths | 合并路径 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.offsetPaths | shapeAdd | Offset Paths | 位移路径 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.path | shapeAdd | Path | 路径 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.puckerBloat | shapeAdd | Pucker & Bloat | 收缩和膨胀 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.rectangle | shapeAdd | Rectangle | 矩形 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.repeater | shapeAdd | Repeater | 中继器 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.roundCorners | shapeAdd | Round Corners | 圆角 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.star | shapeAdd | Polystar | 多边星形 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.stroke | shapeAdd | Stroke | 描边 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.trimPaths | shapeAdd | Trim Paths | 修剪路径 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.twist | shapeAdd | Twist | 扭转 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.wigglePaths | shapeAdd | Wiggle Paths | 摆动路径 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.wiggleTransform | shapeAdd | Wiggle Transform | 摆动变换 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| shapeAdd.item.zigZag | shapeAdd | Zig Zag | 之字形 | host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
+| status.addedShape | status | Added: {label} | 已添加：{label} | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| status.addingShape | status | Adding {label}... | 正在添加 {label}... | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.backgroundDefaultsRestored | status | Background defaults restored. | 背景已恢复默认。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.backgroundRandomized | status | Background randomized. | 背景已随机。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.colorPickerOpening | status | Opening AE color picker... | 正在打开 AE 取色器... | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -211,9 +211,9 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | status.colorUpdated | status | Color updated. | 颜色已更新。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.createdBackgroundBoxes | status | Created {count} background rounded rectangle(s) | 已创建 {count} 个背景圆角矩形 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.createdItems | status | Created {count} item(s) | 已创建 {count} 个项目 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| status.createdStrokeFillLayer | status | Created Stroke / Fill shape layer | 已创建 Stroke / Fill 形状图层 | client/js/main.js, host/tools/shapeAdd.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| status.createdStrokeFillLayer | status | Created Stroke / Fill shape layer | 已创建 Stroke / Fill 形状图层 | host/tools/shapeAdd.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.creatingBackgroundBox | status | Creating rounded rectangles... | 正在创建圆角矩形... | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| status.creatingStrokeFillLayer | status | Creating Stroke / Fill shape layer... | 正在创建 Stroke / Fill 形状图层... | client/js/main.js, host/tools/shapeAdd.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| status.creatingStrokeFillLayer | status | Creating Stroke / Fill shape layer... | 正在创建 Stroke / Fill 形状图层... | host/tools/shapeAdd.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.defaultsRestored | status | Defaults restored. | 已恢复默认值。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.homeEditing | status | Home editing. Drag tools to reorder. | 主页编辑中。拖动工具可重排。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.homeLayoutSaved | status | Home layout saved. | 主页布局已保存。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -226,7 +226,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | status.noResponse | status | No response from After Effects. | After Effects 没有响应。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.noSelectedLayers | status | No selected layers. | 没有选中图层。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.noTextLayer | status | Please select at least one text layer | 请至少选择一个文本层 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| status.openComp | status | Please open a composition | 请打开合成 | client/js/main.js, host/tools/shapeAdd.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| status.openComp | status | Please open a composition | 请打开合成 | host/tools/shapeAdd.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.readingSelection | status | Reading selection... | 正在读取选择... | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.ready | status | Ready | 就绪 | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.readyPeriod | status | Ready. | 就绪。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -250,25 +250,25 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.backgroundPreset.minimalDark | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
 | settings.backgroundPreset.obsidianRings | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
 | settings.backgroundPreset.solarGrid | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
-| shapeAdd.item.ellipse | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.fill | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.gradientFill | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.gradientStroke | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.group | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.mergePaths | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.offsetPaths | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.path | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.puckerBloat | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.rectangle | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.repeater | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.roundCorners | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.star | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.stroke | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.trimPaths | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.twist | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.wigglePaths | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.wiggleTransform | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| shapeAdd.item.zigZag | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
+| shapeAdd.item.ellipse | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.fill | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.gradientFill | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.gradientStroke | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.group | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.mergePaths | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.offsetPaths | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.path | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.puckerBloat | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.rectangle | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.repeater | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.roundCorners | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.star | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.stroke | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.trimPaths | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.twist | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.wigglePaths | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.wiggleTransform | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
+| shapeAdd.item.zigZag | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
 | tools.adComponentKit.description | client/js/i18n.js | adComponentKit.tool.jsx:en, adComponentKit.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
 | tools.adComponentKit.title | client/js/i18n.js | adComponentKit.tool.jsx:en, adComponentKit.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
 | tools.shapeAdd.description | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
@@ -276,7 +276,27 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 ## Candidate Delete Table
 
-No low-risk delete candidates found.
+| key | reason | required AE test |
+| --- | --- | --- |
+| shapeAdd.item.ellipse | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.fill | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.gradientFill | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.gradientStroke | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.group | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.mergePaths | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.offsetPaths | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.path | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.puckerBloat | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.rectangle | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.repeater | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.roundCorners | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.star | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.stroke | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.trimPaths | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.twist | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.wigglePaths | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.wiggleTransform | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+| shapeAdd.item.zigZag | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
 
 ## Deferred Table
 

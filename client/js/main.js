@@ -26,9 +26,6 @@
         settings: "AEToolbox.settings.v1",
         background: "AEToolbox.background.v1",
         backgroundCollapsed: "AEToolbox.backgroundSettingsCollapsed.v1",
-        shapeAddStrokeFill: "AEToolbox.shapeAdd.strokeFillDefaults.v1",
-        shapeAddItemsCollapsed: "AEToolbox.shapeAdd.itemsCollapsed.v1",
-        shapeAddStrokeFillSettingsCollapsed: "AEToolbox.shapeAdd.strokeFillSettingsCollapsed.v1",
         language: "aeToolbox.language",
         homeOrder: "aeToolbox.homeToolOrder"
     };
@@ -50,42 +47,6 @@
     var RegistrySaveTimers = {};
     var RegistryRuntimeStates = {};
     var CustomSelectGlobalListenersBound = false;
-    var DefaultShapeStrokeFillParams = {
-        strokeWidth: 7,
-        miterLimit: 14,
-        trimStart: 0,
-        trimEnd: 100,
-        trimOffset: 0,
-        taperStartLength: 15,
-        taperEndLength: 15,
-        taperStartWidth: 0,
-        taperEndWidth: 0,
-        taperStartEase: 30,
-        taperEndEase: 30,
-        strokeColor: "#FFFFFF",
-        fillColor: "#D6B25E"
-    };
-    var ShapeAddItems = [
-        { labelKey: "shapeAdd.item.group", key: "group", matchName: "ADBE Vector Group" },
-        { labelKey: "shapeAdd.item.rectangle", key: "rectangle", matchName: "ADBE Vector Shape - Rect" },
-        { labelKey: "shapeAdd.item.ellipse", key: "ellipse", matchName: "ADBE Vector Shape - Ellipse" },
-        { labelKey: "shapeAdd.item.star", key: "star", matchName: "ADBE Vector Shape - Star" },
-        { labelKey: "shapeAdd.item.path", key: "path", matchName: "ADBE Vector Shape - Group" },
-        { labelKey: "shapeAdd.item.fill", key: "fill", matchName: "ADBE Vector Graphic - Fill" },
-        { labelKey: "shapeAdd.item.stroke", key: "stroke", matchName: "ADBE Vector Graphic - Stroke" },
-        { labelKey: "shapeAdd.item.gradientFill", key: "gradientFill", matchName: "ADBE Vector Graphic - G-Fill" },
-        { labelKey: "shapeAdd.item.gradientStroke", key: "gradientStroke", matchName: "ADBE Vector Graphic - G-Stroke" },
-        { labelKey: "shapeAdd.item.mergePaths", key: "mergePaths", matchName: "ADBE Vector Filter - Merge" },
-        { labelKey: "shapeAdd.item.offsetPaths", key: "offsetPaths", matchName: "ADBE Vector Filter - Offset" },
-        { labelKey: "shapeAdd.item.puckerBloat", key: "puckerBloat", matchName: "ADBE Vector Filter - PB" },
-        { labelKey: "shapeAdd.item.repeater", key: "repeater", matchName: "ADBE Vector Filter - Repeater" },
-        { labelKey: "shapeAdd.item.roundCorners", key: "roundCorners", matchName: "ADBE Vector Filter - RC" },
-        { labelKey: "shapeAdd.item.trimPaths", key: "trimPaths", matchName: "ADBE Vector Filter - Trim" },
-        { labelKey: "shapeAdd.item.twist", key: "twist", matchName: "ADBE Vector Filter - Twist" },
-        { labelKey: "shapeAdd.item.wigglePaths", key: "wigglePaths", matchName: "ADBE Vector Filter - Roughen" },
-        { labelKey: "shapeAdd.item.wiggleTransform", key: "wiggleTransform", matchName: "ADBE Vector Filter - Wiggler" },
-        { labelKey: "shapeAdd.item.zigZag", key: "zigZag", matchName: "ADBE Vector Filter - Zigzag" }
-    ];
     var DefaultSettings = {
         motionSpeed: 1,
         uiScale: 0.92,
@@ -3782,7 +3743,6 @@
         applyI18n(document);
         updateHomeToolLabels();
         configureToolDetail(activeToolId);
-        renderShapeAddButtons();
         if (HomeLayoutManager.isEditing && editButton) {
             editButton.textContent = tr("common.done");
             editButton.setAttribute("aria-label", tr("common.done"));
@@ -3810,147 +3770,7 @@
     }
 
     function refreshActiveTool() {
-        if (activeToolId === "shapeAdd" && !isDynamicTool(activeToolId)) {
-            refreshShapeAddState();
-            return;
-        }
         refreshSelection();
-    }
-
-    function renderShapeAddButtons() {
-        var list = byId("shapeAddButtonList");
-        var i;
-        var button;
-        var label;
-        var meta;
-        if (!list) {
-            return;
-        }
-        if (list.getAttribute("data-rendered") !== "true") {
-            for (i = 0; i < ShapeAddItems.length; i++) {
-                button = document.createElement("button");
-                button.type = "button";
-                button.className = "panel-button shape-add-button";
-                button.disabled = true;
-                button.setAttribute("data-shape-key", ShapeAddItems[i].key);
-                button.setAttribute("data-shape-match-name", ShapeAddItems[i].matchName);
-                button.setAttribute("data-shape-label-key", ShapeAddItems[i].labelKey);
-
-                label = document.createElement("span");
-                label.className = "button-label";
-
-                meta = document.createElement("span");
-                meta.className = "button-meta";
-                meta.textContent = ShapeAddItems[i].key;
-
-                button.appendChild(label);
-                button.appendChild(meta);
-                button.addEventListener("click", function () {
-                    addShapeItem(
-                        this.getAttribute("data-shape-match-name"),
-                        this.getAttribute("data-shape-key"),
-                        tr(this.getAttribute("data-shape-label-key"))
-                    );
-                });
-                list.appendChild(button);
-            }
-            list.setAttribute("data-rendered", "true");
-        }
-        for (i = 0; i < ShapeAddItems.length; i++) {
-            button = list.querySelector('[data-shape-key="' + ShapeAddItems[i].key + '"]');
-            if (button) {
-                label = button.querySelector(".button-label");
-                if (label) {
-                    label.textContent = tr(ShapeAddItems[i].labelKey);
-                }
-            }
-        }
-    }
-
-    function setShapeAddButtonsEnabled(enabled) {
-        var buttons = document.querySelectorAll(".shape-add-button");
-        var i;
-        for (i = 0; i < buttons.length; i++) {
-            buttons[i].disabled = !enabled;
-        }
-    }
-
-    var shapeAddHasComp = false;
-
-    function setStrokeFillButtonEnabled(enabled) {
-        var button = byId("createStrokeFillLayerBtn");
-        if (button) {
-            button.disabled = !enabled;
-        }
-    }
-
-    function setShapeAddState(result) {
-        var card = byId("shapeAddStatus");
-        var canAdd = !!(result && result.canAdd);
-        var message = resultMessage(result, "status.selectShapeLayer");
-        if (card) {
-            card.textContent = message;
-            card.classList.toggle("is-ready", canAdd);
-            card.classList.toggle("is-error", !canAdd);
-        }
-        setShapeAddButtonsEnabled(canAdd);
-        if (result && typeof result.hasComp === "boolean") {
-            shapeAddHasComp = result.hasComp;
-        }
-        setStrokeFillButtonEnabled(shapeAddHasComp);
-        if (byId("selectionPill")) {
-            byId("selectionPill").textContent = canAdd ? (result.targetLabel || tr("selection.shapeTarget")) : tr("selection.noShapeTarget");
-        }
-    }
-
-    function refreshShapeAddState(callback) {
-        evalHost("shapeAdd_getState()", function (raw) {
-            var result = parseResult(raw);
-            setShapeAddState(result);
-            if (callback) {
-                callback(result);
-            }
-        });
-    }
-
-    function addShapeItem(matchName, key, label) {
-        refreshShapeAddState(function (state) {
-            var script;
-            if (!state || !state.canAdd) {
-                setStatus(resultMessage(state, "status.selectShapeLayer"), "error");
-                return;
-            }
-            script = "shapeAdd_add('" + jsxQuote(matchName) + "','" + jsxQuote(key) + "')";
-            setStatus(tr("status.addingShape", { label: label }), "busy", true);
-            evalHost(script, function (raw) {
-                var result = parseResult(raw);
-                setShapeAddState(result);
-                setStatus(result.ok && !result.messageKey ? tr("status.addedShape", { label: label }) : resultMessage(result, "status.addedShape", { label: label }), result.ok ? "ok" : "error");
-            });
-        });
-    }
-
-    function createStrokeFillLayer() {
-        var params;
-        var json;
-        if (!shapeAddHasComp) {
-            setStatus(tr("status.openComp"), "error");
-            refreshShapeAddState();
-            return;
-        }
-        params = collectShapeStrokeFillParams();
-        json = JSON.stringify(params);
-        saveShapeStrokeFillParams();
-        setStatus(tr("status.creatingStrokeFillLayer"), "busy", true);
-        evalHost("shapeAdd_createStrokeFillLayer('" + jsxQuote(json) + "')", function (raw) {
-            var result = parseResult(raw);
-            setStatus(actionMessage(result, "status.createdStrokeFillLayer"), result.ok ? "ok" : "error");
-            if (!result.ok) {
-                setShapeAddState(result);
-            } else {
-                refreshShapeAddState();
-            }
-        });
     }
 
     function openToolWithLaunchTransition(toolButton, toolId) {
@@ -4514,63 +4334,6 @@
         }
     }
 
-    function collectShapeStrokeFillParams() {
-        if (!byId("sfStrokeWidthNumber")) {
-            return {
-                strokeWidth: DefaultShapeStrokeFillParams.strokeWidth,
-                miterLimit: DefaultShapeStrokeFillParams.miterLimit,
-                trimStart: DefaultShapeStrokeFillParams.trimStart,
-                trimEnd: DefaultShapeStrokeFillParams.trimEnd,
-                trimOffset: DefaultShapeStrokeFillParams.trimOffset,
-                taperStartLength: DefaultShapeStrokeFillParams.taperStartLength,
-                taperEndLength: DefaultShapeStrokeFillParams.taperEndLength,
-                taperStartWidth: DefaultShapeStrokeFillParams.taperStartWidth,
-                taperEndWidth: DefaultShapeStrokeFillParams.taperEndWidth,
-                taperStartEase: DefaultShapeStrokeFillParams.taperStartEase,
-                taperEndEase: DefaultShapeStrokeFillParams.taperEndEase,
-                strokeColor: DefaultShapeStrokeFillParams.strokeColor,
-                fillColor: DefaultShapeStrokeFillParams.fillColor
-            };
-        }
-        return {
-            strokeWidth: clampNumber(byId("sfStrokeWidthNumber").value, DefaultShapeStrokeFillParams.strokeWidth, 0),
-            miterLimit: clampNumber(byId("sfMiterLimitNumber").value, DefaultShapeStrokeFillParams.miterLimit, 0),
-            trimStart: clampNumber(byId("sfTrimStartNumber").value, DefaultShapeStrokeFillParams.trimStart, 0, 100),
-            trimEnd: clampNumber(byId("sfTrimEndNumber").value, DefaultShapeStrokeFillParams.trimEnd, 0, 100),
-            trimOffset: clampNumber(byId("sfTrimOffsetNumber").value, DefaultShapeStrokeFillParams.trimOffset, -360, 360),
-            taperStartLength: clampNumber(byId("sfTaperStartLengthNumber").value, DefaultShapeStrokeFillParams.taperStartLength, 0),
-            taperEndLength: clampNumber(byId("sfTaperEndLengthNumber").value, DefaultShapeStrokeFillParams.taperEndLength, 0),
-            taperStartWidth: clampNumber(byId("sfTaperStartWidthNumber").value, DefaultShapeStrokeFillParams.taperStartWidth, 0),
-            taperEndWidth: clampNumber(byId("sfTaperEndWidthNumber").value, DefaultShapeStrokeFillParams.taperEndWidth, 0),
-            taperStartEase: clampNumber(byId("sfTaperStartEaseNumber").value, DefaultShapeStrokeFillParams.taperStartEase, 0, 100),
-            taperEndEase: clampNumber(byId("sfTaperEndEaseNumber").value, DefaultShapeStrokeFillParams.taperEndEase, 0, 100),
-            strokeColor: normalizeHex(byId("sfStrokeColor").value, DefaultShapeStrokeFillParams.strokeColor),
-            fillColor: normalizeHex(byId("sfFillColor").value, DefaultShapeStrokeFillParams.fillColor)
-        };
-    }
-
-    function setShapeStrokeFillParams(params) {
-        var data = params || DefaultShapeStrokeFillParams;
-
-        setLinkedRangeValue("sfStrokeWidth", data.strokeWidth, DefaultShapeStrokeFillParams.strokeWidth);
-        setLinkedRangeValue("sfMiterLimit", data.miterLimit, DefaultShapeStrokeFillParams.miterLimit);
-        setLinkedRangeValue("sfTrimStart", data.trimStart, DefaultShapeStrokeFillParams.trimStart);
-        setLinkedRangeValue("sfTrimEnd", data.trimEnd, DefaultShapeStrokeFillParams.trimEnd);
-        setLinkedRangeValue("sfTrimOffset", data.trimOffset, DefaultShapeStrokeFillParams.trimOffset);
-        setLinkedRangeValue("sfTaperStartLength", data.taperStartLength, DefaultShapeStrokeFillParams.taperStartLength);
-        setLinkedRangeValue("sfTaperEndLength", data.taperEndLength, DefaultShapeStrokeFillParams.taperEndLength);
-        setLinkedRangeValue("sfTaperStartWidth", data.taperStartWidth, DefaultShapeStrokeFillParams.taperStartWidth);
-        setLinkedRangeValue("sfTaperEndWidth", data.taperEndWidth, DefaultShapeStrokeFillParams.taperEndWidth);
-        setLinkedRangeValue("sfTaperStartEase", data.taperStartEase, DefaultShapeStrokeFillParams.taperStartEase);
-        setLinkedRangeValue("sfTaperEndEase", data.taperEndEase, DefaultShapeStrokeFillParams.taperEndEase);
-        setColorValue("sfStrokeColor", data.strokeColor || DefaultShapeStrokeFillParams.strokeColor);
-        setColorValue("sfFillColor", data.fillColor || DefaultShapeStrokeFillParams.fillColor);
-    }
-
-    function saveShapeStrokeFillParams() {
-        saveStoredJson(StorageKeys.shapeAddStrokeFill, collectShapeStrokeFillParams());
-    }
-
     function refreshSelection() {
         if (!hostLoaded) {
             return;
@@ -4685,8 +4448,6 @@
                         applyToolIconTheme(byId("toolIconColor").value, result.color);
                     }
                     saveSettings();
-                } else if (inputId === "sfStrokeColor" || inputId === "sfFillColor") {
-                    saveShapeStrokeFillParams();
                 }
                 setStatus(resultMessage(result, "status.colorUpdated"));
                 return;
@@ -5152,11 +4913,6 @@
         });
     }
 
-    function setupShapeAddCollapsibles() {
-        setupStoredCollapsible("shapeAddItemsCard", "shapeAddItemsToggle", StorageKeys.shapeAddItemsCollapsed, false);
-        setupStoredCollapsible("strokeFillSettingsCard", "strokeFillSettingsToggle", StorageKeys.shapeAddStrokeFillSettingsCollapsed, true);
-    }
-
     function collectSettings() {
         var autoStatus = byId("autoStatus");
         var registryDebugTools = byId("registryDebugTools");
@@ -5194,7 +4950,6 @@
 
     function loadPersistentState() {
         applySettings(loadStoredJson(StorageKeys.settings, DefaultSettings));
-        setShapeStrokeFillParams(loadStoredJson(StorageKeys.shapeAddStrokeFill, DefaultShapeStrokeFillParams));
     }
 
     function resetSettingsMorphStyles() {
@@ -5398,27 +5153,7 @@
         var closeSettingsBtn;
         var settingsBackdrop;
         var refreshBtn;
-        var strokeFillRangeIds;
-        var i;
 
-        strokeFillRangeIds = [
-            ["sfStrokeWidth", 0, null],
-            ["sfMiterLimit", 0, null],
-            ["sfTrimStart", 0, 100],
-            ["sfTrimEnd", 0, 100],
-            ["sfTrimOffset", -360, 360],
-            ["sfTaperStartLength", 0, null],
-            ["sfTaperEndLength", 0, null],
-            ["sfTaperStartWidth", 0, null],
-            ["sfTaperEndWidth", 0, null],
-            ["sfTaperStartEase", 0, 100],
-            ["sfTaperEndEase", 0, 100]
-        ];
-        for (i = 0; i < strokeFillRangeIds.length; i++) {
-            linkPersistedRange(strokeFillRangeIds[i][0], strokeFillRangeIds[i][0] + "Number", strokeFillRangeIds[i][1], strokeFillRangeIds[i][2], saveShapeStrokeFillParams);
-        }
-
-        renderShapeAddButtons();
         renderSettingsContent();
         renderSettingsTheme();
         renderSettingsBackgroundEngine();
@@ -5431,7 +5166,6 @@
         loadPersistentState();
         setupLanguageSelector();
         setupCollapsibleSettings();
-        setupShapeAddCollapsibles();
         BackgroundEngine.init();
         setupCustomSelectInputs();
         HomeLayoutManager.init();
@@ -5441,10 +5175,6 @@
         byId("backBtn").addEventListener("click", function () {
             closeToolWithLaunchTransition();
         });
-        if (byId("createStrokeFillLayerBtn")) {
-            byId("createStrokeFillLayerBtn").addEventListener("click", createStrokeFillLayer);
-        }
-
         settingsBtn = byId("settingsBtn");
         closeSettingsBtn = byId("closeSettingsBtn");
         settingsBackdrop = byId("settingsBackdrop");
