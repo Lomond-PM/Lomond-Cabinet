@@ -44,8 +44,8 @@ Main risks:
 Recommended migration route:
 
 1. Phase 1: Add core registry renderer action/state capability. Completed.
-2. Phase 2: Add a hidden `shapeAddProbe.tool.jsx`. Completed.
-3. Phase 3: Migrate one minimal action. Covered by the probe.
+2. Phase 2: Add a hidden `shapeAddProbe.tool.jsx`. Completed; the temporary probe was later retired after formal migration.
+3. Phase 3: Migrate one minimal action. Covered by the retired probe and then by the formal registry tool.
 4. Phase 4: Migrate the 19 native shape item buttons. Completed.
 5. Phase 5: Migrate the Stroke / Fill subtool UI to registry while preserving legacy host execution. Completed.
 6. Phase 6: Remove or simplify remaining obsolete frontend helper code only after AE verification.
@@ -98,7 +98,7 @@ Main risks:
 Recommended migration route:
 
 1. Phase 1: migration notes and schema draft. In progress.
-2. Phase 2: Developer Mode probe with a non-production id such as `adComponentKitProbe`.
+2. Phase 2: Developer Mode probe with a non-production id such as `adComponentKitProbe`. Completed; the temporary probe was later retired after formal migration.
 3. Phase 3: validate one minimal official action.
 4. Phase 4: migrate Feature Stack and Icon Grid through tabs / visibleWhen.
 5. Phase 5: migrate maintenance actions and stateCard.

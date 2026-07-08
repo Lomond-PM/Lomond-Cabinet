@@ -278,7 +278,7 @@ Ad Component Kit migration note:
 - The legacy Ad Component Kit detail DOM, action footer, frontend event binding, and unused component/ecom CSS have been removed.
 - The static Home card is retained as the saved-order anchor for `ecommerceLayout`; registry metadata owns the active detail page and actions.
 - A schema draft exists at `docs/schema-drafts/ad-component-kit.registry-schema-draft.md`.
-- `host/tools/adComponentKitProbe.tool.jsx` remains a Developer Mode-only probe.
+- The obsolete `host/tools/adComponentKitProbe.tool.jsx` Developer Mode probe has been retired; use the formal `ecommerceLayout` registry tool for Ad Component Kit regression testing.
 
 Shape Add:
 
@@ -293,6 +293,10 @@ The old global wrappers `shapeAdd_getState()`, `shapeAdd_add(matchName, key)`, a
 Developer Mode-only registry tools are hidden from normal users and appear only when Settings > Developer Mode is enabled:
 
 - Registry Control Lab
-- Registry Probe
-- Shape Add Probe
-- Ad Component Kit Probe
+- Settings Renderer Lab
+
+Retired temporary probes:
+
+- `registryProbe`
+- `shapeAddProbe`
+- `adComponentKitProbe`

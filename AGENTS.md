@@ -294,8 +294,7 @@ Developer Mode tools are hidden from normal Home by default and appear only when
 Examples:
 
 - `Registry Control Lab`
-- `Registry Probe`
-- `shapeAddProbe`
+- `Settings Renderer Lab`
 - tools whose id/title/description contains `probe`, `lab`, `test`, `debug`, or `controlLab`
 - tools with `debugOnly: true`
 - tools with `developerOnly: true`
@@ -303,7 +302,7 @@ Examples:
 
 Formal production tools must not depend on Developer Mode.
 
-Do not delete Developer Mode tools just because they are hidden. They are used to validate the core registry renderer and migration paths.
+Do not delete Developer Mode lab tools just because they are hidden. They are used to validate the core registry renderer and migration paths. Temporary probes may be retired after the formal tool path replaces them and AE testing confirms they no longer add regression value.
 
 ## Current Tool Status
 
@@ -322,7 +321,7 @@ Status: formal registry tool.
 - Stroke / Fill parameters live under the create button in a collapsible registry section.
 - Stroke / Fill has a section-local reset defaults button.
 - `host/tools/shapeAdd.jsx` still contains necessary legacy host action logic and must remain for now.
-- `shapeAddProbe` is Developer Mode-only and does not replace the formal Shape Add tool.
+- The obsolete `shapeAddProbe` Developer Mode probe was retired after the formal Shape Add registry path stabilized.
 
 ### Text Background Box / Background Rounded Rectangle
 
@@ -369,9 +368,8 @@ Before asking the user to verify a major UI/tool change in AE, run or provide th
 Developer Mode:
 
 - Developer Mode off: Registry Control Lab is hidden.
-- Developer Mode off: Registry Probe is hidden.
-- Developer Mode off: shapeAddProbe is hidden.
-- Developer Mode on: debug/probe/lab tools are visible.
+- Developer Mode off: Settings Renderer Lab is hidden.
+- Developer Mode on: retained lab/debug tools are visible.
 - Developer Mode on/off does not break saved Home order.
 
 Shape Add:
