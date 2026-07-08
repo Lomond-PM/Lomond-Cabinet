@@ -209,12 +209,12 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | status.colorPickerOpening | status | Opening AE color picker... | 正在打开 AE 取色器... | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.colorUnchanged | status | Color unchanged. | 颜色未改变。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.colorUpdated | status | Color updated. | 颜色已更新。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| status.createdBackgroundBoxes | status | Created {count} background rounded rectangle(s) | 已创建 {count} 个背景圆角矩形 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| status.createdBackgroundBoxes | status | Created {count} background rounded rectangle(s) | 已创建 {count} 个背景圆角矩形 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.createdItems | status | Created {count} item(s) | 已创建 {count} 个项目 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.createdStrokeFillLayer | status | Created Stroke / Fill shape layer | 已创建 Stroke / Fill 形状图层 | client/js/main.js, host/tools/shapeAdd.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| status.creatingBackgroundBox | status | Creating rounded rectangles... | 正在创建圆角矩形... | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| status.creatingBackgroundBox | status | Creating rounded rectangles... | 正在创建圆角矩形... | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.creatingStrokeFillLayer | status | Creating Stroke / Fill shape layer... | 正在创建 Stroke / Fill 形状图层... | client/js/main.js, host/tools/shapeAdd.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| status.defaultsRestored | status | Defaults restored. | 已恢复默认值。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| status.defaultsRestored | status | Defaults restored. | 已恢复默认值。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.homeEditing | status | Home editing. Drag tools to reorder. | 主页编辑中。拖动工具可重排。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.homeLayoutSaved | status | Home layout saved. | 主页布局已保存。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.hostLoadError | status | Error: host JSX did not load. Check host/index.jsx includes. | 错误：host JSX 未加载。请检查 host/index.jsx include。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
