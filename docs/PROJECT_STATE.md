@@ -4,11 +4,19 @@
 
 This is an After Effects CEP Extension panel. The visible UI title is **Lomond Cabinet**. The extension id and folder are still `com.kevin.aetoolbox`.
 
-Current version candidate:
+Current project version:
 
 ```text
-0.2.2
+0.2.3
 ```
+
+Current release-prep track:
+
+```text
+0.2.3 released registry migration / legacy cleanup baseline
+```
+
+Do not update `VERSION` or `CSXS/manifest.xml` until the release task explicitly requests it.
 
 Confirmed entry points:
 
@@ -45,25 +53,13 @@ Confirmed from current code:
 
 ## Current Tool List
 
-### Registry Probe
+### Retired Developer Mode probes
 
-Frontend source:
+The following temporary probe tools were removed before 0.2.3 after their validation value was replaced by formal tools or labs:
 
-```text
-Dynamic Tool Registry Phase 1
-```
-
-Host module:
-
-```text
-host/tools/registryProbe.tool.jsx
-```
-
-Purpose:
-
-- Minimal test tool for dynamic `.tool.jsx` registration.
-- Verifies host metadata, i18n merge, generic UI rendering, and `AEToolbox.runRegisteredToolAction(...)`.
-- This is a Developer Mode-only sample registry tool and should not appear in the normal Home view.
+- `host/tools/registryProbe.tool.jsx`: early minimal registry registration / host communication proof of concept, superseded by Registry Control Lab.
+- `host/tools/shapeAddProbe.tool.jsx`: Shape Add one-action probe, superseded by the formal `shapeAdd` registry tool.
+- `host/tools/adComponentKitProbe.tool.jsx`: Ad Component Kit Feature Stack / Icon Grid probe, superseded by the formal `ecommerceLayout` registry tool.
 
 ### Text Background Box
 
@@ -105,6 +101,22 @@ Purpose:
 - Covers full-width button fields, primary/secondary variants, center-axis bilingual button text, tabs / option cards, and `visibleWhen` conditional fields.
 - Covers action payloads, host state display, state-gated buttons/actions, after-run state refresh, and action-specific status fallbacks.
 - This is a Developer Mode-only lab tool and should not appear in the normal Home view.
+
+### Settings Renderer Lab
+
+Host module:
+
+```text
+host/tools/settingsRendererLab.tool.jsx
+```
+
+Purpose:
+
+- Developer Mode-only sandbox for testing future app-level Settings schema rendering.
+- Uses the shared registry/core renderer to test select, checkbox/switch, range, number, color, button, and collapsible section behavior.
+- Tests Background Engine-like preset select behavior without touching the production `BackgroundEngine`.
+- Uses sandbox storage key `AEToolbox.settingsLab.v1`.
+- Does not replace the production Settings panel or write production Settings storage keys.
 
 ### Selection Info
 
@@ -163,6 +175,19 @@ Purpose:
 - Icon Grid: selected 2D layers become normalized grid items.
 - Uses layer comments as component metadata.
 
+Migration status:
+
+- Formally migrated to the `.tool.jsx` registry path in `host/tools/adComponentKit.tool.jsx`.
+- Registry id remains `ecommerceLayout` to preserve saved Home order compatibility.
+- Current active host module remains `host/tools/adComponentKit.jsx`; the registry action reuses that host logic instead of rewriting AE layer creation algorithms.
+- `host/tools/ecommerceLayout.jsx` was audited as unused legacy / experimental host code and removed from `host/index.jsx`.
+- Future id cleanup from `ecommerceLayout` to `adComponentKit` would require a separate HomeLayout / storage migration and is not part of the current structure.
+- The frontend legacy Ad Component Kit detail DOM, action footer, event binding, and unused component/ecom CSS have been removed after AE verification.
+- The static Home card is retained as the Home order anchor while dynamic registry metadata owns the detail page and actions for the same id.
+- Feature Stack, Icon Grid, and maintenance actions live in one registry tool using tabs / option cards, `visibleWhen`, `stateAction`, `stateCard`, `enabledWhen` / `disabledWhen`, and `refreshStateAfterRun`.
+- The draft registry schema remains documented at `docs/schema-drafts/ad-component-kit.registry-schema-draft.md` as historical migration context.
+- The obsolete `host/tools/adComponentKitProbe.tool.jsx` Developer Mode probe has been retired; the formal `ecommerceLayout` registry tool owns Feature Stack, Icon Grid, and maintenance action validation.
+
 ### Shape Add
 
 Frontend tool id:
@@ -174,10 +199,18 @@ shapeAdd
 Host functions:
 
 ```js
+AEToolbox.runRegisteredToolAction("shapeAdd", actionId, paramsJson)
+```
+
+The removed legacy global wrappers were:
+
+```js
 shapeAdd_getState()
 shapeAdd_add(matchName, key)
 shapeAdd_createStrokeFillLayer(paramsJson)
 ```
+
+Do not add new client `evalScript` calls to those removed wrappers.
 
 Purpose:
 
@@ -188,14 +221,16 @@ Purpose:
 Migration status:
 
 - Shape Add is now on the phased registry path for formal use.
-- `host/tools/shapeAddProbe.tool.jsx` remains a Developer Mode-only probe for testing one rectangle action through registry action/state capability.
+- The obsolete `host/tools/shapeAddProbe.tool.jsx` Developer Mode probe has been retired; the formal `shapeAdd` registry tool owns Shape Add action/state validation.
 - `host/tools/shapeAdd.tool.jsx` now registers the formal `shapeAdd` registry tool for the 19 native shape item buttons.
 - The registry tool reuses the legacy host execution functions instead of rewriting AE layer creation logic.
 - The static Home card has been removed so Home resolves `shapeAdd` through the dynamic registry entry and still uses the same `toolId` for saved order.
 - The Stroke / Fill Shape Layer subtool UI is now declared as registry sections using range, color, and full-width button fields.
 - Stroke / Fill settings are grouped in a collapsible registry settings section under the create button and include a local reset defaults button for only those fields.
-- Stroke / Fill creation still reuses the existing legacy host implementation and global wrapper path instead of rewriting AE layer creation logic.
-- The old Shape Add detail DOM has been removed from `client/index.html`; obsolete frontend helper functions remain guarded until a later cleanup pass.
+- Stroke / Fill creation still reuses the existing host implementation in `host/tools/shapeAdd.jsx` instead of rewriting AE layer creation logic.
+- The legacy frontend adapter, duplicate `shapeAdd.item.*` global i18n keys, legacy Shape Add CSS, and old host global wrappers have been removed after AE testing.
+- The Shape Add registry number/range input typing bug has been fixed; typed draft values are no longer forced to `1.0` during input.
+- The old Shape Add detail DOM and obsolete frontend helper functions have been removed from the active frontend path.
 
 ### More Tools
 
@@ -205,9 +240,9 @@ Home contains a disabled More Tools card. It is not an active tool.
 
 `tools.quickStack.title` exists in i18n, but no active Home tool card or host module was found. Treat it as a reserved/unused label unless future code adds an implementation.
 
-### ecommerceLayout.jsx
+### ecommerceLayout host id
 
-`host/tools/ecommerceLayout.jsx` still exists and is included by `host/index.jsx`. It exposes guide/template layout functions, but the active frontend Home card titled Ad Component Kit uses `adComponentKit.jsx` functions. Treat `ecommerceLayout.jsx` as preserved legacy/experimental host code unless explicitly reactivated.
+`host/tools/ecommerceLayout.jsx` has been removed after audit. The active Ad Component Kit host behavior is `host/tools/adComponentKit.jsx`, while the registry id remains `ecommerceLayout` for saved Home order and storage compatibility.
 
 ## Current UI State
 
@@ -221,10 +256,9 @@ Home contains a disabled More Tools card. It is not an active tool.
   - Ad Component Kit
   - Shape Add, through `host/tools/shapeAdd.tool.jsx` when host registry loading succeeds
   - disabled More Tools
-- Developer Mode adds debug/probe/lab registry tools to Home:
+- Developer Mode adds retained lab/debug registry tools to Home:
   - Registry Control Lab
-  - Registry Probe
-  - Shape Add Probe
+  - Settings Renderer Lab
 - Home background is procedural and configurable.
 - Home icon order is persisted with key:
 
@@ -254,12 +288,27 @@ Current status:
 - The registry renderer supports transient `actionPayload` on button/action schema entries.
 - The registry renderer supports `stateAction` host state queries, runtime-only state storage, state-driven disabled buttons/actions, `stateCard`, and `refreshStateAfterRun`.
 
-Legacy tools not migrated:
+Legacy compatibility notes:
 
-- Ad Component Kit.
-- The preserved `ecommerceLayout.jsx` host module.
+- The removed legacy `ecommerceLayout.jsx` host module is gone.
+- The retained `ecommerceLayout` registry id and `AEToolbox.ecommerceLayout.v1` storage key are compatibility choices, not evidence of an active legacy frontend.
 
-Legacy host implementations still reused by registry tools:
+### Ad Component Kit Registry Migration Draft
+
+Current decision:
+
+- Keep Ad Component Kit as one registry tool with id `ecommerceLayout`.
+- Do not split Feature Stack and Icon Grid into separate Home entries at this stage.
+- Use `tabs` / option cards for `componentKind`.
+- Use `visibleWhen` for Feature Stack and Icon Grid field groups.
+- Use `stateAction` and `stateCard` to show active comp, selection count, valid text layer count, valid 2D layer count, and selected component controller type.
+- Use `enabledWhen` / `disabledWhen` for create, refresh, select, and detach actions.
+- Prefer preserving storage key `AEToolbox.ecommerceLayout.v1` during the first registry migration pass.
+- Keep tool-specific i18n in the future `.tool.jsx`; leave common/global labels in `client/js/i18n.js`.
+
+Do not delete the static Ad Component Kit Home card unless the replacement plan preserves `aeToolbox.homeToolOrder` behavior. The old Ad Component Kit detail panel and footer have already been removed; the active detail page is the registry renderer.
+
+Host implementations still reused by registry tools:
 
 - Text Background Box / Background Rounded Rectangle keeps the legacy host creation implementation while using the registry metadata/detail path.
 - Shape Add native item buttons keep the legacy host add implementation while using the registry metadata/detail path.
@@ -271,14 +320,14 @@ Current decision:
 
 - Shape Add native item buttons are on the registry path after the action/state capability work.
 - Shape Add Stroke / Fill parameter UI is on the registry path, while host execution remains in the legacy `shapeAdd.jsx` module.
-- Do not delete `host/tools/shapeAdd.jsx` or the global wrappers while registry Shape Add still reuses them.
+- Do not delete `host/tools/shapeAdd.jsx`; it remains the active Shape Add host behavior module. The old global wrappers have already been removed.
 
 Key risks:
 
 - Static Home entry and dynamic registry tool with the same `shapeAdd` id can conflict; the current migration removes the static Home card.
 - `HomeLayoutManager` saved order may be affected by replacing static entries with dynamic entries, so the migrated registry tool keeps the same `shapeAdd` id.
 - Legacy detail panel and registry detail panel can coexist and conflict; the legacy panel is preserved but no longer opened for dynamic `shapeAdd`.
-- Shape Add depends on `shapeAdd_getState()` and continuous host-state refresh.
+- Shape Add depends on registry `stateAction` host-state refresh through `AEToolbox.tools.shapeAdd.getRegistryState()`.
 - The 19 native shape item buttons require action payloads such as `key` and `matchName`.
 - Button disabled state depends on host state.
 - Host messages should move toward `messageKey` to avoid plain message/i18n/mojibake issues.
@@ -287,12 +336,12 @@ Key risks:
 Recommended migration route:
 
 1. Phase 1: core registry renderer action/state capability. Completed.
-2. Phase 2: hidden `shapeAddProbe.tool.jsx`. Completed.
-3. Phase 3: migrate one minimal action. Covered by the probe.
+2. Phase 2: hidden `shapeAddProbe.tool.jsx`. Completed; the temporary probe was later retired.
+3. Phase 3: migrate one minimal action. Covered by the retired probe and then by the formal registry tool.
 4. Phase 4: migrate the 19 native shape item buttons. Completed on the registry path.
 5. Phase 5: migrate Stroke / Fill subtool UI to registry while reusing the legacy host action. Completed on the registry path.
-6. Phase 6: remove or simplify remaining obsolete frontend helper code after AE verification.
-7. Phase 7: remove legacy host wrappers only if no registered or global path uses them.
+6. Phase 6: remove or simplify remaining obsolete frontend helper code after AE verification. Completed.
+7. Phase 7: remove legacy host wrappers after confirming no registered or global path uses them. Completed.
 
 ### Settings
 
@@ -308,12 +357,73 @@ Current categories:
 
 Settings are persisted with `localStorage`.
 
+Current implementation status:
+
+- Settings remains an app-level panel with a static shell in `client/index.html`.
+- Settings behavior is still implemented in `client/js/main.js`.
+- `BackgroundEngine` remains the authoritative runtime behavior for procedural background settings.
+- Settings should not be treated as a normal registry tool.
+- An app-level Settings schema exists at `client/js/settingsSchema.js`.
+- `client/index.html` loads the schema so migrated production Settings sections can be rendered from data.
+- Language, Developer Mode / `registryDebugTools`, Motion Speed, UI Scale, Theme colors, and Background Engine controls are currently connected to the production Settings UI through the schema renderer path.
+- Settings internal content is rendered through `renderSettingsContent()` plus section renderers using the `settings-renderer` / `settings-section` / `settings-field` visual structure.
+- The Settings renderer baseline has been restored to the stable path after the failed visual-unification attempt.
+- The outer Settings morph shell remains in `client/index.html` and still uses `#settingsView`, `.settings-panel`, `.settings-ui-layer`, and `.settings-content`.
+- Background Engine UI is schema-rendered, while `BackgroundEngine.applyPreset(...)`, `BackgroundEngine.save(...)`, and `BackgroundEngine.syncControls(...)` remain the behavior layer.
+- A Developer Mode-only Settings Renderer Lab exists at `host/tools/settingsRendererLab.tool.jsx` for testing renderer capabilities before formal Settings migration.
+- The target direction remains an app-level Settings Schema with phased production adoption after lab validation.
+- Settings i18n remains core/global i18n and should stay in `client/js/i18n.js`.
+- Settings is not a normal registry tool. Treat it as an app-level core settings framework with behavior adapters for existing storage and `BackgroundEngine`.
+
+Current Settings storage:
+
+- `AEToolbox.settings.v1`
+- `AEToolbox.background.v1`
+- `AEToolbox.backgroundSettingsCollapsed.v1`
+- `aeToolbox.language`
+
+Draft future Settings storage:
+
+- `AEToolbox.settings.v2`
+
+The v2 key is documented only. Runtime code still writes to the v1 and background legacy keys.
+
+Developer Mode storage:
+
+- Developer Mode continues to use `AEToolbox.settings.v1.registryDebugTools` for compatibility with existing user settings.
+- It controls debug/probe/lab tool visibility generically through `window.AETOOLBOX_DEBUG_REGISTRY`.
+
+Language storage:
+
+- Language continues to use `aeToolbox.language` through the existing `I18n.setLanguage(...)` path.
+- Changing language still refreshes Home labels, Settings copy, active tool detail, registry tool fields/actions, and custom select labels.
+
+Motion / UI Scale storage:
+
+- Motion Speed and UI Scale continue to use `AEToolbox.settings.v1`.
+- Existing `setupMotionSpeed()`, `setupUiScale()`, `applyUiScale(...)`, and `linkPersistedRange(...)` behavior remains in place.
+
+Theme color storage:
+
+- Theme colors continue to use `AEToolbox.settings.v1`.
+- Existing `applyThemeAccent(...)`, `applyHomeBackground(...)`, `applyToolIconTheme(...)`, `setupColorControls()`, and AE host color picker behavior remain in place.
+
+Background Engine storage:
+
+- Background Engine continues to use `AEToolbox.background.v1`.
+- Background Engine collapse state continues to use `AEToolbox.backgroundSettingsCollapsed.v1`.
+- The production UI is now generated from the Settings schema, but it preserves the existing `bgPreset`, color, range, switch, randomize, and reset control IDs so the existing `BackgroundEngine` behavior layer remains intact.
+
 ### i18n
 
 - `client/js/i18n.js` owns dictionaries.
 - `I18n.init()` is called before UI setup.
 - `body.i18n-ready` is used to avoid visible pre-i18n flashes.
 - Missing keys warn once in console.
+- i18n cleanup now uses the generated report as the safety gate before 0.2.3. Use `scripts/report-i18n-usage.js` to generate `docs/reports/i18n-usage-report.md`.
+- Do not bulk-delete `client/js/i18n.js` keys. Registry tool copy should live in each `host/tools/*.tool.jsx`, but `client/js/i18n.js` still owns core/global/Settings/Home/fallback copy.
+- Low-risk duplicate cleanup has already removed confirmed migrated tool keys, including Text Background Box / Selection Info title duplicates, Shape Add `shapeAdd.item.*` duplicates, and final global tool title fallback duplicates for Shape Add and Ad Component Kit.
+- Deferred keys must not be mechanically deleted. The next cleanup pass should start from the generated report, then verify AE startup, Home fallback, tool detail rendering, and language switching.
 
 ## Current Motion State
 
@@ -361,13 +471,15 @@ These are based on current code and recent project history. Verify visually afte
 ## Known Issues / Areas To Watch
 
 - `README.md` appears partially outdated and contains mojibake in some tree/menu examples. Do not rely on it as the current source of truth.
-- `host/tools/ecommerceLayout.jsx` is included but likely not active in the current UI flow.
+- The Ad Component Kit registry id remains `ecommerceLayout` even though the old `host/tools/ecommerceLayout.jsx` module has been removed. Do not rename the id without a dedicated storage and HomeLayout migration.
 - Some host functions return `message` strings rather than `messageKey`; i18n coverage may be incomplete for host messages.
 - `client/js/main.js` and `client/css/style.css` are large and have accumulated multiple iterations. Avoid broad rewrites.
 - CEP/AE may cache old JS or JSX; always hard-refresh/reopen panel or restart AE when behavior does not match code.
 - If a change appears to have no effect, confirm the active JS and host JSX path before editing algorithms.
 - Shape Add is now on the phased registry path. Do not attempt a one-pass rewrite or remove the preserved legacy host actions; see `docs/KNOWN_ISSUES.md`.
 - Deferred: Settings Background Engine preset dropdown can trigger a render/layout glitch after closing. See `docs/KNOWN_ISSUES.md`.
+- Settings schema migration is phased. The internal UI shell is now on the Settings Renderer path, but do not replace remaining behavior layers such as `BackgroundEngine` without a dedicated migration and AE regression pass.
+- Deferred to 0.2.4: closing the CEP panel can still make AE appear frozen for several seconds to more than ten seconds. Future work should audit CEP unload, pending `evalScript`, state polling intervals, document/window listeners, and localStorage save paths.
 
 ## Later Development Suggestions
 

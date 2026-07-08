@@ -236,6 +236,30 @@ Supported shared controls and behaviors include:
 
 If a migrated tool needs a missing control type, report or add the missing control as a generic core renderer capability. Do not create a tool-specific workaround.
 
+## App-Level Settings Rules
+
+Settings is an app-level core panel, not a registry tool.
+
+Current production Settings behavior is phased and app-level:
+
+- The outer Settings shell lives in `client/index.html`.
+- Settings behavior lives in `client/js/main.js`.
+- Migrated Settings rows are rendered from `client/js/settingsSchema.js` through the Settings renderer path.
+- `BackgroundEngine` remains the runtime owner for procedural background behavior.
+- Settings i18n belongs in `client/js/i18n.js` because it is core/global UI.
+
+The app-level Settings data model lives in:
+
+```text
+client/js/settingsSchema.js
+```
+
+Do not migrate Settings as `host/tools/*.tool.jsx`. Do not replace the Settings shell, migrate storage keys, or change `BackgroundEngine` behavior as a side effect of unrelated work.
+
+Settings renderer baseline is currently restored to the stable path. Future Settings work should proceed through the app-level Settings Schema and Settings Renderer Lab, then through focused production tasks.
+
+Developer Mode is a core Settings value. It controls debug/probe/lab registry tool visibility generically and must not be implemented as a tool-specific condition.
+
 ## i18n Rules
 
 The panel supports:
@@ -252,6 +276,8 @@ Current direction:
 - Tool metadata must use `titleKey` and `descriptionKey`.
 - User-visible action labels, section titles, field labels, hints, status messages, and option labels must use i18n keys.
 - Host JSX should return `messageKey` when practical.
+- Before deleting old global keys, run `node scripts/report-i18n-usage.js` and inspect `docs/reports/i18n-usage-report.md`.
+- Treat Home static anchors, startup fallback, dynamic key construction, and preserved legacy adapters as reasons to defer deletion until AE tests confirm the path is safe.
 
 When editing existing i18n:
 
@@ -269,8 +295,7 @@ Developer Mode tools are hidden from normal Home by default and appear only when
 Examples:
 
 - `Registry Control Lab`
-- `Registry Probe`
-- `shapeAddProbe`
+- `Settings Renderer Lab`
 - tools whose id/title/description contains `probe`, `lab`, `test`, `debug`, or `controlLab`
 - tools with `debugOnly: true`
 - tools with `developerOnly: true`
@@ -278,7 +303,7 @@ Examples:
 
 Formal production tools must not depend on Developer Mode.
 
-Do not delete Developer Mode tools just because they are hidden. They are used to validate the core registry renderer and migration paths.
+Do not delete Developer Mode lab tools just because they are hidden. They are used to validate the core registry renderer and migration paths. Temporary probes may be retired after the formal tool path replaces them and AE testing confirms they no longer add regression value.
 
 ## Current Tool Status
 
@@ -297,7 +322,9 @@ Status: formal registry tool.
 - Stroke / Fill parameters live under the create button in a collapsible registry section.
 - Stroke / Fill has a section-local reset defaults button.
 - `host/tools/shapeAdd.jsx` still contains necessary legacy host action logic and must remain for now.
-- `shapeAddProbe` is Developer Mode-only and does not replace the formal Shape Add tool.
+- The obsolete `shapeAddProbe` Developer Mode probe was retired after the formal Shape Add registry path stabilized.
+- Shape Add legacy frontend adapter, duplicate `shapeAdd.item.*` global i18n, legacy Shape Add CSS, and old global host wrappers have been cleaned up after AE testing.
+- Shape Add number/range inputs preserve raw typed text during editing and only normalize on commit.
 
 ### Text Background Box / Background Rounded Rectangle
 
@@ -315,9 +342,19 @@ Status: registry tool.
 
 ### Ad Component Kit
 
-Status: legacy tool.
+Status: registry tool.
 
-- Feature Stack and Icon Grid remain in the legacy UI/host path.
+- Feature Stack and Icon Grid are exposed through the registry UI.
+- Current frontend id is `ecommerceLayout`.
+- Current active host module is `host/tools/adComponentKit.jsx`.
+- The old `host/tools/ecommerceLayout.jsx` guide/template host module was audited and removed.
+- The formal schema is `host/tools/adComponentKit.tool.jsx`.
+- The active host behavior is `host/tools/adComponentKit.jsx`.
+- Storage remains `AEToolbox.ecommerceLayout.v1`.
+- Keep id `ecommerceLayout` for HomeLayout saved-order and `AEToolbox.ecommerceLayout.v1` storage compatibility unless a dedicated migration is requested.
+- Keep one tool and use tabs / visibleWhen for Feature Stack and Icon Grid, not split them into multiple Home tools.
+- Do not rewrite the AE creation algorithms in `host/tools/adComponentKit.jsx`.
+- Schema draft: `docs/schema-drafts/ad-component-kit.registry-schema-draft.md`.
 - Do not refactor these unless explicitly requested.
 
 ### Registry Control Lab
@@ -337,9 +374,8 @@ Before asking the user to verify a major UI/tool change in AE, run or provide th
 Developer Mode:
 
 - Developer Mode off: Registry Control Lab is hidden.
-- Developer Mode off: Registry Probe is hidden.
-- Developer Mode off: shapeAddProbe is hidden.
-- Developer Mode on: debug/probe/lab tools are visible.
+- Developer Mode off: Settings Renderer Lab is hidden.
+- Developer Mode on: retained lab/debug tools are visible.
 - Developer Mode on/off does not break saved Home order.
 
 Shape Add:
@@ -384,11 +420,19 @@ Do not refactor `HomeLayoutManager` casually.
 
 Do not save absolute icon positions. Home order should remain a `toolId` order array.
 
-### Shape Add legacy host actions
+### Shape Add host actions
 
-Do not delete `host/tools/shapeAdd.jsx` or global Shape Add wrappers casually.
+Do not delete `host/tools/shapeAdd.jsx` casually.
 
-The registry Shape Add UI still reuses these host actions:
+The registry Shape Add UI uses registered actions:
+
+```js
+AEToolbox.runRegisteredToolAction("shapeAdd", actionId, paramsJson)
+```
+
+Formal host behavior remains in `host/tools/shapeAdd.jsx`; formal registry schema remains in `host/tools/shapeAdd.tool.jsx`.
+
+Removed legacy global wrappers:
 
 ```js
 shapeAdd_getState()
@@ -396,7 +440,13 @@ shapeAdd_add(matchName, key)
 shapeAdd_createStrokeFillLayer(paramsJson)
 ```
 
-Remove them only after all registry callers and any global bridge callers are audited.
+Do not add new `client` evalScript calls to these removed wrappers. Use registry actions instead.
+
+### CEP panel close freeze
+
+Status: Deferred to 0.2.4.
+
+Closing the CEP panel can still make After Effects appear frozen for several seconds to more than ten seconds. Do not claim this is fixed in 0.2.3 and do not patch shutdown lifecycle opportunistically. A future focused task should audit pending `evalScript` calls, registry state polling, document/window listeners, custom select cleanup, and localStorage save paths.
 
 ## Release Workflow
 
@@ -424,7 +474,7 @@ When changing the version, keep these synchronized:
 - `README.md` / docs, if they explicitly state the current version
 - `CHANGELOG.md`
 
-`v0.2.1` has been published and must not be moved. `v0.2.2` is the agent handoff guide / project maintainability release.
+`v0.2.1` and `v0.2.2` have been published and must not be moved. `v0.2.3` is the registry migration / legacy cleanup release. Do not move existing tags; future releases must use a new release branch and tag.
 
 Do not move existing tags unless the user explicitly asks.
 

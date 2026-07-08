@@ -663,9 +663,18 @@
             "    if (!l) { return {left:0, top:0, width:0, height:0}; }",
             "    return l.sourceRectAtTime(time, false);",
             "  }",
+            "  function scaleForLayer(l, axis) {",
+            "    try {",
+            "      var s = Math.abs(l.transform.scale[axis]) / 100;",
+            "      return s > 0.0001 ? s : 1;",
+            "    } catch (e) {",
+            "      return 1;",
+            "    }",
+            "  }",
             "  function pillHeightForLayer(l) {",
             "    var r = rectForLayer(l);",
-            "    return Math.max(0, r.height + py * 2);",
+            "    var sy = scaleForLayer(l, 1);",
+            "    return Math.max(0, r.height * sy + py * 2);",
             "  }",
             "  var totalH = 0;",
             "  for (var i = 0; i < refs.length; i++) {",
@@ -677,12 +686,15 @@
             "    y += pillHeightForLayer(layerFromRef(refs[j])) + gap;",
             "  }",
             "  var ownRect = rectForLayer(thisLayer);",
-            "  var ownH = Math.max(0, ownRect.height + py * 2);",
-            "  var ownW = (mode == 1) ? fixedW : ownRect.width + px * 2;",
+            "  var ownScaleX = scaleForLayer(thisLayer, 0);",
+            "  var ownScaleY = scaleForLayer(thisLayer, 1);",
+            "  var ownTextW = ownRect.width * ownScaleX;",
+            "  var ownH = Math.max(0, ownRect.height * ownScaleY + py * 2);",
+            "  var ownW = (mode == 1) ? fixedW : ownTextW + px * 2;",
             "  y += ownH / 2;",
             "  var x = 0;",
             "  if (align == 0) {",
-            "    x = -ownW / 2 + px + ownRect.width / 2;",
+            "    x = -ownW / 2 + px + ownTextW / 2;",
             "  }",
             "  [x, y];",
             "} else {",
@@ -721,17 +733,7 @@
             "var txt = thisLayer.parent;",
             "var ctrl = txt ? txt.parent : null;",
             "if (txt && ctrl && txt.sourceRectAtTime) {",
-            "  var r = txt.sourceRectAtTime(time, false);",
-            "  var px = ctrl.effect(\"Padding X\")(1);",
-            "  var fixedW = ctrl.effect(\"Fixed Width\")(1);",
-            "  var mode = Math.round(ctrl.effect(\"Pill Width Mode\")(1));",
-            "  var align = Math.round(ctrl.effect(\"Text Align\")(1));",
-            "  var w = (mode == 1) ? fixedW : r.width + px * 2;",
-            "  var x = 0;",
-            "  if (align == 0) {",
-            "    x = w / 2 - px - r.width / 2;",
-            "  }",
-            "  [x, 0];",
+            "  txt.fromComp(ctrl.toComp([0, txt.position[1]]));",
             "} else {",
             "  value;",
             "}"
@@ -747,9 +749,19 @@
             "  var py = ctrl.effect(\"Padding Y\")(1);",
             "  var fixedW = ctrl.effect(\"Fixed Width\")(1);",
             "  var mode = Math.round(ctrl.effect(\"Pill Width Mode\")(1));",
-            "  var w = (mode == 1) ? fixedW : r.width + px * 2;",
-            "  var h = r.height + py * 2;",
-            "  [Math.max(0, w), Math.max(0, h)];",
+            "  function scaleForLayer(l, axis) {",
+            "    try {",
+            "      var s = Math.abs(l.transform.scale[axis]) / 100;",
+            "      return s > 0.0001 ? s : 1;",
+            "    } catch (e) {",
+            "      return 1;",
+            "    }",
+            "  }",
+            "  var sx = scaleForLayer(txt, 0);",
+            "  var sy = scaleForLayer(txt, 1);",
+            "  var w = (mode == 1) ? fixedW : r.width * sx + px * 2;",
+            "  var h = r.height * sy + py * 2;",
+            "  [Math.max(0, w / sx), Math.max(0, h / sy)];",
             "} else {",
             "  value;",
             "}"
@@ -1642,6 +1654,79 @@
         }
         app.endUndoGroup();
         return jsonResult(true, "Component detached. Layers will no longer refresh as a kit component.");
+    };
+
+    AEToolbox.tools.adComponentKit.getState = function () {
+        var comp = getComp();
+        var selected;
+        var i;
+        var layer;
+        var bounds;
+        var textLayerCount = 0;
+        var twoDLayerCount = 0;
+        var selectedControllerType = null;
+        var data;
+        var hasComp = !!comp;
+        var selectionCount = 0;
+        var messageKey = "tools.adComponentKit.state.noComp";
+
+        if (comp && comp.selectedLayers) {
+            selected = comp.selectedLayers;
+            selectionCount = selected.length;
+        } else {
+            selected = [];
+        }
+
+        if (selected.length) {
+            data = parseMetadata(selected[0]);
+            if (data && data.role === "controller") {
+                selectedControllerType = data.componentType || null;
+            }
+        }
+
+        for (i = 0; i < selected.length; i++) {
+            layer = selected[i];
+            if (isTextLayer(layer) && !layer.threeDLayer) {
+                textLayerCount++;
+            }
+            try {
+                if (!layer.threeDLayer && !layer.parent && !shouldSkipGridLayer(layer) && !hasTransformExpression(layer, "ADBE Position") && !hasTransformExpression(layer, "ADBE Scale")) {
+                    bounds = getLayerVisualBoundsInComp(layer, comp.time);
+                    if (bounds.width > 0 && bounds.height > 0) {
+                        twoDLayerCount++;
+                    }
+                }
+            } catch (gridErr) {
+            }
+        }
+
+        if (!hasComp) {
+            messageKey = "tools.adComponentKit.state.noComp";
+        } else if (textLayerCount > 0) {
+            messageKey = "tools.adComponentKit.state.featureReady";
+        } else if (selectionCount > 0) {
+            messageKey = "tools.adComponentKit.state.noTextSelection";
+        } else {
+            messageKey = "tools.adComponentKit.state.noSelection";
+        }
+
+        return AEToolbox.stringify({
+            ok: true,
+            messageKey: messageKey,
+            state: {
+                hasComp: hasComp,
+                activeComp: hasComp ? comp.name : "",
+                selectionCount: selectionCount,
+                textLayerCount: textLayerCount,
+                twoDLayerCount: twoDLayerCount,
+                selectedControllerType: selectedControllerType,
+                canCreateFeatureStack: hasComp && textLayerCount > 0,
+                canCreateIconGrid: hasComp && twoDLayerCount > 0,
+                canRefresh: hasComp && !!selectedControllerType,
+                canSelectLayers: hasComp && !!selectedControllerType,
+                canDetach: hasComp && !!selectedControllerType
+            }
+        });
     };
 
     AEToolbox.tools.adComponentKit.getLayerVisualBoundsInComp = getLayerVisualBoundsInComp;

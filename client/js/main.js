@@ -11,10 +11,6 @@
     var motionScale = 1;
     var animationWarmupDone = false;
     var activeToolId = "shapeAdd";
-    var activeValues = {
-        fillMode: "Solid Fill",
-        strokeMode: "None"
-    };
     var Motion = {
         appleOut: "cubic-bezier(0.16, 1, 0.3, 1)",
         appleStandard: "cubic-bezier(0.22, 1, 0.36, 1)",
@@ -26,26 +22,22 @@
         close: 360
     };
     var StorageKeys = {
-        tool: "AEToolbox.textBackgroundBox.v1",
         ecommerce: "AEToolbox.ecommerceLayout.v1",
         settings: "AEToolbox.settings.v1",
         background: "AEToolbox.background.v1",
         backgroundCollapsed: "AEToolbox.backgroundSettingsCollapsed.v1",
-        shapeAddStrokeFill: "AEToolbox.shapeAdd.strokeFillDefaults.v1",
-        shapeAddItemsCollapsed: "AEToolbox.shapeAdd.itemsCollapsed.v1",
-        shapeAddStrokeFillSettingsCollapsed: "AEToolbox.shapeAdd.strokeFillSettingsCollapsed.v1",
         language: "aeToolbox.language",
         homeOrder: "aeToolbox.homeToolOrder"
     };
     var ToolRegistry = {
         ecommerceLayout: {
-            titleKey: "tools.adComponentKit.title",
-            descriptionKey: "tools.adComponentKit.description",
+            title: "Ad Component Kit",
+            description: "Ad Component Kit",
             selectionMode: "layers"
         },
         shapeAdd: {
-            titleKey: "tools.shapeAdd.title",
-            descriptionKey: "tools.shapeAdd.description",
+            title: "Shape Add",
+            description: "Shape Add",
             selectionMode: "shape"
         }
     };
@@ -54,77 +46,7 @@
     var RegistryToolState = {};
     var RegistrySaveTimers = {};
     var RegistryRuntimeStates = {};
-    var DefaultToolParams = {
-        paddingX: 40,
-        paddingY: 20,
-        roundness: 20,
-        fillMode: "Solid Fill",
-        fillColor: "#202020",
-        fillOpacity: 80,
-        strokeMode: "None",
-        strokeColor: "#ffffff",
-        strokeWidth: 2,
-        strokeOpacity: 100
-    };
-    var DefaultShapeStrokeFillParams = {
-        strokeWidth: 7,
-        miterLimit: 14,
-        trimStart: 0,
-        trimEnd: 100,
-        trimOffset: 0,
-        taperStartLength: 15,
-        taperEndLength: 15,
-        taperStartWidth: 0,
-        taperEndWidth: 0,
-        taperStartEase: 30,
-        taperEndEase: 30,
-        strokeColor: "#FFFFFF",
-        fillColor: "#D6B25E"
-    };
-    var DefaultEcommerceParams = {
-        componentKind: "featureStack",
-        gap: 14,
-        paddingX: 24,
-        paddingY: 12,
-        cornerRadius: 28,
-        pillWidthMode: "auto",
-        fixedWidth: 320,
-        fillColor: "#d6b25e",
-        gradientEnable: false,
-        textAlign: "center",
-        sortMode: "yPosition",
-        columns: 4,
-        normalizeMode: "fitBox",
-        targetWidth: 72,
-        targetHeight: 72,
-        cellWidth: 100,
-        cellHeight: 118,
-        gapX: 28,
-        gapY: 24,
-        lastRowAlign: "center",
-        gridSortMode: "rowMajor"
-    };
-    var ShapeAddItems = [
-        { labelKey: "shapeAdd.item.group", key: "group", matchName: "ADBE Vector Group" },
-        { labelKey: "shapeAdd.item.rectangle", key: "rectangle", matchName: "ADBE Vector Shape - Rect" },
-        { labelKey: "shapeAdd.item.ellipse", key: "ellipse", matchName: "ADBE Vector Shape - Ellipse" },
-        { labelKey: "shapeAdd.item.star", key: "star", matchName: "ADBE Vector Shape - Star" },
-        { labelKey: "shapeAdd.item.path", key: "path", matchName: "ADBE Vector Shape - Group" },
-        { labelKey: "shapeAdd.item.fill", key: "fill", matchName: "ADBE Vector Graphic - Fill" },
-        { labelKey: "shapeAdd.item.stroke", key: "stroke", matchName: "ADBE Vector Graphic - Stroke" },
-        { labelKey: "shapeAdd.item.gradientFill", key: "gradientFill", matchName: "ADBE Vector Graphic - G-Fill" },
-        { labelKey: "shapeAdd.item.gradientStroke", key: "gradientStroke", matchName: "ADBE Vector Graphic - G-Stroke" },
-        { labelKey: "shapeAdd.item.mergePaths", key: "mergePaths", matchName: "ADBE Vector Filter - Merge" },
-        { labelKey: "shapeAdd.item.offsetPaths", key: "offsetPaths", matchName: "ADBE Vector Filter - Offset" },
-        { labelKey: "shapeAdd.item.puckerBloat", key: "puckerBloat", matchName: "ADBE Vector Filter - PB" },
-        { labelKey: "shapeAdd.item.repeater", key: "repeater", matchName: "ADBE Vector Filter - Repeater" },
-        { labelKey: "shapeAdd.item.roundCorners", key: "roundCorners", matchName: "ADBE Vector Filter - RC" },
-        { labelKey: "shapeAdd.item.trimPaths", key: "trimPaths", matchName: "ADBE Vector Filter - Trim" },
-        { labelKey: "shapeAdd.item.twist", key: "twist", matchName: "ADBE Vector Filter - Twist" },
-        { labelKey: "shapeAdd.item.wigglePaths", key: "wigglePaths", matchName: "ADBE Vector Filter - Roughen" },
-        { labelKey: "shapeAdd.item.wiggleTransform", key: "wiggleTransform", matchName: "ADBE Vector Filter - Wiggler" },
-        { labelKey: "shapeAdd.item.zigZag", key: "zigZag", matchName: "ADBE Vector Filter - Zigzag" }
-    ];
+    var CustomSelectGlobalListenersBound = false;
     var DefaultSettings = {
         motionSpeed: 1,
         uiScale: 0.92,
@@ -194,6 +116,13 @@
             return window.I18n.t(key, params);
         }
         return key;
+    }
+
+    function toolText(meta, keyName, fallbackName, defaultValue) {
+        if (meta && meta[keyName]) {
+            return tr(meta[keyName]);
+        }
+        return (meta && meta[fallbackName]) || defaultValue || "";
     }
 
     function applyI18n(root) {
@@ -1061,6 +990,9 @@
             if (!tool || tool.hidden || (isDeveloperRegistryTool(tool) && window.AETOOLBOX_DEBUG_REGISTRY !== true)) {
                 continue;
             }
+            if (grid.querySelector(".tool-app[data-tool='" + tool.id + "']:not([data-dynamic-tool='true'])")) {
+                continue;
+            }
             button = document.createElement("button");
             button.type = "button";
             button.className = "tool-app app-card";
@@ -1096,6 +1028,600 @@
             HomeLayoutManager.renderOrder();
             HomeLayoutManager.bindIconEvents();
         }
+    }
+
+    function findSettingsSchemaField(key) {
+        var schema = window.AEToolboxSettingsSchema;
+        var sections = schema && schema.sections ? schema.sections : [];
+        var i;
+        var j;
+        var fields;
+        for (i = 0; i < sections.length; i++) {
+            fields = sections[i] && sections[i].fields ? sections[i].fields : [];
+            for (j = 0; j < fields.length; j++) {
+                if (fields[j] && fields[j].key === key) {
+                    return fields[j];
+                }
+            }
+        }
+        return null;
+    }
+
+    function findSettingsSchemaSection(id) {
+        var schema = window.AEToolboxSettingsSchema;
+        var sections = schema && schema.sections ? schema.sections : [];
+        var i;
+        for (i = 0; i < sections.length; i++) {
+            if (sections[i] && sections[i].id === id) {
+                return sections[i];
+            }
+        }
+        return null;
+    }
+
+    function createSettingsSectionMount(id, className) {
+        var section = document.createElement("section");
+        section.id = id;
+        section.className = className || "settings-section";
+        return section;
+    }
+
+    function renderSettingsContent() {
+        var content = document.querySelector(".settings-content");
+        var renderer;
+        if (!content) {
+            return;
+        }
+        content.innerHTML = "";
+        content.classList.remove("settings-renderer");
+        renderer = document.createElement("div");
+        renderer.className = "settings-renderer";
+        renderer.appendChild(createSettingsSectionMount("settingsLanguageMount", "settings-section"));
+        renderer.appendChild(createSettingsSectionMount("settingsDeveloperModeMount", "settings-section"));
+        renderer.appendChild(createSettingsSectionMount("settingsMotionMount", "settings-section"));
+        renderer.appendChild(createSettingsSectionMount("settingsThemeMount", "settings-section"));
+        renderer.appendChild(createSettingsSectionMount("backgroundSettingsCard", "settings-section settings-section--background settings-section--collapsible collapsible-card"));
+        content.appendChild(renderer);
+    }
+
+    function createSettingsSectionHeader(overlineKey, titleKey, descriptionKey) {
+        var heading = document.createElement("div");
+        var copy = document.createElement("span");
+        var title = document.createElement("h3");
+        var description;
+
+        heading.className = "settings-section-header";
+        copy.className = "settings-section-copy";
+        title.className = "registry-title-primary settings-section-title";
+        title.setAttribute("data-i18n", titleKey);
+        title.textContent = tr(titleKey);
+        copy.appendChild(title);
+        if (descriptionKey) {
+            description = document.createElement("small");
+            description.className = "registry-section-description registry-text-muted settings-section-description";
+            description.setAttribute("data-i18n", descriptionKey);
+            description.textContent = tr(descriptionKey);
+            copy.appendChild(description);
+        }
+        heading.appendChild(copy);
+        return heading;
+    }
+
+    function createSettingsFieldCopy(labelKey, descriptionKey, fallbackDescription) {
+        var copy = document.createElement("span");
+        var label = document.createElement("strong");
+        var hint = document.createElement("small");
+
+        copy.className = "registry-label-column settings-field-copy";
+        label.className = "control-label registry-text-body settings-field-label";
+        label.setAttribute("data-i18n", labelKey);
+        label.textContent = tr(labelKey);
+        hint.className = "registry-field-hint registry-text-muted settings-field-description";
+        if (descriptionKey) {
+            hint.setAttribute("data-i18n", descriptionKey);
+            hint.textContent = tr(descriptionKey);
+        } else {
+            hint.textContent = fallbackDescription || "";
+        }
+        copy.appendChild(label);
+        if (descriptionKey || fallbackDescription) {
+            copy.appendChild(hint);
+        }
+        return copy;
+    }
+
+    function createSettingsGroupLabel(labelKey) {
+        var label = document.createElement("div");
+        label.className = "settings-group-label";
+        label.setAttribute("data-i18n", labelKey);
+        label.textContent = tr(labelKey);
+        return label;
+    }
+
+    function createSharedSettingsFieldRow(type, field, descriptionKey, fallbackDescription) {
+        var row = document.createElement(type === "checkbox" ? "label" : "div");
+        var copy = createSettingsFieldCopy(field.labelKey, descriptionKey || field.descriptionKey || field.hintKey, fallbackDescription || "");
+        var controls = document.createElement("span");
+
+        row.className = type === "checkbox" ? "switch-row registry-switch-row settings-field settings-field--switch" : "control-row registry-field-row settings-field settings-field--" + type;
+        controls.className = "control-inputs settings-field-control";
+        row.appendChild(copy);
+        row.appendChild(controls);
+        return {
+            row: row,
+            controls: controls
+        };
+    }
+
+    function createSharedSettingsSelect(id, field, selectedValue) {
+        var select = document.createElement("select");
+        var option;
+        var i;
+
+        select.id = id;
+        select.className = "select-input settings-select";
+        for (i = 0; field.options && i < field.options.length; i++) {
+            option = document.createElement("option");
+            option.value = field.options[i].value;
+            if (field.options[i].labelKey) {
+                option.setAttribute("data-i18n", field.options[i].labelKey);
+                option.textContent = tr(field.options[i].labelKey);
+            } else {
+                option.textContent = field.options[i].value === "zh-CN" ? "\u7b80\u4f53\u4e2d\u6587" : "English";
+            }
+            if (field.options[i].value === selectedValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        }
+        return select;
+    }
+
+    function createSharedSettingsSwitch(id, checked) {
+        var switchWrap = document.createElement("span");
+        var input = document.createElement("input");
+        var track = document.createElement("span");
+
+        switchWrap.className = "switch registry-switch settings-switch";
+        input.id = id;
+        input.type = "checkbox";
+        input.checked = checked === true;
+        track.className = "switch-track";
+        switchWrap.appendChild(input);
+        switchWrap.appendChild(track);
+        return switchWrap;
+    }
+
+    function dispatchSettingsControlEvent(element, type) {
+        var event;
+        if (!element) {
+            return;
+        }
+        event = document.createEvent("HTMLEvents");
+        event.initEvent(type, true, false);
+        element.dispatchEvent(event);
+    }
+
+    function createSharedSettingsRangeNumber(field, rangeId, numberId, minValue, maxValue, rangeHookClass, numberHookClass) {
+        var controls = document.createElement("span");
+        var range = document.createElement("input");
+        var number = document.createElement("input");
+        var dragField = {
+            min: minValue,
+            max: maxValue,
+            step: field.step,
+            defaultValue: field.defaultValue
+        };
+
+        controls.className = "control-inputs settings-field-control registry-range-control";
+        range.id = rangeId;
+        range.className = "pill-slider registry-range settings-slider" + (rangeHookClass ? " " + rangeHookClass : "");
+        range.type = "range";
+        range.min = String(minValue);
+        range.max = String(maxValue);
+        range.step = String(field.step);
+        range.value = String(field.defaultValue);
+
+        number.id = numberId;
+        number.className = "num-input registry-range-number settings-number" + (numberHookClass ? " " + numberHookClass : "");
+        number.type = "number";
+        number.min = String(minValue);
+        number.max = String(maxValue);
+        number.step = String(field.step);
+        number.value = String(field.defaultValue);
+
+        controls.appendChild(number);
+        controls.appendChild(range);
+        setupRegistryNumberDrag(number, dragField, function (value) {
+            range.value = value;
+            dispatchSettingsControlEvent(number, "input");
+            dispatchSettingsControlEvent(number, "change");
+        });
+        return controls;
+    }
+
+    function createSharedSettingsColorControl(field, inputId, fallbackColor, shellClassName) {
+        var controls = document.createElement("span");
+        var shell = document.createElement("button");
+        var input = document.createElement("input");
+        var hexInput = document.createElement("input");
+        var fallback = fallbackColor || "#ffffff";
+
+        controls.className = "control-inputs settings-field-control registry-color-control settings-color-control";
+        shell.className = "registry-color-swatch settings-color-pill" + (shellClassName ? " " + shellClassName : "");
+        shell.type = "button";
+        shell.setAttribute("aria-label", tr(field.labelKey));
+        shell.setAttribute("data-color-target", inputId);
+        input.id = inputId;
+        input.className = "native-color-input";
+        input.type = "hidden";
+        input.value = normalizeHex(field.defaultValue, fallback);
+        hexInput.id = inputId + "Hex";
+        hexInput.className = "registry-color-hex settings-color-hex";
+        hexInput.type = "text";
+        hexInput.value = input.value;
+        hexInput.setAttribute("spellcheck", "false");
+
+        function syncColorUi(value) {
+            var previous = input.value || fallback;
+            var normalized = normalizeHex(value, previous || fallback).toLowerCase();
+            input.value = normalized;
+            hexInput.value = normalized;
+            shell.style.backgroundColor = normalized;
+            return normalized;
+        }
+
+        function applyHex(value) {
+            var normalized = syncColorUi(value);
+            if (BackgroundEngine.handleColorChange(inputId, normalized)) {
+                return;
+            }
+            if (inputId === "themeAccent") {
+                applyThemeAccent(normalized);
+                saveSettings();
+            } else if (inputId === "homeBackground") {
+                applyHomeBackground(normalized);
+                saveSettings();
+            } else if (inputId === "toolIconColor" || inputId === "toolIconLine") {
+                if (inputId === "toolIconColor") {
+                    applyToolIconTheme(normalized, byId("toolIconLine").value);
+                } else {
+                    applyToolIconTheme(byId("toolIconColor").value, normalized);
+                }
+                saveSettings();
+            }
+        }
+
+        hexInput._registryOnValueChange = function () {
+            applyHex(hexInput.value);
+        };
+        hexInput.addEventListener("input", function () {
+            if (/^#?[0-9a-fA-F]{6}$/.test(this.value)) {
+                applyHex(this.value);
+            }
+        });
+        hexInput.addEventListener("change", function () {
+            applyHex(this.value);
+        });
+        hexInput.addEventListener("blur", function () {
+            applyHex(this.value);
+        });
+        hexInput.addEventListener("keydown", function (event) {
+            if (event.keyCode === 13) {
+                event.preventDefault();
+                applyHex(this.value);
+                this.blur();
+            } else if (event.keyCode === 27) {
+                event.preventDefault();
+                this.value = input.value || fallback;
+                this.blur();
+            }
+        });
+        shell.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            openRegistryColorPicker(hexInput, shell, fallback);
+        });
+        shell.appendChild(input);
+        controls.appendChild(shell);
+        controls.appendChild(hexInput);
+        syncColorUi(input.value);
+        return controls;
+    }
+
+    function renderSettingsLanguage() {
+        var mount = byId("settingsLanguageMount");
+        var field = findSettingsSchemaField("language");
+        var heading;
+        var fieldRow;
+        var select;
+
+        if (!mount || !field) {
+            return;
+        }
+
+        mount.innerHTML = "";
+        mount.className = "settings-section";
+
+        heading = createSettingsSectionHeader("common.global", field.labelKey, null);
+
+        fieldRow = createSharedSettingsFieldRow("select", field, null, "English / \u7b80\u4f53\u4e2d\u6587");
+        select = createSharedSettingsSelect("languageSelect", field, window.I18n && window.I18n.getLanguage ? window.I18n.getLanguage() : null);
+        fieldRow.controls.appendChild(select);
+        mount.appendChild(heading);
+        mount.appendChild(fieldRow.row);
+    }
+
+    function renderSettingsDeveloperMode() {
+        var mount = byId("settingsDeveloperModeMount");
+        var field = findSettingsSchemaField("registryDebugTools");
+        var heading;
+        var fieldRow;
+        var switchWrap;
+
+        if (!mount || !field) {
+            return;
+        }
+
+        mount.innerHTML = "";
+        mount.className = "settings-section";
+
+        heading = createSettingsSectionHeader("section.debug", "section.developerTools", null);
+
+        fieldRow = createSharedSettingsFieldRow("checkbox", field, field.descriptionKey, "");
+        switchWrap = createSharedSettingsSwitch("registryDebugTools", field.defaultValue === true);
+        fieldRow.controls.appendChild(switchWrap);
+        mount.appendChild(heading);
+        mount.appendChild(fieldRow.row);
+    }
+
+    function renderSettingsRangeRow(field, numberId) {
+        var fieldRow;
+        var controls;
+
+        fieldRow = createSharedSettingsFieldRow("range", field, field.descriptionKey, "");
+        controls = createSharedSettingsRangeNumber(field, field.key, numberId, field.min, field.max, "", "");
+        fieldRow.row.removeChild(fieldRow.controls);
+        fieldRow.row.appendChild(controls);
+
+        return fieldRow.row;
+    }
+
+    function renderSettingsMotion() {
+        var mount = byId("settingsMotionMount");
+        var section = findSettingsSchemaSection("motion");
+        var heading;
+        var fields;
+        var i;
+
+        if (!mount || !section) {
+            return;
+        }
+
+        mount.innerHTML = "";
+        mount.className = "settings-section";
+
+        heading = createSettingsSectionHeader("section.motion", "section.animation", null);
+        mount.appendChild(heading);
+
+        fields = section.fields || [];
+        for (i = 0; i < fields.length; i++) {
+            if (fields[i] && fields[i].key === "motionSpeed") {
+                mount.appendChild(renderSettingsRangeRow(fields[i], "motionSpeedNumber"));
+            } else if (fields[i] && fields[i].key === "uiScale") {
+                mount.appendChild(renderSettingsRangeRow(fields[i], "uiScaleNumber"));
+            }
+        }
+    }
+
+    function renderSettingsTheme() {
+        var mount = byId("settingsThemeMount");
+        var section = findSettingsSchemaSection("theme");
+        var heading;
+        var fields;
+        var field;
+        var fieldRow;
+        var controls;
+        var i;
+
+        if (!mount || !section) {
+            return;
+        }
+
+        mount.innerHTML = "";
+        mount.className = "settings-section";
+
+        heading = createSettingsSectionHeader("section.color", section.titleKey, null);
+        mount.appendChild(heading);
+
+        fields = section.fields || [];
+        for (i = 0; i < fields.length; i++) {
+            field = fields[i];
+            if (!field || field.type !== "color" || !field.key) {
+                continue;
+            }
+            fieldRow = createSharedSettingsFieldRow("color", field, field.descriptionKey, "");
+            controls = createSharedSettingsColorControl(field, field.key, "#ffffff", "theme-color-shell");
+            fieldRow.row.removeChild(fieldRow.controls);
+            fieldRow.row.appendChild(controls);
+            mount.appendChild(fieldRow.row);
+        }
+    }
+
+    function findSettingsSectionField(section, key) {
+        var fields = section && section.fields ? section.fields : [];
+        var i;
+        for (i = 0; i < fields.length; i++) {
+            if (fields[i] && fields[i].key === key) {
+                return fields[i];
+            }
+        }
+        return null;
+    }
+
+    function renderSettingsBackgroundRange(field, controlId, minValue, maxValue) {
+        var fieldRow;
+        var controls;
+
+        fieldRow = createSharedSettingsFieldRow("range", field, null, "");
+        fieldRow.row.className += " bg-control-row";
+        controls = createSharedSettingsRangeNumber(field, controlId, controlId + "Number", minValue, maxValue, "bg-param", "bg-param-number");
+        fieldRow.row.removeChild(fieldRow.controls);
+        fieldRow.row.appendChild(controls);
+        return fieldRow.row;
+    }
+
+    function renderSettingsBackgroundColor(field, inputId) {
+        var row = createSharedSettingsFieldRow("color", field, null, "");
+        var controls = createSharedSettingsColorControl(field, inputId, "#050403", "small-color-shell");
+        row.row.className += " settings-field--background-color";
+        row.row.removeChild(row.controls);
+        row.row.appendChild(controls);
+        return row.row;
+    }
+
+    function renderSettingsBackgroundEngine() {
+        var mount = byId("backgroundSettingsCard");
+        var section = findSettingsSchemaSection("backgroundEngine");
+        var toggle;
+        var toggleCopy;
+        var title;
+        var chevron;
+        var body;
+        var field;
+        var fieldRow;
+        var select;
+        var colors;
+        var ranges;
+        var motionFields;
+        var switchWrap;
+        var actions;
+        var button;
+        var i;
+
+        if (!mount || !section) {
+            return;
+        }
+
+        mount.innerHTML = "";
+        mount.className = "settings-section settings-section--background settings-section--collapsible collapsible-card";
+
+        toggle = document.createElement("button");
+        toggle.className = "settings-section-header settings-section-toggle collapsible-heading";
+        toggle.id = "backgroundSettingsToggle";
+        toggle.type = "button";
+        toggle.setAttribute("aria-expanded", "true");
+        toggleCopy = document.createElement("span");
+        title = document.createElement("h3");
+        title.className = "registry-title-primary settings-section-title";
+        title.setAttribute("data-i18n", section.titleKey);
+        title.textContent = tr(section.titleKey);
+        toggleCopy.appendChild(title);
+        chevron = document.createElement("span");
+        chevron.className = "collapse-chevron";
+        chevron.setAttribute("aria-hidden", "true");
+        toggle.appendChild(toggleCopy);
+        toggle.appendChild(chevron);
+
+        body = document.createElement("div");
+        body.className = "collapsible-body";
+        body.id = "backgroundSettingsBody";
+
+        field = findSettingsSectionField(section, "preset");
+        if (field) {
+            fieldRow = createSharedSettingsFieldRow("select", field, field.descriptionKey, "");
+            select = createSharedSettingsSelect("bgPreset", field, field.defaultValue);
+            fieldRow.controls.appendChild(select);
+            body.appendChild(fieldRow.row);
+        }
+
+        body.appendChild(createSettingsGroupLabel("section.color"));
+
+        colors = [
+            ["baseColor", "bgBaseColor"],
+            ["secondaryColor", "bgSecondaryColor"],
+            ["accentColor", "bgAccentColor"],
+            ["accent2Color", "bgAccent2Color"],
+            ["lineColor", "bgLineColor"],
+            ["glowColor", "bgGlowColor"]
+        ];
+        for (i = 0; i < colors.length; i++) {
+            field = findSettingsSectionField(section, colors[i][0]);
+            if (field) {
+                body.appendChild(renderSettingsBackgroundColor(field, colors[i][1]));
+            }
+        }
+
+        body.appendChild(createSettingsGroupLabel("section.shape"));
+
+        ranges = [
+            ["glowOpacity", "bgGlowOpacity"],
+            ["glowSize", "bgGlowSize"],
+            ["glowX", "bgGlowX"],
+            ["glowY", "bgGlowY"],
+            ["gridOpacity", "bgGridOpacity"],
+            ["gridSize", "bgGridSize"],
+            ["lineOpacity", "bgLineOpacity"],
+            ["ringOpacity", "bgRingOpacity"],
+            ["ringScale", "bgRingScale"],
+            ["accentAngle", "bgAccentAngle"],
+            ["patternDensity", "bgPatternDensity"],
+            ["contrast", "bgContrast"]
+        ];
+        for (i = 0; i < ranges.length; i++) {
+            field = findSettingsSectionField(section, ranges[i][0]);
+            if (field) {
+                body.appendChild(renderSettingsBackgroundRange(field, ranges[i][1], field.min, field.max));
+            }
+        }
+
+        body.appendChild(createSettingsGroupLabel("section.motion"));
+
+        field = findSettingsSectionField(section, "motionEnable");
+        if (field) {
+            fieldRow = createSharedSettingsFieldRow("checkbox", field, field.descriptionKey, "");
+            switchWrap = createSharedSettingsSwitch("bgMotionEnable", field.defaultValue === true);
+            fieldRow.controls.appendChild(switchWrap);
+            body.appendChild(fieldRow.row);
+        }
+
+        motionFields = [
+            ["motionSpeed", "bgMotionSpeed"],
+            ["motionAmount", "bgMotionAmount"]
+        ];
+        for (i = 0; i < motionFields.length; i++) {
+            field = findSettingsSectionField(section, motionFields[i][0]);
+            if (field) {
+                body.appendChild(renderSettingsBackgroundRange(field, motionFields[i][1], field.min, field.max));
+            }
+        }
+
+        actions = document.createElement("div");
+        actions.className = "settings-action-row settings-actions";
+        field = findSettingsSectionField(section, "randomize");
+        if (field) {
+            button = document.createElement("button");
+            button.className = "panel-button registry-large-button is-full-width settings-action-button";
+            button.id = "bgRandomizeBtn";
+            button.type = "button";
+            button.setAttribute("data-i18n", field.labelKey);
+            button.textContent = tr(field.labelKey);
+            actions.appendChild(button);
+        }
+        field = findSettingsSectionField(section, "reset");
+        if (field) {
+            button = document.createElement("button");
+            button.className = "panel-button registry-large-button is-full-width settings-action-button";
+            button.id = "bgResetBtn";
+            button.type = "button";
+            button.setAttribute("data-i18n", field.labelKey);
+            button.textContent = tr(field.labelKey);
+            actions.appendChild(button);
+        }
+        body.appendChild(actions);
+
+        mount.appendChild(toggle);
+        mount.appendChild(body);
     }
 
     function mergeDynamicToolI18n(tool) {
@@ -1589,8 +2115,14 @@
         return "dynamic_" + toolId + "_" + key;
     }
 
-    function registryToolStorageKey(toolId) {
-        return "aeToolbox.registryToolValues." + toolId;
+    function registryToolStorageKey(toolOrId) {
+        if (toolOrId && typeof toolOrId === "object" && toolOrId.storageKey) {
+            return toolOrId.storageKey;
+        }
+        if (toolOrId && typeof toolOrId === "object" && toolOrId.id) {
+            return "aeToolbox.registryToolValues." + toolOrId.id;
+        }
+        return "aeToolbox.registryToolValues." + toolOrId;
     }
 
     function schemaDefaultValue(field) {
@@ -1646,7 +2178,7 @@
 
     function loadRegistryToolState(toolDef) {
         var defaults = registrySchemaDefaults(toolDef);
-        var saved = loadStoredJson(registryToolStorageKey(toolDef.id), null);
+        var saved = loadStoredJson(registryToolStorageKey(toolDef), null);
         var state = {
             version: 1,
             toolId: toolDef.id,
@@ -1659,6 +2191,12 @@
             for (key in defaults.values) {
                 if (defaults.values.hasOwnProperty(key) && saved.values.hasOwnProperty(key)) {
                     state.values[key] = saved.values[key];
+                }
+            }
+        } else if (saved) {
+            for (key in defaults.values) {
+                if (defaults.values.hasOwnProperty(key) && saved.hasOwnProperty(key)) {
+                    state.values[key] = saved[key];
                 }
             }
         }
@@ -1732,7 +2270,7 @@
             uiState: collectRegistryUiState(toolDef)
         };
         RegistryToolState[toolDef.id] = state;
-        saveStoredJson(registryToolStorageKey(toolDef.id), state);
+        saveStoredJson(registryToolStorageKey(toolDef), state);
     }
 
     function scheduleRegistryToolSave(toolDef) {
@@ -1754,7 +2292,7 @@
             return;
         }
         try {
-            window.localStorage.removeItem(registryToolStorageKey(toolId));
+            window.localStorage.removeItem(registryToolStorageKey(tool));
         } catch (err) {
         }
         delete RegistryToolState[toolId];
@@ -1798,7 +2336,7 @@
             }
         }
         RegistryToolState[toolDef.id] = state;
-        saveStoredJson(registryToolStorageKey(toolDef.id), state);
+        saveStoredJson(registryToolStorageKey(toolDef), state);
         renderRegistryToolDetail(toolDef);
         setStatus(tr("common.valuesReset"), "ok");
     }
@@ -1867,6 +2405,25 @@
             }
         }
         input.value = decimals > 0 ? numeric.toFixed(decimals) : String(Math.round(numeric));
+    }
+
+    function isSchemaNumberDraftValue(value) {
+        var text = String(value || "").trim();
+        return text === "" ||
+            text === "-" ||
+            text === "+" ||
+            text === "." ||
+            text === "-." ||
+            text === "+." ||
+            /\.$/.test(text);
+    }
+
+    function commitSchemaNumberInput(input, field, fallback, onCommit) {
+        var normalized = normalizeSchemaNumber(input.value, field, fallback);
+        setSchemaNumberValue(input, normalized, field);
+        if (onCommit) {
+            onCommit(input.value);
+        }
     }
 
     function setupRegistryNumberDrag(input, field, onUpdate) {
@@ -2715,7 +3272,8 @@
             input.type = "range";
             numberInput = document.createElement("input");
             numberInput.className = "num-input registry-range-number";
-            numberInput.type = "number";
+            numberInput.type = "text";
+            numberInput.inputMode = "decimal";
             numberInput.id = fieldId + "_number";
             applySchemaNumberAttributes(input, field);
             applySchemaNumberAttributes(numberInput, field);
@@ -2728,13 +3286,29 @@
             input.addEventListener("change", scheduleSave);
             numberInput.addEventListener("input", function () {
                 var range = byId(this.id.replace(/_number$/, ""));
-                if (range) {
-                    setSchemaNumberValue(this, this.value, field);
-                    range.value = this.value;
+                if (range && !isSchemaNumberDraftValue(this.value) && !isNaN(Number(this.value))) {
+                    range.value = normalizeSchemaNumber(this.value, field, range.value);
                 }
                 scheduleSave();
             });
-            numberInput.addEventListener("change", scheduleSave);
+            numberInput.addEventListener("change", function () {
+                var range = byId(this.id.replace(/_number$/, ""));
+                commitSchemaNumberInput(this, field, range ? range.value : schemaDefaultValue(field), function (value) {
+                    if (range) {
+                        range.value = value;
+                    }
+                });
+                scheduleSave();
+            });
+            numberInput.addEventListener("blur", function () {
+                var range = byId(this.id.replace(/_number$/, ""));
+                commitSchemaNumberInput(this, field, range ? range.value : schemaDefaultValue(field), function (value) {
+                    if (range) {
+                        range.value = value;
+                    }
+                });
+                scheduleSave();
+            });
             setupRegistryNumberDrag(numberInput, field, function (value) {
                 input.value = value;
                 scheduleSave();
@@ -2777,13 +3351,18 @@
             input = document.createElement("input");
             input.id = fieldId;
             input.className = fieldType === "number" ? "num-input" : "registry-text-input";
-            input.type = fieldType === "number" ? "number" : "text";
+            input.type = "text";
             if (fieldType === "number") {
+                input.inputMode = "decimal";
                 applySchemaNumberAttributes(input, field);
                 setupRegistryNumberDrag(input, field, scheduleSave);
                 input.addEventListener("input", scheduleSave);
                 input.addEventListener("change", function () {
-                    setSchemaNumberValue(this, this.value, field);
+                    commitSchemaNumberInput(this, field, registryFieldValue(toolDef, field));
+                    scheduleSave();
+                });
+                input.addEventListener("blur", function () {
+                    commitSchemaNumberInput(this, field, registryFieldValue(toolDef, field));
                     scheduleSave();
                 });
             }
@@ -2992,7 +3571,7 @@
                 if (field.type === "checkbox") {
                     params[field.key] = !!input.checked;
                 } else if (field.type === "number" || field.type === "range") {
-                    params[field.key] = Number(input.value);
+                    params[field.key] = normalizeSchemaNumber(input.value, field, registryFieldValue(toolDef, field));
                 } else if (field.type === "color") {
                     params[field.key] = normalizeHex(input.value, schemaDefaultValue(field)).toLowerCase();
                 } else {
@@ -3175,7 +3754,7 @@
         var dynamic = isDynamicTool(toolId);
 
         activeToolId = toolId || "shapeAdd";
-        byId("detailHeading").textContent = tr(meta.titleKey || "app.title");
+        byId("detailHeading").textContent = toolText(meta, "titleKey", "title", tr("app.title"));
 
         if (dynamic) {
             renderDynamicToolDetail(activeToolId);
@@ -3199,8 +3778,8 @@
         for (i = 0; i < labels.length; i++) {
             toolId = labels[i].getAttribute("data-tool-title") || labels[i].getAttribute("data-tool");
             meta = getToolMeta(toolId);
-            if (meta && meta.titleKey) {
-                labels[i].textContent = tr(meta.titleKey);
+            if (meta && (meta.titleKey || meta.title)) {
+                labels[i].textContent = toolText(meta, "titleKey", "title", labels[i].textContent);
             }
         }
     }
@@ -3212,7 +3791,6 @@
         applyI18n(document);
         updateHomeToolLabels();
         configureToolDetail(activeToolId);
-        renderShapeAddButtons();
         if (HomeLayoutManager.isEditing && editButton) {
             editButton.textContent = tr("common.done");
             editButton.setAttribute("aria-label", tr("common.done"));
@@ -3240,147 +3818,7 @@
     }
 
     function refreshActiveTool() {
-        if (activeToolId === "shapeAdd" && !isDynamicTool(activeToolId)) {
-            refreshShapeAddState();
-            return;
-        }
         refreshSelection();
-    }
-
-    function renderShapeAddButtons() {
-        var list = byId("shapeAddButtonList");
-        var i;
-        var button;
-        var label;
-        var meta;
-        if (!list) {
-            return;
-        }
-        if (list.getAttribute("data-rendered") !== "true") {
-            for (i = 0; i < ShapeAddItems.length; i++) {
-                button = document.createElement("button");
-                button.type = "button";
-                button.className = "panel-button shape-add-button";
-                button.disabled = true;
-                button.setAttribute("data-shape-key", ShapeAddItems[i].key);
-                button.setAttribute("data-shape-match-name", ShapeAddItems[i].matchName);
-                button.setAttribute("data-shape-label-key", ShapeAddItems[i].labelKey);
-
-                label = document.createElement("span");
-                label.className = "button-label";
-
-                meta = document.createElement("span");
-                meta.className = "button-meta";
-                meta.textContent = ShapeAddItems[i].key;
-
-                button.appendChild(label);
-                button.appendChild(meta);
-                button.addEventListener("click", function () {
-                    addShapeItem(
-                        this.getAttribute("data-shape-match-name"),
-                        this.getAttribute("data-shape-key"),
-                        tr(this.getAttribute("data-shape-label-key"))
-                    );
-                });
-                list.appendChild(button);
-            }
-            list.setAttribute("data-rendered", "true");
-        }
-        for (i = 0; i < ShapeAddItems.length; i++) {
-            button = list.querySelector('[data-shape-key="' + ShapeAddItems[i].key + '"]');
-            if (button) {
-                label = button.querySelector(".button-label");
-                if (label) {
-                    label.textContent = tr(ShapeAddItems[i].labelKey);
-                }
-            }
-        }
-    }
-
-    function setShapeAddButtonsEnabled(enabled) {
-        var buttons = document.querySelectorAll(".shape-add-button");
-        var i;
-        for (i = 0; i < buttons.length; i++) {
-            buttons[i].disabled = !enabled;
-        }
-    }
-
-    var shapeAddHasComp = false;
-
-    function setStrokeFillButtonEnabled(enabled) {
-        var button = byId("createStrokeFillLayerBtn");
-        if (button) {
-            button.disabled = !enabled;
-        }
-    }
-
-    function setShapeAddState(result) {
-        var card = byId("shapeAddStatus");
-        var canAdd = !!(result && result.canAdd);
-        var message = resultMessage(result, "status.selectShapeLayer");
-        if (card) {
-            card.textContent = message;
-            card.classList.toggle("is-ready", canAdd);
-            card.classList.toggle("is-error", !canAdd);
-        }
-        setShapeAddButtonsEnabled(canAdd);
-        if (result && typeof result.hasComp === "boolean") {
-            shapeAddHasComp = result.hasComp;
-        }
-        setStrokeFillButtonEnabled(shapeAddHasComp);
-        if (byId("selectionPill")) {
-            byId("selectionPill").textContent = canAdd ? (result.targetLabel || tr("selection.shapeTarget")) : tr("selection.noShapeTarget");
-        }
-    }
-
-    function refreshShapeAddState(callback) {
-        evalHost("shapeAdd_getState()", function (raw) {
-            var result = parseResult(raw);
-            setShapeAddState(result);
-            if (callback) {
-                callback(result);
-            }
-        });
-    }
-
-    function addShapeItem(matchName, key, label) {
-        refreshShapeAddState(function (state) {
-            var script;
-            if (!state || !state.canAdd) {
-                setStatus(resultMessage(state, "status.selectShapeLayer"), "error");
-                return;
-            }
-            script = "shapeAdd_add('" + jsxQuote(matchName) + "','" + jsxQuote(key) + "')";
-            setStatus(tr("status.addingShape", { label: label }), "busy", true);
-            evalHost(script, function (raw) {
-                var result = parseResult(raw);
-                setShapeAddState(result);
-                setStatus(result.ok && !result.messageKey ? tr("status.addedShape", { label: label }) : resultMessage(result, "status.addedShape", { label: label }), result.ok ? "ok" : "error");
-            });
-        });
-    }
-
-    function createStrokeFillLayer() {
-        var params;
-        var json;
-        if (!shapeAddHasComp) {
-            setStatus(tr("status.openComp"), "error");
-            refreshShapeAddState();
-            return;
-        }
-        params = collectShapeStrokeFillParams();
-        json = JSON.stringify(params);
-        saveShapeStrokeFillParams();
-        setStatus(tr("status.creatingStrokeFillLayer"), "busy", true);
-        evalHost("shapeAdd_createStrokeFillLayer('" + jsxQuote(json) + "')", function (raw) {
-            var result = parseResult(raw);
-            setStatus(actionMessage(result, "status.createdStrokeFillLayer"), result.ok ? "ok" : "error");
-            if (!result.ok) {
-                setShapeAddState(result);
-            } else {
-                refreshShapeAddState();
-            }
-        });
     }
 
     function openToolWithLaunchTransition(toolButton, toolId) {
@@ -3944,381 +4382,6 @@
         }
     }
 
-    function setupSegmentedControls() {
-        var groups = document.querySelectorAll(".segmented");
-        for (var i = 0; i < groups.length; i++) {
-            ensureSegmentedThumb(groups[i]);
-            updateSegmentedThumb(groups[i], false);
-            groups[i].addEventListener("click", function (event) {
-                var button = event.target;
-                var siblings;
-                var j;
-
-                if (!button || button.tagName !== "BUTTON") {
-                    return;
-                }
-                siblings = button.parentNode.querySelectorAll("button");
-                for (j = 0; j < siblings.length; j++) {
-                    siblings[j].classList.remove("is-active");
-                }
-                button.classList.add("is-active");
-                activeValues[button.parentNode.getAttribute("data-name")] = button.getAttribute("data-value");
-                updateSegmentedThumb(button.parentNode, true);
-                updateConditionalFields();
-                saveToolParams();
-            });
-        }
-
-        window.addEventListener("resize", function () {
-            for (var j = 0; j < groups.length; j++) {
-                updateSegmentedThumb(groups[j], false);
-            }
-        });
-    }
-
-    function ensureSegmentedThumb(group) {
-        var thumb = group.querySelector(".segmented-thumb");
-        if (!thumb) {
-            thumb = document.createElement("span");
-            thumb.className = "segmented-thumb";
-            group.insertBefore(thumb, group.firstChild);
-        }
-        return thumb;
-    }
-
-    function updateSegmentedThumb(group, animate) {
-        var thumb = ensureSegmentedThumb(group);
-        var active = group.querySelector("button.is-active");
-        var groupRect;
-        var activeRect;
-        var x;
-
-        if (!active) {
-            thumb.style.opacity = "0";
-            return;
-        }
-
-        groupRect = group.getBoundingClientRect();
-        activeRect = active.getBoundingClientRect();
-        x = activeRect.left - groupRect.left;
-
-        if (!animate) {
-            thumb.style.transition = "none";
-        } else {
-            thumb.style.transition = "";
-        }
-
-        thumb.style.width = activeRect.width + "px";
-        thumb.style.transform = "translateX(" + x + "px)";
-        thumb.style.opacity = "1";
-
-        if (!animate) {
-            window.setTimeout(function () {
-                thumb.style.transition = "";
-            }, 20);
-        }
-    }
-
-    function updateConditionalFields() {
-        if (!byId("fillColorField") || !byId("strokeColorField")) {
-            return;
-        }
-        var fillIsSolid = activeValues.fillMode === "Solid Fill";
-        var fillIsNone = activeValues.fillMode === "None";
-        var strokeIsSolid = activeValues.strokeMode === "Solid Stroke";
-        var strokeIsNone = activeValues.strokeMode === "None";
-
-        byId("fillColorField").style.display = fillIsSolid ? "flex" : "none";
-        byId("fillOpacityField").style.display = fillIsNone ? "none" : "flex";
-
-        byId("strokeColorField").style.display = strokeIsSolid ? "flex" : "none";
-        byId("strokeWidthField").style.display = strokeIsNone ? "none" : "flex";
-        byId("strokeOpacityField").style.display = strokeIsNone ? "none" : "flex";
-    }
-
-    function collectParams() {
-        return {
-            paddingX: clampNumber(byId("paddingXNumber").value, 40, 0),
-            paddingY: clampNumber(byId("paddingYNumber").value, 20, 0),
-            roundness: clampNumber(byId("roundnessNumber").value, 20, 0),
-            fillMode: activeValues.fillMode,
-            fillColor: byId("fillColor").value,
-            fillOpacity: clampNumber(byId("fillOpacityNumber").value, 80, 0, 100),
-            strokeMode: activeValues.strokeMode,
-            strokeColor: byId("strokeColor").value,
-            strokeWidth: clampNumber(byId("strokeWidthNumber").value, 2, 0),
-            strokeOpacity: clampNumber(byId("strokeOpacityNumber").value, 100, 0, 100)
-        };
-    }
-
-    function setToolParams(params, animateSegments) {
-        var data = params || DefaultToolParams;
-
-        byId("paddingX").value = clampNumber(data.paddingX, DefaultToolParams.paddingX, 0);
-        byId("paddingXNumber").value = byId("paddingX").value;
-        byId("paddingY").value = clampNumber(data.paddingY, DefaultToolParams.paddingY, 0);
-        byId("paddingYNumber").value = byId("paddingY").value;
-        byId("roundness").value = clampNumber(data.roundness, DefaultToolParams.roundness, 0);
-        byId("roundnessNumber").value = byId("roundness").value;
-        setColorValue("fillColor", data.fillColor || DefaultToolParams.fillColor);
-        byId("fillOpacity").value = clampNumber(data.fillOpacity, DefaultToolParams.fillOpacity, 0, 100);
-        byId("fillOpacityNumber").value = byId("fillOpacity").value;
-        setColorValue("strokeColor", data.strokeColor || DefaultToolParams.strokeColor);
-        byId("strokeWidth").value = clampNumber(data.strokeWidth, DefaultToolParams.strokeWidth, 0);
-        byId("strokeWidthNumber").value = byId("strokeWidth").value;
-        byId("strokeOpacity").value = clampNumber(data.strokeOpacity, DefaultToolParams.strokeOpacity, 0, 100);
-        byId("strokeOpacityNumber").value = byId("strokeOpacity").value;
-
-        activeValues.fillMode = data.fillMode || DefaultToolParams.fillMode;
-        activeValues.strokeMode = data.strokeMode || DefaultToolParams.strokeMode;
-        setSegmentedValue("fillMode", activeValues.fillMode, animateSegments);
-        setSegmentedValue("strokeMode", activeValues.strokeMode, animateSegments);
-        updateConditionalFields();
-    }
-
-    function saveToolParams() {
-        saveStoredJson(StorageKeys.tool, collectParams());
-    }
-
-    function collectShapeStrokeFillParams() {
-        if (!byId("sfStrokeWidthNumber")) {
-            return {
-                strokeWidth: DefaultShapeStrokeFillParams.strokeWidth,
-                miterLimit: DefaultShapeStrokeFillParams.miterLimit,
-                trimStart: DefaultShapeStrokeFillParams.trimStart,
-                trimEnd: DefaultShapeStrokeFillParams.trimEnd,
-                trimOffset: DefaultShapeStrokeFillParams.trimOffset,
-                taperStartLength: DefaultShapeStrokeFillParams.taperStartLength,
-                taperEndLength: DefaultShapeStrokeFillParams.taperEndLength,
-                taperStartWidth: DefaultShapeStrokeFillParams.taperStartWidth,
-                taperEndWidth: DefaultShapeStrokeFillParams.taperEndWidth,
-                taperStartEase: DefaultShapeStrokeFillParams.taperStartEase,
-                taperEndEase: DefaultShapeStrokeFillParams.taperEndEase,
-                strokeColor: DefaultShapeStrokeFillParams.strokeColor,
-                fillColor: DefaultShapeStrokeFillParams.fillColor
-            };
-        }
-        return {
-            strokeWidth: clampNumber(byId("sfStrokeWidthNumber").value, DefaultShapeStrokeFillParams.strokeWidth, 0),
-            miterLimit: clampNumber(byId("sfMiterLimitNumber").value, DefaultShapeStrokeFillParams.miterLimit, 0),
-            trimStart: clampNumber(byId("sfTrimStartNumber").value, DefaultShapeStrokeFillParams.trimStart, 0, 100),
-            trimEnd: clampNumber(byId("sfTrimEndNumber").value, DefaultShapeStrokeFillParams.trimEnd, 0, 100),
-            trimOffset: clampNumber(byId("sfTrimOffsetNumber").value, DefaultShapeStrokeFillParams.trimOffset, -360, 360),
-            taperStartLength: clampNumber(byId("sfTaperStartLengthNumber").value, DefaultShapeStrokeFillParams.taperStartLength, 0),
-            taperEndLength: clampNumber(byId("sfTaperEndLengthNumber").value, DefaultShapeStrokeFillParams.taperEndLength, 0),
-            taperStartWidth: clampNumber(byId("sfTaperStartWidthNumber").value, DefaultShapeStrokeFillParams.taperStartWidth, 0),
-            taperEndWidth: clampNumber(byId("sfTaperEndWidthNumber").value, DefaultShapeStrokeFillParams.taperEndWidth, 0),
-            taperStartEase: clampNumber(byId("sfTaperStartEaseNumber").value, DefaultShapeStrokeFillParams.taperStartEase, 0, 100),
-            taperEndEase: clampNumber(byId("sfTaperEndEaseNumber").value, DefaultShapeStrokeFillParams.taperEndEase, 0, 100),
-            strokeColor: normalizeHex(byId("sfStrokeColor").value, DefaultShapeStrokeFillParams.strokeColor),
-            fillColor: normalizeHex(byId("sfFillColor").value, DefaultShapeStrokeFillParams.fillColor)
-        };
-    }
-
-    function setShapeStrokeFillParams(params) {
-        var data = params || DefaultShapeStrokeFillParams;
-
-        setLinkedRangeValue("sfStrokeWidth", data.strokeWidth, DefaultShapeStrokeFillParams.strokeWidth);
-        setLinkedRangeValue("sfMiterLimit", data.miterLimit, DefaultShapeStrokeFillParams.miterLimit);
-        setLinkedRangeValue("sfTrimStart", data.trimStart, DefaultShapeStrokeFillParams.trimStart);
-        setLinkedRangeValue("sfTrimEnd", data.trimEnd, DefaultShapeStrokeFillParams.trimEnd);
-        setLinkedRangeValue("sfTrimOffset", data.trimOffset, DefaultShapeStrokeFillParams.trimOffset);
-        setLinkedRangeValue("sfTaperStartLength", data.taperStartLength, DefaultShapeStrokeFillParams.taperStartLength);
-        setLinkedRangeValue("sfTaperEndLength", data.taperEndLength, DefaultShapeStrokeFillParams.taperEndLength);
-        setLinkedRangeValue("sfTaperStartWidth", data.taperStartWidth, DefaultShapeStrokeFillParams.taperStartWidth);
-        setLinkedRangeValue("sfTaperEndWidth", data.taperEndWidth, DefaultShapeStrokeFillParams.taperEndWidth);
-        setLinkedRangeValue("sfTaperStartEase", data.taperStartEase, DefaultShapeStrokeFillParams.taperStartEase);
-        setLinkedRangeValue("sfTaperEndEase", data.taperEndEase, DefaultShapeStrokeFillParams.taperEndEase);
-        setColorValue("sfStrokeColor", data.strokeColor || DefaultShapeStrokeFillParams.strokeColor);
-        setColorValue("sfFillColor", data.fillColor || DefaultShapeStrokeFillParams.fillColor);
-    }
-
-    function saveShapeStrokeFillParams() {
-        saveStoredJson(StorageKeys.shapeAddStrokeFill, collectShapeStrokeFillParams());
-    }
-
-    function collectEcommerceParams() {
-        return {
-            componentKind: getActiveComponentKind(),
-            gap: clampNumber(byId("ackFeatureGapNumber").value, DefaultEcommerceParams.gap, 0),
-            paddingX: clampNumber(byId("ackFeaturePaddingXNumber").value, DefaultEcommerceParams.paddingX, 0),
-            paddingY: clampNumber(byId("ackFeaturePaddingYNumber").value, DefaultEcommerceParams.paddingY, 0),
-            cornerRadius: clampNumber(byId("ackFeatureRadiusNumber").value, DefaultEcommerceParams.cornerRadius, 0),
-            pillWidthMode: byId("ackFeatureWidthMode").value,
-            fixedWidth: clampNumber(byId("ackFeatureFixedWidthNumber").value, DefaultEcommerceParams.fixedWidth, 1),
-            fillColor: byId("ackFeatureFillColor").value,
-            gradientEnable: !!byId("ackFeatureGradient").checked,
-            textAlign: byId("ackFeatureTextAlign").value,
-            sortMode: byId("ackFeatureSort").value,
-            columns: clampNumber(byId("ackIconColumnsNumber").value, DefaultEcommerceParams.columns, 1, 12),
-            normalizeMode: byId("ackIconNormalizeMode").value,
-            targetWidth: clampNumber(byId("ackIconTargetWidthNumber").value, DefaultEcommerceParams.targetWidth, 1),
-            targetHeight: clampNumber(byId("ackIconTargetHeightNumber").value, DefaultEcommerceParams.targetHeight, 1),
-            cellWidth: clampNumber(byId("ackIconCellWidthNumber").value, DefaultEcommerceParams.cellWidth, 1),
-            cellHeight: clampNumber(byId("ackIconCellHeightNumber").value, DefaultEcommerceParams.cellHeight, 1),
-            gapX: clampNumber(byId("ackIconGapXNumber").value, DefaultEcommerceParams.gapX, 0),
-            gapY: clampNumber(byId("ackIconGapYNumber").value, DefaultEcommerceParams.gapY, 0),
-            lastRowAlign: byId("ackIconLastRowAlign").value,
-            gridSortMode: byId("ackIconSort").value
-        };
-    }
-
-    function setEcommerceParams(params) {
-        var data = params || DefaultEcommerceParams;
-        setLinkedRangeValue("ackFeatureGap", data.gap, DefaultEcommerceParams.gap);
-        setLinkedRangeValue("ackFeaturePaddingX", data.paddingX, DefaultEcommerceParams.paddingX);
-        setLinkedRangeValue("ackFeaturePaddingY", data.paddingY, DefaultEcommerceParams.paddingY);
-        setLinkedRangeValue("ackFeatureRadius", data.cornerRadius, DefaultEcommerceParams.cornerRadius);
-        setLinkedRangeValue("ackFeatureFixedWidth", data.fixedWidth, DefaultEcommerceParams.fixedWidth);
-        setLinkedRangeValue("ackIconColumns", data.columns, DefaultEcommerceParams.columns);
-        setLinkedRangeValue("ackIconTargetWidth", data.targetWidth, DefaultEcommerceParams.targetWidth);
-        setLinkedRangeValue("ackIconTargetHeight", data.targetHeight, DefaultEcommerceParams.targetHeight);
-        setLinkedRangeValue("ackIconCellWidth", data.cellWidth, DefaultEcommerceParams.cellWidth);
-        setLinkedRangeValue("ackIconCellHeight", data.cellHeight, DefaultEcommerceParams.cellHeight);
-        setLinkedRangeValue("ackIconGapX", data.gapX, DefaultEcommerceParams.gapX);
-        setLinkedRangeValue("ackIconGapY", data.gapY, DefaultEcommerceParams.gapY);
-        byId("ackFeatureWidthMode").value = data.pillWidthMode || DefaultEcommerceParams.pillWidthMode;
-        byId("ackFeatureTextAlign").value = data.textAlign || DefaultEcommerceParams.textAlign;
-        byId("ackFeatureSort").value = data.sortMode || DefaultEcommerceParams.sortMode;
-        byId("ackIconNormalizeMode").value = data.normalizeMode || DefaultEcommerceParams.normalizeMode;
-        byId("ackIconLastRowAlign").value = data.lastRowAlign || data.gridAlign || DefaultEcommerceParams.lastRowAlign;
-        byId("ackIconSort").value = data.gridSortMode || DefaultEcommerceParams.gridSortMode;
-        byId("ackFeatureGradient").checked = !!data.gradientEnable;
-        setColorValue("ackFeatureFillColor", data.fillColor || DefaultEcommerceParams.fillColor);
-        setActiveComponentKind(data.componentKind || DefaultEcommerceParams.componentKind, false);
-        syncAllCustomSelects();
-    }
-
-    function saveEcommerceParams() {
-        saveStoredJson(StorageKeys.ecommerce, collectEcommerceParams());
-    }
-
-    function getActiveComponentKind() {
-        var active = document.querySelector(".component-type-card.is-active");
-        return active ? active.getAttribute("data-component-kind") : DefaultEcommerceParams.componentKind;
-    }
-
-    function updateComponentActionButtons(kind) {
-        var selectedKind = kind === "iconGrid" ? "iconGrid" : "featureStack";
-        var buttons = document.querySelectorAll(".component-action-button[data-component-action]");
-        var i;
-        for (i = 0; i < buttons.length; i++) {
-            buttons[i].classList.toggle("is-active", buttons[i].getAttribute("data-component-action") === selectedKind);
-        }
-    }
-
-    function setActiveComponentKind(kind, announce) {
-        var selectedKind = kind === "iconGrid" ? "iconGrid" : "featureStack";
-        var cards = document.querySelectorAll(".component-type-card[data-component-kind]");
-        var builders = document.querySelectorAll(".component-builder[data-component-builder]");
-        var i;
-
-        for (i = 0; i < cards.length; i++) {
-            cards[i].classList.toggle("is-active", cards[i].getAttribute("data-component-kind") === selectedKind);
-            cards[i].setAttribute("aria-selected", cards[i].getAttribute("data-component-kind") === selectedKind ? "true" : "false");
-        }
-        for (i = 0; i < builders.length; i++) {
-            builders[i].classList.toggle("is-active", builders[i].getAttribute("data-component-builder") === selectedKind);
-        }
-        updateComponentActionButtons(selectedKind);
-        saveEcommerceParams();
-        if (announce !== false) {
-            if (selectedKind === "iconGrid") {
-                setComponentKitStatus("Icon Grid selected. Choose any 2D layers in AE.");
-            } else {
-                setComponentKitStatus("Feature Stack selected. Choose one or more text layers in AE.");
-            }
-        }
-    }
-
-    function setComponentKitStatus(message, isError) {
-        var card = byId("componentKitStatus");
-        if (!card) {
-            return;
-        }
-        card.textContent = message || tr("status.readyPeriod");
-        card.classList.toggle("is-error", !!isError);
-    }
-
-    function createFeatureStack() {
-        var json = JSON.stringify(collectEcommerceParams());
-        saveEcommerceParams();
-        setStatus(tr("status.creatingFeatureStack"), "busy", true);
-        evalHost("AEToolbox.tools.adComponentKit.createFeatureStack('" + jsxQuote(json) + "')", function (raw) {
-            var result = parseResult(raw);
-            var message = actionMessage(result, "status.createdFeatureStack");
-            setStatus(message, result.ok ? "ok" : "error");
-            setComponentKitStatus(message, !result.ok);
-        });
-    }
-
-    function createIconGrid() {
-        var json = JSON.stringify(collectEcommerceParams());
-        var script = "AEToolbox.tools.adComponentKit.createIconGrid('" + jsxQuote(json) + "')";
-        saveEcommerceParams();
-        setStatus(tr("status.creatingIconGrid"), "busy", true);
-        if (window.console && console.log) {
-            console.log("[AE Toolbox] Create Icon Grid evalScript:", script);
-            console.log("[AE Toolbox] Create Icon Grid params:", json);
-        }
-        evalHost(script, function (raw) {
-            var result = parseResult(raw);
-            var version = result.version ? " [" + result.version + "]" : " [NO ICON GRID VERSION]";
-            var message = actionMessage(result, "status.createdIconGrid") + version;
-            if (window.console && console.log) {
-                console.log("[AE Toolbox] Create Icon Grid raw result:", raw);
-                console.log("[AE Toolbox] Create Icon Grid parsed result:", result);
-            }
-            setStatus(message, result.ok ? "ok" : "error");
-            setComponentKitStatus(message, !result.ok);
-        });
-    }
-
-    function refreshSelectedComponent() {
-        var json = JSON.stringify(collectEcommerceParams());
-        saveEcommerceParams();
-        setStatus(tr("status.refreshingComponent"), "busy", true);
-        evalHost("AEToolbox.tools.adComponentKit.refreshSelectedComponent('" + jsxQuote(json) + "')", function (raw) {
-            var result = parseResult(raw);
-            var message = actionMessage(result, "status.componentRefreshed");
-            setStatus(message, result.ok ? "ok" : "error");
-            setComponentKitStatus(message, !result.ok);
-        });
-    }
-
-    function selectComponentLayers() {
-        setStatus(tr("status.selectingComponentLayers"), "busy", true);
-        evalHost("AEToolbox.tools.adComponentKit.selectComponentLayers()", function (raw) {
-            var result = parseResult(raw);
-            var message = actionMessage(result, "status.componentLayersSelected");
-            setStatus(message, result.ok ? "ok" : "error");
-            setComponentKitStatus(message, !result.ok);
-        });
-    }
-
-    function detachSelectedComponent() {
-        setStatus(tr("status.detachingComponent"), "busy", true);
-        evalHost("AEToolbox.tools.adComponentKit.detachSelectedComponent()", function (raw) {
-            var result = parseResult(raw);
-            var message = actionMessage(result, "status.componentDetached");
-            setStatus(message, result.ok ? "ok" : "error");
-            setComponentKitStatus(message, !result.ok);
-        });
-    }
-
-    function createBackgroundBox() {
-        var params = collectParams();
-        var json = JSON.stringify(params);
-        setStatus(tr("status.creatingBackgroundBox"), "busy", true);
-        evalHost("AEToolbox.tools.textBackgroundBox.create('" + jsxQuote(json) + "')", function (raw) {
-            var result = parseResult(raw);
-            setStatus(actionMessage(result, "status.createdBackgroundBoxes"), result.ok ? "ok" : "error");
-            if (result.selectionLabel) {
-                byId("selectionPill").textContent = result.selectionLabel;
-            }
-        });
-    }
-
     function refreshSelection() {
         if (!hostLoaded) {
             return;
@@ -4345,6 +4408,7 @@
     function setColorValue(inputId, hex) {
         var input = byId(inputId);
         var shell;
+        var hexInput;
         var normalized = normalizeHex(hex, "#ffffff");
 
         if (!input) {
@@ -4352,9 +4416,13 @@
         }
 
         shell = input.parentNode;
+        hexInput = byId(inputId + "Hex");
         input.value = normalized;
         if (shell) {
             shell.style.backgroundColor = normalized;
+        }
+        if (hexInput) {
+            hexInput.value = normalized;
         }
     }
 
@@ -4428,31 +4496,12 @@
                         applyToolIconTheme(byId("toolIconColor").value, result.color);
                     }
                     saveSettings();
-                } else if (inputId === "sfStrokeColor" || inputId === "sfFillColor") {
-                    saveShapeStrokeFillParams();
-                } else {
-                    saveToolParams();
                 }
                 setStatus(resultMessage(result, "status.colorUpdated"));
                 return;
             }
             setStatus(resultMessage(result, "status.colorUnchanged"), result.ok ? "ok" : "error");
         });
-    }
-
-    function resetDefaults() {
-        setToolParams(DefaultToolParams, true);
-        saveToolParams();
-        setStatus(tr("status.defaultsRestored"));
-    }
-
-    function setSegmentedValue(name, value, animate) {
-        var group = document.querySelector('.segmented[data-name="' + name + '"]');
-        var buttons = group.querySelectorAll("button");
-        for (var i = 0; i < buttons.length; i++) {
-            buttons[i].classList.toggle("is-active", buttons[i].getAttribute("data-value") === value);
-        }
-        updateSegmentedThumb(group, animate !== false);
     }
 
     function setupColorControls() {
@@ -4508,6 +4557,10 @@
                 menu.style.maxHeight = "";
             }
         }
+    }
+
+    function cleanupTransientUiState() {
+        closeCustomSelectMenus();
     }
 
     function getCustomSelectMenu(control) {
@@ -4652,6 +4705,9 @@
 
         control = document.createElement("span");
         control.className = "custom-select select-input-replacement";
+        if (select.classList && select.classList.contains("settings-select")) {
+            control.className += " settings-select-control";
+        }
         control.setAttribute("data-select-for", selectId);
 
         trigger = document.createElement("button");
@@ -4755,14 +4811,19 @@
         for (i = 0; i < selects.length; i++) {
             createCustomSelect(selects[i], i);
         }
-        document.addEventListener("click", function (event) {
-            if (!hasAncestorWithClass(event.target, "custom-select", document) && !hasAncestorWithClass(event.target, "select-menu", document)) {
+        if (!CustomSelectGlobalListenersBound) {
+            CustomSelectGlobalListenersBound = true;
+            document.addEventListener("click", function (event) {
+                if (!hasAncestorWithClass(event.target, "custom-select", document) && !hasAncestorWithClass(event.target, "select-menu", document)) {
+                    closeCustomSelectMenus();
+                }
+            });
+            window.addEventListener("resize", function () {
                 closeCustomSelectMenus();
-            }
-        });
-        window.addEventListener("resize", function () {
-            closeCustomSelectMenus();
-        });
+            });
+            window.addEventListener("beforeunload", cleanupTransientUiState);
+            window.addEventListener("unload", cleanupTransientUiState);
+        }
     }
 
     function setCustomSelectValue(control, value, announce) {
@@ -4900,11 +4961,6 @@
         });
     }
 
-    function setupShapeAddCollapsibles() {
-        setupStoredCollapsible("shapeAddItemsCard", "shapeAddItemsToggle", StorageKeys.shapeAddItemsCollapsed, false);
-        setupStoredCollapsible("strokeFillSettingsCard", "strokeFillSettingsToggle", StorageKeys.shapeAddStrokeFillSettingsCollapsed, true);
-    }
-
     function collectSettings() {
         var autoStatus = byId("autoStatus");
         var registryDebugTools = byId("registryDebugTools");
@@ -4942,8 +4998,6 @@
 
     function loadPersistentState() {
         applySettings(loadStoredJson(StorageKeys.settings, DefaultSettings));
-        setEcommerceParams(loadStoredJson(StorageKeys.ecommerce, DefaultEcommerceParams));
-        setShapeStrokeFillParams(loadStoredJson(StorageKeys.shapeAddStrokeFill, DefaultShapeStrokeFillParams));
     }
 
     function resetSettingsMorphStyles() {
@@ -5147,87 +5201,28 @@
         var closeSettingsBtn;
         var settingsBackdrop;
         var refreshBtn;
-        var componentTypeCards;
-        var componentSelects;
-        var componentRangeIds;
-        var strokeFillRangeIds;
-        var i;
 
-        componentRangeIds = [
-            ["ackFeatureGap", 0, null],
-            ["ackFeaturePaddingX", 0, null],
-            ["ackFeaturePaddingY", 0, null],
-            ["ackFeatureRadius", 0, null],
-            ["ackFeatureFixedWidth", 1, null],
-            ["ackIconColumns", 1, 12],
-            ["ackIconTargetWidth", 1, null],
-            ["ackIconTargetHeight", 1, null],
-            ["ackIconCellWidth", 1, null],
-            ["ackIconCellHeight", 1, null],
-            ["ackIconGapX", 0, null],
-            ["ackIconGapY", 0, null]
-        ];
-        for (i = 0; i < componentRangeIds.length; i++) {
-            linkPersistedRange(componentRangeIds[i][0], componentRangeIds[i][0] + "Number", componentRangeIds[i][1], componentRangeIds[i][2], saveEcommerceParams);
-        }
-        strokeFillRangeIds = [
-            ["sfStrokeWidth", 0, null],
-            ["sfMiterLimit", 0, null],
-            ["sfTrimStart", 0, 100],
-            ["sfTrimEnd", 0, 100],
-            ["sfTrimOffset", -360, 360],
-            ["sfTaperStartLength", 0, null],
-            ["sfTaperEndLength", 0, null],
-            ["sfTaperStartWidth", 0, null],
-            ["sfTaperEndWidth", 0, null],
-            ["sfTaperStartEase", 0, 100],
-            ["sfTaperEndEase", 0, 100]
-        ];
-        for (i = 0; i < strokeFillRangeIds.length; i++) {
-            linkPersistedRange(strokeFillRangeIds[i][0], strokeFillRangeIds[i][0] + "Number", strokeFillRangeIds[i][1], strokeFillRangeIds[i][2], saveShapeStrokeFillParams);
-        }
-
-        setupSegmentedControls();
-        renderShapeAddButtons();
+        renderSettingsContent();
+        renderSettingsTheme();
+        renderSettingsBackgroundEngine();
         setupColorControls();
+        renderSettingsMotion();
         setupMotionSpeed();
         setupUiScale();
+        renderSettingsLanguage();
+        renderSettingsDeveloperMode();
         loadPersistentState();
         setupLanguageSelector();
         setupCollapsibleSettings();
-        setupShapeAddCollapsibles();
         BackgroundEngine.init();
         setupCustomSelectInputs();
         HomeLayoutManager.init();
         configureToolDetail(activeToolId);
-        updateConditionalFields();
         refreshLanguage();
 
         byId("backBtn").addEventListener("click", function () {
             closeToolWithLaunchTransition();
         });
-        if (byId("createStrokeFillLayerBtn")) {
-            byId("createStrokeFillLayerBtn").addEventListener("click", createStrokeFillLayer);
-        }
-        byId("createFeatureStackBtn").addEventListener("click", createFeatureStack);
-        byId("createIconGridBtn").addEventListener("click", createIconGrid);
-        byId("refreshComponentBtn").addEventListener("click", refreshSelectedComponent);
-        byId("selectComponentLayersBtn").addEventListener("click", selectComponentLayers);
-        byId("detachComponentBtn").addEventListener("click", detachSelectedComponent);
-
-        componentTypeCards = document.querySelectorAll(".component-type-card[data-component-kind]");
-        for (i = 0; i < componentTypeCards.length; i++) {
-            componentTypeCards[i].addEventListener("click", function () {
-                setActiveComponentKind(this.getAttribute("data-component-kind"), true);
-            });
-        }
-
-        componentSelects = document.querySelectorAll(".tool-panel[data-tool-panel='ecommerceLayout'] select");
-        for (i = 0; i < componentSelects.length; i++) {
-            componentSelects[i].addEventListener("change", saveEcommerceParams);
-        }
-        byId("ackFeatureGradient").addEventListener("change", saveEcommerceParams);
-
         settingsBtn = byId("settingsBtn");
         closeSettingsBtn = byId("closeSettingsBtn");
         settingsBackdrop = byId("settingsBackdrop");

@@ -34,7 +34,7 @@ Main risks:
 - Static Home entry and dynamic registry tool with the same `shapeAdd` id can conflict; the phased migration removes the static Home card when the registry entry owns `shapeAdd`.
 - `HomeLayoutManager` saved order may be affected by replacing a static card with a dynamic card, so the registry tool must keep the same `shapeAdd` id.
 - Legacy detail panel and registry detail panel can coexist and conflict during panel switching; this must be tested in AE.
-- Shape Add depends on `shapeAdd_getState()` and continuous host-state refresh.
+- Shape Add depends on registry `stateAction` host-state refresh through `AEToolbox.tools.shapeAdd.getRegistryState()`.
 - The 19 native shape item buttons need action-specific payloads such as `key` and `matchName`.
 - Button disabled/enabled state depends on host state, not only local schema.
 - Host messages may return plain `message` strings and mojibake; registry migration should prefer `messageKey`.
@@ -44,12 +44,12 @@ Main risks:
 Recommended migration route:
 
 1. Phase 1: Add core registry renderer action/state capability. Completed.
-2. Phase 2: Add a hidden `shapeAddProbe.tool.jsx`. Completed.
-3. Phase 3: Migrate one minimal action. Covered by the probe.
+2. Phase 2: Add a hidden `shapeAddProbe.tool.jsx`. Completed; the temporary probe was later retired after formal migration.
+3. Phase 3: Migrate one minimal action. Covered by the retired probe and then by the formal registry tool.
 4. Phase 4: Migrate the 19 native shape item buttons. Completed.
 5. Phase 5: Migrate the Stroke / Fill subtool UI to registry while preserving legacy host execution. Completed.
-6. Phase 6: Remove or simplify remaining obsolete frontend helper code only after AE verification.
-7. Phase 7: Remove legacy host wrappers only if no caller uses them.
+6. Phase 6: Remove or simplify remaining obsolete frontend helper code only after AE verification. Completed.
+7. Phase 7: Remove legacy host wrappers only if no caller uses them. Completed.
 
 Future investigation notes:
 
@@ -59,11 +59,93 @@ Future investigation notes:
 
 Do not remove this note until several future Shape Add changes have been tested in After Effects without Home/detail regressions.
 
+## Ad Component Kit registry migration risk
+
+Status:
+
+Historical migration risk / current registry path completed.
+
+Area:
+
+- Ad Component Kit
+- Home tool list
+- Registry / legacy tool coexistence
+- Saved Home layout order
+- Tool detail panel switching
+- Feature Stack and Icon Grid host actions
+
+Current conclusion:
+
+- Ad Component Kit has been formally migrated to the registry path.
+- The current frontend id is `ecommerceLayout`.
+- The current active host module is `host/tools/adComponentKit.jsx`.
+- `host/tools/ecommerceLayout.jsx` was audited as unused legacy / experimental host code and removed.
+- Ad Component Kit is a compound tool: Feature Stack, Icon Grid, and component maintenance actions.
+- The recommended future registry id is `ecommerceLayout` to preserve `aeToolbox.homeToolOrder`.
+- The recommended future shape is one registry tool using tabs / option cards and `visibleWhen`, not multiple Home entries.
+- Existing AE creation logic in `host/tools/adComponentKit.jsx` should be reused, not rewritten.
+
+Main risks:
+
+- A static Home entry and a dynamic registry tool with the same `ecommerceLayout` id can conflict if they coexist.
+- Replacing the static card can affect `HomeLayoutManager` saved order unless the id stays stable.
+- Legacy detail DOM and registry detail panel can coexist and conflict during detail switching.
+- Feature Stack and Icon Grid have different valid-selection requirements and need host state.
+- Refresh, select component layers, and detach require selected controller metadata.
+- Host actions currently return plain `message` strings; registry migration should move toward `messageKey` fallbacks.
+- Existing user parameters are stored under `AEToolbox.ecommerceLayout.v1`; persistence migration must not lose values.
+
+Recommended migration route:
+
+1. Phase 1: migration notes and schema draft. Completed.
+2. Phase 2: Developer Mode probe with a non-production id such as `adComponentKitProbe`. Completed; the temporary probe was later retired after formal migration.
+3. Phase 3: validate one minimal official action.
+4. Phase 4: migrate Feature Stack and Icon Grid through tabs / visibleWhen.
+5. Phase 5: migrate maintenance actions and stateCard.
+6. Phase 6: same-id replacement using `id: "ecommerceLayout"`.
+7. Phase 7: remove legacy DOM, event bindings, CSS, and i18n after AE testing.
+
+Do not rename the `ecommerceLayout` registry id or storage key without a dedicated HomeLayout / storage migration.
+
+## CEP panel close freeze
+
+Status:
+
+Deferred to 0.2.4.
+
+Area:
+
+- CEP panel shutdown
+- App close / unload lifecycle
+- Host bridge calls
+- Runtime polling / timers
+- localStorage save paths
+
+Observed behavior:
+
+- Closing the plugin window can make After Effects appear frozen for several seconds to more than ten seconds.
+- This is not addressed in the 0.2.3 release preparation.
+
+Current decision:
+
+- Do not treat this as fixed in 0.2.3.
+- Do not make opportunistic shutdown changes while preparing documentation or unrelated migration cleanup.
+- Schedule a dedicated 0.2.4 investigation.
+
+Future investigation notes:
+
+- Audit pending `CSInterface.evalScript()` calls during close / unload.
+- Audit registry `stateAction` polling intervals and cleanup.
+- Audit Settings / registry document and window listeners.
+- Audit custom select / portal cleanup.
+- Audit localStorage save bursts during unload.
+- Audit `beforeunload`, panel close transition callbacks, and stale DOM access after view teardown.
+
 ## Settings background preset dropdown render glitch
 
 Status:
 
-Deferred / To be handled in future UI stabilization pass.
+Deferred / Pending extended regression testing after Background Engine Settings schema migration.
 
 Area:
 
@@ -92,9 +174,11 @@ Attempted fixes:
 
 Current decision:
 
-- Stop active debugging for now.
-- Keep the issue documented.
-- Revisit later in a dedicated UI stabilization pass.
+- Stop direct legacy dropdown debugging.
+- Keep the issue documented until the migrated Settings schema-rendered Background Engine UI is tested repeatedly in AE.
+- Background Engine UI migration now routes the preset control through the shared Settings renderer/custom select lifecycle while preserving the existing `BackgroundEngine` behavior layer.
+- Settings internal UI shell migration keeps using the shared portal-style select lifecycle; this issue remains pending extended regression verification.
+- Do not mark this issue fixed until repeated open/close, ESC, outside click, resize, and language-switch tests show no recurrence.
 
 Future investigation notes:
 
@@ -104,7 +188,7 @@ Future investigation notes:
 - Check scroll container height / overflow state.
 - Check stale open / active classes.
 - Check whether the dropdown popover should be rendered in a portal layer instead of inside the scroll container.
-- Consider replacing Settings preset dropdown with the same standardized registry select component if appropriate.
+- Continue validating that the shared portal-style custom select used by the migrated Settings renderer does not reproduce the old layout glitch.
 - Consider building a small UI state stress test before further fixes.
 
 Do not claim the issue is fixed.

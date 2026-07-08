@@ -8,11 +8,48 @@ This project follows simple semantic versioning for development handoff:
 - `MINOR`: new tools or substantial user-facing capabilities.
 - `PATCH`: fixes, UI adjustments, and documentation updates.
 
-## Unreleased
+## [0.2.3] - 2026-07-08
+
+Release candidate documentation only. Do not update `VERSION` or `CSXS/manifest.xml` until the release task explicitly requests it.
+
+### Added
+
+- Added an app-level Global Settings Schema draft in `client/js/settingsSchema.js`.
+- Documented that Settings is an app-level core settings framework and should not be migrated as a normal registry tool.
+- Added a Developer Mode-only Settings Renderer Lab for sandbox testing the future app-level Settings schema controls.
+- Migrated the production Settings Developer Mode row to the app-level Settings schema renderer path while preserving the existing `AEToolbox.settings.v1.registryDebugTools` storage.
+- Migrated the production Settings Language row to the app-level Settings schema renderer path while preserving the existing `aeToolbox.language` storage.
+- Migrated the production Settings Motion Speed and UI Scale rows to the app-level Settings schema renderer path while preserving the existing `AEToolbox.settings.v1` storage.
+- Migrated the production Settings Theme color rows to the app-level Settings schema renderer path while preserving the existing `AEToolbox.settings.v1` storage and color application logic.
+- Added Ad Component Kit registry migration notes and a schema draft without connecting it to the production Home/detail path.
+- Migrated Ad Component Kit to the unified registry tool path with id `ecommerceLayout`, including Feature Stack, Icon Grid, and maintenance actions.
+- Added `scripts/report-i18n-usage.js` and `docs/reports/i18n-usage-report.md` to guide conservative i18n cleanup before deleting global keys.
 
 ### Notes
 
-- No unreleased changes yet.
+- Settings schema data is now used by the production Settings renderer for migrated rows, while Settings remains an app-level core panel and still preserves existing storage and behavior adapters.
+- Settings Renderer Lab uses sandbox storage key `AEToolbox.settingsLab.v1` and does not write production Settings keys.
+- Ad Component Kit now uses registry metadata/detail rendering while preserving `AEToolbox.ecommerceLayout.v1` and reusing `host/tools/adComponentKit.jsx`.
+- Removed the legacy Ad Component Kit frontend detail DOM, action footer, event binding, unused component/ecom CSS, and obsolete global Ad Component Kit i18n entries. The static Home card remains as the saved-order anchor for `ecommerceLayout`.
+- Removed the unused legacy / experimental `host/tools/ecommerceLayout.jsx` host module after confirming the active Ad Component Kit runtime path uses `host/tools/adComponentKit.jsx`.
+- Retired obsolete Developer Mode probes `registryProbe`, `shapeAddProbe`, and `adComponentKitProbe`; Registry Control Lab and Settings Renderer Lab remain available for renderer/settings validation.
+- Settings renderer baseline has been restored to the stable path after the failed visual-unification attempt; Settings remains an app-level core settings framework, not a normal registry tool.
+- Tool-local i18n is now the expected location for registry tool strings; `client/js/i18n.js` is reserved for core, Home, Settings, common, and fallback copy.
+
+### Changed
+
+- Ad Component Kit is now the visible unified registry tool for Feature Stack, Icon Grid, and maintenance actions while keeping registry id `ecommerceLayout` and storage key `AEToolbox.ecommerceLayout.v1`.
+- Shape Add / Shape Builder has completed registry migration for native shape items and Stroke / Fill, with obsolete frontend adapter, duplicate `shapeAdd.item.*` global i18n, legacy Shape Add CSS, and old host global wrappers removed.
+- Text Background Box / Text Plate has completed registry migration and legacy frontend adapter cleanup.
+- Home and registry option-card colors now follow theme/design tokens instead of hard-coded accent colors.
+
+### Fixed
+
+- Fixed Shape Add registry number/range input typing so partially typed values such as `1`, `1.`, `12`, and `12.5` are not formatted until commit.
+
+### Known Issues
+
+- Deferred to 0.2.4: closing the CEP panel can still make AE appear frozen for several seconds to more than ten seconds. 0.2.3 does not attempt to fix this; future work should audit CEP unload, pending `evalScript`, polling/state intervals, document/window listeners, and localStorage save paths.
 
 ## [0.2.2] - 2026-07-03
 
@@ -46,7 +83,7 @@ This project follows simple semantic versioning for development handoff:
 - Added a debug-only Shape Add Probe registry tool to validate action payload, stateAction, state-driven disabled state, state card, and after-run state refresh against the legacy Shape Add host action.
 - Documented the Shape Add registry migration audit before continuing with a phased AE-tested migration path.
 - Migrated the formal Shape Add native item buttons to the `.tool.jsx` registry path using action payloads, host state, state-driven disabled buttons, and after-run state refresh.
-- Migrated the Shape Add Stroke / Fill Shape Layer subtool UI into registry sections while reusing the existing `shapeAdd_createStrokeFillLayer(paramsJson)` host logic.
+- Migrated the Shape Add Stroke / Fill Shape Layer subtool UI into registry sections while routing through the registered `createStrokeFillLayer` action and preserving `host/tools/shapeAdd.jsx` behavior.
 - Moved Stroke / Fill parameters into a collapsible registry settings section under the create button and added a section-local reset defaults button.
 - Removed the legacy static Home card for Shape Add so the registry Shape Add entry owns the Home card and saved `toolId` order can continue using `shapeAdd`.
 - Added hidden / field-only registry actions so schema button fields can resolve host functions without creating duplicate footer buttons.
@@ -138,7 +175,7 @@ This project follows simple semantic versioning for development handoff:
 
 ### Known Issues
 
-- `host/tools/ecommerceLayout.jsx` is still included but appears to be legacy or experimental relative to the active Ad Component Kit UI path.
+- `host/tools/ecommerceLayout.jsx` has been removed after audit; Ad Component Kit active host behavior is `host/tools/adComponentKit.jsx`.
 - Some host JSX messages are plain `message` strings rather than `messageKey` values.
 - `client/js/main.js` and `client/css/style.css` are large and should be patched carefully instead of rewritten.
 - CEP or AE may cache old JavaScript or JSX; reopen the panel or restart AE when changes do not appear.

@@ -97,6 +97,30 @@ Rules:
 - Custom selects should use the project overlay style, not system dropdown styling.
 - Persist settings in `localStorage`.
 
+Settings are an app-level core panel, not a registry tool.
+
+Current state:
+
+- The production Settings panel keeps its static shell in `client/index.html`, but migrated sections are rendered from the app-level Settings schema.
+- The current behavior remains in `client/js/main.js`.
+- `BackgroundEngine` remains legacy behavior and should not be replaced opportunistically.
+- `client/js/settingsSchema.js` is the draft app-level data model.
+- The production panel currently renders Language, Developer Mode, Motion Speed, UI Scale, Theme colors, and Background Engine controls from the Settings schema.
+- The Settings renderer baseline has been restored to the stable path after the failed visual-unification attempt.
+- Settings internal content should render through a single content pass and use Settings-specific visual classes such as `settings-renderer`, `settings-section`, `settings-section-header`, `settings-field`, and `settings-action-row`.
+- The outer morph shell classes such as `settings-view`, `settings-panel`, and `settings-ui-layer` are shell infrastructure and should not be removed during visual migration.
+- Background Engine behavior remains owned by the existing `BackgroundEngine` runtime; the schema renderer preserves the legacy control IDs and storage keys.
+
+Future direction:
+
+- Settings must remain an app-level Settings Schema / Settings Renderer system, not a `host/tools/*.tool.jsx` registry tool.
+- Settings UI changes should be focused and AE-tested; do not rewrite the shell or `BackgroundEngine` behavior during unrelated work.
+- The Settings Renderer Lab is Developer Mode-only and uses sandbox storage; it must not write production Settings keys.
+- Settings i18n belongs to core/global dictionaries in `client/js/i18n.js`.
+- Developer Mode is a core setting that controls debug/probe/lab registry tool visibility.
+- Developer Mode must not be implemented as a tool-specific condition such as `shapeAddProbe` only.
+- Background Engine preset selection should continue using the shared portal-style custom select lifecycle and requires repeated regression testing because the old legacy preset dropdown had a deferred render glitch.
+
 ## i18n Copy Rules
 
 - Use concise labels.
@@ -105,6 +129,9 @@ Rules:
 - Use `I18n.t()` / `tr()` for dynamic text.
 - Avoid hard-coded user-visible English or Chinese in `main.js`.
 - Host JSX should return `messageKey` when practical; otherwise frontend falls back to `message`.
+- Registry tool-specific copy belongs in the owning `host/tools/*.tool.jsx` `i18n` block.
+- `client/js/i18n.js` should retain core/global/Settings/Home/legacy fallback copy.
+- Before deleting global i18n keys, run `node scripts/report-i18n-usage.js` and review `docs/reports/i18n-usage-report.md`; treat dynamic and fallback paths conservatively.
 
 ## Motion System
 
@@ -373,12 +400,12 @@ Shape Add is a compound tool. It must not be treated as a normal parameter-only 
 The phased migration path is:
 
 1. Add core renderer action/state capability.
-2. Add hidden `shapeAddProbe.tool.jsx`.
-3. Validate one minimal rectangle action.
+2. Add hidden `shapeAddProbe.tool.jsx`. Completed and later retired after formal migration.
+3. Validate one minimal rectangle action. Completed through the retired probe.
 4. Migrate the 19 native shape item buttons. Completed.
 5. Migrate Stroke / Fill Shape Layer subtool UI through registry schema while preserving the legacy host implementation. Completed.
-6. Remove or simplify remaining obsolete frontend helper code only after AE verification.
-7. Remove legacy host wrappers only when no registered or global caller uses them.
+6. Remove or simplify remaining obsolete frontend helper code only after AE verification. Completed.
+7. Remove legacy host wrappers only when no registered or global caller uses them. Completed.
 
 The formal registry Shape Add uses:
 
@@ -390,7 +417,7 @@ The formal registry Shape Add uses:
 - `enabledWhen` / `disabledWhen` style state checks so buttons do not fire without a valid target.
 - `refreshStateAfterRun` after each add action.
 - Existing legacy host execution in `host/tools/shapeAdd.jsx`; do not rewrite AE layer creation logic for this migration step.
-- Registry range/color/full-width button fields for the Stroke / Fill Shape Layer subtool, calling the existing `shapeAdd_createStrokeFillLayer(paramsJson)` behavior through a registry action wrapper.
+- Registry range/color/full-width button fields for the Stroke / Fill Shape Layer subtool, calling `AEToolbox.runRegisteredToolAction("shapeAdd", "createStrokeFillLayer", paramsJson)` through the registry action path.
 - A collapsible Stroke / Fill settings section below the create button, with a local reset button that affects only Stroke / Fill defaults.
 
 Known constraints remain:
@@ -398,10 +425,47 @@ Known constraints remain:
 - The static Home Shape Add card must not coexist with the dynamic registry `shapeAdd` card.
 - The registry tool keeps the same `shapeAdd` id so saved Home layout order remains meaningful.
 - The legacy detail panel may remain in markup while the registry detail path owns the active `shapeAdd` page.
-- The Stroke / Fill Shape Layer subtool UI is registry-rendered, but host execution remains in legacy `shapeAdd.jsx` until a later cleanup pass.
+- The Stroke / Fill Shape Layer subtool UI is registry-rendered, while host execution remains in `host/tools/shapeAdd.jsx`.
 - Plain host `message` strings should continue moving toward `messageKey` normalization.
 
 Do not add Shape Add-specific CSS or custom page structure during this process. Any capability needed by Shape Add should become a reusable core registry renderer capability first.
+
+## Ad Component Kit Registry Migration Constraint
+
+Ad Component Kit is also a compound tool, but its current scope is narrower than Shape Add:
+
+- Feature Stack builder.
+- Icon Grid builder.
+- Component maintenance actions for refresh, select child layers, and detach.
+
+The current production registry id is `ecommerceLayout`, while the active host implementation is `host/tools/adComponentKit.jsx`. The old `host/tools/ecommerceLayout.jsx` guide/template host module was separately audited and removed because no active runtime path called it.
+
+Current registry design:
+
+- One registry tool owns Feature Stack, Icon Grid, and maintenance actions instead of splitting them into multiple Home entries.
+- Id is `ecommerceLayout` so saved Home layout order remains compatible.
+- `tabs` / option cards switch Feature Stack vs Icon Grid.
+- `visibleWhen` switches fields by `componentKind`.
+- `stateAction` and `stateCard` show active comp, selection count, valid text layer count, valid 2D layer count, selected controller type, and action availability.
+- `enabledWhen` / `disabledWhen` gate create, refresh, select, and detach actions.
+- The tool reuses the existing `host/tools/adComponentKit.jsx` AE creation logic.
+- `AEToolbox.ecommerceLayout.v1` remains the storage key to preserve user parameters.
+- The registry id remains `ecommerceLayout` for HomeLayout and storage compatibility; do not rename it without a dedicated migration.
+- The legacy Ad Component Kit detail DOM, footer actions, frontend event binding, and unused component/ecom CSS have been removed after AE verification.
+- The static Home card remains only as a saved-order-compatible Home entry for the same `ecommerceLayout` id; registry metadata owns the active detail page and actions.
+- The legacy `host/tools/ecommerceLayout.jsx` host module has been removed; active behavior is `host/tools/adComponentKit.jsx`.
+
+Migration was phased:
+
+1. Schema draft and migration notes.
+2. Developer Mode probe with a non-production id such as `adComponentKitProbe`. Completed and later retired after formal migration.
+3. Minimal official action validation.
+4. Full tabs / visibleWhen migration.
+5. Maintenance actions and state card.
+6. Same-id replacement of the legacy Home/detail path.
+7. Legacy DOM, event, CSS, and i18n cleanup after AE verification. Completed for the frontend detail path.
+
+Do not add Ad Component Kit-specific DOM, CSS, or custom page structure during migration. Any missing UI behavior must become a generic core renderer capability first.
 
 Supported field types in the current generic renderer:
 
@@ -426,3 +490,17 @@ window.AETOOLBOX_DEBUG_REGISTRY === true
 ```
 
 By default, registry tools must not show `Registry`, tool id, host function, raw schema, or other implementation details in the user-facing detail page.
+
+## 0.2.3 Cleanup State
+
+Before the 0.2.3 release, the current design-system-relevant cleanup state is:
+
+- Ad Component Kit is a unified registry tool with id `ecommerceLayout`, storage `AEToolbox.ecommerceLayout.v1`, schema `host/tools/adComponentKit.tool.jsx`, and host behavior `host/tools/adComponentKit.jsx`.
+- Shape Add is a registry tool with legacy frontend adapter, duplicate `shapeAdd.item.*` global i18n, old Shape Add CSS, and old global host wrappers removed.
+- Text Background Box is a registry tool with the old frontend adapter removed.
+- Registry tool-specific i18n should live in `.tool.jsx`; `client/js/i18n.js` should keep core, Home, Settings, common, and fallback strings.
+- Registry Control Lab and Settings Renderer Lab remain Developer Mode-only labs; retired probes should not reappear as formal Home tools.
+
+Deferred 0.2.4 risk:
+
+- Closing the CEP panel can still make AE appear frozen for several seconds to more than ten seconds. This is a lifecycle/performance issue, not a visual design-system issue, and should be handled in a focused future task.
