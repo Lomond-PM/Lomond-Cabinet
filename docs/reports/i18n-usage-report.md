@@ -11,7 +11,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | A | Core / Global; keep | 64 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 23 |
-| D | Candidate delete; low-risk after AE test | 6 |
+| D | Candidate delete; low-risk after AE test | 0 |
 | E | Deferred / uncertain | 120 |
 
 ## Registry Tools i18n Table
@@ -237,14 +237,8 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | tools.adComponentKit.title | tools.adComponentKit | Ad Component Kit | 电商组件工具箱 | client/js/main.js, host/tools/adComponentKit.tool.jsx | adComponentKit.tool.jsx:en, adComponentKit.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
 | tools.moreTools.title | tools.moreTools | More Tools | 更多工具 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | tools.quickStack.title | tools.quickStack | Quick Stack | 快速堆叠 | none | no | E | Reserved or unused Home label. Confirm no planned implementation before deleting. |
-| tools.selectionInfo.description | tools.selectionInfo | Ask the After Effects host for the current comp selection and show a ... | 从 After Effects 主机读取当前合成选择，并显示紧凑的图层摘要。 | host/tools/selectionInfo.tool.jsx | selectionInfo.tool.jsx:en, selectionInfo.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
-| tools.selectionInfo.introTitle | tools.selectionInfo | Read selected layers | 读取选中图层 | none | no | D | Candidate delete. Obsolete tool/global copy has no runtime reference in this report. |
-| tools.selectionInfo.title | tools.selectionInfo | Selection Info | 选择信息 | host/tools/selectionInfo.tool.jsx | selectionInfo.tool.jsx:en, selectionInfo.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
 | tools.shapeAdd.description | tools.shapeAdd | Add native Shape Layer items or create a linked Stroke / Fill shape l... | 添加原生 Shape Layer 元素，或创建联动的 Stroke / Fill 形状图层。 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
 | tools.shapeAdd.title | tools.shapeAdd | Shape Add | 形状添加 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| tools.textBackgroundBox.description | tools.textBackgroundBox | Create a rounded rectangle behind selected layers, or a default 100x1... | 为选中图层创建背景圆角矩形；未选中图层时创建 100x100 默认矩形。 | host/tools/textBackgroundBox.tool.jsx | textBackgroundBox.tool.jsx:en, textBackgroundBox.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
-| tools.textBackgroundBox.introTitle | tools.textBackgroundBox | Create rounded backgrounds | 创建背景圆角矩形 | none | no | D | Candidate delete. Obsolete tool/global copy has no runtime reference in this report. |
-| tools.textBackgroundBox.title | tools.textBackgroundBox | Background Rounded Rectangle | 背景圆角矩形 | host/tools/textBackgroundBox.tool.jsx | textBackgroundBox.tool.jsx:en, textBackgroundBox.tool.jsx:zh-CN | D | Candidate delete after AE language-switch and startup fallback test. |
 
 ## Duplicate Tool Key Table
 
@@ -277,23 +271,12 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | shapeAdd.item.zigZag | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
 | tools.adComponentKit.description | client/js/i18n.js | adComponentKit.tool.jsx:en, adComponentKit.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
 | tools.adComponentKit.title | client/js/i18n.js | adComponentKit.tool.jsx:en, adComponentKit.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| tools.selectionInfo.description | client/js/i18n.js | selectionInfo.tool.jsx:en, selectionInfo.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
-| tools.selectionInfo.title | client/js/i18n.js | selectionInfo.tool.jsx:en, selectionInfo.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
 | tools.shapeAdd.description | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
 | tools.shapeAdd.title | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| tools.textBackgroundBox.description | client/js/i18n.js | textBackgroundBox.tool.jsx:en, textBackgroundBox.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
-| tools.textBackgroundBox.title | client/js/i18n.js | textBackgroundBox.tool.jsx:en, textBackgroundBox.tool.jsx:zh-CN | Candidate delete after AE language-switch and startup fallback test. | Low |
 
 ## Candidate Delete Table
 
-| key | reason | required AE test |
-| --- | --- | --- |
-| tools.selectionInfo.description | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
-| tools.selectionInfo.introTitle | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
-| tools.selectionInfo.title | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
-| tools.textBackgroundBox.description | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
-| tools.textBackgroundBox.introTitle | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
-| tools.textBackgroundBox.title | Tool-local duplicate with no non-tool runtime reference found by conservative text scan. | Open AE, switch language, reload panel, open affected tool detail, verify Home fallback. |
+No low-risk delete candidates found.
 
 ## Deferred Table
 
