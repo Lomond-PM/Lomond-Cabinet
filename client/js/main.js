@@ -11,10 +11,6 @@
     var motionScale = 1;
     var animationWarmupDone = false;
     var activeToolId = "shapeAdd";
-    var activeValues = {
-        fillMode: "Solid Fill",
-        strokeMode: "None"
-    };
     var Motion = {
         appleOut: "cubic-bezier(0.16, 1, 0.3, 1)",
         appleStandard: "cubic-bezier(0.22, 1, 0.36, 1)",
@@ -26,7 +22,6 @@
         close: 360
     };
     var StorageKeys = {
-        tool: "AEToolbox.textBackgroundBox.v1",
         ecommerce: "AEToolbox.ecommerceLayout.v1",
         settings: "AEToolbox.settings.v1",
         background: "AEToolbox.background.v1",
@@ -55,18 +50,6 @@
     var RegistrySaveTimers = {};
     var RegistryRuntimeStates = {};
     var CustomSelectGlobalListenersBound = false;
-    var DefaultToolParams = {
-        paddingX: 40,
-        paddingY: 20,
-        roundness: 20,
-        fillMode: "Solid Fill",
-        fillColor: "#202020",
-        fillOpacity: 80,
-        strokeMode: "None",
-        strokeColor: "#ffffff",
-        strokeWidth: 2,
-        strokeOpacity: 100
-    };
     var DefaultShapeStrokeFillParams = {
         strokeWidth: 7,
         miterLimit: 14,
@@ -4531,142 +4514,6 @@
         }
     }
 
-    function setupSegmentedControls() {
-        var groups = document.querySelectorAll(".segmented");
-        for (var i = 0; i < groups.length; i++) {
-            ensureSegmentedThumb(groups[i]);
-            updateSegmentedThumb(groups[i], false);
-            groups[i].addEventListener("click", function (event) {
-                var button = event.target;
-                var siblings;
-                var j;
-
-                if (!button || button.tagName !== "BUTTON") {
-                    return;
-                }
-                siblings = button.parentNode.querySelectorAll("button");
-                for (j = 0; j < siblings.length; j++) {
-                    siblings[j].classList.remove("is-active");
-                }
-                button.classList.add("is-active");
-                activeValues[button.parentNode.getAttribute("data-name")] = button.getAttribute("data-value");
-                updateSegmentedThumb(button.parentNode, true);
-                updateConditionalFields();
-                saveToolParams();
-            });
-        }
-
-        window.addEventListener("resize", function () {
-            for (var j = 0; j < groups.length; j++) {
-                updateSegmentedThumb(groups[j], false);
-            }
-        });
-    }
-
-    function ensureSegmentedThumb(group) {
-        var thumb = group.querySelector(".segmented-thumb");
-        if (!thumb) {
-            thumb = document.createElement("span");
-            thumb.className = "segmented-thumb";
-            group.insertBefore(thumb, group.firstChild);
-        }
-        return thumb;
-    }
-
-    function updateSegmentedThumb(group, animate) {
-        var thumb = ensureSegmentedThumb(group);
-        var active = group.querySelector("button.is-active");
-        var groupRect;
-        var activeRect;
-        var x;
-
-        if (!active) {
-            thumb.style.opacity = "0";
-            return;
-        }
-
-        groupRect = group.getBoundingClientRect();
-        activeRect = active.getBoundingClientRect();
-        x = activeRect.left - groupRect.left;
-
-        if (!animate) {
-            thumb.style.transition = "none";
-        } else {
-            thumb.style.transition = "";
-        }
-
-        thumb.style.width = activeRect.width + "px";
-        thumb.style.transform = "translateX(" + x + "px)";
-        thumb.style.opacity = "1";
-
-        if (!animate) {
-            window.setTimeout(function () {
-                thumb.style.transition = "";
-            }, 20);
-        }
-    }
-
-    function updateConditionalFields() {
-        if (!byId("fillColorField") || !byId("strokeColorField")) {
-            return;
-        }
-        var fillIsSolid = activeValues.fillMode === "Solid Fill";
-        var fillIsNone = activeValues.fillMode === "None";
-        var strokeIsSolid = activeValues.strokeMode === "Solid Stroke";
-        var strokeIsNone = activeValues.strokeMode === "None";
-
-        byId("fillColorField").style.display = fillIsSolid ? "flex" : "none";
-        byId("fillOpacityField").style.display = fillIsNone ? "none" : "flex";
-
-        byId("strokeColorField").style.display = strokeIsSolid ? "flex" : "none";
-        byId("strokeWidthField").style.display = strokeIsNone ? "none" : "flex";
-        byId("strokeOpacityField").style.display = strokeIsNone ? "none" : "flex";
-    }
-
-    function collectParams() {
-        return {
-            paddingX: clampNumber(byId("paddingXNumber").value, 40, 0),
-            paddingY: clampNumber(byId("paddingYNumber").value, 20, 0),
-            roundness: clampNumber(byId("roundnessNumber").value, 20, 0),
-            fillMode: activeValues.fillMode,
-            fillColor: byId("fillColor").value,
-            fillOpacity: clampNumber(byId("fillOpacityNumber").value, 80, 0, 100),
-            strokeMode: activeValues.strokeMode,
-            strokeColor: byId("strokeColor").value,
-            strokeWidth: clampNumber(byId("strokeWidthNumber").value, 2, 0),
-            strokeOpacity: clampNumber(byId("strokeOpacityNumber").value, 100, 0, 100)
-        };
-    }
-
-    function setToolParams(params, animateSegments) {
-        var data = params || DefaultToolParams;
-
-        byId("paddingX").value = clampNumber(data.paddingX, DefaultToolParams.paddingX, 0);
-        byId("paddingXNumber").value = byId("paddingX").value;
-        byId("paddingY").value = clampNumber(data.paddingY, DefaultToolParams.paddingY, 0);
-        byId("paddingYNumber").value = byId("paddingY").value;
-        byId("roundness").value = clampNumber(data.roundness, DefaultToolParams.roundness, 0);
-        byId("roundnessNumber").value = byId("roundness").value;
-        setColorValue("fillColor", data.fillColor || DefaultToolParams.fillColor);
-        byId("fillOpacity").value = clampNumber(data.fillOpacity, DefaultToolParams.fillOpacity, 0, 100);
-        byId("fillOpacityNumber").value = byId("fillOpacity").value;
-        setColorValue("strokeColor", data.strokeColor || DefaultToolParams.strokeColor);
-        byId("strokeWidth").value = clampNumber(data.strokeWidth, DefaultToolParams.strokeWidth, 0);
-        byId("strokeWidthNumber").value = byId("strokeWidth").value;
-        byId("strokeOpacity").value = clampNumber(data.strokeOpacity, DefaultToolParams.strokeOpacity, 0, 100);
-        byId("strokeOpacityNumber").value = byId("strokeOpacity").value;
-
-        activeValues.fillMode = data.fillMode || DefaultToolParams.fillMode;
-        activeValues.strokeMode = data.strokeMode || DefaultToolParams.strokeMode;
-        setSegmentedValue("fillMode", activeValues.fillMode, animateSegments);
-        setSegmentedValue("strokeMode", activeValues.strokeMode, animateSegments);
-        updateConditionalFields();
-    }
-
-    function saveToolParams() {
-        saveStoredJson(StorageKeys.tool, collectParams());
-    }
-
     function collectShapeStrokeFillParams() {
         if (!byId("sfStrokeWidthNumber")) {
             return {
@@ -4722,19 +4569,6 @@
 
     function saveShapeStrokeFillParams() {
         saveStoredJson(StorageKeys.shapeAddStrokeFill, collectShapeStrokeFillParams());
-    }
-
-    function createBackgroundBox() {
-        var params = collectParams();
-        var json = JSON.stringify(params);
-        setStatus(tr("status.creatingBackgroundBox"), "busy", true);
-        evalHost("AEToolbox.tools.textBackgroundBox.create('" + jsxQuote(json) + "')", function (raw) {
-            var result = parseResult(raw);
-            setStatus(actionMessage(result, "status.createdBackgroundBoxes"), result.ok ? "ok" : "error");
-            if (result.selectionLabel) {
-                byId("selectionPill").textContent = result.selectionLabel;
-            }
-        });
     }
 
     function refreshSelection() {
@@ -4853,29 +4687,12 @@
                     saveSettings();
                 } else if (inputId === "sfStrokeColor" || inputId === "sfFillColor") {
                     saveShapeStrokeFillParams();
-                } else {
-                    saveToolParams();
                 }
                 setStatus(resultMessage(result, "status.colorUpdated"));
                 return;
             }
             setStatus(resultMessage(result, "status.colorUnchanged"), result.ok ? "ok" : "error");
         });
-    }
-
-    function resetDefaults() {
-        setToolParams(DefaultToolParams, true);
-        saveToolParams();
-        setStatus(tr("status.defaultsRestored"));
-    }
-
-    function setSegmentedValue(name, value, animate) {
-        var group = document.querySelector('.segmented[data-name="' + name + '"]');
-        var buttons = group.querySelectorAll("button");
-        for (var i = 0; i < buttons.length; i++) {
-            buttons[i].classList.toggle("is-active", buttons[i].getAttribute("data-value") === value);
-        }
-        updateSegmentedThumb(group, animate !== false);
     }
 
     function setupColorControls() {
@@ -5601,7 +5418,6 @@
             linkPersistedRange(strokeFillRangeIds[i][0], strokeFillRangeIds[i][0] + "Number", strokeFillRangeIds[i][1], strokeFillRangeIds[i][2], saveShapeStrokeFillParams);
         }
 
-        setupSegmentedControls();
         renderShapeAddButtons();
         renderSettingsContent();
         renderSettingsTheme();
@@ -5620,7 +5436,6 @@
         setupCustomSelectInputs();
         HomeLayoutManager.init();
         configureToolDetail(activeToolId);
-        updateConditionalFields();
         refreshLanguage();
 
         byId("backBtn").addEventListener("click", function () {
