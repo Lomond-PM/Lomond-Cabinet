@@ -1,13 +1,14 @@
 # Ad Component Kit Registry Schema Draft
 
-Status: draft only. Not connected to the production Home, detail renderer, or host runtime.
+Status: historical schema draft / implemented reference.
 
-This document records the proposed registry design for migrating the legacy Ad Component Kit / Ecommerce Component Kit. It must not be treated as an implementation file.
+This document records the migration design that guided the Ad Component Kit / Ecommerce Component Kit registry migration. The production implementation now lives in `host/tools/adComponentKit.tool.jsx` and `host/tools/adComponentKit.jsx`; this file remains useful as historical context and as a checklist for future id/storage migration work.
 
 ## Current Legacy State
 
 - Frontend tool id: `ecommerceLayout`
 - Visible title: `Ad Component Kit`
+- Active registry schema: `host/tools/adComponentKit.tool.jsx`
 - Active host module: `host/tools/adComponentKit.jsx`
 - Former legacy host module: `host/tools/ecommerceLayout.jsx` (removed after separate unused-path audit)
 - Current storage key: `AEToolbox.ecommerceLayout.v1`
@@ -25,13 +26,13 @@ Rationale:
 - The registry renderer already supports `tabs`, `visibleWhen`, `stateAction`, `stateCard`, `enabledWhen`, `disabledWhen`, `actionPayload`, full-width buttons, and persisted values.
 - Splitting into multiple Home tools should wait until there are truly independent product badge, price block, coupon, CTA, or banner host actions.
 
-Recommended registry id:
+Implemented registry id:
 
 ```text
 ecommerceLayout
 ```
 
-Use the existing id to keep `aeToolbox.homeToolOrder` meaningful when the static Home card is eventually replaced by the dynamic registry card.
+Use the existing id to keep `aeToolbox.homeToolOrder` and `AEToolbox.ecommerceLayout.v1` storage meaningful. A future rename to `adComponentKit` requires a dedicated HomeLayout / storage migration.
 
 ## Draft Tool Definition
 
@@ -340,31 +341,24 @@ Existing functions to preserve:
 
 ## Legacy Cleanup Plan
 
-Only after the registry tool is active and AE-tested:
+Current status after the registry tool became active and AE-tested:
 
-1. Remove legacy detail DOM in `client/index.html`.
-2. Remove `collectEcommerceParams`, `setEcommerceParams`, `saveEcommerceParams`, `setActiveComponentKind`, and related static event bindings from `client/js/main.js`.
-3. Remove unused `.component-*` and `.ecom-*` CSS.
-4. Move tool-local i18n out of `client/js/i18n.js` or leave compatibility keys until no caller uses them.
+1. Completed: remove legacy detail DOM in `client/index.html`.
+2. Completed: remove `collectEcommerceParams`, `setEcommerceParams`, `saveEcommerceParams`, `setActiveComponentKind`, and related static event bindings from `client/js/main.js`.
+3. Completed: remove unused `.component-*` and `.ecom-*` CSS.
+4. Completed for low-risk duplicates: move tool-local i18n out of `client/js/i18n.js` where no fallback caller remains.
 5. Completed: audit and remove unused `host/tools/ecommerceLayout.jsx`.
 
 ## Phased Migration Plan
 
-1. Phase 1: migration notes and schema draft. This document.
-2. Phase 2: Developer Mode probe using a non-production id such as `adComponentKitProbe`.
-3. Phase 3: minimal official action validation, preferably one create action.
-4. Phase 4: full tabs migration with Feature Stack and Icon Grid under one registry tool.
-5. Phase 5: maintenance actions and stateCard.
-6. Phase 6: same-id replacement using `id: "ecommerceLayout"` and one Home entry.
-7. Phase 7: legacy DOM / CSS / i18n / event cleanup after AE testing.
+1. Phase 1: migration notes and schema draft. Completed.
+2. Phase 2: Developer Mode probe using a non-production id such as `adComponentKitProbe`. Completed, then retired.
+3. Phase 3: minimal official action validation. Completed.
+4. Phase 4: full tabs migration with Feature Stack and Icon Grid under one registry tool. Completed.
+5. Phase 5: maintenance actions and stateCard. Completed.
+6. Phase 6: same-id replacement using `id: "ecommerceLayout"` and one Home entry. Completed.
+7. Phase 7: legacy DOM / CSS / i18n / event cleanup after AE testing. Completed for the active frontend path.
 
-## Phase 2 Probe Recommendation
+## Retired Phase 2 Probe
 
-Next safest implementation task:
-
-- Add `host/tools/adComponentKitProbe.tool.jsx`.
-- Mark it `debugOnly: true`.
-- Do not use id `ecommerceLayout`.
-- Use one action first, preferably `createFeatureStack`, because it has fewer icon normalization edge cases than Icon Grid.
-- Add `stateAction` before enabling the action button.
-- Do not remove or modify the legacy Ad Component Kit UI.
+The temporary `host/tools/adComponentKitProbe.tool.jsx` validated Feature Stack, Icon Grid, host state, and registry action behavior before the formal tool migration. It has been retired because the formal `ecommerceLayout` registry tool now owns those workflows.

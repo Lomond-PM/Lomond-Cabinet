@@ -106,14 +106,15 @@ Current state:
 - `BackgroundEngine` remains legacy behavior and should not be replaced opportunistically.
 - `client/js/settingsSchema.js` is the draft app-level data model.
 - The production panel currently renders Language, Developer Mode, Motion Speed, UI Scale, Theme colors, and Background Engine controls from the Settings schema.
+- The Settings renderer baseline has been restored to the stable path after the failed visual-unification attempt.
 - Settings internal content should render through a single content pass and use Settings-specific visual classes such as `settings-renderer`, `settings-section`, `settings-section-header`, `settings-field`, and `settings-action-row`.
 - The outer morph shell classes such as `settings-view`, `settings-panel`, and `settings-ui-layer` are shell infrastructure and should not be removed during visual migration.
 - Background Engine behavior remains owned by the existing `BackgroundEngine` runtime; the schema renderer preserves the legacy control IDs and storage keys.
 
 Future direction:
 
-- Settings should migrate through an app-level Settings Schema, not through `host/tools/*.tool.jsx`.
-- Settings UI should continue migrating in phases: renderer shell first, then legacy DOM/CSS cleanup after AE verification.
+- Settings must remain an app-level Settings Schema / Settings Renderer system, not a `host/tools/*.tool.jsx` registry tool.
+- Settings UI changes should be focused and AE-tested; do not rewrite the shell or `BackgroundEngine` behavior during unrelated work.
 - The Settings Renderer Lab is Developer Mode-only and uses sandbox storage; it must not write production Settings keys.
 - Settings i18n belongs to core/global dictionaries in `client/js/i18n.js`.
 - Developer Mode is a core setting that controls debug/probe/lab registry tool visibility.
@@ -403,8 +404,8 @@ The phased migration path is:
 3. Validate one minimal rectangle action. Completed through the retired probe.
 4. Migrate the 19 native shape item buttons. Completed.
 5. Migrate Stroke / Fill Shape Layer subtool UI through registry schema while preserving the legacy host implementation. Completed.
-6. Remove or simplify remaining obsolete frontend helper code only after AE verification.
-7. Remove legacy host wrappers only when no registered or global caller uses them.
+6. Remove or simplify remaining obsolete frontend helper code only after AE verification. Completed.
+7. Remove legacy host wrappers only when no registered or global caller uses them. Completed.
 
 The formal registry Shape Add uses:
 
@@ -452,6 +453,7 @@ Current registry design:
 - The registry id remains `ecommerceLayout` for HomeLayout and storage compatibility; do not rename it without a dedicated migration.
 - The legacy Ad Component Kit detail DOM, footer actions, frontend event binding, and unused component/ecom CSS have been removed after AE verification.
 - The static Home card remains only as a saved-order-compatible Home entry for the same `ecommerceLayout` id; registry metadata owns the active detail page and actions.
+- The legacy `host/tools/ecommerceLayout.jsx` host module has been removed; active behavior is `host/tools/adComponentKit.jsx`.
 
 Migration was phased:
 
@@ -488,3 +490,17 @@ window.AETOOLBOX_DEBUG_REGISTRY === true
 ```
 
 By default, registry tools must not show `Registry`, tool id, host function, raw schema, or other implementation details in the user-facing detail page.
+
+## 0.2.3 Cleanup State
+
+Before the 0.2.3 release, the current design-system-relevant cleanup state is:
+
+- Ad Component Kit is a unified registry tool with id `ecommerceLayout`, storage `AEToolbox.ecommerceLayout.v1`, schema `host/tools/adComponentKit.tool.jsx`, and host behavior `host/tools/adComponentKit.jsx`.
+- Shape Add is a registry tool with legacy frontend adapter, duplicate `shapeAdd.item.*` global i18n, old Shape Add CSS, and old global host wrappers removed.
+- Text Background Box is a registry tool with the old frontend adapter removed.
+- Registry tool-specific i18n should live in `.tool.jsx`; `client/js/i18n.js` should keep core, Home, Settings, common, and fallback strings.
+- Registry Control Lab and Settings Renderer Lab remain Developer Mode-only labs; retired probes should not reappear as formal Home tools.
+
+Deferred 0.2.4 risk:
+
+- Closing the CEP panel can still make AE appear frozen for several seconds to more than ten seconds. This is a lifecycle/performance issue, not a visual design-system issue, and should be handled in a focused future task.

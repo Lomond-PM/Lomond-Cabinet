@@ -18,6 +18,14 @@ Current project version:
 0.2.2
 ```
 
+Current development track:
+
+```text
+0.2.3 release candidate documentation is being prepared.
+```
+
+Do not update `VERSION` or `CSXS/manifest.xml` until the release task explicitly requests it.
+
 ## Project Type
 
 This is an **After Effects CEP Extension**.
@@ -78,10 +86,22 @@ The Home view also contains a disabled More Tools card.
 Developer Mode tools are hidden from the normal Home view and appear only when the Developer Mode setting is enabled:
 
 - Registry Control Lab
+- Settings Renderer Lab
+
+Temporary probes retired before 0.2.3:
+
 - Registry Probe
 - Shape Add Probe
+- Ad Component Kit Probe
 
-Ad Component Kit uses registry id `ecommerceLayout` for HomeLayout and storage compatibility, but its active host implementation is `host/tools/adComponentKit.jsx`.
+Ad Component Kit uses registry id `ecommerceLayout` and storage key `AEToolbox.ecommerceLayout.v1` for HomeLayout and storage compatibility, but its active schema and host implementation are:
+
+```text
+host/tools/adComponentKit.tool.jsx
+host/tools/adComponentKit.jsx
+```
+
+The legacy `host/tools/ecommerceLayout.jsx` module has been removed. If the tool is ever renamed from `ecommerceLayout` to `adComponentKit`, that must be a dedicated HomeLayout and storage migration.
 
 ## Installation
 
@@ -196,10 +216,41 @@ Supported languages:
 
 Rules:
 
-- Add all user-visible text to `client/js/i18n.js`.
+- Core, Home, Settings, common, and fallback copy belongs in `client/js/i18n.js`.
+- Registry tool-specific copy belongs in the owning `host/tools/*.tool.jsx` `i18n` block.
 - Use `data-i18n` for static DOM text.
 - Use `tr(...)` / `I18n.t(...)` for dynamic text.
-- New tools should provide `titleKey` and `descriptionKey` in `ToolRegistry`.
+- Registry tools should provide `titleKey` and `descriptionKey` in their tool definition.
+- Before deleting old global keys, run `node scripts/report-i18n-usage.js` and review `docs/reports/i18n-usage-report.md`.
+
+## Registry Architecture
+
+Current principle:
+
+```text
+Tool owns data and actions.
+Core owns UI and behavior.
+```
+
+Registry tools live in `host/tools/*.tool.jsx`. They declare metadata, sections, fields, actions, state actions, state cards, and tool-local i18n. They should not add dedicated DOM, dedicated CSS, or custom renderer behavior.
+
+Settings is not a registry tool. It is an app-level core settings framework. The Settings shell and behavior remain app-owned, while migrated rows are rendered from the app-level Settings schema.
+
+Current migrated registry tools:
+
+- `shapeAdd`: Shape Add / Shape Builder, including 19 native shape items and Stroke / Fill layer creation.
+- `textBackgroundBox`: Text Background Box / Text Plate.
+- `selectionInfo`: Selection Info.
+- `ecommerceLayout`: Ad Component Kit, including Feature Stack, Icon Grid, and maintenance actions.
+
+Current Developer Mode labs:
+
+- `registryControlLab`: registry renderer/action/state validation.
+- `settingsRendererLab`: app-level Settings renderer validation.
+
+Known 0.2.4 follow-up:
+
+- Closing the CEP panel can still make AE appear frozen for several seconds to more than ten seconds. 0.2.3 does not attempt to fix this; future work should audit CEP unload, pending host calls, polling, listeners, and save paths.
 
 ## Continue Development On Another Machine
 

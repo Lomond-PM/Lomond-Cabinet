@@ -240,22 +240,23 @@ If a migrated tool needs a missing control type, report or add the missing contr
 
 Settings is an app-level core panel, not a registry tool.
 
-Current production Settings behavior remains legacy:
+Current production Settings behavior is phased and app-level:
 
-- Static Settings DOM lives in `client/index.html`.
+- The outer Settings shell lives in `client/index.html`.
 - Settings behavior lives in `client/js/main.js`.
+- Migrated Settings rows are rendered from `client/js/settingsSchema.js` through the Settings renderer path.
 - `BackgroundEngine` remains the runtime owner for procedural background behavior.
 - Settings i18n belongs in `client/js/i18n.js` because it is core/global UI.
 
-The draft future data model lives in:
+The app-level Settings data model lives in:
 
 ```text
 client/js/settingsSchema.js
 ```
 
-That file is a schema draft only unless a task explicitly connects it. Do not load it in `index.html`, replace the Settings DOM, migrate storage, or change `BackgroundEngine` behavior as a side effect of unrelated work.
+Do not migrate Settings as `host/tools/*.tool.jsx`. Do not replace the Settings shell, migrate storage keys, or change `BackgroundEngine` behavior as a side effect of unrelated work.
 
-Settings must not be migrated as `host/tools/*.tool.jsx`. Future Settings work should proceed through an app-level Settings Schema and a separate Settings Renderer Lab before touching the production Settings panel.
+Settings renderer baseline is currently restored to the stable path. Future Settings work should proceed through the app-level Settings Schema and Settings Renderer Lab, then through focused production tasks.
 
 Developer Mode is a core Settings value. It controls debug/probe/lab registry tool visibility generically and must not be implemented as a tool-specific condition.
 
@@ -322,6 +323,8 @@ Status: formal registry tool.
 - Stroke / Fill has a section-local reset defaults button.
 - `host/tools/shapeAdd.jsx` still contains necessary legacy host action logic and must remain for now.
 - The obsolete `shapeAddProbe` Developer Mode probe was retired after the formal Shape Add registry path stabilized.
+- Shape Add legacy frontend adapter, duplicate `shapeAdd.item.*` global i18n, legacy Shape Add CSS, and old global host wrappers have been cleaned up after AE testing.
+- Shape Add number/range inputs preserve raw typed text during editing and only normalize on commit.
 
 ### Text Background Box / Background Rounded Rectangle
 
@@ -345,6 +348,9 @@ Status: registry tool.
 - Current frontend id is `ecommerceLayout`.
 - Current active host module is `host/tools/adComponentKit.jsx`.
 - The old `host/tools/ecommerceLayout.jsx` guide/template host module was audited and removed.
+- The formal schema is `host/tools/adComponentKit.tool.jsx`.
+- The active host behavior is `host/tools/adComponentKit.jsx`.
+- Storage remains `AEToolbox.ecommerceLayout.v1`.
 - Keep id `ecommerceLayout` for HomeLayout saved-order and `AEToolbox.ecommerceLayout.v1` storage compatibility unless a dedicated migration is requested.
 - Keep one tool and use tabs / visibleWhen for Feature Stack and Icon Grid, not split them into multiple Home tools.
 - Do not rewrite the AE creation algorithms in `host/tools/adComponentKit.jsx`.
@@ -436,6 +442,12 @@ shapeAdd_createStrokeFillLayer(paramsJson)
 
 Do not add new `client` evalScript calls to these removed wrappers. Use registry actions instead.
 
+### CEP panel close freeze
+
+Status: Deferred to 0.2.4.
+
+Closing the CEP panel can still make After Effects appear frozen for several seconds to more than ten seconds. Do not claim this is fixed in 0.2.3 and do not patch shutdown lifecycle opportunistically. A future focused task should audit pending `evalScript` calls, registry state polling, document/window listeners, custom select cleanup, and localStorage save paths.
+
 ## Release Workflow
 
 Release flow:
@@ -462,7 +474,7 @@ When changing the version, keep these synchronized:
 - `README.md` / docs, if they explicitly state the current version
 - `CHANGELOG.md`
 
-`v0.2.1` has been published and must not be moved. `v0.2.2` is the agent handoff guide / project maintainability release.
+`v0.2.1` has been published and must not be moved. `v0.2.2` is the agent handoff guide / project maintainability release. `0.2.3` is currently the registry migration / cleanup release-prep track; do not update VERSION or create a tag until explicitly asked.
 
 Do not move existing tags unless the user explicitly asks.
 

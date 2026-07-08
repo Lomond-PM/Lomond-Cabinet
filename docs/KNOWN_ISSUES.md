@@ -48,7 +48,7 @@ Recommended migration route:
 3. Phase 3: Migrate one minimal action. Covered by the retired probe and then by the formal registry tool.
 4. Phase 4: Migrate the 19 native shape item buttons. Completed.
 5. Phase 5: Migrate the Stroke / Fill subtool UI to registry while preserving legacy host execution. Completed.
-6. Phase 6: Remove or simplify remaining obsolete frontend helper code only after AE verification.
+6. Phase 6: Remove or simplify remaining obsolete frontend helper code only after AE verification. Completed.
 7. Phase 7: Remove legacy host wrappers only if no caller uses them. Completed.
 
 Future investigation notes:
@@ -63,7 +63,7 @@ Do not remove this note until several future Shape Add changes have been tested 
 
 Status:
 
-Migration planned / schema draft only.
+Historical migration risk / current registry path completed.
 
 Area:
 
@@ -97,7 +97,7 @@ Main risks:
 
 Recommended migration route:
 
-1. Phase 1: migration notes and schema draft. In progress.
+1. Phase 1: migration notes and schema draft. Completed.
 2. Phase 2: Developer Mode probe with a non-production id such as `adComponentKitProbe`. Completed; the temporary probe was later retired after formal migration.
 3. Phase 3: validate one minimal official action.
 4. Phase 4: migrate Feature Stack and Icon Grid through tabs / visibleWhen.
@@ -106,6 +106,40 @@ Recommended migration route:
 7. Phase 7: remove legacy DOM, event bindings, CSS, and i18n after AE testing.
 
 Do not rename the `ecommerceLayout` registry id or storage key without a dedicated HomeLayout / storage migration.
+
+## CEP panel close freeze
+
+Status:
+
+Deferred to 0.2.4.
+
+Area:
+
+- CEP panel shutdown
+- App close / unload lifecycle
+- Host bridge calls
+- Runtime polling / timers
+- localStorage save paths
+
+Observed behavior:
+
+- Closing the plugin window can make After Effects appear frozen for several seconds to more than ten seconds.
+- This is not addressed in the 0.2.3 release preparation.
+
+Current decision:
+
+- Do not treat this as fixed in 0.2.3.
+- Do not make opportunistic shutdown changes while preparing documentation or unrelated migration cleanup.
+- Schedule a dedicated 0.2.4 investigation.
+
+Future investigation notes:
+
+- Audit pending `CSInterface.evalScript()` calls during close / unload.
+- Audit registry `stateAction` polling intervals and cleanup.
+- Audit Settings / registry document and window listeners.
+- Audit custom select / portal cleanup.
+- Audit localStorage save bursts during unload.
+- Audit `beforeunload`, panel close transition callbacks, and stale DOM access after view teardown.
 
 ## Settings background preset dropdown render glitch
 
