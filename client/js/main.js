@@ -31,13 +31,13 @@
     };
     var ToolRegistry = {
         ecommerceLayout: {
-            titleKey: "tools.adComponentKit.title",
-            descriptionKey: "tools.adComponentKit.description",
+            title: "Ad Component Kit",
+            description: "Ad Component Kit",
             selectionMode: "layers"
         },
         shapeAdd: {
-            titleKey: "tools.shapeAdd.title",
-            descriptionKey: "tools.shapeAdd.description",
+            title: "Shape Add",
+            description: "Shape Add",
             selectionMode: "shape"
         }
     };
@@ -116,6 +116,13 @@
             return window.I18n.t(key, params);
         }
         return key;
+    }
+
+    function toolText(meta, keyName, fallbackName, defaultValue) {
+        if (meta && meta[keyName]) {
+            return tr(meta[keyName]);
+        }
+        return (meta && meta[fallbackName]) || defaultValue || "";
     }
 
     function applyI18n(root) {
@@ -3706,7 +3713,7 @@
         var dynamic = isDynamicTool(toolId);
 
         activeToolId = toolId || "shapeAdd";
-        byId("detailHeading").textContent = tr(meta.titleKey || "app.title");
+        byId("detailHeading").textContent = toolText(meta, "titleKey", "title", tr("app.title"));
 
         if (dynamic) {
             renderDynamicToolDetail(activeToolId);
@@ -3730,8 +3737,8 @@
         for (i = 0; i < labels.length; i++) {
             toolId = labels[i].getAttribute("data-tool-title") || labels[i].getAttribute("data-tool");
             meta = getToolMeta(toolId);
-            if (meta && meta.titleKey) {
-                labels[i].textContent = tr(meta.titleKey);
+            if (meta && (meta.titleKey || meta.title)) {
+                labels[i].textContent = toolText(meta, "titleKey", "title", labels[i].textContent);
             }
         }
     }

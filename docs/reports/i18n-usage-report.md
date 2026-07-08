@@ -10,7 +10,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | --- | --- | --- |
 | A | Core / Global; keep | 64 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
-| C | Legacy fallback; temporarily keep | 4 |
+| C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
 | E | Deferred / uncertain | 120 |
 
@@ -211,12 +211,8 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | status.selectShapeLayer | status | Please select a shape layer | 请选择形状图层 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.selectionUpdated | status | Selection info updated. | 选择信息已更新。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.unableReadSelection | status | Unable to read selection. | 无法读取选择。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| tools.adComponentKit.description | tools.adComponentKit | Build reusable ecommerce ad components without moving the product or ... | 快速创建可复用的电商视觉组件，不移动产品图，也不重做整张构图。 | client/js/main.js, host/tools/adComponentKit.tool.jsx | adComponentKit.tool.jsx:en, adComponentKit.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| tools.adComponentKit.title | tools.adComponentKit | Ad Component Kit | 电商组件工具箱 | client/js/main.js, host/tools/adComponentKit.tool.jsx | adComponentKit.tool.jsx:en, adComponentKit.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
 | tools.moreTools.title | tools.moreTools | More Tools | 更多工具 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | tools.quickStack.title | tools.quickStack | Quick Stack | 快速堆叠 | none | no | E | Reserved or unused Home label. Confirm no planned implementation before deleting. |
-| tools.shapeAdd.description | tools.shapeAdd | Add native Shape Layer items or create a linked Stroke / Fill shape l... | 添加原生 Shape Layer 元素，或创建联动的 Stroke / Fill 形状图层。 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| tools.shapeAdd.title | tools.shapeAdd | Shape Add | 形状添加 | client/js/main.js, host/tools/shapeAdd.tool.jsx | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
 
 ## Duplicate Tool Key Table
 
@@ -228,10 +224,6 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.backgroundPreset.minimalDark | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
 | settings.backgroundPreset.obsidianRings | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
 | settings.backgroundPreset.solarGrid | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
-| tools.adComponentKit.description | client/js/i18n.js | adComponentKit.tool.jsx:en, adComponentKit.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| tools.adComponentKit.title | client/js/i18n.js | adComponentKit.tool.jsx:en, adComponentKit.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| tools.shapeAdd.description | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
-| tools.shapeAdd.title | client/js/i18n.js | shapeAdd.tool.jsx:en, shapeAdd.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
 
 ## Candidate Delete Table
 

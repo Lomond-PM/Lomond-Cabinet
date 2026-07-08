@@ -6,7 +6,7 @@
 
     /*
      * i18n extension rules:
-     * - New tools must use titleKey / descriptionKey in ToolRegistry.
+     * - Registry tool strings belong in the matching host/tools/*.tool.jsx i18n block.
      * - New user-visible strings must be added to the dictionaries below.
      * - Do not hard-code user-visible text in HTML or main.js; use data-i18n or I18n.t(...).
      * - Host JSX should return messageKey when practical; the client falls back to message.
@@ -56,10 +56,6 @@
                 "common.registry": "Registry",
                 "common.parameters": "Parameters",
 
-                "tools.adComponentKit.title": "Ad Component Kit",
-                "tools.adComponentKit.description": "Build reusable ecommerce ad components without moving the product or redesigning the full composition.",
-                "tools.shapeAdd.title": "Shape Add",
-                "tools.shapeAdd.description": "Add native Shape Layer items or create a linked Stroke / Fill shape layer.",
                 "tools.moreTools.title": "More Tools",
                 "tools.quickStack.title": "Quick Stack",
 
@@ -253,10 +249,6 @@
                 "common.registry": "\u6ce8\u518c\u4fe1\u606f",
                 "common.parameters": "\u53c2\u6570",
 
-                "tools.adComponentKit.title": "\u7535\u5546\u7ec4\u4ef6\u5de5\u5177\u7bb1",
-                "tools.adComponentKit.description": "\u5feb\u901f\u521b\u5efa\u53ef\u590d\u7528\u7684\u7535\u5546\u89c6\u89c9\u7ec4\u4ef6\uff0c\u4e0d\u79fb\u52a8\u4ea7\u54c1\u56fe\uff0c\u4e5f\u4e0d\u91cd\u505a\u6574\u5f20\u6784\u56fe\u3002",
-                "tools.shapeAdd.title": "\u5f62\u72b6\u6dfb\u52a0",
-                "tools.shapeAdd.description": "\u6dfb\u52a0\u539f\u751f Shape Layer \u5143\u7d20\uff0c\u6216\u521b\u5efa\u8054\u52a8\u7684 Stroke / Fill \u5f62\u72b6\u56fe\u5c42\u3002",
                 "tools.moreTools.title": "\u66f4\u591a\u5de5\u5177",
                 "tools.quickStack.title": "\u5feb\u901f\u5806\u53e0",
 
