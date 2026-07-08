@@ -275,6 +275,8 @@ Current direction:
 - Tool metadata must use `titleKey` and `descriptionKey`.
 - User-visible action labels, section titles, field labels, hints, status messages, and option labels must use i18n keys.
 - Host JSX should return `messageKey` when practical.
+- Before deleting old global keys, run `node scripts/report-i18n-usage.js` and inspect `docs/reports/i18n-usage-report.md`.
+- Treat Home static anchors, startup fallback, dynamic key construction, and preserved legacy adapters as reasons to defer deletion until AE tests confirm the path is safe.
 
 When editing existing i18n:
 

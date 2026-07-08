@@ -128,6 +128,9 @@ Future direction:
 - Use `I18n.t()` / `tr()` for dynamic text.
 - Avoid hard-coded user-visible English or Chinese in `main.js`.
 - Host JSX should return `messageKey` when practical; otherwise frontend falls back to `message`.
+- Registry tool-specific copy belongs in the owning `host/tools/*.tool.jsx` `i18n` block.
+- `client/js/i18n.js` should retain core/global/Settings/Home/legacy fallback copy.
+- Before deleting global i18n keys, run `node scripts/report-i18n-usage.js` and review `docs/reports/i18n-usage-report.md`; treat dynamic and fallback paths conservatively.
 
 ## Motion System
 
