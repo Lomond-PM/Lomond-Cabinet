@@ -2407,6 +2407,25 @@
         input.value = decimals > 0 ? numeric.toFixed(decimals) : String(Math.round(numeric));
     }
 
+    function isSchemaNumberDraftValue(value) {
+        var text = String(value || "").trim();
+        return text === "" ||
+            text === "-" ||
+            text === "+" ||
+            text === "." ||
+            text === "-." ||
+            text === "+." ||
+            /\.$/.test(text);
+    }
+
+    function commitSchemaNumberInput(input, field, fallback, onCommit) {
+        var normalized = normalizeSchemaNumber(input.value, field, fallback);
+        setSchemaNumberValue(input, normalized, field);
+        if (onCommit) {
+            onCommit(input.value);
+        }
+    }
+
     function setupRegistryNumberDrag(input, field, onUpdate) {
         var suppressNextClick = false;
 
@@ -3253,7 +3272,8 @@
             input.type = "range";
             numberInput = document.createElement("input");
             numberInput.className = "num-input registry-range-number";
-            numberInput.type = "number";
+            numberInput.type = "text";
+            numberInput.inputMode = "decimal";
             numberInput.id = fieldId + "_number";
             applySchemaNumberAttributes(input, field);
             applySchemaNumberAttributes(numberInput, field);
@@ -3266,13 +3286,29 @@
             input.addEventListener("change", scheduleSave);
             numberInput.addEventListener("input", function () {
                 var range = byId(this.id.replace(/_number$/, ""));
-                if (range) {
-                    setSchemaNumberValue(this, this.value, field);
-                    range.value = this.value;
+                if (range && !isSchemaNumberDraftValue(this.value) && !isNaN(Number(this.value))) {
+                    range.value = normalizeSchemaNumber(this.value, field, range.value);
                 }
                 scheduleSave();
             });
-            numberInput.addEventListener("change", scheduleSave);
+            numberInput.addEventListener("change", function () {
+                var range = byId(this.id.replace(/_number$/, ""));
+                commitSchemaNumberInput(this, field, range ? range.value : schemaDefaultValue(field), function (value) {
+                    if (range) {
+                        range.value = value;
+                    }
+                });
+                scheduleSave();
+            });
+            numberInput.addEventListener("blur", function () {
+                var range = byId(this.id.replace(/_number$/, ""));
+                commitSchemaNumberInput(this, field, range ? range.value : schemaDefaultValue(field), function (value) {
+                    if (range) {
+                        range.value = value;
+                    }
+                });
+                scheduleSave();
+            });
             setupRegistryNumberDrag(numberInput, field, function (value) {
                 input.value = value;
                 scheduleSave();
@@ -3315,13 +3351,18 @@
             input = document.createElement("input");
             input.id = fieldId;
             input.className = fieldType === "number" ? "num-input" : "registry-text-input";
-            input.type = fieldType === "number" ? "number" : "text";
+            input.type = "text";
             if (fieldType === "number") {
+                input.inputMode = "decimal";
                 applySchemaNumberAttributes(input, field);
                 setupRegistryNumberDrag(input, field, scheduleSave);
                 input.addEventListener("input", scheduleSave);
                 input.addEventListener("change", function () {
-                    setSchemaNumberValue(this, this.value, field);
+                    commitSchemaNumberInput(this, field, registryFieldValue(toolDef, field));
+                    scheduleSave();
+                });
+                input.addEventListener("blur", function () {
+                    commitSchemaNumberInput(this, field, registryFieldValue(toolDef, field));
                     scheduleSave();
                 });
             }
@@ -3530,7 +3571,7 @@
                 if (field.type === "checkbox") {
                     params[field.key] = !!input.checked;
                 } else if (field.type === "number" || field.type === "range") {
-                    params[field.key] = Number(input.value);
+                    params[field.key] = normalizeSchemaNumber(input.value, field, registryFieldValue(toolDef, field));
                 } else if (field.type === "color") {
                     params[field.key] = normalizeHex(input.value, schemaDefaultValue(field)).toLowerCase();
                 } else {
