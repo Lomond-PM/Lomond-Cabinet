@@ -8,7 +8,7 @@ This project follows simple semantic versioning for development handoff:
 - `MINOR`: new tools or substantial user-facing capabilities.
 - `PATCH`: fixes, UI adjustments, and documentation updates.
 
-## [0.2.3] - Unreleased
+## [0.2.3] - 2026-07-08
 
 Release candidate documentation only. Do not update `VERSION` or `CSXS/manifest.xml` until the release task explicitly requests it.
 

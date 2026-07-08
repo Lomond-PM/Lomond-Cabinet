@@ -474,7 +474,7 @@ When changing the version, keep these synchronized:
 - `README.md` / docs, if they explicitly state the current version
 - `CHANGELOG.md`
 
-`v0.2.1` has been published and must not be moved. `v0.2.2` is the agent handoff guide / project maintainability release. `0.2.3` is currently the registry migration / cleanup release-prep track; do not update VERSION or create a tag until explicitly asked.
+`v0.2.1` and `v0.2.2` have been published and must not be moved. `v0.2.3` is the registry migration / legacy cleanup release. Do not move existing tags; future releases must use a new release branch and tag.
 
 Do not move existing tags unless the user explicitly asks.
 
