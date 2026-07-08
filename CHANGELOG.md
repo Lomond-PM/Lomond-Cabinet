@@ -28,6 +28,7 @@ This project follows simple semantic versioning for development handoff:
 - Settings Renderer Lab uses sandbox storage key `AEToolbox.settingsLab.v1` and does not write production Settings keys.
 - Ad Component Kit now uses registry metadata/detail rendering while preserving `AEToolbox.ecommerceLayout.v1` and reusing `host/tools/adComponentKit.jsx`.
 - Removed the legacy Ad Component Kit frontend detail DOM, action footer, event binding, unused component/ecom CSS, and obsolete global Ad Component Kit i18n entries. The static Home card remains as the saved-order anchor for `ecommerceLayout`.
+- Removed the unused legacy / experimental `host/tools/ecommerceLayout.jsx` host module after confirming the active Ad Component Kit runtime path uses `host/tools/adComponentKit.jsx`.
 
 ## [0.2.2] - 2026-07-03
 
@@ -153,7 +154,7 @@ This project follows simple semantic versioning for development handoff:
 
 ### Known Issues
 
-- `host/tools/ecommerceLayout.jsx` is still included but appears to be legacy or experimental relative to the active Ad Component Kit UI path.
+- `host/tools/ecommerceLayout.jsx` has been removed after audit; Ad Component Kit active host behavior is `host/tools/adComponentKit.jsx`.
 - Some host JSX messages are plain `message` strings rather than `messageKey` values.
 - `client/js/main.js` and `client/css/style.css` are large and should be patched carefully instead of rewritten.
 - CEP or AE may cache old JavaScript or JSX; reopen the panel or restart AE when changes do not appear.

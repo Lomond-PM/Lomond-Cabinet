@@ -437,7 +437,7 @@ Ad Component Kit is also a compound tool, but its current scope is narrower than
 - Icon Grid builder.
 - Component maintenance actions for refresh, select child layers, and detach.
 
-The current production registry id is `ecommerceLayout`, while the active host implementation is `host/tools/adComponentKit.jsx`. The included `host/tools/ecommerceLayout.jsx` file is retained legacy / experimental host code and must not be deleted as part of registry migration unless separately audited.
+The current production registry id is `ecommerceLayout`, while the active host implementation is `host/tools/adComponentKit.jsx`. The old `host/tools/ecommerceLayout.jsx` guide/template host module was separately audited and removed because no active runtime path called it.
 
 Current registry design:
 
@@ -449,6 +449,7 @@ Current registry design:
 - `enabledWhen` / `disabledWhen` gate create, refresh, select, and detach actions.
 - The tool reuses the existing `host/tools/adComponentKit.jsx` AE creation logic.
 - `AEToolbox.ecommerceLayout.v1` remains the storage key to preserve user parameters.
+- The registry id remains `ecommerceLayout` for HomeLayout and storage compatibility; do not rename it without a dedicated migration.
 - The legacy Ad Component Kit detail DOM, footer actions, frontend event binding, and unused component/ecom CSS have been removed after AE verification.
 - The static Home card remains only as a saved-order-compatible Home entry for the same `ecommerceLayout` id; registry metadata owns the active detail page and actions.
 

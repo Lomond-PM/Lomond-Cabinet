@@ -184,7 +184,8 @@ Migration status:
 - Formally migrated to the `.tool.jsx` registry path in `host/tools/adComponentKit.tool.jsx`.
 - Registry id remains `ecommerceLayout` to preserve saved Home order compatibility.
 - Current active host module remains `host/tools/adComponentKit.jsx`; the registry action reuses that host logic instead of rewriting AE layer creation algorithms.
-- `host/tools/ecommerceLayout.jsx` remains included and preserved as legacy / experimental host code; do not delete it without a separate audit.
+- `host/tools/ecommerceLayout.jsx` was audited as unused legacy / experimental host code and removed from `host/index.jsx`.
+- Future id cleanup from `ecommerceLayout` to `adComponentKit` would require a separate HomeLayout / storage migration and is not part of the current structure.
 - The frontend legacy Ad Component Kit detail DOM, action footer, event binding, and unused component/ecom CSS have been removed after AE verification.
 - The static Home card is retained as the Home order anchor while dynamic registry metadata owns the detail page and actions for the same id.
 - Feature Stack, Icon Grid, and maintenance actions live in one registry tool using tabs / option cards, `visibleWhen`, `stateAction`, `stateCard`, `enabledWhen` / `disabledWhen`, and `refreshStateAfterRun`.
@@ -233,9 +234,9 @@ Home contains a disabled More Tools card. It is not an active tool.
 
 `tools.quickStack.title` exists in i18n, but no active Home tool card or host module was found. Treat it as a reserved/unused label unless future code adds an implementation.
 
-### ecommerceLayout.jsx
+### ecommerceLayout host id
 
-`host/tools/ecommerceLayout.jsx` still exists and is included by `host/index.jsx`. It exposes guide/template layout functions, but the active frontend Home card titled Ad Component Kit uses `adComponentKit.jsx` functions. Treat `ecommerceLayout.jsx` as preserved legacy/experimental host code unless explicitly reactivated.
+`host/tools/ecommerceLayout.jsx` has been removed after audit. The active Ad Component Kit host behavior is `host/tools/adComponentKit.jsx`, while the registry id remains `ecommerceLayout` for saved Home order and storage compatibility.
 
 ## Current UI State
 
@@ -285,7 +286,7 @@ Current status:
 
 Legacy tools not migrated:
 
-- The preserved `ecommerceLayout.jsx` host module.
+- The removed legacy `ecommerceLayout.jsx` host module and the retained `ecommerceLayout` registry id / storage compatibility path.
 
 ### Ad Component Kit Registry Migration Draft
 
@@ -463,7 +464,7 @@ These are based on current code and recent project history. Verify visually afte
 ## Known Issues / Areas To Watch
 
 - `README.md` appears partially outdated and contains mojibake in some tree/menu examples. Do not rely on it as the current source of truth.
-- `host/tools/ecommerceLayout.jsx` is included but likely not active in the current UI flow.
+- The Ad Component Kit registry id remains `ecommerceLayout` even though the old `host/tools/ecommerceLayout.jsx` module has been removed. Do not rename the id without a dedicated storage and HomeLayout migration.
 - Some host functions return `message` strings rather than `messageKey`; i18n coverage may be incomplete for host messages.
 - `client/js/main.js` and `client/css/style.css` are large and have accumulated multiple iterations. Avoid broad rewrites.
 - CEP/AE may cache old JS or JSX; always hard-refresh/reopen panel or restart AE when behavior does not match code.

@@ -272,8 +272,8 @@ Ad Component Kit migration note:
 
 - The current registry/frontend id is `ecommerceLayout`.
 - The active host implementation is `host/tools/adComponentKit.jsx`.
-- `host/tools/ecommerceLayout.jsx` is still included but is retained legacy / experimental host code relative to the active Ad Component Kit UI path.
-- Do not delete `host/tools/ecommerceLayout.jsx` without a separate audit.
+- `host/tools/ecommerceLayout.jsx` was separately audited as unused legacy / experimental host code and removed.
+- Keep the registry id `ecommerceLayout` unless a dedicated HomeLayout / storage migration is planned.
 - Ad Component Kit is now one registry tool with Feature Stack, Icon Grid, and maintenance actions represented by tabs / option cards, state cards, and state-gated actions.
 - The legacy Ad Component Kit detail DOM, action footer, frontend event binding, and unused component/ecom CSS have been removed.
 - The static Home card is retained as the saved-order anchor for `ecommerceLayout`; registry metadata owns the active detail page and actions.
