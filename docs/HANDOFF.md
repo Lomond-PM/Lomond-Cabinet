@@ -90,6 +90,9 @@ Current release-prep note:
 
 - `VERSION` is `0.2.3`.
 - `CHANGELOG.md` contains the `0.2.3` release entry for the registry migration / cleanup release.
+- `CHANGELOG.md` also contains an Unreleased / 0.2.4 draft for the current dev-line work.
+- `release/0.2.4` has not been created yet.
+- Do not claim 0.2.4 is released until `VERSION`, `CSXS/manifest.xml`, `main`, and tag `v0.2.4` are updated through the release flow.
 - Do not create or move tags during documentation-only handoff work.
 
 On a new machine:
@@ -278,11 +281,37 @@ Current implementation:
 Known MVP limitations:
 
 - Windows taskbar may briefly flash while the helper overlay starts.
-- Pressing Esc during the helper initialization delay may not cancel.
-- After that delay window, Esc cancellation can still be unreliable in some AE / Windows focus states.
+- Each new plugin session's first Pick may have unreliable Esc cancellation.
+- Right-click cancel may still invoke the CEP WebView default context menu.
 - These issues currently have lower priority because core cross-window picking works.
 
-Future eyedropper work should focus on Windows helper overlay focus / activation / cancel lifecycle. A future C# / C++ helper can replace the PowerShell MVP behind the same `ColorSampler` provider interface. Do not change color picker UI, color model, H/S/V/R/G/B sliders, axis modes, Settings semantics, or registry field behavior as part of helper follow-up unless the task explicitly asks.
+Recent lifecycle note:
+
+- A focused attempt to fix the remaining Windows helper taskbar flash / first-run Esc / right-click menu behavior was tested and rolled back.
+- Those fixes are not included in the 0.2.4 draft.
+- Do not write future release notes as if those lifecycle issues were fixed in 0.2.4.
+
+Future eyedropper work should focus on a dedicated helper replacement or a small, isolated overlay lifecycle task. A future C# / C++ helper can replace the PowerShell MVP behind the same `ColorSampler` provider interface. Do not change color picker UI, color model, H/S/V/R/G/B sliders, axis modes, Settings semantics, or registry field behavior as part of helper follow-up unless the task explicitly asks.
+
+## 0.2.4 Release Checklist
+
+Use this checklist after `docs/prepare-0.2.4-release` is reviewed and merged back to `dev`.
+
+1. Create `release/0.2.4` from the latest tested `dev`.
+2. Update `VERSION` to `0.2.4`.
+3. Update `CSXS/manifest.xml` `ExtensionBundleVersion` and extension `Version` to `0.2.4`.
+4. Check `package.json` version if one exists.
+5. Confirm the final `CHANGELOG.md` 0.2.4 section.
+6. AE regression: panel close from Home, Home Edit, Settings, Shape Add detail, Ad Component Kit detail, Developer Mode off, and Developer Mode on.
+7. AE regression: color picker H / S / V / R / G / B axes, channel sliders, Hex input select-all, popup flip / clamp, and Windows eyedropper MVP.
+8. AE regression: Ad Component Kit Feature Stack / Icon Grid creation, removable artifact metadata, and Remove Selected Generated Component.
+9. AE regression: Shape Add native components section collapse, native item creation, Stroke / Fill creation, and number input editing.
+10. AE regression: Settings, Text Background Box, Selection Info, Home Edit order persistence, and language switching.
+11. Commit `release: 0.2.4`.
+12. Merge `release/0.2.4` into `dev`.
+13. Merge `dev` into `main`.
+14. Tag `v0.2.4` from the release commit on `main`.
+15. Push `dev`, `main`, and `v0.2.4`.
 
 ## Current Active Tool Bridge Summary
 

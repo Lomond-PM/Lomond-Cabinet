@@ -19,10 +19,18 @@ Current release-prep track:
 Current development track:
 
 ```text
-dev includes 0.2.4 work after the 0.2.3 release baseline
+dev includes 0.2.4 work after the 0.2.3 release baseline; release/0.2.4 has not been created
 ```
 
 Do not update `VERSION` or `CSXS/manifest.xml` until the release task explicitly requests it.
+
+Current 0.2.4 release-readiness status:
+
+- `VERSION` is still `0.2.3`.
+- `CSXS/manifest.xml` still declares `0.2.3`.
+- No `package.json` version file is present in the current workspace.
+- `CHANGELOG.md` contains an Unreleased / 0.2.4 draft section, but 0.2.4 is not published until the release branch updates version metadata, merges to `main`, and creates tag `v0.2.4`.
+- 0.2.5 planning is expected to move toward procedural appearance work. That work is not part of 0.2.4 and should not be mixed into 0.2.4 release prep.
 
 Confirmed entry points:
 
@@ -242,6 +250,8 @@ Migration status:
 - The legacy frontend adapter, duplicate `shapeAdd.item.*` global i18n keys, legacy Shape Add CSS, and old host global wrappers have been removed after AE testing.
 - The Shape Add registry number/range input typing bug has been fixed; typed draft values are no longer forced to `1.0` during input.
 - The old Shape Add detail DOM and obsolete frontend helper functions have been removed from the active frontend path.
+- The Add Native Components / 添加原生组件 section is collapsible through the generic registry section collapse mechanism, and its collapse state is persisted by the registry renderer.
+- This collapsible section does not change Shape Add host behavior or restore the old legacy frontend adapter.
 
 ### More Tools
 
@@ -422,6 +432,7 @@ Theme color storage:
 - Native `window.EyeDropper` is detected as a provider, but current AE CEP testing shows it immediately cancels; the provider marks itself unusable for the session and falls through to the Windows helper provider.
 - `WindowsHelperProvider` is a Windows-only MVP using a PowerShell / WinForms / Drawing helper. It can sample colors across windows and synchronizes picked colors through the existing color setter path for Hex, preview, swatch, color plane, axis slider, and H/S/V/R/G/B channel sliders.
 - The ColorSampler provider boundary is intended to allow a future C# / C++ native helper replacement without changing color picker UI, color model, sliders, or registry field integration.
+- The 0.2.4 color picker control work also includes H / S / V / R / G / B axis modes, H / S / V / R / G / B channel sliders, Hex input click / focus select-all, and popup flip / clamp positioning near panel edges.
 
 Background Engine storage:
 
@@ -484,6 +495,7 @@ These are based on current code and recent project history. Verify visually afte
 - Home Edit toggle flow: current code uses `HomeLayoutManager.isEditing`; the first click enters edit mode and Done saves the layout.
 - CEP panel close freeze mitigation: `fix/panel-close-freeze-audit` has been merged to `dev` for the 0.2.4 development line. The mitigation adds shutdown lifecycle guards, stops polling / timers / pending registry saves, guards close-time host/UI refresh work, and adds Home close teardown. This is not part of v0.2.3.
 - Built-in color picker eyedropper: `dev` contains the ColorSampler provider framework and Windows-only helper MVP. Native `window.EyeDropper` is not usable in current AE CEP testing because it immediately cancels, so the Windows helper is the current working provider.
+- Windows eyedropper overlay lifecycle follow-up: an attempt to remove the remaining taskbar flash / first-run Esc / right-click menu limitations was tested and rolled back because it did not meet the required stability. Those fixes are not included in the 0.2.4 draft; the previously verified Windows helper MVP remains the 0.2.4 behavior.
 
 ## Known Issues / Areas To Watch
 
@@ -497,7 +509,27 @@ These are based on current code and recent project history. Verify visually afte
 - Deferred: Settings Background Engine preset dropdown can trigger a render/layout glitch after closing. See `docs/KNOWN_ISSUES.md`.
 - Settings schema migration is phased. The internal UI shell is now on the Settings Renderer path, but do not replace remaining behavior layers such as `BackgroundEngine` without a dedicated migration and AE regression pass.
 - 0.2.4 development line: closing the CEP panel has been noticeably mitigated on `dev` after `fix/panel-close-freeze-audit`; tool detail close is behaving normally in current testing and Home close has little to no perceptible impact. Continue monitoring across AE / CEP environments before release, and do not claim this shipped until 0.2.4 is merged to `main` and tagged.
-- Color picker eyedropper helper limitations: the current Windows helper may briefly flash the Windows taskbar during sampling, and Esc cancellation can be unreliable during or after the overlay activation delay. These are lower-priority MVP limitations unless they begin to affect core pick success.
+- Color picker eyedropper helper limitations: the current Windows helper may briefly flash the Windows taskbar during sampling, first-run Esc cancellation can be unreliable, and right-click cancel may show the CEP WebView context menu. These are lower-priority MVP limitations unless they begin to affect core pick success.
+
+## 0.2.4 Release Checklist
+
+Use this only after the documentation prep branch is reviewed and merged back to `dev`.
+
+1. Create `release/0.2.4` from the latest tested `dev`.
+2. Update `VERSION` to `0.2.4`.
+3. Update `CSXS/manifest.xml` `ExtensionBundleVersion` and extension `Version` to `0.2.4`.
+4. Check `package.json` version if one exists in the release branch.
+5. Convert `CHANGELOG.md` Unreleased / 0.2.4 draft into the final `0.2.4` section.
+6. Run AE regression tests for panel close behavior.
+7. Run AE regression tests for color picker axis modes, channel sliders, Hex input select-all, popup positioning, and eyedropper MVP.
+8. Run AE regression tests for Ad Component Kit Feature Stack / Icon Grid creation and removable artifact cleanup.
+9. Run AE regression tests for Shape Add collapsible native components and Stroke / Fill creation.
+10. Run AE regression tests for Settings, Text Background Box, Selection Info, Developer Mode on/off, and Home Edit ordering.
+11. Commit `release: 0.2.4`.
+12. Merge `release/0.2.4` into `dev`.
+13. Merge `dev` into `main`.
+14. Create tag `v0.2.4` from the release commit on `main`.
+15. Push `dev`, `main`, and `v0.2.4`.
 
 ## Later Development Suggestions
 

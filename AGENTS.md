@@ -325,6 +325,7 @@ Status: formal registry tool.
 - The obsolete `shapeAddProbe` Developer Mode probe was retired after the formal Shape Add registry path stabilized.
 - Shape Add legacy frontend adapter, duplicate `shapeAdd.item.*` global i18n, legacy Shape Add CSS, and old global host wrappers have been cleaned up after AE testing.
 - Shape Add number/range inputs preserve raw typed text during editing and only normalize on commit.
+- The Add Native Components / 添加原生组件 section is collapsible through the generic registry section collapse mechanism. Do not restore the old legacy Shape Add frontend collapsible adapter.
 
 ### Text Background Box / Background Rounded Rectangle
 
@@ -354,6 +355,8 @@ Status: registry tool.
 - Keep id `ecommerceLayout` for HomeLayout saved-order and `AEToolbox.ecommerceLayout.v1` storage compatibility unless a dedicated migration is requested.
 - Keep one tool and use tabs / visibleWhen for Feature Stack and Icon Grid, not split them into multiple Home tools.
 - Do not rewrite the AE creation algorithms in `host/tools/adComponentKit.jsx`.
+- New Feature Stack / Icon Grid artifacts created on the 0.2.4 development line write Lomond ownership metadata and signed tool expressions so `Remove Selected Generated Component` can clean them later.
+- Artifact cleanup is forward-only: do not delete no-metadata legacy output, do not guess by layer name, and do not clean expressions without the `LOMOND_CABINET_BINDING_V1` signature.
 - Schema draft: `docs/schema-drafts/ad-component-kit.registry-schema-draft.md`.
 - Do not refactor these unless explicitly requested.
 
@@ -451,6 +454,24 @@ Closing the CEP panel can make After Effects appear frozen for several seconds t
 The `dev` branch contains a 0.2.4 mitigation from `fix/panel-close-freeze-audit`: shutdown lifecycle guards, close-time `evalScript` / UI refresh guards, polling and timer cleanup, pending registry save cleanup, and Home close teardown. Future work must not remove these guards during unrelated cleanup.
 
 Close lifecycle changes should stay small and be tested against Home, Home Edit, Settings, Shape Add detail, Ad Component Kit detail, registry state refresh, Developer Mode off, and Developer Mode on. If freezes recur, start with instrumentation and a reproduction matrix before changing HomeLayoutManager, Settings, BackgroundEngine, or App Launch / Close motion.
+
+### Color picker eyedropper helper
+
+Status: Windows helper MVP on `dev` for the 0.2.4 development line.
+
+The built-in color picker uses the ColorSampler provider framework. Native `window.EyeDropper` exists in AE CEP but immediately cancels in current testing, so it is marked unusable for the session and the Windows helper provider is the working path.
+
+The Windows helper can pick across windows and syncs results through the existing color picker path for Hex, preview, swatch, color plane, axis slider, H/S/V/R/G/B sliders, and the active color field.
+
+Known 0.2.4 limitations remain: taskbar may briefly flash, first-run Esc cancellation can be unreliable, and right-click cancel may show the CEP WebView default context menu. A recent attempt to fix these overlay lifecycle issues was rolled back and must not be documented as shipped in 0.2.4.
+
+Future helper work should prefer a dedicated native helper / C# helper or a separately scoped helper replacement. Do not change the ColorSampler provider contract, color model, H/S/V/R/G/B sliders, popup positioning, Settings behavior, or registry field behavior unless explicitly requested.
+
+### 0.2.4 release prep boundary
+
+`docs/prepare-0.2.4-release` is documentation-only. Do not modify functional code, helper scripts, `VERSION`, or `CSXS/manifest.xml` while preparing release notes.
+
+0.2.5 planning is expected to move toward procedural appearance work. Do not mix 0.2.5 procedural appearance implementation into 0.2.4 release prep.
 
 ## Release Workflow
 
