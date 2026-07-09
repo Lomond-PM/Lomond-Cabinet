@@ -305,7 +305,7 @@ AEToolbox.tools.adComponentKit.createFeatureStack(paramsJson)
 AEToolbox.tools.adComponentKit.createIconGrid(paramsJson)
 AEToolbox.tools.adComponentKit.refreshSelectedComponent(paramsJson)
 AEToolbox.tools.adComponentKit.selectComponentLayers()
-AEToolbox.tools.adComponentKit.detachSelectedComponent()
+AEToolbox.tools.adComponentKit.removeSelectedGeneratedComponent()
 ```
 
 Ad Component Kit migration note:
@@ -317,6 +317,12 @@ Ad Component Kit migration note:
 - `host/tools/ecommerceLayout.jsx` was separately audited as unused legacy / experimental host code and removed.
 - Keep the registry id `ecommerceLayout` unless a dedicated HomeLayout / storage migration is planned.
 - Ad Component Kit is now one registry tool with Feature Stack, Icon Grid, and maintenance actions represented by tabs / option cards, state cards, and state-gated actions.
+- New Feature Stack / Icon Grid output writes `LOMOND_CABINET_ARTIFACT_V1` metadata into layer comments, including owner, tool, kind, role, `artifactId`, component id, and created timestamp.
+- Tool-written expressions use the `LOMOND_CABINET_BINDING_V1` signature with artifact id and previous expression state, allowing cleanup to restore previous expressions or clear tool-owned expressions.
+- `Remove Selected Generated Component` only trusts Lomond artifact metadata and matching signed expressions. It must not delete layers without metadata, must not clean unsigned expressions, and must not guess legacy components by layer name.
+- Artifact cleanup is forward-only and intentionally does not handle old Ad Component Kit output created before this metadata existed.
+- The registry UI places Refresh Selected Component, Select Component Layers, and Remove Selected Generated Component directly below the active Feature Stack / Icon Grid create button. The separate Component Maintenance group is removed.
+- Detach Component is no longer exposed in the registry UI. Do not reintroduce it casually; future maintenance actions should keep cleanup semantics precise and metadata-based.
 - The legacy Ad Component Kit detail DOM, action footer, frontend event binding, and unused component/ecom CSS have been removed.
 - The static Home card is retained as the saved-order anchor for `ecommerceLayout`; registry metadata owns the active detail page and actions.
 - A schema draft exists at `docs/schema-drafts/ad-component-kit.registry-schema-draft.md`.
