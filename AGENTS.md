@@ -444,9 +444,13 @@ Do not add new `client` evalScript calls to these removed wrappers. Use registry
 
 ### CEP panel close freeze
 
-Status: Deferred to 0.2.4.
+Status: Mitigated on `dev` for the 0.2.4 development line; not part of v0.2.3.
 
-Closing the CEP panel can still make After Effects appear frozen for several seconds to more than ten seconds. Do not claim this is fixed in 0.2.3 and do not patch shutdown lifecycle opportunistically. A future focused task should audit pending `evalScript` calls, registry state polling, document/window listeners, custom select cleanup, and localStorage save paths.
+Closing the CEP panel can make After Effects appear frozen for several seconds to more than ten seconds in v0.2.3 and earlier. Do not claim this is fixed in 0.2.3.
+
+The `dev` branch contains a 0.2.4 mitigation from `fix/panel-close-freeze-audit`: shutdown lifecycle guards, close-time `evalScript` / UI refresh guards, polling and timer cleanup, pending registry save cleanup, and Home close teardown. Future work must not remove these guards during unrelated cleanup.
+
+Close lifecycle changes should stay small and be tested against Home, Home Edit, Settings, Shape Add detail, Ad Component Kit detail, registry state refresh, Developer Mode off, and Developer Mode on. If freezes recur, start with instrumentation and a reproduction matrix before changing HomeLayoutManager, Settings, BackgroundEngine, or App Launch / Close motion.
 
 ## Release Workflow
 

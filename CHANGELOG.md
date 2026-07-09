@@ -8,6 +8,18 @@ This project follows simple semantic versioning for development handoff:
 - `MINOR`: new tools or substantial user-facing capabilities.
 - `PATCH`: fixes, UI adjustments, and documentation updates.
 
+## [Unreleased]
+
+### Fixed
+
+- Mitigated AE freeze when closing the CEP panel by guarding shutdown lifecycle, stopping polling / timers / pending registry saves, and skipping close-time host/UI refresh work.
+- Added Home close teardown for Home edit / drag state, Home timers, and document-level drag listeners.
+
+### Known / Follow-up
+
+- Continue monitoring close behavior across AE / CEP environments before the 0.2.4 release.
+- This mitigation is on `dev` for the 0.2.4 development line and is not part of the published 0.2.3 tag.
+
 ## [0.2.3] - 2026-07-08
 
 Release candidate documentation only. Do not update `VERSION` or `CSXS/manifest.xml` until the release task explicitly requests it.

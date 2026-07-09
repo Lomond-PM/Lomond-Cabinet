@@ -67,6 +67,9 @@ codex-scratch/
 *.codex.patch
 *.ai.tmp
 
+# Local workflow helpers
+/local-scripts/
+
 # Keep project source and handoff files tracked:
 # CSXS/
 # client/
