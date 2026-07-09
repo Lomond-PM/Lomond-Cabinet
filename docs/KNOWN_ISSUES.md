@@ -190,7 +190,7 @@ Current decision:
 - Do not treat native `window.EyeDropper` as the primary implementation in AE CEP unless future CEP testing proves it can open reliably.
 - Do not replace the helper opportunistically during unrelated color picker work.
 - Keep the ColorSampler provider interface stable so a future C# / C++ native helper can replace the PowerShell MVP without changing picker UI, color model, axis modes, sliders, or registry field integration.
-- A focused attempt to fix the remaining Windows helper taskbar flash / first-run Esc / right-click menu behavior was tested and rolled back. Those fixes are not part of the 0.2.4 draft.
+- A focused attempt to fix the remaining Windows helper taskbar flash / first-run Esc / right-click menu behavior was tested and rolled back. Those fixes are not part of 0.2.4.
 - Future work should prefer a dedicated native helper / C# helper or a separately scoped helper replacement instead of further complex PowerShell overlay focus patches.
 
 ## Settings background preset dropdown render glitch

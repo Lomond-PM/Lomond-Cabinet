@@ -8,7 +8,11 @@ This project follows simple semantic versioning for development handoff:
 - `MINOR`: new tools or substantial user-facing capabilities.
 - `PATCH`: fixes, UI adjustments, and documentation updates.
 
-## [Unreleased] - 0.2.4 draft
+## [Unreleased]
+
+- No unreleased changes yet.
+
+## [0.2.4] - 2026-07-09
 
 ### Added
 
@@ -39,11 +43,10 @@ This project follows simple semantic versioning for development handoff:
 - Ad Component Kit artifact cleanup is forward-only. It does not process old generated components without Lomond metadata, does not guess by layer name, and does not clean expressions without the `LOMOND_CABINET_BINDING_V1` signature.
 - Native `window.EyeDropper` exists in AE CEP but immediately cancels in current testing, so it is marked unusable for the session and the Windows helper provider is used instead.
 - The Windows eyedropper helper is currently an MVP. The Windows taskbar may briefly flash during sampling, first-run Esc cancellation can be unreliable, and right-click cancel may still show the CEP WebView context menu.
-- A focused attempt to fix the Windows helper overlay lifecycle issues was tested and rolled back. Those fixes are not included in the 0.2.4 draft.
+- A focused attempt to fix the Windows helper overlay lifecycle issues was tested and rolled back. Those fixes are not included in 0.2.4.
 - Future eyedropper work should prefer a dedicated native C# / C++ helper or a focused helper replacement over further complex PowerShell overlay lifecycle patches.
-- Continue monitoring close behavior across AE / CEP environments before the 0.2.4 release.
-- This mitigation is on `dev` for the 0.2.4 development line and is not part of the published 0.2.3 tag.
-- 0.2.4 is not released until `VERSION`, `CSXS/manifest.xml`, `main`, and tag `v0.2.4` are updated through the release flow.
+- Continue monitoring close behavior across AE / CEP environments after the 0.2.4 release.
+- The panel close mitigation is included in 0.2.4 and is not part of the published 0.2.3 tag.
 
 ## [0.2.3] - 2026-07-08
 
