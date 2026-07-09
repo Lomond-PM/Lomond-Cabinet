@@ -21,7 +21,7 @@ Current project version:
 Current development track:
 
 ```text
-0.2.3 is the current release.
+0.2.3 is the current release. dev contains 0.2.4 draft work that is not released or tagged yet.
 ```
 
 Do not update `VERSION` or `CSXS/manifest.xml` until the release task explicitly requests it.
@@ -248,9 +248,15 @@ Current Developer Mode labs:
 - `registryControlLab`: registry renderer/action/state validation.
 - `settingsRendererLab`: app-level Settings renderer validation.
 
-Known 0.2.4 follow-up:
+Current 0.2.4 draft highlights on `dev`:
 
-- Closing the CEP panel can still make AE appear frozen for several seconds to more than ten seconds. 0.2.3 does not attempt to fix this; future work should audit CEP unload, pending host calls, polling, listeners, and save paths.
+- Panel close freeze mitigation through shutdown guards, polling / timer cleanup, and Home close teardown.
+- Built-in color picker H / S / V / R / G / B axis modes, channel sliders, Hex input select-all, and popup flip / clamp positioning.
+- ColorSampler provider framework with Windows-only eyedropper helper MVP. Native `window.EyeDropper` exists in AE CEP but immediate-cancels in current testing, so the Windows helper is the working provider.
+- Ad Component Kit removable artifacts for newly created Feature Stack / Icon Grid output using Lomond metadata and signed tool expressions.
+- Shape Add Add Native Components / 添加原生组件 section collapse.
+
+0.2.4 is not released until the release branch updates `VERSION`, `CSXS/manifest.xml`, merges to `main`, and creates tag `v0.2.4`.
 
 ## Continue Development On Another Machine
 

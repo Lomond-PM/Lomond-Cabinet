@@ -181,8 +181,8 @@ Current implementation:
 Known limitations:
 
 - The Windows taskbar may briefly flash while the helper starts or activates the overlay.
-- If the user presses Esc during the short helper initialization delay after clicking Pick, cancellation may not be handled.
-- After that delay window, Esc cancellation can still be unreliable depending on AE / Windows focus state.
+- Each new plugin session's first Pick can have unreliable Esc cancellation. In current AE testing, focus may fall back to the AE timeline instead of being captured by the helper overlay.
+- Right-click cancel may cancel the helper but can still invoke the CEP WebView default context menu, such as Back / Forward / Print / View Source.
 - These limitations currently do not significantly affect the core pick-color workflow, so they are lower priority than the main eyedropper capability.
 
 Current decision:
@@ -190,7 +190,8 @@ Current decision:
 - Do not treat native `window.EyeDropper` as the primary implementation in AE CEP unless future CEP testing proves it can open reliably.
 - Do not replace the helper opportunistically during unrelated color picker work.
 - Keep the ColorSampler provider interface stable so a future C# / C++ native helper can replace the PowerShell MVP without changing picker UI, color model, axis modes, sliders, or registry field integration.
-- Future work should focus on Windows helper overlay focus / activation / cancel lifecycle.
+- A focused attempt to fix the remaining Windows helper taskbar flash / first-run Esc / right-click menu behavior was tested and rolled back. Those fixes are not part of the 0.2.4 draft.
+- Future work should prefer a dedicated native helper / C# helper or a separately scoped helper replacement instead of further complex PowerShell overlay focus patches.
 
 ## Settings background preset dropdown render glitch
 

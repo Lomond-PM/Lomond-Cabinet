@@ -8,14 +8,19 @@ This project follows simple semantic versioning for development handoff:
 - `MINOR`: new tools or substantial user-facing capabilities.
 - `PATCH`: fixes, UI adjustments, and documentation updates.
 
-## [Unreleased]
+## [Unreleased] - 0.2.4 draft
 
 ### Added
 
+- Added H / S / V / R / G / B axis modes to the built-in color picker.
+- Added H / S / V / R / G / B single-channel sliders to the built-in color picker.
+- Added click / focus select-all behavior for Hex color inputs.
+- Added flip / clamp positioning for color picker popups so lower-panel fields can open without clipping.
 - Added a ColorSampler provider framework for the built-in color picker eyedropper path, with native EyeDropper, Windows helper, and unavailable-provider boundaries.
 - Added a Windows-only eyedropper helper MVP using PowerShell / WinForms / Drawing so the built-in color picker can sample colors across windows and sync results back to Hex, preview, swatch, plane, axis slider, and H/S/V/R/G/B channel sliders.
 - Added removable Ad Component Kit artifact metadata for newly created Feature Stack and Icon Grid components, including per-batch `artifactId` ownership data and signed tool expressions.
 - Added `Remove Selected Generated Component` for new Ad Component Kit artifacts. Cleanup only trusts `LOMOND_CABINET_ARTIFACT_V1` metadata and only restores / clears expressions signed with `LOMOND_CABINET_BINDING_V1`.
+- Added collapsible Shape Add native components section for `Add Native Components` / `添加原生组件`, with persisted section state.
 
 ### Fixed
 
@@ -23,14 +28,22 @@ This project follows simple semantic versioning for development handoff:
 - Added Home close teardown for Home edit / drag state, Home timers, and document-level drag listeners.
 - Moved Ad Component Kit refresh / select / remove actions directly under the active create button, removed the separate Component Maintenance group, and removed the Detach Component entry from the registry UI.
 
+### Changed
+
+- Kept registry tool copy tool-local: Ad Component Kit and Shape Add strings remain in their `.tool.jsx` files instead of moving into `client/js/i18n.js`.
+- Kept Settings as an app-level core settings framework, not a normal registry tool.
+- Preserved the ColorSampler provider contract so a future C# / C++ color sampler helper can replace the Windows PowerShell MVP without changing picker UI, color model, sliders, or registry field integration.
+
 ### Known / Follow-up
 
 - Ad Component Kit artifact cleanup is forward-only. It does not process old generated components without Lomond metadata, does not guess by layer name, and does not clean expressions without the `LOMOND_CABINET_BINDING_V1` signature.
 - Native `window.EyeDropper` exists in AE CEP but immediately cancels in current testing, so it is marked unusable for the session and the Windows helper provider is used instead.
-- The Windows eyedropper helper is currently an MVP. The Windows taskbar may briefly flash during sampling, and Esc cancellation can be unreliable during or after the helper overlay activation delay.
-- Future eyedropper work should focus on Windows helper overlay focus / activation / cancel lifecycle, or replace the helper with a C# / C++ native helper without changing the ColorSampler provider interface.
+- The Windows eyedropper helper is currently an MVP. The Windows taskbar may briefly flash during sampling, first-run Esc cancellation can be unreliable, and right-click cancel may still show the CEP WebView context menu.
+- A focused attempt to fix the Windows helper overlay lifecycle issues was tested and rolled back. Those fixes are not included in the 0.2.4 draft.
+- Future eyedropper work should prefer a dedicated native C# / C++ helper or a focused helper replacement over further complex PowerShell overlay lifecycle patches.
 - Continue monitoring close behavior across AE / CEP environments before the 0.2.4 release.
 - This mitigation is on `dev` for the 0.2.4 development line and is not part of the published 0.2.3 tag.
+- 0.2.4 is not released until `VERSION`, `CSXS/manifest.xml`, `main`, and tag `v0.2.4` are updated through the release flow.
 
 ## [0.2.3] - 2026-07-08
 
