@@ -5,6 +5,8 @@
     var ICON_GRID_VERSION = "ICON_GRID_SCALE_FIX_OLD_SCALE_V1";
     var ICON_GRID_FUNCTION_NAME = "AEToolbox.tools.adComponentKit.createIconGrid";
     var ICON_GRID_FILE = "host/tools/adComponentKit.jsx";
+    var ARTIFACT_METADATA_PREFIX = "LOMOND_CABINET_ARTIFACT_V1:";
+    var EXPRESSION_BINDING_PREFIX = "// LOMOND_CABINET_BINDING_V1";
 
     function jsonResult(ok, message, extra) {
         var s = "{\"ok\":" + (ok ? "true" : "false") + ",\"message\":\"" + AEToolbox.jsonEscape(message) + "\"";
@@ -433,9 +435,105 @@
         return "{\"aetoolbox\":true,\"componentId\":\"" + AEToolbox.jsonEscape(componentId) + "\",\"componentType\":\"" + AEToolbox.jsonEscape(componentType) + "\",\"role\":\"" + AEToolbox.jsonEscape(role) + "\",\"index\":" + index + "}";
     }
 
+    function pad2(n) {
+        n = Math.floor(Math.abs(n));
+        return n < 10 ? "0" + n : String(n);
+    }
+
+    function createArtifactId(kind) {
+        var d = new Date();
+        var random = Math.floor(Math.random() * 1000000);
+        return "ack_" + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + "_" + pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds()) + "_" + String(random);
+    }
+
+    function createdAtString() {
+        var d = new Date();
+        return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + "T" + pad2(d.getHours()) + ":" + pad2(d.getMinutes()) + ":" + pad2(d.getSeconds());
+    }
+
+    function encodeText(value) {
+        try {
+            return encodeURIComponent(String(value || ""));
+        } catch (err) {
+            return "";
+        }
+    }
+
+    function decodeText(value) {
+        try {
+            return decodeURIComponent(String(value || ""));
+        } catch (err) {
+            return "";
+        }
+    }
+
+    function buildArtifactMetadata(data) {
+        var out = {
+            owner: "Lomond Cabinet / AEToolbox",
+            tool: "adComponentKit",
+            kind: data.kind || data.componentType || "",
+            artifactId: data.artifactId || data.componentId || "",
+            componentId: data.componentId || data.artifactId || "",
+            componentType: data.componentType || data.kind || "",
+            role: data.role || "",
+            index: typeof data.index === "number" ? data.index : 0,
+            createdAt: data.createdAt || createdAtString()
+        };
+        if (typeof data.previousCommentEncoded === "string") {
+            out.previousCommentEncoded = data.previousCommentEncoded;
+        }
+        return ARTIFACT_METADATA_PREFIX + AEToolbox.stringify(out);
+    }
+
+    function parseArtifactMetadata(comment) {
+        var raw = String(comment || "");
+        var json;
+        var data;
+        if (raw.indexOf(ARTIFACT_METADATA_PREFIX) !== 0) {
+            return null;
+        }
+        json = raw.substr(ARTIFACT_METADATA_PREFIX.length);
+        try {
+            data = AEToolbox.parseJson(json);
+        } catch (err) {
+            return null;
+        }
+        if (!data || data.tool !== "adComponentKit" || !data.artifactId) {
+            return null;
+        }
+        data.aetoolbox = true;
+        data.componentId = data.componentId || data.artifactId;
+        data.componentType = data.componentType || data.kind;
+        data.kind = data.kind || data.componentType;
+        return data;
+    }
+
+    function setLayerArtifactMetadata(layer, data) {
+        var raw = "";
+        if (!layer) {
+            return;
+        }
+        try {
+            raw = layer.comment || "";
+        } catch (err1) {
+            raw = "";
+        }
+        if (data.role === "sourceLayerBinding" && raw && raw.indexOf(ARTIFACT_METADATA_PREFIX) !== 0) {
+            data.previousCommentEncoded = encodeText(raw);
+        }
+        try {
+            layer.comment = buildArtifactMetadata(data);
+        } catch (err2) {
+        }
+    }
+
     function parseMetadata(layer) {
         var raw = layer ? layer.comment : "";
         var data;
+        data = parseArtifactMetadata(raw);
+        if (data) {
+            return data;
+        }
         if (!raw || raw.indexOf("\"aetoolbox\"") < 0) {
             return null;
         }
@@ -621,6 +719,102 @@
         }
     }
 
+    function buildExpressionSignature(options) {
+        return [
+            EXPRESSION_BINDING_PREFIX,
+            "// tool=adComponentKit",
+            "// artifactId=" + String(options.artifactId || ""),
+            "// kind=" + String(options.kind || ""),
+            "// role=" + String(options.role || ""),
+            "// previousExpressionEnabled=" + (options.previousExpressionEnabled ? "true" : "false"),
+            "// previousExpressionEncoded=" + encodeText(options.previousExpression || "")
+        ].join("\n");
+    }
+
+    function signedExpressionBody(expressionText, options) {
+        return buildExpressionSignature(options) + "\n" + expressionText;
+    }
+
+    function setSignedExpressionSafe(prop, expressionText, options) {
+        var previousExpression = "";
+        var previousEnabled = false;
+        if (!prop) {
+            return;
+        }
+        try {
+            previousExpression = prop.expression || "";
+        } catch (err1) {
+            previousExpression = "";
+        }
+        try {
+            previousEnabled = !!prop.expressionEnabled;
+        } catch (err2) {
+            previousEnabled = false;
+        }
+        if (previousExpression && previousExpression.indexOf(EXPRESSION_BINDING_PREFIX) === 0) {
+            previousEnabled = signedExpressionValue(previousExpression, "previousExpressionEnabled") === "true";
+            previousExpression = decodeText(signedExpressionValue(previousExpression, "previousExpressionEncoded"));
+        }
+        options = options || {};
+        options.previousExpression = previousExpression;
+        options.previousExpressionEnabled = previousEnabled;
+        setExpressionSafe(prop, signedExpressionBody(expressionText, options));
+    }
+
+    function signedExpressionValue(expression, key) {
+        var lines = String(expression || "").split("\n");
+        var prefix = "// " + key + "=";
+        var i;
+        for (i = 0; i < lines.length; i++) {
+            if (lines[i].indexOf(prefix) === 0) {
+                return lines[i].substr(prefix.length);
+            }
+        }
+        return "";
+    }
+
+    function isToolOwnedExpression(expression, artifactId) {
+        var text = String(expression || "");
+        if (text.indexOf(EXPRESSION_BINDING_PREFIX) !== 0) {
+            return false;
+        }
+        if (artifactId && signedExpressionValue(text, "artifactId") !== artifactId) {
+            return false;
+        }
+        return signedExpressionValue(text, "tool") === "adComponentKit";
+    }
+
+    function restoreOrClearSignedExpression(prop, artifactId) {
+        var expression = "";
+        var previousExpression = "";
+        var previousEnabled = false;
+        if (!prop) {
+            return "skipped";
+        }
+        try {
+            expression = prop.expression || "";
+        } catch (err1) {
+            return "skipped";
+        }
+        if (!isToolOwnedExpression(expression, artifactId)) {
+            return "skipped";
+        }
+        previousEnabled = signedExpressionValue(expression, "previousExpressionEnabled") === "true";
+        previousExpression = decodeText(signedExpressionValue(expression, "previousExpressionEncoded"));
+        try {
+            if (previousExpression) {
+                prop.expression = previousExpression;
+                prop.expressionEnabled = previousEnabled;
+                return "restored";
+            }
+            prop.expression = "";
+            prop.expressionEnabled = false;
+            return "cleared";
+        } catch (err2) {
+            return "skipped";
+        }
+    }
+
     function expressionString(value) {
         return String(value).replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
     }
@@ -634,13 +828,14 @@
         return "[" + refs.join(",") + "]";
     }
 
-    function bindFeatureTextPositionToController(layer, allTextLayers, itemIndex) {
+    function bindFeatureTextPositionToController(layer, allTextLayers, itemIndex, artifactId) {
         var pos = positionProp(layer);
         var refs = layerRefsExpression(allTextLayers);
+        var expressionText;
         if (!pos) {
             return;
         }
-        setExpressionSafe(pos, [
+        expressionText = [
             "var ctrl = parent;",
             "if (ctrl) {",
             "  var refs = " + refs + ";",
@@ -700,10 +895,19 @@
             "} else {",
             "  value;",
             "}"
-        ].join("\n"));
+        ].join("\n");
+        if (artifactId) {
+            setSignedExpressionSafe(pos, expressionText, {
+                artifactId: artifactId,
+                kind: "featureStack",
+                role: "sourceLayerBinding"
+            });
+        } else {
+            setExpressionSafe(pos, expressionText);
+        }
     }
 
-    function bindFeatureTextPositionsToController(texts) {
+    function bindFeatureTextPositionsToController(texts, artifactId) {
         var compact = [];
         var i;
         for (i = 0; i < texts.length; i++) {
@@ -713,12 +917,12 @@
         }
         for (i = 0; i < compact.length; i++) {
             if (compact[i]) {
-                bindFeatureTextPositionToController(compact[i], compact, i);
+                bindFeatureTextPositionToController(compact[i], compact, i, artifactId);
             }
         }
     }
 
-    function bindFeaturePillToController(layer) {
+    function bindFeaturePillToController(layer, artifactId) {
         var root = layer.property("ADBE Root Vectors Group");
         var group = root ? root.property(1) : null;
         var vectors = group ? group.property("ADBE Vectors Group") : null;
@@ -728,8 +932,12 @@
         var sizeProp = rect ? rect.property("ADBE Vector Rect Size") : null;
         var roundProp = rect ? rect.property("ADBE Vector Rect Roundness") : null;
         var colorProp = fill ? fill.property("ADBE Vector Fill Color") : null;
+        var positionExpression;
+        var sizeExpression;
+        var roundExpression;
+        var colorExpression;
 
-        setExpressionSafe(position, [
+        positionExpression = [
             "var txt = thisLayer.parent;",
             "var ctrl = txt ? txt.parent : null;",
             "if (txt && ctrl && txt.sourceRectAtTime) {",
@@ -737,9 +945,9 @@
             "} else {",
             "  value;",
             "}"
-        ].join("\n"));
+        ].join("\n");
 
-        setExpressionSafe(sizeProp, [
+        sizeExpression = [
             "var txt = thisLayer.parent;",
             "var ctrl = txt ? txt.parent : null;",
             "if (!ctrl && thisLayer.parent) { ctrl = thisLayer.parent; }",
@@ -765,21 +973,33 @@
             "} else {",
             "  value;",
             "}"
-        ].join("\n"));
+        ].join("\n");
 
-        setExpressionSafe(roundProp, [
+        roundExpression = [
             "var txt = thisLayer.parent;",
             "var ctrl = txt ? txt.parent : null;",
             "if (!ctrl && thisLayer.parent) { ctrl = thisLayer.parent; }",
             "ctrl ? ctrl.effect(\"Corner Radius\")(1) : value;"
-        ].join("\n"));
+        ].join("\n");
 
-        setExpressionSafe(colorProp, [
+        colorExpression = [
             "var txt = thisLayer.parent;",
             "var ctrl = txt ? txt.parent : null;",
             "if (!ctrl && thisLayer.parent) { ctrl = thisLayer.parent; }",
             "ctrl ? ctrl.effect(\"Fill Color\")(1) : value;"
-        ].join("\n"));
+        ].join("\n");
+
+        if (artifactId) {
+            setSignedExpressionSafe(position, positionExpression, { artifactId: artifactId, kind: "featureStack", role: "generatedLayer" });
+            setSignedExpressionSafe(sizeProp, sizeExpression, { artifactId: artifactId, kind: "featureStack", role: "generatedLayer" });
+            setSignedExpressionSafe(roundProp, roundExpression, { artifactId: artifactId, kind: "featureStack", role: "generatedLayer" });
+            setSignedExpressionSafe(colorProp, colorExpression, { artifactId: artifactId, kind: "featureStack", role: "generatedLayer" });
+        } else {
+            setExpressionSafe(position, positionExpression);
+            setExpressionSafe(sizeProp, sizeExpression);
+            setExpressionSafe(roundProp, roundExpression);
+            setExpressionSafe(colorProp, colorExpression);
+        }
     }
 
     function debugNumber(n) {
@@ -849,6 +1069,169 @@
             }
         }
         return layers;
+    }
+
+    function findArtifactIdFromSelectedLayers(comp) {
+        var selected = comp && comp.selectedLayers ? comp.selectedLayers : [];
+        var i;
+        var data;
+        for (i = 0; i < selected.length; i++) {
+            data = parseArtifactMetadata(selected[i].comment);
+            if (data && data.tool === "adComponentKit" && data.artifactId) {
+                return {
+                    artifactId: data.artifactId,
+                    kind: data.kind || data.componentType || "",
+                    data: data
+                };
+            }
+        }
+        return null;
+    }
+
+    function findLayersByArtifactId(comp, artifactId) {
+        var layers = [];
+        var i;
+        var data;
+        for (i = 1; i <= comp.numLayers; i++) {
+            data = parseArtifactMetadata(comp.layer(i).comment);
+            if (data && data.artifactId === artifactId && data.tool === "adComponentKit") {
+                layers[layers.length] = {
+                    layer: comp.layer(i),
+                    data: data
+                };
+            }
+        }
+        return layers;
+    }
+
+    function scanSignedExpressionsInGroup(group, artifactId, result) {
+        var i;
+        var child;
+        var action;
+        if (!group) {
+            return;
+        }
+        try {
+            action = restoreOrClearSignedExpression(group, artifactId);
+            if (action === "restored") {
+                result.restoredExpressions++;
+            } else if (action === "cleared") {
+                result.clearedExpressions++;
+            }
+        } catch (propErr) {
+            result.skippedItems++;
+        }
+        try {
+            if (!group.numProperties) {
+                return;
+            }
+            for (i = 1; i <= group.numProperties; i++) {
+                try {
+                    child = group.property(i);
+                    scanSignedExpressionsInGroup(child, artifactId, result);
+                } catch (childErr) {
+                    result.skippedItems++;
+                }
+            }
+        } catch (err) {
+        }
+    }
+
+    function restoreOrClearArtifactExpressions(comp, artifactId, result) {
+        var i;
+        for (i = 1; i <= comp.numLayers; i++) {
+            try {
+                scanSignedExpressionsInGroup(comp.layer(i), artifactId, result);
+            } catch (err) {
+                result.skippedItems++;
+            }
+        }
+    }
+
+    function restoreSourceLayerBinding(item, result) {
+        var previousComment;
+        try {
+            item.layer.parent = null;
+        } catch (err1) {
+        }
+        previousComment = decodeText(item.data.previousCommentEncoded || "");
+        try {
+            item.layer.comment = previousComment;
+        } catch (err2) {
+            result.skippedItems++;
+        }
+    }
+
+    function shouldDeleteArtifactLayer(role) {
+        return role === "controller" || role === "generatedLayer" || role === "helperLayer" || role === "item" || role === "itemBg" || role === "icon";
+    }
+
+    function removeArtifactById(comp, artifactId) {
+        var layers = findLayersByArtifactId(comp, artifactId);
+        var result = {
+            removedLayers: 0,
+            restoredExpressions: 0,
+            clearedExpressions: 0,
+            skippedItems: 0,
+            artifactId: artifactId,
+            kind: "",
+            layerCount: layers.length
+        };
+        var deleteItems = [];
+        var i;
+        var item;
+
+        for (i = 0; i < layers.length; i++) {
+            item = layers[i];
+            if (!result.kind) {
+                result.kind = item.data.kind || item.data.componentType || "";
+            }
+            if (item.data.role === "sourceLayerBinding") {
+                restoreSourceLayerBinding(item, result);
+            } else if (shouldDeleteArtifactLayer(item.data.role)) {
+                deleteItems[deleteItems.length] = item.layer;
+            }
+        }
+
+        restoreOrClearArtifactExpressions(comp, artifactId, result);
+
+        deleteItems.sort(function (a, b) {
+            return b.index - a.index;
+        });
+        for (i = 0; i < deleteItems.length; i++) {
+            try {
+                deleteItems[i].remove();
+                result.removedLayers++;
+            } catch (err) {
+                result.skippedItems++;
+            }
+        }
+        return result;
+    }
+
+    function removeArtifactBySelectedLayer() {
+        var comp = getComp();
+        var selectedInfo;
+        var result;
+        if (!comp) {
+            return jsonResult(false, "Open a composition before removing a generated component.");
+        }
+        selectedInfo = findArtifactIdFromSelectedLayers(comp);
+        if (!selectedInfo || !selectedInfo.artifactId) {
+            return jsonResult(false, "Select a new Ad Component Kit generated layer or controller with Lomond metadata.");
+        }
+        app.beginUndoGroup("AE Toolbox Remove Generated Component");
+        try {
+            result = removeArtifactById(comp, selectedInfo.artifactId);
+        } catch (err) {
+            app.endUndoGroup();
+            return jsonResult(false, "Remove generated component failed: " + err.toString());
+        }
+        app.endUndoGroup();
+        if (!result.removedLayers && !result.restoredExpressions && !result.clearedExpressions) {
+            return jsonResult(false, "No removable generated component content found for selected artifact.", "\"artifactId\":\"" + AEToolbox.jsonEscape(selectedInfo.artifactId) + "\"");
+        }
+        return jsonResult(true, "Removed generated component. Layers: " + result.removedLayers + ", restored expressions: " + result.restoredExpressions + ", cleared expressions: " + result.clearedExpressions + ".", "\"artifactId\":\"" + AEToolbox.jsonEscape(result.artifactId) + "\",\"kind\":\"" + AEToolbox.jsonEscape(result.kind || selectedInfo.kind || "") + "\",\"removedLayers\":" + result.removedLayers + ",\"restoredExpressions\":" + result.restoredExpressions + ",\"clearedExpressions\":" + result.clearedExpressions + ",\"skippedItems\":" + result.skippedItems);
     }
 
     function unionBoundsForLayers(layers, comp) {
@@ -960,6 +1343,8 @@
         var texts = [];
         var skipped = 0;
         var componentId;
+        var artifactId;
+        var createdAt;
         var selectionBounds;
         var originalInfo;
         var i;
@@ -1014,9 +1399,20 @@
             }
         }
         componentId = nextComponentId(comp, "featureStack");
+        artifactId = createArtifactId("featureStack");
+        createdAt = createdAtString();
         app.beginUndoGroup("AE Toolbox Create Feature Stack");
         try {
             ctrl = createController(comp, "FEATURE_STACK_CTRL", componentId, "featureStack", 0, 0, p);
+            setLayerArtifactMetadata(ctrl, {
+                kind: "featureStack",
+                componentType: "featureStack",
+                artifactId: artifactId,
+                componentId: componentId,
+                role: "controller",
+                index: 0,
+                createdAt: createdAt
+            });
             ctrl.parent = null;
             ctrl.threeDLayer = false;
             ctrlTr = ctrl.property("ADBE Transform Group");
@@ -1028,11 +1424,27 @@
             currentY = -totalHeight / 2;
             for (i = 0; i < texts.length; i++) {
                 itemY = currentY + pillHeights[i] / 2;
-                texts[i].comment = metadata(componentId, "featureStack", "itemText", i + 1);
+                setLayerArtifactMetadata(texts[i], {
+                    kind: "featureStack",
+                    componentType: "featureStack",
+                    artifactId: artifactId,
+                    componentId: componentId,
+                    role: "sourceLayerBinding",
+                    index: i + 1,
+                    createdAt: createdAt
+                });
                 centerTextAnchor(texts[i], comp.time);
 
                 bg = createLocalPillLayer(comp, texts[i].name + "_PILL_BG", pillWidths[i], pillHeights[i], AEToolbox.hexToColorArray(p.fillColor), p.cornerRadius);
-                bg.comment = metadata(componentId, "featureStack", "itemBg", i + 1);
+                setLayerArtifactMetadata(bg, {
+                    kind: "featureStack",
+                    componentType: "featureStack",
+                    artifactId: artifactId,
+                    componentId: componentId,
+                    role: "generatedLayer",
+                    index: i + 1,
+                    createdAt: createdAt
+                });
                 bg.moveAfter(texts[i]);
 
                 texts[i].parent = ctrl;
@@ -1052,8 +1464,8 @@
                 };
                 currentY += pillHeights[i] + p.gap;
             }
-            parentBackgroundsToTextLayers(parentPairs);
-            bindFeatureTextPositionsToController(texts);
+            parentBackgroundsToTextLayers(parentPairs, artifactId);
+            bindFeatureTextPositionsToController(texts, artifactId);
         } catch (err) {
             app.endUndoGroup();
             return jsonResult(false, "Create feature stack failed: " + err.toString());
@@ -1067,7 +1479,7 @@
         if (Math.abs(ctrlPositionValue[0] - selectionBounds.centerX) > 0.5 || Math.abs(ctrlPositionValue[1] - selectionBounds.centerY) > 0.5) {
             warning = warning ? warning + " Controller position does not match original center." : "Controller position does not match original center.";
         }
-        return jsonResult(true, "Feature Stack created with " + texts.length + " item(s).", "\"componentId\":\"" + AEToolbox.jsonEscape(componentId) + "\"," + featureLocalDebugJson(selectionBounds.centerX, selectionBounds.centerY, ctrlPositionValue[0], ctrlPositionValue[1], ctrlAnchorValue[0], ctrlAnchorValue[1], debugItems, warning));
+        return jsonResult(true, "Feature Stack created with " + texts.length + " item(s).", "\"componentId\":\"" + AEToolbox.jsonEscape(componentId) + "\",\"artifactId\":\"" + AEToolbox.jsonEscape(artifactId) + "\"," + featureLocalDebugJson(selectionBounds.centerX, selectionBounds.centerY, ctrlPositionValue[0], ctrlPositionValue[1], ctrlAnchorValue[0], ctrlAnchorValue[1], debugItems, warning));
     };
 
     function readFeatureParams(ctrl) {
@@ -1099,9 +1511,9 @@
         var p = readFeatureParams(ctrl);
         for (i = 0; i < layers.length; i++) {
             item = layers[i];
-            if (item.data.role === "itemText") {
+            if (item.data.role === "itemText" || item.data.role === "sourceLayerBinding") {
                 texts[item.data.index - 1] = item.layer;
-            } else if (item.data.role === "itemBg") {
+            } else if (item.data.role === "itemBg" || item.data.role === "generatedLayer") {
                 bgs[item.data.index - 1] = item.layer;
             }
         }
@@ -1126,8 +1538,8 @@
                 };
             }
         }
-        parentBackgroundsToTextLayers(parentPairs);
-        bindFeatureTextPositionsToController(texts);
+        parentBackgroundsToTextLayers(parentPairs, data.artifactId || data.componentId);
+        bindFeatureTextPositionsToController(texts, data.artifactId || data.componentId);
         return texts.length;
     }
 
@@ -1225,14 +1637,14 @@
         }
     }
 
-    function parentBackgroundsToTextLayers(pairs) {
+    function parentBackgroundsToTextLayers(pairs, artifactId) {
         var i;
         for (i = 0; i < pairs.length; i++) {
             try {
                 if (pairs[i].bg && pairs[i].text) {
                     pairs[i].bg.parent = pairs[i].text;
                     setLayerLocalPosition(pairs[i].bg, 0, 0);
-                    bindFeaturePillToController(pairs[i].bg);
+                    bindFeaturePillToController(pairs[i].bg, artifactId);
                 }
             } catch (err) {
             }
@@ -1404,6 +1816,8 @@
         var gridItems = [];
         var skipped = 0;
         var componentId;
+        var artifactId;
+        var createdAt;
         var i;
         var b;
         var scale;
@@ -1447,6 +1861,8 @@
         }
         selectionBounds = unionBoundsForGridItems(gridItems);
         componentId = nextComponentId(comp, "iconGrid");
+        artifactId = createArtifactId("iconGrid");
+        createdAt = createdAtString();
         app.beginUndoGroup("AE Toolbox Create Icon Grid");
         try {
             layoutResult = computeIconGridWorldLayout(gridItems, p, selectionBounds.centerX, selectionBounds.centerY);
@@ -1463,6 +1879,15 @@
                 layoutResult.items[i].finalCompY = finalBounds.centerY;
             }
             ctrl = createController(comp, "ICON_GRID_CTRL", componentId, "iconGrid", 0, 0, p);
+            setLayerArtifactMetadata(ctrl, {
+                kind: "iconGrid",
+                componentType: "iconGrid",
+                artifactId: artifactId,
+                componentId: componentId,
+                role: "controller",
+                index: 0,
+                createdAt: createdAt
+            });
             ctrl.parent = null;
             ctrl.threeDLayer = false;
             ctrlTr = ctrl.property("ADBE Transform Group");
@@ -1471,7 +1896,15 @@
             ctrlTr.property("ADBE Scale").setValue([100, 100]);
             ctrlTr.property("ADBE Rotate Z").setValue(0);
             for (i = 0; i < gridItems.length; i++) {
-                gridItems[i].layer.comment = metadata(componentId, "iconGrid", "item", i + 1);
+                setLayerArtifactMetadata(gridItems[i].layer, {
+                    kind: "iconGrid",
+                    componentType: "iconGrid",
+                    artifactId: artifactId,
+                    componentId: componentId,
+                    role: "sourceLayerBinding",
+                    index: i + 1,
+                    createdAt: createdAt
+                });
                 gridItems[i].layer.parent = ctrl;
             }
             for (i = 0; i < gridItems.length; i++) {
@@ -1499,7 +1932,7 @@
                 break;
             }
         }
-        return jsonResult(true, "Icon Grid created with " + gridItems.length + " item(s).", "\"componentId\":\"" + AEToolbox.jsonEscape(componentId) + "\"," + gridDebugJson(selectionBounds.centerX, selectionBounds.centerY, ctrlPositionValue[0], ctrlPositionValue[1], gridItems.length, Math.max(1, Math.min(gridItems.length, p.columns)), layoutResult.rows, p.normalizeMode, layoutResult.items, warning));
+        return jsonResult(true, "Icon Grid created with " + gridItems.length + " item(s).", "\"componentId\":\"" + AEToolbox.jsonEscape(componentId) + "\",\"artifactId\":\"" + AEToolbox.jsonEscape(artifactId) + "\"," + gridDebugJson(selectionBounds.centerX, selectionBounds.centerY, ctrlPositionValue[0], ctrlPositionValue[1], gridItems.length, Math.max(1, Math.min(gridItems.length, p.columns)), layoutResult.rows, p.normalizeMode, layoutResult.items, warning));
     };
 
     function readIconParams(ctrl) {
@@ -1531,7 +1964,7 @@
         var p = readIconParams(ctrl);
         for (i = 0; i < layers.length; i++) {
             item = layers[i];
-            if (item.data.role === "item" || item.data.role === "icon") {
+            if (item.data.role === "item" || item.data.role === "icon" || item.data.role === "generatedLayer" || item.data.role === "sourceLayerBinding") {
                 items[item.data.index - 1] = item.layer;
             }
         }
@@ -1656,6 +2089,10 @@
         return jsonResult(true, "Component detached. Layers will no longer refresh as a kit component.");
     };
 
+    AEToolbox.tools.adComponentKit.removeSelectedGeneratedComponent = function () {
+        return removeArtifactBySelectedLayer();
+    };
+
     AEToolbox.tools.adComponentKit.getState = function () {
         var comp = getComp();
         var selected;
@@ -1665,6 +2102,7 @@
         var textLayerCount = 0;
         var twoDLayerCount = 0;
         var selectedControllerType = null;
+        var selectedArtifactInfo = null;
         var data;
         var hasComp = !!comp;
         var selectionCount = 0;
@@ -1682,6 +2120,7 @@
             if (data && data.role === "controller") {
                 selectedControllerType = data.componentType || null;
             }
+            selectedArtifactInfo = findArtifactIdFromSelectedLayers(comp);
         }
 
         for (i = 0; i < selected.length; i++) {
@@ -1724,7 +2163,8 @@
                 canCreateIconGrid: hasComp && twoDLayerCount > 0,
                 canRefresh: hasComp && !!selectedControllerType,
                 canSelectLayers: hasComp && !!selectedControllerType,
-                canDetach: hasComp && !!selectedControllerType
+                canDetach: hasComp && !!selectedControllerType,
+                canRemoveGeneratedComponent: hasComp && !!selectedArtifactInfo
             }
         });
     };

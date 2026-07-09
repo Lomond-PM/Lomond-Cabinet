@@ -84,6 +84,9 @@ Current conclusion:
 - The recommended future registry id is `ecommerceLayout` to preserve `aeToolbox.homeToolOrder`.
 - The recommended future shape is one registry tool using tabs / option cards and `visibleWhen`, not multiple Home entries.
 - Existing AE creation logic in `host/tools/adComponentKit.jsx` should be reused, not rewritten.
+- New Feature Stack and Icon Grid output now writes Lomond artifact metadata and can be removed by `Remove Selected Generated Component`.
+- Artifact cleanup is intentionally limited to new output with `LOMOND_CABINET_ARTIFACT_V1` metadata and expressions signed with `LOMOND_CABINET_BINDING_V1`.
+- The registry UI now places Refresh Selected Component, Select Component Layers, and Remove Selected Generated Component directly below the active create button; the separate Component Maintenance group and Detach Component UI entry were removed.
 
 Main risks:
 
@@ -92,6 +95,8 @@ Main risks:
 - Legacy detail DOM and registry detail panel can coexist and conflict during detail switching.
 - Feature Stack and Icon Grid have different valid-selection requirements and need host state.
 - Refresh, select component layers, and detach require selected controller metadata.
+- Remove Selected Generated Component must remain metadata-based. It must not delete layers that lack Lomond artifact metadata, must not clean unsigned expressions, and must not use layer-name heuristics for old output.
+- Icon Grid uses existing user layers as source bindings; cleanup must not delete those source layers. It should remove the controller, clear metadata / parent bindings, and restore or clear only signed tool expressions.
 - Host actions currently return plain `message` strings; registry migration should move toward `messageKey` fallbacks.
 - Existing user parameters are stored under `AEToolbox.ecommerceLayout.v1`; persistence migration must not lose values.
 
@@ -107,11 +112,13 @@ Recommended migration route:
 
 Do not rename the `ecommerceLayout` registry id or storage key without a dedicated HomeLayout / storage migration.
 
+Do not extend artifact cleanup to legacy no-metadata Ad Component Kit output unless a dedicated migration / audit task defines a safe ownership model.
+
 ## CEP panel close freeze
 
 Status:
 
-Deferred to 0.2.4.
+Mitigated on `dev` for the 0.2.4 development line; still pending broader AE / CEP regression before release.
 
 Area:
 
@@ -123,23 +130,68 @@ Area:
 
 Observed behavior:
 
-- Closing the plugin window can make After Effects appear frozen for several seconds to more than ten seconds.
-- This is not addressed in the 0.2.3 release preparation.
+- In 0.2.3 and earlier, closing the plugin window can make After Effects appear frozen for several seconds to more than ten seconds.
+- This is not addressed in the 0.2.3 release or tag.
+- On `dev`, after `fix/panel-close-freeze-audit`, closing from tool detail pages is behaving normally in current testing.
+- On `dev`, closing from Home is now noticeably improved and has little to no perceptible impact in current testing.
 
 Current decision:
 
 - Do not treat this as fixed in 0.2.3.
-- Do not make opportunistic shutdown changes while preparing documentation or unrelated migration cleanup.
-- Schedule a dedicated 0.2.4 investigation.
+- Do not claim this has shipped until the 0.2.4 release is merged to `main` and tagged.
+- Keep the shutdown lifecycle guards in place; do not remove them during unrelated cleanup.
+- Continue monitoring close behavior across more AE / CEP environments before 0.2.4 release.
+- Run a focused 0.2.4 release regression around Home, Settings, registry tool detail pages, and Developer Mode before publishing.
 
-Future investigation notes:
+Mitigation added on `dev`:
 
-- Audit pending `CSInterface.evalScript()` calls during close / unload.
-- Audit registry `stateAction` polling intervals and cleanup.
-- Audit Settings / registry document and window listeners.
-- Audit custom select / portal cleanup.
-- Audit localStorage save bursts during unload.
-- Audit `beforeunload`, panel close transition callbacks, and stale DOM access after view teardown.
+- Added a panel shutdown guard so close / unload paths stop new host calls and ignore late callbacks.
+- Guarded close-time `CSInterface.evalScript()` use and UI refresh work.
+- Stopped selection polling, registry state polling, runtime timers, and pending registry save timers during shutdown.
+- Added Home close teardown for Home edit / drag state, Home timers, and document-level drag listeners.
+
+Follow-up notes:
+
+- If the issue returns, first build an instrumentation / reproduction matrix by AE version, CEP version, close location, Developer Mode state, and active panel state.
+- Re-audit remaining close-time work, CEP unload behavior, pending `CSInterface.evalScript()` callbacks, Home teardown, observers, listeners, and localStorage writes.
+- Avoid large UI refactors as a first response.
+
+## Color picker eyedropper helper limitations
+
+Status:
+
+Windows-only helper MVP on `dev` for the 0.2.4 development line; known limitations accepted for now.
+
+Area:
+
+- Built-in color picker
+- ColorSampler provider framework
+- Windows helper eyedropper
+- PowerShell / WinForms / Drawing overlay
+
+Current implementation:
+
+- The built-in color picker uses a `ColorSampler` provider framework.
+- Native `window.EyeDropper` exists in AE CEP, but current testing shows it immediately cancels instead of opening a usable system picker.
+- Immediate native EyeDropper cancel marks the native provider unusable for the current session.
+- `WindowsHelperProvider` uses a Windows-only PowerShell / WinForms / Drawing helper.
+- The helper can pick colors across windows.
+- Picked colors synchronize through the existing color setter path for Hex input, preview, swatch, color plane, axis slider, H/S/V/R/G/B channel sliders, and the current color field value.
+
+Known limitations:
+
+- The Windows taskbar may briefly flash while the helper starts or activates the overlay.
+- Each new plugin session's first Pick can have unreliable Esc cancellation. In current AE testing, focus may fall back to the AE timeline instead of being captured by the helper overlay.
+- Right-click cancel may cancel the helper but can still invoke the CEP WebView default context menu, such as Back / Forward / Print / View Source.
+- These limitations currently do not significantly affect the core pick-color workflow, so they are lower priority than the main eyedropper capability.
+
+Current decision:
+
+- Do not treat native `window.EyeDropper` as the primary implementation in AE CEP unless future CEP testing proves it can open reliably.
+- Do not replace the helper opportunistically during unrelated color picker work.
+- Keep the ColorSampler provider interface stable so a future C# / C++ native helper can replace the PowerShell MVP without changing picker UI, color model, axis modes, sliders, or registry field integration.
+- A focused attempt to fix the remaining Windows helper taskbar flash / first-run Esc / right-click menu behavior was tested and rolled back. Those fixes are not part of 0.2.4.
+- Future work should prefer a dedicated native helper / C# helper or a separately scoped helper replacement instead of further complex PowerShell overlay focus patches.
 
 ## Settings background preset dropdown render glitch
 

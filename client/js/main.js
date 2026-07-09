@@ -27,7 +27,8 @@
         background: "AEToolbox.background.v1",
         backgroundCollapsed: "AEToolbox.backgroundSettingsCollapsed.v1",
         language: "aeToolbox.language",
-        homeOrder: "aeToolbox.homeToolOrder"
+        homeOrder: "aeToolbox.homeToolOrder",
+        colorPickerAxis: "AEToolbox.colorPicker.axisMode.v1"
     };
     var ToolRegistry = {
         ecommerceLayout: {
@@ -47,6 +48,10 @@
     var RegistrySaveTimers = {};
     var RegistryRuntimeStates = {};
     var CustomSelectGlobalListenersBound = false;
+    var PanelLifecycleListenersBound = false;
+    var panelShuttingDown = false;
+    var panelSuspended = false;
+    var selectionPollTimer = null;
     var DefaultSettings = {
         motionSpeed: 1,
         uiScale: 0.92,
@@ -230,14 +235,30 @@
         }
     }
 
+    function lifecycleDebug(message, data) {
+        if ((window.AETOOLBOX_DEBUG_UI === true || window.AETOOLBOX_DEBUG_REGISTRY === true) && window.console && console.log) {
+            if (typeof data !== "undefined") {
+                console.log("[AE Toolbox Lifecycle] " + message, data);
+            } else {
+                console.log("[AE Toolbox Lifecycle] " + message);
+            }
+        }
+    }
+
     var HomeLayoutManager = {
         toolOrder: [],
         isEditing: false,
         dragState: null,
         globalEventsBound: false,
         initialized: false,
+        transientTimers: [],
+        globalDragHandlers: null,
 
         init: function () {
+            if (panelShuttingDown) {
+                lifecycleDebug("skipped home init because panelShuttingDown");
+                return;
+            }
             this.loadOrder();
             this.renderOrder();
             this.bindIconEvents();
@@ -309,6 +330,10 @@
         },
 
         saveOrder: function () {
+            if (panelShuttingDown) {
+                lifecycleDebug("skipped home layout save because panelShuttingDown");
+                return;
+            }
             saveStoredJson(StorageKeys.homeOrder, this.toolOrder);
         },
 
@@ -318,6 +343,10 @@
             var i;
             var button;
 
+            if (panelShuttingDown) {
+                lifecycleDebug("skipped home render because panelShuttingDown");
+                return;
+            }
             if (!grid) {
                 return;
             }
@@ -336,6 +365,9 @@
             var editButton = byId("editHomeBtn");
             var i;
 
+            if (panelShuttingDown) {
+                return;
+            }
             if (this.isEditing) {
                 return;
             }
@@ -357,6 +389,10 @@
             var announce = !options || options.announce !== false;
             var i;
 
+            if (panelShuttingDown) {
+                save = false;
+                announce = false;
+            }
             uiDebug("exitHomeEditMode", { save: save });
             this.isEditing = false;
             home.classList.remove("home-editing");
@@ -379,8 +415,90 @@
         },
 
         commitEditMode: function () {
+            if (panelShuttingDown) {
+                lifecycleDebug("skipped home layout save because panelShuttingDown");
+                this.exitEditMode({ save: false, announce: false });
+                return;
+            }
             uiDebug("saveHomeLayout");
             this.exitEditMode({ save: true, announce: true });
+        },
+
+        trackTimer: function (timer) {
+            if (timer) {
+                this.transientTimers[this.transientTimers.length] = timer;
+            }
+            return timer;
+        },
+
+        clearTransientTimers: function () {
+            var i;
+            for (i = 0; i < this.transientTimers.length; i++) {
+                window.clearTimeout(this.transientTimers[i]);
+            }
+            this.transientTimers = [];
+            if (this.dragState && this.dragState.longPressTimer) {
+                window.clearTimeout(this.dragState.longPressTimer);
+                this.dragState.longPressTimer = null;
+            }
+            lifecycleDebug("home timers cleared");
+        },
+
+        cancelDragForShutdown: function () {
+            var state = this.dragState;
+            var home = byId("homeView");
+            var current;
+            var i;
+
+            if (state && state.longPressTimer) {
+                window.clearTimeout(state.longPressTimer);
+                state.longPressTimer = null;
+            }
+            if (state && state.placeholder && state.placeholder.parentNode) {
+                if (state.button && state.placeholder.parentNode) {
+                    state.placeholder.parentNode.insertBefore(state.button, state.placeholder);
+                }
+                state.placeholder.parentNode.removeChild(state.placeholder);
+            }
+            if (state && state.button) {
+                state.button.classList.remove("is-dragging", "is-reordering", "is-pressed");
+                state.button.style.position = "";
+                state.button.style.left = "";
+                state.button.style.top = "";
+                state.button.style.width = "";
+                state.button.style.height = "";
+                state.button.style.transform = "";
+                state.button.style.willChange = "";
+            }
+            current = document.querySelectorAll("#toolGrid .tool-app.is-reordering, #toolGrid .tool-app.is-dragging, #toolGrid .tool-app.is-pressed");
+            for (i = 0; i < current.length; i++) {
+                current[i].classList.remove("is-reordering", "is-dragging", "is-pressed");
+                current[i].style.transform = "";
+            }
+            if (home) {
+                home.classList.remove("home-editing", "is-dragging", "is-opening", "is-returning");
+            }
+            this.dragState = null;
+        },
+
+        removeGlobalDragListeners: function () {
+            if (this.globalDragHandlers) {
+                document.removeEventListener(this.globalDragHandlers.moveEvent, this.globalDragHandlers.move);
+                document.removeEventListener(this.globalDragHandlers.endEvent, this.globalDragHandlers.end);
+                this.globalDragHandlers = null;
+                this.globalEventsBound = false;
+            }
+        },
+
+        teardownForShutdown: function () {
+            lifecycleDebug("home teardown start");
+            this.clearTransientTimers();
+            this.cancelDragForShutdown();
+            this.removeGlobalDragListeners();
+            this.isEditing = false;
+            lifecycleDebug("home listeners removed");
+            lifecycleDebug("observers disconnected");
+            lifecycleDebug("home teardown done");
         },
 
         bindIconEvents: function () {
@@ -398,9 +516,15 @@
                 }
                 tools[i].setAttribute("data-home-events-bound", "true");
                 tools[i].addEventListener(startEvent, function (event) {
+                    if (panelShuttingDown) {
+                        return;
+                    }
                     self.startDrag(event, event.currentTarget);
                 });
                 tools[i].addEventListener("click", function (event) {
+                    if (panelShuttingDown) {
+                        return;
+                    }
                     event.preventDefault();
                 });
             }
@@ -413,6 +537,9 @@
             byId("editHomeBtn").addEventListener("click", function (event) {
                 event.preventDefault();
                 event.stopPropagation();
+                if (panelShuttingDown) {
+                    return;
+                }
                 uiDebug("Edit Home click", { isEditing: self.isEditing });
                 if (self.isEditing) {
                     self.commitEditMode();
@@ -421,6 +548,9 @@
                 }
             });
             byId("homeView").addEventListener("click", function (event) {
+                if (panelShuttingDown) {
+                    return;
+                }
                 if (!self.isEditing || self.dragState) {
                     return;
                 }
@@ -431,12 +561,24 @@
                 }
                 self.exitEditMode({ save: false, announce: true });
             });
-            document.addEventListener(moveEvent, function (event) {
-                self.updateDrag(event);
-            });
-            document.addEventListener(endEvent, function (event) {
-                self.endDrag(event);
-            });
+            this.globalDragHandlers = {
+                moveEvent: moveEvent,
+                endEvent: endEvent,
+                move: function (event) {
+                    if (panelShuttingDown) {
+                        return;
+                    }
+                    self.updateDrag(event);
+                },
+                end: function (event) {
+                    if (panelShuttingDown) {
+                        return;
+                    }
+                    self.endDrag(event);
+                }
+            };
+            document.addEventListener(moveEvent, this.globalDragHandlers.move);
+            document.addEventListener(endEvent, this.globalDragHandlers.end);
         },
 
         startDrag: function (event, toolButton) {
@@ -444,6 +586,9 @@
             var self = this;
             var rect;
 
+            if (panelShuttingDown) {
+                return;
+            }
             if (typeof event.button !== "undefined" && event.button !== 0) {
                 return;
             }
@@ -487,16 +632,22 @@
                 return;
             }
 
-            this.dragState.longPressTimer = window.setTimeout(function () {
+            this.dragState.longPressTimer = this.trackTimer(window.setTimeout(function () {
+                if (panelShuttingDown) {
+                    return;
+                }
                 if (self.dragState && !self.dragState.moved) {
                     self.enterEditMode();
                     self.beginDragging();
                 }
-            }, 520);
+            }, 520));
         },
 
         beginDragging: function () {
             var state = this.dragState;
+            if (panelShuttingDown) {
+                return;
+            }
             if (!state || state.isDragging) {
                 return;
             }
@@ -519,6 +670,9 @@
             var dy;
             var targetIndex;
 
+            if (panelShuttingDown) {
+                return;
+            }
             if (!state) {
                 return;
             }
@@ -555,12 +709,17 @@
             var state = this.dragState;
             var self = this;
 
+            if (panelShuttingDown) {
+                return;
+            }
             if (!state || state.rafPending) {
                 return;
             }
             state.rafPending = true;
             nextFrame(function () {
-                self.processDragFrame();
+                if (!panelShuttingDown) {
+                    self.processDragFrame();
+                }
             });
         },
 
@@ -569,6 +728,9 @@
             var targetIndex;
             var now;
 
+            if (panelShuttingDown) {
+                return;
+            }
             if (!state || !state.button) {
                 return;
             }
@@ -609,6 +771,9 @@
             var state = this.dragState;
             var shouldOpen;
 
+            if (panelShuttingDown) {
+                return;
+            }
             if (!state) {
                 return;
             }
@@ -662,6 +827,9 @@
             state.button.style.transform = "";
             state.button.style.willChange = "";
             byId("homeView").classList.remove("is-dragging");
+            if (panelShuttingDown) {
+                return;
+            }
             more = byId("toolGrid").querySelector(".tool-app.is-disabled");
             byId("toolGrid").insertBefore(state.button, more);
             this.renderOrder();
@@ -750,6 +918,9 @@
             var dx;
             var dy;
 
+            if (panelShuttingDown) {
+                return;
+            }
             if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) {
                 return;
             }
@@ -789,12 +960,15 @@
                 }
             }
 
-            window.setTimeout(function () {
+            this.trackTimer(window.setTimeout(function () {
+                if (panelShuttingDown) {
+                    return;
+                }
                 var current = document.querySelectorAll("#toolGrid .tool-app.is-reordering");
                 for (i = 0; i < current.length; i++) {
                     current[i].classList.remove("is-reordering");
                 }
-            }, duration("normal") + 30);
+            }, duration("normal") + 30));
 
             this.cacheDropTargets();
             this.updateDraggedTransform();
@@ -808,6 +982,10 @@
             var id;
             var button;
 
+            if (panelShuttingDown) {
+                lifecycleDebug("skipped home render because panelShuttingDown");
+                return;
+            }
             if (!state || !grid) {
                 return;
             }
@@ -827,6 +1005,10 @@
         },
 
         resetHomeLayout: function () {
+            if (panelShuttingDown) {
+                lifecycleDebug("skipped home layout save because panelShuttingDown");
+                return;
+            }
             this.toolOrder = this.getDefaultOrder();
             this.renderOrder();
             this.saveOrder();
@@ -914,6 +1096,12 @@
     }
 
     function evalHost(code, callback) {
+        if (panelShuttingDown) {
+            if (callback) {
+                callback('{"ok":false,"message":"Panel runtime is shutting down."}');
+            }
+            return;
+        }
         if (!hostLoaded && code.indexOf("$.evalFile") !== 0) {
             setStatus(tr("status.hostLoading"), "busy", true);
         }
@@ -976,6 +1164,10 @@
         var icon;
         var title;
 
+        if (panelShuttingDown) {
+            lifecycleDebug("skipped home render because panelShuttingDown");
+            return;
+        }
         if (!grid) {
             return;
         }
@@ -1018,6 +1210,10 @@
         window.AETOOLBOX_DEBUG_REGISTRY = enabled === true;
         if (byId("registryDebugTools")) {
             byId("registryDebugTools").checked = window.AETOOLBOX_DEBUG_REGISTRY === true;
+        }
+        if (panelShuttingDown) {
+            lifecycleDebug("skipped home render because panelShuttingDown");
+            return;
         }
         if (!HomeLayoutManager || !HomeLayoutManager.initialized) {
             return;
@@ -1202,6 +1398,31 @@
         element.dispatchEvent(event);
     }
 
+    function bindHexInputSelectBehavior(input) {
+        if (!input || input.getAttribute("data-hex-select-bound") === "true") {
+            return;
+        }
+        input.setAttribute("data-hex-select-bound", "true");
+
+        function selectSoon() {
+            window.setTimeout(function () {
+                if (document.activeElement === input && input.select) {
+                    try {
+                        input.select();
+                    } catch (err) {
+                    }
+                }
+            }, 0);
+        }
+
+        input.addEventListener("focus", selectSoon);
+        input.addEventListener("click", function () {
+            if (document.activeElement === input) {
+                selectSoon();
+            }
+        });
+    }
+
     function createSharedSettingsRangeNumber(field, rangeId, numberId, minValue, maxValue, rangeHookClass, numberHookClass) {
         var controls = document.createElement("span");
         var range = document.createElement("input");
@@ -1261,6 +1482,7 @@
         hexInput.type = "text";
         hexInput.value = input.value;
         hexInput.setAttribute("spellcheck", "false");
+        bindHexInputSelectBehavior(hexInput);
 
         function syncColorUi(value) {
             var previous = input.value || fallback;
@@ -1632,6 +1854,9 @@
 
     function loadRegisteredToolsFromHost() {
         evalHost("AEToolbox.getRegisteredTools()", function (raw) {
+            if (panelShuttingDown) {
+                return;
+            }
             var result = parseResult(raw);
             var tools = result.tools || [];
             var loadErrors = result.loadErrors || [];
@@ -1662,6 +1887,9 @@
             }
 
             renderDynamicToolHome();
+            if (panelShuttingDown) {
+                return;
+            }
             HomeLayoutManager.loadOrder();
             HomeLayoutManager.renderOrder();
             HomeLayoutManager.bindIconEvents();
@@ -1679,8 +1907,14 @@
         jsxPath = jsxPath.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
         setStatus(tr("status.loadingHost"), "busy", true);
         cs.evalScript('$.evalFile("' + jsxPath + '")', function (loadResult) {
+            if (panelShuttingDown) {
+                return;
+            }
             hostLoaded = true;
             cs.evalScript("AEToolbox.ping()", function (result) {
+                if (panelShuttingDown) {
+                    return;
+                }
                 if (window.console && console.log) {
                     console.log(result);
                 }
@@ -1689,6 +1923,9 @@
                     return;
                 }
                 cs.evalScript("AEToolbox.getHostLoadInfo()", function (infoRaw) {
+                    if (panelShuttingDown) {
+                        return;
+                    }
                     if (window.console && console.log) {
                         console.log("[AE Toolbox] Host load info:", infoRaw);
                     }
@@ -2277,6 +2514,9 @@
         if (!toolDef || !toolDef.id) {
             return;
         }
+        if (panelShuttingDown) {
+            return;
+        }
         if (RegistrySaveTimers[toolDef.id]) {
             window.clearTimeout(RegistrySaveTimers[toolDef.id]);
         }
@@ -2284,6 +2524,16 @@
             RegistrySaveTimers[toolDef.id] = null;
             saveRegistryToolValues(toolDef);
         }, 150);
+    }
+
+    function clearRegistrySaveTimers() {
+        var key;
+        for (key in RegistrySaveTimers) {
+            if (Object.prototype.hasOwnProperty.call(RegistrySaveTimers, key) && RegistrySaveTimers[key]) {
+                window.clearTimeout(RegistrySaveTimers[key]);
+                RegistrySaveTimers[key] = null;
+            }
+        }
     }
 
     function resetRegistryToolValues(toolId) {
@@ -2808,6 +3058,12 @@
         }
 
         runtime = getRegistryRuntime(toolDef.id);
+        if (panelShuttingDown || panelSuspended) {
+            if (callback) {
+                callback(null);
+            }
+            return;
+        }
         if (runtime.pending) {
             return;
         }
@@ -2817,6 +3073,9 @@
         evalHost(hostFunction + "()", function (raw) {
             var result = parseResult(raw);
             runtime.pending = false;
+            if (panelShuttingDown || panelSuspended) {
+                return;
+            }
             runtime.lastResult = result;
             runtime.state = normalizeRegistryStateResult(result);
             updateRegistryStateDependentUi(toolDef);
@@ -2883,29 +3142,87 @@
         return tr(fallbackKey || "status.ready", result || {});
     }
 
-    function hexToRgb(hex) {
-        var normalized = normalizeHex(hex, "#ffffff").replace("#", "");
+    function clamp(value, min, max) {
+        var numeric = Number(value);
+        if (isNaN(numeric)) {
+            numeric = min;
+        }
+        return Math.max(min, Math.min(max, numeric));
+    }
+
+    function normalizeRgbChannel(value) {
+        return Math.round(clamp(value, 0, 255));
+    }
+
+    function normalizeUnitChannel(value) {
+        return clamp(value, 0, 1);
+    }
+
+    function normalizeHueChannel(value) {
+        var h = Number(value);
+        if (isNaN(h)) {
+            h = 0;
+        }
+        h = h % 360;
+        if (h < 0) {
+            h += 360;
+        }
+        return h;
+    }
+
+    function parseHexColor(hex, fallback) {
+        var fallbackColor;
+        var value = String(hex || "").replace("#", "").trim();
+        var alpha = 255;
+
+        if (!/^[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(value)) {
+            if (fallback && String(fallback) !== String(hex)) {
+                return parseHexColor(fallback, "#ffffff");
+            }
+            fallbackColor = { r: 255, g: 255, b: 255, a: 1 };
+            return fallbackColor;
+        }
+        if (value.length === 8) {
+            alpha = parseInt(value.substr(6, 2), 16);
+        }
         return {
-            r: parseInt(normalized.substr(0, 2), 16),
-            g: parseInt(normalized.substr(2, 2), 16),
-            b: parseInt(normalized.substr(4, 2), 16)
+            r: parseInt(value.substr(0, 2), 16),
+            g: parseInt(value.substr(2, 2), 16),
+            b: parseInt(value.substr(4, 2), 16),
+            a: alpha / 255
         };
     }
 
-    function rgbToHex(r, g, b) {
-        var value = ((Math.max(0, Math.min(255, Math.round(r))) << 16) |
-            (Math.max(0, Math.min(255, Math.round(g))) << 8) |
-            Math.max(0, Math.min(255, Math.round(b)))).toString(16);
-        while (value.length < 6) {
-            value = "0" + value;
+    function formatHexPart(value) {
+        var text = normalizeRgbChannel(value).toString(16);
+        return text.length < 2 ? "0" + text : text;
+    }
+
+    function formatHexColor(color, includeAlpha) {
+        var alpha = typeof color.a === "number" ? color.a : 1;
+        var hex = "#" + formatHexPart(color.r) + formatHexPart(color.g) + formatHexPart(color.b);
+        if (includeAlpha) {
+            hex += formatHexPart(alpha * 255);
         }
-        return "#" + value.toLowerCase();
+        return hex.toLowerCase();
+    }
+
+    function isCompleteHexColor(value) {
+        return /^#?[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(String(value || "").trim());
+    }
+
+    function hexToRgb(hex) {
+        return parseHexColor(hex, "#ffffff");
+    }
+
+    function rgbToHex(r, g, b) {
+        return formatHexColor({ r: r, g: g, b: b, a: 1 }, false);
     }
 
     function rgbToHsv(rgb) {
-        var r = rgb.r / 255;
-        var g = rgb.g / 255;
-        var b = rgb.b / 255;
+        var r = normalizeRgbChannel(rgb.r) / 255;
+        var g = normalizeRgbChannel(rgb.g) / 255;
+        var b = normalizeRgbChannel(rgb.b) / 255;
         var max = Math.max(r, g, b);
         var min = Math.min(r, g, b);
         var d = max - min;
@@ -2921,18 +3238,23 @@
             } else {
                 h = (r - g) / d + 4;
             }
-            h = Math.round(h * 60);
+            h = h * 60;
             if (h < 0) {
                 h += 360;
             }
         }
-        return { h: h, s: s, v: v };
+        return {
+            h: normalizeHueChannel(h),
+            s: normalizeUnitChannel(s),
+            v: normalizeUnitChannel(v),
+            a: typeof rgb.a === "number" ? normalizeUnitChannel(rgb.a) : 1
+        };
     }
 
-    function hsvToHex(hsv) {
-        var h = ((hsv.h % 360) + 360) % 360;
-        var s = Math.max(0, Math.min(1, hsv.s));
-        var v = Math.max(0, Math.min(1, hsv.v));
+    function hsvToRgb(hsv) {
+        var h = normalizeHueChannel(hsv.h);
+        var s = normalizeUnitChannel(hsv.s);
+        var v = normalizeUnitChannel(hsv.v);
         var c = v * s;
         var x = c * (1 - Math.abs((h / 60) % 2 - 1));
         var m = v - c;
@@ -2953,118 +3275,1023 @@
         } else {
             r = c; g = 0; b = x;
         }
-        return rgbToHex((r + m) * 255, (g + m) * 255, (b + m) * 255);
+        return {
+            r: normalizeRgbChannel((r + m) * 255),
+            g: normalizeRgbChannel((g + m) * 255),
+            b: normalizeRgbChannel((b + m) * 255),
+            a: typeof hsv.a === "number" ? normalizeUnitChannel(hsv.a) : 1
+        };
+    }
+
+    function hsvToHex(hsv) {
+        return formatHexColor(hsvToRgb(hsv), false);
+    }
+
+    function makeColorStateFromRgb(rgb) {
+        var normalized = {
+            r: normalizeRgbChannel(rgb.r),
+            g: normalizeRgbChannel(rgb.g),
+            b: normalizeRgbChannel(rgb.b),
+            a: typeof rgb.a === "number" ? normalizeUnitChannel(rgb.a) : 1
+        };
+        var hsv = rgbToHsv(normalized);
+        normalized.h = hsv.h;
+        normalized.s = hsv.s;
+        normalized.v = hsv.v;
+        return normalized;
+    }
+
+    function makeColorStateFromHsv(hsv) {
+        var rgb = hsvToRgb(hsv);
+        return makeColorStateFromRgb({
+            r: rgb.r,
+            g: rgb.g,
+            b: rgb.b,
+            a: typeof hsv.a === "number" ? hsv.a : rgb.a
+        });
+    }
+
+    var ColorSampler = (function () {
+        var unusableProviders = {};
+        var immediateCancelThresholdMs = 500;
+
+        function providerUnavailable(source, errorCode, message, reason) {
+            return normalizePickResult({
+                ok: false,
+                unavailable: true,
+                source: source,
+                errorCode: errorCode || "PROVIDER_UNAVAILABLE",
+                message: message || "",
+                reason: reason || ""
+            });
+        }
+
+        function providerCanceled(source, reason) {
+            return normalizePickResult({
+                ok: false,
+                canceled: true,
+                source: source,
+                reason: reason || "user-cancel"
+            });
+        }
+
+        function providerFailed(source, errorCode, message) {
+            return normalizePickResult({
+                ok: false,
+                failed: true,
+                source: source,
+                errorCode: errorCode || "PROVIDER_FAILED",
+                message: message || ""
+            });
+        }
+
+        function detectNativeEyeDropper() {
+            return typeof window !== "undefined" && typeof window.EyeDropper === "function";
+        }
+
+        function detectNodeCapability() {
+            return !!getNodeRequire();
+        }
+
+        function getNodeRequire() {
+            if (typeof window !== "undefined" && typeof window.require === "function") {
+                return window.require;
+            }
+            if (typeof require === "function") {
+                return require;
+            }
+            return null;
+        }
+
+        function detectChildProcessCapability() {
+            var nodeRequire;
+            var childProcess;
+            nodeRequire = getNodeRequire();
+            if (!nodeRequire) {
+                return false;
+            }
+            try {
+                childProcess = nodeRequire("child_process");
+                return !!(childProcess && typeof childProcess.spawn === "function");
+            } catch (err) {
+                return false;
+            }
+        }
+
+        function projectRootPath() {
+            var nodeRequire = getNodeRequire();
+            var pathModule;
+            var locationPath;
+            if (typeof window !== "undefined" && window.location && window.location.pathname) {
+                locationPath = decodeURIComponent(window.location.pathname);
+                if (/^\/[A-Za-z]:\//.test(locationPath)) {
+                    locationPath = locationPath.substr(1);
+                }
+                locationPath = locationPath.replace(/\//g, "\\");
+                return locationPath.replace(/\\client\\index\.html$/i, "");
+            }
+            if (nodeRequire && typeof __dirname === "string") {
+                try {
+                    pathModule = nodeRequire("path");
+                    return pathModule.resolve(__dirname, "..", "..");
+                } catch (err) {
+                }
+            }
+            return "";
+        }
+
+        function helperScriptPath() {
+            var nodeRequire = getNodeRequire();
+            var root = projectRootPath();
+            if (!root) {
+                return "";
+            }
+            if (nodeRequire) {
+                try {
+                    return nodeRequire("path").join(root, "helpers", "win", "eyedropper", "windows-eyedropper.ps1");
+                } catch (err) {
+                }
+            }
+            return root + "\\helpers\\win\\eyedropper\\windows-eyedropper.ps1";
+        }
+
+        var NativeBridge = {
+            helperTimeoutMs: 20000,
+            runJsonHelper: function (command, args, options) {
+                return new Promise(function (resolve) {
+                    var nodeRequire = getNodeRequire();
+                    var childProcess;
+                    var child;
+                    var stdout = "";
+                    var stderr = "";
+                    var completed = false;
+                    var timer = null;
+
+                    function finish(result) {
+                        if (completed) {
+                            return;
+                        }
+                        completed = true;
+                        if (timer) {
+                            clearTimeout(timer);
+                            timer = null;
+                        }
+                        resolve(result);
+                    }
+
+                    if (!nodeRequire) {
+                        finish(providerUnavailable("windows-helper", "NODE_UNAVAILABLE", "Node require is unavailable."));
+                        return;
+                    }
+                    try {
+                        childProcess = nodeRequire("child_process");
+                    } catch (err) {
+                        finish(providerUnavailable("windows-helper", "CHILD_PROCESS_UNAVAILABLE", "child_process is unavailable."));
+                        return;
+                    }
+
+                    try {
+                        child = childProcess.spawn(command, args || [], {
+                            windowsHide: true,
+                            stdio: ["ignore", "pipe", "pipe"]
+                        });
+                    } catch (exc) {
+                        finish(providerFailed("windows-helper", "SPAWN_FAILED", exc && exc.message ? exc.message : "spawn failed"));
+                        return;
+                    }
+
+                    timer = setTimeout(function () {
+                        try {
+                            child.kill();
+                        } catch (err) {
+                        }
+                        finish(providerFailed("windows-helper", "TIMEOUT", "Helper timed out."));
+                    }, options && options.timeoutMs ? options.timeoutMs : NativeBridge.helperTimeoutMs);
+
+                    child.stdout.on("data", function (chunk) {
+                        stdout += chunk ? String(chunk) : "";
+                    });
+                    child.stderr.on("data", function (chunk) {
+                        stderr += chunk ? String(chunk) : "";
+                    });
+                    child.on("error", function (error) {
+                        finish(providerFailed("windows-helper", "SPAWN_ERROR", error && error.message ? error.message : "spawn error"));
+                    });
+                    child.on("close", function (code) {
+                        var parsed;
+                        if (completed) {
+                            return;
+                        }
+                        if (!stdout) {
+                            finish(providerFailed("windows-helper", code === 0 ? "EMPTY_OUTPUT" : "HELPER_FAILED", stderr || "Helper returned no output."));
+                            return;
+                        }
+                        try {
+                            parsed = JSON.parse(stdout.trim());
+                        } catch (err) {
+                            finish(providerFailed("windows-helper", "INVALID_JSON", stderr || "Helper returned invalid JSON."));
+                            return;
+                        }
+                        if (!parsed.ok && !parsed.canceled && !parsed.failed && !parsed.unavailable && code !== 0) {
+                            parsed.failed = true;
+                            parsed.errorCode = parsed.errorCode || "HELPER_FAILED";
+                            parsed.message = parsed.message || stderr || "Helper failed.";
+                        }
+                        finish(normalizePickResult(parsed));
+                    });
+                });
+            }
+        };
+
+        function markProviderUnusable(providerId, reason) {
+            unusableProviders[providerId] = {
+                reason: reason || "unusable",
+                at: Date.now()
+            };
+        }
+
+        function isProviderUnusable(providerId) {
+            return !!unusableProviders[providerId];
+        }
+
+        function errorName(error) {
+            return error && error.name ? String(error.name) : "Error";
+        }
+
+        function errorCodeFromName(name) {
+            return String(name || "Error").replace(/([a-z])([A-Z])/g, "$1_$2").toUpperCase();
+        }
+
+        function normalizePickResult(result) {
+            var normalized = result || {};
+            var hex = normalized.hex || normalized.sRGBHex || "";
+            if (normalized.ok && isCompleteHexColor(hex)) {
+                normalized.hex = formatHexColor(parseHexColor(hex, "#ffffff"), false);
+                normalized.ok = true;
+                normalized.source = normalized.source || "unknown";
+                return normalized;
+            }
+            if (normalized.ok) {
+                normalized.ok = false;
+                normalized.failed = true;
+                normalized.errorCode = normalized.errorCode || "INVALID_COLOR";
+            }
+            normalized.source = normalized.source || "unknown";
+            return normalized;
+        }
+
+        var NativeEyeDropperProvider = {
+            id: "native-eyedropper",
+            isAvailable: function () {
+                return detectNativeEyeDropper() && !isProviderUnusable(this.id);
+            },
+            pickColor: function () {
+                var picker;
+                var startedAt;
+                var promise;
+
+                if (!detectNativeEyeDropper()) {
+                    return Promise.resolve(providerUnavailable(this.id, "PROVIDER_UNAVAILABLE", "Native EyeDropper is not available."));
+                }
+                if (isProviderUnusable(this.id)) {
+                    return Promise.resolve(providerUnavailable(this.id, "PROVIDER_UNUSABLE", "Native EyeDropper was marked unusable in this session.", "session-unusable"));
+                }
+
+                try {
+                    picker = new window.EyeDropper();
+                    startedAt = Date.now();
+                    promise = picker.open();
+                } catch (exc) {
+                    if (errorName(exc) === "SecurityError" || errorName(exc) === "NotAllowedError" || errorName(exc) === "TypeError") {
+                        markProviderUnusable(this.id, errorName(exc));
+                        return Promise.resolve(providerUnavailable(this.id, errorCodeFromName(errorName(exc)), errorName(exc), "provider-error"));
+                    }
+                    return Promise.resolve(providerFailed(this.id, errorCodeFromName(errorName(exc)), errorName(exc)));
+                }
+
+                if (!promise || typeof promise.then !== "function") {
+                    markProviderUnusable(this.id, "open-returned-non-promise");
+                    return Promise.resolve(providerUnavailable(this.id, "PROVIDER_UNUSABLE", "Native EyeDropper did not return a promise.", "open-returned-non-promise"));
+                }
+
+                return promise.then(function (result) {
+                    return normalizePickResult({
+                        ok: true,
+                        hex: result && result.sRGBHex,
+                        source: NativeEyeDropperProvider.id
+                    });
+                })["catch"](function (error) {
+                    var name = errorName(error);
+                    var elapsed = Date.now() - startedAt;
+
+                    if (name === "AbortError" && elapsed <= immediateCancelThresholdMs) {
+                        markProviderUnusable(NativeEyeDropperProvider.id, "immediate-abort");
+                        return providerUnavailable(NativeEyeDropperProvider.id, "PROVIDER_UNUSABLE", "Native EyeDropper immediately canceled in this CEP runtime.", "immediate-abort");
+                    }
+                    if (name === "AbortError") {
+                        return providerCanceled(NativeEyeDropperProvider.id, "user-cancel");
+                    }
+                    if (name === "SecurityError" || name === "NotAllowedError" || name === "TypeError") {
+                        markProviderUnusable(NativeEyeDropperProvider.id, name);
+                        return providerUnavailable(NativeEyeDropperProvider.id, errorCodeFromName(name), name, "provider-error");
+                    }
+                    return providerFailed(NativeEyeDropperProvider.id, errorCodeFromName(name), name);
+                });
+            }
+        };
+
+        var WindowsHelperProvider = {
+            id: "windows-helper",
+            isAvailable: function () {
+                var nodeRequire = getNodeRequire();
+                var fsModule;
+                if (!nodeRequire || !detectChildProcessCapability()) {
+                    return false;
+                }
+                if (typeof process !== "undefined" && process.platform && process.platform !== "win32") {
+                    return false;
+                }
+                try {
+                    fsModule = nodeRequire("fs");
+                    return fsModule.existsSync(helperScriptPath());
+                } catch (err) {
+                    return false;
+                }
+            },
+            pickColor: function () {
+                var nodeRequire = getNodeRequire();
+                var fsModule;
+                var scriptPath = helperScriptPath();
+
+                if (!nodeRequire || !detectChildProcessCapability()) {
+                    return Promise.resolve(providerUnavailable(this.id, "CHILD_PROCESS_UNAVAILABLE", "child_process is unavailable."));
+                }
+                if (typeof process !== "undefined" && process.platform && process.platform !== "win32") {
+                    return Promise.resolve(providerUnavailable(this.id, "WINDOWS_ONLY", "Windows helper is only available on Windows."));
+                }
+                try {
+                    fsModule = nodeRequire("fs");
+                    if (!scriptPath || !fsModule.existsSync(scriptPath)) {
+                        return Promise.resolve(providerUnavailable(this.id, "HELPER_NOT_FOUND", "Windows eyedropper helper was not found."));
+                    }
+                } catch (err) {
+                    return Promise.resolve(providerUnavailable(this.id, "FS_UNAVAILABLE", "Filesystem access is unavailable."));
+                }
+                return NativeBridge.runJsonHelper("powershell.exe", [
+                    "-NoLogo",
+                    "-NoProfile",
+                    "-WindowStyle",
+                    "Hidden",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    scriptPath,
+                    "-TimeoutSeconds",
+                    "20"
+                ], {
+                    timeoutMs: NativeBridge.helperTimeoutMs
+                }).then(function (result) {
+                    result = normalizePickResult(result);
+                    result.source = WindowsHelperProvider.id;
+                    if (result.ok || result.canceled || result.unavailable || result.failed) {
+                        return result;
+                    }
+                    return providerFailed(WindowsHelperProvider.id, "HELPER_FAILED", "Windows helper returned an unknown result.");
+                });
+            }
+        };
+
+        var UnavailableProvider = {
+            id: "unavailable",
+            pickColor: function () {
+                return Promise.resolve(providerUnavailable(this.id, "PROVIDER_UNAVAILABLE", "No color sampler provider is available."));
+            }
+        };
+
+        function pickColor(options) {
+            var providers = [NativeEyeDropperProvider, WindowsHelperProvider, UnavailableProvider];
+            var index = 0;
+
+            function tryNext() {
+                var provider = providers[index];
+                index += 1;
+                if (!provider) {
+                    return Promise.resolve(UnavailableProvider.pickColor(options));
+                }
+                return provider.pickColor(options).then(function (result) {
+                    var normalized = normalizePickResult(result);
+                    if (normalized.ok || normalized.canceled || normalized.failed) {
+                        return normalized;
+                    }
+                    if (normalized.unavailable && provider.id !== UnavailableProvider.id) {
+                        return tryNext();
+                    }
+                    return normalized;
+                });
+            }
+
+            return tryNext();
+        }
+
+        return {
+            detectNativeEyeDropper: detectNativeEyeDropper,
+            detectNodeCapability: detectNodeCapability,
+            detectChildProcessCapability: detectChildProcessCapability,
+            pickColor: pickColor,
+            normalizePickResult: normalizePickResult,
+            markProviderUnusable: markProviderUnusable,
+            isProviderUnusable: isProviderUnusable,
+            NativeEyeDropperProvider: NativeEyeDropperProvider,
+            WindowsHelperProvider: WindowsHelperProvider,
+            UnavailableProvider: UnavailableProvider
+        };
+    }());
+
+    function validColorPickerAxisMode(mode) {
+        return mode === "hsv-h" || mode === "hsv-s" || mode === "hsv-v" ||
+            mode === "rgb-r" || mode === "rgb-g" || mode === "rgb-b";
+    }
+
+    function loadColorPickerAxisMode() {
+        var saved = null;
+        try {
+            saved = window.localStorage.getItem(StorageKeys.colorPickerAxis);
+        } catch (err) {
+        }
+        return validColorPickerAxisMode(saved) ? saved : "hsv-v";
+    }
+
+    function saveColorPickerAxisMode(mode) {
+        if (!validColorPickerAxisMode(mode)) {
+            return;
+        }
+        try {
+            window.localStorage.setItem(StorageKeys.colorPickerAxis, mode);
+        } catch (err) {
+        }
+    }
+
+    function getAxisValue(color, axisMode) {
+        if (axisMode === "hsv-h") {
+            return color.h / 359;
+        }
+        if (axisMode === "hsv-s") {
+            return color.s;
+        }
+        if (axisMode === "hsv-v") {
+            return color.v;
+        }
+        if (axisMode === "rgb-r") {
+            return color.r / 255;
+        }
+        if (axisMode === "rgb-g") {
+            return color.g / 255;
+        }
+        return color.b / 255;
+    }
+
+    function getPlanePoint(color, axisMode) {
+        if (axisMode === "hsv-h") {
+            return { x: color.s, y: 1 - color.v };
+        }
+        if (axisMode === "hsv-s") {
+            return { x: color.h / 359, y: 1 - color.v };
+        }
+        if (axisMode === "hsv-v") {
+            return { x: color.h / 359, y: 1 - color.s };
+        }
+        if (axisMode === "rgb-r") {
+            return { x: color.g / 255, y: 1 - color.b / 255 };
+        }
+        if (axisMode === "rgb-g") {
+            return { x: color.r / 255, y: 1 - color.b / 255 };
+        }
+        return { x: color.r / 255, y: 1 - color.g / 255 };
+    }
+
+    function colorFromPlanePoint(color, axisMode, x, y) {
+        x = normalizeUnitChannel(x);
+        y = normalizeUnitChannel(y);
+        if (axisMode === "hsv-h") {
+            return makeColorStateFromHsv({ h: color.h, s: x, v: 1 - y, a: color.a });
+        }
+        if (axisMode === "hsv-s") {
+            return makeColorStateFromHsv({ h: x * 359, s: color.s, v: 1 - y, a: color.a });
+        }
+        if (axisMode === "hsv-v") {
+            return makeColorStateFromHsv({ h: x * 359, s: 1 - y, v: color.v, a: color.a });
+        }
+        if (axisMode === "rgb-r") {
+            return makeColorStateFromRgb({ r: color.r, g: x * 255, b: (1 - y) * 255, a: color.a });
+        }
+        if (axisMode === "rgb-g") {
+            return makeColorStateFromRgb({ r: x * 255, g: color.g, b: (1 - y) * 255, a: color.a });
+        }
+        return makeColorStateFromRgb({ r: x * 255, g: (1 - y) * 255, b: color.b, a: color.a });
+    }
+
+    function colorFromAxisValue(color, axisMode, value) {
+        value = normalizeUnitChannel(value);
+        if (axisMode === "hsv-h") {
+            return makeColorStateFromHsv({ h: value * 359, s: color.s, v: color.v, a: color.a });
+        }
+        if (axisMode === "hsv-s") {
+            return makeColorStateFromHsv({ h: color.h, s: value, v: color.v, a: color.a });
+        }
+        if (axisMode === "hsv-v") {
+            return makeColorStateFromHsv({ h: color.h, s: color.s, v: value, a: color.a });
+        }
+        if (axisMode === "rgb-r") {
+            return makeColorStateFromRgb({ r: value * 255, g: color.g, b: color.b, a: color.a });
+        }
+        if (axisMode === "rgb-g") {
+            return makeColorStateFromRgb({ r: color.r, g: value * 255, b: color.b, a: color.a });
+        }
+        return makeColorStateFromRgb({ r: color.r, g: color.g, b: value * 255, a: color.a });
+    }
+
+    function sampleColorForPlane(color, axisMode, x, y) {
+        return colorFromPlanePoint(color, axisMode, x, y);
+    }
+
+    function sampleColorForAxis(color, axisMode, value) {
+        return colorFromAxisValue(color, axisMode, value);
+    }
+
+    function resizeCanvasToDisplaySize(canvas) {
+        var rect = canvas.getBoundingClientRect();
+        var ratio = window.devicePixelRatio || 1;
+        var width = Math.max(1, Math.round(rect.width * ratio));
+        var height = Math.max(1, Math.round(rect.height * ratio));
+        if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
+        }
+        return { width: width, height: height };
+    }
+
+    function drawColorPickerPlane(canvas, color, axisMode) {
+        var size = resizeCanvasToDisplaySize(canvas);
+        var ctx = canvas.getContext("2d");
+        var image = ctx.createImageData(size.width, size.height);
+        var data = image.data;
+        var x;
+        var y;
+        var index;
+        var sampled;
+
+        for (y = 0; y < size.height; y++) {
+            for (x = 0; x < size.width; x++) {
+                sampled = sampleColorForPlane(color, axisMode, size.width <= 1 ? 0 : x / (size.width - 1), size.height <= 1 ? 0 : y / (size.height - 1));
+                index = (y * size.width + x) * 4;
+                data[index] = sampled.r;
+                data[index + 1] = sampled.g;
+                data[index + 2] = sampled.b;
+                data[index + 3] = 255;
+            }
+        }
+        ctx.putImageData(image, 0, 0);
+    }
+
+    function drawColorPickerAxis(canvas, color, axisMode) {
+        var size = resizeCanvasToDisplaySize(canvas);
+        var ctx = canvas.getContext("2d");
+        var image = ctx.createImageData(size.width, size.height);
+        var data = image.data;
+        var x;
+        var y;
+        var index;
+        var sampled;
+
+        for (x = 0; x < size.width; x++) {
+            sampled = sampleColorForAxis(color, axisMode, size.width <= 1 ? 0 : x / (size.width - 1));
+            for (y = 0; y < size.height; y++) {
+                index = (y * size.width + x) * 4;
+                data[index] = sampled.r;
+                data[index + 1] = sampled.g;
+                data[index + 2] = sampled.b;
+                data[index + 3] = 255;
+            }
+        }
+        ctx.putImageData(image, 0, 0);
     }
 
     function closeRegistryColorPicker() {
         var picker = document.querySelector(".registry-color-picker-popover");
+        if (picker && picker._cleanupColorPicker) {
+            picker._cleanupColorPicker();
+        }
         if (picker && picker.parentNode) {
             picker.parentNode.removeChild(picker);
         }
     }
 
     function openRegistryColorPicker(hexInput, swatch, fallback) {
-        var hsv = rgbToHsv(hexToRgb(hexInput.value || fallback || "#ffffff"));
+        var color = makeColorStateFromRgb(parseHexColor(hexInput.value || fallback || "#ffffff", fallback || "#ffffff"));
+        var axisMode = loadColorPickerAxisMode();
         var popover;
-        var sv;
-        var svHandle;
-        var hue;
+        var axisControls;
+        var planeWrap;
+        var planeCanvas;
+        var planeHandle;
+        var axisWrap;
+        var axisCanvas;
+        var axisHandle;
         var preview;
         var hexEdit;
-        var rect;
+        var outputRow;
+        var eyedropperButton;
+        var eyedropperStatus;
+        var axisButtons = [];
+        var channelSliders = {};
+        var outsideBound = false;
+        var outsideHandler = null;
 
-        function applyColor(nextHsv) {
+        function applyColor(nextColor, skipNotify) {
             var hex;
-            hsv = nextHsv || hsv;
-            hex = hsvToHex(hsv);
+            var point;
+            color = nextColor || color;
+            hex = formatHexColor(color, false);
             hexInput.value = hex;
             hexEdit.value = hex;
             swatch.style.backgroundColor = hex;
             preview.style.backgroundColor = hex;
-            sv.style.backgroundColor = hsvToHex({ h: hsv.h, s: 1, v: 1 });
-            svHandle.style.left = (hsv.s * 100) + "%";
-            svHandle.style.top = ((1 - hsv.v) * 100) + "%";
-            hue.value = hsv.h;
-            if (hexInput._registryOnValueChange) {
+            drawColorPickerPlane(planeCanvas, color, axisMode);
+            drawColorPickerAxis(axisCanvas, color, axisMode);
+            point = getPlanePoint(color, axisMode);
+            planeHandle.style.left = (point.x * 100) + "%";
+            planeHandle.style.top = (point.y * 100) + "%";
+            axisHandle.style.left = (getAxisValue(color, axisMode) * 100) + "%";
+            syncChannelSliders();
+            if (!skipNotify && hexInput._registryOnValueChange) {
                 hexInput._registryOnValueChange();
             }
         }
 
-        function setSvFromEvent(event) {
-            var box = sv.getBoundingClientRect();
-            var s = Math.max(0, Math.min(1, (event.clientX - box.left) / box.width));
-            var v = 1 - Math.max(0, Math.min(1, (event.clientY - box.top) / box.height));
-            applyColor({ h: hsv.h, s: s, v: v });
+        function syncChannelSliders() {
+            if (channelSliders.h) {
+                channelSliders.h.value = Math.round(color.h);
+            }
+            if (channelSliders.s) {
+                channelSliders.s.value = Math.round(color.s * 100);
+            }
+            if (channelSliders.v) {
+                channelSliders.v.value = Math.round(color.v * 100);
+            }
+            if (channelSliders.r) {
+                channelSliders.r.value = Math.round(color.r);
+            }
+            if (channelSliders.g) {
+                channelSliders.g.value = Math.round(color.g);
+            }
+            if (channelSliders.b) {
+                channelSliders.b.value = Math.round(color.b);
+            }
         }
 
-        function beginSvDrag(event) {
+        function colorFromChannelValue(channel, value) {
+            if (channel === "h") {
+                return makeColorStateFromHsv({ h: clamp(value, 0, 360), s: color.s, v: color.v, a: color.a });
+            }
+            if (channel === "s") {
+                return makeColorStateFromHsv({ h: color.h, s: clamp(value, 0, 100) / 100, v: color.v, a: color.a });
+            }
+            if (channel === "v") {
+                return makeColorStateFromHsv({ h: color.h, s: color.s, v: clamp(value, 0, 100) / 100, a: color.a });
+            }
+            if (channel === "r") {
+                return makeColorStateFromRgb({ r: clamp(value, 0, 255), g: color.g, b: color.b, a: color.a });
+            }
+            if (channel === "g") {
+                return makeColorStateFromRgb({ r: color.r, g: clamp(value, 0, 255), b: color.b, a: color.a });
+            }
+            return makeColorStateFromRgb({ r: color.r, g: color.g, b: clamp(value, 0, 255), a: color.a });
+        }
+
+        function syncAxisButtons() {
+            var i;
+            for (i = 0; i < axisButtons.length; i++) {
+                axisButtons[i].classList.toggle("is-active", axisButtons[i].getAttribute("data-axis-mode") === axisMode);
+                axisButtons[i].setAttribute("aria-pressed", axisButtons[i].getAttribute("data-axis-mode") === axisMode ? "true" : "false");
+            }
+        }
+
+        function setAxisMode(mode) {
+            if (!validColorPickerAxisMode(mode) || mode === axisMode) {
+                return;
+            }
+            axisMode = mode;
+            saveColorPickerAxisMode(axisMode);
+            syncAxisButtons();
+            applyColor(color, true);
+        }
+
+        function pointFromEvent(event, element) {
+            var box = element.getBoundingClientRect();
+            return {
+                x: box.width <= 0 ? 0 : normalizeUnitChannel((event.clientX - box.left) / box.width),
+                y: box.height <= 0 ? 0 : normalizeUnitChannel((event.clientY - box.top) / box.height)
+            };
+        }
+
+        function setPlaneFromEvent(event) {
+            var point = pointFromEvent(event, planeCanvas);
+            applyColor(colorFromPlanePoint(color, axisMode, point.x, point.y));
+        }
+
+        function setAxisFromEvent(event) {
+            var point = pointFromEvent(event, axisCanvas);
+            applyColor(colorFromAxisValue(color, axisMode, point.x));
+        }
+
+        function beginDrag(event, updateFn) {
             function move(moveEvent) {
                 moveEvent.preventDefault();
-                setSvFromEvent(moveEvent);
+                updateFn(moveEvent);
             }
             function up() {
                 document.removeEventListener("mousemove", move);
                 document.removeEventListener("mouseup", up);
             }
             event.preventDefault();
-            setSvFromEvent(event);
+            updateFn(event);
             document.addEventListener("mousemove", move);
             document.addEventListener("mouseup", up);
+        }
+
+        function renderAll() {
+            positionPopover();
+            applyColor(color, true);
+        }
+
+        function isPopoverMounted() {
+            return !!(popover && popover.parentNode);
+        }
+
+        function setEyedropperBusy(isBusy) {
+            if (!eyedropperButton) {
+                return;
+            }
+            eyedropperButton.classList.toggle("is-busy", !!isBusy);
+            eyedropperButton.setAttribute("aria-busy", isBusy ? "true" : "false");
+        }
+
+        function setEyedropperStatus(text, tone) {
+            if (!eyedropperStatus) {
+                return;
+            }
+            eyedropperStatus.textContent = text || "idle";
+            eyedropperStatus.setAttribute("data-tone", tone || "idle");
+        }
+
+        function markEyeDropperUnavailable(message) {
+            if (eyedropperButton) {
+                eyedropperButton.setAttribute("title", message || "Eyedropper is not available in this CEP runtime.");
+            }
+            setEyedropperBusy(false);
+            setEyedropperStatus("unavailable", "warn");
+        }
+
+        function runEyeDropper() {
+            if (panelShuttingDown || !isPopoverMounted()) {
+                return;
+            }
+
+            setEyedropperStatus("starting", "busy");
+            setEyedropperBusy(true);
+            ColorSampler.pickColor({ currentHex: formatHexColor(color, false) }).then(function (result) {
+                if (panelShuttingDown || !isPopoverMounted()) {
+                    return;
+                }
+                setEyedropperBusy(false);
+                if (result && result.ok && isCompleteHexColor(result.hex)) {
+                    applyColor(makeColorStateFromRgb(parseHexColor(result.hex, formatHexColor(color, false))));
+                    setEyedropperStatus("picked", "ok");
+                    return;
+                }
+                if (result && result.canceled) {
+                    setEyedropperStatus("canceled", "idle");
+                    return;
+                }
+                if (result && result.unavailable) {
+                    markEyeDropperUnavailable(result.message || "Eyedropper is not available in this CEP runtime.");
+                    return;
+                }
+                if (result && result.failed) {
+                    setEyedropperStatus("failed: " + (result.errorCode || "error"), "error");
+                    return;
+                }
+                setEyedropperStatus("failed", "error");
+            })["catch"](function (error) {
+                if (!panelShuttingDown && isPopoverMounted()) {
+                    setEyedropperBusy(false);
+                    setEyedropperStatus("failed: " + (error && error.name ? error.name : "error"), "error");
+                }
+            });
+        }
+
+        function cleanup() {
+            setEyedropperBusy(false);
+            window.removeEventListener("resize", renderAll);
+            window.removeEventListener("scroll", closeRegistryColorPicker, true);
+            if (outsideHandler) {
+                document.removeEventListener("mousedown", outsideHandler);
+                outsideHandler = null;
+            }
+        }
+
+        function bindOutsideClose() {
+            outsideHandler = function (event) {
+                if (!popover.contains(event.target) && event.target !== swatch) {
+                    closeRegistryColorPicker();
+                }
+            };
+            if (!outsideBound) {
+                outsideBound = true;
+                document.addEventListener("mousedown", outsideHandler);
+            }
+        }
+
+        function positionPopover() {
+            var triggerRect = swatch.getBoundingClientRect();
+            var popupRect = popover.getBoundingClientRect();
+            var viewportWidth = window.innerWidth || document.documentElement.clientWidth || 320;
+            var viewportHeight = window.innerHeight || document.documentElement.clientHeight || 480;
+            var margin = 8;
+            var gap = 8;
+            var popupWidth = popupRect.width || popover.offsetWidth || 244;
+            var popupHeight = popupRect.height || popover.offsetHeight || 260;
+            var availableBelow = viewportHeight - triggerRect.bottom - gap - margin;
+            var availableAbove = triggerRect.top - gap - margin;
+            var left;
+            var top;
+            var openAbove;
+
+            left = Math.max(margin, Math.min(triggerRect.left, viewportWidth - popupWidth - margin));
+            openAbove = availableBelow < popupHeight && availableAbove > availableBelow;
+            if (openAbove) {
+                top = triggerRect.top - popupHeight - gap;
+            } else {
+                top = triggerRect.bottom + gap;
+            }
+            if (availableBelow < popupHeight && availableAbove < popupHeight) {
+                if (availableAbove > availableBelow) {
+                    top = triggerRect.top - popupHeight - gap;
+                } else {
+                    top = triggerRect.bottom + gap;
+                }
+            }
+            top = Math.max(margin, Math.min(top, viewportHeight - popupHeight - margin));
+
+            popover.classList.toggle("is-above", top < triggerRect.top);
+            popover.style.left = left + "px";
+            popover.style.top = top + "px";
         }
 
         closeRegistryColorPicker();
         popover = document.createElement("div");
         popover.className = "registry-color-picker-popover";
+        popover._cleanupColorPicker = cleanup;
 
-        sv = document.createElement("div");
-        sv.className = "registry-hsv-sv";
-        svHandle = document.createElement("span");
-        svHandle.className = "registry-hsv-handle";
-        sv.appendChild(svHandle);
-        sv.addEventListener("mousedown", beginSvDrag);
+        axisControls = document.createElement("div");
+        axisControls.className = "registry-color-axis-controls";
 
-        hue = document.createElement("input");
-        hue.type = "range";
-        hue.className = "registry-hsv-hue";
-        hue.min = "0";
-        hue.max = "359";
-        hue.step = "1";
-        hue.addEventListener("input", function () {
-            applyColor({ h: Number(this.value), s: hsv.s, v: hsv.v });
+        function addAxisButton(mode, label) {
+            var button = document.createElement("button");
+            button.type = "button";
+            button.className = "registry-color-axis-button";
+            button.textContent = label;
+            button.setAttribute("data-axis-mode", mode);
+            button.setAttribute("title", mode.indexOf("hsv") === 0 ? "HSV " + label : "RGB " + label);
+            button.addEventListener("click", function () {
+                setAxisMode(this.getAttribute("data-axis-mode"));
+            });
+            axisButtons[axisButtons.length] = button;
+            axisControls.appendChild(button);
+        }
+
+        addAxisButton("hsv-h", "H");
+        addAxisButton("hsv-s", "S");
+        addAxisButton("hsv-v", "V");
+        addAxisButton("rgb-r", "R");
+        addAxisButton("rgb-g", "G");
+        addAxisButton("rgb-b", "B");
+
+        function createChannelSliders() {
+            var wrap = document.createElement("div");
+
+            function addChannel(key, label, maxValue) {
+                var row = document.createElement("label");
+                var text = document.createElement("span");
+                var slider = document.createElement("input");
+
+                row.className = "registry-color-channel-row";
+                text.className = "registry-color-channel-label";
+                text.textContent = label;
+                slider.type = "range";
+                slider.className = "registry-color-channel-slider";
+                slider.min = "0";
+                slider.max = String(maxValue);
+                slider.step = "1";
+                slider.addEventListener("input", function () {
+                    applyColor(colorFromChannelValue(key, this.value));
+                });
+                channelSliders[key] = slider;
+                row.appendChild(text);
+                row.appendChild(slider);
+                wrap.appendChild(row);
+            }
+
+            wrap.className = "registry-color-channel-sliders";
+            addChannel("h", "H", 360);
+            addChannel("s", "S", 100);
+            addChannel("v", "V", 100);
+            addChannel("r", "R", 255);
+            addChannel("g", "G", 255);
+            addChannel("b", "B", 255);
+            return wrap;
+        }
+
+        planeWrap = document.createElement("div");
+        planeWrap.className = "registry-color-plane";
+        planeCanvas = document.createElement("canvas");
+        planeCanvas.className = "registry-color-plane-canvas";
+        planeHandle = document.createElement("span");
+        planeHandle.className = "registry-color-plane-handle";
+        planeCanvas.addEventListener("mousedown", function (event) {
+            beginDrag(event, setPlaneFromEvent);
         });
+        planeWrap.appendChild(planeCanvas);
+        planeWrap.appendChild(planeHandle);
+
+        axisWrap = document.createElement("div");
+        axisWrap.className = "registry-color-axis";
+        axisCanvas = document.createElement("canvas");
+        axisCanvas.className = "registry-color-axis-canvas";
+        axisHandle = document.createElement("span");
+        axisHandle.className = "registry-color-axis-handle";
+        axisCanvas.addEventListener("mousedown", function (event) {
+            beginDrag(event, setAxisFromEvent);
+        });
+        axisWrap.appendChild(axisCanvas);
+        axisWrap.appendChild(axisHandle);
 
         preview = document.createElement("span");
         preview.className = "registry-hsv-preview";
+
+        eyedropperButton = document.createElement("button");
+        eyedropperButton.type = "button";
+        eyedropperButton.className = "registry-eyedropper-button";
+        eyedropperButton.textContent = "Pick";
+        eyedropperButton.setAttribute("aria-label", "Eyedropper");
+        eyedropperButton.setAttribute("title", "Pick a color from the screen");
+        eyedropperButton.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            runEyeDropper();
+        });
+
+        eyedropperStatus = document.createElement("span");
+        eyedropperStatus.className = "registry-eyedropper-status";
+        setEyedropperStatus("idle", "idle");
 
         hexEdit = document.createElement("input");
         hexEdit.className = "registry-color-hex registry-hsv-hex";
         hexEdit.type = "text";
         hexEdit.setAttribute("spellcheck", "false");
+        bindHexInputSelectBehavior(hexEdit);
+        hexEdit.addEventListener("input", function () {
+            if (isCompleteHexColor(this.value)) {
+                color = makeColorStateFromRgb(parseHexColor(this.value, fallback || "#ffffff"));
+                applyColor(color);
+            }
+        });
         hexEdit.addEventListener("change", function () {
-            hsv = rgbToHsv(hexToRgb(normalizeHex(this.value, fallback || "#ffffff")));
-            applyColor(hsv);
+            color = makeColorStateFromRgb(parseHexColor(this.value, fallback || "#ffffff"));
+            applyColor(color);
         });
 
-        popover.appendChild(sv);
-        popover.appendChild(hue);
-        popover.appendChild(preview);
-        popover.appendChild(hexEdit);
+        outputRow = document.createElement("div");
+        outputRow.className = "registry-color-output-row";
+        outputRow.appendChild(preview);
+        outputRow.appendChild(eyedropperButton);
+        outputRow.appendChild(hexEdit);
+
+        popover.appendChild(axisControls);
+        popover.appendChild(planeWrap);
+        popover.appendChild(axisWrap);
+        popover.appendChild(createChannelSliders());
+        popover.appendChild(outputRow);
+        popover.appendChild(eyedropperStatus);
         document.body.appendChild(popover);
 
-        rect = swatch.getBoundingClientRect();
-        popover.style.left = Math.max(10, Math.min(window.innerWidth - 230, rect.left)) + "px";
-        popover.style.top = Math.max(10, Math.min(window.innerHeight - 230, rect.bottom + 8)) + "px";
-        applyColor(hsv);
+        positionPopover();
+        syncAxisButtons();
+        applyColor(color, true);
+        window.addEventListener("resize", renderAll);
+        window.addEventListener("scroll", closeRegistryColorPicker, true);
 
-        window.setTimeout(function () {
-            function outside(event) {
-                if (!popover.contains(event.target) && event.target !== swatch) {
-                    closeRegistryColorPicker();
-                    document.removeEventListener("mousedown", outside);
-                }
-            }
-            document.addEventListener("mousedown", outside);
-        }, 0);
+        window.setTimeout(bindOutsideClose, 0);
     }
 
     function renderSchemaField(field, toolDef) {
@@ -3324,6 +4551,7 @@
             input.type = "text";
             input.value = colorValue;
             input.setAttribute("spellcheck", "false");
+            bindHexInputSelectBehavior(input);
 
             swatch = document.createElement("button");
             swatch.type = "button";
@@ -3679,8 +4907,14 @@
         var action = actionDef || findRegistryAction(toolDef, actionId) || {};
         var params = mergeActionPayload(collectDynamicToolParams(toolId), actionPayload || action.actionPayload || {});
         var json = JSON.stringify(params);
+        if (panelShuttingDown) {
+            return;
+        }
         setStatus(tr(action.pendingMessageKey || "status.loadingHost"), "busy", true);
         evalHost("AEToolbox.runRegisteredToolAction('" + jsxQuote(toolId) + "','" + jsxQuote(actionId) + "','" + jsxQuote(json) + "')", function (raw) {
+            if (panelShuttingDown) {
+                return;
+            }
             var result = parseResult(raw);
             var fallback = result.ok ? (action.successMessageKey || "status.ready") : (action.errorMessageKey || "status.ready");
             setStatus(dynamicActionMessage(result, fallback), result.ok ? "ok" : "error");
@@ -3818,6 +5052,9 @@
     }
 
     function refreshActiveTool() {
+        if (panelShuttingDown || panelSuspended) {
+            return;
+        }
         refreshSelection();
     }
 
@@ -3831,6 +5068,9 @@
         var overlay;
         var finishGate;
 
+        if (panelShuttingDown) {
+            return;
+        }
         if (byId("appShell").classList.contains("is-animating")) {
             return;
         }
@@ -3841,7 +5081,10 @@
         pressDelay = Math.max(120, Math.min(140, duration("fast") - 40));
         toolButton.classList.add("is-pressed");
 
-        window.setTimeout(function () {
+        HomeLayoutManager.trackTimer(window.setTimeout(function () {
+            if (panelShuttingDown) {
+                return;
+            }
             toolButton.classList.remove("is-pressed");
             configureToolDetail(toolId);
             beginAnimation();
@@ -3897,7 +5140,7 @@
                 finishGate();
             });
 
-        }, pressDelay);
+        }, pressDelay));
     }
 
     function closeToolWithLaunchTransition() {
@@ -3993,28 +5236,18 @@
         if (/^#[0-9a-fA-F]{3}$/.test(value)) {
             value = "#" + value.charAt(1) + value.charAt(1) + value.charAt(2) + value.charAt(2) + value.charAt(3) + value.charAt(3);
         }
-        if (!/^#[0-9a-fA-F]{6}$/.test(value)) {
-            return fallback || "#ffffff";
+        if (/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(value)) {
+            return formatHexColor(parseHexColor(value, fallback || "#ffffff"), false).toUpperCase();
         }
-        return value.toUpperCase();
+        return formatHexColor(parseHexColor(fallback || "#ffffff", "#ffffff"), false).toUpperCase();
     }
 
     function hexToRgb(hex) {
-        var normalized = normalizeHex(hex, "#ffffff");
-        return {
-            r: parseInt(normalized.substr(1, 2), 16),
-            g: parseInt(normalized.substr(3, 2), 16),
-            b: parseInt(normalized.substr(5, 2), 16)
-        };
+        return parseHexColor(hex, "#ffffff");
     }
 
     function rgbToHex(r, g, b) {
-        function part(v) {
-            var n = Math.max(0, Math.min(255, Math.round(v)));
-            var s = n.toString(16);
-            return s.length < 2 ? "0" + s : s;
-        }
-        return ("#" + part(r) + part(g) + part(b)).toUpperCase();
+        return formatHexColor({ r: r, g: g, b: b, a: 1 }, false).toUpperCase();
     }
 
     function mixHex(hex, target, amount) {
@@ -4383,10 +5616,13 @@
     }
 
     function refreshSelection() {
-        if (!hostLoaded) {
+        if (!hostLoaded || panelShuttingDown || panelSuspended) {
             return;
         }
         evalHost("AEToolbox.getSelectionSummary()", function (raw) {
+            if (panelShuttingDown || panelSuspended) {
+                return;
+            }
             var result = parseResult(raw);
             if (result.selectionLabel) {
                 byId("selectionPill").textContent = result.selectionLabel;
@@ -4469,6 +5705,9 @@
         var input = byId(inputId);
         var current = input.value;
 
+        if (panelShuttingDown) {
+            return;
+        }
         if (!hostLoaded) {
             setStatus(tr("status.hostLoading"), "busy", true);
             return;
@@ -4476,6 +5715,9 @@
 
         setStatus(tr("status.colorPickerOpening"), "busy", true);
         evalHost("AEToolbox.pickColor('" + jsxQuote(current) + "')", function (raw) {
+            if (panelShuttingDown) {
+                return;
+            }
             var result = parseResult(raw);
             if (result.ok && !result.cancelled && result.color) {
                 setColorValue(inputId, result.color);
@@ -4561,6 +5803,83 @@
 
     function cleanupTransientUiState() {
         closeCustomSelectMenus();
+    }
+
+    function stopSelectionPolling() {
+        if (selectionPollTimer) {
+            window.clearInterval(selectionPollTimer);
+            selectionPollTimer = null;
+        }
+    }
+
+    function startSelectionPolling() {
+        if (selectionPollTimer || panelShuttingDown || panelSuspended) {
+            return;
+        }
+        selectionPollTimer = window.setInterval(function () {
+            if (!panelShuttingDown && !panelSuspended && (!byId("autoStatus") || byId("autoStatus").checked)) {
+                refreshActiveTool();
+            }
+        }, 2200);
+    }
+
+    function suspendPanelRuntime() {
+        panelSuspended = true;
+        stopSelectionPolling();
+        stopRegistryStatePolling();
+        closeRegistryColorPicker();
+        cleanupTransientUiState();
+    }
+
+    function resumePanelRuntime() {
+        if (panelShuttingDown) {
+            return;
+        }
+        panelSuspended = false;
+        startSelectionPolling();
+        if (isDynamicTool(activeToolId)) {
+            startRegistryStatePolling(DynamicTools[activeToolId]);
+        }
+        refreshActiveTool();
+    }
+
+    function shutdownPanelRuntime() {
+        if (panelShuttingDown) {
+            return;
+        }
+        lifecycleDebug("panel close start");
+        panelShuttingDown = true;
+        stopSelectionPolling();
+        stopRegistryStatePolling();
+        clearRegistrySaveTimers();
+        if (HomeLayoutManager && HomeLayoutManager.teardownForShutdown) {
+            HomeLayoutManager.teardownForShutdown();
+        }
+        if (statusTimer) {
+            window.clearTimeout(statusTimer);
+            statusTimer = null;
+        }
+        closeRegistryColorPicker();
+        cleanupTransientUiState();
+    }
+
+    function handleVisibilityChange() {
+        if (document.hidden) {
+            suspendPanelRuntime();
+        } else {
+            resumePanelRuntime();
+        }
+    }
+
+    function bindPanelLifecycle() {
+        if (PanelLifecycleListenersBound) {
+            return;
+        }
+        PanelLifecycleListenersBound = true;
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("pagehide", shutdownPanelRuntime);
+        window.addEventListener("beforeunload", shutdownPanelRuntime);
+        window.addEventListener("unload", shutdownPanelRuntime);
     }
 
     function getCustomSelectMenu(control) {
@@ -4821,9 +6140,8 @@
             window.addEventListener("resize", function () {
                 closeCustomSelectMenus();
             });
-            window.addEventListener("beforeunload", cleanupTransientUiState);
-            window.addEventListener("unload", cleanupTransientUiState);
         }
+        bindPanelLifecycle();
     }
 
     function setCustomSelectValue(control, value, announce) {
@@ -5256,14 +6574,13 @@
             }
         });
         window.addEventListener("focus", function () {
-            refreshActiveTool();
-        });
-
-        window.setInterval(function () {
-            if (!byId("autoStatus") || byId("autoStatus").checked) {
+            if (!panelShuttingDown && !panelSuspended) {
                 refreshActiveTool();
             }
-        }, 2200);
+        });
+
+        bindPanelLifecycle();
+        startSelectionPolling();
     }
 
     document.addEventListener("DOMContentLoaded", function () {

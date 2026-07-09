@@ -491,7 +491,7 @@ window.AETOOLBOX_DEBUG_REGISTRY === true
 
 By default, registry tools must not show `Registry`, tool id, host function, raw schema, or other implementation details in the user-facing detail page.
 
-## 0.2.3 Cleanup State
+## 0.2.3 Cleanup State And 0.2.4 UI Notes
 
 Before the 0.2.3 release, the current design-system-relevant cleanup state is:
 
@@ -501,6 +501,9 @@ Before the 0.2.3 release, the current design-system-relevant cleanup state is:
 - Registry tool-specific i18n should live in `.tool.jsx`; `client/js/i18n.js` should keep core, Home, Settings, common, and fallback strings.
 - Registry Control Lab and Settings Renderer Lab remain Developer Mode-only labs; retired probes should not reappear as formal Home tools.
 
-Deferred 0.2.4 risk:
+0.2.4 UI notes on `dev`:
 
-- Closing the CEP panel can still make AE appear frozen for several seconds to more than ten seconds. This is a lifecycle/performance issue, not a visual design-system issue, and should be handled in a focused future task.
+- Closing the CEP panel is mitigated on the 0.2.4 development line through lifecycle guards and Home teardown. This is still a lifecycle/performance concern, not a visual design-system concern.
+- Color picker updates include axis modes, channel sliders, Hex input select-all, popup flip / clamp positioning, and a Windows-only eyedropper helper MVP.
+- Shape Add native components now use the generic registry section collapse behavior.
+- 0.2.5 procedural appearance work is not part of 0.2.4 release prep and should not be mixed into release documentation or stabilization branches.

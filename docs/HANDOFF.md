@@ -88,8 +88,10 @@ ExtensionBundleVersion
 
 Current release-prep note:
 
-- `VERSION` is `0.2.3`.
-- `CHANGELOG.md` contains the `0.2.3` release entry for the registry migration / cleanup release.
+- `VERSION` is `0.2.4` on `release/0.2.4`.
+- `CSXS/manifest.xml` is `0.2.4` on `release/0.2.4`.
+- `CHANGELOG.md` contains the formal `0.2.4` release section and a clean `Unreleased` placeholder.
+- Do not claim 0.2.4 is published until `release/0.2.4` is merged through `dev` / `main` and tag `v0.2.4` is created.
 - Do not create or move tags during documentation-only handoff work.
 
 On a new machine:
@@ -252,9 +254,63 @@ docs/KNOWN_ISSUES.md
 
 ### Deferred CEP Panel Close Freeze
 
-Closing the plugin window can still make After Effects appear frozen for several seconds to more than ten seconds. This is deferred to 0.2.4 and is not fixed by the 0.2.3 documentation/update pass.
+Closing the plugin window could make After Effects appear frozen for several seconds to more than ten seconds in 0.2.3 and earlier. This is not fixed by the 0.2.3 release/tag.
 
-Future investigation should audit pending `evalScript` calls, registry state polling, document/window listeners, custom select cleanup, localStorage save paths, and close/unload callbacks.
+The 0.2.4 release line contains the mitigation from `fix/panel-close-freeze-audit`. Current testing shows tool detail close behaving normally and Home close noticeably improved with little to no perceptible impact.
+
+The mitigation added shutdown lifecycle guards, close-time `evalScript` / UI refresh guards, polling and timer cleanup, pending registry save cleanup, and Home close teardown. Do not remove those guards during unrelated cleanup.
+
+Do not treat panel close freeze as a 0.2.3 blocker. Before a 0.2.4 release, run close regression across Home, Home Edit, Settings, Shape Add detail, Ad Component Kit detail, Developer Mode off, and Developer Mode on.
+
+If close freezes return, start with instrumentation and a reproduction matrix by AE version, CEP version, active view, Developer Mode state, pending host call state, and Home edit/drag state. Re-audit remaining close-time work, CEP unload, pending `evalScript`, Home teardown, observers, listeners, custom select cleanup, registry polling, and localStorage writes before considering larger UI changes.
+
+Do not opportunistically refactor `HomeLayoutManager`, Settings, BackgroundEngine, or App Launch / Close motion while working on close lifecycle follow-up.
+
+### Color Picker Eyedropper Provider Notes
+
+The 0.2.4 release line contains the eyedropper implementation for the built-in color picker.
+
+Current implementation:
+
+- Color sampling is routed through the `ColorSampler` provider framework in `client/js/main.js`.
+- Native `window.EyeDropper` exists in AE CEP, but current testing shows it immediately cancels instead of opening the system picker. The provider marks it unusable for the session.
+- `WindowsHelperProvider` uses a Windows-only PowerShell / WinForms / Drawing helper under `helpers/win/eyedropper/`.
+- Picked colors sync through the existing color picker setter path, updating Hex, preview, swatch, color plane, axis slider, H/S/V/R/G/B sliders, and the active color field.
+
+Known MVP limitations:
+
+- Windows taskbar may briefly flash while the helper overlay starts.
+- Each new plugin session's first Pick may have unreliable Esc cancellation.
+- Right-click cancel may still invoke the CEP WebView default context menu.
+- These issues currently have lower priority because core cross-window picking works.
+
+Recent lifecycle note:
+
+- A focused attempt to fix the remaining Windows helper taskbar flash / first-run Esc / right-click menu behavior was tested and rolled back.
+- Those fixes are not included in 0.2.4.
+- Do not write future release notes as if those lifecycle issues were fixed in 0.2.4.
+
+Future eyedropper work should focus on a dedicated helper replacement or a small, isolated overlay lifecycle task. A future C# / C++ helper can replace the PowerShell MVP behind the same `ColorSampler` provider interface. Do not change color picker UI, color model, H/S/V/R/G/B sliders, axis modes, Settings semantics, or registry field behavior as part of helper follow-up unless the task explicitly asks.
+
+## 0.2.4 Release Checklist
+
+Use this checklist before the manual 0.2.4 release commit / merge / tag.
+
+1. Confirm current branch is `release/0.2.4`.
+2. Confirm `VERSION` is `0.2.4`.
+3. Confirm `CSXS/manifest.xml` `ExtensionBundleVersion` and extension `Version` are `0.2.4`.
+4. Check `package.json` version if one exists.
+5. Confirm the final `CHANGELOG.md` 0.2.4 section.
+6. AE regression: panel close from Home, Home Edit, Settings, Shape Add detail, Ad Component Kit detail, Developer Mode off, and Developer Mode on.
+7. AE regression: color picker H / S / V / R / G / B axes, channel sliders, Hex input select-all, popup flip / clamp, and Windows eyedropper MVP.
+8. AE regression: Ad Component Kit Feature Stack / Icon Grid creation, removable artifact metadata, and Remove Selected Generated Component.
+9. AE regression: Shape Add native components section collapse, native item creation, Stroke / Fill creation, and number input editing.
+10. AE regression: Settings, Text Background Box, Selection Info, Home Edit order persistence, and language switching.
+11. Commit `release: 0.2.4`.
+12. Merge `release/0.2.4` into `dev`.
+13. Merge `dev` into `main`.
+14. Tag `v0.2.4` from the release commit on `main`.
+15. Push `dev`, `main`, and `v0.2.4`.
 
 ## Current Active Tool Bridge Summary
 
@@ -277,7 +333,7 @@ AEToolbox.tools.adComponentKit.createFeatureStack(paramsJson)
 AEToolbox.tools.adComponentKit.createIconGrid(paramsJson)
 AEToolbox.tools.adComponentKit.refreshSelectedComponent(paramsJson)
 AEToolbox.tools.adComponentKit.selectComponentLayers()
-AEToolbox.tools.adComponentKit.detachSelectedComponent()
+AEToolbox.tools.adComponentKit.removeSelectedGeneratedComponent()
 ```
 
 Ad Component Kit migration note:
@@ -289,6 +345,12 @@ Ad Component Kit migration note:
 - `host/tools/ecommerceLayout.jsx` was separately audited as unused legacy / experimental host code and removed.
 - Keep the registry id `ecommerceLayout` unless a dedicated HomeLayout / storage migration is planned.
 - Ad Component Kit is now one registry tool with Feature Stack, Icon Grid, and maintenance actions represented by tabs / option cards, state cards, and state-gated actions.
+- New Feature Stack / Icon Grid output writes `LOMOND_CABINET_ARTIFACT_V1` metadata into layer comments, including owner, tool, kind, role, `artifactId`, component id, and created timestamp.
+- Tool-written expressions use the `LOMOND_CABINET_BINDING_V1` signature with artifact id and previous expression state, allowing cleanup to restore previous expressions or clear tool-owned expressions.
+- `Remove Selected Generated Component` only trusts Lomond artifact metadata and matching signed expressions. It must not delete layers without metadata, must not clean unsigned expressions, and must not guess legacy components by layer name.
+- Artifact cleanup is forward-only and intentionally does not handle old Ad Component Kit output created before this metadata existed.
+- The registry UI places Refresh Selected Component, Select Component Layers, and Remove Selected Generated Component directly below the active Feature Stack / Icon Grid create button. The separate Component Maintenance group is removed.
+- Detach Component is no longer exposed in the registry UI. Do not reintroduce it casually; future maintenance actions should keep cleanup semantics precise and metadata-based.
 - The legacy Ad Component Kit detail DOM, action footer, frontend event binding, and unused component/ecom CSS have been removed.
 - The static Home card is retained as the saved-order anchor for `ecommerceLayout`; registry metadata owns the active detail page and actions.
 - A schema draft exists at `docs/schema-drafts/ad-component-kit.registry-schema-draft.md`.
