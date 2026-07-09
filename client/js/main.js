@@ -3350,24 +3350,158 @@
         }
 
         function detectNodeCapability() {
-            return (typeof window !== "undefined" && typeof window.require === "function") ||
-                typeof require === "function";
+            return !!getNodeRequire();
+        }
+
+        function getNodeRequire() {
+            if (typeof window !== "undefined" && typeof window.require === "function") {
+                return window.require;
+            }
+            if (typeof require === "function") {
+                return require;
+            }
+            return null;
         }
 
         function detectChildProcessCapability() {
             var nodeRequire;
             var childProcess;
-            if (!detectNodeCapability()) {
+            nodeRequire = getNodeRequire();
+            if (!nodeRequire) {
                 return false;
             }
             try {
-                nodeRequire = typeof window !== "undefined" && typeof window.require === "function" ? window.require : require;
                 childProcess = nodeRequire("child_process");
                 return !!(childProcess && typeof childProcess.spawn === "function");
             } catch (err) {
                 return false;
             }
         }
+
+        function projectRootPath() {
+            var nodeRequire = getNodeRequire();
+            var pathModule;
+            var locationPath;
+            if (typeof window !== "undefined" && window.location && window.location.pathname) {
+                locationPath = decodeURIComponent(window.location.pathname);
+                if (/^\/[A-Za-z]:\//.test(locationPath)) {
+                    locationPath = locationPath.substr(1);
+                }
+                locationPath = locationPath.replace(/\//g, "\\");
+                return locationPath.replace(/\\client\\index\.html$/i, "");
+            }
+            if (nodeRequire && typeof __dirname === "string") {
+                try {
+                    pathModule = nodeRequire("path");
+                    return pathModule.resolve(__dirname, "..", "..");
+                } catch (err) {
+                }
+            }
+            return "";
+        }
+
+        function helperScriptPath() {
+            var nodeRequire = getNodeRequire();
+            var root = projectRootPath();
+            if (!root) {
+                return "";
+            }
+            if (nodeRequire) {
+                try {
+                    return nodeRequire("path").join(root, "helpers", "win", "eyedropper", "windows-eyedropper.ps1");
+                } catch (err) {
+                }
+            }
+            return root + "\\helpers\\win\\eyedropper\\windows-eyedropper.ps1";
+        }
+
+        var NativeBridge = {
+            helperTimeoutMs: 20000,
+            runJsonHelper: function (command, args, options) {
+                return new Promise(function (resolve) {
+                    var nodeRequire = getNodeRequire();
+                    var childProcess;
+                    var child;
+                    var stdout = "";
+                    var stderr = "";
+                    var completed = false;
+                    var timer = null;
+
+                    function finish(result) {
+                        if (completed) {
+                            return;
+                        }
+                        completed = true;
+                        if (timer) {
+                            clearTimeout(timer);
+                            timer = null;
+                        }
+                        resolve(result);
+                    }
+
+                    if (!nodeRequire) {
+                        finish(providerUnavailable("windows-helper", "NODE_UNAVAILABLE", "Node require is unavailable."));
+                        return;
+                    }
+                    try {
+                        childProcess = nodeRequire("child_process");
+                    } catch (err) {
+                        finish(providerUnavailable("windows-helper", "CHILD_PROCESS_UNAVAILABLE", "child_process is unavailable."));
+                        return;
+                    }
+
+                    try {
+                        child = childProcess.spawn(command, args || [], {
+                            windowsHide: true,
+                            stdio: ["ignore", "pipe", "pipe"]
+                        });
+                    } catch (exc) {
+                        finish(providerFailed("windows-helper", "SPAWN_FAILED", exc && exc.message ? exc.message : "spawn failed"));
+                        return;
+                    }
+
+                    timer = setTimeout(function () {
+                        try {
+                            child.kill();
+                        } catch (err) {
+                        }
+                        finish(providerFailed("windows-helper", "TIMEOUT", "Helper timed out."));
+                    }, options && options.timeoutMs ? options.timeoutMs : NativeBridge.helperTimeoutMs);
+
+                    child.stdout.on("data", function (chunk) {
+                        stdout += chunk ? String(chunk) : "";
+                    });
+                    child.stderr.on("data", function (chunk) {
+                        stderr += chunk ? String(chunk) : "";
+                    });
+                    child.on("error", function (error) {
+                        finish(providerFailed("windows-helper", "SPAWN_ERROR", error && error.message ? error.message : "spawn error"));
+                    });
+                    child.on("close", function (code) {
+                        var parsed;
+                        if (completed) {
+                            return;
+                        }
+                        if (!stdout) {
+                            finish(providerFailed("windows-helper", code === 0 ? "EMPTY_OUTPUT" : "HELPER_FAILED", stderr || "Helper returned no output."));
+                            return;
+                        }
+                        try {
+                            parsed = JSON.parse(stdout.trim());
+                        } catch (err) {
+                            finish(providerFailed("windows-helper", "INVALID_JSON", stderr || "Helper returned invalid JSON."));
+                            return;
+                        }
+                        if (!parsed.ok && !parsed.canceled && !parsed.failed && !parsed.unavailable && code !== 0) {
+                            parsed.failed = true;
+                            parsed.errorCode = parsed.errorCode || "HELPER_FAILED";
+                            parsed.message = parsed.message || stderr || "Helper failed.";
+                        }
+                        finish(normalizePickResult(parsed));
+                    });
+                });
+            }
+        };
 
         function markProviderUnusable(providerId, reason) {
             unusableProviders[providerId] = {
@@ -3469,10 +3603,61 @@
         var WindowsHelperProvider = {
             id: "windows-helper",
             isAvailable: function () {
-                return false;
+                var nodeRequire = getNodeRequire();
+                var fsModule;
+                if (!nodeRequire || !detectChildProcessCapability()) {
+                    return false;
+                }
+                if (typeof process !== "undefined" && process.platform && process.platform !== "win32") {
+                    return false;
+                }
+                try {
+                    fsModule = nodeRequire("fs");
+                    return fsModule.existsSync(helperScriptPath());
+                } catch (err) {
+                    return false;
+                }
             },
             pickColor: function () {
-                return Promise.resolve(providerUnavailable(this.id, "PROVIDER_UNAVAILABLE", "Windows helper provider is not implemented yet."));
+                var nodeRequire = getNodeRequire();
+                var fsModule;
+                var scriptPath = helperScriptPath();
+
+                if (!nodeRequire || !detectChildProcessCapability()) {
+                    return Promise.resolve(providerUnavailable(this.id, "CHILD_PROCESS_UNAVAILABLE", "child_process is unavailable."));
+                }
+                if (typeof process !== "undefined" && process.platform && process.platform !== "win32") {
+                    return Promise.resolve(providerUnavailable(this.id, "WINDOWS_ONLY", "Windows helper is only available on Windows."));
+                }
+                try {
+                    fsModule = nodeRequire("fs");
+                    if (!scriptPath || !fsModule.existsSync(scriptPath)) {
+                        return Promise.resolve(providerUnavailable(this.id, "HELPER_NOT_FOUND", "Windows eyedropper helper was not found."));
+                    }
+                } catch (err) {
+                    return Promise.resolve(providerUnavailable(this.id, "FS_UNAVAILABLE", "Filesystem access is unavailable."));
+                }
+                return NativeBridge.runJsonHelper("powershell.exe", [
+                    "-NoLogo",
+                    "-NoProfile",
+                    "-WindowStyle",
+                    "Hidden",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    scriptPath,
+                    "-TimeoutSeconds",
+                    "20"
+                ], {
+                    timeoutMs: NativeBridge.helperTimeoutMs
+                }).then(function (result) {
+                    result = normalizePickResult(result);
+                    result.source = WindowsHelperProvider.id;
+                    if (result.ok || result.canceled || result.unavailable || result.failed) {
+                        return result;
+                    }
+                    return providerFailed(WindowsHelperProvider.id, "HELPER_FAILED", "Windows helper returned an unknown result.");
+                });
             }
         };
 
