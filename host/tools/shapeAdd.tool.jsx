@@ -224,6 +224,8 @@
                 id: "nativeItems",
                 labelKey: "tools.shapeAdd.sections.nativeItems",
                 descriptionKey: "tools.shapeAdd.sections.nativeItemsDescription",
+                collapsible: true,
+                defaultCollapsed: false,
                 fields: buildFields()
             },
             {
