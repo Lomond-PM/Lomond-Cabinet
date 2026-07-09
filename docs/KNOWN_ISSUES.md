@@ -84,6 +84,9 @@ Current conclusion:
 - The recommended future registry id is `ecommerceLayout` to preserve `aeToolbox.homeToolOrder`.
 - The recommended future shape is one registry tool using tabs / option cards and `visibleWhen`, not multiple Home entries.
 - Existing AE creation logic in `host/tools/adComponentKit.jsx` should be reused, not rewritten.
+- New Feature Stack and Icon Grid output now writes Lomond artifact metadata and can be removed by `Remove Selected Generated Component`.
+- Artifact cleanup is intentionally limited to new output with `LOMOND_CABINET_ARTIFACT_V1` metadata and expressions signed with `LOMOND_CABINET_BINDING_V1`.
+- The registry UI now places Refresh Selected Component, Select Component Layers, and Remove Selected Generated Component directly below the active create button; the separate Component Maintenance group and Detach Component UI entry were removed.
 
 Main risks:
 
@@ -92,6 +95,8 @@ Main risks:
 - Legacy detail DOM and registry detail panel can coexist and conflict during detail switching.
 - Feature Stack and Icon Grid have different valid-selection requirements and need host state.
 - Refresh, select component layers, and detach require selected controller metadata.
+- Remove Selected Generated Component must remain metadata-based. It must not delete layers that lack Lomond artifact metadata, must not clean unsigned expressions, and must not use layer-name heuristics for old output.
+- Icon Grid uses existing user layers as source bindings; cleanup must not delete those source layers. It should remove the controller, clear metadata / parent bindings, and restore or clear only signed tool expressions.
 - Host actions currently return plain `message` strings; registry migration should move toward `messageKey` fallbacks.
 - Existing user parameters are stored under `AEToolbox.ecommerceLayout.v1`; persistence migration must not lose values.
 
@@ -106,6 +111,8 @@ Recommended migration route:
 7. Phase 7: remove legacy DOM, event bindings, CSS, and i18n after AE testing.
 
 Do not rename the `ecommerceLayout` registry id or storage key without a dedicated HomeLayout / storage migration.
+
+Do not extend artifact cleanup to legacy no-metadata Ad Component Kit output unless a dedicated migration / audit task defines a safe ownership model.
 
 ## CEP panel close freeze
 

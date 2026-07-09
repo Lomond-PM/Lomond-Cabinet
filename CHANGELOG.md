@@ -14,14 +14,18 @@ This project follows simple semantic versioning for development handoff:
 
 - Added a ColorSampler provider framework for the built-in color picker eyedropper path, with native EyeDropper, Windows helper, and unavailable-provider boundaries.
 - Added a Windows-only eyedropper helper MVP using PowerShell / WinForms / Drawing so the built-in color picker can sample colors across windows and sync results back to Hex, preview, swatch, plane, axis slider, and H/S/V/R/G/B channel sliders.
+- Added removable Ad Component Kit artifact metadata for newly created Feature Stack and Icon Grid components, including per-batch `artifactId` ownership data and signed tool expressions.
+- Added `Remove Selected Generated Component` for new Ad Component Kit artifacts. Cleanup only trusts `LOMOND_CABINET_ARTIFACT_V1` metadata and only restores / clears expressions signed with `LOMOND_CABINET_BINDING_V1`.
 
 ### Fixed
 
 - Mitigated AE freeze when closing the CEP panel by guarding shutdown lifecycle, stopping polling / timers / pending registry saves, and skipping close-time host/UI refresh work.
 - Added Home close teardown for Home edit / drag state, Home timers, and document-level drag listeners.
+- Moved Ad Component Kit refresh / select / remove actions directly under the active create button, removed the separate Component Maintenance group, and removed the Detach Component entry from the registry UI.
 
 ### Known / Follow-up
 
+- Ad Component Kit artifact cleanup is forward-only. It does not process old generated components without Lomond metadata, does not guess by layer name, and does not clean expressions without the `LOMOND_CABINET_BINDING_V1` signature.
 - Native `window.EyeDropper` exists in AE CEP but immediately cancels in current testing, so it is marked unusable for the session and the Windows helper provider is used instead.
 - The Windows eyedropper helper is currently an MVP. The Windows taskbar may briefly flash during sampling, and Esc cancellation can be unreliable during or after the helper overlay activation delay.
 - Future eyedropper work should focus on Windows helper overlay focus / activation / cancel lifecycle, or replace the helper with a C# / C++ native helper without changing the ColorSampler provider interface.

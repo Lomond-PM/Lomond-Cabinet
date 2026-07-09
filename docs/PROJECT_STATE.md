@@ -171,7 +171,7 @@ AEToolbox.tools.adComponentKit.createFeatureStack(paramsJson)
 AEToolbox.tools.adComponentKit.createIconGrid(paramsJson)
 AEToolbox.tools.adComponentKit.refreshSelectedComponent(paramsJson)
 AEToolbox.tools.adComponentKit.selectComponentLayers()
-AEToolbox.tools.adComponentKit.detachSelectedComponent()
+AEToolbox.tools.adComponentKit.removeSelectedGeneratedComponent()
 ```
 
 Purpose:
@@ -180,6 +180,8 @@ Purpose:
 - Feature Stack: selected text layers become centered pill rows.
 - Icon Grid: selected 2D layers become normalized grid items.
 - Uses layer comments as component metadata.
+- New Feature Stack / Icon Grid components created on the current dev line write removable Lomond artifact metadata with an `artifactId`.
+- Ad Component Kit expressions written by the tool use a `LOMOND_CABINET_BINDING_V1` signature so cleanup can restore or clear only tool-owned expressions.
 
 Migration status:
 
@@ -191,6 +193,9 @@ Migration status:
 - The frontend legacy Ad Component Kit detail DOM, action footer, event binding, and unused component/ecom CSS have been removed after AE verification.
 - The static Home card is retained as the Home order anchor while dynamic registry metadata owns the detail page and actions for the same id.
 - Feature Stack, Icon Grid, and maintenance actions live in one registry tool using tabs / option cards, `visibleWhen`, `stateAction`, `stateCard`, `enabledWhen` / `disabledWhen`, and `refreshStateAfterRun`.
+- `Remove Selected Generated Component` removes only newly created artifacts that carry `LOMOND_CABINET_ARTIFACT_V1` metadata, and only cleans expressions carrying the matching `LOMOND_CABINET_BINDING_V1` signature.
+- Cleanup is deliberately forward-only: it does not remove older Ad Component Kit output without Lomond artifact metadata and does not use layer-name heuristics.
+- Registry UI now places Refresh Selected Component, Select Component Layers, and Remove Selected Generated Component directly below the active create button for Feature Stack or Icon Grid. The old separate Component Maintenance group is removed, and Detach Component is no longer exposed in the registry UI.
 - The draft registry schema remains documented at `docs/schema-drafts/ad-component-kit.registry-schema-draft.md` as historical migration context.
 - The obsolete `host/tools/adComponentKitProbe.tool.jsx` Developer Mode probe has been retired; the formal `ecommerceLayout` registry tool owns Feature Stack, Icon Grid, and maintenance action validation.
 
