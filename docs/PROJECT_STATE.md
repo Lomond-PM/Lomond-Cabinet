@@ -16,6 +16,12 @@ Current release-prep track:
 0.2.3 released registry migration / legacy cleanup baseline
 ```
 
+Current development track:
+
+```text
+dev includes 0.2.4 work after the 0.2.3 release baseline
+```
+
 Do not update `VERSION` or `CSXS/manifest.xml` until the release task explicitly requests it.
 
 Confirmed entry points:
@@ -467,6 +473,7 @@ These are based on current code and recent project history. Verify visually afte
 - Native select appearance: current code uses custom select overlays appended to `body`.
 - Shape Add text alignment: current CSS aligns native shape item buttons around a fixed center axis.
 - Home Edit toggle flow: current code uses `HomeLayoutManager.isEditing`; the first click enters edit mode and Done saves the layout.
+- CEP panel close freeze mitigation: `fix/panel-close-freeze-audit` has been merged to `dev` for the 0.2.4 development line. The mitigation adds shutdown lifecycle guards, stops polling / timers / pending registry saves, guards close-time host/UI refresh work, and adds Home close teardown. This is not part of v0.2.3.
 
 ## Known Issues / Areas To Watch
 
@@ -479,7 +486,7 @@ These are based on current code and recent project history. Verify visually afte
 - Shape Add is now on the phased registry path. Do not attempt a one-pass rewrite or remove the preserved legacy host actions; see `docs/KNOWN_ISSUES.md`.
 - Deferred: Settings Background Engine preset dropdown can trigger a render/layout glitch after closing. See `docs/KNOWN_ISSUES.md`.
 - Settings schema migration is phased. The internal UI shell is now on the Settings Renderer path, but do not replace remaining behavior layers such as `BackgroundEngine` without a dedicated migration and AE regression pass.
-- Deferred to 0.2.4: closing the CEP panel can still make AE appear frozen for several seconds to more than ten seconds. Future work should audit CEP unload, pending `evalScript`, state polling intervals, document/window listeners, and localStorage save paths.
+- 0.2.4 development line: closing the CEP panel has been noticeably mitigated on `dev` after `fix/panel-close-freeze-audit`; tool detail close is behaving normally in current testing and Home close has little to no perceptible impact. Continue monitoring across AE / CEP environments before release, and do not claim this shipped until 0.2.4 is merged to `main` and tagged.
 
 ## Later Development Suggestions
 

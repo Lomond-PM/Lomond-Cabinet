@@ -252,9 +252,17 @@ docs/KNOWN_ISSUES.md
 
 ### Deferred CEP Panel Close Freeze
 
-Closing the plugin window can still make After Effects appear frozen for several seconds to more than ten seconds. This is deferred to 0.2.4 and is not fixed by the 0.2.3 documentation/update pass.
+Closing the plugin window could make After Effects appear frozen for several seconds to more than ten seconds in 0.2.3 and earlier. This is not fixed by the 0.2.3 release/tag.
 
-Future investigation should audit pending `evalScript` calls, registry state polling, document/window listeners, custom select cleanup, localStorage save paths, and close/unload callbacks.
+The `dev` branch now contains a 0.2.4 development-line mitigation from `fix/panel-close-freeze-audit`. Current testing shows tool detail close behaving normally and Home close noticeably improved with little to no perceptible impact.
+
+The mitigation added shutdown lifecycle guards, close-time `evalScript` / UI refresh guards, polling and timer cleanup, pending registry save cleanup, and Home close teardown. Do not remove those guards during unrelated cleanup.
+
+Do not treat panel close freeze as a 0.2.3 blocker. Before a 0.2.4 release, run close regression across Home, Home Edit, Settings, Shape Add detail, Ad Component Kit detail, Developer Mode off, and Developer Mode on.
+
+If close freezes return, start with instrumentation and a reproduction matrix by AE version, CEP version, active view, Developer Mode state, pending host call state, and Home edit/drag state. Re-audit remaining close-time work, CEP unload, pending `evalScript`, Home teardown, observers, listeners, custom select cleanup, registry polling, and localStorage writes before considering larger UI changes.
+
+Do not opportunistically refactor `HomeLayoutManager`, Settings, BackgroundEngine, or App Launch / Close motion while working on close lifecycle follow-up.
 
 ## Current Active Tool Bridge Summary
 

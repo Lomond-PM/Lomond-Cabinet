@@ -111,7 +111,7 @@ Do not rename the `ecommerceLayout` registry id or storage key without a dedicat
 
 Status:
 
-Deferred to 0.2.4.
+Mitigated on `dev` for the 0.2.4 development line; still pending broader AE / CEP regression before release.
 
 Area:
 
@@ -123,23 +123,31 @@ Area:
 
 Observed behavior:
 
-- Closing the plugin window can make After Effects appear frozen for several seconds to more than ten seconds.
-- This is not addressed in the 0.2.3 release preparation.
+- In 0.2.3 and earlier, closing the plugin window can make After Effects appear frozen for several seconds to more than ten seconds.
+- This is not addressed in the 0.2.3 release or tag.
+- On `dev`, after `fix/panel-close-freeze-audit`, closing from tool detail pages is behaving normally in current testing.
+- On `dev`, closing from Home is now noticeably improved and has little to no perceptible impact in current testing.
 
 Current decision:
 
 - Do not treat this as fixed in 0.2.3.
-- Do not make opportunistic shutdown changes while preparing documentation or unrelated migration cleanup.
-- Schedule a dedicated 0.2.4 investigation.
+- Do not claim this has shipped until the 0.2.4 release is merged to `main` and tagged.
+- Keep the shutdown lifecycle guards in place; do not remove them during unrelated cleanup.
+- Continue monitoring close behavior across more AE / CEP environments before 0.2.4 release.
+- Run a focused 0.2.4 release regression around Home, Settings, registry tool detail pages, and Developer Mode before publishing.
 
-Future investigation notes:
+Mitigation added on `dev`:
 
-- Audit pending `CSInterface.evalScript()` calls during close / unload.
-- Audit registry `stateAction` polling intervals and cleanup.
-- Audit Settings / registry document and window listeners.
-- Audit custom select / portal cleanup.
-- Audit localStorage save bursts during unload.
-- Audit `beforeunload`, panel close transition callbacks, and stale DOM access after view teardown.
+- Added a panel shutdown guard so close / unload paths stop new host calls and ignore late callbacks.
+- Guarded close-time `CSInterface.evalScript()` use and UI refresh work.
+- Stopped selection polling, registry state polling, runtime timers, and pending registry save timers during shutdown.
+- Added Home close teardown for Home edit / drag state, Home timers, and document-level drag listeners.
+
+Follow-up notes:
+
+- If the issue returns, first build an instrumentation / reproduction matrix by AE version, CEP version, close location, Developer Mode state, and active panel state.
+- Re-audit remaining close-time work, CEP unload behavior, pending `CSInterface.evalScript()` callbacks, Home teardown, observers, listeners, and localStorage writes.
+- Avoid large UI refactors as a first response.
 
 ## Settings background preset dropdown render glitch
 
