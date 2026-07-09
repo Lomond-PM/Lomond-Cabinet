@@ -88,11 +88,10 @@ ExtensionBundleVersion
 
 Current release-prep note:
 
-- `VERSION` is `0.2.3`.
-- `CHANGELOG.md` contains the `0.2.3` release entry for the registry migration / cleanup release.
-- `CHANGELOG.md` also contains an Unreleased / 0.2.4 draft for the current dev-line work.
-- `release/0.2.4` has not been created yet.
-- Do not claim 0.2.4 is released until `VERSION`, `CSXS/manifest.xml`, `main`, and tag `v0.2.4` are updated through the release flow.
+- `VERSION` is `0.2.4` on `release/0.2.4`.
+- `CSXS/manifest.xml` is `0.2.4` on `release/0.2.4`.
+- `CHANGELOG.md` contains the formal `0.2.4` release section and a clean `Unreleased` placeholder.
+- Do not claim 0.2.4 is published until `release/0.2.4` is merged through `dev` / `main` and tag `v0.2.4` is created.
 - Do not create or move tags during documentation-only handoff work.
 
 On a new machine:
@@ -257,7 +256,7 @@ docs/KNOWN_ISSUES.md
 
 Closing the plugin window could make After Effects appear frozen for several seconds to more than ten seconds in 0.2.3 and earlier. This is not fixed by the 0.2.3 release/tag.
 
-The `dev` branch now contains a 0.2.4 development-line mitigation from `fix/panel-close-freeze-audit`. Current testing shows tool detail close behaving normally and Home close noticeably improved with little to no perceptible impact.
+The 0.2.4 release line contains the mitigation from `fix/panel-close-freeze-audit`. Current testing shows tool detail close behaving normally and Home close noticeably improved with little to no perceptible impact.
 
 The mitigation added shutdown lifecycle guards, close-time `evalScript` / UI refresh guards, polling and timer cleanup, pending registry save cleanup, and Home close teardown. Do not remove those guards during unrelated cleanup.
 
@@ -269,7 +268,7 @@ Do not opportunistically refactor `HomeLayoutManager`, Settings, BackgroundEngin
 
 ### Color Picker Eyedropper Provider Notes
 
-The `dev` branch contains a 0.2.4 development-line eyedropper implementation for the built-in color picker.
+The 0.2.4 release line contains the eyedropper implementation for the built-in color picker.
 
 Current implementation:
 
@@ -288,18 +287,18 @@ Known MVP limitations:
 Recent lifecycle note:
 
 - A focused attempt to fix the remaining Windows helper taskbar flash / first-run Esc / right-click menu behavior was tested and rolled back.
-- Those fixes are not included in the 0.2.4 draft.
+- Those fixes are not included in 0.2.4.
 - Do not write future release notes as if those lifecycle issues were fixed in 0.2.4.
 
 Future eyedropper work should focus on a dedicated helper replacement or a small, isolated overlay lifecycle task. A future C# / C++ helper can replace the PowerShell MVP behind the same `ColorSampler` provider interface. Do not change color picker UI, color model, H/S/V/R/G/B sliders, axis modes, Settings semantics, or registry field behavior as part of helper follow-up unless the task explicitly asks.
 
 ## 0.2.4 Release Checklist
 
-Use this checklist after `docs/prepare-0.2.4-release` is reviewed and merged back to `dev`.
+Use this checklist before the manual 0.2.4 release commit / merge / tag.
 
-1. Create `release/0.2.4` from the latest tested `dev`.
-2. Update `VERSION` to `0.2.4`.
-3. Update `CSXS/manifest.xml` `ExtensionBundleVersion` and extension `Version` to `0.2.4`.
+1. Confirm current branch is `release/0.2.4`.
+2. Confirm `VERSION` is `0.2.4`.
+3. Confirm `CSXS/manifest.xml` `ExtensionBundleVersion` and extension `Version` are `0.2.4`.
 4. Check `package.json` version if one exists.
 5. Confirm the final `CHANGELOG.md` 0.2.4 section.
 6. AE regression: panel close from Home, Home Edit, Settings, Shape Add detail, Ad Component Kit detail, Developer Mode off, and Developer Mode on.

@@ -15,16 +15,16 @@ AE Toolbox
 Current project version:
 
 ```text
-0.2.3
+0.2.4
 ```
 
 Current development track:
 
 ```text
-0.2.3 is the current release. dev contains 0.2.4 draft work that is not released or tagged yet.
+0.2.4 is being prepared on `release/0.2.4`. It is not final until merged to `main` and tagged `v0.2.4`.
 ```
 
-Do not update `VERSION` or `CSXS/manifest.xml` until the release task explicitly requests it.
+`VERSION` and `CSXS/manifest.xml` are updated to 0.2.4 on the release branch. Do not change them again unless the release task explicitly requests it.
 
 ## Project Type
 
@@ -248,7 +248,7 @@ Current Developer Mode labs:
 - `registryControlLab`: registry renderer/action/state validation.
 - `settingsRendererLab`: app-level Settings renderer validation.
 
-Current 0.2.4 draft highlights on `dev`:
+Current 0.2.4 release highlights:
 
 - Panel close freeze mitigation through shutdown guards, polling / timer cleanup, and Home close teardown.
 - Built-in color picker H / S / V / R / G / B axis modes, channel sliders, Hex input select-all, and popup flip / clamp positioning.
@@ -256,7 +256,7 @@ Current 0.2.4 draft highlights on `dev`:
 - Ad Component Kit removable artifacts for newly created Feature Stack / Icon Grid output using Lomond metadata and signed tool expressions.
 - Shape Add Add Native Components / 添加原生组件 section collapse.
 
-0.2.4 is not released until the release branch updates `VERSION`, `CSXS/manifest.xml`, merges to `main`, and creates tag `v0.2.4`.
+0.2.4 is not published until this release branch is merged to `main` and tag `v0.2.4` is created.
 
 ## Continue Development On Another Machine
 

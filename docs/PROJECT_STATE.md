@@ -7,29 +7,29 @@ This is an After Effects CEP Extension panel. The visible UI title is **Lomond C
 Current project version:
 
 ```text
-0.2.3
+0.2.4
 ```
 
 Current release-prep track:
 
 ```text
-0.2.3 released registry migration / legacy cleanup baseline
+0.2.4 release preparation
 ```
 
 Current development track:
 
 ```text
-dev includes 0.2.4 work after the 0.2.3 release baseline; release/0.2.4 has not been created
+release/0.2.4 is preparing the formal 0.2.4 release from the dev-line work after the 0.2.3 baseline
 ```
 
-Do not update `VERSION` or `CSXS/manifest.xml` until the release task explicitly requests it.
+`VERSION` and `CSXS/manifest.xml` are updated to `0.2.4` on this release branch. Do not change them again unless the release task explicitly requests it.
 
 Current 0.2.4 release-readiness status:
 
-- `VERSION` is still `0.2.3`.
-- `CSXS/manifest.xml` still declares `0.2.3`.
+- `VERSION` is `0.2.4`.
+- `CSXS/manifest.xml` declares `0.2.4`.
 - No `package.json` version file is present in the current workspace.
-- `CHANGELOG.md` contains an Unreleased / 0.2.4 draft section, but 0.2.4 is not published until the release branch updates version metadata, merges to `main`, and creates tag `v0.2.4`.
+- `CHANGELOG.md` contains the formal `0.2.4` section, but 0.2.4 is not published until this branch is merged through `dev` / `main` and tag `v0.2.4` is created.
 - 0.2.5 planning is expected to move toward procedural appearance work. That work is not part of 0.2.4 and should not be mixed into 0.2.4 release prep.
 
 Confirmed entry points:
@@ -495,7 +495,7 @@ These are based on current code and recent project history. Verify visually afte
 - Home Edit toggle flow: current code uses `HomeLayoutManager.isEditing`; the first click enters edit mode and Done saves the layout.
 - CEP panel close freeze mitigation: `fix/panel-close-freeze-audit` has been merged to `dev` for the 0.2.4 development line. The mitigation adds shutdown lifecycle guards, stops polling / timers / pending registry saves, guards close-time host/UI refresh work, and adds Home close teardown. This is not part of v0.2.3.
 - Built-in color picker eyedropper: `dev` contains the ColorSampler provider framework and Windows-only helper MVP. Native `window.EyeDropper` is not usable in current AE CEP testing because it immediately cancels, so the Windows helper is the current working provider.
-- Windows eyedropper overlay lifecycle follow-up: an attempt to remove the remaining taskbar flash / first-run Esc / right-click menu limitations was tested and rolled back because it did not meet the required stability. Those fixes are not included in the 0.2.4 draft; the previously verified Windows helper MVP remains the 0.2.4 behavior.
+- Windows eyedropper overlay lifecycle follow-up: an attempt to remove the remaining taskbar flash / first-run Esc / right-click menu limitations was tested and rolled back because it did not meet the required stability. Those fixes are not included in 0.2.4; the previously verified Windows helper MVP remains the 0.2.4 behavior.
 
 ## Known Issues / Areas To Watch
 
@@ -508,28 +508,27 @@ These are based on current code and recent project history. Verify visually afte
 - Shape Add is now on the phased registry path. Do not attempt a one-pass rewrite or remove the preserved legacy host actions; see `docs/KNOWN_ISSUES.md`.
 - Deferred: Settings Background Engine preset dropdown can trigger a render/layout glitch after closing. See `docs/KNOWN_ISSUES.md`.
 - Settings schema migration is phased. The internal UI shell is now on the Settings Renderer path, but do not replace remaining behavior layers such as `BackgroundEngine` without a dedicated migration and AE regression pass.
-- 0.2.4 development line: closing the CEP panel has been noticeably mitigated on `dev` after `fix/panel-close-freeze-audit`; tool detail close is behaving normally in current testing and Home close has little to no perceptible impact. Continue monitoring across AE / CEP environments before release, and do not claim this shipped until 0.2.4 is merged to `main` and tagged.
+- 0.2.4 release branch: closing the CEP panel has been noticeably mitigated after `fix/panel-close-freeze-audit`; tool detail close is behaving normally in current testing and Home close has little to no perceptible impact. Continue monitoring across AE / CEP environments, and do not claim the release is published until 0.2.4 is merged to `main` and tagged.
 - Color picker eyedropper helper limitations: the current Windows helper may briefly flash the Windows taskbar during sampling, first-run Esc cancellation can be unreliable, and right-click cancel may show the CEP WebView context menu. These are lower-priority MVP limitations unless they begin to affect core pick success.
 
 ## 0.2.4 Release Checklist
 
-Use this only after the documentation prep branch is reviewed and merged back to `dev`.
+Use this after the release branch has passed AE regression.
 
-1. Create `release/0.2.4` from the latest tested `dev`.
-2. Update `VERSION` to `0.2.4`.
-3. Update `CSXS/manifest.xml` `ExtensionBundleVersion` and extension `Version` to `0.2.4`.
-4. Check `package.json` version if one exists in the release branch.
-5. Convert `CHANGELOG.md` Unreleased / 0.2.4 draft into the final `0.2.4` section.
-6. Run AE regression tests for panel close behavior.
-7. Run AE regression tests for color picker axis modes, channel sliders, Hex input select-all, popup positioning, and eyedropper MVP.
-8. Run AE regression tests for Ad Component Kit Feature Stack / Icon Grid creation and removable artifact cleanup.
-9. Run AE regression tests for Shape Add collapsible native components and Stroke / Fill creation.
-10. Run AE regression tests for Settings, Text Background Box, Selection Info, Developer Mode on/off, and Home Edit ordering.
-11. Commit `release: 0.2.4`.
-12. Merge `release/0.2.4` into `dev`.
-13. Merge `dev` into `main`.
-14. Create tag `v0.2.4` from the release commit on `main`.
-15. Push `dev`, `main`, and `v0.2.4`.
+1. Confirm `VERSION` is `0.2.4`.
+2. Confirm `CSXS/manifest.xml` `ExtensionBundleVersion` and extension `Version` are `0.2.4`.
+3. Confirm no `package.json` version file exists, or update it if one is added before release.
+4. Confirm `CHANGELOG.md` has the final `0.2.4` section and a clean `Unreleased` placeholder.
+5. Run AE regression tests for panel close behavior.
+6. Run AE regression tests for color picker axis modes, channel sliders, Hex input select-all, popup positioning, and eyedropper MVP.
+7. Run AE regression tests for Ad Component Kit Feature Stack / Icon Grid creation and removable artifact cleanup.
+8. Run AE regression tests for Shape Add collapsible native components and Stroke / Fill creation.
+9. Run AE regression tests for Settings, Text Background Box, Selection Info, Developer Mode on/off, and Home Edit ordering.
+10. Commit `release: 0.2.4`.
+11. Merge `release/0.2.4` into `dev`.
+12. Merge `dev` into `main`.
+13. Create tag `v0.2.4` from the release commit on `main`.
+14. Push `dev`, `main`, and `v0.2.4`.
 
 ## Later Development Suggestions
 
