@@ -47,6 +47,10 @@
     var RegistrySaveTimers = {};
     var RegistryRuntimeStates = {};
     var CustomSelectGlobalListenersBound = false;
+    var PanelLifecycleListenersBound = false;
+    var panelShuttingDown = false;
+    var panelSuspended = false;
+    var selectionPollTimer = null;
     var DefaultSettings = {
         motionSpeed: 1,
         uiScale: 0.92,
@@ -230,14 +234,30 @@
         }
     }
 
+    function lifecycleDebug(message, data) {
+        if ((window.AETOOLBOX_DEBUG_UI === true || window.AETOOLBOX_DEBUG_REGISTRY === true) && window.console && console.log) {
+            if (typeof data !== "undefined") {
+                console.log("[AE Toolbox Lifecycle] " + message, data);
+            } else {
+                console.log("[AE Toolbox Lifecycle] " + message);
+            }
+        }
+    }
+
     var HomeLayoutManager = {
         toolOrder: [],
         isEditing: false,
         dragState: null,
         globalEventsBound: false,
         initialized: false,
+        transientTimers: [],
+        globalDragHandlers: null,
 
         init: function () {
+            if (panelShuttingDown) {
+                lifecycleDebug("skipped home init because panelShuttingDown");
+                return;
+            }
             this.loadOrder();
             this.renderOrder();
             this.bindIconEvents();
@@ -309,6 +329,10 @@
         },
 
         saveOrder: function () {
+            if (panelShuttingDown) {
+                lifecycleDebug("skipped home layout save because panelShuttingDown");
+                return;
+            }
             saveStoredJson(StorageKeys.homeOrder, this.toolOrder);
         },
 
@@ -318,6 +342,10 @@
             var i;
             var button;
 
+            if (panelShuttingDown) {
+                lifecycleDebug("skipped home render because panelShuttingDown");
+                return;
+            }
             if (!grid) {
                 return;
             }
@@ -336,6 +364,9 @@
             var editButton = byId("editHomeBtn");
             var i;
 
+            if (panelShuttingDown) {
+                return;
+            }
             if (this.isEditing) {
                 return;
             }
@@ -357,6 +388,10 @@
             var announce = !options || options.announce !== false;
             var i;
 
+            if (panelShuttingDown) {
+                save = false;
+                announce = false;
+            }
             uiDebug("exitHomeEditMode", { save: save });
             this.isEditing = false;
             home.classList.remove("home-editing");
@@ -379,8 +414,90 @@
         },
 
         commitEditMode: function () {
+            if (panelShuttingDown) {
+                lifecycleDebug("skipped home layout save because panelShuttingDown");
+                this.exitEditMode({ save: false, announce: false });
+                return;
+            }
             uiDebug("saveHomeLayout");
             this.exitEditMode({ save: true, announce: true });
+        },
+
+        trackTimer: function (timer) {
+            if (timer) {
+                this.transientTimers[this.transientTimers.length] = timer;
+            }
+            return timer;
+        },
+
+        clearTransientTimers: function () {
+            var i;
+            for (i = 0; i < this.transientTimers.length; i++) {
+                window.clearTimeout(this.transientTimers[i]);
+            }
+            this.transientTimers = [];
+            if (this.dragState && this.dragState.longPressTimer) {
+                window.clearTimeout(this.dragState.longPressTimer);
+                this.dragState.longPressTimer = null;
+            }
+            lifecycleDebug("home timers cleared");
+        },
+
+        cancelDragForShutdown: function () {
+            var state = this.dragState;
+            var home = byId("homeView");
+            var current;
+            var i;
+
+            if (state && state.longPressTimer) {
+                window.clearTimeout(state.longPressTimer);
+                state.longPressTimer = null;
+            }
+            if (state && state.placeholder && state.placeholder.parentNode) {
+                if (state.button && state.placeholder.parentNode) {
+                    state.placeholder.parentNode.insertBefore(state.button, state.placeholder);
+                }
+                state.placeholder.parentNode.removeChild(state.placeholder);
+            }
+            if (state && state.button) {
+                state.button.classList.remove("is-dragging", "is-reordering", "is-pressed");
+                state.button.style.position = "";
+                state.button.style.left = "";
+                state.button.style.top = "";
+                state.button.style.width = "";
+                state.button.style.height = "";
+                state.button.style.transform = "";
+                state.button.style.willChange = "";
+            }
+            current = document.querySelectorAll("#toolGrid .tool-app.is-reordering, #toolGrid .tool-app.is-dragging, #toolGrid .tool-app.is-pressed");
+            for (i = 0; i < current.length; i++) {
+                current[i].classList.remove("is-reordering", "is-dragging", "is-pressed");
+                current[i].style.transform = "";
+            }
+            if (home) {
+                home.classList.remove("home-editing", "is-dragging", "is-opening", "is-returning");
+            }
+            this.dragState = null;
+        },
+
+        removeGlobalDragListeners: function () {
+            if (this.globalDragHandlers) {
+                document.removeEventListener(this.globalDragHandlers.moveEvent, this.globalDragHandlers.move);
+                document.removeEventListener(this.globalDragHandlers.endEvent, this.globalDragHandlers.end);
+                this.globalDragHandlers = null;
+                this.globalEventsBound = false;
+            }
+        },
+
+        teardownForShutdown: function () {
+            lifecycleDebug("home teardown start");
+            this.clearTransientTimers();
+            this.cancelDragForShutdown();
+            this.removeGlobalDragListeners();
+            this.isEditing = false;
+            lifecycleDebug("home listeners removed");
+            lifecycleDebug("observers disconnected");
+            lifecycleDebug("home teardown done");
         },
 
         bindIconEvents: function () {
@@ -398,9 +515,15 @@
                 }
                 tools[i].setAttribute("data-home-events-bound", "true");
                 tools[i].addEventListener(startEvent, function (event) {
+                    if (panelShuttingDown) {
+                        return;
+                    }
                     self.startDrag(event, event.currentTarget);
                 });
                 tools[i].addEventListener("click", function (event) {
+                    if (panelShuttingDown) {
+                        return;
+                    }
                     event.preventDefault();
                 });
             }
@@ -413,6 +536,9 @@
             byId("editHomeBtn").addEventListener("click", function (event) {
                 event.preventDefault();
                 event.stopPropagation();
+                if (panelShuttingDown) {
+                    return;
+                }
                 uiDebug("Edit Home click", { isEditing: self.isEditing });
                 if (self.isEditing) {
                     self.commitEditMode();
@@ -421,6 +547,9 @@
                 }
             });
             byId("homeView").addEventListener("click", function (event) {
+                if (panelShuttingDown) {
+                    return;
+                }
                 if (!self.isEditing || self.dragState) {
                     return;
                 }
@@ -431,12 +560,24 @@
                 }
                 self.exitEditMode({ save: false, announce: true });
             });
-            document.addEventListener(moveEvent, function (event) {
-                self.updateDrag(event);
-            });
-            document.addEventListener(endEvent, function (event) {
-                self.endDrag(event);
-            });
+            this.globalDragHandlers = {
+                moveEvent: moveEvent,
+                endEvent: endEvent,
+                move: function (event) {
+                    if (panelShuttingDown) {
+                        return;
+                    }
+                    self.updateDrag(event);
+                },
+                end: function (event) {
+                    if (panelShuttingDown) {
+                        return;
+                    }
+                    self.endDrag(event);
+                }
+            };
+            document.addEventListener(moveEvent, this.globalDragHandlers.move);
+            document.addEventListener(endEvent, this.globalDragHandlers.end);
         },
 
         startDrag: function (event, toolButton) {
@@ -444,6 +585,9 @@
             var self = this;
             var rect;
 
+            if (panelShuttingDown) {
+                return;
+            }
             if (typeof event.button !== "undefined" && event.button !== 0) {
                 return;
             }
@@ -487,16 +631,22 @@
                 return;
             }
 
-            this.dragState.longPressTimer = window.setTimeout(function () {
+            this.dragState.longPressTimer = this.trackTimer(window.setTimeout(function () {
+                if (panelShuttingDown) {
+                    return;
+                }
                 if (self.dragState && !self.dragState.moved) {
                     self.enterEditMode();
                     self.beginDragging();
                 }
-            }, 520);
+            }, 520));
         },
 
         beginDragging: function () {
             var state = this.dragState;
+            if (panelShuttingDown) {
+                return;
+            }
             if (!state || state.isDragging) {
                 return;
             }
@@ -519,6 +669,9 @@
             var dy;
             var targetIndex;
 
+            if (panelShuttingDown) {
+                return;
+            }
             if (!state) {
                 return;
             }
@@ -555,12 +708,17 @@
             var state = this.dragState;
             var self = this;
 
+            if (panelShuttingDown) {
+                return;
+            }
             if (!state || state.rafPending) {
                 return;
             }
             state.rafPending = true;
             nextFrame(function () {
-                self.processDragFrame();
+                if (!panelShuttingDown) {
+                    self.processDragFrame();
+                }
             });
         },
 
@@ -569,6 +727,9 @@
             var targetIndex;
             var now;
 
+            if (panelShuttingDown) {
+                return;
+            }
             if (!state || !state.button) {
                 return;
             }
@@ -609,6 +770,9 @@
             var state = this.dragState;
             var shouldOpen;
 
+            if (panelShuttingDown) {
+                return;
+            }
             if (!state) {
                 return;
             }
@@ -662,6 +826,9 @@
             state.button.style.transform = "";
             state.button.style.willChange = "";
             byId("homeView").classList.remove("is-dragging");
+            if (panelShuttingDown) {
+                return;
+            }
             more = byId("toolGrid").querySelector(".tool-app.is-disabled");
             byId("toolGrid").insertBefore(state.button, more);
             this.renderOrder();
@@ -750,6 +917,9 @@
             var dx;
             var dy;
 
+            if (panelShuttingDown) {
+                return;
+            }
             if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) {
                 return;
             }
@@ -789,12 +959,15 @@
                 }
             }
 
-            window.setTimeout(function () {
+            this.trackTimer(window.setTimeout(function () {
+                if (panelShuttingDown) {
+                    return;
+                }
                 var current = document.querySelectorAll("#toolGrid .tool-app.is-reordering");
                 for (i = 0; i < current.length; i++) {
                     current[i].classList.remove("is-reordering");
                 }
-            }, duration("normal") + 30);
+            }, duration("normal") + 30));
 
             this.cacheDropTargets();
             this.updateDraggedTransform();
@@ -808,6 +981,10 @@
             var id;
             var button;
 
+            if (panelShuttingDown) {
+                lifecycleDebug("skipped home render because panelShuttingDown");
+                return;
+            }
             if (!state || !grid) {
                 return;
             }
@@ -827,6 +1004,10 @@
         },
 
         resetHomeLayout: function () {
+            if (panelShuttingDown) {
+                lifecycleDebug("skipped home layout save because panelShuttingDown");
+                return;
+            }
             this.toolOrder = this.getDefaultOrder();
             this.renderOrder();
             this.saveOrder();
@@ -914,6 +1095,12 @@
     }
 
     function evalHost(code, callback) {
+        if (panelShuttingDown) {
+            if (callback) {
+                callback('{"ok":false,"message":"Panel runtime is shutting down."}');
+            }
+            return;
+        }
         if (!hostLoaded && code.indexOf("$.evalFile") !== 0) {
             setStatus(tr("status.hostLoading"), "busy", true);
         }
@@ -976,6 +1163,10 @@
         var icon;
         var title;
 
+        if (panelShuttingDown) {
+            lifecycleDebug("skipped home render because panelShuttingDown");
+            return;
+        }
         if (!grid) {
             return;
         }
@@ -1018,6 +1209,10 @@
         window.AETOOLBOX_DEBUG_REGISTRY = enabled === true;
         if (byId("registryDebugTools")) {
             byId("registryDebugTools").checked = window.AETOOLBOX_DEBUG_REGISTRY === true;
+        }
+        if (panelShuttingDown) {
+            lifecycleDebug("skipped home render because panelShuttingDown");
+            return;
         }
         if (!HomeLayoutManager || !HomeLayoutManager.initialized) {
             return;
@@ -1632,6 +1827,9 @@
 
     function loadRegisteredToolsFromHost() {
         evalHost("AEToolbox.getRegisteredTools()", function (raw) {
+            if (panelShuttingDown) {
+                return;
+            }
             var result = parseResult(raw);
             var tools = result.tools || [];
             var loadErrors = result.loadErrors || [];
@@ -1662,6 +1860,9 @@
             }
 
             renderDynamicToolHome();
+            if (panelShuttingDown) {
+                return;
+            }
             HomeLayoutManager.loadOrder();
             HomeLayoutManager.renderOrder();
             HomeLayoutManager.bindIconEvents();
@@ -1679,8 +1880,14 @@
         jsxPath = jsxPath.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
         setStatus(tr("status.loadingHost"), "busy", true);
         cs.evalScript('$.evalFile("' + jsxPath + '")', function (loadResult) {
+            if (panelShuttingDown) {
+                return;
+            }
             hostLoaded = true;
             cs.evalScript("AEToolbox.ping()", function (result) {
+                if (panelShuttingDown) {
+                    return;
+                }
                 if (window.console && console.log) {
                     console.log(result);
                 }
@@ -1689,6 +1896,9 @@
                     return;
                 }
                 cs.evalScript("AEToolbox.getHostLoadInfo()", function (infoRaw) {
+                    if (panelShuttingDown) {
+                        return;
+                    }
                     if (window.console && console.log) {
                         console.log("[AE Toolbox] Host load info:", infoRaw);
                     }
@@ -2277,6 +2487,9 @@
         if (!toolDef || !toolDef.id) {
             return;
         }
+        if (panelShuttingDown) {
+            return;
+        }
         if (RegistrySaveTimers[toolDef.id]) {
             window.clearTimeout(RegistrySaveTimers[toolDef.id]);
         }
@@ -2284,6 +2497,16 @@
             RegistrySaveTimers[toolDef.id] = null;
             saveRegistryToolValues(toolDef);
         }, 150);
+    }
+
+    function clearRegistrySaveTimers() {
+        var key;
+        for (key in RegistrySaveTimers) {
+            if (Object.prototype.hasOwnProperty.call(RegistrySaveTimers, key) && RegistrySaveTimers[key]) {
+                window.clearTimeout(RegistrySaveTimers[key]);
+                RegistrySaveTimers[key] = null;
+            }
+        }
     }
 
     function resetRegistryToolValues(toolId) {
@@ -2808,6 +3031,12 @@
         }
 
         runtime = getRegistryRuntime(toolDef.id);
+        if (panelShuttingDown || panelSuspended) {
+            if (callback) {
+                callback(null);
+            }
+            return;
+        }
         if (runtime.pending) {
             return;
         }
@@ -2817,6 +3046,9 @@
         evalHost(hostFunction + "()", function (raw) {
             var result = parseResult(raw);
             runtime.pending = false;
+            if (panelShuttingDown || panelSuspended) {
+                return;
+            }
             runtime.lastResult = result;
             runtime.state = normalizeRegistryStateResult(result);
             updateRegistryStateDependentUi(toolDef);
@@ -3679,8 +3911,14 @@
         var action = actionDef || findRegistryAction(toolDef, actionId) || {};
         var params = mergeActionPayload(collectDynamicToolParams(toolId), actionPayload || action.actionPayload || {});
         var json = JSON.stringify(params);
+        if (panelShuttingDown) {
+            return;
+        }
         setStatus(tr(action.pendingMessageKey || "status.loadingHost"), "busy", true);
         evalHost("AEToolbox.runRegisteredToolAction('" + jsxQuote(toolId) + "','" + jsxQuote(actionId) + "','" + jsxQuote(json) + "')", function (raw) {
+            if (panelShuttingDown) {
+                return;
+            }
             var result = parseResult(raw);
             var fallback = result.ok ? (action.successMessageKey || "status.ready") : (action.errorMessageKey || "status.ready");
             setStatus(dynamicActionMessage(result, fallback), result.ok ? "ok" : "error");
@@ -3818,6 +4056,9 @@
     }
 
     function refreshActiveTool() {
+        if (panelShuttingDown || panelSuspended) {
+            return;
+        }
         refreshSelection();
     }
 
@@ -3831,6 +4072,9 @@
         var overlay;
         var finishGate;
 
+        if (panelShuttingDown) {
+            return;
+        }
         if (byId("appShell").classList.contains("is-animating")) {
             return;
         }
@@ -3841,7 +4085,10 @@
         pressDelay = Math.max(120, Math.min(140, duration("fast") - 40));
         toolButton.classList.add("is-pressed");
 
-        window.setTimeout(function () {
+        HomeLayoutManager.trackTimer(window.setTimeout(function () {
+            if (panelShuttingDown) {
+                return;
+            }
             toolButton.classList.remove("is-pressed");
             configureToolDetail(toolId);
             beginAnimation();
@@ -3897,7 +4144,7 @@
                 finishGate();
             });
 
-        }, pressDelay);
+        }, pressDelay));
     }
 
     function closeToolWithLaunchTransition() {
@@ -4383,10 +4630,13 @@
     }
 
     function refreshSelection() {
-        if (!hostLoaded) {
+        if (!hostLoaded || panelShuttingDown || panelSuspended) {
             return;
         }
         evalHost("AEToolbox.getSelectionSummary()", function (raw) {
+            if (panelShuttingDown || panelSuspended) {
+                return;
+            }
             var result = parseResult(raw);
             if (result.selectionLabel) {
                 byId("selectionPill").textContent = result.selectionLabel;
@@ -4469,6 +4719,9 @@
         var input = byId(inputId);
         var current = input.value;
 
+        if (panelShuttingDown) {
+            return;
+        }
         if (!hostLoaded) {
             setStatus(tr("status.hostLoading"), "busy", true);
             return;
@@ -4476,6 +4729,9 @@
 
         setStatus(tr("status.colorPickerOpening"), "busy", true);
         evalHost("AEToolbox.pickColor('" + jsxQuote(current) + "')", function (raw) {
+            if (panelShuttingDown) {
+                return;
+            }
             var result = parseResult(raw);
             if (result.ok && !result.cancelled && result.color) {
                 setColorValue(inputId, result.color);
@@ -4561,6 +4817,83 @@
 
     function cleanupTransientUiState() {
         closeCustomSelectMenus();
+    }
+
+    function stopSelectionPolling() {
+        if (selectionPollTimer) {
+            window.clearInterval(selectionPollTimer);
+            selectionPollTimer = null;
+        }
+    }
+
+    function startSelectionPolling() {
+        if (selectionPollTimer || panelShuttingDown || panelSuspended) {
+            return;
+        }
+        selectionPollTimer = window.setInterval(function () {
+            if (!panelShuttingDown && !panelSuspended && (!byId("autoStatus") || byId("autoStatus").checked)) {
+                refreshActiveTool();
+            }
+        }, 2200);
+    }
+
+    function suspendPanelRuntime() {
+        panelSuspended = true;
+        stopSelectionPolling();
+        stopRegistryStatePolling();
+        closeRegistryColorPicker();
+        cleanupTransientUiState();
+    }
+
+    function resumePanelRuntime() {
+        if (panelShuttingDown) {
+            return;
+        }
+        panelSuspended = false;
+        startSelectionPolling();
+        if (isDynamicTool(activeToolId)) {
+            startRegistryStatePolling(DynamicTools[activeToolId]);
+        }
+        refreshActiveTool();
+    }
+
+    function shutdownPanelRuntime() {
+        if (panelShuttingDown) {
+            return;
+        }
+        lifecycleDebug("panel close start");
+        panelShuttingDown = true;
+        stopSelectionPolling();
+        stopRegistryStatePolling();
+        clearRegistrySaveTimers();
+        if (HomeLayoutManager && HomeLayoutManager.teardownForShutdown) {
+            HomeLayoutManager.teardownForShutdown();
+        }
+        if (statusTimer) {
+            window.clearTimeout(statusTimer);
+            statusTimer = null;
+        }
+        closeRegistryColorPicker();
+        cleanupTransientUiState();
+    }
+
+    function handleVisibilityChange() {
+        if (document.hidden) {
+            suspendPanelRuntime();
+        } else {
+            resumePanelRuntime();
+        }
+    }
+
+    function bindPanelLifecycle() {
+        if (PanelLifecycleListenersBound) {
+            return;
+        }
+        PanelLifecycleListenersBound = true;
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("pagehide", shutdownPanelRuntime);
+        window.addEventListener("beforeunload", shutdownPanelRuntime);
+        window.addEventListener("unload", shutdownPanelRuntime);
     }
 
     function getCustomSelectMenu(control) {
@@ -4821,9 +5154,8 @@
             window.addEventListener("resize", function () {
                 closeCustomSelectMenus();
             });
-            window.addEventListener("beforeunload", cleanupTransientUiState);
-            window.addEventListener("unload", cleanupTransientUiState);
         }
+        bindPanelLifecycle();
     }
 
     function setCustomSelectValue(control, value, announce) {
@@ -5256,14 +5588,13 @@
             }
         });
         window.addEventListener("focus", function () {
-            refreshActiveTool();
-        });
-
-        window.setInterval(function () {
-            if (!byId("autoStatus") || byId("autoStatus").checked) {
+            if (!panelShuttingDown && !panelSuspended) {
                 refreshActiveTool();
             }
-        }, 2200);
+        });
+
+        bindPanelLifecycle();
+        startSelectionPolling();
     }
 
     document.addEventListener("DOMContentLoaded", function () {
