@@ -1398,6 +1398,31 @@
         element.dispatchEvent(event);
     }
 
+    function bindHexInputSelectBehavior(input) {
+        if (!input || input.getAttribute("data-hex-select-bound") === "true") {
+            return;
+        }
+        input.setAttribute("data-hex-select-bound", "true");
+
+        function selectSoon() {
+            window.setTimeout(function () {
+                if (document.activeElement === input && input.select) {
+                    try {
+                        input.select();
+                    } catch (err) {
+                    }
+                }
+            }, 0);
+        }
+
+        input.addEventListener("focus", selectSoon);
+        input.addEventListener("click", function () {
+            if (document.activeElement === input) {
+                selectSoon();
+            }
+        });
+    }
+
     function createSharedSettingsRangeNumber(field, rangeId, numberId, minValue, maxValue, rangeHookClass, numberHookClass) {
         var controls = document.createElement("span");
         var range = document.createElement("input");
@@ -1457,6 +1482,7 @@
         hexInput.type = "text";
         hexInput.value = input.value;
         hexInput.setAttribute("spellcheck", "false");
+        bindHexInputSelectBehavior(hexInput);
 
         function syncColorUi(value) {
             var previous = input.value || fallback;
@@ -3477,8 +3503,8 @@
         var axisHandle;
         var preview;
         var hexEdit;
-        var rect;
         var axisButtons = [];
+        var channelSliders = {};
         var outsideBound = false;
         var outsideHandler = null;
 
@@ -3497,9 +3523,50 @@
             planeHandle.style.left = (point.x * 100) + "%";
             planeHandle.style.top = (point.y * 100) + "%";
             axisHandle.style.left = (getAxisValue(color, axisMode) * 100) + "%";
+            syncChannelSliders();
             if (!skipNotify && hexInput._registryOnValueChange) {
                 hexInput._registryOnValueChange();
             }
+        }
+
+        function syncChannelSliders() {
+            if (channelSliders.h) {
+                channelSliders.h.value = Math.round(color.h);
+            }
+            if (channelSliders.s) {
+                channelSliders.s.value = Math.round(color.s * 100);
+            }
+            if (channelSliders.v) {
+                channelSliders.v.value = Math.round(color.v * 100);
+            }
+            if (channelSliders.r) {
+                channelSliders.r.value = Math.round(color.r);
+            }
+            if (channelSliders.g) {
+                channelSliders.g.value = Math.round(color.g);
+            }
+            if (channelSliders.b) {
+                channelSliders.b.value = Math.round(color.b);
+            }
+        }
+
+        function colorFromChannelValue(channel, value) {
+            if (channel === "h") {
+                return makeColorStateFromHsv({ h: clamp(value, 0, 360), s: color.s, v: color.v, a: color.a });
+            }
+            if (channel === "s") {
+                return makeColorStateFromHsv({ h: color.h, s: clamp(value, 0, 100) / 100, v: color.v, a: color.a });
+            }
+            if (channel === "v") {
+                return makeColorStateFromHsv({ h: color.h, s: color.s, v: clamp(value, 0, 100) / 100, a: color.a });
+            }
+            if (channel === "r") {
+                return makeColorStateFromRgb({ r: clamp(value, 0, 255), g: color.g, b: color.b, a: color.a });
+            }
+            if (channel === "g") {
+                return makeColorStateFromRgb({ r: color.r, g: clamp(value, 0, 255), b: color.b, a: color.a });
+            }
+            return makeColorStateFromRgb({ r: color.r, g: color.g, b: clamp(value, 0, 255), a: color.a });
         }
 
         function syncAxisButtons() {
@@ -3554,11 +3621,13 @@
         }
 
         function renderAll() {
+            positionPopover();
             applyColor(color, true);
         }
 
         function cleanup() {
             window.removeEventListener("resize", renderAll);
+            window.removeEventListener("scroll", closeRegistryColorPicker, true);
             if (outsideHandler) {
                 document.removeEventListener("mousedown", outsideHandler);
                 outsideHandler = null;
@@ -3575,6 +3644,42 @@
                 outsideBound = true;
                 document.addEventListener("mousedown", outsideHandler);
             }
+        }
+
+        function positionPopover() {
+            var triggerRect = swatch.getBoundingClientRect();
+            var popupRect = popover.getBoundingClientRect();
+            var viewportWidth = window.innerWidth || document.documentElement.clientWidth || 320;
+            var viewportHeight = window.innerHeight || document.documentElement.clientHeight || 480;
+            var margin = 8;
+            var gap = 8;
+            var popupWidth = popupRect.width || popover.offsetWidth || 244;
+            var popupHeight = popupRect.height || popover.offsetHeight || 260;
+            var availableBelow = viewportHeight - triggerRect.bottom - gap - margin;
+            var availableAbove = triggerRect.top - gap - margin;
+            var left;
+            var top;
+            var openAbove;
+
+            left = Math.max(margin, Math.min(triggerRect.left, viewportWidth - popupWidth - margin));
+            openAbove = availableBelow < popupHeight && availableAbove > availableBelow;
+            if (openAbove) {
+                top = triggerRect.top - popupHeight - gap;
+            } else {
+                top = triggerRect.bottom + gap;
+            }
+            if (availableBelow < popupHeight && availableAbove < popupHeight) {
+                if (availableAbove > availableBelow) {
+                    top = triggerRect.top - popupHeight - gap;
+                } else {
+                    top = triggerRect.bottom + gap;
+                }
+            }
+            top = Math.max(margin, Math.min(top, viewportHeight - popupHeight - margin));
+
+            popover.classList.toggle("is-above", top < triggerRect.top);
+            popover.style.left = left + "px";
+            popover.style.top = top + "px";
         }
 
         closeRegistryColorPicker();
@@ -3605,6 +3710,41 @@
         addAxisButton("rgb-r", "R");
         addAxisButton("rgb-g", "G");
         addAxisButton("rgb-b", "B");
+
+        function createChannelSliders() {
+            var wrap = document.createElement("div");
+
+            function addChannel(key, label, maxValue) {
+                var row = document.createElement("label");
+                var text = document.createElement("span");
+                var slider = document.createElement("input");
+
+                row.className = "registry-color-channel-row";
+                text.className = "registry-color-channel-label";
+                text.textContent = label;
+                slider.type = "range";
+                slider.className = "registry-color-channel-slider";
+                slider.min = "0";
+                slider.max = String(maxValue);
+                slider.step = "1";
+                slider.addEventListener("input", function () {
+                    applyColor(colorFromChannelValue(key, this.value));
+                });
+                channelSliders[key] = slider;
+                row.appendChild(text);
+                row.appendChild(slider);
+                wrap.appendChild(row);
+            }
+
+            wrap.className = "registry-color-channel-sliders";
+            addChannel("h", "H", 360);
+            addChannel("s", "S", 100);
+            addChannel("v", "V", 100);
+            addChannel("r", "R", 255);
+            addChannel("g", "G", 255);
+            addChannel("b", "B", 255);
+            return wrap;
+        }
 
         planeWrap = document.createElement("div");
         planeWrap.className = "registry-color-plane";
@@ -3637,6 +3777,7 @@
         hexEdit.className = "registry-color-hex registry-hsv-hex";
         hexEdit.type = "text";
         hexEdit.setAttribute("spellcheck", "false");
+        bindHexInputSelectBehavior(hexEdit);
         hexEdit.addEventListener("input", function () {
             if (isCompleteHexColor(this.value)) {
                 color = makeColorStateFromRgb(parseHexColor(this.value, fallback || "#ffffff"));
@@ -3651,16 +3792,16 @@
         popover.appendChild(axisControls);
         popover.appendChild(planeWrap);
         popover.appendChild(axisWrap);
+        popover.appendChild(createChannelSliders());
         popover.appendChild(preview);
         popover.appendChild(hexEdit);
         document.body.appendChild(popover);
 
-        rect = swatch.getBoundingClientRect();
-        popover.style.left = Math.max(10, Math.min(window.innerWidth - 254, rect.left)) + "px";
-        popover.style.top = Math.max(10, Math.min(window.innerHeight - 268, rect.bottom + 8)) + "px";
+        positionPopover();
         syncAxisButtons();
         applyColor(color, true);
         window.addEventListener("resize", renderAll);
+        window.addEventListener("scroll", closeRegistryColorPicker, true);
 
         window.setTimeout(bindOutsideClose, 0);
     }
@@ -3922,6 +4063,7 @@
             input.type = "text";
             input.value = colorValue;
             input.setAttribute("spellcheck", "false");
+            bindHexInputSelectBehavior(input);
 
             swatch = document.createElement("button");
             swatch.type = "button";
