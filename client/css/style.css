@@ -2530,7 +2530,7 @@ p {
 .registry-color-picker-popover {
     position: fixed;
     z-index: 1300;
-    width: calc(220px * var(--ui-scale));
+    width: calc(244px * var(--ui-scale));
     padding: calc(10px * var(--ui-scale));
     border: 1px solid var(--panel-border);
     border-radius: var(--radius-md);
@@ -2538,19 +2538,53 @@ p {
     box-shadow: 0 14px 28px rgba(0, 0, 0, 0.42);
 }
 
-.registry-hsv-sv {
+.registry-color-axis-controls {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: calc(4px * var(--ui-scale));
+    margin-bottom: calc(8px * var(--ui-scale));
+}
+
+.registry-color-axis-button {
+    height: calc(24px * var(--ui-scale));
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-secondary);
+    font-size: var(--font-small);
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.registry-color-axis-button:hover {
+    border-color: var(--gold-soft);
+    color: var(--text-primary);
+}
+
+.registry-color-axis-button.is-active {
+    border-color: var(--gold);
+    background: var(--gold-button);
+    color: #080604;
+}
+
+.registry-color-plane {
     position: relative;
     height: calc(130px * var(--ui-scale));
     border: 1px solid var(--separator);
     border-radius: var(--radius-sm);
-    background:
-        linear-gradient(0deg, #000, transparent),
-        linear-gradient(90deg, #fff, transparent);
     cursor: crosshair;
     overflow: hidden;
 }
 
-.registry-hsv-handle {
+.registry-color-plane-canvas,
+.registry-color-axis-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.registry-color-plane-handle {
     position: absolute;
     width: calc(12px * var(--ui-scale));
     height: calc(12px * var(--ui-scale));
@@ -2561,27 +2595,28 @@ p {
     pointer-events: none;
 }
 
-.registry-hsv-hue {
+.registry-color-axis {
+    position: relative;
     width: 100%;
-    margin: calc(10px * var(--ui-scale)) 0;
-    -webkit-appearance: none;
-    background: transparent;
-}
-
-.registry-hsv-hue::-webkit-slider-runnable-track {
     height: calc(10px * var(--ui-scale));
+    margin: calc(10px * var(--ui-scale)) 0;
+    border: 1px solid var(--separator);
     border-radius: 999px;
-    background: linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+    cursor: ew-resize;
+    overflow: visible;
 }
 
-.registry-hsv-hue::-webkit-slider-thumb {
+.registry-color-axis-handle {
+    position: absolute;
+    top: 50%;
     width: calc(20px * var(--ui-scale));
     height: calc(14px * var(--ui-scale));
-    margin-top: calc(-2px * var(--ui-scale));
     border: 1px solid rgba(255, 255, 255, 0.82);
     border-radius: 999px;
     background: #15120c;
-    -webkit-appearance: none;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.64);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
 }
 
 .registry-hsv-preview {

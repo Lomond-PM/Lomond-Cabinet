@@ -27,7 +27,8 @@
         background: "AEToolbox.background.v1",
         backgroundCollapsed: "AEToolbox.backgroundSettingsCollapsed.v1",
         language: "aeToolbox.language",
-        homeOrder: "aeToolbox.homeToolOrder"
+        homeOrder: "aeToolbox.homeToolOrder",
+        colorPickerAxis: "AEToolbox.colorPicker.axisMode.v1"
     };
     var ToolRegistry = {
         ecommerceLayout: {
@@ -3115,29 +3116,87 @@
         return tr(fallbackKey || "status.ready", result || {});
     }
 
-    function hexToRgb(hex) {
-        var normalized = normalizeHex(hex, "#ffffff").replace("#", "");
+    function clamp(value, min, max) {
+        var numeric = Number(value);
+        if (isNaN(numeric)) {
+            numeric = min;
+        }
+        return Math.max(min, Math.min(max, numeric));
+    }
+
+    function normalizeRgbChannel(value) {
+        return Math.round(clamp(value, 0, 255));
+    }
+
+    function normalizeUnitChannel(value) {
+        return clamp(value, 0, 1);
+    }
+
+    function normalizeHueChannel(value) {
+        var h = Number(value);
+        if (isNaN(h)) {
+            h = 0;
+        }
+        h = h % 360;
+        if (h < 0) {
+            h += 360;
+        }
+        return h;
+    }
+
+    function parseHexColor(hex, fallback) {
+        var fallbackColor;
+        var value = String(hex || "").replace("#", "").trim();
+        var alpha = 255;
+
+        if (!/^[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(value)) {
+            if (fallback && String(fallback) !== String(hex)) {
+                return parseHexColor(fallback, "#ffffff");
+            }
+            fallbackColor = { r: 255, g: 255, b: 255, a: 1 };
+            return fallbackColor;
+        }
+        if (value.length === 8) {
+            alpha = parseInt(value.substr(6, 2), 16);
+        }
         return {
-            r: parseInt(normalized.substr(0, 2), 16),
-            g: parseInt(normalized.substr(2, 2), 16),
-            b: parseInt(normalized.substr(4, 2), 16)
+            r: parseInt(value.substr(0, 2), 16),
+            g: parseInt(value.substr(2, 2), 16),
+            b: parseInt(value.substr(4, 2), 16),
+            a: alpha / 255
         };
     }
 
-    function rgbToHex(r, g, b) {
-        var value = ((Math.max(0, Math.min(255, Math.round(r))) << 16) |
-            (Math.max(0, Math.min(255, Math.round(g))) << 8) |
-            Math.max(0, Math.min(255, Math.round(b)))).toString(16);
-        while (value.length < 6) {
-            value = "0" + value;
+    function formatHexPart(value) {
+        var text = normalizeRgbChannel(value).toString(16);
+        return text.length < 2 ? "0" + text : text;
+    }
+
+    function formatHexColor(color, includeAlpha) {
+        var alpha = typeof color.a === "number" ? color.a : 1;
+        var hex = "#" + formatHexPart(color.r) + formatHexPart(color.g) + formatHexPart(color.b);
+        if (includeAlpha) {
+            hex += formatHexPart(alpha * 255);
         }
-        return "#" + value.toLowerCase();
+        return hex.toLowerCase();
+    }
+
+    function isCompleteHexColor(value) {
+        return /^#?[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(String(value || "").trim());
+    }
+
+    function hexToRgb(hex) {
+        return parseHexColor(hex, "#ffffff");
+    }
+
+    function rgbToHex(r, g, b) {
+        return formatHexColor({ r: r, g: g, b: b, a: 1 }, false);
     }
 
     function rgbToHsv(rgb) {
-        var r = rgb.r / 255;
-        var g = rgb.g / 255;
-        var b = rgb.b / 255;
+        var r = normalizeRgbChannel(rgb.r) / 255;
+        var g = normalizeRgbChannel(rgb.g) / 255;
+        var b = normalizeRgbChannel(rgb.b) / 255;
         var max = Math.max(r, g, b);
         var min = Math.min(r, g, b);
         var d = max - min;
@@ -3153,18 +3212,23 @@
             } else {
                 h = (r - g) / d + 4;
             }
-            h = Math.round(h * 60);
+            h = h * 60;
             if (h < 0) {
                 h += 360;
             }
         }
-        return { h: h, s: s, v: v };
+        return {
+            h: normalizeHueChannel(h),
+            s: normalizeUnitChannel(s),
+            v: normalizeUnitChannel(v),
+            a: typeof rgb.a === "number" ? normalizeUnitChannel(rgb.a) : 1
+        };
     }
 
-    function hsvToHex(hsv) {
-        var h = ((hsv.h % 360) + 360) % 360;
-        var s = Math.max(0, Math.min(1, hsv.s));
-        var v = Math.max(0, Math.min(1, hsv.v));
+    function hsvToRgb(hsv) {
+        var h = normalizeHueChannel(hsv.h);
+        var s = normalizeUnitChannel(hsv.s);
+        var v = normalizeUnitChannel(hsv.v);
         var c = v * s;
         var x = c * (1 - Math.abs((h / 60) % 2 - 1));
         var m = v - c;
@@ -3185,85 +3249,386 @@
         } else {
             r = c; g = 0; b = x;
         }
-        return rgbToHex((r + m) * 255, (g + m) * 255, (b + m) * 255);
+        return {
+            r: normalizeRgbChannel((r + m) * 255),
+            g: normalizeRgbChannel((g + m) * 255),
+            b: normalizeRgbChannel((b + m) * 255),
+            a: typeof hsv.a === "number" ? normalizeUnitChannel(hsv.a) : 1
+        };
+    }
+
+    function hsvToHex(hsv) {
+        return formatHexColor(hsvToRgb(hsv), false);
+    }
+
+    function makeColorStateFromRgb(rgb) {
+        var normalized = {
+            r: normalizeRgbChannel(rgb.r),
+            g: normalizeRgbChannel(rgb.g),
+            b: normalizeRgbChannel(rgb.b),
+            a: typeof rgb.a === "number" ? normalizeUnitChannel(rgb.a) : 1
+        };
+        var hsv = rgbToHsv(normalized);
+        normalized.h = hsv.h;
+        normalized.s = hsv.s;
+        normalized.v = hsv.v;
+        return normalized;
+    }
+
+    function makeColorStateFromHsv(hsv) {
+        var rgb = hsvToRgb(hsv);
+        return makeColorStateFromRgb({
+            r: rgb.r,
+            g: rgb.g,
+            b: rgb.b,
+            a: typeof hsv.a === "number" ? hsv.a : rgb.a
+        });
+    }
+
+    function validColorPickerAxisMode(mode) {
+        return mode === "hsv-h" || mode === "hsv-s" || mode === "hsv-v" ||
+            mode === "rgb-r" || mode === "rgb-g" || mode === "rgb-b";
+    }
+
+    function loadColorPickerAxisMode() {
+        var saved = null;
+        try {
+            saved = window.localStorage.getItem(StorageKeys.colorPickerAxis);
+        } catch (err) {
+        }
+        return validColorPickerAxisMode(saved) ? saved : "hsv-v";
+    }
+
+    function saveColorPickerAxisMode(mode) {
+        if (!validColorPickerAxisMode(mode)) {
+            return;
+        }
+        try {
+            window.localStorage.setItem(StorageKeys.colorPickerAxis, mode);
+        } catch (err) {
+        }
+    }
+
+    function getAxisValue(color, axisMode) {
+        if (axisMode === "hsv-h") {
+            return color.h / 359;
+        }
+        if (axisMode === "hsv-s") {
+            return color.s;
+        }
+        if (axisMode === "hsv-v") {
+            return color.v;
+        }
+        if (axisMode === "rgb-r") {
+            return color.r / 255;
+        }
+        if (axisMode === "rgb-g") {
+            return color.g / 255;
+        }
+        return color.b / 255;
+    }
+
+    function getPlanePoint(color, axisMode) {
+        if (axisMode === "hsv-h") {
+            return { x: color.s, y: 1 - color.v };
+        }
+        if (axisMode === "hsv-s") {
+            return { x: color.h / 359, y: 1 - color.v };
+        }
+        if (axisMode === "hsv-v") {
+            return { x: color.h / 359, y: 1 - color.s };
+        }
+        if (axisMode === "rgb-r") {
+            return { x: color.g / 255, y: 1 - color.b / 255 };
+        }
+        if (axisMode === "rgb-g") {
+            return { x: color.r / 255, y: 1 - color.b / 255 };
+        }
+        return { x: color.r / 255, y: 1 - color.g / 255 };
+    }
+
+    function colorFromPlanePoint(color, axisMode, x, y) {
+        x = normalizeUnitChannel(x);
+        y = normalizeUnitChannel(y);
+        if (axisMode === "hsv-h") {
+            return makeColorStateFromHsv({ h: color.h, s: x, v: 1 - y, a: color.a });
+        }
+        if (axisMode === "hsv-s") {
+            return makeColorStateFromHsv({ h: x * 359, s: color.s, v: 1 - y, a: color.a });
+        }
+        if (axisMode === "hsv-v") {
+            return makeColorStateFromHsv({ h: x * 359, s: 1 - y, v: color.v, a: color.a });
+        }
+        if (axisMode === "rgb-r") {
+            return makeColorStateFromRgb({ r: color.r, g: x * 255, b: (1 - y) * 255, a: color.a });
+        }
+        if (axisMode === "rgb-g") {
+            return makeColorStateFromRgb({ r: x * 255, g: color.g, b: (1 - y) * 255, a: color.a });
+        }
+        return makeColorStateFromRgb({ r: x * 255, g: (1 - y) * 255, b: color.b, a: color.a });
+    }
+
+    function colorFromAxisValue(color, axisMode, value) {
+        value = normalizeUnitChannel(value);
+        if (axisMode === "hsv-h") {
+            return makeColorStateFromHsv({ h: value * 359, s: color.s, v: color.v, a: color.a });
+        }
+        if (axisMode === "hsv-s") {
+            return makeColorStateFromHsv({ h: color.h, s: value, v: color.v, a: color.a });
+        }
+        if (axisMode === "hsv-v") {
+            return makeColorStateFromHsv({ h: color.h, s: color.s, v: value, a: color.a });
+        }
+        if (axisMode === "rgb-r") {
+            return makeColorStateFromRgb({ r: value * 255, g: color.g, b: color.b, a: color.a });
+        }
+        if (axisMode === "rgb-g") {
+            return makeColorStateFromRgb({ r: color.r, g: value * 255, b: color.b, a: color.a });
+        }
+        return makeColorStateFromRgb({ r: color.r, g: color.g, b: value * 255, a: color.a });
+    }
+
+    function sampleColorForPlane(color, axisMode, x, y) {
+        return colorFromPlanePoint(color, axisMode, x, y);
+    }
+
+    function sampleColorForAxis(color, axisMode, value) {
+        return colorFromAxisValue(color, axisMode, value);
+    }
+
+    function resizeCanvasToDisplaySize(canvas) {
+        var rect = canvas.getBoundingClientRect();
+        var ratio = window.devicePixelRatio || 1;
+        var width = Math.max(1, Math.round(rect.width * ratio));
+        var height = Math.max(1, Math.round(rect.height * ratio));
+        if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
+        }
+        return { width: width, height: height };
+    }
+
+    function drawColorPickerPlane(canvas, color, axisMode) {
+        var size = resizeCanvasToDisplaySize(canvas);
+        var ctx = canvas.getContext("2d");
+        var image = ctx.createImageData(size.width, size.height);
+        var data = image.data;
+        var x;
+        var y;
+        var index;
+        var sampled;
+
+        for (y = 0; y < size.height; y++) {
+            for (x = 0; x < size.width; x++) {
+                sampled = sampleColorForPlane(color, axisMode, size.width <= 1 ? 0 : x / (size.width - 1), size.height <= 1 ? 0 : y / (size.height - 1));
+                index = (y * size.width + x) * 4;
+                data[index] = sampled.r;
+                data[index + 1] = sampled.g;
+                data[index + 2] = sampled.b;
+                data[index + 3] = 255;
+            }
+        }
+        ctx.putImageData(image, 0, 0);
+    }
+
+    function drawColorPickerAxis(canvas, color, axisMode) {
+        var size = resizeCanvasToDisplaySize(canvas);
+        var ctx = canvas.getContext("2d");
+        var image = ctx.createImageData(size.width, size.height);
+        var data = image.data;
+        var x;
+        var y;
+        var index;
+        var sampled;
+
+        for (x = 0; x < size.width; x++) {
+            sampled = sampleColorForAxis(color, axisMode, size.width <= 1 ? 0 : x / (size.width - 1));
+            for (y = 0; y < size.height; y++) {
+                index = (y * size.width + x) * 4;
+                data[index] = sampled.r;
+                data[index + 1] = sampled.g;
+                data[index + 2] = sampled.b;
+                data[index + 3] = 255;
+            }
+        }
+        ctx.putImageData(image, 0, 0);
     }
 
     function closeRegistryColorPicker() {
         var picker = document.querySelector(".registry-color-picker-popover");
+        if (picker && picker._cleanupColorPicker) {
+            picker._cleanupColorPicker();
+        }
         if (picker && picker.parentNode) {
             picker.parentNode.removeChild(picker);
         }
     }
 
     function openRegistryColorPicker(hexInput, swatch, fallback) {
-        var hsv = rgbToHsv(hexToRgb(hexInput.value || fallback || "#ffffff"));
+        var color = makeColorStateFromRgb(parseHexColor(hexInput.value || fallback || "#ffffff", fallback || "#ffffff"));
+        var axisMode = loadColorPickerAxisMode();
         var popover;
-        var sv;
-        var svHandle;
-        var hue;
+        var axisControls;
+        var planeWrap;
+        var planeCanvas;
+        var planeHandle;
+        var axisWrap;
+        var axisCanvas;
+        var axisHandle;
         var preview;
         var hexEdit;
         var rect;
+        var axisButtons = [];
+        var outsideBound = false;
+        var outsideHandler = null;
 
-        function applyColor(nextHsv) {
+        function applyColor(nextColor, skipNotify) {
             var hex;
-            hsv = nextHsv || hsv;
-            hex = hsvToHex(hsv);
+            var point;
+            color = nextColor || color;
+            hex = formatHexColor(color, false);
             hexInput.value = hex;
             hexEdit.value = hex;
             swatch.style.backgroundColor = hex;
             preview.style.backgroundColor = hex;
-            sv.style.backgroundColor = hsvToHex({ h: hsv.h, s: 1, v: 1 });
-            svHandle.style.left = (hsv.s * 100) + "%";
-            svHandle.style.top = ((1 - hsv.v) * 100) + "%";
-            hue.value = hsv.h;
-            if (hexInput._registryOnValueChange) {
+            drawColorPickerPlane(planeCanvas, color, axisMode);
+            drawColorPickerAxis(axisCanvas, color, axisMode);
+            point = getPlanePoint(color, axisMode);
+            planeHandle.style.left = (point.x * 100) + "%";
+            planeHandle.style.top = (point.y * 100) + "%";
+            axisHandle.style.left = (getAxisValue(color, axisMode) * 100) + "%";
+            if (!skipNotify && hexInput._registryOnValueChange) {
                 hexInput._registryOnValueChange();
             }
         }
 
-        function setSvFromEvent(event) {
-            var box = sv.getBoundingClientRect();
-            var s = Math.max(0, Math.min(1, (event.clientX - box.left) / box.width));
-            var v = 1 - Math.max(0, Math.min(1, (event.clientY - box.top) / box.height));
-            applyColor({ h: hsv.h, s: s, v: v });
+        function syncAxisButtons() {
+            var i;
+            for (i = 0; i < axisButtons.length; i++) {
+                axisButtons[i].classList.toggle("is-active", axisButtons[i].getAttribute("data-axis-mode") === axisMode);
+                axisButtons[i].setAttribute("aria-pressed", axisButtons[i].getAttribute("data-axis-mode") === axisMode ? "true" : "false");
+            }
         }
 
-        function beginSvDrag(event) {
+        function setAxisMode(mode) {
+            if (!validColorPickerAxisMode(mode) || mode === axisMode) {
+                return;
+            }
+            axisMode = mode;
+            saveColorPickerAxisMode(axisMode);
+            syncAxisButtons();
+            applyColor(color, true);
+        }
+
+        function pointFromEvent(event, element) {
+            var box = element.getBoundingClientRect();
+            return {
+                x: box.width <= 0 ? 0 : normalizeUnitChannel((event.clientX - box.left) / box.width),
+                y: box.height <= 0 ? 0 : normalizeUnitChannel((event.clientY - box.top) / box.height)
+            };
+        }
+
+        function setPlaneFromEvent(event) {
+            var point = pointFromEvent(event, planeCanvas);
+            applyColor(colorFromPlanePoint(color, axisMode, point.x, point.y));
+        }
+
+        function setAxisFromEvent(event) {
+            var point = pointFromEvent(event, axisCanvas);
+            applyColor(colorFromAxisValue(color, axisMode, point.x));
+        }
+
+        function beginDrag(event, updateFn) {
             function move(moveEvent) {
                 moveEvent.preventDefault();
-                setSvFromEvent(moveEvent);
+                updateFn(moveEvent);
             }
             function up() {
                 document.removeEventListener("mousemove", move);
                 document.removeEventListener("mouseup", up);
             }
             event.preventDefault();
-            setSvFromEvent(event);
+            updateFn(event);
             document.addEventListener("mousemove", move);
             document.addEventListener("mouseup", up);
+        }
+
+        function renderAll() {
+            applyColor(color, true);
+        }
+
+        function cleanup() {
+            window.removeEventListener("resize", renderAll);
+            if (outsideHandler) {
+                document.removeEventListener("mousedown", outsideHandler);
+                outsideHandler = null;
+            }
+        }
+
+        function bindOutsideClose() {
+            outsideHandler = function (event) {
+                if (!popover.contains(event.target) && event.target !== swatch) {
+                    closeRegistryColorPicker();
+                }
+            };
+            if (!outsideBound) {
+                outsideBound = true;
+                document.addEventListener("mousedown", outsideHandler);
+            }
         }
 
         closeRegistryColorPicker();
         popover = document.createElement("div");
         popover.className = "registry-color-picker-popover";
+        popover._cleanupColorPicker = cleanup;
 
-        sv = document.createElement("div");
-        sv.className = "registry-hsv-sv";
-        svHandle = document.createElement("span");
-        svHandle.className = "registry-hsv-handle";
-        sv.appendChild(svHandle);
-        sv.addEventListener("mousedown", beginSvDrag);
+        axisControls = document.createElement("div");
+        axisControls.className = "registry-color-axis-controls";
 
-        hue = document.createElement("input");
-        hue.type = "range";
-        hue.className = "registry-hsv-hue";
-        hue.min = "0";
-        hue.max = "359";
-        hue.step = "1";
-        hue.addEventListener("input", function () {
-            applyColor({ h: Number(this.value), s: hsv.s, v: hsv.v });
+        function addAxisButton(mode, label) {
+            var button = document.createElement("button");
+            button.type = "button";
+            button.className = "registry-color-axis-button";
+            button.textContent = label;
+            button.setAttribute("data-axis-mode", mode);
+            button.setAttribute("title", mode.indexOf("hsv") === 0 ? "HSV " + label : "RGB " + label);
+            button.addEventListener("click", function () {
+                setAxisMode(this.getAttribute("data-axis-mode"));
+            });
+            axisButtons[axisButtons.length] = button;
+            axisControls.appendChild(button);
+        }
+
+        addAxisButton("hsv-h", "H");
+        addAxisButton("hsv-s", "S");
+        addAxisButton("hsv-v", "V");
+        addAxisButton("rgb-r", "R");
+        addAxisButton("rgb-g", "G");
+        addAxisButton("rgb-b", "B");
+
+        planeWrap = document.createElement("div");
+        planeWrap.className = "registry-color-plane";
+        planeCanvas = document.createElement("canvas");
+        planeCanvas.className = "registry-color-plane-canvas";
+        planeHandle = document.createElement("span");
+        planeHandle.className = "registry-color-plane-handle";
+        planeCanvas.addEventListener("mousedown", function (event) {
+            beginDrag(event, setPlaneFromEvent);
         });
+        planeWrap.appendChild(planeCanvas);
+        planeWrap.appendChild(planeHandle);
+
+        axisWrap = document.createElement("div");
+        axisWrap.className = "registry-color-axis";
+        axisCanvas = document.createElement("canvas");
+        axisCanvas.className = "registry-color-axis-canvas";
+        axisHandle = document.createElement("span");
+        axisHandle.className = "registry-color-axis-handle";
+        axisCanvas.addEventListener("mousedown", function (event) {
+            beginDrag(event, setAxisFromEvent);
+        });
+        axisWrap.appendChild(axisCanvas);
+        axisWrap.appendChild(axisHandle);
 
         preview = document.createElement("span");
         preview.className = "registry-hsv-preview";
@@ -3272,31 +3637,32 @@
         hexEdit.className = "registry-color-hex registry-hsv-hex";
         hexEdit.type = "text";
         hexEdit.setAttribute("spellcheck", "false");
+        hexEdit.addEventListener("input", function () {
+            if (isCompleteHexColor(this.value)) {
+                color = makeColorStateFromRgb(parseHexColor(this.value, fallback || "#ffffff"));
+                applyColor(color);
+            }
+        });
         hexEdit.addEventListener("change", function () {
-            hsv = rgbToHsv(hexToRgb(normalizeHex(this.value, fallback || "#ffffff")));
-            applyColor(hsv);
+            color = makeColorStateFromRgb(parseHexColor(this.value, fallback || "#ffffff"));
+            applyColor(color);
         });
 
-        popover.appendChild(sv);
-        popover.appendChild(hue);
+        popover.appendChild(axisControls);
+        popover.appendChild(planeWrap);
+        popover.appendChild(axisWrap);
         popover.appendChild(preview);
         popover.appendChild(hexEdit);
         document.body.appendChild(popover);
 
         rect = swatch.getBoundingClientRect();
-        popover.style.left = Math.max(10, Math.min(window.innerWidth - 230, rect.left)) + "px";
-        popover.style.top = Math.max(10, Math.min(window.innerHeight - 230, rect.bottom + 8)) + "px";
-        applyColor(hsv);
+        popover.style.left = Math.max(10, Math.min(window.innerWidth - 254, rect.left)) + "px";
+        popover.style.top = Math.max(10, Math.min(window.innerHeight - 268, rect.bottom + 8)) + "px";
+        syncAxisButtons();
+        applyColor(color, true);
+        window.addEventListener("resize", renderAll);
 
-        window.setTimeout(function () {
-            function outside(event) {
-                if (!popover.contains(event.target) && event.target !== swatch) {
-                    closeRegistryColorPicker();
-                    document.removeEventListener("mousedown", outside);
-                }
-            }
-            document.addEventListener("mousedown", outside);
-        }, 0);
+        window.setTimeout(bindOutsideClose, 0);
     }
 
     function renderSchemaField(field, toolDef) {
@@ -4240,28 +4606,18 @@
         if (/^#[0-9a-fA-F]{3}$/.test(value)) {
             value = "#" + value.charAt(1) + value.charAt(1) + value.charAt(2) + value.charAt(2) + value.charAt(3) + value.charAt(3);
         }
-        if (!/^#[0-9a-fA-F]{6}$/.test(value)) {
-            return fallback || "#ffffff";
+        if (/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(value)) {
+            return formatHexColor(parseHexColor(value, fallback || "#ffffff"), false).toUpperCase();
         }
-        return value.toUpperCase();
+        return formatHexColor(parseHexColor(fallback || "#ffffff", "#ffffff"), false).toUpperCase();
     }
 
     function hexToRgb(hex) {
-        var normalized = normalizeHex(hex, "#ffffff");
-        return {
-            r: parseInt(normalized.substr(1, 2), 16),
-            g: parseInt(normalized.substr(3, 2), 16),
-            b: parseInt(normalized.substr(5, 2), 16)
-        };
+        return parseHexColor(hex, "#ffffff");
     }
 
     function rgbToHex(r, g, b) {
-        function part(v) {
-            var n = Math.max(0, Math.min(255, Math.round(v)));
-            var s = n.toString(16);
-            return s.length < 2 ? "0" + s : s;
-        }
-        return ("#" + part(r) + part(g) + part(b)).toUpperCase();
+        return formatHexColor({ r: r, g: g, b: b, a: 1 }, false).toUpperCase();
     }
 
     function mixHex(hex, target, amount) {
