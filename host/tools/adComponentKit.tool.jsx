@@ -47,6 +47,10 @@
                 {
                     stateKey: "canCreateIconGrid",
                     labelKey: "tools.adComponentKit.state.canCreateIconGrid"
+                },
+                {
+                    stateKey: "canRemoveGeneratedComponent",
+                    labelKey: "tools.adComponentKit.state.canRemoveGeneratedComponent"
                 }
             ]
         },
@@ -237,6 +241,66 @@
                         pendingMessageKey: "tools.adComponentKit.status.creatingFeatureStack",
                         successMessageKey: "tools.adComponentKit.status.createdFeatureStack",
                         errorMessageKey: "tools.adComponentKit.status.createFeatureStackFailed"
+                    },
+                    {
+                        type: "button",
+                        key: "refreshSelectedComponentFeature",
+                        labelKey: "tools.adComponentKit.actions.refreshSelectedComponent",
+                        variant: "secondary",
+                        fullWidth: true,
+                        actionId: "refreshSelectedComponent",
+                        visibleWhen: {
+                            key: "componentKind",
+                            equals: "featureStack"
+                        },
+                        enabledWhen: {
+                            stateKey: "canRefresh",
+                            equals: true
+                        },
+                        refreshStateAfterRun: true,
+                        pendingMessageKey: "tools.adComponentKit.status.refreshingComponent",
+                        successMessageKey: "tools.adComponentKit.status.componentRefreshed",
+                        errorMessageKey: "tools.adComponentKit.status.componentMaintenanceFailed"
+                    },
+                    {
+                        type: "button",
+                        key: "selectComponentLayersFeature",
+                        labelKey: "tools.adComponentKit.actions.selectComponentLayers",
+                        variant: "secondary",
+                        fullWidth: true,
+                        actionId: "selectComponentLayers",
+                        visibleWhen: {
+                            key: "componentKind",
+                            equals: "featureStack"
+                        },
+                        enabledWhen: {
+                            stateKey: "canSelectLayers",
+                            equals: true
+                        },
+                        refreshStateAfterRun: true,
+                        pendingMessageKey: "tools.adComponentKit.status.selectingComponentLayers",
+                        successMessageKey: "tools.adComponentKit.status.componentLayersSelected",
+                        errorMessageKey: "tools.adComponentKit.status.componentMaintenanceFailed"
+                    },
+                    {
+                        type: "button",
+                        key: "removeSelectedGeneratedComponentFeature",
+                        labelKey: "tools.adComponentKit.actions.removeSelectedGeneratedComponent",
+                        variant: "secondary",
+                        fullWidth: true,
+                        actionId: "removeSelectedGeneratedComponent",
+                        visibleWhen: {
+                            key: "componentKind",
+                            equals: "featureStack"
+                        },
+                        enabledWhen: {
+                            stateKey: "canRemoveGeneratedComponent",
+                            equals: true
+                        },
+                        refreshStateAfterRun: true,
+                        pendingMessageKey: "tools.adComponentKit.status.removingGeneratedComponent",
+                        successMessageKey: "tools.adComponentKit.status.generatedComponentRemoved",
+                        errorMessageKey: "tools.adComponentKit.status.generatedComponentRemoveFailed"
                     },
                     {
                         type: "info",
@@ -436,23 +500,18 @@
                         pendingMessageKey: "tools.adComponentKit.status.creatingIconGrid",
                         successMessageKey: "tools.adComponentKit.status.createdIconGrid",
                         errorMessageKey: "tools.adComponentKit.status.createIconGridFailed"
-                    }
-                ]
-            },
-            {
-                id: "maintenance",
-                labelKey: "tools.adComponentKit.sections.maintenance",
-                descriptionKey: "tools.adComponentKit.sections.maintenanceDescription",
-                collapsible: true,
-                defaultCollapsed: true,
-                fields: [
+                    },
                     {
                         type: "button",
-                        key: "refreshSelectedComponent",
+                        key: "refreshSelectedComponentIcon",
                         labelKey: "tools.adComponentKit.actions.refreshSelectedComponent",
                         variant: "secondary",
                         fullWidth: true,
                         actionId: "refreshSelectedComponent",
+                        visibleWhen: {
+                            key: "componentKind",
+                            equals: "iconGrid"
+                        },
                         enabledWhen: {
                             stateKey: "canRefresh",
                             equals: true
@@ -464,11 +523,15 @@
                     },
                     {
                         type: "button",
-                        key: "selectComponentLayers",
+                        key: "selectComponentLayersIcon",
                         labelKey: "tools.adComponentKit.actions.selectComponentLayers",
                         variant: "secondary",
                         fullWidth: true,
                         actionId: "selectComponentLayers",
+                        visibleWhen: {
+                            key: "componentKind",
+                            equals: "iconGrid"
+                        },
                         enabledWhen: {
                             stateKey: "canSelectLayers",
                             equals: true
@@ -480,19 +543,23 @@
                     },
                     {
                         type: "button",
-                        key: "detachSelectedComponent",
-                        labelKey: "tools.adComponentKit.actions.detachSelectedComponent",
+                        key: "removeSelectedGeneratedComponentIcon",
+                        labelKey: "tools.adComponentKit.actions.removeSelectedGeneratedComponent",
                         variant: "secondary",
                         fullWidth: true,
-                        actionId: "detachSelectedComponent",
+                        actionId: "removeSelectedGeneratedComponent",
+                        visibleWhen: {
+                            key: "componentKind",
+                            equals: "iconGrid"
+                        },
                         enabledWhen: {
-                            stateKey: "canDetach",
+                            stateKey: "canRemoveGeneratedComponent",
                             equals: true
                         },
                         refreshStateAfterRun: true,
-                        pendingMessageKey: "tools.adComponentKit.status.detachingComponent",
-                        successMessageKey: "tools.adComponentKit.status.componentDetached",
-                        errorMessageKey: "tools.adComponentKit.status.componentMaintenanceFailed"
+                        pendingMessageKey: "tools.adComponentKit.status.removingGeneratedComponent",
+                        successMessageKey: "tools.adComponentKit.status.generatedComponentRemoved",
+                        errorMessageKey: "tools.adComponentKit.status.generatedComponentRemoveFailed"
                     }
                 ]
             }
@@ -545,13 +612,13 @@
                 fieldOnly: true
             },
             {
-                id: "detachSelectedComponent",
-                labelKey: "tools.adComponentKit.actions.detachSelectedComponent",
-                hostFunction: "AEToolbox.tools.adComponentKit.detachSelectedComponent",
+                id: "removeSelectedGeneratedComponent",
+                labelKey: "tools.adComponentKit.actions.removeSelectedGeneratedComponent",
+                hostFunction: "AEToolbox.tools.adComponentKit.removeSelectedGeneratedComponent",
                 refreshStateAfterRun: true,
-                pendingMessageKey: "tools.adComponentKit.status.detachingComponent",
-                successMessageKey: "tools.adComponentKit.status.componentDetached",
-                errorMessageKey: "tools.adComponentKit.status.componentMaintenanceFailed",
+                pendingMessageKey: "tools.adComponentKit.status.removingGeneratedComponent",
+                successMessageKey: "tools.adComponentKit.status.generatedComponentRemoved",
+                errorMessageKey: "tools.adComponentKit.status.generatedComponentRemoveFailed",
                 hidden: true,
                 fieldOnly: true
             }
@@ -563,8 +630,6 @@
                 "tools.adComponentKit.sections.state": "Component State",
                 "tools.adComponentKit.sections.component": "Component Builder",
                 "tools.adComponentKit.sections.componentDescription": "Choose one component type and tune only the relevant settings.",
-                "tools.adComponentKit.sections.maintenance": "Component Maintenance",
-                "tools.adComponentKit.sections.maintenanceDescription": "Refresh, select, or detach an existing generated component controller.",
                 "tools.adComponentKit.state.activeComp": "Active Comp",
                 "tools.adComponentKit.state.selectionCount": "Selection",
                 "tools.adComponentKit.state.textLayerCount": "Text Layers",
@@ -572,6 +637,7 @@
                 "tools.adComponentKit.state.selectedControllerType": "Controller",
                 "tools.adComponentKit.state.canCreateFeatureStack": "Can Create Feature Stack",
                 "tools.adComponentKit.state.canCreateIconGrid": "Can Create Icon Grid",
+                "tools.adComponentKit.state.canRemoveGeneratedComponent": "Can Remove Generated Component",
                 "tools.adComponentKit.fields.componentKind": "Component Type",
                 "tools.adComponentKit.options.featureStack": "Feature Stack",
                 "tools.adComponentKit.options.featureStackDescription": "Create centered pill rows from selected text layers.",
@@ -601,7 +667,7 @@
                 "tools.adComponentKit.actions.createIconGrid": "Create Icon Grid",
                 "tools.adComponentKit.actions.refreshSelectedComponent": "Refresh Selected Component",
                 "tools.adComponentKit.actions.selectComponentLayers": "Select Component Layers",
-                "tools.adComponentKit.actions.detachSelectedComponent": "Detach Component",
+                "tools.adComponentKit.actions.removeSelectedGeneratedComponent": "Remove Selected Generated Component",
                 "tools.adComponentKit.status.creatingFeatureStack": "Creating Feature Stack...",
                 "tools.adComponentKit.status.createdFeatureStack": "Feature Stack created.",
                 "tools.adComponentKit.status.createFeatureStackFailed": "Select one or more text layers.",
@@ -612,8 +678,9 @@
                 "tools.adComponentKit.status.componentRefreshed": "Component refreshed.",
                 "tools.adComponentKit.status.selectingComponentLayers": "Selecting component layers...",
                 "tools.adComponentKit.status.componentLayersSelected": "Component layers selected.",
-                "tools.adComponentKit.status.detachingComponent": "Detaching component...",
-                "tools.adComponentKit.status.componentDetached": "Component detached.",
+                "tools.adComponentKit.status.removingGeneratedComponent": "Removing generated component...",
+                "tools.adComponentKit.status.generatedComponentRemoved": "Generated component removed.",
+                "tools.adComponentKit.status.generatedComponentRemoveFailed": "Select a new generated component layer with Lomond metadata.",
                 "tools.adComponentKit.status.componentMaintenanceFailed": "Select a generated component controller."
             },
             "zh-CN": {
@@ -622,8 +689,6 @@
                 "tools.adComponentKit.sections.state": "\u7ec4\u4ef6\u72b6\u6001",
                 "tools.adComponentKit.sections.component": "\u7ec4\u4ef6\u6784\u5efa",
                 "tools.adComponentKit.sections.componentDescription": "\u9009\u62e9\u4e00\u79cd\u7ec4\u4ef6\u7c7b\u578b\uff0c\u53ea\u8c03\u6574\u76f8\u5173\u53c2\u6570\u3002",
-                "tools.adComponentKit.sections.maintenance": "\u7ec4\u4ef6\u7ef4\u62a4",
-                "tools.adComponentKit.sections.maintenanceDescription": "\u5237\u65b0\u3001\u9009\u62e9\u6216\u89e3\u7ec4\u5df2\u751f\u6210\u7684\u7ec4\u4ef6\u63a7\u5236\u5668\u3002",
                 "tools.adComponentKit.state.activeComp": "\u6fc0\u6d3b\u5408\u6210",
                 "tools.adComponentKit.state.selectionCount": "\u9009\u4e2d\u6570\u91cf",
                 "tools.adComponentKit.state.textLayerCount": "\u6587\u672c\u5c42",
@@ -631,6 +696,7 @@
                 "tools.adComponentKit.state.selectedControllerType": "\u63a7\u5236\u5668",
                 "tools.adComponentKit.state.canCreateFeatureStack": "\u53ef\u521b\u5efa\u5356\u70b9\u80f6\u56ca",
                 "tools.adComponentKit.state.canCreateIconGrid": "\u53ef\u521b\u5efa\u56fe\u6807\u7f51\u683c",
+                "tools.adComponentKit.state.canRemoveGeneratedComponent": "\u53ef\u79fb\u9664\u751f\u6210\u7ec4\u4ef6",
                 "tools.adComponentKit.fields.componentKind": "\u7ec4\u4ef6\u7c7b\u578b",
                 "tools.adComponentKit.options.featureStack": "\u5356\u70b9\u80f6\u56ca",
                 "tools.adComponentKit.options.featureStackDescription": "\u5c06\u9009\u4e2d\u6587\u672c\u5c42\u521b\u5efa\u4e3a\u5c45\u4e2d\u80f6\u56ca\u884c\u3002",
@@ -660,7 +726,7 @@
                 "tools.adComponentKit.actions.createIconGrid": "\u521b\u5efa\u56fe\u6807\u7f51\u683c",
                 "tools.adComponentKit.actions.refreshSelectedComponent": "\u5237\u65b0\u9009\u4e2d\u7ec4\u4ef6",
                 "tools.adComponentKit.actions.selectComponentLayers": "\u9009\u62e9\u7ec4\u4ef6\u56fe\u5c42",
-                "tools.adComponentKit.actions.detachSelectedComponent": "\u89e3\u7ec4\u7ec4\u4ef6",
+                "tools.adComponentKit.actions.removeSelectedGeneratedComponent": "\u79fb\u9664\u9009\u4e2d\u751f\u6210\u7ec4\u4ef6",
                 "tools.adComponentKit.status.creatingFeatureStack": "\u6b63\u5728\u521b\u5efa\u5356\u70b9\u80f6\u56ca...",
                 "tools.adComponentKit.status.createdFeatureStack": "\u5356\u70b9\u80f6\u56ca\u5df2\u521b\u5efa\u3002",
                 "tools.adComponentKit.status.createFeatureStackFailed": "\u8bf7\u9009\u62e9\u4e00\u4e2a\u6216\u591a\u4e2a\u6587\u672c\u5c42\u3002",
@@ -671,8 +737,9 @@
                 "tools.adComponentKit.status.componentRefreshed": "\u7ec4\u4ef6\u5df2\u5237\u65b0\u3002",
                 "tools.adComponentKit.status.selectingComponentLayers": "\u6b63\u5728\u9009\u62e9\u7ec4\u4ef6\u56fe\u5c42...",
                 "tools.adComponentKit.status.componentLayersSelected": "\u5df2\u9009\u62e9\u7ec4\u4ef6\u56fe\u5c42\u3002",
-                "tools.adComponentKit.status.detachingComponent": "\u6b63\u5728\u89e3\u7ec4\u7ec4\u4ef6...",
-                "tools.adComponentKit.status.componentDetached": "\u7ec4\u4ef6\u5df2\u89e3\u7ec4\u3002",
+                "tools.adComponentKit.status.removingGeneratedComponent": "\u6b63\u5728\u79fb\u9664\u751f\u6210\u7ec4\u4ef6...",
+                "tools.adComponentKit.status.generatedComponentRemoved": "\u751f\u6210\u7ec4\u4ef6\u5df2\u79fb\u9664\u3002",
+                "tools.adComponentKit.status.generatedComponentRemoveFailed": "\u8bf7\u9009\u62e9\u5e26\u6709 Lomond metadata \u7684\u65b0\u751f\u6210\u7ec4\u4ef6\u56fe\u5c42\u3002",
                 "tools.adComponentKit.status.componentMaintenanceFailed": "\u8bf7\u9009\u62e9\u5df2\u751f\u6210\u7684\u7ec4\u4ef6\u63a7\u5236\u5668\u3002"
             }
         }
