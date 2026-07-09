@@ -69,6 +69,8 @@ codex-scratch/
 
 # Local workflow helpers
 /local-scripts/
+/.vscode/
+*.code-workspace
 
 # Keep project source and handoff files tracked:
 # CSXS/
