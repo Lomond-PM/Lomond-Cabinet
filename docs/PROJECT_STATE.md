@@ -413,6 +413,10 @@ Theme color storage:
 
 - Theme colors continue to use `AEToolbox.settings.v1`.
 - Existing `applyThemeAccent(...)`, `applyHomeBackground(...)`, `applyToolIconTheme(...)`, `setupColorControls()`, and AE host color picker behavior remain in place.
+- The built-in registry/settings color picker on `dev` now uses a `ColorSampler` provider framework for eyedropper sampling.
+- Native `window.EyeDropper` is detected as a provider, but current AE CEP testing shows it immediately cancels; the provider marks itself unusable for the session and falls through to the Windows helper provider.
+- `WindowsHelperProvider` is a Windows-only MVP using a PowerShell / WinForms / Drawing helper. It can sample colors across windows and synchronizes picked colors through the existing color setter path for Hex, preview, swatch, color plane, axis slider, and H/S/V/R/G/B channel sliders.
+- The ColorSampler provider boundary is intended to allow a future C# / C++ native helper replacement without changing color picker UI, color model, sliders, or registry field integration.
 
 Background Engine storage:
 
@@ -474,6 +478,7 @@ These are based on current code and recent project history. Verify visually afte
 - Shape Add text alignment: current CSS aligns native shape item buttons around a fixed center axis.
 - Home Edit toggle flow: current code uses `HomeLayoutManager.isEditing`; the first click enters edit mode and Done saves the layout.
 - CEP panel close freeze mitigation: `fix/panel-close-freeze-audit` has been merged to `dev` for the 0.2.4 development line. The mitigation adds shutdown lifecycle guards, stops polling / timers / pending registry saves, guards close-time host/UI refresh work, and adds Home close teardown. This is not part of v0.2.3.
+- Built-in color picker eyedropper: `dev` contains the ColorSampler provider framework and Windows-only helper MVP. Native `window.EyeDropper` is not usable in current AE CEP testing because it immediately cancels, so the Windows helper is the current working provider.
 
 ## Known Issues / Areas To Watch
 
@@ -487,6 +492,7 @@ These are based on current code and recent project history. Verify visually afte
 - Deferred: Settings Background Engine preset dropdown can trigger a render/layout glitch after closing. See `docs/KNOWN_ISSUES.md`.
 - Settings schema migration is phased. The internal UI shell is now on the Settings Renderer path, but do not replace remaining behavior layers such as `BackgroundEngine` without a dedicated migration and AE regression pass.
 - 0.2.4 development line: closing the CEP panel has been noticeably mitigated on `dev` after `fix/panel-close-freeze-audit`; tool detail close is behaving normally in current testing and Home close has little to no perceptible impact. Continue monitoring across AE / CEP environments before release, and do not claim this shipped until 0.2.4 is merged to `main` and tagged.
+- Color picker eyedropper helper limitations: the current Windows helper may briefly flash the Windows taskbar during sampling, and Esc cancellation can be unreliable during or after the overlay activation delay. These are lower-priority MVP limitations unless they begin to affect core pick success.
 
 ## Later Development Suggestions
 

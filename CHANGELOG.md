@@ -10,6 +10,11 @@ This project follows simple semantic versioning for development handoff:
 
 ## [Unreleased]
 
+### Added
+
+- Added a ColorSampler provider framework for the built-in color picker eyedropper path, with native EyeDropper, Windows helper, and unavailable-provider boundaries.
+- Added a Windows-only eyedropper helper MVP using PowerShell / WinForms / Drawing so the built-in color picker can sample colors across windows and sync results back to Hex, preview, swatch, plane, axis slider, and H/S/V/R/G/B channel sliders.
+
 ### Fixed
 
 - Mitigated AE freeze when closing the CEP panel by guarding shutdown lifecycle, stopping polling / timers / pending registry saves, and skipping close-time host/UI refresh work.
@@ -17,6 +22,9 @@ This project follows simple semantic versioning for development handoff:
 
 ### Known / Follow-up
 
+- Native `window.EyeDropper` exists in AE CEP but immediately cancels in current testing, so it is marked unusable for the session and the Windows helper provider is used instead.
+- The Windows eyedropper helper is currently an MVP. The Windows taskbar may briefly flash during sampling, and Esc cancellation can be unreliable during or after the helper overlay activation delay.
+- Future eyedropper work should focus on Windows helper overlay focus / activation / cancel lifecycle, or replace the helper with a C# / C++ native helper without changing the ColorSampler provider interface.
 - Continue monitoring close behavior across AE / CEP environments before the 0.2.4 release.
 - This mitigation is on `dev` for the 0.2.4 development line and is not part of the published 0.2.3 tag.
 

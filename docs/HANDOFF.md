@@ -264,6 +264,26 @@ If close freezes return, start with instrumentation and a reproduction matrix by
 
 Do not opportunistically refactor `HomeLayoutManager`, Settings, BackgroundEngine, or App Launch / Close motion while working on close lifecycle follow-up.
 
+### Color Picker Eyedropper Provider Notes
+
+The `dev` branch contains a 0.2.4 development-line eyedropper implementation for the built-in color picker.
+
+Current implementation:
+
+- Color sampling is routed through the `ColorSampler` provider framework in `client/js/main.js`.
+- Native `window.EyeDropper` exists in AE CEP, but current testing shows it immediately cancels instead of opening the system picker. The provider marks it unusable for the session.
+- `WindowsHelperProvider` uses a Windows-only PowerShell / WinForms / Drawing helper under `helpers/win/eyedropper/`.
+- Picked colors sync through the existing color picker setter path, updating Hex, preview, swatch, color plane, axis slider, H/S/V/R/G/B sliders, and the active color field.
+
+Known MVP limitations:
+
+- Windows taskbar may briefly flash while the helper overlay starts.
+- Pressing Esc during the helper initialization delay may not cancel.
+- After that delay window, Esc cancellation can still be unreliable in some AE / Windows focus states.
+- These issues currently have lower priority because core cross-window picking works.
+
+Future eyedropper work should focus on Windows helper overlay focus / activation / cancel lifecycle. A future C# / C++ helper can replace the PowerShell MVP behind the same `ColorSampler` provider interface. Do not change color picker UI, color model, H/S/V/R/G/B sliders, axis modes, Settings semantics, or registry field behavior as part of helper follow-up unless the task explicitly asks.
+
 ## Current Active Tool Bridge Summary
 
 Text Background Box:
