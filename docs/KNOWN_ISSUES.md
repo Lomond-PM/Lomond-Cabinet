@@ -149,6 +149,42 @@ Follow-up notes:
 - Re-audit remaining close-time work, CEP unload behavior, pending `CSInterface.evalScript()` callbacks, Home teardown, observers, listeners, and localStorage writes.
 - Avoid large UI refactors as a first response.
 
+## Color picker eyedropper helper limitations
+
+Status:
+
+Windows-only helper MVP on `dev` for the 0.2.4 development line; known limitations accepted for now.
+
+Area:
+
+- Built-in color picker
+- ColorSampler provider framework
+- Windows helper eyedropper
+- PowerShell / WinForms / Drawing overlay
+
+Current implementation:
+
+- The built-in color picker uses a `ColorSampler` provider framework.
+- Native `window.EyeDropper` exists in AE CEP, but current testing shows it immediately cancels instead of opening a usable system picker.
+- Immediate native EyeDropper cancel marks the native provider unusable for the current session.
+- `WindowsHelperProvider` uses a Windows-only PowerShell / WinForms / Drawing helper.
+- The helper can pick colors across windows.
+- Picked colors synchronize through the existing color setter path for Hex input, preview, swatch, color plane, axis slider, H/S/V/R/G/B channel sliders, and the current color field value.
+
+Known limitations:
+
+- The Windows taskbar may briefly flash while the helper starts or activates the overlay.
+- If the user presses Esc during the short helper initialization delay after clicking Pick, cancellation may not be handled.
+- After that delay window, Esc cancellation can still be unreliable depending on AE / Windows focus state.
+- These limitations currently do not significantly affect the core pick-color workflow, so they are lower priority than the main eyedropper capability.
+
+Current decision:
+
+- Do not treat native `window.EyeDropper` as the primary implementation in AE CEP unless future CEP testing proves it can open reliably.
+- Do not replace the helper opportunistically during unrelated color picker work.
+- Keep the ColorSampler provider interface stable so a future C# / C++ native helper can replace the PowerShell MVP without changing picker UI, color model, axis modes, sliders, or registry field integration.
+- Future work should focus on Windows helper overlay focus / activation / cancel lifecycle.
+
 ## Settings background preset dropdown render glitch
 
 Status:
