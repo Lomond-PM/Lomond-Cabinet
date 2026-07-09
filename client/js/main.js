@@ -3311,6 +3311,217 @@
         });
     }
 
+    var ColorSampler = (function () {
+        var unusableProviders = {};
+        var immediateCancelThresholdMs = 500;
+
+        function providerUnavailable(source, errorCode, message, reason) {
+            return normalizePickResult({
+                ok: false,
+                unavailable: true,
+                source: source,
+                errorCode: errorCode || "PROVIDER_UNAVAILABLE",
+                message: message || "",
+                reason: reason || ""
+            });
+        }
+
+        function providerCanceled(source, reason) {
+            return normalizePickResult({
+                ok: false,
+                canceled: true,
+                source: source,
+                reason: reason || "user-cancel"
+            });
+        }
+
+        function providerFailed(source, errorCode, message) {
+            return normalizePickResult({
+                ok: false,
+                failed: true,
+                source: source,
+                errorCode: errorCode || "PROVIDER_FAILED",
+                message: message || ""
+            });
+        }
+
+        function detectNativeEyeDropper() {
+            return typeof window !== "undefined" && typeof window.EyeDropper === "function";
+        }
+
+        function detectNodeCapability() {
+            return (typeof window !== "undefined" && typeof window.require === "function") ||
+                typeof require === "function";
+        }
+
+        function detectChildProcessCapability() {
+            var nodeRequire;
+            var childProcess;
+            if (!detectNodeCapability()) {
+                return false;
+            }
+            try {
+                nodeRequire = typeof window !== "undefined" && typeof window.require === "function" ? window.require : require;
+                childProcess = nodeRequire("child_process");
+                return !!(childProcess && typeof childProcess.spawn === "function");
+            } catch (err) {
+                return false;
+            }
+        }
+
+        function markProviderUnusable(providerId, reason) {
+            unusableProviders[providerId] = {
+                reason: reason || "unusable",
+                at: Date.now()
+            };
+        }
+
+        function isProviderUnusable(providerId) {
+            return !!unusableProviders[providerId];
+        }
+
+        function errorName(error) {
+            return error && error.name ? String(error.name) : "Error";
+        }
+
+        function errorCodeFromName(name) {
+            return String(name || "Error").replace(/([a-z])([A-Z])/g, "$1_$2").toUpperCase();
+        }
+
+        function normalizePickResult(result) {
+            var normalized = result || {};
+            var hex = normalized.hex || normalized.sRGBHex || "";
+            if (normalized.ok && isCompleteHexColor(hex)) {
+                normalized.hex = formatHexColor(parseHexColor(hex, "#ffffff"), false);
+                normalized.ok = true;
+                normalized.source = normalized.source || "unknown";
+                return normalized;
+            }
+            if (normalized.ok) {
+                normalized.ok = false;
+                normalized.failed = true;
+                normalized.errorCode = normalized.errorCode || "INVALID_COLOR";
+            }
+            normalized.source = normalized.source || "unknown";
+            return normalized;
+        }
+
+        var NativeEyeDropperProvider = {
+            id: "native-eyedropper",
+            isAvailable: function () {
+                return detectNativeEyeDropper() && !isProviderUnusable(this.id);
+            },
+            pickColor: function () {
+                var picker;
+                var startedAt;
+                var promise;
+
+                if (!detectNativeEyeDropper()) {
+                    return Promise.resolve(providerUnavailable(this.id, "PROVIDER_UNAVAILABLE", "Native EyeDropper is not available."));
+                }
+                if (isProviderUnusable(this.id)) {
+                    return Promise.resolve(providerUnavailable(this.id, "PROVIDER_UNUSABLE", "Native EyeDropper was marked unusable in this session.", "session-unusable"));
+                }
+
+                try {
+                    picker = new window.EyeDropper();
+                    startedAt = Date.now();
+                    promise = picker.open();
+                } catch (exc) {
+                    if (errorName(exc) === "SecurityError" || errorName(exc) === "NotAllowedError" || errorName(exc) === "TypeError") {
+                        markProviderUnusable(this.id, errorName(exc));
+                        return Promise.resolve(providerUnavailable(this.id, errorCodeFromName(errorName(exc)), errorName(exc), "provider-error"));
+                    }
+                    return Promise.resolve(providerFailed(this.id, errorCodeFromName(errorName(exc)), errorName(exc)));
+                }
+
+                if (!promise || typeof promise.then !== "function") {
+                    markProviderUnusable(this.id, "open-returned-non-promise");
+                    return Promise.resolve(providerUnavailable(this.id, "PROVIDER_UNUSABLE", "Native EyeDropper did not return a promise.", "open-returned-non-promise"));
+                }
+
+                return promise.then(function (result) {
+                    return normalizePickResult({
+                        ok: true,
+                        hex: result && result.sRGBHex,
+                        source: NativeEyeDropperProvider.id
+                    });
+                })["catch"](function (error) {
+                    var name = errorName(error);
+                    var elapsed = Date.now() - startedAt;
+
+                    if (name === "AbortError" && elapsed <= immediateCancelThresholdMs) {
+                        markProviderUnusable(NativeEyeDropperProvider.id, "immediate-abort");
+                        return providerUnavailable(NativeEyeDropperProvider.id, "PROVIDER_UNUSABLE", "Native EyeDropper immediately canceled in this CEP runtime.", "immediate-abort");
+                    }
+                    if (name === "AbortError") {
+                        return providerCanceled(NativeEyeDropperProvider.id, "user-cancel");
+                    }
+                    if (name === "SecurityError" || name === "NotAllowedError" || name === "TypeError") {
+                        markProviderUnusable(NativeEyeDropperProvider.id, name);
+                        return providerUnavailable(NativeEyeDropperProvider.id, errorCodeFromName(name), name, "provider-error");
+                    }
+                    return providerFailed(NativeEyeDropperProvider.id, errorCodeFromName(name), name);
+                });
+            }
+        };
+
+        var WindowsHelperProvider = {
+            id: "windows-helper",
+            isAvailable: function () {
+                return false;
+            },
+            pickColor: function () {
+                return Promise.resolve(providerUnavailable(this.id, "PROVIDER_UNAVAILABLE", "Windows helper provider is not implemented yet."));
+            }
+        };
+
+        var UnavailableProvider = {
+            id: "unavailable",
+            pickColor: function () {
+                return Promise.resolve(providerUnavailable(this.id, "PROVIDER_UNAVAILABLE", "No color sampler provider is available."));
+            }
+        };
+
+        function pickColor(options) {
+            var providers = [NativeEyeDropperProvider, WindowsHelperProvider, UnavailableProvider];
+            var index = 0;
+
+            function tryNext() {
+                var provider = providers[index];
+                index += 1;
+                if (!provider) {
+                    return Promise.resolve(UnavailableProvider.pickColor(options));
+                }
+                return provider.pickColor(options).then(function (result) {
+                    var normalized = normalizePickResult(result);
+                    if (normalized.ok || normalized.canceled || normalized.failed) {
+                        return normalized;
+                    }
+                    if (normalized.unavailable && provider.id !== UnavailableProvider.id) {
+                        return tryNext();
+                    }
+                    return normalized;
+                });
+            }
+
+            return tryNext();
+        }
+
+        return {
+            detectNativeEyeDropper: detectNativeEyeDropper,
+            detectNodeCapability: detectNodeCapability,
+            detectChildProcessCapability: detectChildProcessCapability,
+            pickColor: pickColor,
+            normalizePickResult: normalizePickResult,
+            markProviderUnusable: markProviderUnusable,
+            isProviderUnusable: isProviderUnusable,
+            NativeEyeDropperProvider: NativeEyeDropperProvider,
+            WindowsHelperProvider: WindowsHelperProvider,
+            UnavailableProvider: UnavailableProvider
+        };
+    }());
+
     function validColorPickerAxisMode(mode) {
         return mode === "hsv-h" || mode === "hsv-s" || mode === "hsv-v" ||
             mode === "rgb-r" || mode === "rgb-g" || mode === "rgb-b";
@@ -3503,6 +3714,9 @@
         var axisHandle;
         var preview;
         var hexEdit;
+        var outputRow;
+        var eyedropperButton;
+        var eyedropperStatus;
         var axisButtons = [];
         var channelSliders = {};
         var outsideBound = false;
@@ -3625,7 +3839,74 @@
             applyColor(color, true);
         }
 
+        function isPopoverMounted() {
+            return !!(popover && popover.parentNode);
+        }
+
+        function setEyedropperBusy(isBusy) {
+            if (!eyedropperButton) {
+                return;
+            }
+            eyedropperButton.classList.toggle("is-busy", !!isBusy);
+            eyedropperButton.setAttribute("aria-busy", isBusy ? "true" : "false");
+        }
+
+        function setEyedropperStatus(text, tone) {
+            if (!eyedropperStatus) {
+                return;
+            }
+            eyedropperStatus.textContent = text || "idle";
+            eyedropperStatus.setAttribute("data-tone", tone || "idle");
+        }
+
+        function markEyeDropperUnavailable(message) {
+            if (eyedropperButton) {
+                eyedropperButton.setAttribute("title", message || "Eyedropper is not available in this CEP runtime.");
+            }
+            setEyedropperBusy(false);
+            setEyedropperStatus("unavailable", "warn");
+        }
+
+        function runEyeDropper() {
+            if (panelShuttingDown || !isPopoverMounted()) {
+                return;
+            }
+
+            setEyedropperStatus("starting", "busy");
+            setEyedropperBusy(true);
+            ColorSampler.pickColor({ currentHex: formatHexColor(color, false) }).then(function (result) {
+                if (panelShuttingDown || !isPopoverMounted()) {
+                    return;
+                }
+                setEyedropperBusy(false);
+                if (result && result.ok && isCompleteHexColor(result.hex)) {
+                    applyColor(makeColorStateFromRgb(parseHexColor(result.hex, formatHexColor(color, false))));
+                    setEyedropperStatus("picked", "ok");
+                    return;
+                }
+                if (result && result.canceled) {
+                    setEyedropperStatus("canceled", "idle");
+                    return;
+                }
+                if (result && result.unavailable) {
+                    markEyeDropperUnavailable(result.message || "Eyedropper is not available in this CEP runtime.");
+                    return;
+                }
+                if (result && result.failed) {
+                    setEyedropperStatus("failed: " + (result.errorCode || "error"), "error");
+                    return;
+                }
+                setEyedropperStatus("failed", "error");
+            })["catch"](function (error) {
+                if (!panelShuttingDown && isPopoverMounted()) {
+                    setEyedropperBusy(false);
+                    setEyedropperStatus("failed: " + (error && error.name ? error.name : "error"), "error");
+                }
+            });
+        }
+
         function cleanup() {
+            setEyedropperBusy(false);
             window.removeEventListener("resize", renderAll);
             window.removeEventListener("scroll", closeRegistryColorPicker, true);
             if (outsideHandler) {
@@ -3773,6 +4054,22 @@
         preview = document.createElement("span");
         preview.className = "registry-hsv-preview";
 
+        eyedropperButton = document.createElement("button");
+        eyedropperButton.type = "button";
+        eyedropperButton.className = "registry-eyedropper-button";
+        eyedropperButton.textContent = "Pick";
+        eyedropperButton.setAttribute("aria-label", "Eyedropper");
+        eyedropperButton.setAttribute("title", "Pick a color from the screen");
+        eyedropperButton.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            runEyeDropper();
+        });
+
+        eyedropperStatus = document.createElement("span");
+        eyedropperStatus.className = "registry-eyedropper-status";
+        setEyedropperStatus("idle", "idle");
+
         hexEdit = document.createElement("input");
         hexEdit.className = "registry-color-hex registry-hsv-hex";
         hexEdit.type = "text";
@@ -3789,12 +4086,18 @@
             applyColor(color);
         });
 
+        outputRow = document.createElement("div");
+        outputRow.className = "registry-color-output-row";
+        outputRow.appendChild(preview);
+        outputRow.appendChild(eyedropperButton);
+        outputRow.appendChild(hexEdit);
+
         popover.appendChild(axisControls);
         popover.appendChild(planeWrap);
         popover.appendChild(axisWrap);
         popover.appendChild(createChannelSliders());
-        popover.appendChild(preview);
-        popover.appendChild(hexEdit);
+        popover.appendChild(outputRow);
+        popover.appendChild(eyedropperStatus);
         document.body.appendChild(popover);
 
         positionPopover();
