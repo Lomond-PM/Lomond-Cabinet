@@ -106,6 +106,7 @@ function checkRequiredEntrypoints() {
         "client/js/main.js",
         "client/js/i18n.js",
         "client/js/settingsSchema.js",
+        "client/js/proceduralCache.js",
         "client/js/proceduralAppearance.js",
         "client/js/proceduralPreviewContract.js",
         "host/index.jsx"
@@ -174,6 +175,7 @@ function checkIndexHtml() {
         "css/style.css",
         "js/i18n.js",
         "js/settingsSchema.js",
+        "js/proceduralCache.js",
         "js/proceduralAppearance.js",
         "js/proceduralPreviewContract.js",
         "js/main.js"

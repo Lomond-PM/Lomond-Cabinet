@@ -17,6 +17,10 @@ Implemented scope:
 - Explicit procedural preview contract helper in `client/js/proceduralPreviewContract.js`.
 - Dependency-scoped preview refresh, lifecycle cleanup, and safe fallback UI at the registry renderer boundary.
 - Generic procedural preview CSS in `client/css/style.css` instead of renderer inline visual styles.
+- Bounded procedural cache helper in `client/js/proceduralCache.js`.
+- Recipe cache capped at 128 LRU entries; raster cache capped at 24 LRU entries.
+- Debug cache API: `ProceduralAppearance.clearCache()` and `ProceduralAppearance.getCacheStats()`.
+- DPR-aware internal raster rendering with render scale clamped to the range 1-2.
 
 The Lab is intentionally isolated:
 
@@ -26,6 +30,7 @@ The Lab is intentionally isolated:
 - It does not modify color picker / eyedropper behavior.
 - It does not modify Ad Component Kit or Shape Add.
 - Preview contract work does not modify the procedural generation algorithm, engine version, seed hashing, palette mapping, warp, ribbon, grain/noise, or deterministic snapshot behavior.
+- Cache and DPR work does not modify recipe fields, seed identity, palette mapping, warp, ribbon, grain/noise, or deterministic snapshot behavior.
 
 ## Goal
 
@@ -119,6 +124,7 @@ Recommended output for the MVP:
 - Rounded-square clipping at the icon container, not transparency-dependent artwork.
 - Cache by `toolId + mode + algorithmVersion + size + devicePixelRatio`.
 - The current Lab cache key is `engineVersion + target + seed + normalizedParams`.
+- DPR is not part of recipe identity. It may affect the rendered raster dimensions and raster cache entry, but it must not affect recipe generation or public recipe cache keys.
 
 The engine should generate a compact recipe before drawing. A recipe is easier to test than raw pixels:
 
