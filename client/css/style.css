@@ -2379,6 +2379,60 @@ p {
     line-height: 1.35;
 }
 
+.registry-procedural-preview {
+    position: sticky;
+    top: calc(4px * var(--ui-scale));
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: calc(10px * var(--ui-scale));
+    box-shadow: 0 calc(12px * var(--ui-scale)) calc(24px * var(--ui-scale)) rgba(0, 0, 0, 0.24);
+}
+
+.registry-procedural-preview-canvas {
+    display: block;
+    width: calc(180px * var(--ui-scale));
+    height: calc(180px * var(--ui-scale));
+    max-width: 100%;
+    aspect-ratio: 1 / 1;
+    border: 1px solid var(--panel-border);
+    border-radius: calc(24px * var(--ui-scale));
+    align-self: center;
+    background: var(--bg-main);
+    overflow: hidden;
+}
+
+.registry-procedural-preview.is-preview-background .registry-procedural-preview-canvas {
+    width: min(100%, calc(360px * var(--ui-scale)));
+    height: calc(180px * var(--ui-scale));
+    aspect-ratio: 2 / 1;
+    border-radius: calc(22px * var(--ui-scale));
+}
+
+.registry-procedural-preview-fallback {
+    display: none;
+    min-height: calc(18px * var(--ui-scale));
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--separator);
+    border-radius: var(--radius-md);
+    padding: calc(10px * var(--ui-scale));
+    text-align: center;
+}
+
+.registry-procedural-preview.is-preview-fallback .registry-procedural-preview-canvas {
+    display: none;
+}
+
+.registry-procedural-preview.is-preview-fallback .registry-procedural-preview-fallback {
+    display: flex;
+}
+
+.registry-procedural-preview-meta {
+    font-size: var(--font-small);
+    word-break: break-all;
+}
+
 .registry-field-divider {
     height: 1px;
     margin: calc(10px * var(--ui-scale)) 0;

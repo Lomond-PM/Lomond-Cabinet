@@ -47,6 +47,8 @@
     var RegistryToolState = {};
     var RegistrySaveTimers = {};
     var ProceduralPreviewTimers = {};
+    var ProceduralPreviewWarnings = {};
+    var ProceduralPreviewLastInputKeys = {};
     var RegistryRuntimeStates = {};
     var CustomSelectGlobalListenersBound = false;
     var PanelLifecycleListenersBound = false;
@@ -2336,6 +2338,7 @@
         var detail = byId("detailView");
 
         stopRegistryStatePolling();
+        clearRegistryProceduralPreviewTimer(activeToolId);
         resetDetailMorphStyles();
         clearDetailContentClasses();
         detail.classList.remove("is-active", "is-closing", "is-entering", "is-morphing");
@@ -2535,12 +2538,7 @@
                 RegistrySaveTimers[key] = null;
             }
         }
-        for (key in ProceduralPreviewTimers) {
-            if (Object.prototype.hasOwnProperty.call(ProceduralPreviewTimers, key) && ProceduralPreviewTimers[key]) {
-                window.cancelAnimationFrame(ProceduralPreviewTimers[key]);
-                ProceduralPreviewTimers[key] = null;
-            }
-        }
+        clearRegistryProceduralPreviewTimer();
     }
 
     function resetRegistryToolValues(toolId) {
@@ -4323,7 +4321,7 @@
 
         function scheduleSave() {
             scheduleRegistryToolSave(toolDef);
-            scheduleRegistryProceduralPreviewUpdate(toolDef);
+            scheduleRegistryProceduralPreviewUpdate(toolDef, field && field.key);
         }
 
         if (!field) {
@@ -4349,11 +4347,8 @@
 
         if (fieldType === "proceduralPreview") {
             row = document.createElement("div");
-            row.className = "registry-info-note registry-schema-field";
+            row.className = "registry-info-note registry-schema-field registry-procedural-preview is-preview-icon";
             row.setAttribute("data-procedural-preview-tool", toolId);
-            row.style.display = "flex";
-            row.style.flexDirection = "column";
-            row.style.gap = "10px";
             applyVisibleWhenMetadata(row, field);
             row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
 
@@ -4371,21 +4366,19 @@
             }
 
             input = document.createElement("canvas");
+            input.className = "registry-procedural-preview-canvas";
             input.setAttribute("data-procedural-preview-canvas", "true");
-            input.style.display = "block";
-            input.style.width = "100%";
-            input.style.maxWidth = "360px";
-            input.style.borderRadius = "24px";
-            input.style.background = "#050403";
-            input.style.border = "1px solid rgba(214, 178, 94, 0.18)";
-            input.style.alignSelf = "center";
             row.appendChild(input);
 
+            hint = document.createElement("span");
+            hint.className = "registry-procedural-preview-fallback registry-text-muted";
+            hint.setAttribute("data-procedural-preview-fallback", "true");
+            hint.setAttribute("role", "status");
+            row.appendChild(hint);
+
             colorValue = document.createElement("code");
-            colorValue.className = "registry-text-muted";
+            colorValue.className = "registry-text-muted registry-procedural-preview-meta";
             colorValue.setAttribute("data-procedural-preview-meta", "true");
-            colorValue.style.fontSize = "10px";
-            colorValue.style.wordBreak = "break-all";
             row.appendChild(colorValue);
             return row;
         }
@@ -4671,8 +4664,133 @@
         return renderSchemaField(field, { id: toolId });
     }
 
-    function scheduleRegistryProceduralPreviewUpdate(toolDef) {
+    function proceduralPreviewContractApi() {
+        return window.ProceduralPreviewContract || null;
+    }
+
+    function findRegistryProceduralPreviewField(toolDef) {
+        var api = proceduralPreviewContractApi();
+        var sections;
+        var fields;
+        var i;
+        var j;
+        if (api && api.findProceduralPreviewField) {
+            return api.findProceduralPreviewField(toolDef);
+        }
+        sections = getToolSections(toolDef);
+        for (i = 0; i < sections.length; i++) {
+            fields = sections[i] && sections[i].fields ? sections[i].fields : [];
+            for (j = 0; j < fields.length; j++) {
+                if (fields[j] && fields[j].type === "proceduralPreview") {
+                    return fields[j];
+                }
+            }
+        }
+        return null;
+    }
+
+    function shouldRefreshRegistryProceduralPreview(toolDef, changedKey) {
+        var field = findRegistryProceduralPreviewField(toolDef);
+        var api = proceduralPreviewContractApi();
+        if (!field) {
+            return false;
+        }
+        if (api && api.shouldRefreshProceduralPreview) {
+            return api.shouldRefreshProceduralPreview(field, changedKey);
+        }
+        return !changedKey;
+    }
+
+    function clearRegistryProceduralPreviewTimer(toolId) {
+        var key;
+        if (toolId) {
+            if (ProceduralPreviewTimers[toolId]) {
+                window.cancelAnimationFrame(ProceduralPreviewTimers[toolId]);
+                ProceduralPreviewTimers[toolId] = null;
+            }
+            delete ProceduralPreviewLastInputKeys[toolId];
+            return;
+        }
+        for (key in ProceduralPreviewTimers) {
+            if (Object.prototype.hasOwnProperty.call(ProceduralPreviewTimers, key) && ProceduralPreviewTimers[key]) {
+                window.cancelAnimationFrame(ProceduralPreviewTimers[key]);
+                ProceduralPreviewTimers[key] = null;
+            }
+        }
+        ProceduralPreviewLastInputKeys = {};
+    }
+
+    function warnProceduralPreviewOnce(code, detail) {
+        if (!code || ProceduralPreviewWarnings[code]) {
+            return;
+        }
+        ProceduralPreviewWarnings[code] = true;
+        if (window.console && console.warn) {
+            console.warn("[AE Toolbox] Procedural preview " + code + (detail ? ": " + detail : ""));
+        }
+    }
+
+    function setProceduralPreviewFallback(preview, field, code) {
+        var canvas = preview ? preview.querySelector("[data-procedural-preview-canvas]") : null;
+        var fallback = preview ? preview.querySelector("[data-procedural-preview-fallback]") : null;
+        var meta = preview ? preview.querySelector("[data-procedural-preview-meta]") : null;
+        if (!preview) {
+            return;
+        }
+        preview.classList.add("is-preview-fallback");
+        preview.setAttribute("data-preview-state", "fallback");
+        if (canvas) {
+            canvas.setAttribute("aria-hidden", "true");
+        }
+        if (fallback) {
+            fallback.textContent = tr((field && field.fallbackKey) || "status.ready");
+        }
+        if (meta) {
+            meta.textContent = code || "";
+        }
+    }
+
+    function clearProceduralPreviewFallback(preview) {
+        var canvas = preview ? preview.querySelector("[data-procedural-preview-canvas]") : null;
+        var fallback = preview ? preview.querySelector("[data-procedural-preview-fallback]") : null;
+        if (!preview) {
+            return;
+        }
+        preview.classList.remove("is-preview-fallback");
+        preview.setAttribute("data-preview-state", "ready");
+        if (canvas) {
+            canvas.removeAttribute("aria-hidden");
+        }
+        if (fallback) {
+            fallback.textContent = "";
+        }
+    }
+
+    function getProceduralPreviewEngine(engineName) {
+        var name = engineName || "proceduralAppearance";
+        if (name === "proceduralAppearance") {
+            return window.ProceduralAppearance || null;
+        }
+        return null;
+    }
+
+    function stablePreviewInputKey(input) {
+        if (!input || !input.ok) {
+            return "";
+        }
+        return JSON.stringify({
+            engine: input.engine,
+            target: input.target,
+            seed: input.seed,
+            params: input.params || {}
+        });
+    }
+
+    function scheduleRegistryProceduralPreviewUpdate(toolDef, changedKey) {
         if (!toolDef || !toolDef.id || panelShuttingDown) {
+            return;
+        }
+        if (!shouldRefreshRegistryProceduralPreview(toolDef, changedKey)) {
             return;
         }
         if (ProceduralPreviewTimers[toolDef.id]) {
@@ -4686,35 +4804,95 @@
 
     function refreshRegistryProceduralPreviews(toolDef) {
         var previews = toolDef && toolDef.id ? document.querySelectorAll('[data-procedural-preview-tool="' + toolDef.id + '"]') : [];
+        var field = findRegistryProceduralPreviewField(toolDef);
+        var api = proceduralPreviewContractApi();
         var values;
+        var input;
+        var inputKey;
+        var engine;
         var options;
         var i;
         var canvas;
+        var context;
         var meta;
         var result;
+        var rendered = false;
 
-        if (!previews.length || !window.ProceduralAppearance) {
+        if (panelShuttingDown || !previews.length || !field) {
             return;
         }
 
         values = collectSchemaValues(toolDef);
+        if (!api || !api.extractProceduralPreviewInput) {
+            warnProceduralPreviewOnce("CONTRACT_MISSING", "client/js/proceduralPreviewContract.js is not available.");
+            input = {
+                ok: false,
+                errorCode: "CONTRACT_MISSING"
+            };
+        } else {
+            input = api.extractProceduralPreviewInput(field, values);
+        }
+        if (!input.ok) {
+            warnProceduralPreviewOnce(input.errorCode || "INVALID_CONTRACT", input.message || "");
+            for (i = 0; i < previews.length; i++) {
+                setProceduralPreviewFallback(previews[i], field, input.errorCode || "INVALID_CONTRACT");
+            }
+            return;
+        }
+
+        inputKey = stablePreviewInputKey(input);
+        if (ProceduralPreviewLastInputKeys[toolDef.id] === inputKey) {
+            return;
+        }
+
+        engine = getProceduralPreviewEngine(input.engine);
+        if (!engine || !engine.render) {
+            warnProceduralPreviewOnce("ENGINE_UNAVAILABLE_" + input.engine, "Unknown or unavailable engine.");
+            for (i = 0; i < previews.length; i++) {
+                setProceduralPreviewFallback(previews[i], field, "ENGINE_UNAVAILABLE");
+            }
+            return;
+        }
+
         options = {
-            target: values.target,
-            seed: values.seed,
-            params: values
+            target: input.target,
+            seed: input.seed,
+            params: input.params
         };
 
         for (i = 0; i < previews.length; i++) {
             canvas = previews[i].querySelector('[data-procedural-preview-canvas]');
             meta = previews[i].querySelector('[data-procedural-preview-meta]');
-            if (!canvas) {
+            if (!canvas || !document.documentElement.contains(canvas)) {
+                setProceduralPreviewFallback(previews[i], field, "CANVAS_MISSING");
                 continue;
             }
-            result = window.ProceduralAppearance.render(canvas, options);
-            canvas.style.maxWidth = result.target === "background" ? "360px" : "180px";
+            if (!canvas.getContext) {
+                setProceduralPreviewFallback(previews[i], field, "CANVAS_CONTEXT_UNAVAILABLE");
+                continue;
+            }
+            context = canvas.getContext("2d");
+            if (!context) {
+                setProceduralPreviewFallback(previews[i], field, "CANVAS_CONTEXT_UNAVAILABLE");
+                continue;
+            }
+            try {
+                result = engine.render(canvas, options);
+            } catch (err) {
+                warnProceduralPreviewOnce("RENDER_FAILED", err && err.message ? err.message : String(err));
+                setProceduralPreviewFallback(previews[i], field, "RENDER_FAILED");
+                continue;
+            }
+            clearProceduralPreviewFallback(previews[i]);
+            previews[i].classList.toggle("is-preview-background", result.target === "background");
+            previews[i].classList.toggle("is-preview-icon", result.target !== "background");
+            rendered = true;
             if (meta) {
                 meta.textContent = result.engineVersion + " | " + result.target + " | seedHash=" + result.seedHash + " | " + result.cacheKey;
             }
+        }
+        if (rendered) {
+            ProceduralPreviewLastInputKeys[toolDef.id] = inputKey;
         }
     }
 
@@ -5040,6 +5218,7 @@
         }
 
         closeRegistryColorPicker();
+        clearRegistryProceduralPreviewTimer(tool.id);
         oldMenus = document.querySelectorAll(".select-menu[data-select-menu-for^='dynamic_']");
         for (i = 0; i < oldMenus.length; i++) {
             oldMenus[i].parentNode.removeChild(oldMenus[i]);
@@ -5085,8 +5264,12 @@
         var actions = document.querySelectorAll(".tool-actions");
         var i;
         var dynamic = isDynamicTool(toolId);
+        var previousToolId = activeToolId;
 
         activeToolId = toolId || "shapeAdd";
+        if (previousToolId && previousToolId !== activeToolId) {
+            clearRegistryProceduralPreviewTimer(previousToolId);
+        }
         byId("detailHeading").textContent = toolText(meta, "titleKey", "title", tr("app.title"));
 
         if (dynamic) {
@@ -5255,6 +5438,7 @@
             return;
         }
 
+        clearRegistryProceduralPreviewTimer(activeToolId);
         beginAnimation();
         exitDetailContent(function () {
             iconRect = getHomeToolIconRect(toolButton);

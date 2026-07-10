@@ -39,11 +39,14 @@ Current 0.2.5 procedural appearance status:
 - Phase 1 Lab is implemented as a Developer Mode-only registry tool: `host/tools/proceduralAppearanceLab.tool.jsx`.
 - Shared frontend engine skeleton: `client/js/proceduralAppearance.js`.
 - Generic registry preview field: `proceduralPreview` in `client/js/main.js`.
+- Preview contract helper: `client/js/proceduralPreviewContract.js`.
 - Scope remains deterministic procedural tool icons, optional theme-mapped recolor, and procedural background MVP.
 - Default icon mode: colorful seed-based icons generated from stable tool ids.
 - Theme changes must not regenerate icon identity.
 - Current Lab does not replace production Home icons or the current BackgroundEngine.
 - Procedural Appearance Phase 1 Lab has entered `dev`; 0.2.5 is no longer documentation-only planning.
+- The registry preview contract is explicit: tools declare the preview engine, target field, seed field, and parameter keys instead of relying on hard-coded `target` / `seed` names or passing all registry values into the renderer.
+- Procedural preview refreshes are dependency-scoped, batched per animation frame, cleaned up on tool/detail shutdown, and use safe fallback UI for missing engines, invalid input, or canvas/render failures.
 - Eyedropper overlay lifecycle limitations remain known limitations and are not part of this workstream.
 
 Confirmed entry points:
@@ -562,6 +565,8 @@ Current boundaries:
 - The Lab does not replace the existing BackgroundEngine.
 - Tool icon previews do not overlay letters or abbreviations.
 - Background target previews can use a manual seed.
+- The Lab preview renderer does not pass unrelated UI, language, or state fields to the procedural engine.
+- The preview contract and fallback work did not modify `client/js/proceduralAppearance.js`, the engine version, seed hashing, palette/warp/ribbon/grain/noise logic, or deterministic snapshots.
 
 Suggested implementation branches:
 

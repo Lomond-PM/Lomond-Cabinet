@@ -16,6 +16,7 @@ This project follows simple semantic versioning for development handoff:
 - Added a shared procedural visual engine skeleton with seeded hash, seeded random, normalized params, canvas rendering, and memory cache keys.
 - Drafted the 0.2.5 procedural appearance plan for deterministic tool icons, optional theme-mapped recolor, and a procedural background MVP.
 - Added `scripts/check-project-consistency.js` for release/version, entrypoint, cache-query, and registry tool structure checks.
+- Added an explicit `proceduralPreview` registry field contract and pure contract helper tests for Procedural Appearance Lab previews.
 
 ### Changed
 
@@ -24,10 +25,18 @@ This project follows simple semantic versioning for development handoff:
 - Unified frontend CSS/JS cache query strings to the 0.2.5 development build id.
 - Clarified host API version versus project release version semantics in `host/index.jsx`.
 - Refreshed the i18n usage report after Procedural Appearance Lab entered the registry tool set.
+- Scoped Procedural Appearance Lab preview refreshes to declared target, seed, and parameter dependencies instead of passing full registry values to the engine.
+- Moved generic procedural preview layout and fallback styling from renderer inline styles into `client/css/style.css`.
+
+### Fixed
+
+- Added procedural preview lifecycle cleanup for pending animation-frame renders when switching tools, closing details, or entering panel shutdown.
+- Added safe procedural preview fallback handling for missing engines, invalid schema input, unavailable canvas contexts, and render exceptions.
 
 ### Notes
 
 - The Lab does not replace production Home icons or the current BackgroundEngine.
+- Procedural preview contract work does not change the procedural generation algorithm, engine version, seed behavior, recipe output, or deterministic snapshot expectations.
 - The original 0.2.4 color picker / eyedropper / Ad Component Kit cleanup / Shape Add collapsible behavior remains out of scope for this workstream.
 - The current duplicate i18n tool-key count is retained because the duplicates are core Settings preset keys also mirrored by Settings Renderer Lab for validation.
 
