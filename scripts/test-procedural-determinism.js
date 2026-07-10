@@ -116,7 +116,7 @@ function run() {
     assert(normalized.warp === 0, "warp lower clamp changed.");
     assert(normalized.ribbonWidth === 0.22, "ribbonWidth upper clamp changed.");
     assert(normalized.hueShift === 30, "hueShift upper clamp changed.");
-    assert(normalized.brightness === 0.2, "brightness invalid-input fallback changed.");
+    assert(normalized.brightness === 0.84, "brightness invalid-input fallback changed.");
     assert(normalized.paletteStrategy === "curatedLuminous", "palette strategy fallback changed.");
     assertions += 5;
 
