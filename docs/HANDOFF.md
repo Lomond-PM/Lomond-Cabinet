@@ -86,17 +86,18 @@ ExtensionBundleVersion
 4. Commit the handoff state.
 5. Package only source and documentation, not runtime cache, archives, logs, or scratch files.
 
-Current release-prep note:
+Current release baseline note:
 
-- `VERSION` is `0.2.4` on `release/0.2.4`.
-- `CSXS/manifest.xml` is `0.2.4` on `release/0.2.4`.
-- `CHANGELOG.md` contains the formal `0.2.4` release section and a clean `Unreleased` placeholder.
-- Do not claim 0.2.4 is published until `release/0.2.4` is merged through `dev` / `main` and tag `v0.2.4` is created.
+- `VERSION` is `0.2.4`.
+- `CSXS/manifest.xml` is `0.2.4`.
+- `CHANGELOG.md` contains the formal `0.2.4` release section.
+- Git state confirms `v0.2.4` exists and is contained by `main`.
+- Treat 0.2.4 as the stable main baseline.
 - Do not create or move tags during documentation-only handoff work.
 
-Current 0.2.5 planning note:
+Current 0.2.5 development note:
 
-- `feature/procedural-appearance-lab` is the first implementation phase for procedural appearance.
+- Procedural Appearance Phase 1 Lab has entered `dev`.
 - Main plan: `docs/design/procedural-appearance.md`.
 - Phase 1 adds a Developer Mode-only Lab and shared procedural engine skeleton.
 - Do not change `VERSION`, `CSXS/manifest.xml`, helper scripts, color picker, Ad Component Kit, Shape Add, or production Settings semantics in this workstream.
@@ -162,17 +163,27 @@ Use this as the first prompt:
 
 ## Suggested Workflow For Adding A Tool
 
-1. Read `client/index.html`, `client/js/main.js`, `client/js/i18n.js`, `host/index.jsx`.
-2. Add a Home card in `index.html`.
-3. Add a `ToolRegistry` entry in `main.js`.
-4. Add detail UI panels with `data-tool-panel`.
-5. Add bottom action footer with `data-tool-actions` if needed.
-6. Add i18n keys in both dictionaries.
-7. Add parameter collection and event binding in `main.js`.
-8. Add a host module in `host/tools/`.
-9. Include it in `host/index.jsx`.
-10. Return JSON strings from host functions.
-11. Test active code path with a version/debug field if behavior does not change.
+Default to the registry-first path for ordinary new tools:
+
+1. Create `host/tools/<toolId>.tool.jsx`.
+2. Register the tool with `AEToolbox.registerTool(toolDef)`.
+3. Put tool metadata, schema, actions, state declarations, and tool-local i18n in the `.tool.jsx` file.
+4. Let the core registry renderer own DOM, control behavior, status display, persistence, and action execution.
+5. Put AE execution logic in `host/tools/<toolId>.jsx` when the tool needs host behavior, then call it through registry actions.
+6. Return JSON strings from host functions, preferably with `ok`, `messageKey`, and structured details.
+7. If a UI capability is missing, add it as a generic registry renderer capability before using it in the tool schema.
+8. Test the active code path in AE; add temporary debug result fields only while confirming routing.
+
+Ordinary registry tools must not default to:
+
+- Dedicated Home card DOM.
+- Dedicated detail page DOM.
+- Dedicated CSS.
+- Dedicated frontend event binding.
+- Direct `localStorage` writes.
+- Bypassing `AEToolbox.runRegisteredToolAction(...)` for normal actions.
+
+Static Home anchors are only for explicit compatibility needs during legacy migration, such as preserving saved Home order, storage ids, or a known startup fallback path.
 
 ## Common Pitfalls
 
@@ -348,25 +359,19 @@ Risk areas:
 - Theme-mapped mode collapsing into a one-color palette.
 - Regressing Home Edit order, Settings, color picker, eyedropper MVP, Ad Component Kit cleanup, Shape Add collapsible, or panel close shutdown guards.
 
-## 0.2.4 Release Checklist
+## 0.2.4 Release Baseline
 
-Use this checklist before the manual 0.2.4 release commit / merge / tag.
+0.2.4 has been merged to `main` and tagged `v0.2.4`. Treat it as the stable baseline while 0.2.5 work continues on `dev`.
 
-1. Confirm current branch is `release/0.2.4`.
-2. Confirm `VERSION` is `0.2.4`.
-3. Confirm `CSXS/manifest.xml` `ExtensionBundleVersion` and extension `Version` are `0.2.4`.
-4. Check `package.json` version if one exists.
-5. Confirm the final `CHANGELOG.md` 0.2.4 section.
-6. AE regression: panel close from Home, Home Edit, Settings, Shape Add detail, Ad Component Kit detail, Developer Mode off, and Developer Mode on.
-7. AE regression: color picker H / S / V / R / G / B axes, channel sliders, Hex input select-all, popup flip / clamp, and Windows eyedropper MVP.
-8. AE regression: Ad Component Kit Feature Stack / Icon Grid creation, removable artifact metadata, and Remove Selected Generated Component.
-9. AE regression: Shape Add native components section collapse, native item creation, Stroke / Fill creation, and number input editing.
-10. AE regression: Settings, Text Background Box, Selection Info, Home Edit order persistence, and language switching.
-11. Commit `release: 0.2.4`.
-12. Merge `release/0.2.4` into `dev`.
-13. Merge `dev` into `main`.
-14. Tag `v0.2.4` from the release commit on `main`.
-15. Push `dev`, `main`, and `v0.2.4`.
+Baseline facts:
+
+1. `VERSION` is `0.2.4`.
+2. `CSXS/manifest.xml` `ExtensionBundleVersion` and extension `Version` are `0.2.4`.
+3. `CHANGELOG.md` contains the final 0.2.4 section.
+4. No `package.json` version file exists in the current workspace.
+5. `v0.2.4` exists and is contained by `main`.
+
+For future releases, create a dedicated release branch, run AE regression, update release metadata only when requested, merge through `dev` and `main`, then create a new version tag from `main`.
 
 ## Current Active Tool Bridge Summary
 

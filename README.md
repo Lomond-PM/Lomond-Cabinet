@@ -21,10 +21,10 @@ Current project version:
 Current development track:
 
 ```text
-0.2.4 is being prepared on `release/0.2.4`. It is not final until merged to `main` and tagged `v0.2.4`.
+0.2.4 is the current stable main baseline. The `v0.2.4` tag exists on `main`, and 0.2.5 development has started on `dev`.
 ```
 
-`VERSION` and `CSXS/manifest.xml` are updated to 0.2.4 on the release branch. Do not change them again unless the release task explicitly requests it.
+`VERSION` and `CSXS/manifest.xml` remain at 0.2.4 during 0.2.5 development until a future release task explicitly updates release metadata.
 
 ## Project Type
 
@@ -247,6 +247,7 @@ Current Developer Mode labs:
 
 - `registryControlLab`: registry renderer/action/state validation.
 - `settingsRendererLab`: app-level Settings renderer validation.
+- `proceduralAppearanceLab`: deterministic procedural icon/background engine validation for 0.2.5.
 
 Current 0.2.4 release highlights:
 
@@ -256,7 +257,7 @@ Current 0.2.4 release highlights:
 - Ad Component Kit removable artifacts for newly created Feature Stack / Icon Grid output using Lomond metadata and signed tool expressions.
 - Shape Add Add Native Components / 添加原生组件 section collapse.
 
-0.2.4 is not published until this release branch is merged to `main` and tag `v0.2.4` is created.
+0.2.4 has been published to `main` and tagged `v0.2.4`. Current 0.2.5 work has begun with the Procedural Appearance Lab, but production Home icons and the production background path still use the existing implementations.
 
 ## Continue Development On Another Machine
 

@@ -15,11 +15,21 @@ This project follows simple semantic versioning for development handoff:
 - Added a Developer Mode-only Procedural Appearance Lab for testing deterministic procedural icon and background generation.
 - Added a shared procedural visual engine skeleton with seeded hash, seeded random, normalized params, canvas rendering, and memory cache keys.
 - Drafted the 0.2.5 procedural appearance plan for deterministic tool icons, optional theme-mapped recolor, and a procedural background MVP.
+- Added `scripts/check-project-consistency.js` for release/version, entrypoint, cache-query, and registry tool structure checks.
+
+### Changed
+
+- Aligned 0.2.5 baseline documentation with the current Git state: 0.2.4 is the `main` / `v0.2.4` stable baseline and 0.2.5 development has started.
+- Replaced the handoff new-tool workflow with a registry-first default path.
+- Unified frontend CSS/JS cache query strings to the 0.2.5 development build id.
+- Clarified host API version versus project release version semantics in `host/index.jsx`.
+- Refreshed the i18n usage report after Procedural Appearance Lab entered the registry tool set.
 
 ### Notes
 
 - The Lab does not replace production Home icons or the current BackgroundEngine.
 - The original 0.2.4 color picker / eyedropper / Ad Component Kit cleanup / Shape Add collapsible behavior remains out of scope for this workstream.
+- The current duplicate i18n tool-key count is retained because the duplicates are core Settings preset keys also mirrored by Settings Renderer Lab for validation.
 
 ## [0.2.4] - 2026-07-09
 

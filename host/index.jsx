@@ -7,7 +7,9 @@ AEToolbox.ping = function () {
 };
 
 (function () {
-    AEToolbox.version = "1.0.0";
+    AEToolbox.hostApiVersion = "1.0.0";
+    AEToolbox.projectVersion = "0.2.4";
+    AEToolbox.version = AEToolbox.hostApiVersion;
     AEToolbox.tools = AEToolbox.tools || {};
 
     AEToolbox.jsonEscape = function (s) {
