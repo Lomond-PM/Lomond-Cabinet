@@ -94,6 +94,14 @@ Current release-prep note:
 - Do not claim 0.2.4 is published until `release/0.2.4` is merged through `dev` / `main` and tag `v0.2.4` is created.
 - Do not create or move tags during documentation-only handoff work.
 
+Current 0.2.5 planning note:
+
+- `plan/procedural-appearance-0.2.5` is documentation-only planning for procedural appearance.
+- Main plan: `docs/design/procedural-appearance.md`.
+- Do not change `VERSION`, `CSXS/manifest.xml`, client runtime code, host tools, helper scripts, or CSS in this planning branch.
+- 0.2.5 should start from the 0.2.4 stable feature line and focus on deterministic procedural icons and a procedural background MVP.
+- Do not continue Windows eyedropper overlay lifecycle fixes in this workstream; those limitations remain documented known issues.
+
 On a new machine:
 
 1. Create a new development branch before coding:
@@ -291,6 +299,45 @@ Recent lifecycle note:
 - Do not write future release notes as if those lifecycle issues were fixed in 0.2.4.
 
 Future eyedropper work should focus on a dedicated helper replacement or a small, isolated overlay lifecycle task. A future C# / C++ helper can replace the PowerShell MVP behind the same `ColorSampler` provider interface. Do not change color picker UI, color model, H/S/V/R/G/B sliders, axis modes, Settings semantics, or registry field behavior as part of helper follow-up unless the task explicitly asks.
+
+## 0.2.5 Procedural Appearance Handoff
+
+The 0.2.5 visual direction is documented in:
+
+```text
+docs/design/procedural-appearance.md
+```
+
+Core decisions:
+
+- Tool icons should be generated from stable `toolId` / hash seeds.
+- Changing theme colors must not regenerate icon identity.
+- Default icon mode is colorful procedural artwork.
+- Optional theme-mapped mode should recolor by luminance / accent mapping while preserving composition.
+- Icons should fill the rounded-square app-icon area.
+- Visual style is soft abstract warped gradients.
+- Do not use dot/line decoration as the main style.
+- Do not introduce transparent glass UI.
+- Background artwork may share visual language with icons, but icon and background generation must remain separate.
+
+Suggested branch sequence:
+
+1. `feat/procedural-icon-engine`
+2. `feat/procedural-home-icons`
+3. `feat/procedural-icon-theme-map`
+4. `feat/procedural-background-mvp`
+5. `docs/update-procedural-appearance-state`
+
+Recommended first implementation step:
+
+- Build deterministic hash / PRNG / palette / recipe helpers and a Developer Mode preview before replacing production Home icons.
+
+Risk areas:
+
+- CEP performance from canvas rendering.
+- Generated icons becoming too similar.
+- Theme-mapped mode collapsing into a one-color palette.
+- Regressing Home Edit order, Settings, color picker, eyedropper MVP, Ad Component Kit cleanup, Shape Add collapsible, or panel close shutdown guards.
 
 ## 0.2.4 Release Checklist
 

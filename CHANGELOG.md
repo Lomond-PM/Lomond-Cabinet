@@ -10,7 +10,13 @@ This project follows simple semantic versioning for development handoff:
 
 ## [Unreleased]
 
-- No unreleased changes yet.
+### Added
+
+- Drafted the 0.2.5 procedural appearance plan for deterministic tool icons, optional theme-mapped recolor, and a procedural background MVP.
+
+### Notes
+
+- 0.2.5 planning is documentation-only at this stage. No runtime procedural appearance implementation has been added yet.
 
 ## [0.2.4] - 2026-07-09
 

@@ -19,18 +19,26 @@ Current release-prep track:
 Current development track:
 
 ```text
-release/0.2.4 is preparing the formal 0.2.4 release from the dev-line work after the 0.2.3 baseline
+plan/procedural-appearance-0.2.5 is planning the 0.2.5 procedural appearance direction after the 0.2.4 stable feature line
 ```
 
-`VERSION` and `CSXS/manifest.xml` are updated to `0.2.4` on this release branch. Do not change them again unless the release task explicitly requests it.
+`VERSION` and `CSXS/manifest.xml` remain at `0.2.4`. Do not change them for 0.2.5 planning work.
 
 Current 0.2.4 release-readiness status:
 
 - `VERSION` is `0.2.4`.
 - `CSXS/manifest.xml` declares `0.2.4`.
 - No `package.json` version file is present in the current workspace.
-- `CHANGELOG.md` contains the formal `0.2.4` section, but 0.2.4 is not published until this branch is merged through `dev` / `main` and tag `v0.2.4` is created.
-- 0.2.5 planning is expected to move toward procedural appearance work. That work is not part of 0.2.4 and should not be mixed into 0.2.4 release prep.
+- `CHANGELOG.md` contains the formal `0.2.4` section and an Unreleased 0.2.5 planning note.
+- 0.2.5 planning is moving toward procedural appearance work. This planning branch must not modify runtime code or backport behavior into the 0.2.4 release line.
+
+Current 0.2.5 planning status:
+
+- Main design document: `docs/design/procedural-appearance.md`.
+- Scope: deterministic procedural tool icons, optional theme-mapped recolor, and procedural background MVP.
+- Default icon mode: colorful seed-based icons generated from stable tool ids.
+- Theme changes must not regenerate icon identity.
+- Eyedropper overlay lifecycle limitations remain known limitations and are not part of this workstream.
 
 Confirmed entry points:
 
@@ -281,6 +289,7 @@ Home contains a disabled More Tools card. It is not an active tool.
   - Registry Control Lab
   - Settings Renderer Lab
 - Home background is procedural and configurable.
+- 0.2.5 planning proposes a new procedural appearance layer for full rounded-square app-like tool icons and a background language that visually relates to the icons while keeping generation logic separate.
 - Home icon order is persisted with key:
 
 ```text
@@ -510,6 +519,40 @@ These are based on current code and recent project history. Verify visually afte
 - Settings schema migration is phased. The internal UI shell is now on the Settings Renderer path, but do not replace remaining behavior layers such as `BackgroundEngine` without a dedicated migration and AE regression pass.
 - 0.2.4 release branch: closing the CEP panel has been noticeably mitigated after `fix/panel-close-freeze-audit`; tool detail close is behaving normally in current testing and Home close has little to no perceptible impact. Continue monitoring across AE / CEP environments, and do not claim the release is published until 0.2.4 is merged to `main` and tagged.
 - Color picker eyedropper helper limitations: the current Windows helper may briefly flash the Windows taskbar during sampling, first-run Esc cancellation can be unreliable, and right-click cancel may show the CEP WebView context menu. These are lower-priority MVP limitations unless they begin to affect core pick success.
+- 0.2.5 procedural appearance planning: tool icons should be generated from stable `toolId` / hash seeds; theme color changes should not regenerate icon structure; theme-mapped mode should recolor without destroying per-tool visual memory.
+
+## 0.2.5 Procedural Appearance Plan
+
+Detailed plan:
+
+```text
+docs/design/procedural-appearance.md
+```
+
+Planned scope:
+
+- Deterministic procedural icon engine.
+- Seed / hash / deterministic random helpers.
+- Colorful default palette generation.
+- Optional theme-mapped recolor mode.
+- Procedural Home background MVP with related visual language but separate generation logic.
+- Developer Mode preview / lab before production Home wiring.
+
+Suggested implementation branches:
+
+1. `feat/procedural-icon-engine`
+2. `feat/procedural-home-icons`
+3. `feat/procedural-icon-theme-map`
+4. `feat/procedural-background-mvp`
+5. `docs/update-procedural-appearance-state`
+
+Non-goals:
+
+- Do not modify color picker / eyedropper behavior as part of this workstream.
+- Do not continue Windows eyedropper overlay lifecycle fixes here.
+- Do not modify Ad Component Kit cleanup or Shape Add host behavior.
+- Do not rewrite BackgroundEngine in the first pass.
+- Do not introduce transparent glass UI or dot/line decorative icon styles.
 
 ## 0.2.4 Release Checklist
 
