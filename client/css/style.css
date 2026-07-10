@@ -72,7 +72,8 @@
     --tool-card-w: calc(92px * var(--ui-scale));
     --tool-card-min-h: calc(124px * var(--ui-scale));
     --tool-icon-size: calc(76px * var(--ui-scale));
-    --tool-icon-radius: calc(24px * var(--ui-scale));
+    --home-tool-icon-radius: 31.5%;
+    --tool-icon-radius: var(--home-tool-icon-radius);
     --tool-icon-small-size: calc(50px * var(--ui-scale));
     --button-height: calc(38px * var(--ui-scale));
     --button-pad-x: calc(14px * var(--ui-scale));
@@ -1167,6 +1168,8 @@ p {
     position: relative;
     width: var(--tool-icon-size);
     height: var(--tool-icon-size);
+    flex: 0 0 var(--tool-icon-size);
+    aspect-ratio: 1 / 1;
     align-items: center;
     justify-content: center;
     overflow: hidden;
@@ -1184,10 +1187,46 @@ p {
     background-color: var(--tool-icon-hover-bg);
 }
 
+.tool-app:hover .tool-icon.procedural-icon-ready,
+.view-home.home-editing .tool-app:not(.is-disabled) .tool-icon.procedural-icon-ready,
+.view-home.home-editing.is-dragging .tool-icon.procedural-icon-ready {
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
 .registry-tool-icon {
     color: var(--tool-icon-line);
     font-size: calc(24px * var(--ui-scale));
     font-weight: 800;
+}
+
+.procedural-home-icon-canvas {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    pointer-events: none;
+}
+
+.tool-icon.procedural-icon-ready {
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+    background: transparent;
+    color: transparent;
+}
+
+.tool-icon.procedural-icon-ready > :not(.procedural-home-icon-canvas) {
+    display: none;
+}
+
+.tool-icon.procedural-icon-fallback .procedural-home-icon-canvas {
+    display: none;
 }
 
 .registry-tool-panel {

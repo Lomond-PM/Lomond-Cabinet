@@ -70,21 +70,21 @@
     function normalizeParams(params) {
         var input = params || {};
         return {
-            warp: clamp(roundNumber(input.warp, 0.68), 0, 1),
-            warpIrregularity: clamp(roundNumber(input.warpIrregularity, 0.62), 0, 1),
-            flowComplexity: clamp(roundNumber(input.flowComplexity, 0.58), 0, 1),
-            flowContinuity: clamp(roundNumber(input.flowContinuity, 0.74), 0, 1),
+            warp: clamp(roundNumber(input.warp, 1), 0, 1),
+            warpIrregularity: clamp(roundNumber(input.warpIrregularity, 1), 0, 1),
+            flowComplexity: clamp(roundNumber(input.flowComplexity, 1), 0, 1),
+            flowContinuity: clamp(roundNumber(input.flowContinuity, 1), 0, 1),
             ribbonWidth: clamp(roundNumber(input.ribbonWidth, 0.14), 0.06, 0.22),
-            gradientBias: clamp(roundNumber(input.gradientBias, 0.46), 0.15, 0.75),
-            highlightConcentration: clamp(roundNumber(input.highlightConcentration, 0.72), 0.35, 1),
+            gradientBias: clamp(roundNumber(input.gradientBias, 0.7), 0.15, 0.75),
+            highlightConcentration: clamp(roundNumber(input.highlightConcentration, 0.35), 0.35, 1),
             highlightArea: clamp(roundNumber(input.highlightArea, 0.08), 0.04, 0.12),
-            secondaryHueInfluence: clamp(roundNumber(input.secondaryHueInfluence, 0.66), 0, 1),
+            secondaryHueInfluence: clamp(roundNumber(input.secondaryHueInfluence, 0.58), 0, 1),
             accentPresence: clamp(roundNumber(input.accentPresence, 0.46), 0, 1),
-            highlightTintShift: clamp(roundNumber(input.highlightTintShift, 0.42), 0, 1),
-            contrast: clamp(roundNumber(input.contrast, 0.58), 0, 1),
-            depth: clamp(roundNumber(input.depth, 0.64), 0, 1),
+            highlightTintShift: clamp(roundNumber(input.highlightTintShift, 0.62), 0, 1),
+            contrast: clamp(roundNumber(input.contrast, 0.88), 0, 1),
+            depth: clamp(roundNumber(input.depth, 0.75), 0, 1),
             hueShift: clamp(roundNumber(input.hueShift, 0), -30, 30),
-            saturation: clamp(roundNumber(input.saturation, 0.72), 0, 1.4),
+            saturation: clamp(roundNumber(input.saturation, 0.84), 0, 1.4),
             brightness: clamp(roundNumber(input.brightness, 0.84), 0.2, 1.4),
             grain: clamp(roundNumber(input.grain, 0.05), 0, 0.5),
             paletteStrategy: normalizePaletteStrategy(input.paletteStrategy)
@@ -346,8 +346,6 @@
         var ratio = normalizeRenderScale(window.devicePixelRatio);
         var displayWidth = Math.max(1, Math.round(width));
         var displayHeight = Math.max(1, Math.round(height));
-        canvas.style.width = displayWidth + "px";
-        canvas.style.height = displayHeight + "px";
         canvas.width = Math.max(1, Math.round(displayWidth * ratio));
         canvas.height = Math.max(1, Math.round(displayHeight * ratio));
         return {
@@ -612,8 +610,8 @@
 
     function render(canvas, options) {
         var target = normalizeTarget(options && options.target);
-        var logicalWidth = target === "background" ? 360 : 180;
-        var logicalHeight = target === "background" ? 160 : 180;
+        var logicalWidth = options && options.logicalWidth ? options.logicalWidth : (target === "background" ? 360 : 180);
+        var logicalHeight = options && options.logicalHeight ? options.logicalHeight : (target === "background" ? 160 : 180);
         var size = resizeCanvas(canvas, logicalWidth, logicalHeight);
         var ctx = canvas.getContext("2d");
         var recipe = recipeFor(options || {});

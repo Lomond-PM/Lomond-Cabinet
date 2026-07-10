@@ -18,6 +18,7 @@ This project follows simple semantic versioning for development handoff:
 - Added `scripts/check-project-consistency.js` for release/version, entrypoint, cache-query, and registry tool structure checks.
 - Added an explicit `proceduralPreview` registry field contract and pure contract helper tests for Procedural Appearance Lab previews.
 - Added bounded procedural appearance cache helpers and tests for recipe/raster cache limits, LRU behavior, cache stats, and DPR render scaling.
+- Added Colorful procedural Home tool icons driven only by stable tool ids, with a dedicated Home icon controller and pure identity/queue tests.
 
 ### Changed
 
@@ -30,6 +31,7 @@ This project follows simple semantic versioning for development handoff:
 - Moved generic procedural preview layout and fallback styling from renderer inline styles into `client/css/style.css`.
 - Added ProceduralAppearance `clearCache()` and `getCacheStats()` debug APIs without persisting cache state.
 - Updated procedural preview rendering to generate internal rasters at a controlled device-pixel-ratio scale capped at 2 while preserving logical canvas size.
+- Kept procedural Home icon identity independent from language, Home order, Developer Mode, theme colors, and Settings changes.
 
 ### Fixed
 
@@ -39,6 +41,7 @@ This project follows simple semantic versioning for development handoff:
 ### Notes
 
 - The Lab does not replace production Home icons or the current BackgroundEngine.
+- Theme-mapped icon recolor and procedural background production wiring remain future work.
 - Procedural preview contract work does not change the procedural generation algorithm, engine version, seed behavior, recipe output, or deterministic snapshot expectations.
 - Procedural cache/DPR work does not change palette, warp, ribbon, grain/noise, recipe fields, seed hashing, or production Home/background wiring.
 - The original 0.2.4 color picker / eyedropper / Ad Component Kit cleanup / Shape Add collapsible behavior remains out of scope for this workstream.

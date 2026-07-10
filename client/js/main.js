@@ -1207,6 +1207,19 @@
             button.appendChild(title);
             grid.insertBefore(button, more);
         }
+        refreshProceduralHomeIcons();
+    }
+
+    function refreshProceduralHomeIcons() {
+        if (panelShuttingDown) {
+            return;
+        }
+        if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.refresh === "function") {
+            window.ProceduralHomeIcons.refresh({
+                root: byId("toolGrid"),
+                shuttingDown: panelShuttingDown
+            });
+        }
     }
 
     function applyRegistryDebugTools(enabled) {
@@ -1227,6 +1240,7 @@
             HomeLayoutManager.renderOrder();
             HomeLayoutManager.bindIconEvents();
         }
+        refreshProceduralHomeIcons();
     }
 
     function findSettingsSchemaField(key) {
@@ -6138,6 +6152,9 @@
         if (HomeLayoutManager && HomeLayoutManager.teardownForShutdown) {
             HomeLayoutManager.teardownForShutdown();
         }
+        if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.teardown === "function") {
+            window.ProceduralHomeIcons.teardown();
+        }
         if (statusTimer) {
             window.clearTimeout(statusTimer);
             statusTimer = null;
@@ -6818,6 +6835,11 @@
         BackgroundEngine.init();
         setupCustomSelectInputs();
         HomeLayoutManager.init();
+        if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.initialize === "function") {
+            window.ProceduralHomeIcons.initialize({
+                root: byId("toolGrid")
+            });
+        }
         configureToolDetail(activeToolId);
         refreshLanguage();
 
