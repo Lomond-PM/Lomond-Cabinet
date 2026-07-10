@@ -19,6 +19,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | tool file | tool id | titleKey | descriptionKey | has en | has zh-CN | missing keys | hardcoded user-facing text | plain message / messageKey status | load status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | adComponentKit.tool.jsx | ecommerceLayout | tools.adComponentKit.title | tools.adComponentKit.description | yes | yes | none | none | messageKey-oriented | ok |
+| proceduralAppearanceLab.tool.jsx | proceduralAppearanceLab | tools.proceduralAppearanceLab.title | tools.proceduralAppearanceLab.description | yes | yes | none | none | messageKey-oriented | ok |
 | registryControlLab.tool.jsx | registryControlLab | tools.registryControlLab.title | tools.registryControlLab.description | yes | yes | none | none | messageKey-oriented | ok |
 | selectionInfo.tool.jsx | selectionInfo | tools.selectionInfo.title | tools.selectionInfo.description | yes | yes | none | none | messageKey-oriented | ok |
 | settingsRendererLab.tool.jsx | settingsRendererLab | tools.settingsRendererLab.title | tools.settingsRendererLab.description | yes | yes | label.registryDebugTools, section.motion, label.motionSpeed, label.uiScale, section.theme, label.accentColor, label.homeBackground, section.backgroundEngine ... | none | messageKey-oriented | ok |

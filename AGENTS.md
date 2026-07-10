@@ -467,11 +467,11 @@ Known 0.2.4 limitations remain: taskbar may briefly flash, first-run Esc cancell
 
 Future helper work should prefer a dedicated native helper / C# helper or a separately scoped helper replacement. Do not change the ColorSampler provider contract, color model, H/S/V/R/G/B sliders, popup positioning, Settings behavior, or registry field behavior unless explicitly requested.
 
-### 0.2.4 release prep boundary
+### 0.2.4 release baseline and 0.2.5 development boundary
 
-`docs/prepare-0.2.4-release` is documentation-only. Do not modify functional code, helper scripts, `VERSION`, or `CSXS/manifest.xml` while preparing release notes.
+0.2.4 is the stable main baseline and is tagged `v0.2.4`. `VERSION` and `CSXS/manifest.xml` remain at `0.2.4` during 0.2.5 development until a future release task explicitly updates release metadata.
 
-0.2.5 planning is expected to move toward procedural appearance work. Do not mix 0.2.5 procedural appearance implementation into 0.2.4 release prep.
+0.2.5 development has started with Procedural Appearance Phase 1 Lab on `dev`. Do not claim 0.2.5 is released, and do not connect procedural appearance to production Home icons or the production background path unless a task explicitly requests that scope.
 
 ## Release Workflow
 

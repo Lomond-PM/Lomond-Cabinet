@@ -10,27 +10,28 @@ Current project version:
 0.2.4
 ```
 
-Current release-prep track:
+Current stable baseline:
 
 ```text
-0.2.4 release preparation
+0.2.4 on main, tagged v0.2.4
 ```
 
 Current development track:
 
 ```text
-plan/procedural-appearance-0.2.5 is planning the 0.2.5 procedural appearance direction after the 0.2.4 stable feature line
+0.2.5 development has started on dev, beginning with Procedural Appearance Phase 1 Lab
 ```
 
-`VERSION` and `CSXS/manifest.xml` remain at `0.2.4`. Do not change them for 0.2.5 planning work.
+`VERSION` and `CSXS/manifest.xml` remain at `0.2.4`. Do not change them for 0.2.5 development work until a dedicated release task updates release metadata.
 
-Current 0.2.4 release-readiness status:
+Current 0.2.4 release status:
 
 - `VERSION` is `0.2.4`.
 - `CSXS/manifest.xml` declares `0.2.4`.
 - No `package.json` version file is present in the current workspace.
-- `CHANGELOG.md` contains the formal `0.2.4` section and an Unreleased 0.2.5 planning note.
-- 0.2.5 planning is moving toward procedural appearance work. This planning branch must not modify runtime code or backport behavior into the 0.2.4 release line.
+- `CHANGELOG.md` contains the formal `0.2.4` section.
+- Git state confirms tag `v0.2.4` exists and `main` contains it.
+- 0.2.4 is the stable release baseline; do not describe it as still awaiting main/tag publication.
 
 Current 0.2.5 procedural appearance status:
 
@@ -42,6 +43,7 @@ Current 0.2.5 procedural appearance status:
 - Default icon mode: colorful seed-based icons generated from stable tool ids.
 - Theme changes must not regenerate icon identity.
 - Current Lab does not replace production Home icons or the current BackgroundEngine.
+- Procedural Appearance Phase 1 Lab has entered `dev`; 0.2.5 is no longer documentation-only planning.
 - Eyedropper overlay lifecycle limitations remain known limitations and are not part of this workstream.
 
 Confirmed entry points:
@@ -521,9 +523,9 @@ These are based on current code and recent project history. Verify visually afte
 - Shape Add is now on the phased registry path. Do not attempt a one-pass rewrite or remove the preserved legacy host actions; see `docs/KNOWN_ISSUES.md`.
 - Deferred: Settings Background Engine preset dropdown can trigger a render/layout glitch after closing. See `docs/KNOWN_ISSUES.md`.
 - Settings schema migration is phased. The internal UI shell is now on the Settings Renderer path, but do not replace remaining behavior layers such as `BackgroundEngine` without a dedicated migration and AE regression pass.
-- 0.2.4 release branch: closing the CEP panel has been noticeably mitigated after `fix/panel-close-freeze-audit`; tool detail close is behaving normally in current testing and Home close has little to no perceptible impact. Continue monitoring across AE / CEP environments, and do not claim the release is published until 0.2.4 is merged to `main` and tagged.
+- 0.2.4 stable baseline: closing the CEP panel has been noticeably mitigated after `fix/panel-close-freeze-audit`; tool detail close is behaving normally in current testing and Home close has little to no perceptible impact. Continue monitoring across AE / CEP environments.
 - Color picker eyedropper helper limitations: the current Windows helper may briefly flash the Windows taskbar during sampling, first-run Esc cancellation can be unreliable, and right-click cancel may show the CEP WebView context menu. These are lower-priority MVP limitations unless they begin to affect core pick success.
-- 0.2.5 procedural appearance planning: tool icons should be generated from stable `toolId` / hash seeds; theme color changes should not regenerate icon structure; theme-mapped mode should recolor without destroying per-tool visual memory.
+- 0.2.5 procedural appearance development: Phase 1 Lab has entered `dev`. Tool icons should be generated from stable `toolId` / hash seeds; theme color changes should not regenerate icon structure; theme-mapped mode should recolor without destroying per-tool visual memory.
 
 ## 0.2.5 Procedural Appearance Plan
 
@@ -577,24 +579,19 @@ Non-goals:
 - Do not rewrite BackgroundEngine in the first pass.
 - Do not introduce transparent glass UI or dot/line decorative icon styles.
 
-## 0.2.4 Release Checklist
+## 0.2.4 Release Baseline
 
-Use this after the release branch has passed AE regression.
+0.2.4 has been merged to `main` and tagged `v0.2.4`. Use it as the stable baseline while 0.2.5 development proceeds on `dev`.
 
-1. Confirm `VERSION` is `0.2.4`.
-2. Confirm `CSXS/manifest.xml` `ExtensionBundleVersion` and extension `Version` are `0.2.4`.
-3. Confirm no `package.json` version file exists, or update it if one is added before release.
-4. Confirm `CHANGELOG.md` has the final `0.2.4` section and a clean `Unreleased` placeholder.
-5. Run AE regression tests for panel close behavior.
-6. Run AE regression tests for color picker axis modes, channel sliders, Hex input select-all, popup positioning, and eyedropper MVP.
-7. Run AE regression tests for Ad Component Kit Feature Stack / Icon Grid creation and removable artifact cleanup.
-8. Run AE regression tests for Shape Add collapsible native components and Stroke / Fill creation.
-9. Run AE regression tests for Settings, Text Background Box, Selection Info, Developer Mode on/off, and Home Edit ordering.
-10. Commit `release: 0.2.4`.
-11. Merge `release/0.2.4` into `dev`.
-12. Merge `dev` into `main`.
-13. Create tag `v0.2.4` from the release commit on `main`.
-14. Push `dev`, `main`, and `v0.2.4`.
+Baseline checks:
+
+1. `VERSION` is `0.2.4`.
+2. `CSXS/manifest.xml` `ExtensionBundleVersion` and extension `Version` are `0.2.4`.
+3. No `package.json` version file exists in the current workspace.
+4. `CHANGELOG.md` has the final `0.2.4` section.
+5. Git tag `v0.2.4` exists and is contained by `main`.
+
+For future releases, create a dedicated release branch and update `VERSION`, `CSXS/manifest.xml`, and release notes only when explicitly requested.
 
 ## Later Development Suggestions
 
