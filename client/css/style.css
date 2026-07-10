@@ -72,7 +72,7 @@
     --tool-card-w: calc(92px * var(--ui-scale));
     --tool-card-min-h: calc(124px * var(--ui-scale));
     --tool-icon-size: calc(76px * var(--ui-scale));
-    --home-tool-icon-radius: 31.5%;
+    --home-tool-icon-radius: 25.5%;
     --tool-icon-radius: var(--home-tool-icon-radius);
     --tool-icon-small-size: calc(50px * var(--ui-scale));
     --button-height: calc(38px * var(--ui-scale));
@@ -1241,7 +1241,7 @@ p {
 .tool-icon.small {
     width: var(--tool-icon-small-size);
     height: var(--tool-icon-small-size);
-    border-radius: calc(16px * var(--ui-scale));
+    border-radius: var(--tool-icon-radius);
 }
 
 .icon-layer {
@@ -2138,7 +2138,7 @@ p {
     .tool-icon {
         width: calc(64px * var(--ui-scale));
         height: calc(64px * var(--ui-scale));
-        border-radius: calc(20px * var(--ui-scale));
+        border-radius: var(--tool-icon-radius);
     }
 
     .detail-header {
@@ -2435,7 +2435,7 @@ p {
     max-width: 100%;
     aspect-ratio: 1 / 1;
     border: 1px solid var(--panel-border);
-    border-radius: calc(24px * var(--ui-scale));
+    border-radius: var(--home-tool-icon-radius);
     align-self: center;
     background: var(--bg-main);
     overflow: hidden;
