@@ -96,10 +96,11 @@ Current release-prep note:
 
 Current 0.2.5 planning note:
 
-- `plan/procedural-appearance-0.2.5` is documentation-only planning for procedural appearance.
+- `feature/procedural-appearance-lab` is the first implementation phase for procedural appearance.
 - Main plan: `docs/design/procedural-appearance.md`.
-- Do not change `VERSION`, `CSXS/manifest.xml`, client runtime code, host tools, helper scripts, or CSS in this planning branch.
-- 0.2.5 should start from the 0.2.4 stable feature line and focus on deterministic procedural icons and a procedural background MVP.
+- Phase 1 adds a Developer Mode-only Lab and shared procedural engine skeleton.
+- Do not change `VERSION`, `CSXS/manifest.xml`, helper scripts, color picker, Ad Component Kit, Shape Add, or production Settings semantics in this workstream.
+- 0.2.5 should continue from the 0.2.4 stable feature line and focus on deterministic procedural icons and a procedural background MVP.
 - Do not continue Windows eyedropper overlay lifecycle fixes in this workstream; those limitations remain documented known issues.
 
 On a new machine:
@@ -319,10 +320,18 @@ Core decisions:
 - Do not use dot/line decoration as the main style.
 - Do not introduce transparent glass UI.
 - Background artwork may share visual language with icons, but icon and background generation must remain separate.
+- Phase 1 Lab uses `engineVersion + target + seed + normalizedParams` as the deterministic output and cache key basis.
+
+Current Phase 1 files:
+
+- `client/js/proceduralAppearance.js`
+- `host/tools/proceduralAppearanceLab.tool.jsx`
+- `client/js/main.js` generic `proceduralPreview` registry field support
+- `docs/design/procedural-appearance.md`
 
 Suggested branch sequence:
 
-1. `feat/procedural-icon-engine`
+1. `feature/procedural-appearance-lab`
 2. `feat/procedural-home-icons`
 3. `feat/procedural-icon-theme-map`
 4. `feat/procedural-background-mvp`
@@ -330,7 +339,7 @@ Suggested branch sequence:
 
 Recommended first implementation step:
 
-- Build deterministic hash / PRNG / palette / recipe helpers and a Developer Mode preview before replacing production Home icons.
+- Validate the Developer Mode Lab in AE before replacing production Home icons.
 
 Risk areas:
 

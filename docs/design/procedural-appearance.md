@@ -1,5 +1,28 @@
 # Procedural Appearance Plan for 0.2.5
 
+## Phase 1 Lab Status
+
+The first 0.2.5 implementation phase adds a Developer Mode-only Procedural Appearance Lab.
+
+Implemented scope:
+
+- Shared frontend procedural engine skeleton in `client/js/proceduralAppearance.js`.
+- Deterministic FNV-1a-style string hash.
+- Deterministic seeded PRNG.
+- Normalized generation parameters.
+- Shared canvas renderer for `icon` and `background` targets.
+- Memory cache keyed by `engineVersion + target + seed + normalizedParams`.
+- Registry Lab entry in `host/tools/proceduralAppearanceLab.tool.jsx`.
+- Generic registry `proceduralPreview` field type in `client/js/main.js`.
+
+The Lab is intentionally isolated:
+
+- It does not replace Home tool icons.
+- It does not replace the existing BackgroundEngine.
+- It does not modify Settings behavior.
+- It does not modify color picker / eyedropper behavior.
+- It does not modify Ad Component Kit or Shape Add.
+
 ## Goal
 
 0.2.5 moves the project from the 0.2.4 feature-stabilization line into procedural appearance work.
@@ -33,6 +56,25 @@ The goal is to create a deterministic visual system for tool icons and Home back
 0.2.5 procedural appearance work should not reopen these systems unless a visual integration point is explicitly required.
 
 The eyedropper overlay lifecycle limitations remain known limitations. Do not continue the taskbar flash / first-run Esc / right-click menu fix as part of procedural appearance work.
+
+## Deterministic Rule
+
+For the Lab and all future production integration:
+
+```text
+engineVersion + target + seed + normalizedParams -> same output
+```
+
+Rules:
+
+- Do not use uncontrolled `Math.random()`.
+- All random values must come from the seeded PRNG.
+- `icon` and `background` targets share the same engine.
+- Targets may use different composition presets.
+- Tool icon seed defaults should come from `toolId` / tool hash.
+- Background previews may use a manual seed.
+- Tool icon output must not overlay letters, initials, or abbreviations.
+- The current BackgroundEngine remains available; procedural background is a future optional mode.
 
 ## Visual Style
 
@@ -72,6 +114,7 @@ Recommended output for the MVP:
 - Device-pixel-ratio aware rendering.
 - Rounded-square clipping at the icon container, not transparency-dependent artwork.
 - Cache by `toolId + mode + algorithmVersion + size + devicePixelRatio`.
+- The current Lab cache key is `engineVersion + target + seed + normalizedParams`.
 
 The engine should generate a compact recipe before drawing. A recipe is easier to test than raw pixels:
 

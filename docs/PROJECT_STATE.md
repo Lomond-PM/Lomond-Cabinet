@@ -32,12 +32,16 @@ Current 0.2.4 release-readiness status:
 - `CHANGELOG.md` contains the formal `0.2.4` section and an Unreleased 0.2.5 planning note.
 - 0.2.5 planning is moving toward procedural appearance work. This planning branch must not modify runtime code or backport behavior into the 0.2.4 release line.
 
-Current 0.2.5 planning status:
+Current 0.2.5 procedural appearance status:
 
 - Main design document: `docs/design/procedural-appearance.md`.
-- Scope: deterministic procedural tool icons, optional theme-mapped recolor, and procedural background MVP.
+- Phase 1 Lab is implemented as a Developer Mode-only registry tool: `host/tools/proceduralAppearanceLab.tool.jsx`.
+- Shared frontend engine skeleton: `client/js/proceduralAppearance.js`.
+- Generic registry preview field: `proceduralPreview` in `client/js/main.js`.
+- Scope remains deterministic procedural tool icons, optional theme-mapped recolor, and procedural background MVP.
 - Default icon mode: colorful seed-based icons generated from stable tool ids.
 - Theme changes must not regenerate icon identity.
+- Current Lab does not replace production Home icons or the current BackgroundEngine.
 - Eyedropper overlay lifecycle limitations remain known limitations and are not part of this workstream.
 
 Confirmed entry points:
@@ -531,20 +535,39 @@ docs/design/procedural-appearance.md
 
 Planned scope:
 
-- Deterministic procedural icon engine.
-- Seed / hash / deterministic random helpers.
+- Deterministic procedural icon engine. Phase 1 skeleton is implemented in `client/js/proceduralAppearance.js`.
+- Seed / hash / deterministic random helpers. Phase 1 uses stable hash and seeded PRNG; uncontrolled `Math.random()` is not used.
 - Colorful default palette generation.
 - Optional theme-mapped recolor mode.
 - Procedural Home background MVP with related visual language but separate generation logic.
-- Developer Mode preview / lab before production Home wiring.
+- Developer Mode preview / lab before production Home wiring. Phase 1 Lab is now available only when Developer Mode tools are visible.
+
+Deterministic rule:
+
+```text
+engineVersion + target + seed + normalizedParams -> same output
+```
+
+Lab cache rule:
+
+```text
+engineVersion + target + seed + normalizedParams
+```
+
+Current boundaries:
+
+- The Lab does not replace formal Home icons.
+- The Lab does not replace the existing BackgroundEngine.
+- Tool icon previews do not overlay letters or abbreviations.
+- Background target previews can use a manual seed.
 
 Suggested implementation branches:
 
-1. `feat/procedural-icon-engine`
-2. `feat/procedural-home-icons`
-3. `feat/procedural-icon-theme-map`
-4. `feat/procedural-background-mvp`
-5. `docs/update-procedural-appearance-state`
+1. `feature/procedural-appearance-lab` - Phase 1 Developer Mode Lab and engine skeleton.
+2. `feat/procedural-home-icons` - connect generated icons to Home after Lab validation.
+3. `feat/procedural-icon-theme-map` - optional theme-mapped recolor mode.
+4. `feat/procedural-background-mvp` - procedural background optional mode while preserving BackgroundEngine.
+5. `docs/update-procedural-appearance-state` - document tested behavior and remaining limitations.
 
 Non-goals:
 

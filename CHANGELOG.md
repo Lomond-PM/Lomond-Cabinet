@@ -12,11 +12,14 @@ This project follows simple semantic versioning for development handoff:
 
 ### Added
 
+- Added a Developer Mode-only Procedural Appearance Lab for testing deterministic procedural icon and background generation.
+- Added a shared procedural visual engine skeleton with seeded hash, seeded random, normalized params, canvas rendering, and memory cache keys.
 - Drafted the 0.2.5 procedural appearance plan for deterministic tool icons, optional theme-mapped recolor, and a procedural background MVP.
 
 ### Notes
 
-- 0.2.5 planning is documentation-only at this stage. No runtime procedural appearance implementation has been added yet.
+- The Lab does not replace production Home icons or the current BackgroundEngine.
+- The original 0.2.4 color picker / eyedropper / Ad Component Kit cleanup / Shape Add collapsible behavior remains out of scope for this workstream.
 
 ## [0.2.4] - 2026-07-09
 

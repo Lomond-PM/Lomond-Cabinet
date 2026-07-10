@@ -46,6 +46,7 @@
     var DynamicToolOrder = [];
     var RegistryToolState = {};
     var RegistrySaveTimers = {};
+    var ProceduralPreviewTimers = {};
     var RegistryRuntimeStates = {};
     var CustomSelectGlobalListenersBound = false;
     var PanelLifecycleListenersBound = false;
@@ -2534,6 +2535,12 @@
                 RegistrySaveTimers[key] = null;
             }
         }
+        for (key in ProceduralPreviewTimers) {
+            if (Object.prototype.hasOwnProperty.call(ProceduralPreviewTimers, key) && ProceduralPreviewTimers[key]) {
+                window.cancelAnimationFrame(ProceduralPreviewTimers[key]);
+                ProceduralPreviewTimers[key] = null;
+            }
+        }
     }
 
     function resetRegistryToolValues(toolId) {
@@ -4316,6 +4323,7 @@
 
         function scheduleSave() {
             scheduleRegistryToolSave(toolDef);
+            scheduleRegistryProceduralPreviewUpdate(toolDef);
         }
 
         if (!field) {
@@ -4336,6 +4344,49 @@
             row.textContent = tr(field.labelKey || field.textKey || field.text || "");
             applyVisibleWhenMetadata(row, field);
             row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
+            return row;
+        }
+
+        if (fieldType === "proceduralPreview") {
+            row = document.createElement("div");
+            row.className = "registry-info-note registry-schema-field";
+            row.setAttribute("data-procedural-preview-tool", toolId);
+            row.style.display = "flex";
+            row.style.flexDirection = "column";
+            row.style.gap = "10px";
+            applyVisibleWhenMetadata(row, field);
+            row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
+
+            label = document.createElement("strong");
+            label.className = "registry-title-primary";
+            label.textContent = tr(field.labelKey || field.key || "");
+            row.appendChild(label);
+
+            hintText = schemaHintText(field);
+            if (hintText) {
+                hint = document.createElement("small");
+                hint.className = "registry-field-hint registry-text-muted";
+                hint.textContent = hintText;
+                row.appendChild(hint);
+            }
+
+            input = document.createElement("canvas");
+            input.setAttribute("data-procedural-preview-canvas", "true");
+            input.style.display = "block";
+            input.style.width = "100%";
+            input.style.maxWidth = "360px";
+            input.style.borderRadius = "24px";
+            input.style.background = "#050403";
+            input.style.border = "1px solid rgba(214, 178, 94, 0.18)";
+            input.style.alignSelf = "center";
+            row.appendChild(input);
+
+            colorValue = document.createElement("code");
+            colorValue.className = "registry-text-muted";
+            colorValue.setAttribute("data-procedural-preview-meta", "true");
+            colorValue.style.fontSize = "10px";
+            colorValue.style.wordBreak = "break-all";
+            row.appendChild(colorValue);
             return row;
         }
 
@@ -4618,6 +4669,53 @@
 
     function renderDynamicField(toolId, field) {
         return renderSchemaField(field, { id: toolId });
+    }
+
+    function scheduleRegistryProceduralPreviewUpdate(toolDef) {
+        if (!toolDef || !toolDef.id || panelShuttingDown) {
+            return;
+        }
+        if (ProceduralPreviewTimers[toolDef.id]) {
+            window.cancelAnimationFrame(ProceduralPreviewTimers[toolDef.id]);
+        }
+        ProceduralPreviewTimers[toolDef.id] = window.requestAnimationFrame(function () {
+            ProceduralPreviewTimers[toolDef.id] = null;
+            refreshRegistryProceduralPreviews(toolDef);
+        });
+    }
+
+    function refreshRegistryProceduralPreviews(toolDef) {
+        var previews = toolDef && toolDef.id ? document.querySelectorAll('[data-procedural-preview-tool="' + toolDef.id + '"]') : [];
+        var values;
+        var options;
+        var i;
+        var canvas;
+        var meta;
+        var result;
+
+        if (!previews.length || !window.ProceduralAppearance) {
+            return;
+        }
+
+        values = collectSchemaValues(toolDef);
+        options = {
+            target: values.target,
+            seed: values.seed,
+            params: values
+        };
+
+        for (i = 0; i < previews.length; i++) {
+            canvas = previews[i].querySelector('[data-procedural-preview-canvas]');
+            meta = previews[i].querySelector('[data-procedural-preview-meta]');
+            if (!canvas) {
+                continue;
+            }
+            result = window.ProceduralAppearance.render(canvas, options);
+            canvas.style.maxWidth = result.target === "background" ? "360px" : "180px";
+            if (meta) {
+                meta.textContent = result.engineVersion + " | " + result.target + " | seedHash=" + result.seedHash + " | " + result.cacheKey;
+            }
+        }
     }
 
     function getToolSections(toolDef) {
@@ -4973,6 +5071,7 @@
         setupCustomSelectInputs();
         updateRegistryVisibleFields(tool);
         updateRegistryStateDependentUi(tool);
+        refreshRegistryProceduralPreviews(tool);
         startRegistryStatePolling(tool);
     }
 
