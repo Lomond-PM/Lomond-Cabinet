@@ -336,9 +336,20 @@ Core decisions:
 Current Phase 1 files:
 
 - `client/js/proceduralAppearance.js`
+- `client/js/proceduralPreviewContract.js`
 - `host/tools/proceduralAppearanceLab.tool.jsx`
 - `client/js/main.js` generic `proceduralPreview` registry field support
 - `docs/design/procedural-appearance.md`
+
+Procedural preview contract:
+
+- Registry tools declare `type: "proceduralPreview"` with `engine`, `targetKey`, `seedKey`, and `parameterKeys`.
+- The core renderer reads only the declared target, seed, and parameter keys. Do not pass full registry value objects into the procedural engine.
+- Preview refresh is dependency-scoped: target, seed, or declared parameter changes can schedule a render; unrelated registry field changes should not enter the procedural preview path.
+- Pending preview animation-frame work is cleaned up when changing tools, closing detail views, or entering panel shutdown.
+- Preview boundary failures use fallback UI rather than uncaught exceptions. Missing engine, missing canvas, invalid target/seed, and render exceptions should remain contained at the renderer boundary.
+- Preview layout and fallback styling belong in generic registry/procedural preview CSS, not inline renderer styles.
+- Do not change `client/js/proceduralAppearance.js`, engine version, seed hashing, palette, warp, ribbon, grain/noise, or deterministic snapshots during preview contract work.
 
 Suggested branch sequence:
 

@@ -24,8 +24,33 @@
                     },
                     {
                         type: "proceduralPreview",
+                        key: "preview",
+                        engine: "proceduralAppearance",
+                        targetKey: "target",
+                        seedKey: "seed",
+                        parameterKeys: [
+                            "paletteStrategy",
+                            "warp",
+                            "warpIrregularity",
+                            "flowComplexity",
+                            "flowContinuity",
+                            "ribbonWidth",
+                            "gradientBias",
+                            "highlightConcentration",
+                            "highlightArea",
+                            "secondaryHueInfluence",
+                            "accentPresence",
+                            "highlightTintShift",
+                            "contrast",
+                            "depth",
+                            "hueShift",
+                            "saturation",
+                            "brightness",
+                            "grain"
+                        ],
                         labelKey: "tools.proceduralAppearanceLab.fields.preview",
-                        hintKey: "tools.proceduralAppearanceLab.hints.preview"
+                        hintKey: "tools.proceduralAppearanceLab.hints.preview",
+                        fallbackKey: "tools.proceduralAppearanceLab.previewFallback"
                     }
                 ]
             },
@@ -280,6 +305,7 @@
                 "tools.proceduralAppearanceLab.fields.saturation": "Saturation",
                 "tools.proceduralAppearanceLab.fields.brightness": "Brightness",
                 "tools.proceduralAppearanceLab.fields.grain": "Grain / Noise",
+                "tools.proceduralAppearanceLab.previewFallback": "Preview unavailable.",
                 "tools.proceduralAppearanceLab.hints.preview": "Same engineVersion + target + seed + normalized params produces the same image.",
                 "tools.proceduralAppearanceLab.hints.seed": "Use a tool id such as shapeAdd for icon identity, or any manual seed for background tests.",
                 "tools.proceduralAppearanceLab.hints.target": "Icon and background share the engine but use different composition presets.",
@@ -322,6 +348,7 @@
                 "tools.proceduralAppearanceLab.fields.saturation": "\u9971\u548c\u5ea6",
                 "tools.proceduralAppearanceLab.fields.brightness": "\u4eae\u5ea6",
                 "tools.proceduralAppearanceLab.fields.grain": "\u9897\u7c92 / \u566a\u58f0",
+                "tools.proceduralAppearanceLab.previewFallback": "\u9884\u89c8\u4e0d\u53ef\u7528\u3002",
                 "tools.proceduralAppearanceLab.hints.preview": "\u76f8\u540c engineVersion + target + seed + \u89c4\u8303\u5316\u53c2\u6570\u4f1a\u751f\u6210\u76f8\u540c\u56fe\u50cf\u3002",
                 "tools.proceduralAppearanceLab.hints.seed": "\u56fe\u6807\u53ef\u4f7f\u7528 shapeAdd \u7b49 tool id\uff0c\u80cc\u666f\u6d4b\u8bd5\u53ef\u4f7f\u7528\u4efb\u610f\u624b\u52a8 seed\u3002",
                 "tools.proceduralAppearanceLab.hints.target": "\u56fe\u6807\u548c\u80cc\u666f\u5171\u7528\u5f15\u64ce\uff0c\u4f46\u4f7f\u7528\u4e0d\u540c\u6784\u56fe\u9884\u8bbe\u3002",

@@ -14,6 +14,9 @@ Implemented scope:
 - Memory cache keyed by `engineVersion + target + seed + normalizedParams`.
 - Registry Lab entry in `host/tools/proceduralAppearanceLab.tool.jsx`.
 - Generic registry `proceduralPreview` field type in `client/js/main.js`.
+- Explicit procedural preview contract helper in `client/js/proceduralPreviewContract.js`.
+- Dependency-scoped preview refresh, lifecycle cleanup, and safe fallback UI at the registry renderer boundary.
+- Generic procedural preview CSS in `client/css/style.css` instead of renderer inline visual styles.
 
 The Lab is intentionally isolated:
 
@@ -22,6 +25,7 @@ The Lab is intentionally isolated:
 - It does not modify Settings behavior.
 - It does not modify color picker / eyedropper behavior.
 - It does not modify Ad Component Kit or Shape Add.
+- Preview contract work does not modify the procedural generation algorithm, engine version, seed hashing, palette mapping, warp, ribbon, grain/noise, or deterministic snapshot behavior.
 
 ## Goal
 
