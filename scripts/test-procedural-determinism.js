@@ -6,6 +6,7 @@ const path = require("path");
 const vm = require("vm");
 
 const ROOT = path.resolve(__dirname, "..");
+const CACHE_PATH = path.join(ROOT, "client", "js", "proceduralCache.js");
 const ENGINE_PATH = path.join(ROOT, "client", "js", "proceduralAppearance.js");
 const TOOL_IDS = ["shapeAdd", "textBackgroundBox", "selectionInfo", "ecommerceLayout"];
 const EXPECTED_SEED_HASHES = {
@@ -51,6 +52,7 @@ function assertFiniteTree(value, pathLabel) {
 }
 
 function loadEngine() {
+    const cacheCode = fs.readFileSync(CACHE_PATH, "utf8");
     const code = fs.readFileSync(ENGINE_PATH, "utf8");
     const context = {
         window: {},
@@ -65,6 +67,7 @@ function loadEngine() {
         isFinite
     };
     vm.createContext(context);
+    vm.runInContext(cacheCode, context, { filename: CACHE_PATH });
     vm.runInContext(code, context, { filename: ENGINE_PATH });
     assert(context.window.ProceduralAppearance, "ProceduralAppearance did not initialize.");
     return context.window.ProceduralAppearance;

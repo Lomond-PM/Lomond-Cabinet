@@ -2,9 +2,12 @@
     "use strict";
 
     var engineVersion = "procedural-appearance-v7";
-    var cache = {};
-    var rasterCache = {};
-    var rasterCacheOrder = [];
+    // 128 keeps several Lab seed/parameter variants hot while bounding CEP memory use.
+    var RECIPE_CACHE_LIMIT = 128;
+    var RASTER_CACHE_LIMIT = 24;
+    var cacheTools = window.ProceduralCache;
+    var recipeCache = cacheTools.createLruCache(RECIPE_CACHE_LIMIT);
+    var rasterCache = cacheTools.createLruCache(RASTER_CACHE_LIMIT);
 
     function clamp(value, min, max) {
         var numeric = Number(value);
@@ -97,6 +100,22 @@
         var seed = String(options && options.seed ? options.seed : "shapeAdd");
         var params = normalizeParams(options && options.params);
         return engineVersion + "|" + target + "|" + seed + "|" + JSON.stringify(params);
+    }
+
+    function clearCache() {
+        recipeCache.clear();
+        rasterCache.clear();
+    }
+
+    function getCacheStats() {
+        return {
+            recipe: recipeCache.stats(),
+            raster: rasterCache.stats()
+        };
+    }
+
+    function normalizeRenderScale(value) {
+        return cacheTools.normalizeRenderScale(value);
     }
 
     var SAFE_COLOR_FAMILIES = [
@@ -314,14 +333,17 @@
 
     function recipeFor(options) {
         var key = cacheKey(options || {});
-        if (!cache[key]) {
-            cache[key] = createRecipe(options || {});
+        var recipe = recipeCache.get(key);
+        if (recipe) {
+            return recipe;
         }
-        return cache[key];
+        recipe = createRecipe(options || {});
+        recipeCache.set(key, recipe);
+        return recipe;
     }
 
     function resizeCanvas(canvas, width, height) {
-        var ratio = window.devicePixelRatio || 1;
+        var ratio = normalizeRenderScale(window.devicePixelRatio);
         var displayWidth = Math.max(1, Math.round(width));
         var displayHeight = Math.max(1, Math.round(height));
         canvas.style.width = displayWidth + "px";
@@ -453,7 +475,7 @@
 
     function renderField(width, height, recipe) {
         var rasterKey = recipe.cacheKey + "|" + width + "x" + height;
-        var canvas = document.createElement("canvas");
+        var canvas;
         var ctx;
         var image;
         var data;
@@ -497,9 +519,11 @@
         var grain;
         var i;
 
-        if (rasterCache[rasterKey]) {
-            return rasterCache[rasterKey];
+        canvas = rasterCache.get(rasterKey);
+        if (canvas) {
+            return canvas;
         }
+        canvas = document.createElement("canvas");
 
         canvas.width = width;
         canvas.height = height;
@@ -582,11 +606,7 @@
         }
 
         ctx.putImageData(image, 0, 0);
-        rasterCache[rasterKey] = canvas;
-        rasterCacheOrder.push(rasterKey);
-        if (rasterCacheOrder.length > 24) {
-            delete rasterCache[rasterCacheOrder.shift()];
-        }
+        rasterCache.set(rasterKey, canvas);
         return canvas;
     }
 
@@ -597,7 +617,7 @@
         var size = resizeCanvas(canvas, logicalWidth, logicalHeight);
         var ctx = canvas.getContext("2d");
         var recipe = recipeFor(options || {});
-        var fieldCanvas = renderField(logicalWidth, logicalHeight, recipe);
+        var fieldCanvas = renderField(size.width, size.height, recipe);
 
         ctx.save();
         ctx.clearRect(0, 0, size.width, size.height);
@@ -622,8 +642,11 @@
         hashString: hashString,
         createRandom: createRandom,
         normalizeParams: normalizeParams,
+        normalizeRenderScale: normalizeRenderScale,
         cacheKey: cacheKey,
         createRecipe: createRecipe,
-        render: render
+        render: render,
+        clearCache: clearCache,
+        getCacheStats: getCacheStats
     };
 }());
