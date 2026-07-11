@@ -169,3 +169,31 @@ Current decision:
 - Do not mark this issue fixed based on a single successful session.
 
 Future investigation should check duplicate event binding, stale open/active classes, document-level pointer handlers, scroll-container overflow, and popover cleanup. A focused UI state stress test is preferable to further ad hoc patches.
+
+## Procedural Palette Editor MVP limitations
+
+Status:
+
+Accepted 0.2.5 development limitation.
+
+Area:
+
+- Settings Palette Library
+- Procedural Palette Store
+- Procedural Appearance Lab palette select
+- Import / export workflow
+
+Current implementation:
+
+- Built-in palettes remain factory defaults in `client/js/proceduralPaletteLibrary.js`.
+- User custom palettes, built-in overrides, hidden built-ins, and Home tool palette assignments persist in `localStorage` under `lomond.proceduralPaletteStore.v1`.
+- Settings exposes a Palette Library editor with color / stops / weights editing, Home tool mapping, live icon/background previews, and copy/paste JSON replace/merge.
+
+Known limitations:
+
+- The GUI does not write user data to source files, by design.
+- File picker-based import/export is not implemented yet; use copy/paste JSON.
+- Procedural Appearance Lab still uses the host-declared fixed palette select. User-created palettes appear in Settings/Home mapping, but dynamic Lab select options require a future generic registry dynamic-options provider.
+- The current persistence layer is localStorage only. A user data JSON file location can be added later if needed.
+
+Do not solve these by hard-coding tool-specific DOM hacks into the registry renderer or by writing generated palette data back into `proceduralPaletteLibrary.js`.

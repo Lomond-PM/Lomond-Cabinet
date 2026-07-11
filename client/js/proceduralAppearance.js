@@ -254,7 +254,10 @@
         return linearRgbToOklab(srgbToLinear(r / 255), srgbToLinear(g / 255), srgbToLinear(b / 255));
     }
 
-    function getPaletteLibrary() {
+    function getPaletteResolver() {
+        if (window.ProceduralPaletteStore && typeof window.ProceduralPaletteStore.getResolvedPalette === "function") {
+            return window.ProceduralPaletteStore;
+        }
         return window.ProceduralPaletteLibrary || null;
     }
 
@@ -269,19 +272,24 @@
 
     function resolvePalette(params) {
         var id = normalizePaletteId(params);
-        var library = getPaletteLibrary();
+        var resolver = getPaletteResolver();
         var palette;
-        if (!id || !library || typeof library.getPalette !== "function") {
+        if (!id || !resolver) {
             return null;
         }
-        palette = library.getPalette(id);
+        if (typeof resolver.getResolvedPalette === "function") {
+            palette = resolver.getResolvedPalette(id);
+        } else if (typeof resolver.getPalette === "function") {
+            palette = resolver.getPalette(id);
+        }
         if (!palette) {
             return null;
         }
         return {
             id: id,
             palette: palette,
-            signature: typeof library.getPaletteSignature === "function" ? library.getPaletteSignature(id) : id
+            signature: typeof resolver.getResolvedPaletteSignature === "function" ? resolver.getResolvedPaletteSignature(id) :
+                (typeof resolver.getPaletteSignature === "function" ? resolver.getPaletteSignature(id) : id)
         };
     }
 

@@ -49,6 +49,20 @@
     var ProceduralPreviewTimers = {};
     var ProceduralPreviewWarnings = {};
     var ProceduralPreviewLastInputKeys = {};
+    var PaletteEditorSelectedId = "";
+    var PaletteEditorState = null;
+    var PaletteEditorPendingTransition = null;
+    var PaletteEditorPreviewRafs = [];
+    var PaletteWorkspaceOpen = false;
+    var PaletteWorkspaceResizeObserver = null;
+    var PaletteWorkspaceResizeFrame = 0;
+    var PaletteWorkspaceResizeFallback = null;
+    var PaletteWorkspaceSplitterCleanup = null;
+    var PaletteWorkspaceTransitionTimer = null;
+    var PaletteWorkspaceTransitionToken = 0;
+    var PaletteEditorDeleteConfirmationId = "";
+    var PaletteLibraryWidthStorageKey = "lomond.paletteEditor.libraryWidth.v1";
+    var PaletteEditorPreviewId = "__palette_editor_preview__";
     var RegistryRuntimeStates = {};
     var CustomSelectGlobalListenersBound = false;
     var PanelLifecycleListenersBound = false;
@@ -1296,6 +1310,7 @@
         renderer.appendChild(createSettingsSectionMount("settingsDeveloperModeMount", "settings-section"));
         renderer.appendChild(createSettingsSectionMount("settingsMotionMount", "settings-section"));
         renderer.appendChild(createSettingsSectionMount("settingsThemeMount", "settings-section"));
+        renderer.appendChild(createSettingsSectionMount("settingsPaletteLibraryMount", "settings-section settings-section--palette-library"));
         renderer.appendChild(createSettingsSectionMount("backgroundSettingsCard", "settings-section settings-section--background settings-section--collapsible collapsible-card"));
         content.appendChild(renderer);
     }
@@ -1712,6 +1727,1143 @@
             fieldRow.row.appendChild(controls);
             mount.appendChild(fieldRow.row);
         }
+    }
+
+    function getPaletteStore() {
+        return window.ProceduralPaletteStore || null;
+    }
+
+    function getPaletteEditorHelper() {
+        return window.ProceduralPaletteEditor || null;
+    }
+
+    function paletteDisplayName(palette) {
+        return palette && (palette.displayName || palette.id) ? (palette.displayName || palette.id) : "";
+    }
+
+    function refreshPaletteDrivenHomeIcons() {
+        if (window.ProceduralAppearance && typeof window.ProceduralAppearance.clearCache === "function") {
+            window.ProceduralAppearance.clearCache();
+        }
+        if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.invalidateRendered === "function") {
+            window.ProceduralHomeIcons.invalidateRendered();
+        }
+        refreshProceduralHomeIcons();
+    }
+
+    function getPaletteLibraryWidth() {
+        var helper = getPaletteEditorHelper();
+        var raw = null;
+        try {
+            raw = window.localStorage ? window.localStorage.getItem(PaletteLibraryWidthStorageKey) : null;
+        } catch (error) {
+        }
+        return helper && helper.parseLibraryWidth ? helper.parseLibraryWidth(raw) : 210;
+    }
+
+    function savePaletteLibraryWidth(value) {
+        try {
+            if (window.localStorage) {
+                window.localStorage.setItem(PaletteLibraryWidthStorageKey, String(value));
+            }
+        } catch (error) {
+        }
+    }
+
+    function clearPaletteWorkspaceBindings() {
+        if (PaletteWorkspaceResizeFrame) {
+            window.cancelAnimationFrame(PaletteWorkspaceResizeFrame);
+            PaletteWorkspaceResizeFrame = 0;
+        }
+        if (PaletteWorkspaceResizeObserver) {
+            PaletteWorkspaceResizeObserver.disconnect();
+            PaletteWorkspaceResizeObserver = null;
+        }
+        if (PaletteWorkspaceResizeFallback) {
+            window.removeEventListener("resize", PaletteWorkspaceResizeFallback);
+            PaletteWorkspaceResizeFallback = null;
+        }
+        if (PaletteWorkspaceSplitterCleanup) {
+            PaletteWorkspaceSplitterCleanup();
+            PaletteWorkspaceSplitterCleanup = null;
+        }
+    }
+
+    function removePaletteCustomSelectMenus() {
+        var menus = document.querySelectorAll(".select-menu[data-select-menu-for^='paletteToolMap_']");
+        var i;
+        for (i = 0; i < menus.length; i++) {
+            if (menus[i].parentNode) {
+                menus[i].parentNode.removeChild(menus[i]);
+            }
+        }
+    }
+
+    function clearPalettePreviewRafs() {
+        var i;
+        for (i = 0; i < PaletteEditorPreviewRafs.length; i++) {
+            window.cancelAnimationFrame(PaletteEditorPreviewRafs[i]);
+        }
+        PaletteEditorPreviewRafs.length = 0;
+    }
+
+    function clearPaletteEditorTransientPreview() {
+        var store = getPaletteStore();
+        if (store && typeof store.clearTransientPalette === "function") {
+            store.clearTransientPalette(PaletteEditorPreviewId);
+        }
+    }
+
+    function initializePaletteEditorState(store, paletteId) {
+        var helper = getPaletteEditorHelper();
+        var palettes = store.listResolvedPalettes(true);
+        var selectedId = paletteId || PaletteEditorSelectedId || (palettes[0] ? palettes[0].id : "");
+        var palette = store.getResolvedPalette(selectedId);
+        if (!palette || !helper || !helper.createEditorState) {
+            return;
+        }
+        PaletteEditorSelectedId = palette.id;
+        PaletteEditorState = helper.createEditorState(palette);
+        PaletteEditorState.selectedPaletteId = palette.id;
+        clearPaletteEditorTransientPreview();
+    }
+
+    function paletteEditorDraftIsValid() {
+        var store = getPaletteStore();
+        var helper = getPaletteEditorHelper();
+        var draft = PaletteEditorState && PaletteEditorState.draft ? PaletteEditorState.draft : null;
+        var candidate;
+        var result;
+        if (!store || !draft || typeof store.validatePalette !== "function") {
+            return false;
+        }
+        if (helper && helper.hasPositiveWeightTotal && !helper.hasPositiveWeightTotal(draft.weights)) {
+            return false;
+        }
+        candidate = Object.assign({}, draft, { id: draft.id || "paletteEditorDraft" });
+        result = store.validatePalette(candidate);
+        return !!(result && result.ok);
+    }
+
+    function updatePaletteEditorDraft(patch) {
+        var helper = getPaletteEditorHelper();
+        var store = getPaletteStore();
+        var validation;
+        if (!PaletteEditorState || !helper || !helper.updateEditorDraft) {
+            return;
+        }
+        PaletteEditorState = helper.updateEditorDraft(PaletteEditorState, patch);
+        if (helper.hasPositiveWeightTotal && !helper.hasPositiveWeightTotal(PaletteEditorState.draft.weights)) {
+            clearPaletteEditorTransientPreview();
+            syncPaletteEditorDirtyUi();
+            return;
+        }
+        if (store && typeof store.setTransientPalette === "function") {
+            validation = store.setTransientPalette(PaletteEditorPreviewId, Object.assign({}, PaletteEditorState.draft, { id: PaletteEditorPreviewId }));
+            if (!validation.ok) {
+                clearPaletteEditorTransientPreview();
+                syncPaletteEditorDirtyUi();
+                return;
+            }
+        }
+        syncPaletteEditorDirtyUi();
+        schedulePaletteEditorPreview();
+    }
+
+    function syncPaletteEditorDirtyUi() {
+        var workspace = document.querySelector(".palette-workspace");
+        var status = document.querySelector(".palette-editor-draft-status");
+        var saveButton = document.querySelector(".palette-editor-save");
+        var dirty = !!(PaletteEditorState && PaletteEditorState.dirty);
+        var valid = paletteEditorDraftIsValid();
+        if (workspace) {
+            workspace.classList.toggle("has-unsaved-palette-draft", dirty);
+        }
+        if (status) {
+            status.textContent = dirty ? tr("paletteLibrary.unsavedChanges") : tr("paletteLibrary.saved");
+            status.classList.toggle("is-dirty", dirty);
+        }
+        if (saveButton) {
+            saveButton.disabled = !dirty || !valid || !!PaletteEditorState.saving;
+        }
+    }
+
+    function renderPalettePreviewCanvas(canvas, target, paletteId) {
+        var rect;
+        var shell = canvas ? canvas.parentNode : null;
+        if (!canvas || !window.ProceduralAppearance || typeof window.ProceduralAppearance.render !== "function") {
+            return;
+        }
+        rect = shell && shell.getBoundingClientRect ? shell.getBoundingClientRect() : null;
+        if (!rect || rect.width <= 0 || rect.height <= 0) {
+            return;
+        }
+        try {
+            window.ProceduralAppearance.render(canvas, {
+                target: target,
+                seed: target === "background" ? "palette-editor-background" : "palette-editor-icon",
+                params: { paletteId: paletteId },
+                logicalWidth: Math.max(1, Math.round(rect.width)),
+                logicalHeight: Math.max(1, Math.round(rect.height))
+            });
+            if (shell && shell.classList) {
+                shell.classList.add("is-rendered");
+            }
+        } catch (error) {
+            if (shell && shell.classList) {
+                shell.classList.remove("is-rendered");
+            }
+        }
+    }
+
+    function schedulePaletteEditorPreview() {
+        var previewId = PaletteEditorPreviewId;
+        clearPalettePreviewRafs();
+        PaletteEditorPreviewRafs.push(window.requestAnimationFrame(function () {
+            PaletteEditorPreviewRafs.push(window.requestAnimationFrame(function () {
+                var canvases;
+                var i;
+                if (panelShuttingDown || !PaletteWorkspaceOpen) {
+                    return;
+                }
+                canvases = document.querySelectorAll(".palette-preview-canvas");
+                for (i = 0; i < canvases.length; i++) {
+                    renderPalettePreviewCanvas(canvases[i], canvases[i].getAttribute("data-palette-preview-target"), previewId);
+                }
+            }));
+        }));
+    }
+
+    function createPaletteColorControl(role, value) {
+        var controls = document.createElement("span");
+        var shell = document.createElement("button");
+        var input = document.createElement("input");
+        var hexInput = document.createElement("input");
+        var inputId = "paletteEditor" + role.charAt(0).toUpperCase() + role.slice(1);
+        var normalized = normalizeHex(value, "#000000");
+
+        controls.className = "control-inputs settings-field-control registry-color-control settings-color-control palette-editor-color-control";
+        shell.className = "registry-color-swatch settings-color-pill small-color-shell";
+        shell.type = "button";
+        shell.style.backgroundColor = normalized;
+        shell.setAttribute("data-color-target", inputId);
+        input.id = inputId;
+        input.className = "native-color-input";
+        input.type = "hidden";
+        input.value = normalized;
+        hexInput.id = inputId + "Hex";
+        hexInput.className = "registry-color-hex settings-color-hex";
+        hexInput.type = "text";
+        hexInput.value = normalized;
+        hexInput.setAttribute("spellcheck", "false");
+        bindHexInputSelectBehavior(hexInput);
+
+        function apply(valueToApply) {
+            var color = normalizeHex(valueToApply, input.value || normalized).toUpperCase();
+            var patch;
+            if (!/^#[0-9A-F]{6}$/.test(color)) {
+                return;
+            }
+            input.value = color;
+            hexInput.value = color;
+            shell.style.backgroundColor = color;
+            patch = { colors: {} };
+            patch.colors[role] = color;
+            updatePaletteEditorDraft(patch);
+        }
+
+        hexInput._registryOnValueChange = function () {
+            apply(hexInput.value);
+        };
+        hexInput.addEventListener("input", function () {
+            if (/^#?[0-9a-fA-F]{6}$/.test(this.value)) {
+                apply(this.value);
+            }
+        });
+        hexInput.addEventListener("change", function () {
+            apply(this.value);
+        });
+        shell.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            openRegistryColorPicker(hexInput, shell, normalizeHex(hexInput.value, normalized));
+        });
+        shell.appendChild(input);
+        controls.appendChild(shell);
+        controls.appendChild(hexInput);
+        return controls;
+    }
+
+    function createPaletteTextInput(value, onChange) {
+        var input = document.createElement("input");
+        input.className = "registry-text-input palette-editor-text";
+        input.type = "text";
+        input.value = value || "";
+        input.addEventListener("input", function () {
+            onChange(this.value);
+        });
+        return input;
+    }
+
+    function createPaletteNumberInput(value, field, onChange, options) {
+        var input = document.createElement("input");
+        var fallback = String(value);
+        options = options || {};
+        input.className = "num-input registry-range-number settings-number palette-editor-number";
+        input.type = "text";
+        input.inputMode = "decimal";
+        applySchemaNumberAttributes(input, field);
+        input.value = String(value);
+        input.addEventListener("input", function () {
+            if (!isSchemaNumberDraftValue(this.value) && !isNaN(Number(this.value))) {
+                onChange(this.value, this, "input");
+            }
+        });
+        setupRegistryNumberDrag(input, field, function (nextValue) {
+            onChange(nextValue, input, "update");
+        }, {
+            onCommit: function (nextValue) {
+                onChange(nextValue, input, "commit");
+            },
+            onCancel: function (nextValue) {
+                onChange(nextValue, input, "cancel");
+            }
+        });
+        if (options.disabled) {
+            input.disabled = true;
+            input.classList.remove("is-drag-ready");
+        }
+        return input;
+    }
+
+    function renderPaletteEditorField(labelKey, control) {
+        var row = document.createElement("div");
+        var label = document.createElement("strong");
+        row.className = "settings-field palette-editor-field";
+        label.className = "control-label registry-text-body settings-field-label";
+        label.setAttribute("data-i18n", labelKey);
+        label.textContent = tr(labelKey);
+        row.appendChild(label);
+        row.appendChild(control);
+        return row;
+    }
+
+    function createPalettePreviewBlock() {
+        var block = document.createElement("div");
+        var iconShell = document.createElement("div");
+        var backgroundShell = document.createElement("div");
+        var iconCanvas = document.createElement("canvas");
+        var backgroundCanvas = document.createElement("canvas");
+        block.className = "palette-preview-block";
+        iconShell.className = "palette-preview-shell palette-preview-shell--icon";
+        backgroundShell.className = "palette-preview-shell palette-preview-shell--background";
+        iconCanvas.className = "palette-preview-canvas palette-preview-canvas--icon";
+        backgroundCanvas.className = "palette-preview-canvas palette-preview-canvas--background";
+        iconCanvas.setAttribute("data-palette-preview-target", "icon");
+        backgroundCanvas.setAttribute("data-palette-preview-target", "background");
+        iconShell.appendChild(iconCanvas);
+        backgroundShell.appendChild(backgroundCanvas);
+        block.appendChild(iconShell);
+        block.appendChild(backgroundShell);
+        return block;
+    }
+
+    function getPaletteToolRows() {
+        return [
+            { toolId: "shapeAdd", titleKey: "paletteLibrary.tool.shapeAdd" },
+            { toolId: "textBackgroundBox", titleKey: "paletteLibrary.tool.textBackgroundBox" },
+            { toolId: "selectionInfo", titleKey: "paletteLibrary.tool.selectionInfo" },
+            { toolId: "ecommerceLayout", titleKey: "paletteLibrary.tool.ecommerceLayout" },
+            { toolId: "proceduralAppearanceLab", titleKey: "paletteLibrary.tool.proceduralAppearanceLab" },
+            { toolId: "registryControlLab", titleKey: "paletteLibrary.tool.registryControlLab" },
+            { toolId: "settingsRendererLab", titleKey: "paletteLibrary.tool.settingsRendererLab" }
+        ];
+    }
+
+    function paletteWorkspaceAnimationDuration(name) {
+        var view = byId("settingsView");
+        if (view && view.classList.contains("no-transition")) {
+            return 0;
+        }
+        try {
+            if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+                return 0;
+            }
+        } catch (error) {
+        }
+        return duration(name);
+    }
+
+    function clearPaletteWorkspaceTransition() {
+        var view = byId("settingsView");
+        PaletteWorkspaceTransitionToken += 1;
+        if (PaletteWorkspaceTransitionTimer) {
+            window.clearTimeout(PaletteWorkspaceTransitionTimer);
+            PaletteWorkspaceTransitionTimer = null;
+        }
+        if (view) {
+            view.classList.remove(
+                "is-palette-workspace-transitioning",
+                "is-palette-workspace-entering",
+                "is-palette-workspace-leaving",
+                "is-palette-settings-reveal",
+                "is-palette-content-visible"
+            );
+        }
+    }
+
+    function setPaletteWorkspaceOpen(open) {
+        var view = byId("settingsView");
+        var content = document.querySelector(".settings-content");
+        var workspace;
+        var token;
+        var exitDelay;
+        var morphDelay;
+        if (!view || view.classList.contains("is-palette-workspace-transitioning") || PaletteWorkspaceOpen === (open === true)) {
+            return;
+        }
+        clearPaletteWorkspaceTransition();
+        token = PaletteWorkspaceTransitionToken;
+        view.classList.add("is-palette-workspace-transitioning");
+        if (content) {
+            content.scrollTop = 0;
+        }
+        if (open) {
+            PaletteWorkspaceOpen = true;
+            view.classList.add("is-palette-workspace", "is-palette-workspace-entering");
+            renderPaletteLibrarySettings();
+            nextFrame(function () {
+                if (token !== PaletteWorkspaceTransitionToken) {
+                    return;
+                }
+                view.classList.add("is-palette-content-visible");
+                schedulePaletteEditorPreview();
+            });
+            morphDelay = paletteWorkspaceAnimationDuration("normal");
+            PaletteWorkspaceTransitionTimer = window.setTimeout(function () {
+                if (token !== PaletteWorkspaceTransitionToken) {
+                    return;
+                }
+                PaletteWorkspaceTransitionTimer = null;
+                view.classList.remove("is-palette-workspace-transitioning", "is-palette-workspace-entering", "is-palette-content-visible");
+            }, morphDelay);
+            return;
+        }
+
+        view.classList.add("is-palette-workspace-leaving");
+        view.classList.remove("is-palette-content-visible");
+        workspace = document.querySelector(".palette-workspace-section");
+        if (workspace) {
+            workspace.classList.add("is-exiting");
+        }
+        exitDelay = paletteWorkspaceAnimationDuration("fast");
+        PaletteWorkspaceTransitionTimer = window.setTimeout(function () {
+            if (token !== PaletteWorkspaceTransitionToken) {
+                return;
+            }
+            PaletteWorkspaceOpen = false;
+            PaletteEditorDeleteConfirmationId = "";
+            clearPaletteWorkspaceBindings();
+            clearPalettePreviewRafs();
+            clearPaletteEditorTransientPreview();
+            renderPaletteLibrarySettings();
+            view.offsetWidth;
+            view.classList.remove("is-palette-workspace", "is-palette-workspace-leaving");
+            view.classList.add("is-palette-settings-reveal");
+            morphDelay = paletteWorkspaceAnimationDuration("normal");
+            PaletteWorkspaceTransitionTimer = window.setTimeout(function () {
+                if (token !== PaletteWorkspaceTransitionToken) {
+                    return;
+                }
+                PaletteWorkspaceTransitionTimer = null;
+                view.classList.remove("is-palette-workspace-transitioning", "is-palette-settings-reveal");
+            }, morphDelay);
+        }, exitDelay);
+    }
+
+    function applyPaletteWorkspaceLayout(workspace) {
+        var helper = getPaletteEditorHelper();
+        var layout;
+        if (!workspace || !helper || !helper.getWorkspaceLayout) {
+            return;
+        }
+        layout = helper.getWorkspaceLayout(workspace.getBoundingClientRect().width);
+        workspace.classList.toggle("is-stacked", layout === "stacked");
+    }
+
+    function setupPaletteWorkspaceResize(workspace) {
+        var queue;
+        clearPaletteWorkspaceBindings();
+        if (!workspace) {
+            return;
+        }
+        queue = function () {
+            if (PaletteWorkspaceResizeFrame) {
+                return;
+            }
+            PaletteWorkspaceResizeFrame = window.requestAnimationFrame(function () {
+                PaletteWorkspaceResizeFrame = 0;
+                applyPaletteWorkspaceLayout(workspace);
+                schedulePaletteEditorPreview();
+            });
+        };
+        if (window.ResizeObserver) {
+            PaletteWorkspaceResizeObserver = new window.ResizeObserver(queue);
+            PaletteWorkspaceResizeObserver.observe(workspace);
+        } else {
+            PaletteWorkspaceResizeFallback = queue;
+            window.addEventListener("resize", PaletteWorkspaceResizeFallback);
+        }
+        applyPaletteWorkspaceLayout(workspace);
+    }
+
+    function setupPaletteWorkspaceSplitter(workspace, splitter) {
+        var helper = getPaletteEditorHelper();
+        var view = byId("settingsView");
+        var move;
+        var stop;
+        var start;
+        if (!workspace || !splitter || !helper || !helper.clampLibraryWidth) {
+            return;
+        }
+        move = function (event) {
+            var rect = workspace.getBoundingClientRect();
+            var next = helper.clampLibraryWidth(event.clientX - rect.left);
+            workspace.style.setProperty("--palette-library-width", next + "px");
+        };
+        stop = function () {
+            var width = parseFloat(workspace.style.getPropertyValue("--palette-library-width"));
+            document.removeEventListener("mousemove", move, true);
+            document.removeEventListener("mouseup", stop, true);
+            if (view) {
+                view.classList.remove("is-resizing-palette-layout");
+            }
+            document.body.classList.remove("is-resizing-palette-layout");
+            savePaletteLibraryWidth(helper.clampLibraryWidth(width));
+        };
+        start = function (event) {
+            if (workspace.classList.contains("is-stacked")) {
+                return;
+            }
+            event.preventDefault();
+            if (view) {
+                view.classList.add("is-resizing-palette-layout");
+            }
+            document.body.classList.add("is-resizing-palette-layout");
+            document.addEventListener("mousemove", move, true);
+            document.addEventListener("mouseup", stop, true);
+        };
+        splitter.addEventListener("mousedown", start);
+        PaletteWorkspaceSplitterCleanup = function () {
+            splitter.removeEventListener("mousedown", start);
+            stop();
+        };
+    }
+
+    function selectPaletteEditorPalette(id) {
+        var store = getPaletteStore();
+        if (!store || !store.getResolvedPalette(id)) {
+            return;
+        }
+        initializePaletteEditorState(store, id);
+        renderPaletteLibrarySettings();
+    }
+
+    function runPaletteEditorTransition() {
+        var transition = PaletteEditorPendingTransition;
+        PaletteEditorPendingTransition = null;
+        if (transition) {
+            transition();
+        }
+    }
+
+    function requestPaletteEditorTransition(transition) {
+        if (PaletteEditorState && PaletteEditorState.dirty) {
+            PaletteEditorPendingTransition = transition;
+            renderPaletteEditorActionBar();
+            return;
+        }
+        transition();
+    }
+
+    function savePaletteEditorDraft(afterSave) {
+        var store = getPaletteStore();
+        var result;
+        var draft;
+        if (!store || !PaletteEditorState || !paletteEditorDraftIsValid()) {
+            setStatus(tr("paletteLibrary.invalidPalette"), "error");
+            return false;
+        }
+        draft = PaletteEditorState.draft;
+        PaletteEditorState.saving = true;
+        if (PaletteEditorState.editorMode === "builtIn") {
+            result = store.updateBuiltInOverride(PaletteEditorState.selectedPaletteId, draft);
+        } else if (PaletteEditorState.editorMode === "custom") {
+            result = store.updatePalette(PaletteEditorState.selectedPaletteId, draft);
+        } else {
+            result = store.createPalette(draft);
+        }
+        PaletteEditorState.saving = false;
+        if (!result || !result.ok) {
+            setStatus(tr("paletteLibrary.invalidPalette"), "error");
+            syncPaletteEditorDirtyUi();
+            return false;
+        }
+        PaletteEditorSelectedId = result.palette.id;
+        initializePaletteEditorState(store, result.palette.id);
+        clearPaletteEditorTransientPreview();
+        refreshPaletteDrivenHomeIcons();
+        setStatus(tr("paletteLibrary.saved"), "ok");
+        if (afterSave) {
+            afterSave();
+        } else {
+            renderPaletteLibrarySettings();
+        }
+        return true;
+    }
+
+    function cancelPaletteEditorDraft() {
+        var store = getPaletteStore();
+        var helper = getPaletteEditorHelper();
+        var restoreId;
+        if (!store || !PaletteEditorState || !helper) {
+            return;
+        }
+        restoreId = PaletteEditorState.editorMode === "new" || PaletteEditorState.editorMode === "duplicate" ? PaletteEditorState.previousSelectedPaletteId : PaletteEditorState.selectedPaletteId;
+        initializePaletteEditorState(store, restoreId);
+        clearPaletteEditorTransientPreview();
+        renderPaletteLibrarySettings();
+    }
+
+    function discardPaletteEditorDraftForTransition() {
+        var store = getPaletteStore();
+        var restoreId;
+        if (!store || !PaletteEditorState) {
+            return;
+        }
+        restoreId = PaletteEditorState.editorMode === "new" || PaletteEditorState.editorMode === "duplicate" ? PaletteEditorState.previousSelectedPaletteId : PaletteEditorState.selectedPaletteId;
+        initializePaletteEditorState(store, restoreId);
+        clearPaletteEditorTransientPreview();
+    }
+
+    function beginNewPaletteDraft() {
+        var helper = getPaletteEditorHelper();
+        if (!helper || !helper.createNewEditorState) {
+            return;
+        }
+        PaletteEditorState = helper.createNewEditorState(PaletteEditorSelectedId);
+        clearPaletteEditorTransientPreview();
+        renderPaletteLibrarySettings();
+    }
+
+    function beginDuplicatePaletteDraft() {
+        var store = getPaletteStore();
+        var helper = getPaletteEditorHelper();
+        var source = store && store.getResolvedPalette(PaletteEditorSelectedId);
+        if (!source || !helper || !helper.createDuplicateEditorState) {
+            return;
+        }
+        PaletteEditorState = helper.createDuplicateEditorState(source, PaletteEditorSelectedId);
+        clearPaletteEditorTransientPreview();
+        renderPaletteLibrarySettings();
+    }
+
+    function createPaletteEditorButton(labelKey, className, handler) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "panel-button registry-large-button " + (className || "");
+        button.setAttribute("data-i18n", labelKey);
+        button.textContent = tr(labelKey);
+        button.addEventListener("click", handler);
+        return button;
+    }
+
+    function renderPaletteEditorActionBar() {
+        var actionBar = document.querySelector(".palette-editor-action-bar");
+        var store = getPaletteStore();
+        var state = PaletteEditorState;
+        var current;
+        var currentKind;
+        if (!actionBar || !store || !state) {
+            return;
+        }
+        actionBar.innerHTML = "";
+        if (PaletteEditorDeleteConfirmationId) {
+            var deletePalette = store.getResolvedPalette(PaletteEditorDeleteConfirmationId);
+            var usageCount = store.getPaletteUsageCount ? store.getPaletteUsageCount(PaletteEditorDeleteConfirmationId) : 0;
+            var deleteNotice = document.createElement("span");
+            deleteNotice.className = "palette-editor-unsaved-notice is-danger";
+            deleteNotice.textContent = tr("paletteLibrary.deleteConfirmation", {
+                name: paletteDisplayName(deletePalette),
+                count: usageCount
+            });
+            actionBar.appendChild(deleteNotice);
+            actionBar.appendChild(createPaletteEditorButton("paletteLibrary.deletePalette", "palette-library-action is-danger", function () {
+                var palettes = store.listResolvedPalettes(true);
+                var deletedIndex = palettes.map(function (palette) { return palette.id; }).indexOf(PaletteEditorDeleteConfirmationId);
+                var remaining = palettes.filter(function (palette) { return palette.id !== PaletteEditorDeleteConfirmationId; });
+                var nextPalette = remaining[Math.min(Math.max(0, deletedIndex), Math.max(0, remaining.length - 1))] || remaining[0] || null;
+                var result = store.deletePalette(PaletteEditorDeleteConfirmationId);
+                if (!result.ok) {
+                    setStatus(tr("paletteLibrary.invalidPalette"), "error");
+                    return;
+                }
+                PaletteEditorDeleteConfirmationId = "";
+                PaletteEditorSelectedId = nextPalette ? nextPalette.id : "";
+                PaletteEditorState = null;
+                clearPaletteEditorTransientPreview();
+                initializePaletteEditorState(store, PaletteEditorSelectedId);
+                if (store.flush) {
+                    store.flush();
+                }
+                refreshPaletteDrivenHomeIcons();
+                setStatus(tr("paletteLibrary.paletteDeleted"), "ok");
+                renderPaletteLibrarySettings();
+            }));
+            actionBar.appendChild(createPaletteEditorButton("paletteLibrary.cancel", "palette-library-action", function () {
+                PaletteEditorDeleteConfirmationId = "";
+                renderPaletteEditorActionBar();
+            }));
+            return;
+        }
+        if (PaletteEditorPendingTransition) {
+            var notice = document.createElement("span");
+            notice.className = "palette-editor-unsaved-notice";
+            notice.textContent = tr("paletteLibrary.unsavedChanges");
+            actionBar.appendChild(notice);
+            actionBar.appendChild(createPaletteEditorButton("paletteLibrary.saveAndContinue", "palette-library-action is-primary", function () {
+                savePaletteEditorDraft(runPaletteEditorTransition);
+            }));
+            actionBar.appendChild(createPaletteEditorButton("paletteLibrary.discardChanges", "palette-library-action", function () {
+                var transition = PaletteEditorPendingTransition;
+                PaletteEditorPendingTransition = null;
+                discardPaletteEditorDraftForTransition();
+                if (transition) {
+                    transition();
+                }
+            }));
+            actionBar.appendChild(createPaletteEditorButton("paletteLibrary.cancel", "palette-library-action", function () {
+                PaletteEditorPendingTransition = null;
+                renderPaletteEditorActionBar();
+            }));
+            return;
+        }
+        current = state.selectedPaletteId ? store.getResolvedPalette(state.selectedPaletteId) : null;
+        currentKind = current && store.getPaletteKind ? store.getPaletteKind(current.id) : (current && current.isBuiltIn ? "builtIn" : "custom");
+        if (state.dirty || state.editorMode === "custom" || state.editorMode === "new" || state.editorMode === "duplicate" || (current && current.isModified)) {
+            var save = createPaletteEditorButton("paletteLibrary.save", "palette-library-action is-primary palette-editor-save", function () {
+                savePaletteEditorDraft();
+            });
+            save.disabled = !state.dirty || !paletteEditorDraftIsValid();
+            actionBar.appendChild(save);
+            actionBar.appendChild(createPaletteEditorButton("paletteLibrary.cancel", "palette-library-action", cancelPaletteEditorDraft));
+        }
+        if (state.editorMode !== "new" && state.editorMode !== "duplicate") {
+            actionBar.appendChild(createPaletteEditorButton("paletteLibrary.duplicatePalette", "palette-library-action", function () {
+                requestPaletteEditorTransition(beginDuplicatePaletteDraft);
+            }));
+        }
+        if (current && currentKind === "builtIn") {
+            actionBar.appendChild(createPaletteEditorButton("paletteLibrary.restoreDefaults", "palette-library-action", function () {
+                requestPaletteEditorTransition(function () {
+                    store.resetBuiltInPalette(current.id);
+                    initializePaletteEditorState(store, current.id);
+                    refreshPaletteDrivenHomeIcons();
+                    renderPaletteLibrarySettings();
+                });
+            }));
+            actionBar.appendChild(createPaletteEditorButton(current.isHidden ? "paletteLibrary.show" : "paletteLibrary.hide", "palette-library-action", function () {
+                requestPaletteEditorTransition(function () {
+                    store.hideBuiltInPalette(current.id, !current.isHidden);
+                    renderPaletteLibrarySettings();
+                });
+            }));
+        } else if (current && currentKind === "custom" && state.editorMode === "custom") {
+            actionBar.appendChild(createPaletteEditorButton("paletteLibrary.deletePalette", "palette-library-action is-danger", function () {
+                requestPaletteEditorTransition(function () {
+                    PaletteEditorDeleteConfirmationId = current.id;
+                    renderPaletteEditorActionBar();
+                });
+            }));
+        }
+    }
+
+    function renderPaletteEditorPane(editor, palettes, store) {
+        var state = PaletteEditorState;
+        var draft = state && state.draft;
+        var roles = ["shadow", "base", "secondary", "highlight"];
+        var scroll;
+        var status;
+        var actions;
+        var i;
+        if (!draft) {
+            return;
+        }
+        scroll = document.createElement("div");
+        scroll.className = "palette-editor-scroll";
+        scroll.appendChild(createPalettePreviewBlock());
+        status = document.createElement("div");
+        status.className = "palette-editor-draft-status";
+        scroll.appendChild(status);
+        scroll.appendChild(renderPaletteEditorField("paletteLibrary.displayName", createPaletteTextInput(draft.displayName, function (value) {
+            updatePaletteEditorDraft({ displayName: value });
+        })));
+        roles.forEach(function (role) {
+            scroll.appendChild(renderPaletteEditorField("paletteLibrary." + role, createPaletteColorControl(role, draft.colors[role])));
+        });
+        for (i = 0; i < 4; i++) {
+            (function (index) {
+                scroll.appendChild(renderPaletteEditorField("paletteLibrary.stop" + (index + 1), createPaletteNumberInput(draft.stops[index], {
+                    min: 0,
+                    max: 1,
+                    step: 0.01,
+                    defaultValue: draft.stops[index]
+                }, function (value, input, phase) {
+                    var helper = getPaletteEditorHelper();
+                    var stops = PaletteEditorState.draft.stops.slice(0);
+                    var clamped = helper.clampStopValue(stops, index, value, 0.01);
+                    if (phase !== "input") {
+                        input.value = Number(clamped).toFixed(2);
+                    }
+                    stops[index] = clamped;
+                    updatePaletteEditorDraft({ stops: stops });
+                }, { disabled: index === 0 || index === 3 })));
+            }(i));
+        }
+        roles.forEach(function (role) {
+            scroll.appendChild(renderPaletteEditorField("paletteLibrary.weight." + role, createPaletteNumberInput(draft.weights[role], {
+                min: 0,
+                max: 1,
+                step: 0.01,
+                defaultValue: draft.weights[role]
+            }, function (value, input, phase) {
+                var weights = Object.assign({}, PaletteEditorState.draft.weights);
+                var normalized = normalizeSchemaNumber(value, { min: 0, max: 1, step: 0.01, defaultValue: draft.weights[role] }, draft.weights[role]);
+                if (phase !== "input") {
+                    input.value = Number(normalized).toFixed(2);
+                }
+                weights[role] = normalized;
+                updatePaletteEditorDraft({ weights: weights });
+            })));
+        });
+        renderPaletteToolMapping(scroll, palettes, store);
+        renderPaletteImportExport(scroll, store);
+        editor.appendChild(scroll);
+        actions = document.createElement("div");
+        actions.className = "palette-editor-action-bar";
+        editor.appendChild(actions);
+        if (store && typeof store.setTransientPalette === "function") {
+            store.setTransientPalette(PaletteEditorPreviewId, Object.assign({}, draft, { id: PaletteEditorPreviewId }));
+        }
+        syncPaletteEditorDirtyUi();
+        schedulePaletteEditorPreview();
+        renderPaletteEditorActionBar();
+    }
+
+    function renderPaletteLibraryLauncher(mount) {
+        var heading = createSettingsSectionHeader("section.procedural", "paletteLibrary.title", "paletteLibrary.description");
+        var button = createPaletteEditorButton("paletteLibrary.open", "palette-library-open", function () {
+            setPaletteWorkspaceOpen(true);
+        });
+        mount.className = "settings-section settings-section--palette-library";
+        mount.innerHTML = "";
+        mount.appendChild(heading);
+        mount.appendChild(button);
+    }
+
+    function renderPaletteLibrarySettings() {
+        var mount = byId("settingsPaletteLibraryMount");
+        var store = getPaletteStore();
+        var heading;
+        var workspace;
+        var list;
+        var editor;
+        var palettes;
+        var splitter;
+        var listScroll;
+        var listToolbar;
+        var back;
+        var roles = ["shadow", "base", "secondary", "highlight"];
+
+        if (!mount || !store || typeof store.listResolvedPalettes !== "function") {
+            return;
+        }
+        closeCustomSelectMenus();
+        removePaletteCustomSelectMenus();
+        clearPaletteWorkspaceBindings();
+        clearPalettePreviewRafs();
+        clearPaletteEditorTransientPreview();
+        if (!PaletteWorkspaceOpen) {
+            renderPaletteLibraryLauncher(mount);
+            return;
+        }
+        palettes = store.listResolvedPalettes(true);
+        if (!PaletteEditorState || (PaletteEditorState.editorMode !== "new" && PaletteEditorState.editorMode !== "duplicate" && (!PaletteEditorSelectedId || !store.getResolvedPalette(PaletteEditorSelectedId)))) {
+            initializePaletteEditorState(store, palettes[0] ? palettes[0].id : "");
+        }
+
+        mount.innerHTML = "";
+        mount.className = "settings-section settings-section--palette-library palette-workspace-section";
+        heading = createSettingsSectionHeader("section.procedural", "paletteLibrary.title", "paletteLibrary.description");
+        back = createPaletteEditorButton("paletteLibrary.backToSettings", "palette-workspace-back", function () {
+            if (PaletteEditorState && PaletteEditorState.dirty) {
+                requestPaletteEditorTransition(function () {
+                    setPaletteWorkspaceOpen(false);
+                });
+                return;
+            }
+            setPaletteWorkspaceOpen(false);
+        });
+        heading.appendChild(back);
+        mount.appendChild(heading);
+
+        workspace = document.createElement("div");
+        workspace.className = "palette-workspace";
+        workspace.style.setProperty("--palette-library-width", getPaletteLibraryWidth() + "px");
+        list = document.createElement("div");
+        list.className = "palette-library-pane";
+        listToolbar = document.createElement("div");
+        listToolbar.className = "palette-library-pane-toolbar";
+        listToolbar.appendChild(createPaletteEditorButton("paletteLibrary.new", "palette-library-new", function () {
+            requestPaletteEditorTransition(beginNewPaletteDraft);
+        }));
+        listScroll = document.createElement("div");
+        listScroll.className = "palette-library-list";
+        editor = document.createElement("div");
+        editor.className = "palette-editor-pane";
+        splitter = document.createElement("div");
+        splitter.className = "palette-splitter";
+        splitter.setAttribute("role", "separator");
+        splitter.setAttribute("aria-label", tr("paletteLibrary.resizePaletteList"));
+        splitter.setAttribute("title", tr("paletteLibrary.resizePaletteList"));
+
+        palettes.forEach(function (palette) {
+            var item = document.createElement("button");
+            var label = document.createElement("span");
+            var meta = document.createElement("small");
+            var swatches = document.createElement("span");
+            item.type = "button";
+            item.className = "palette-library-item" + (palette.id === PaletteEditorSelectedId && PaletteEditorState && PaletteEditorState.editorMode !== "new" && PaletteEditorState.editorMode !== "duplicate" ? " is-selected" : "");
+            item.setAttribute("data-palette-id", palette.id);
+            label.textContent = paletteDisplayName(palette);
+            meta.textContent = palette.isCustom ? tr("paletteLibrary.custom") : (palette.isModified ? tr("paletteLibrary.modified") : tr("paletteLibrary.builtIn"));
+            swatches.className = "palette-library-swatches";
+            roles.forEach(function (role) {
+                var swatch = document.createElement("span");
+                swatch.style.backgroundColor = palette.colors[role];
+                swatches.appendChild(swatch);
+            });
+            item.appendChild(label);
+            item.appendChild(swatches);
+            item.appendChild(meta);
+            item.addEventListener("click", function () {
+                var id = this.getAttribute("data-palette-id");
+                requestPaletteEditorTransition(function () {
+                    selectPaletteEditorPalette(id);
+                });
+            });
+            listScroll.appendChild(item);
+        });
+        if (PaletteEditorState && (PaletteEditorState.editorMode === "new" || PaletteEditorState.editorMode === "duplicate")) {
+            var draftItem = document.createElement("div");
+            draftItem.className = "palette-library-item is-draft";
+            draftItem.textContent = paletteDisplayName(PaletteEditorState.draft) + " - " + tr("paletteLibrary.unsavedChanges");
+            listScroll.appendChild(draftItem);
+        }
+        list.appendChild(listToolbar);
+        list.appendChild(listScroll);
+        workspace.appendChild(list);
+        workspace.appendChild(splitter);
+        workspace.appendChild(editor);
+        mount.appendChild(workspace);
+        renderPaletteEditorPane(editor, palettes, store);
+        setupPaletteWorkspaceResize(workspace);
+        setupPaletteWorkspaceSplitter(workspace, splitter);
+        setupCustomSelectInputs();
+    }
+
+    function renderPaletteToolMapping(container, palettes, store) {
+        var section = document.createElement("div");
+        var title = document.createElement("h4");
+        section.className = "palette-tool-map";
+        title.className = "settings-group-label";
+        title.setAttribute("data-i18n", "paletteLibrary.toolMapping");
+        title.textContent = tr("paletteLibrary.toolMapping");
+        section.appendChild(title);
+        getPaletteToolRows().forEach(function (tool) {
+            var row = document.createElement("div");
+            var label = document.createElement("span");
+            var select = document.createElement("select");
+            row.className = "palette-tool-map-row";
+            label.innerHTML = escapeHtml(tr(tool.titleKey)) + "<small>" + escapeHtml(tool.toolId) + "</small>";
+            select.id = "paletteToolMap_" + tool.toolId;
+            select.className = "select-input settings-select";
+            palettes.filter(function (palette) { return !palette.isHidden; }).forEach(function (palette) {
+                var option = document.createElement("option");
+                option.value = palette.id;
+                option.textContent = paletteDisplayName(palette);
+                if (store.getToolPalette(tool.toolId) === palette.id) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+            select.addEventListener("change", function () {
+                store.setToolPalette(tool.toolId, this.value);
+                refreshPaletteDrivenHomeIcons();
+            });
+            row.appendChild(label);
+            row.appendChild(select);
+            section.appendChild(row);
+        });
+        container.appendChild(section);
+    }
+
+    function renderPaletteImportExport(container, store) {
+        var details = document.createElement("details");
+        var summary = document.createElement("summary");
+        var body = document.createElement("div");
+        var exportSection = document.createElement("section");
+        var importSection = document.createElement("section");
+        var exportTitle = document.createElement("h5");
+        var importTitle = document.createElement("h5");
+        var exportDescription = document.createElement("p");
+        var importDescription = document.createElement("p");
+        var exportLabel = document.createElement("label");
+        var importLabel = document.createElement("label");
+        var exportTextarea = document.createElement("textarea");
+        var importTextarea = document.createElement("textarea");
+        var exportActions = document.createElement("div");
+        var importActions = document.createElement("div");
+        var validationStatus = document.createElement("small");
+        var replaceConfirm = document.createElement("div");
+
+        function setJsonStatus(message, isError) {
+            validationStatus.textContent = message || "";
+            validationStatus.classList.toggle("is-error", isError === true);
+        }
+
+        function validateImport() {
+            var validation = store.validateImportData ? store.validateImportData(importTextarea.value) : { ok: false, errors: ["Validation unavailable."] };
+            if (!validation.ok) {
+                setJsonStatus((validation.errors || []).join(" ") || tr("paletteLibrary.invalidJson"), true);
+                setStatus(tr("paletteLibrary.invalidJson"), "error");
+                return false;
+            }
+            setJsonStatus(tr("paletteLibrary.jsonValid"), false);
+            return true;
+        }
+
+        function completeImport(mode) {
+            var result;
+            if (!validateImport()) {
+                return;
+            }
+            try {
+                result = store.importData(importTextarea.value, { mode: mode });
+            } catch (error) {
+                setJsonStatus(error.message || tr("paletteLibrary.invalidJson"), true);
+                setStatus(tr("paletteLibrary.invalidJson"), "error");
+                return;
+            }
+            if (!result || !result.ok) {
+                setJsonStatus((result && result.errors ? result.errors.join(" ") : tr("paletteLibrary.invalidPalette")), true);
+                setStatus(tr("paletteLibrary.invalidPalette"), "error");
+                return;
+            }
+            PaletteEditorSelectedId = "";
+            PaletteEditorState = null;
+            clearPaletteEditorTransientPreview();
+            initializePaletteEditorState(store, "");
+            refreshPaletteDrivenHomeIcons();
+            setStatus(tr("paletteLibrary.importSuccessful"), "ok");
+            renderPaletteLibrarySettings();
+        }
+
+        details.className = "palette-import-export palette-json-advanced";
+        summary.setAttribute("data-i18n", "paletteLibrary.importExport");
+        summary.textContent = tr("paletteLibrary.importExport");
+        body.className = "palette-json-workspace";
+        exportSection.className = "palette-json-section palette-json-export-section";
+        importSection.className = "palette-json-section palette-json-import-section";
+
+        exportTitle.textContent = tr("paletteLibrary.exportConfiguration");
+        exportDescription.textContent = tr("paletteLibrary.exportDescription");
+        exportLabel.textContent = tr("paletteLibrary.exportResult");
+        exportTextarea.className = "registry-textarea palette-json-box palette-json-export";
+        exportTextarea.readOnly = true;
+        exportTextarea.setAttribute("aria-label", tr("paletteLibrary.exportResult"));
+        exportActions.className = "settings-action-row palette-library-actions";
+        exportActions.appendChild(createPaletteEditorButton("paletteLibrary.generateJson", "palette-library-action", function () {
+            exportTextarea.value = JSON.stringify(store.exportData(), null, 2);
+            setJsonStatus("", false);
+        }));
+        exportActions.appendChild(createPaletteEditorButton("paletteLibrary.copyJson", "palette-library-action", function () {
+            var text = exportTextarea.value || JSON.stringify(store.exportData(), null, 2);
+            exportTextarea.value = text;
+            if (window.navigator && window.navigator.clipboard && window.navigator.clipboard.writeText) {
+                window.navigator.clipboard.writeText(text).then(function () {
+                    setStatus(tr("paletteLibrary.exportCopied"), "ok");
+                }, function () {
+                    exportTextarea.select();
+                    document.execCommand("copy");
+                    setStatus(tr("paletteLibrary.exportCopied"), "ok");
+                });
+            } else {
+                exportTextarea.select();
+                document.execCommand("copy");
+                setStatus(tr("paletteLibrary.exportCopied"), "ok");
+            }
+        }));
+
+        importTitle.textContent = tr("paletteLibrary.importConfiguration");
+        importDescription.textContent = tr("paletteLibrary.importDescription");
+        importLabel.textContent = tr("paletteLibrary.importInput");
+        importTextarea.className = "registry-textarea palette-json-box palette-json-import";
+        importTextarea.placeholder = tr("paletteLibrary.pasteJsonPlaceholder");
+        importTextarea.setAttribute("aria-label", tr("paletteLibrary.importInput"));
+        validationStatus.className = "palette-json-validation";
+        importActions.className = "settings-action-row palette-library-actions";
+        importActions.appendChild(createPaletteEditorButton("paletteLibrary.validate", "palette-library-action", validateImport));
+        importActions.appendChild(createPaletteEditorButton("paletteLibrary.mergeImport", "palette-library-action", function () {
+            completeImport("merge");
+        }));
+        importActions.appendChild(createPaletteEditorButton("paletteLibrary.replaceImport", "palette-library-action is-danger", function () {
+            replaceConfirm.classList.add("is-visible");
+        }));
+        importActions.appendChild(createPaletteEditorButton("paletteLibrary.clear", "palette-library-action", function () {
+            importTextarea.value = "";
+            replaceConfirm.classList.remove("is-visible");
+            setJsonStatus("", false);
+        }));
+
+        replaceConfirm.className = "palette-json-replace-confirm";
+        var replaceCopy = document.createElement("span");
+        replaceCopy.textContent = tr("paletteLibrary.replaceConfirmation");
+        replaceConfirm.appendChild(replaceCopy);
+        replaceConfirm.appendChild(createPaletteEditorButton("paletteLibrary.replaceImport", "palette-library-action is-danger", function () {
+            completeImport("replace");
+        }));
+        replaceConfirm.appendChild(createPaletteEditorButton("paletteLibrary.cancel", "palette-library-action", function () {
+            replaceConfirm.classList.remove("is-visible");
+        }));
+
+        exportSection.appendChild(exportTitle);
+        exportSection.appendChild(exportDescription);
+        exportSection.appendChild(exportLabel);
+        exportSection.appendChild(exportTextarea);
+        exportSection.appendChild(exportActions);
+        importSection.appendChild(importTitle);
+        importSection.appendChild(importDescription);
+        importSection.appendChild(importLabel);
+        importSection.appendChild(importTextarea);
+        importSection.appendChild(validationStatus);
+        importSection.appendChild(importActions);
+        importSection.appendChild(replaceConfirm);
+        body.appendChild(exportSection);
+        body.appendChild(importSection);
+        details.appendChild(summary);
+        details.appendChild(body);
+        container.appendChild(details);
     }
 
     function findSettingsSectionField(section, key) {
@@ -2722,17 +3874,25 @@
         }
     }
 
-    function setupRegistryNumberDrag(input, field, onUpdate) {
+    function setupRegistryNumberDrag(input, field, onUpdate, options) {
         var suppressNextClick = false;
+        var editStartValue = input.value;
+        var skipNextBlurCommit = false;
+        options = options || null;
 
         input.classList.add("registry-number-input", "is-drag-ready");
 
         input.addEventListener("focus", function () {
+            editStartValue = input.value;
             input.classList.add("is-editing-number");
         });
 
         input.addEventListener("blur", function () {
             input.classList.remove("is-editing-number");
+            if (options && options.onCommit && !skipNextBlurCommit) {
+                commitSchemaNumberInput(input, field, editStartValue, options.onCommit);
+            }
+            skipNextBlurCommit = false;
         });
 
         input.addEventListener("click", function (event) {
@@ -2750,9 +3910,33 @@
 
         input.addEventListener("keydown", function (event) {
             if (event.keyCode === 13) {
+                if (options && options.onCommit) {
+                    commitSchemaNumberInput(input, field, editStartValue, options.onCommit);
+                    skipNextBlurCommit = true;
+                }
                 input.blur();
             } else if (event.keyCode === 27) {
+                if (options && options.onCancel) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setSchemaNumberValue(input, editStartValue, field);
+                    options.onCancel(input.value);
+                    skipNextBlurCommit = true;
+                }
                 input.blur();
+            } else if (options && (event.keyCode === 38 || event.keyCode === 40)) {
+                var direction = event.keyCode === 38 ? 1 : -1;
+                var step = Number(field.step);
+                var current = normalizeSchemaNumber(input.value, field, editStartValue);
+                event.preventDefault();
+                event.stopPropagation();
+                if (isNaN(step) || step <= 0) {
+                    step = 1;
+                }
+                setSchemaNumberValue(input, current + direction * step, field);
+                if (onUpdate) {
+                    onUpdate(input.value);
+                }
             }
         });
 
@@ -6253,6 +7437,13 @@
         if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.teardown === "function") {
             window.ProceduralHomeIcons.teardown();
         }
+        if (window.ProceduralPaletteStore && typeof window.ProceduralPaletteStore.flush === "function") {
+            window.ProceduralPaletteStore.flush();
+        }
+        clearPalettePreviewRafs();
+        clearPaletteWorkspaceBindings();
+        clearPaletteWorkspaceTransition();
+        clearPaletteEditorTransientPreview();
         if (statusTimer) {
             window.clearTimeout(statusTimer);
             statusTimer = null;
@@ -6771,6 +7962,14 @@
 
         nextFrame(function () {
             resetSettingsMorphStyles();
+            PaletteWorkspaceOpen = false;
+            PaletteEditorPendingTransition = null;
+            PaletteEditorDeleteConfirmationId = "";
+            clearPaletteWorkspaceTransition();
+            clearPaletteWorkspaceBindings();
+            clearPalettePreviewRafs();
+            clearPaletteEditorTransientPreview();
+            view.classList.remove("is-palette-workspace", "is-resizing-palette-layout");
             clearSettingsContentClasses();
             nextFrame(function () {
                 view.classList.remove("no-transition");
@@ -6922,8 +8121,14 @@
         var settingsBackdrop;
         var refreshBtn;
 
+        if (window.ProceduralPaletteStore && typeof window.ProceduralPaletteStore.initialize === "function") {
+            window.ProceduralPaletteStore.initialize({
+                library: window.ProceduralPaletteLibrary
+            });
+        }
         renderSettingsContent();
         renderSettingsTheme();
+        renderPaletteLibrarySettings();
         renderSettingsBackgroundEngine();
         setupColorControls();
         renderSettingsMotion();
