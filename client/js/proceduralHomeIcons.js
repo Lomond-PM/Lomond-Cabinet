@@ -13,6 +13,25 @@
 
     var ICON_TARGET = "icon";
     var DEFAULT_BATCH_SIZE = 2;
+    var HOME_ICON_PALETTE_IDS = [
+        "pacificCyan",
+        "blueLavender",
+        "tealLuminous",
+        "mossGold",
+        "plumRose",
+        "slateIce",
+        "warmCoral",
+        "graphiteSilver"
+    ];
+    var HOME_ICON_PALETTE_MAP = {
+        ecommerceLayout: "warmCoral",
+        shapeAdd: "pacificCyan",
+        textBackgroundBox: "blueLavender",
+        selectionInfo: "graphiteSilver",
+        proceduralAppearanceLab: "tealLuminous",
+        registryControlLab: "slateIce",
+        settingsRendererLab: "plumRose"
+    };
     var warned = {};
     var state = {
         initialized: false,
@@ -48,6 +67,17 @@
         return id || "";
     }
 
+    function hashString(input) {
+        var str = String(input || "");
+        var hash = 2166136261;
+        var i;
+        for (i = 0; i < str.length; i++) {
+            hash ^= str.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+        return hash >>> 0;
+    }
+
     function resolveToolId(input) {
         if (!input) {
             return "";
@@ -58,6 +88,27 @@
         return trimToolId(input.toolId || input.id || input.seed);
     }
 
+    function resolveHomePaletteId(toolId) {
+        var id = trimToolId(toolId);
+        var paletteId;
+        if (!id) {
+            return "";
+        }
+        paletteId = HOME_ICON_PALETTE_MAP[id];
+        if (paletteId) {
+            return paletteId;
+        }
+        return HOME_ICON_PALETTE_IDS[hashString(id) % HOME_ICON_PALETTE_IDS.length];
+    }
+
+    function getHomeIconPaletteMap() {
+        var copy = {};
+        Object.keys(HOME_ICON_PALETTE_MAP).forEach(function (key) {
+            copy[key] = HOME_ICON_PALETTE_MAP[key];
+        });
+        return copy;
+    }
+
     function createIconInput(input) {
         var toolId = resolveToolId(input);
         if (!toolId) {
@@ -66,7 +117,9 @@
         return {
             target: ICON_TARGET,
             seed: toolId,
-            params: {}
+            params: {
+                paletteId: resolveHomePaletteId(toolId)
+            }
         };
     }
 
@@ -244,7 +297,9 @@
             engine.render(canvas, {
                 target: ICON_TARGET,
                 seed: id,
-                params: {},
+                params: {
+                    paletteId: resolveHomePaletteId(id)
+                },
                 logicalWidth: size.logicalWidth,
                 logicalHeight: size.logicalHeight,
                 clipToCanvas: false
@@ -412,6 +467,8 @@
 
     return {
         resolveToolId: resolveToolId,
+        resolveHomePaletteId: resolveHomePaletteId,
+        getHomeIconPaletteMap: getHomeIconPaletteMap,
         createIconInput: createIconInput,
         getIconRenderSize: getIconRenderSize,
         setIconRenderState: setIconRenderState,

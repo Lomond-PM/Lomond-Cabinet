@@ -19,6 +19,9 @@ This project follows simple semantic versioning for development handoff:
 - Added an explicit `proceduralPreview` registry field contract and pure contract helper tests for Procedural Appearance Lab previews.
 - Added bounded procedural appearance cache helpers and tests for recipe/raster cache limits, LRU behavior, cache stats, and DPR render scaling.
 - Added Colorful procedural Home tool icons driven only by stable tool ids, with a dedicated Home icon controller and pure identity/queue tests.
+- Added an Apple-inspired curated procedural palette library with 8 fixed versioned palettes, stable palette signatures, and pure palette validation tests.
+- Added stable Home tool `paletteId` mapping for Colorful procedural icons while keeping icon seed identity based only on tool id.
+- Added Procedural Appearance Lab palette selection for the fixed palette library.
 
 ### Changed
 
@@ -32,6 +35,7 @@ This project follows simple semantic versioning for development handoff:
 - Added ProceduralAppearance `clearCache()` and `getCacheStats()` debug APIs without persisting cache state.
 - Updated procedural preview rendering to generate internal rasters at a controlled device-pixel-ratio scale capped at 2 while preserving logical canvas size.
 - Kept procedural Home icon identity independent from language, Home order, Developer Mode, theme colors, and Settings changes.
+- Included `paletteId` and palette signature in procedural recipe/cache identity for fixed palettes without changing seed, engine version, or geometry recipe fields.
 
 ### Fixed
 
@@ -44,6 +48,9 @@ This project follows simple semantic versioning for development handoff:
 - Theme-mapped icon recolor and procedural background production wiring remain future work.
 - Procedural preview contract work does not change the procedural generation algorithm, engine version, seed behavior, recipe output, or deterministic snapshot expectations.
 - Procedural cache/DPR work does not change palette, warp, ribbon, grain/noise, recipe fields, seed hashing, or production Home/background wiring.
+- The curated palette library is Apple-inspired / Apple-like only; it is not an Apple official palette set.
+- `algorithmDefault` keeps the existing procedural color path and deterministic snapshot behavior.
+- Theme-mapped palette remapping, user-editable palettes, and production procedural background wiring remain future work.
 - The original 0.2.4 color picker / eyedropper / Ad Component Kit cleanup / Shape Add collapsible behavior remains out of scope for this workstream.
 - The current duplicate i18n tool-key count is retained because the duplicates are core Settings preset keys also mirrored by Settings Renderer Lab for validation.
 
