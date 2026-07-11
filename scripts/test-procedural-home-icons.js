@@ -65,6 +65,22 @@ function makeClassList() {
 function makeIcon(width, height) {
     return {
         classList: makeClassList(),
+        ownerDocument: {
+            createElement() {
+                return makeCanvas();
+            }
+        },
+        insertBefore(child) {
+            this.child = child;
+            return child;
+        },
+        firstChild: null,
+        querySelector(selector) {
+            if (selector === ".procedural-home-icon-canvas") {
+                return this.child || null;
+            }
+            return null;
+        },
         getBoundingClientRect() {
             return {
                 width,
@@ -72,6 +88,39 @@ function makeIcon(width, height) {
             };
         }
     };
+}
+
+function makeCanvas() {
+    const attrs = {};
+    return {
+        className: "",
+        width: 0,
+        height: 0,
+        style: {},
+        setAttribute(name, value) {
+            attrs[name] = String(value);
+        },
+        getAttribute(name) {
+            return attrs[name] || "";
+        },
+        getContext(type) {
+            if (type !== "2d") {
+                return null;
+            }
+            return {
+                clearRect() {},
+                drawImage() {}
+            };
+        }
+    };
+}
+
+function makeRenderableCard(toolId, icon) {
+    const card = makeCard(toolId);
+    card.querySelector = function (selector) {
+        return selector === ".tool-icon" ? icon : null;
+    };
+    return card;
 }
 
 function run() {
@@ -195,10 +244,28 @@ function run() {
     assert(stableStringify(staticSize) === stableStringify(dynamicSize), "Static and dynamic cards should share the same sizing contract.");
     assertions += 1;
 
-    assert(/--home-tool-icon-radius:\s*31\.5%;/.test(STYLE_CSS), "Home icon radius should use the shared proportional token.");
+    let renderOptions = null;
+    const renderIcon = makeIcon(76, 76);
+    const renderCard = makeRenderableCard("shapeAdd", renderIcon);
+    const renderOk = icons.renderTool(renderCard, "shapeAdd", {
+        render(canvas, options) {
+            renderOptions = options;
+            canvas.width = 76;
+            canvas.height = 76;
+        },
+        normalizeRenderScale() {
+            return 1;
+        }
+    });
+    assert(renderOk === true, "Renderable Home icon card should render successfully.");
+    assert(renderOptions && renderOptions.clipToCanvas === false, "Home icon render should disable internal engine clipping so shell radius is authoritative.");
+    assertions += 2;
+
+    assert(/--radius-home-icon:\s*25\.5%;/.test(STYLE_CSS), "Home icon radius should use the shared proportional token.");
+    assert(/--home-tool-icon-radius:\s*var\(--radius-home-icon\);/.test(STYLE_CSS), "Legacy Home icon alias should reference the shared radius token.");
     assert(/--tool-icon-radius:\s*var\(--home-tool-icon-radius\);/.test(STYLE_CSS), "Tool icon radius should reference the Home radius token.");
     assert(/\.procedural-home-icon-canvas\s*\{[\s\S]*border-radius:\s*0;/.test(STYLE_CSS), "Canvas contract should not define an independent radius.");
-    assertions += 3;
+    assertions += 4;
 
     const readyBlock = STYLE_CSS.match(/\.tool-icon\.procedural-icon-ready\s*\{[\s\S]*?\}/);
     assert(readyBlock && /border:\s*0;/.test(readyBlock[0]), "Ready state should remove the real border.");

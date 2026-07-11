@@ -616,10 +616,13 @@
         var ctx = canvas.getContext("2d");
         var recipe = recipeFor(options || {});
         var fieldCanvas = renderField(size.width, size.height, recipe);
+        var shouldClip = !options || options.clipToCanvas !== false;
 
         ctx.save();
         ctx.clearRect(0, 0, size.width, size.height);
-        clipRoundedRect(ctx, size.width, size.height, target === "background" ? 26 * size.ratio : 36 * size.ratio);
+        if (shouldClip) {
+            clipRoundedRect(ctx, size.width, size.height, target === "background" ? 26 * size.ratio : 36 * size.ratio);
+        }
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
         ctx.drawImage(fieldCanvas, 0, 0, size.width, size.height);

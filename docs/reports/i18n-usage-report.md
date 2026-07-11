@@ -12,7 +12,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
-| E | Deferred / uncertain | 120 |
+| E | Deferred / uncertain | 122 |
 
 ## Registry Tools i18n Table
 
@@ -77,6 +77,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | helper.autoSelectionStatus | helper | Refresh selected text layer count while the panel is open. | 面板打开时刷新选中文本层数量。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.enableMotion | helper | Uses slow opacity and transform only. | 仅使用缓慢的透明度和位移动画。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.homeBackground | helper | Sets the main panel and Home surface color. | 设置主面板和主页表面颜色。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.homeIconRadius | helper | Developer-only proportional radius for Home tool icons and matching s... | 仅开发者模式可见，控制主页工具图标和同类正方形预览的比例圆角。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.motionSpeed | helper | Adjust panel transitions. 1.00 is balanced. | 调整面板过渡动画。1.00 为平衡值。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.preset | helper | Start from a designed procedural look. | 从设计好的程序化外观开始。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.refreshSelectionPrompt | helper | Click Refresh Selection to inspect the current comp selection. | 点击“刷新选择”以检查当前合成选区。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -114,6 +115,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | label.gridOpacity | label | Grid Opacity | 网格不透明度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.gridSize | label | Grid Size | 网格尺寸 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.homeBackground | label | Home background | 主页背景 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.homeIconRadius | label | Home icon radius | 主页图标圆角 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.lastRowAlign | label | Last Row Align | 最后一行对齐 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.line | label | Line | 线条 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.lineOpacity | label | Line Opacity | 线条不透明度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -239,6 +241,7 @@ No low-risk delete candidates found.
 | helper.autoSelectionStatus | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.enableMotion | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.homeBackground | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.homeIconRadius | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.motionSpeed | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.preset | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.refreshSelectionPrompt | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
@@ -276,6 +279,7 @@ No low-risk delete candidates found.
 | label.gridOpacity | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | label.gridSize | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | label.homeBackground | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.homeIconRadius | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | label.lastRowAlign | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | label.line | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | label.lineOpacity | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |

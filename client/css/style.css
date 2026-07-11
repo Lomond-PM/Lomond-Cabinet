@@ -72,8 +72,11 @@
     --tool-card-w: calc(92px * var(--ui-scale));
     --tool-card-min-h: calc(124px * var(--ui-scale));
     --tool-icon-size: calc(76px * var(--ui-scale));
-    --home-tool-icon-radius: 25.5%;
+    --radius-home-icon: 25.5%;
+    --home-tool-icon-radius: var(--radius-home-icon);
     --tool-icon-radius: var(--home-tool-icon-radius);
+    --home-drag-shadow-primary: rgba(0, 0, 0, 0.48);
+    --home-drag-shadow-secondary: rgba(0, 0, 0, 0.32);
     --tool-icon-small-size: calc(50px * var(--ui-scale));
     --button-height: calc(38px * var(--ui-scale));
     --button-pad-x: calc(14px * var(--ui-scale));
@@ -1084,9 +1087,7 @@ p {
 
 .view-home.home-editing .tool-app:not(.is-disabled) .tool-icon {
     border-color: var(--tool-icon-line);
-    box-shadow:
-        0 0 0 1px var(--tool-icon-line-soft),
-        0 10px 22px rgba(0, 0, 0, 0.28);
+    box-shadow: none;
 }
 
 .tool-app:hover {
@@ -1097,6 +1098,12 @@ p {
 .tool-app.is-dragging:hover,
 .tool-app.is-dragging:active {
     transition: none !important;
+}
+
+.view-home.home-editing .tool-app.is-dragging .tool-icon {
+    box-shadow:
+        0 calc(20px * var(--ui-scale)) calc(42px * var(--ui-scale)) var(--home-drag-shadow-primary),
+        0 calc(7px * var(--ui-scale)) calc(16px * var(--ui-scale)) var(--home-drag-shadow-secondary);
 }
 
 .tool-app:active,
@@ -2435,7 +2442,7 @@ p {
     max-width: 100%;
     aspect-ratio: 1 / 1;
     border: 1px solid var(--panel-border);
-    border-radius: var(--home-tool-icon-radius);
+    border-radius: var(--radius-home-icon);
     align-self: center;
     background: var(--bg-main);
     overflow: hidden;

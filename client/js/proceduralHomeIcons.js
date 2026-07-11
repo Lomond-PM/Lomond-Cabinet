@@ -210,8 +210,8 @@
         }
     }
 
-    function renderTool(card, toolId) {
-        var engine = state.engine || (root && root.ProceduralAppearance);
+    function renderTool(card, toolId, engineOverride) {
+        var engine = engineOverride || state.engine || (root && root.ProceduralAppearance);
         var id = trimToolId(toolId);
         var icon;
         var canvas;
@@ -246,7 +246,8 @@
                 seed: id,
                 params: {},
                 logicalWidth: size.logicalWidth,
-                logicalHeight: size.logicalHeight
+                logicalHeight: size.logicalHeight,
+                clipToCanvas: false
             });
             markCanvasSize(canvas, size);
             markRendered(icon);
