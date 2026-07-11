@@ -21,8 +21,11 @@ Implemented scope:
 - Recipe cache capped at 128 LRU entries; raster cache capped at 24 LRU entries.
 - Debug cache API: `ProceduralAppearance.clearCache()` and `ProceduralAppearance.getCacheStats()`.
 - DPR-aware internal raster rendering with render scale clamped to the range 1-2.
+- Apple-inspired curated Palette Library in `client/js/proceduralPaletteLibrary.js`.
+- Fixed `paletteId` support for ProceduralAppearance recipes and cache identity.
 - Colorful production Home tool icon wiring in `client/js/proceduralHomeIcons.js`.
 - Home icon identity is based only on stable tool id / `data-tool`.
+- Home Colorful icons use stable `toolId -> paletteId` mapping; palette selection changes color identity but not geometry seed identity.
 
 The Lab is intentionally isolated:
 
@@ -33,7 +36,8 @@ The Lab is intentionally isolated:
 - It does not modify Ad Component Kit or Shape Add.
 - Preview contract work does not modify the procedural generation algorithm, engine version, seed hashing, palette mapping, warp, ribbon, grain/noise, or deterministic snapshot behavior.
 - Cache and DPR work does not modify recipe fields, seed identity, palette mapping, warp, ribbon, grain/noise, or deterministic snapshot behavior.
-- Home icon wiring does not modify the procedural generation algorithm, `engineVersion`, seed hashing, palette mapping, warp, ribbon, grain/noise, or deterministic snapshot behavior.
+- Home icon wiring does not modify the procedural generation algorithm, `engineVersion`, seed hashing, warp, ribbon, grain/noise, or deterministic snapshot behavior.
+- Palette Library work does not modify the confirmed default shape parameters, geometry recipe, seed hashing, PRNG sequence, `engineVersion`, Home layout/order, or BackgroundEngine.
 
 ## Goal
 
@@ -186,6 +190,40 @@ Algorithm versioning:
 
 ## Palette Generation
 
+### Curated Palette Library
+
+The 0.2.5 development line now includes a fixed, versioned, Apple-inspired palette library. These palettes are curated for the Lomond Cabinet procedural visual system and must not be described as Apple official palettes.
+
+First palette ids:
+
+- `pacificCyan`
+- `blueLavender`
+- `tealLuminous`
+- `mossGold`
+- `plumRose`
+- `slateIce`
+- `warmCoral`
+- `graphiteSilver`
+
+Each palette defines stable roles:
+
+- `shadow`
+- `base`
+- `secondary`
+- `highlight`
+
+Each palette also defines non-linear stops and role weights. The weights guide color mapping only; they must not change geometry, ribbon placement, warp fields, seed hashing, or random call order.
+
+Palette identity:
+
+```text
+palette id + palette version + colors + stops + weights -> palette signature
+```
+
+The palette signature is included in fixed-palette recipe/cache identity. This means palette content or version changes invalidate cached color recipes without changing the tool seed or geometry recipe.
+
+`algorithmDefault` remains the current algorithmic color path. It preserves existing deterministic snapshots and does not attach a fixed palette signature.
+
 Default colorful mode:
 
 1. Derive a base hue from the seed.
@@ -206,6 +244,32 @@ Suggested ranges:
 - Accent region value: 70-98%.
 
 The palette should create visual memory independent of current app theme.
+
+Fixed palette mode:
+
+1. Resolve `paletteId` from the fixed Palette Library.
+2. Map `shadow`, `base`, `secondary`, and `highlight` into existing color roles.
+3. Keep `base` dominant, `secondary` visible but controlled, and `highlight` narrow.
+4. Do not mechanically split the canvas into four equal color bands.
+5. Do not consume the geometry PRNG sequence while resolving palette data.
+
+Home Colorful icon palette mapping:
+
+- `shapeAdd` -> `pacificCyan`
+- `textBackgroundBox` -> `blueLavender`
+- `selectionInfo` -> `graphiteSilver`
+- `ecommerceLayout` -> `warmCoral`
+- `proceduralAppearanceLab` -> `tealLuminous`
+- `registryControlLab` -> `slateIce`
+- `settingsRendererLab` -> `plumRose`
+
+Unmapped tools use a deterministic fallback based only on stable tool id and the fixed palette id list. Language, Home order, theme color, UI scale, and display title must not affect palette mapping.
+
+Not implemented yet:
+
+- User-editable palette library.
+- Theme-mapped recolor from app theme tokens.
+- Production procedural background palette wiring.
 
 ## Theme-Mapped Recolor
 

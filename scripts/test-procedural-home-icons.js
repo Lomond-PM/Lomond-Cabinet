@@ -144,7 +144,7 @@ function run() {
     assertions += 1;
 
     assert(base.seed === "shapeAdd" && base.target === "icon", "Tool id should be the seed source for icon input.");
-    assert(stableStringify(base.params) === "{}", "Home icon input should not add visual params.");
+    assert(base.params.paletteId === icons.resolveHomePaletteId("shapeAdd"), "Home icon input should include only the stable palette id color source.");
     assertions += 2;
 
     const staticCard = makeCard("ecommerceLayout");
@@ -258,8 +258,9 @@ function run() {
         }
     });
     assert(renderOk === true, "Renderable Home icon card should render successfully.");
+    assert(renderOptions.params.paletteId === icons.resolveHomePaletteId("shapeAdd"), "Home icon render should pass stable paletteId without changing seed.");
     assert(renderOptions && renderOptions.clipToCanvas === false, "Home icon render should disable internal engine clipping so shell radius is authoritative.");
-    assertions += 2;
+    assertions += 3;
 
     assert(/--radius-home-icon:\s*25\.5%;/.test(STYLE_CSS), "Home icon radius should use the shared proportional token.");
     assert(/--home-tool-icon-radius:\s*var\(--radius-home-icon\);/.test(STYLE_CSS), "Legacy Home icon alias should reference the shared radius token.");

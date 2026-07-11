@@ -30,6 +30,7 @@
                         seedKey: "seed",
                         parameterKeys: [
                             "paletteStrategy",
+                            "paletteId",
                             "warp",
                             "warpIrregularity",
                             "flowComplexity",
@@ -105,6 +106,51 @@
                             {
                                 value: "restrainedContrast",
                                 labelKey: "tools.proceduralAppearanceLab.options.restrainedContrast"
+                            }
+                        ]
+                    },
+                    {
+                        type: "select",
+                        key: "paletteId",
+                        labelKey: "tools.proceduralAppearanceLab.fields.paletteId",
+                        hintKey: "tools.proceduralAppearanceLab.hints.paletteId",
+                        defaultValue: "algorithmDefault",
+                        options: [
+                            {
+                                value: "algorithmDefault",
+                                labelKey: "tools.proceduralAppearanceLab.options.algorithmDefault"
+                            },
+                            {
+                                value: "pacificCyan",
+                                labelKey: "tools.proceduralAppearanceLab.options.pacificCyan"
+                            },
+                            {
+                                value: "blueLavender",
+                                labelKey: "tools.proceduralAppearanceLab.options.blueLavender"
+                            },
+                            {
+                                value: "tealLuminous",
+                                labelKey: "tools.proceduralAppearanceLab.options.tealLuminous"
+                            },
+                            {
+                                value: "mossGold",
+                                labelKey: "tools.proceduralAppearanceLab.options.mossGold"
+                            },
+                            {
+                                value: "plumRose",
+                                labelKey: "tools.proceduralAppearanceLab.options.plumRose"
+                            },
+                            {
+                                value: "slateIce",
+                                labelKey: "tools.proceduralAppearanceLab.options.slateIce"
+                            },
+                            {
+                                value: "warmCoral",
+                                labelKey: "tools.proceduralAppearanceLab.options.warmCoral"
+                            },
+                            {
+                                value: "graphiteSilver",
+                                labelKey: "tools.proceduralAppearanceLab.options.graphiteSilver"
                             }
                         ]
                     }
@@ -288,6 +334,7 @@
                 "tools.proceduralAppearanceLab.fields.seed": "Seed",
                 "tools.proceduralAppearanceLab.fields.target": "Target",
                 "tools.proceduralAppearanceLab.fields.paletteStrategy": "Palette Strategy",
+                "tools.proceduralAppearanceLab.fields.paletteId": "Curated Palette",
                 "tools.proceduralAppearanceLab.fields.warp": "Warp",
                 "tools.proceduralAppearanceLab.fields.warpIrregularity": "Warp Irregularity",
                 "tools.proceduralAppearanceLab.fields.flowComplexity": "Flow Complexity",
@@ -310,12 +357,22 @@
                 "tools.proceduralAppearanceLab.hints.seed": "Use a tool id such as shapeAdd for icon identity, or any manual seed for background tests.",
                 "tools.proceduralAppearanceLab.hints.target": "Icon and background share the engine but use different composition presets.",
                 "tools.proceduralAppearanceLab.hints.paletteStrategy": "Uses a curated hue family with controlled shadow, base, secondary, highlight, and accent roles.",
+                "tools.proceduralAppearanceLab.hints.paletteId": "Uses a fixed Apple-inspired palette library. These are not official Apple palettes.",
                 "tools.proceduralAppearanceLab.options.icon": "Tool Icon",
                 "tools.proceduralAppearanceLab.options.background": "Background",
                 "tools.proceduralAppearanceLab.options.curatedLuminous": "Curated Luminous",
                 "tools.proceduralAppearanceLab.options.coolLuminous": "Cool Luminous",
                 "tools.proceduralAppearanceLab.options.warmLuminous": "Warm Luminous",
-                "tools.proceduralAppearanceLab.options.restrainedContrast": "Restrained Contrast"
+                "tools.proceduralAppearanceLab.options.restrainedContrast": "Restrained Contrast",
+                "tools.proceduralAppearanceLab.options.algorithmDefault": "Current Algorithm",
+                "tools.proceduralAppearanceLab.options.pacificCyan": "Pacific Cyan",
+                "tools.proceduralAppearanceLab.options.blueLavender": "Blue Lavender",
+                "tools.proceduralAppearanceLab.options.tealLuminous": "Teal Luminous",
+                "tools.proceduralAppearanceLab.options.mossGold": "Moss Gold",
+                "tools.proceduralAppearanceLab.options.plumRose": "Plum Rose",
+                "tools.proceduralAppearanceLab.options.slateIce": "Slate Ice",
+                "tools.proceduralAppearanceLab.options.warmCoral": "Warm Coral",
+                "tools.proceduralAppearanceLab.options.graphiteSilver": "Graphite Silver"
             },
             "zh-CN": {
                 "tools.proceduralAppearanceLab.title": "\u7a0b\u5e8f\u5316\u5916\u89c2\u5b9e\u9a8c\u5ba4",
@@ -331,6 +388,7 @@
                 "tools.proceduralAppearanceLab.fields.seed": "Seed",
                 "tools.proceduralAppearanceLab.fields.target": "\u76ee\u6807",
                 "tools.proceduralAppearanceLab.fields.paletteStrategy": "\u8c03\u8272\u7b56\u7565",
+                "tools.proceduralAppearanceLab.fields.paletteId": "\u7cbe\u9009\u8272\u5361",
                 "tools.proceduralAppearanceLab.fields.warp": "\u626d\u66f2",
                 "tools.proceduralAppearanceLab.fields.warpIrregularity": "\u626d\u66f2\u4e0d\u89c4\u5219\u5ea6",
                 "tools.proceduralAppearanceLab.fields.flowComplexity": "\u6d41\u573a\u590d\u6742\u5ea6",
@@ -353,12 +411,22 @@
                 "tools.proceduralAppearanceLab.hints.seed": "\u56fe\u6807\u53ef\u4f7f\u7528 shapeAdd \u7b49 tool id\uff0c\u80cc\u666f\u6d4b\u8bd5\u53ef\u4f7f\u7528\u4efb\u610f\u624b\u52a8 seed\u3002",
                 "tools.proceduralAppearanceLab.hints.target": "\u56fe\u6807\u548c\u80cc\u666f\u5171\u7528\u5f15\u64ce\uff0c\u4f46\u4f7f\u7528\u4e0d\u540c\u6784\u56fe\u9884\u8bbe\u3002",
                 "tools.proceduralAppearanceLab.hints.paletteStrategy": "\u4f7f\u7528\u7b5b\u9009\u8272\u76f8\u5bb6\u65cf\uff0c\u5e76\u4ee5\u53d7\u63a7\u7684\u9634\u5f71\u3001\u4e3b\u8272\u3001\u8f85\u8272\u3001\u9ad8\u5149\u548c\u5f3a\u8c03\u8272\u5c42\u7ea7\u751f\u6210\u989c\u8272\u3002",
+                "tools.proceduralAppearanceLab.hints.paletteId": "\u4f7f\u7528\u56fa\u5b9a\u7684 Apple-inspired \u8272\u5361\u5e93\u3002\u8fd9\u4e9b\u4e0d\u662f Apple \u5b98\u65b9\u8272\u5361\u3002",
                 "tools.proceduralAppearanceLab.options.icon": "\u5de5\u5177\u56fe\u6807",
                 "tools.proceduralAppearanceLab.options.background": "\u80cc\u666f",
                 "tools.proceduralAppearanceLab.options.curatedLuminous": "\u7cbe\u9009\u53d1\u5149",
                 "tools.proceduralAppearanceLab.options.coolLuminous": "\u51b7\u8272\u53d1\u5149",
                 "tools.proceduralAppearanceLab.options.warmLuminous": "\u6696\u8272\u53d1\u5149",
-                "tools.proceduralAppearanceLab.options.restrainedContrast": "\u514b\u5236\u5bf9\u6bd4"
+                "tools.proceduralAppearanceLab.options.restrainedContrast": "\u514b\u5236\u5bf9\u6bd4",
+                "tools.proceduralAppearanceLab.options.algorithmDefault": "\u5f53\u524d\u7b97\u6cd5\u914d\u8272",
+                "tools.proceduralAppearanceLab.options.pacificCyan": "\u592a\u5e73\u6d0b\u9752\u84dd",
+                "tools.proceduralAppearanceLab.options.blueLavender": "\u84dd\u7d2b\u85b0\u8863\u8349",
+                "tools.proceduralAppearanceLab.options.tealLuminous": "\u660e\u4eae\u84dd\u7eff",
+                "tools.proceduralAppearanceLab.options.mossGold": "\u82d4\u7eff\u7070\u91d1",
+                "tools.proceduralAppearanceLab.options.plumRose": "\u6885\u7d2b\u73ab\u7470",
+                "tools.proceduralAppearanceLab.options.slateIce": "\u77f3\u677f\u51b0\u84dd",
+                "tools.proceduralAppearanceLab.options.warmCoral": "\u6696\u73ca\u745a",
+                "tools.proceduralAppearanceLab.options.graphiteSilver": "\u77f3\u58a8\u94f6\u7070"
             }
         }
     });

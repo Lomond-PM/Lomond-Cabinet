@@ -99,7 +99,9 @@
         var target = normalizeTarget(options && options.target);
         var seed = String(options && options.seed ? options.seed : "shapeAdd");
         var params = normalizeParams(options && options.params);
-        return engineVersion + "|" + target + "|" + seed + "|" + JSON.stringify(params);
+        var paletteIdentity = getPaletteCacheIdentity(options && options.params);
+        var key = engineVersion + "|" + target + "|" + seed + "|" + JSON.stringify(params);
+        return paletteIdentity ? key + "|palette:" + paletteIdentity : key;
     }
 
     function clearCache() {
@@ -220,6 +222,74 @@
         return clamped <= 0.0031308 ? clamped * 12.92 : 1.055 * Math.pow(clamped, 1 / 2.4) - 0.055;
     }
 
+    function srgbToLinear(value) {
+        var clamped = clamp(value, 0, 1);
+        return clamped <= 0.04045 ? clamped / 12.92 : Math.pow((clamped + 0.055) / 1.055, 2.4);
+    }
+
+    function linearRgbToOklab(r, g, b) {
+        var l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+        var m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+        var s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+        return {
+            L: 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+            a: 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+            bLab: 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
+            r: clamp(r, 0, 1),
+            g: clamp(g, 0, 1),
+            b: clamp(b, 0, 1)
+        };
+    }
+
+    function hexToColor(hex) {
+        var value = String(hex || "#000000").replace("#", "");
+        var r = parseInt(value.slice(0, 2), 16);
+        var g = parseInt(value.slice(2, 4), 16);
+        var b = parseInt(value.slice(4, 6), 16);
+        if (isNaN(r) || isNaN(g) || isNaN(b)) {
+            r = 0;
+            g = 0;
+            b = 0;
+        }
+        return linearRgbToOklab(srgbToLinear(r / 255), srgbToLinear(g / 255), srgbToLinear(b / 255));
+    }
+
+    function getPaletteLibrary() {
+        return window.ProceduralPaletteLibrary || null;
+    }
+
+    function normalizePaletteId(params) {
+        var id = String(params && params.paletteId ? params.paletteId : "");
+        id = id.replace(/^\s+|\s+$/g, "");
+        if (!id || id === "algorithmDefault") {
+            return "";
+        }
+        return id;
+    }
+
+    function resolvePalette(params) {
+        var id = normalizePaletteId(params);
+        var library = getPaletteLibrary();
+        var palette;
+        if (!id || !library || typeof library.getPalette !== "function") {
+            return null;
+        }
+        palette = library.getPalette(id);
+        if (!palette) {
+            return null;
+        }
+        return {
+            id: id,
+            palette: palette,
+            signature: typeof library.getPaletteSignature === "function" ? library.getPaletteSignature(id) : id
+        };
+    }
+
+    function getPaletteCacheIdentity(params) {
+        var resolved = resolvePalette(params);
+        return resolved ? resolved.signature : "";
+    }
+
     function createPalette(seedText, params) {
         var strategy = params.paletteStrategy;
         var paletteSeed = hashString(engineVersion + "|palette|" + seedText + "|" + strategy);
@@ -270,13 +340,40 @@
         };
     }
 
+    function createFixedPalette(resolved) {
+        var palette = resolved.palette;
+        var shadow = hexToColor(palette.colors.shadow);
+        var base = hexToColor(palette.colors.base);
+        var secondary = hexToColor(palette.colors.secondary);
+        var highlight = hexToColor(palette.colors.highlight);
+        return {
+            fixedPalette: true,
+            paletteId: resolved.id,
+            paletteSignature: resolved.signature,
+            familyId: palette.family,
+            shadow: shadow,
+            base: base,
+            secondary: secondary,
+            highlight: highlight,
+            accent: mixOklab(secondary, highlight, 0.42),
+            stops: palette.stops.slice(0),
+            weights: {
+                shadow: Number(palette.weights.shadow),
+                base: Number(palette.weights.base),
+                secondary: Number(palette.weights.secondary),
+                highlight: Number(palette.weights.highlight)
+            }
+        };
+    }
+
     function createRecipe(options) {
         var target = normalizeTarget(options && options.target);
         var seedText = String(options && options.seed ? options.seed : "shapeAdd");
         var params = normalizeParams(options && options.params);
+        var resolvedPalette = resolvePalette(options && options.params);
         var seed = hashString(engineVersion + "|" + target + "|" + seedText);
         var random = createRandom(seed);
-        var palette = createPalette(seedText, params);
+        var palette = resolvedPalette ? createFixedPalette(resolvedPalette) : createPalette(seedText, params);
         var ribbonCount = target === "background" ? 2 : 3;
         var ribbons = [];
         var vortices = [];
@@ -327,7 +424,7 @@
             phaseA: random() * Math.PI * 2,
             phaseB: random() * Math.PI * 2,
             phaseC: random() * Math.PI * 2,
-            cacheKey: cacheKey({ target: target, seed: seedText, params: params })
+            cacheKey: cacheKey({ target: target, seed: seedText, params: options && options.params })
         };
     }
 
@@ -381,6 +478,22 @@
         var secondaryWindow = Math.pow(Math.sin(value * Math.PI), 0.74);
         var transition = Math.sin(value * Math.PI);
         var secondaryAmount = 0.12 * params.secondaryHueInfluence;
+        var stops;
+        var shadowAmount;
+        var fixedSecondary;
+        var fixedHighlightLean;
+        var fixedMapped;
+        if (palette.fixedPalette) {
+            stops = palette.stops || [0, 0.34, 0.74, 1];
+            shadowAmount = smoothstep(stops[1], stops[0], value) * clamp(palette.weights.shadow * 2.15, 0.18, 0.66);
+            fixedSecondary = smoothstep(stops[1], stops[2], value) * (1 - smoothstep(stops[2], stops[3], value));
+            fixedSecondary += secondaryWindow * clamp(palette.weights.secondary * 2.4, 0.18, 0.52);
+            fixedSecondary += clamp(ribbonEnergy, 0, 1) * (target === "background" ? 0.14 : 0.22);
+            fixedHighlightLean = smoothstep(stops[2], stops[3], value) * clamp(palette.weights.highlight * 1.8, 0.05, 0.18);
+            fixedMapped = mixOklab(palette.base, palette.shadow, clamp(shadowAmount, 0, 0.58));
+            fixedMapped = mixOklab(fixedMapped, palette.secondary, clamp(fixedSecondary, 0, target === "background" ? 0.46 : 0.62));
+            return mixOklab(fixedMapped, palette.highlight, clamp(fixedHighlightLean, 0, target === "background" ? 0.1 : 0.16));
+        }
         secondaryAmount += secondaryWindow * (0.34 + params.secondaryHueInfluence * 0.36);
         secondaryAmount += clamp(ribbonEnergy, 0, 1) * (target === "background" ? 0.16 : 0.24) * params.secondaryHueInfluence;
         secondaryAmount += transition * 0.1 * params.secondaryHueInfluence;

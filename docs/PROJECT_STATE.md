@@ -41,6 +41,7 @@ Current 0.2.5 procedural appearance status:
 - Generic registry preview field: `proceduralPreview` in `client/js/main.js`.
 - Preview contract helper: `client/js/proceduralPreviewContract.js`.
 - Cache/DPR helper: `client/js/proceduralCache.js`.
+- Curated palette library: `client/js/proceduralPaletteLibrary.js`.
 - Home icon controller: `client/js/proceduralHomeIcons.js`.
 - Scope remains deterministic procedural tool icons, optional theme-mapped recolor, and procedural background MVP.
 - Default icon mode: colorful seed-based icons generated from stable tool ids.
@@ -54,6 +55,12 @@ Current 0.2.5 procedural appearance status:
 - ProceduralAppearance exposes `clearCache()` and `getCacheStats()` for debug visibility without exposing mutable cache internals or writing cache state to storage.
 - Render scale is derived from device pixel ratio with `clamp(DPR, 1, 2)`. DPR affects output raster resolution only, not recipe identity or cache keys.
 - Home icon rendering is batched and uses existing ProceduralAppearance recipe/raster cache behavior; Home order, language, theme, and Developer Mode do not change icon identity.
+- Procedural Appearance now supports fixed Apple-inspired `paletteId` values through a versioned Palette Library. These are curated project palettes, not Apple official palettes.
+- The first palette library contains 8 fixed palettes: `pacificCyan`, `blueLavender`, `tealLuminous`, `mossGold`, `plumRose`, `slateIce`, `warmCoral`, and `graphiteSilver`.
+- Home Colorful icons use a stable `toolId -> paletteId` mapping, with deterministic fallback for unmapped tools. The seed remains the stable tool id only.
+- Procedural Appearance Lab can select `algorithmDefault` or any fixed palette. `algorithmDefault` preserves the existing algorithmic color path.
+- Palette signatures are part of fixed-palette cache identity so palette content/version changes invalidate color recipes without changing geometry seed identity.
+- Theme-mapped recolor, user-editable palettes, and production procedural background wiring are not implemented yet.
 - Eyedropper overlay lifecycle limitations remain known limitations and are not part of this workstream.
 
 Confirmed entry points:
