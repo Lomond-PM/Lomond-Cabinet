@@ -28,6 +28,7 @@
     var library = null;
     var storage = null;
     var state = createEmptyState();
+    var transientPalettes = {};
     var initialized = false;
 
     function createEmptyState() {
@@ -262,6 +263,9 @@
     }
 
     function getResolvedPalette(id) {
+        if (transientPalettes[id]) {
+            return clone(transientPalettes[id]);
+        }
         var palettes = listResolvedPalettes(true);
         var i;
         for (i = 0; i < palettes.length; i++) {
@@ -343,6 +347,54 @@
         return { ok: true, palette: clone(validation.palette) };
     }
 
+    function updateBuiltInOverride(id, patch) {
+        if (!isBuiltInPalette(id)) {
+            return { ok: false, errors: ["Palette is not built in."] };
+        }
+        return updatePalette(id, patch);
+    }
+
+    function getPaletteKind(id) {
+        var i;
+        if (transientPalettes[id]) {
+            return "transient";
+        }
+        if (isBuiltInPalette(id)) {
+            return "builtIn";
+        }
+        for (i = 0; i < state.customPalettes.length; i++) {
+            if (state.customPalettes[i].id === id) {
+                return "custom";
+            }
+        }
+        return "unknown";
+    }
+
+    function hasBuiltInOverride(id) {
+        return isBuiltInPalette(id) && Object.prototype.hasOwnProperty.call(state.builtInOverrides, id);
+    }
+
+    function setTransientPalette(id, input) {
+        var palette = sanitizePalette(input || {}, id);
+        var validation = validatePaletteData(palette);
+        if (!id || !validation.ok) {
+            return { ok: false, errors: validation.errors || ["Invalid transient palette."] };
+        }
+        palette.isBuiltIn = false;
+        palette.isCustom = false;
+        palette.isTransient = true;
+        transientPalettes[id] = palette;
+        return { ok: true, palette: clone(palette) };
+    }
+
+    function clearTransientPalette(id) {
+        if (id) {
+            delete transientPalettes[id];
+        } else {
+            transientPalettes = {};
+        }
+    }
+
     function buildOverrideForPalette(palette) {
         return {
             displayName: palette.displayName,
@@ -359,6 +411,7 @@
     function deletePalette(id) {
         var index = -1;
         var i;
+        var removedToolMappings = [];
         if (isBuiltInPalette(id)) {
             return { ok: false, errors: ["Built-in palettes cannot be deleted."] };
         }
@@ -374,12 +427,23 @@
         state.customPalettes.splice(index, 1);
         Object.keys(state.toolPaletteMap).forEach(function (toolId) {
             if (state.toolPaletteMap[toolId] === id) {
+                removedToolMappings.push(toolId);
                 delete state.toolPaletteMap[toolId];
             }
         });
         touchAndSave();
         notify();
-        return { ok: true };
+        return { ok: true, removedToolMappings: removedToolMappings };
+    }
+
+    function getPaletteUsageCount(id) {
+        var count = 0;
+        Object.keys(state.toolPaletteMap).forEach(function (toolId) {
+            if (state.toolPaletteMap[toolId] === id) {
+                count += 1;
+            }
+        });
+        return count;
     }
 
     function resetBuiltInPalette(id) {
@@ -462,6 +526,7 @@
         var mode = options && options.mode === "merge" ? "merge" : "replace";
         var imported = sanitizeState(data);
         var existingIds = {};
+        var remappedPaletteIds = {};
         if (!imported.ok) {
             return imported;
         }
@@ -474,16 +539,22 @@
             imported.state.customPalettes.forEach(function (palette) {
                 var copy = clone(palette);
                 if (existingIds[copy.id]) {
-                    copy.id = generatePaletteId();
+                    remappedPaletteIds[copy.id] = generatePaletteId();
+                    copy.id = remappedPaletteIds[copy.id];
                 }
                 state.customPalettes.push(copy);
                 existingIds[copy.id] = true;
             });
             Object.keys(imported.state.builtInOverrides).forEach(function (id) {
-                state.builtInOverrides[id] = imported.state.builtInOverrides[id];
+                if (!Object.prototype.hasOwnProperty.call(state.builtInOverrides, id)) {
+                    state.builtInOverrides[id] = imported.state.builtInOverrides[id];
+                }
             });
             Object.keys(imported.state.toolPaletteMap).forEach(function (toolId) {
-                state.toolPaletteMap[toolId] = imported.state.toolPaletteMap[toolId];
+                var importedPaletteId = imported.state.toolPaletteMap[toolId];
+                if (!Object.prototype.hasOwnProperty.call(state.toolPaletteMap, toolId)) {
+                    state.toolPaletteMap[toolId] = remappedPaletteIds[importedPaletteId] || importedPaletteId;
+                }
             });
             imported.state.hiddenBuiltInPaletteIds.forEach(function (id) {
                 if (state.hiddenBuiltInPaletteIds.indexOf(id) === -1) {
@@ -493,7 +564,17 @@
         }
         touchAndSave();
         notify();
-        return { ok: true, data: exportData() };
+        return { ok: true, data: exportData(), remappedPaletteIds: remappedPaletteIds };
+    }
+
+    function validateImportData(json) {
+        var data;
+        try {
+            data = typeof json === "string" ? JSON.parse(json) : clone(json);
+        } catch (error) {
+            return { ok: false, errors: ["Invalid JSON: " + error.message] };
+        }
+        return sanitizeState(data);
     }
 
     function clearUserData() {
@@ -534,7 +615,7 @@
         });
         Object.keys(data.toolPaletteMap || {}).forEach(function (toolId) {
             var paletteId = data.toolPaletteMap[toolId];
-            if (getResolvedPalette(paletteId) || isBuiltInPalette(paletteId) || seen[paletteId]) {
+            if (paletteExists(paletteId) || seen[paletteId]) {
                 next.toolPaletteMap[toolId] = paletteId;
             }
         });
@@ -620,6 +701,7 @@
         library = options.library || getLibrary();
         storage = options.storage || storage || null;
         load();
+        transientPalettes = {};
         initialized = true;
         return { ok: true, data: exportData() };
     }
@@ -638,13 +720,20 @@
         createPalette: createPalette,
         duplicatePalette: duplicatePalette,
         updatePalette: updatePalette,
+        updateBuiltInOverride: updateBuiltInOverride,
+        getPaletteKind: getPaletteKind,
+        hasBuiltInOverride: hasBuiltInOverride,
+        setTransientPalette: setTransientPalette,
+        clearTransientPalette: clearTransientPalette,
         deletePalette: deletePalette,
+        getPaletteUsageCount: getPaletteUsageCount,
         resetBuiltInPalette: resetBuiltInPalette,
         hideBuiltInPalette: hideBuiltInPalette,
         setToolPalette: setToolPalette,
         getToolPalette: getToolPalette,
         exportData: exportData,
         importData: importData,
+        validateImportData: validateImportData,
         clearUserData: clearUserData,
         subscribe: subscribe,
         unsubscribe: unsubscribe,
