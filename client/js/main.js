@@ -49,6 +49,8 @@
     var ProceduralPreviewTimers = {};
     var ProceduralPreviewWarnings = {};
     var ProceduralPreviewLastInputKeys = {};
+    var PaletteEditorSelectedId = "";
+    var PaletteEditorPreviewRafs = [];
     var RegistryRuntimeStates = {};
     var CustomSelectGlobalListenersBound = false;
     var PanelLifecycleListenersBound = false;
@@ -1296,6 +1298,7 @@
         renderer.appendChild(createSettingsSectionMount("settingsDeveloperModeMount", "settings-section"));
         renderer.appendChild(createSettingsSectionMount("settingsMotionMount", "settings-section"));
         renderer.appendChild(createSettingsSectionMount("settingsThemeMount", "settings-section"));
+        renderer.appendChild(createSettingsSectionMount("settingsPaletteLibraryMount", "settings-section settings-section--palette-library"));
         renderer.appendChild(createSettingsSectionMount("backgroundSettingsCard", "settings-section settings-section--background settings-section--collapsible collapsible-card"));
         content.appendChild(renderer);
     }
@@ -1712,6 +1715,417 @@
             fieldRow.row.appendChild(controls);
             mount.appendChild(fieldRow.row);
         }
+    }
+
+    function getPaletteStore() {
+        return window.ProceduralPaletteStore || null;
+    }
+
+    function paletteDisplayName(palette) {
+        return palette && (palette.displayName || palette.id) ? (palette.displayName || palette.id) : "";
+    }
+
+    function refreshPaletteDrivenHomeIcons() {
+        if (window.ProceduralAppearance && typeof window.ProceduralAppearance.clearCache === "function") {
+            window.ProceduralAppearance.clearCache();
+        }
+        if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.invalidateRendered === "function") {
+            window.ProceduralHomeIcons.invalidateRendered();
+        }
+        refreshProceduralHomeIcons();
+    }
+
+    function createPaletteColorControl(paletteId, role, value) {
+        var controls = document.createElement("span");
+        var shell = document.createElement("button");
+        var input = document.createElement("input");
+        var hexInput = document.createElement("input");
+        var inputId = "paletteEditor" + role.charAt(0).toUpperCase() + role.slice(1);
+        var normalized = normalizeHex(value, "#000000");
+
+        controls.className = "control-inputs settings-field-control registry-color-control settings-color-control palette-editor-color-control";
+        shell.className = "registry-color-swatch settings-color-pill small-color-shell";
+        shell.type = "button";
+        shell.style.backgroundColor = normalized;
+        shell.setAttribute("data-color-target", inputId);
+        input.id = inputId;
+        input.className = "native-color-input";
+        input.type = "hidden";
+        input.value = normalized;
+        hexInput.id = inputId + "Hex";
+        hexInput.className = "registry-color-hex settings-color-hex";
+        hexInput.type = "text";
+        hexInput.value = normalized;
+        hexInput.setAttribute("spellcheck", "false");
+        bindHexInputSelectBehavior(hexInput);
+
+        function apply(valueToApply) {
+            var store = getPaletteStore();
+            var palette = store && store.getResolvedPalette ? store.getResolvedPalette(paletteId) : null;
+            var color = normalizeHex(valueToApply, input.value || normalized).toUpperCase();
+            var patch;
+            if (!store || !palette || !/^#[0-9A-F]{6}$/.test(color)) {
+                return;
+            }
+            input.value = color;
+            hexInput.value = color;
+            shell.style.backgroundColor = color;
+            patch = { colors: {} };
+            patch.colors[role] = color;
+            store.updatePalette(paletteId, patch);
+            refreshPaletteDrivenHomeIcons();
+        }
+
+        hexInput._registryOnValueChange = function () {
+            apply(hexInput.value);
+        };
+        hexInput.addEventListener("input", function () {
+            if (/^#?[0-9a-fA-F]{6}$/.test(this.value)) {
+                apply(this.value);
+            }
+        });
+        hexInput.addEventListener("change", function () {
+            apply(this.value);
+        });
+        shell.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            openRegistryColorPicker(hexInput, shell, normalized);
+        });
+        shell.appendChild(input);
+        controls.appendChild(shell);
+        controls.appendChild(hexInput);
+        return controls;
+    }
+
+    function createPaletteTextInput(value, onChange) {
+        var input = document.createElement("input");
+        input.className = "text-input palette-editor-text";
+        input.type = "text";
+        input.value = value || "";
+        input.addEventListener("change", function () {
+            onChange(this.value);
+        });
+        return input;
+    }
+
+    function createPaletteNumberInput(value, min, max, step, onChange) {
+        var input = document.createElement("input");
+        input.className = "num-input settings-number palette-editor-number";
+        input.type = "number";
+        input.min = String(min);
+        input.max = String(max);
+        input.step = String(step);
+        input.value = String(value);
+        input.addEventListener("change", function () {
+            onChange(this.value);
+        });
+        return input;
+    }
+
+    function renderPaletteEditorField(labelKey, control) {
+        var row = document.createElement("div");
+        var label = document.createElement("strong");
+        row.className = "settings-field palette-editor-field";
+        label.className = "control-label registry-text-body settings-field-label";
+        label.setAttribute("data-i18n", labelKey);
+        label.textContent = tr(labelKey);
+        row.appendChild(label);
+        row.appendChild(control);
+        return row;
+    }
+
+    function renderPalettePreviewCanvas(canvas, target, paletteId) {
+        if (!canvas || !window.ProceduralAppearance || typeof window.ProceduralAppearance.render !== "function") {
+            return;
+        }
+        try {
+            window.ProceduralAppearance.render(canvas, {
+                target: target,
+                seed: target === "background" ? "palette-editor-background" : "palette-editor-icon",
+                params: {
+                    paletteId: paletteId
+                },
+                logicalWidth: target === "background" ? 220 : 96,
+                logicalHeight: target === "background" ? 96 : 96
+            });
+        } catch (error) {
+        }
+    }
+
+    function clearPalettePreviewRafs() {
+        var i;
+        for (i = 0; i < PaletteEditorPreviewRafs.length; i++) {
+            window.cancelAnimationFrame(PaletteEditorPreviewRafs[i]);
+        }
+        PaletteEditorPreviewRafs.length = 0;
+    }
+
+    function createPalettePreviewBlock(paletteId) {
+        var block = document.createElement("div");
+        var iconCanvas = document.createElement("canvas");
+        var backgroundCanvas = document.createElement("canvas");
+        block.className = "palette-preview-block";
+        iconCanvas.className = "palette-preview-canvas palette-preview-canvas--icon";
+        backgroundCanvas.className = "palette-preview-canvas palette-preview-canvas--background";
+        block.appendChild(iconCanvas);
+        block.appendChild(backgroundCanvas);
+        PaletteEditorPreviewRafs.push(window.requestAnimationFrame(function () {
+            renderPalettePreviewCanvas(iconCanvas, "icon", paletteId);
+            renderPalettePreviewCanvas(backgroundCanvas, "background", paletteId);
+        }));
+        return block;
+    }
+
+    function getPaletteToolRows() {
+        return [
+            { toolId: "shapeAdd", titleKey: "paletteLibrary.tool.shapeAdd" },
+            { toolId: "textBackgroundBox", titleKey: "paletteLibrary.tool.textBackgroundBox" },
+            { toolId: "selectionInfo", titleKey: "paletteLibrary.tool.selectionInfo" },
+            { toolId: "ecommerceLayout", titleKey: "paletteLibrary.tool.ecommerceLayout" },
+            { toolId: "proceduralAppearanceLab", titleKey: "paletteLibrary.tool.proceduralAppearanceLab" },
+            { toolId: "registryControlLab", titleKey: "paletteLibrary.tool.registryControlLab" },
+            { toolId: "settingsRendererLab", titleKey: "paletteLibrary.tool.settingsRendererLab" }
+        ];
+    }
+
+    function renderPaletteLibrarySettings() {
+        var mount = byId("settingsPaletteLibraryMount");
+        var store = getPaletteStore();
+        var heading;
+        var body;
+        var list;
+        var editor;
+        var palettes;
+        var selected;
+        var actions;
+        var button;
+        var roles = ["shadow", "base", "secondary", "highlight"];
+        var i;
+
+        if (!mount || !store || typeof store.listResolvedPalettes !== "function") {
+            return;
+        }
+
+        clearPalettePreviewRafs();
+        palettes = store.listResolvedPalettes(true);
+        if (!PaletteEditorSelectedId || !store.getResolvedPalette(PaletteEditorSelectedId)) {
+            PaletteEditorSelectedId = palettes[0] ? palettes[0].id : "";
+        }
+        selected = store.getResolvedPalette(PaletteEditorSelectedId);
+
+        mount.innerHTML = "";
+        heading = createSettingsSectionHeader("section.procedural", "paletteLibrary.title", "paletteLibrary.description");
+        mount.appendChild(heading);
+
+        body = document.createElement("div");
+        body.className = "palette-library-editor";
+        list = document.createElement("div");
+        list.className = "palette-library-list";
+        editor = document.createElement("div");
+        editor.className = "palette-library-detail";
+
+        palettes.forEach(function (palette) {
+            var item = document.createElement("button");
+            var label = document.createElement("span");
+            var meta = document.createElement("small");
+            var swatches = document.createElement("span");
+            item.type = "button";
+            item.className = "palette-library-item" + (palette.id === PaletteEditorSelectedId ? " is-selected" : "");
+            item.setAttribute("data-palette-id", palette.id);
+            label.textContent = paletteDisplayName(palette);
+            meta.textContent = palette.isCustom ? tr("paletteLibrary.custom") : (palette.isModified ? tr("paletteLibrary.modified") : tr("paletteLibrary.builtIn"));
+            swatches.className = "palette-library-swatches";
+            roles.forEach(function (role) {
+                var swatch = document.createElement("span");
+                swatch.style.backgroundColor = palette.colors[role];
+                swatches.appendChild(swatch);
+            });
+            item.appendChild(label);
+            item.appendChild(swatches);
+            item.appendChild(meta);
+            item.addEventListener("click", function () {
+                PaletteEditorSelectedId = this.getAttribute("data-palette-id");
+                renderPaletteLibrarySettings();
+                setupCustomSelectInputs();
+            });
+            list.appendChild(item);
+        });
+
+        if (selected) {
+            editor.appendChild(createPalettePreviewBlock(selected.id));
+            editor.appendChild(renderPaletteEditorField("paletteLibrary.displayName", createPaletteTextInput(paletteDisplayName(selected), function (value) {
+                store.updatePalette(selected.id, { displayName: value });
+                refreshPaletteDrivenHomeIcons();
+                renderPaletteLibrarySettings();
+                setupCustomSelectInputs();
+            })));
+            roles.forEach(function (role) {
+                editor.appendChild(renderPaletteEditorField("paletteLibrary." + role, createPaletteColorControl(selected.id, role, selected.colors[role])));
+            });
+            for (i = 0; i < 4; i++) {
+                (function (index) {
+                    editor.appendChild(renderPaletteEditorField("paletteLibrary.stop" + (index + 1), createPaletteNumberInput(selected.stops[index], 0, 1, 0.01, function (value) {
+                        var stops = selected.stops.slice(0);
+                        stops[index] = parseFloat(value);
+                        store.updatePalette(selected.id, { stops: stops });
+                        refreshPaletteDrivenHomeIcons();
+                        renderPaletteLibrarySettings();
+                    })));
+                }(i));
+            }
+            roles.forEach(function (role) {
+                editor.appendChild(renderPaletteEditorField("paletteLibrary.weight." + role, createPaletteNumberInput(selected.weights[role], 0, 1, 0.01, function (value) {
+                    var weights = Object.assign({}, selected.weights);
+                    weights[role] = parseFloat(value);
+                    store.updatePalette(selected.id, { weights: weights });
+                    refreshPaletteDrivenHomeIcons();
+                    renderPaletteLibrarySettings();
+                })));
+            });
+
+            actions = document.createElement("div");
+            actions.className = "settings-action-row palette-library-actions";
+            [
+                ["paletteLibrary.new", function () {
+                    var created = store.createPalette(selected);
+                    if (created.ok) {
+                        PaletteEditorSelectedId = created.palette.id;
+                    }
+                }],
+                ["paletteLibrary.duplicate", function () {
+                    var duplicated = store.duplicatePalette(selected.id);
+                    if (duplicated.ok) {
+                        PaletteEditorSelectedId = duplicated.palette.id;
+                    }
+                }],
+                [selected.isBuiltIn ? "paletteLibrary.restoreDefaults" : "paletteLibrary.delete", function () {
+                    if (selected.isBuiltIn) {
+                        store.resetBuiltInPalette(selected.id);
+                    } else {
+                        store.deletePalette(selected.id);
+                        PaletteEditorSelectedId = "";
+                    }
+                }],
+                [selected.isBuiltIn ? (selected.isHidden ? "paletteLibrary.show" : "paletteLibrary.hide") : "", function () {
+                    if (selected.isBuiltIn) {
+                        store.hideBuiltInPalette(selected.id, !selected.isHidden);
+                    }
+                }]
+            ].forEach(function (action) {
+                if (!action[0]) {
+                    return;
+                }
+                button = document.createElement("button");
+                button.type = "button";
+                button.className = "panel-button registry-large-button palette-library-action";
+                button.setAttribute("data-i18n", action[0]);
+                button.textContent = tr(action[0]);
+                button.addEventListener("click", function () {
+                    action[1]();
+                    refreshPaletteDrivenHomeIcons();
+                    renderPaletteLibrarySettings();
+                    setupCustomSelectInputs();
+                });
+                actions.appendChild(button);
+            });
+            editor.appendChild(actions);
+        }
+
+        body.appendChild(list);
+        body.appendChild(editor);
+        mount.appendChild(body);
+        renderPaletteToolMapping(mount, palettes, store);
+        renderPaletteImportExport(mount, store);
+    }
+
+    function renderPaletteToolMapping(mount, palettes, store) {
+        var section = document.createElement("div");
+        var title = document.createElement("h4");
+        section.className = "palette-tool-map";
+        title.className = "settings-group-label";
+        title.setAttribute("data-i18n", "paletteLibrary.toolMapping");
+        title.textContent = tr("paletteLibrary.toolMapping");
+        section.appendChild(title);
+        getPaletteToolRows().forEach(function (tool) {
+            var row = document.createElement("div");
+            var label = document.createElement("span");
+            var select = document.createElement("select");
+            row.className = "palette-tool-map-row";
+            label.innerHTML = escapeHtml(tr(tool.titleKey)) + "<small>" + escapeHtml(tool.toolId) + "</small>";
+            select.className = "select-input settings-select";
+            palettes.filter(function (palette) { return !palette.isHidden; }).forEach(function (palette) {
+                var option = document.createElement("option");
+                option.value = palette.id;
+                option.textContent = paletteDisplayName(palette);
+                if (store.getToolPalette(tool.toolId) === palette.id) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+            select.addEventListener("change", function () {
+                store.setToolPalette(tool.toolId, this.value);
+                refreshPaletteDrivenHomeIcons();
+            });
+            row.appendChild(label);
+            row.appendChild(select);
+            section.appendChild(row);
+        });
+        mount.appendChild(section);
+    }
+
+    function renderPaletteImportExport(mount, store) {
+        var section = document.createElement("div");
+        var title = document.createElement("h4");
+        var textarea = document.createElement("textarea");
+        var actions = document.createElement("div");
+        var exportButton = document.createElement("button");
+        var replaceButton = document.createElement("button");
+        var mergeButton = document.createElement("button");
+        section.className = "palette-import-export";
+        title.className = "settings-group-label";
+        title.setAttribute("data-i18n", "paletteLibrary.importExport");
+        title.textContent = tr("paletteLibrary.importExport");
+        textarea.className = "text-input palette-json-box";
+        textarea.value = JSON.stringify(store.exportData(), null, 2);
+        actions.className = "settings-action-row palette-library-actions";
+        [
+            [exportButton, "paletteLibrary.export", function () {
+                textarea.value = JSON.stringify(store.exportData(), null, 2);
+                textarea.select();
+            }],
+            [replaceButton, "paletteLibrary.replace", function () {
+                try {
+                    store.importData(textarea.value, { mode: "replace" });
+                    refreshPaletteDrivenHomeIcons();
+                    renderPaletteLibrarySettings();
+                    setupCustomSelectInputs();
+                } catch (error) {
+                    setStatus(tr("paletteLibrary.invalidPalette"), "error");
+                }
+            }],
+            [mergeButton, "paletteLibrary.merge", function () {
+                try {
+                    store.importData(textarea.value, { mode: "merge" });
+                    refreshPaletteDrivenHomeIcons();
+                    renderPaletteLibrarySettings();
+                    setupCustomSelectInputs();
+                } catch (error) {
+                    setStatus(tr("paletteLibrary.invalidPalette"), "error");
+                }
+            }]
+        ].forEach(function (item) {
+            item[0].type = "button";
+            item[0].className = "panel-button registry-large-button palette-library-action";
+            item[0].setAttribute("data-i18n", item[1]);
+            item[0].textContent = tr(item[1]);
+            item[0].addEventListener("click", item[2]);
+            actions.appendChild(item[0]);
+        });
+        section.appendChild(title);
+        section.appendChild(textarea);
+        section.appendChild(actions);
+        mount.appendChild(section);
     }
 
     function findSettingsSectionField(section, key) {
@@ -6253,6 +6667,10 @@
         if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.teardown === "function") {
             window.ProceduralHomeIcons.teardown();
         }
+        if (window.ProceduralPaletteStore && typeof window.ProceduralPaletteStore.flush === "function") {
+            window.ProceduralPaletteStore.flush();
+        }
+        clearPalettePreviewRafs();
         if (statusTimer) {
             window.clearTimeout(statusTimer);
             statusTimer = null;
@@ -6922,8 +7340,14 @@
         var settingsBackdrop;
         var refreshBtn;
 
+        if (window.ProceduralPaletteStore && typeof window.ProceduralPaletteStore.initialize === "function") {
+            window.ProceduralPaletteStore.initialize({
+                library: window.ProceduralPaletteLibrary
+            });
+        }
         renderSettingsContent();
         renderSettingsTheme();
+        renderPaletteLibrarySettings();
         renderSettingsBackgroundEngine();
         setupColorControls();
         renderSettingsMotion();

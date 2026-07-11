@@ -47,6 +47,7 @@
         shuttingDown: false,
         generatedCount: 0
     };
+    var storeSubscriptionBound = false;
 
     function warnOnce(code, message, data) {
         if (warned[code]) {
@@ -90,9 +91,16 @@
 
     function resolveHomePaletteId(toolId) {
         var id = trimToolId(toolId);
+        var store = root && root.ProceduralPaletteStore;
         var paletteId;
         if (!id) {
             return "";
+        }
+        if (store && typeof store.getToolPalette === "function") {
+            paletteId = store.getToolPalette(id);
+            if (paletteId) {
+                return paletteId;
+            }
         }
         paletteId = HOME_ICON_PALETTE_MAP[id];
         if (paletteId) {
@@ -107,6 +115,13 @@
             copy[key] = HOME_ICON_PALETTE_MAP[key];
         });
         return copy;
+    }
+
+    function invalidateRendered() {
+        state.rendered = {};
+        if (root && root.ProceduralAppearance && typeof root.ProceduralAppearance.clearCache === "function") {
+            root.ProceduralAppearance.clearCache();
+        }
     }
 
     function createIconInput(input) {
@@ -432,6 +447,13 @@
         state.root = options.root || (root && root.document);
         state.engine = options.engine || (root && root.ProceduralAppearance);
         state.batchSize = options.batchSize || DEFAULT_BATCH_SIZE;
+        if (!storeSubscriptionBound && root && root.ProceduralPaletteStore && typeof root.ProceduralPaletteStore.subscribe === "function") {
+            storeSubscriptionBound = true;
+            root.ProceduralPaletteStore.subscribe(function () {
+                invalidateRendered();
+                refresh({ root: state.root });
+            });
+        }
         refresh(options);
     }
 
@@ -469,6 +491,7 @@
         resolveToolId: resolveToolId,
         resolveHomePaletteId: resolveHomePaletteId,
         getHomeIconPaletteMap: getHomeIconPaletteMap,
+        invalidateRendered: invalidateRendered,
         createIconInput: createIconInput,
         getIconRenderSize: getIconRenderSize,
         setIconRenderState: setIconRenderState,

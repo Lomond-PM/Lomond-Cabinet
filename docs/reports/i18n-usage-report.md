@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 64 |
+| A | Core / Global; keep | 104 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -152,6 +152,46 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | label.trimOffset | label | Trim Offset | 修剪偏移 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.trimStart | label | Trim Start | 修剪开始 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.uiScale | label | UI scale | UI 缩放 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| paletteLibrary.base | paletteLibrary | Base | 主色 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.builtIn | paletteLibrary | Built-in | 内置 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.custom | paletteLibrary | Custom | 自定义 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.delete | paletteLibrary | Delete | 删除 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.description | paletteLibrary | Edit curated procedural palettes, custom palettes, and Home tool colo... | 编辑程序化精选色卡、自定义色卡和 Home 工具配色分配。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.displayName | paletteLibrary | Display name | 显示名称 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.duplicate | paletteLibrary | Duplicate | 复制 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.export | paletteLibrary | Export | 导出 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.hide | paletteLibrary | Hide | 隐藏 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.highlight | paletteLibrary | Highlight | 高光 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.import | paletteLibrary | Import | 导入 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.importExport | paletteLibrary | Import / Export JSON | 导入 / 导出 JSON | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.invalidPalette | paletteLibrary | Invalid Palette | 无效色卡 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.merge | paletteLibrary | Merge | 合并 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.modified | paletteLibrary | Modified | 已修改 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.new | paletteLibrary | New Palette | 新建色卡 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.paletteInUse | paletteLibrary | Palette In Use | 色卡正在使用 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.replace | paletteLibrary | Replace | 替换 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.restoreDefaults | paletteLibrary | Restore Defaults | 恢复默认 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.secondary | paletteLibrary | Secondary | 辅色 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.shadow | paletteLibrary | Shadow | 阴影 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.show | paletteLibrary | Show | 显示 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.stop1 | paletteLibrary | Stop 1 | 色标 1 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.stop2 | paletteLibrary | Stop 2 | 色标 2 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.stop3 | paletteLibrary | Stop 3 | 色标 3 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.stop4 | paletteLibrary | Stop 4 | 色标 4 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.title | paletteLibrary | Palette Library | 色卡库 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.tool.ecommerceLayout | paletteLibrary | Ad Component Kit | Ad Component Kit | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.tool.proceduralAppearanceLab | paletteLibrary | Procedural Appearance Lab | 程序化外观实验室 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.tool.registryControlLab | paletteLibrary | Registry Control Lab | 注册器控制实验室 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.tool.selectionInfo | paletteLibrary | Selection Info | Selection Info | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.tool.settingsRendererLab | paletteLibrary | Settings Renderer Lab | Settings Renderer Lab | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.tool.shapeAdd | paletteLibrary | Shape Add | Shape Add | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.tool.textBackgroundBox | paletteLibrary | Text Background Box | Text Background Box | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.toolMapping | paletteLibrary | Home tool palette mapping | Home 工具色卡映射 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.unsavedChanges | paletteLibrary | Unsaved Changes | 未保存更改 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.weight.base | paletteLibrary | Base weight | 主色权重 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.weight.highlight | paletteLibrary | Highlight weight | 高光权重 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.weight.secondary | paletteLibrary | Secondary weight | 辅色权重 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.weight.shadow | paletteLibrary | Shadow weight | 阴影权重 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | section.animation | section | Animation | 动画 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | section.backgroundEngine | section | Background Engine | 背景引擎 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | section.bounds | section | Bounds | 边界 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -166,7 +206,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | section.motion | section | Motion | 动效 | client/js/main.js, client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | section.nativeShapeItems | section | Native shape items | 原生形状元素 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | section.outline | section | Outline | 轮廓 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| section.procedural | section | Procedural | 程序化 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| section.procedural | section | Procedural | 程序化 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | section.selection | section | Selection | 选择 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | section.shape | section | Shape | 形状 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | section.stroke | section | Stroke | 描边 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |

@@ -102,7 +102,10 @@ Current 0.2.5 development note:
 - Phase 1 adds a Developer Mode-only Lab and shared procedural engine skeleton.
 - The 0.2.5 development line also includes Colorful Home icons and a fixed Apple-inspired Palette Library. These palettes are curated project palettes, not Apple official palettes.
 - Home icon seed identity remains stable tool id only. `paletteId` controls fixed color selection and must not be derived from language, title, Home order, theme color, or UI Scale.
-- `algorithmDefault` keeps the existing procedural color path; theme-mapped palettes, user-editable palettes, and production procedural background wiring are still future work.
+- Palette Store user data lives in localStorage key `lomond.proceduralPaletteStore.v1`. Do not write user palette edits back into `client/js/proceduralPaletteLibrary.js`.
+- Built-in palette edits are stored as overrides; custom palettes use generated stable ids; display names do not affect visual identity.
+- Settings Palette Library currently supports copy/paste JSON import/export. File picker import/export and dynamic Lab options for user-created palettes are deferred.
+- `algorithmDefault` keeps the existing procedural color path; theme-mapped palette remapping and production procedural background wiring are still future work.
 - Do not change `VERSION`, `CSXS/manifest.xml`, helper scripts, color picker, Ad Component Kit, Shape Add, or production Settings semantics in this workstream.
 - 0.2.5 should continue from the 0.2.4 stable feature line and focus on deterministic procedural icons and a procedural background MVP.
 - Do not continue Windows eyedropper overlay lifecycle fixes in this workstream; those limitations remain documented known issues.

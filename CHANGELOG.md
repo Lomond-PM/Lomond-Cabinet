@@ -22,6 +22,8 @@ This project follows simple semantic versioning for development handoff:
 - Added an Apple-inspired curated procedural palette library with 8 fixed versioned palettes, stable palette signatures, and pure palette validation tests.
 - Added stable Home tool `paletteId` mapping for Colorful procedural icons while keeping icon seed identity based only on tool id.
 - Added Procedural Appearance Lab palette selection for the fixed palette library.
+- Added a Settings Palette Library editor backed by `lomond.proceduralPaletteStore.v1` for custom palettes, built-in overrides, Home tool palette assignment, live icon/background previews, and copy/paste JSON import/export.
+- Added `scripts/test-procedural-palette-store.js` for Palette Store validation, persistence, signatures, imports, and tool mapping behavior.
 
 ### Changed
 
@@ -36,6 +38,7 @@ This project follows simple semantic versioning for development handoff:
 - Updated procedural preview rendering to generate internal rasters at a controlled device-pixel-ratio scale capped at 2 while preserving logical canvas size.
 - Kept procedural Home icon identity independent from language, Home order, Developer Mode, theme colors, and Settings changes.
 - Included `paletteId` and palette signature in procedural recipe/cache identity for fixed palettes without changing seed, engine version, or geometry recipe fields.
+- Resolved procedural palettes through a Palette Store layer so factory palettes remain source-controlled defaults while user edits stay in localStorage.
 
 ### Fixed
 
@@ -51,6 +54,7 @@ This project follows simple semantic versioning for development handoff:
 - The curated palette library is Apple-inspired / Apple-like only; it is not an Apple official palette set.
 - `algorithmDefault` keeps the existing procedural color path and deterministic snapshot behavior.
 - Theme-mapped palette remapping, user-editable palettes, and production procedural background wiring remain future work.
+- File picker-based palette import/export remains future work; the current editor supports copy/paste JSON import/export.
 - The original 0.2.4 color picker / eyedropper / Ad Component Kit cleanup / Shape Add collapsible behavior remains out of scope for this workstream.
 - The current duplicate i18n tool-key count is retained because the duplicates are core Settings preset keys also mirrored by Settings Renderer Lab for validation.
 

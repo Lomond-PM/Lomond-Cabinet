@@ -42,6 +42,7 @@ Current 0.2.5 procedural appearance status:
 - Preview contract helper: `client/js/proceduralPreviewContract.js`.
 - Cache/DPR helper: `client/js/proceduralCache.js`.
 - Curated palette library: `client/js/proceduralPaletteLibrary.js`.
+- User palette store: `client/js/proceduralPaletteStore.js`.
 - Home icon controller: `client/js/proceduralHomeIcons.js`.
 - Scope remains deterministic procedural tool icons, optional theme-mapped recolor, and procedural background MVP.
 - Default icon mode: colorful seed-based icons generated from stable tool ids.
@@ -60,7 +61,11 @@ Current 0.2.5 procedural appearance status:
 - Home Colorful icons use a stable `toolId -> paletteId` mapping, with deterministic fallback for unmapped tools. The seed remains the stable tool id only.
 - Procedural Appearance Lab can select `algorithmDefault` or any fixed palette. `algorithmDefault` preserves the existing algorithmic color path.
 - Palette signatures are part of fixed-palette cache identity so palette content/version changes invalidate color recipes without changing geometry seed identity.
-- Theme-mapped recolor, user-editable palettes, and production procedural background wiring are not implemented yet.
+- Settings now includes a Palette Library editor. Factory palettes remain in source-controlled `proceduralPaletteLibrary.js`; user custom palettes, built-in overrides, hidden built-ins, and Home tool palette mappings persist under `lomond.proceduralPaletteStore.v1`.
+- User palette display names do not participate in visual identity. Color, stop, weight, and guidance changes do affect resolved palette signatures.
+- The Palette Store layer resolves factory defaults + built-in overrides + custom palettes for ProceduralAppearance and Home icons. It must not write back to source files.
+- Theme-mapped recolor and production procedural background wiring are not implemented yet.
+- File picker-based palette import/export is deferred; the current editor supports copy/paste JSON replace/merge.
 - Eyedropper overlay lifecycle limitations remain known limitations and are not part of this workstream.
 
 Confirmed entry points:

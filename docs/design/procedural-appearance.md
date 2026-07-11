@@ -22,6 +22,7 @@ Implemented scope:
 - Debug cache API: `ProceduralAppearance.clearCache()` and `ProceduralAppearance.getCacheStats()`.
 - DPR-aware internal raster rendering with render scale clamped to the range 1-2.
 - Apple-inspired curated Palette Library in `client/js/proceduralPaletteLibrary.js`.
+- Palette Store in `client/js/proceduralPaletteStore.js`.
 - Fixed `paletteId` support for ProceduralAppearance recipes and cache identity.
 - Colorful production Home tool icon wiring in `client/js/proceduralHomeIcons.js`.
 - Home icon identity is based only on stable tool id / `data-tool`.
@@ -31,13 +32,14 @@ The Lab is intentionally isolated:
 
 - It remains the experimentation surface even though Colorful procedural Home icons are now wired to production Home cards.
 - It does not replace the existing BackgroundEngine.
-- It does not modify Settings behavior.
+- It does not modify production Settings semantics or BackgroundEngine behavior; the Palette Library editor is an additive Settings surface for procedural palettes.
 - It does not modify color picker / eyedropper behavior.
 - It does not modify Ad Component Kit or Shape Add.
 - Preview contract work does not modify the procedural generation algorithm, engine version, seed hashing, palette mapping, warp, ribbon, grain/noise, or deterministic snapshot behavior.
 - Cache and DPR work does not modify recipe fields, seed identity, palette mapping, warp, ribbon, grain/noise, or deterministic snapshot behavior.
 - Home icon wiring does not modify the procedural generation algorithm, `engineVersion`, seed hashing, warp, ribbon, grain/noise, or deterministic snapshot behavior.
 - Palette Library work does not modify the confirmed default shape parameters, geometry recipe, seed hashing, PRNG sequence, `engineVersion`, Home layout/order, or BackgroundEngine.
+- Palette Store work does not write user edits back into source files and does not change geometry seed identity.
 
 ## Goal
 
@@ -224,6 +226,43 @@ The palette signature is included in fixed-palette recipe/cache identity. This m
 
 `algorithmDefault` remains the current algorithmic color path. It preserves existing deterministic snapshots and does not attach a fixed palette signature.
 
+### Palette Store
+
+The Palette Store is the user-editable layer on top of factory palettes.
+
+Storage key:
+
+```text
+lomond.proceduralPaletteStore.v1
+```
+
+Stored data:
+
+- `schemaVersion`
+- `customPalettes`
+- `builtInOverrides`
+- `hiddenBuiltInPaletteIds`
+- `toolPaletteMap`
+- `updatedAt`
+
+Rules:
+
+- Factory palettes remain in `client/js/proceduralPaletteLibrary.js`.
+- The GUI never writes back to `proceduralPaletteLibrary.js`.
+- Built-in edits are stored as overrides.
+- Custom palettes use stable generated ids.
+- `displayName` is user data and does not affect visual identity.
+- Colors, stops, weights, and optional guidance affect the resolved palette signature.
+- Damaged or unsupported localStorage data must fall back safely to factory defaults.
+- Pending saves are debounced and flushed during panel shutdown.
+- Copy/paste JSON replace/merge is implemented for the first editor pass; file picker import/export remains deferred.
+
+Resolved palette order:
+
+```text
+factory default + built-in override + custom palette
+```
+
 Default colorful mode:
 
 1. Derive a base hue from the seed.
@@ -267,9 +306,14 @@ Unmapped tools use a deterministic fallback based only on stable tool id and the
 
 Not implemented yet:
 
-- User-editable palette library.
 - Theme-mapped recolor from app theme tokens.
 - Production procedural background palette wiring.
+
+Current editor limitations:
+
+- The Settings Palette Library editor supports user-editable palettes and Home tool mapping.
+- Procedural Appearance Lab still uses the fixed host-declared palette select. Dynamic Lab options for user-created palettes are deferred unless a generic registry dynamic-options provider is added.
+- File picker import/export is deferred; use copy/paste JSON in the Settings editor.
 
 ## Theme-Mapped Recolor
 

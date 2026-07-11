@@ -488,6 +488,118 @@ body:not(.i18n-ready) .app-shell {
     flex: 1 1 0;
 }
 
+.palette-library-editor {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.35fr);
+    gap: calc(12px * var(--ui-scale));
+}
+
+.palette-library-list,
+.palette-library-detail,
+.palette-tool-map,
+.palette-import-export {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: calc(8px * var(--ui-scale));
+}
+
+.palette-library-item {
+    display: grid;
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    gap: calc(5px * var(--ui-scale));
+    padding: calc(8px * var(--ui-scale));
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-primary);
+    text-align: left;
+}
+
+.palette-library-item.is-selected,
+.palette-library-item:hover {
+    border-color: var(--gold-soft);
+    background: rgba(214, 178, 94, 0.07);
+}
+
+.palette-library-item small,
+.palette-tool-map-row small {
+    display: block;
+    color: var(--text-muted);
+    font-size: var(--font-small);
+}
+
+.palette-library-swatches {
+    display: grid;
+    height: calc(12px * var(--ui-scale));
+    grid-template-columns: repeat(4, 1fr);
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+}
+
+.palette-editor-field {
+    min-height: calc(32px * var(--ui-scale));
+}
+
+.palette-editor-field > .control-label {
+    flex: 0 0 112px;
+}
+
+.palette-preview-block {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: calc(10px * var(--ui-scale));
+    align-items: center;
+    margin-bottom: calc(4px * var(--ui-scale));
+}
+
+.palette-preview-canvas {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--separator);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.palette-preview-canvas--icon {
+    width: calc(74px * var(--ui-scale));
+    height: calc(74px * var(--ui-scale));
+    border-radius: var(--radius-home-icon);
+}
+
+.palette-preview-canvas--background {
+    min-width: 0;
+    height: calc(74px * var(--ui-scale));
+    border-radius: var(--radius-md);
+}
+
+.palette-editor-text,
+.palette-editor-number,
+.palette-json-box {
+    width: 100%;
+}
+
+.palette-tool-map,
+.palette-import-export {
+    margin-top: calc(12px * var(--ui-scale));
+    padding-top: calc(10px * var(--ui-scale));
+    border-top: 1px solid rgba(214, 178, 94, 0.085);
+}
+
+.palette-tool-map-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(120px, 0.8fr);
+    gap: calc(10px * var(--ui-scale));
+    align-items: center;
+}
+
+.palette-json-box {
+    min-height: calc(92px * var(--ui-scale));
+    resize: vertical;
+    font-family: var(--font-mono);
+    font-size: var(--font-small);
+}
+
 .collapsible-card {
     overflow: hidden;
 }
