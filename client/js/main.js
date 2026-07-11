@@ -62,6 +62,8 @@
         homeBackground: "#050403",
         toolIconColor: "#15120c",
         toolIconLine: "#fff0be",
+        homeIconRadius: 25.5,
+        homeDragShadowIntensity: 1,
         autoStatus: true,
         registryDebugTools: false
     };
@@ -1207,6 +1209,19 @@
             button.appendChild(title);
             grid.insertBefore(button, more);
         }
+        refreshProceduralHomeIcons();
+    }
+
+    function refreshProceduralHomeIcons() {
+        if (panelShuttingDown) {
+            return;
+        }
+        if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.refresh === "function") {
+            window.ProceduralHomeIcons.refresh({
+                root: byId("toolGrid"),
+                shuttingDown: panelShuttingDown
+            });
+        }
     }
 
     function applyRegistryDebugTools(enabled) {
@@ -1214,6 +1229,7 @@
         if (byId("registryDebugTools")) {
             byId("registryDebugTools").checked = window.AETOOLBOX_DEBUG_REGISTRY === true;
         }
+        syncSettingsDeveloperOnlyFields();
         if (panelShuttingDown) {
             lifecycleDebug("skipped home render because panelShuttingDown");
             return;
@@ -1227,6 +1243,7 @@
             HomeLayoutManager.renderOrder();
             HomeLayoutManager.bindIconEvents();
         }
+        refreshProceduralHomeIcons();
     }
 
     function findSettingsSchemaField(key) {
@@ -1580,9 +1597,15 @@
     function renderSettingsDeveloperMode() {
         var mount = byId("settingsDeveloperModeMount");
         var field = findSettingsSchemaField("registryDebugTools");
+        var radiusField = findSettingsSchemaField("homeIconRadius");
+        var shadowField = findSettingsSchemaField("homeDragShadowIntensity");
         var heading;
         var fieldRow;
         var switchWrap;
+        var radiusRow;
+        var radiusControls;
+        var shadowRow;
+        var shadowControls;
 
         if (!mount || !field) {
             return;
@@ -1598,6 +1621,24 @@
         fieldRow.controls.appendChild(switchWrap);
         mount.appendChild(heading);
         mount.appendChild(fieldRow.row);
+
+        if (radiusField) {
+            radiusRow = createSharedSettingsFieldRow("range", radiusField, radiusField.descriptionKey, "");
+            radiusRow.row.classList.add("settings-developer-only");
+            radiusRow.controls.parentNode && radiusRow.row.removeChild(radiusRow.controls);
+            radiusControls = createSharedSettingsRangeNumber(radiusField, "homeIconRadius", "homeIconRadiusNumber", radiusField.min, radiusField.max, "", "");
+            radiusRow.row.appendChild(radiusControls);
+            mount.appendChild(radiusRow.row);
+        }
+        if (shadowField) {
+            shadowRow = createSharedSettingsFieldRow("range", shadowField, shadowField.descriptionKey, "");
+            shadowRow.row.classList.add("settings-developer-only");
+            shadowRow.controls.parentNode && shadowRow.row.removeChild(shadowRow.controls);
+            shadowControls = createSharedSettingsRangeNumber(shadowField, "homeDragShadowIntensity", "homeDragShadowIntensityNumber", shadowField.min, shadowField.max, "", "");
+            shadowRow.row.appendChild(shadowControls);
+            mount.appendChild(shadowRow.row);
+        }
+        syncSettingsDeveloperOnlyFields();
     }
 
     function renderSettingsRangeRow(field, numberId) {
@@ -5984,6 +6025,77 @@
         setColorValue("toolIconLine", line);
     }
 
+    function applyHomeIconRadius(value) {
+        var radius = clampNumber(value, DefaultSettings.homeIconRadius, 18, 40);
+        var range = byId("homeIconRadius");
+        var number = byId("homeIconRadiusNumber");
+
+        document.documentElement.style.setProperty("--radius-home-icon", String(radius) + "%");
+        if (range) {
+            range.value = radius;
+        }
+        if (number) {
+            number.value = radius;
+        }
+    }
+
+    function setupHomeIconRadius() {
+        var input = byId("homeIconRadius");
+        var number = byId("homeIconRadiusNumber");
+
+        if (!input || !number) {
+            return;
+        }
+
+        linkPersistedRange("homeIconRadius", "homeIconRadiusNumber", 18, 40, function () {
+            applyHomeIconRadius(number.value);
+            saveSettings();
+        });
+        applyHomeIconRadius(number.value);
+    }
+
+    function applyHomeDragShadowIntensity(value) {
+        var intensity = clampNumber(value, DefaultSettings.homeDragShadowIntensity, 0, 1.5);
+        var range = byId("homeDragShadowIntensity");
+        var number = byId("homeDragShadowIntensityNumber");
+        var primary = Math.min(0.72, Math.max(0, 0.48 * intensity));
+        var secondary = Math.min(0.48, Math.max(0, 0.32 * intensity));
+
+        document.documentElement.style.setProperty("--home-drag-shadow-primary", "rgba(0, 0, 0, " + primary.toFixed(3) + ")");
+        document.documentElement.style.setProperty("--home-drag-shadow-secondary", "rgba(0, 0, 0, " + secondary.toFixed(3) + ")");
+        if (range) {
+            range.value = intensity;
+        }
+        if (number) {
+            number.value = intensity;
+        }
+    }
+
+    function setupHomeDragShadowIntensity() {
+        var input = byId("homeDragShadowIntensity");
+        var number = byId("homeDragShadowIntensityNumber");
+
+        if (!input || !number) {
+            return;
+        }
+
+        linkPersistedRange("homeDragShadowIntensity", "homeDragShadowIntensityNumber", 0, 1.5, function () {
+            applyHomeDragShadowIntensity(number.value);
+            saveSettings();
+        });
+        applyHomeDragShadowIntensity(number.value);
+    }
+
+    function syncSettingsDeveloperOnlyFields() {
+        var enabled = window.AETOOLBOX_DEBUG_REGISTRY === true;
+        var rows = document.querySelectorAll(".settings-developer-only");
+        var i;
+        for (i = 0; i < rows.length; i++) {
+            rows[i].hidden = !enabled;
+            rows[i].classList.toggle("is-settings-hidden", !enabled);
+        }
+    }
+
     function pickColorWithAE(inputId) {
         var input = byId(inputId);
         var current = input.value;
@@ -6137,6 +6249,9 @@
         clearRegistrySaveTimers();
         if (HomeLayoutManager && HomeLayoutManager.teardownForShutdown) {
             HomeLayoutManager.teardownForShutdown();
+        }
+        if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.teardown === "function") {
+            window.ProceduralHomeIcons.teardown();
         }
         if (statusTimer) {
             window.clearTimeout(statusTimer);
@@ -6572,6 +6687,8 @@
             homeBackground: normalizeHex(byId("homeBackground").value, DefaultSettings.homeBackground),
             toolIconColor: normalizeHex(byId("toolIconColor").value, DefaultSettings.toolIconColor),
             toolIconLine: normalizeHex(byId("toolIconLine").value, DefaultSettings.toolIconLine),
+            homeIconRadius: byId("homeIconRadiusNumber") ? clampNumber(byId("homeIconRadiusNumber").value, DefaultSettings.homeIconRadius, 18, 40) : DefaultSettings.homeIconRadius,
+            homeDragShadowIntensity: byId("homeDragShadowIntensityNumber") ? clampNumber(byId("homeDragShadowIntensityNumber").value, DefaultSettings.homeDragShadowIntensity, 0, 1.5) : DefaultSettings.homeDragShadowIntensity,
             autoStatus: autoStatus ? !!autoStatus.checked : true,
             registryDebugTools: registryDebugTools ? !!registryDebugTools.checked : false
         };
@@ -6595,6 +6712,8 @@
         applyThemeAccent(data.themeAccent || DefaultSettings.themeAccent);
         applyHomeBackground(data.homeBackground || DefaultSettings.homeBackground);
         applyToolIconTheme(data.toolIconColor || DefaultSettings.toolIconColor, data.toolIconLine || DefaultSettings.toolIconLine);
+        applyHomeIconRadius(data.homeIconRadius || DefaultSettings.homeIconRadius);
+        applyHomeDragShadowIntensity(typeof data.homeDragShadowIntensity !== "undefined" ? data.homeDragShadowIntensity : DefaultSettings.homeDragShadowIntensity);
     }
 
     function loadPersistentState() {
@@ -6812,12 +6931,19 @@
         setupUiScale();
         renderSettingsLanguage();
         renderSettingsDeveloperMode();
+        setupHomeIconRadius();
+        setupHomeDragShadowIntensity();
         loadPersistentState();
         setupLanguageSelector();
         setupCollapsibleSettings();
         BackgroundEngine.init();
         setupCustomSelectInputs();
         HomeLayoutManager.init();
+        if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.initialize === "function") {
+            window.ProceduralHomeIcons.initialize({
+                root: byId("toolGrid")
+            });
+        }
         configureToolDetail(activeToolId);
         refreshLanguage();
 

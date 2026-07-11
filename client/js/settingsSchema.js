@@ -53,6 +53,38 @@
                             "Must not be implemented as a shapeAddProbe-specific condition.",
                             "Disabling Developer Mode must not corrupt saved Home tool order."
                         ]
+                    },
+                    {
+                        key: "homeIconRadius",
+                        type: "range",
+                        labelKey: "label.homeIconRadius",
+                        descriptionKey: "helper.homeIconRadius",
+                        defaultValue: 25.5,
+                        min: 18,
+                        max: 40,
+                        step: 0.5,
+                        developerOnly: true,
+                        rules: [
+                            "Controls the shared proportional radius token for Home procedural tool icons.",
+                            "Visible only when Developer Mode is enabled.",
+                            "Default preserves the current Home icon geometry."
+                        ]
+                    },
+                    {
+                        key: "homeDragShadowIntensity",
+                        type: "range",
+                        labelKey: "label.homeDragShadowIntensity",
+                        descriptionKey: "helper.homeDragShadowIntensity",
+                        defaultValue: 1,
+                        min: 0,
+                        max: 1.5,
+                        step: 0.05,
+                        developerOnly: true,
+                        rules: [
+                            "Controls the Home edit drag shadow intensity.",
+                            "Visible only when Developer Mode is enabled.",
+                            "Default preserves the current drag shadow."
+                        ]
                     }
                 ]
             },

@@ -21,16 +21,19 @@ Implemented scope:
 - Recipe cache capped at 128 LRU entries; raster cache capped at 24 LRU entries.
 - Debug cache API: `ProceduralAppearance.clearCache()` and `ProceduralAppearance.getCacheStats()`.
 - DPR-aware internal raster rendering with render scale clamped to the range 1-2.
+- Colorful production Home tool icon wiring in `client/js/proceduralHomeIcons.js`.
+- Home icon identity is based only on stable tool id / `data-tool`.
 
 The Lab is intentionally isolated:
 
-- It does not replace Home tool icons.
+- It remains the experimentation surface even though Colorful procedural Home icons are now wired to production Home cards.
 - It does not replace the existing BackgroundEngine.
 - It does not modify Settings behavior.
 - It does not modify color picker / eyedropper behavior.
 - It does not modify Ad Component Kit or Shape Add.
 - Preview contract work does not modify the procedural generation algorithm, engine version, seed hashing, palette mapping, warp, ribbon, grain/noise, or deterministic snapshot behavior.
 - Cache and DPR work does not modify recipe fields, seed identity, palette mapping, warp, ribbon, grain/noise, or deterministic snapshot behavior.
+- Home icon wiring does not modify the procedural generation algorithm, `engineVersion`, seed hashing, palette mapping, warp, ribbon, grain/noise, or deterministic snapshot behavior.
 
 ## Goal
 
@@ -295,9 +298,10 @@ Recommended branch split:
    - Render icons in a small isolated preview path or Developer Mode lab first.
 
 3. `feat/procedural-home-icons`
-   - Connect generated icons to Home tool cards.
+   - Connect Colorful generated icons to Home tool cards.
    - Preserve existing icon text / fallback path.
    - Keep tool id based identity stable.
+   - Do not implement theme-mapped recolor or production procedural background.
 
 4. `feat/procedural-icon-theme-map`
    - Add optional theme-mapped recolor mode.

@@ -109,6 +109,7 @@ function checkRequiredEntrypoints() {
         "client/js/proceduralCache.js",
         "client/js/proceduralAppearance.js",
         "client/js/proceduralPreviewContract.js",
+        "client/js/proceduralHomeIcons.js",
         "host/index.jsx"
     ].forEach((file) => {
         check("Required entry exists: " + file, exists(file), file + " is required.");
@@ -178,6 +179,7 @@ function checkIndexHtml() {
         "js/proceduralCache.js",
         "js/proceduralAppearance.js",
         "js/proceduralPreviewContract.js",
+        "js/proceduralHomeIcons.js",
         "js/main.js"
     ];
     expected.forEach((item) => {

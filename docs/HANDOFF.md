@@ -337,6 +337,7 @@ Current Phase 1 files:
 
 - `client/js/proceduralAppearance.js`
 - `client/js/proceduralPreviewContract.js`
+- `client/js/proceduralHomeIcons.js`
 - `host/tools/proceduralAppearanceLab.tool.jsx`
 - `client/js/main.js` generic `proceduralPreview` registry field support
 - `docs/design/procedural-appearance.md`
@@ -350,6 +351,14 @@ Procedural preview contract:
 - Preview boundary failures use fallback UI rather than uncaught exceptions. Missing engine, missing canvas, invalid target/seed, and render exceptions should remain contained at the renderer boundary.
 - Preview layout and fallback styling belong in generic registry/procedural preview CSS, not inline renderer styles.
 - Do not change `client/js/proceduralAppearance.js`, engine version, seed hashing, palette, warp, ribbon, grain/noise, or deterministic snapshots during preview contract work.
+
+Procedural Home icon wiring:
+
+- Colorful Home icons are rendered by `client/js/proceduralHomeIcons.js`.
+- The only seed source is the stable tool id from `data-tool`; do not use title text, current language, Home order, DOM index, Developer Mode state, theme color, or Settings values.
+- Static Home anchors and dynamic registry tools must pass through the same controller path and dedupe by tool id.
+- Existing glyph/text icons are fallback only. Successful procedural canvas rendering should cover the rounded-square icon area and hide the fallback visually.
+- Theme-mapped recolor and procedural background production wiring are not implemented yet.
 
 Suggested branch sequence:
 

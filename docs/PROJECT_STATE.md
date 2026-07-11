@@ -41,16 +41,19 @@ Current 0.2.5 procedural appearance status:
 - Generic registry preview field: `proceduralPreview` in `client/js/main.js`.
 - Preview contract helper: `client/js/proceduralPreviewContract.js`.
 - Cache/DPR helper: `client/js/proceduralCache.js`.
+- Home icon controller: `client/js/proceduralHomeIcons.js`.
 - Scope remains deterministic procedural tool icons, optional theme-mapped recolor, and procedural background MVP.
 - Default icon mode: colorful seed-based icons generated from stable tool ids.
 - Theme changes must not regenerate icon identity.
-- Current Lab does not replace production Home icons or the current BackgroundEngine.
+- Colorful procedural icons are wired to production Home cards on the 0.2.5 development line. Stable `data-tool` / tool id is the only icon seed source.
+- The current BackgroundEngine is not replaced, and procedural background production wiring is still future work.
 - Procedural Appearance Phase 1 Lab has entered `dev`; 0.2.5 is no longer documentation-only planning.
 - The registry preview contract is explicit: tools declare the preview engine, target field, seed field, and parameter keys instead of relying on hard-coded `target` / `seed` names or passing all registry values into the renderer.
 - Procedural preview refreshes are dependency-scoped, batched per animation frame, cleaned up on tool/detail shutdown, and use safe fallback UI for missing engines, invalid input, or canvas/render failures.
 - Procedural Appearance recipe cache is bounded with a 128-entry LRU; raster cache remains bounded at 24 entries.
 - ProceduralAppearance exposes `clearCache()` and `getCacheStats()` for debug visibility without exposing mutable cache internals or writing cache state to storage.
 - Render scale is derived from device pixel ratio with `clamp(DPR, 1, 2)`. DPR affects output raster resolution only, not recipe identity or cache keys.
+- Home icon rendering is batched and uses existing ProceduralAppearance recipe/raster cache behavior; Home order, language, theme, and Developer Mode do not change icon identity.
 - Eyedropper overlay lifecycle limitations remain known limitations and are not part of this workstream.
 
 Confirmed entry points:
@@ -565,13 +568,14 @@ engineVersion + target + seed + normalizedParams
 
 Current boundaries:
 
-- The Lab does not replace formal Home icons.
+- Colorful procedural Home icons are connected through `client/js/proceduralHomeIcons.js`.
 - The Lab does not replace the existing BackgroundEngine.
 - Tool icon previews do not overlay letters or abbreviations.
 - Background target previews can use a manual seed.
 - The Lab preview renderer does not pass unrelated UI, language, or state fields to the procedural engine.
 - The preview contract and fallback work did not modify `client/js/proceduralAppearance.js`, the engine version, seed hashing, palette/warp/ribbon/grain/noise logic, or deterministic snapshots.
 - Cache/DPR work preserves the procedural visual algorithm and deterministic recipe snapshots. It does not connect generated previews to production Home icons or replace `BackgroundEngine`.
+- Home icon wiring reuses the existing engine without changing recipe fields, `engineVersion`, seed hashing, palette, warp, ribbon, grain/noise, or deterministic snapshots. It does not implement theme-mapped recolor or procedural background production mode.
 
 Suggested implementation branches:
 
