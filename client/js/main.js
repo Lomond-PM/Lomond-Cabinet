@@ -56,6 +56,7 @@
     var panelShuttingDown = false;
     var panelSuspended = false;
     var selectionPollTimer = null;
+    var ThemeSettingsStoreListener = null;
     var DefaultSettings = {
         motionSpeed: 1,
         uiScale: 0.92,
@@ -63,6 +64,9 @@
         homeBackground: "#050403",
         toolIconColor: "#15120c",
         toolIconLine: "#fff0be",
+        proceduralIconMode: "colorful",
+        toolIconDarkSourceMode: "manualEndpoints",
+        toolIconDarkPaletteId: "",
         homeIconRadius: 25.5,
         homeDragShadowIntensity: 1,
         autoStatus: true,
@@ -1371,27 +1375,63 @@
         };
     }
 
-    function createSharedSettingsSelect(id, field, selectedValue) {
-        var select = document.createElement("select");
+    function getProceduralPaletteOptions() {
+        var store = window.ProceduralPaletteStore;
+        var palettes;
+        if (!store || typeof store.listResolvedPalettes !== "function") {
+            return [{ value: "", labelKey: "settings.palette.none" }];
+        }
+        try {
+            palettes = store.listResolvedPalettes(false) || [];
+        } catch (error) {
+            return [{ value: "", labelKey: "settings.palette.none" }];
+        }
+        palettes = palettes.map(function (palette) {
+            return {
+                value: palette.id,
+                labelText: palette.displayName || palette.id
+            };
+        });
+        return palettes.length ? palettes : [{ value: "", labelKey: "settings.palette.none" }];
+    }
+
+    function getSettingsFieldOptions(field) {
+        if (field && field.optionsProvider === "proceduralPalettes") {
+            return getProceduralPaletteOptions();
+        }
+        return field && field.options ? field.options : [];
+    }
+
+    function appendSettingsSelectOptions(select, field, selectedValue) {
+        var options = getSettingsFieldOptions(field);
         var option;
         var i;
-
-        select.id = id;
-        select.className = "select-input settings-select";
-        for (i = 0; field.options && i < field.options.length; i++) {
+        select.innerHTML = "";
+        for (i = 0; i < options.length; i++) {
             option = document.createElement("option");
-            option.value = field.options[i].value;
-            if (field.options[i].labelKey) {
-                option.setAttribute("data-i18n", field.options[i].labelKey);
-                option.textContent = tr(field.options[i].labelKey);
+            option.value = options[i].value;
+            if (options[i].labelKey) {
+                option.setAttribute("data-i18n", options[i].labelKey);
+                option.textContent = tr(options[i].labelKey);
             } else {
-                option.textContent = field.options[i].value === "zh-CN" ? "\u7b80\u4f53\u4e2d\u6587" : "English";
+                option.textContent = options[i].labelText || (options[i].value === "zh-CN" ? "\u7b80\u4f53\u4e2d\u6587" : (options[i].value === "en" ? "English" : options[i].value));
             }
-            if (field.options[i].value === selectedValue) {
+            if (options[i].value === selectedValue) {
                 option.selected = true;
             }
             select.appendChild(option);
         }
+        if (!select.value && options.length) {
+            select.value = options[0].value;
+        }
+    }
+
+    function createSharedSettingsSelect(id, field, selectedValue) {
+        var select = document.createElement("select");
+
+        select.id = id;
+        select.className = "select-input settings-select";
+        appendSettingsSelectOptions(select, field, selectedValue);
         return select;
     }
 
@@ -1682,15 +1722,532 @@
         }
     }
 
+    function settingsVisibleWhenMatches(rule) {
+        var input;
+        var value;
+        var i;
+        if (!rule) {
+            return true;
+        }
+        if (rule.all instanceof Array) {
+            for (i = 0; i < rule.all.length; i++) {
+                if (!settingsVisibleWhenMatches(rule.all[i])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        if (rule.any instanceof Array) {
+            for (i = 0; i < rule.any.length; i++) {
+                if (settingsVisibleWhenMatches(rule.any[i])) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (!rule.key) {
+            return true;
+        }
+        input = byId(rule.key);
+        if (!input) {
+            return false;
+        }
+        value = input.type === "checkbox" ? !!input.checked : input.value;
+        if (typeof rule.equals !== "undefined") {
+            return String(value) === String(rule.equals);
+        }
+        if (rule["in"] instanceof Array) {
+            return rule["in"].indexOf(value) !== -1;
+        }
+        return true;
+    }
+
+    function applySettingsVisibilityMetadata(element, rule) {
+        if (!element || !rule || (!rule.key && !(rule.all instanceof Array) && !(rule.any instanceof Array))) {
+            return;
+        }
+        if (rule.key) {
+            element.setAttribute("data-settings-visible-key", rule.key);
+        }
+        if (rule.key && typeof rule.equals !== "undefined") {
+            element.setAttribute("data-settings-visible-equals", rule.equals);
+        }
+        if (rule.all instanceof Array || rule.any instanceof Array) {
+            element.setAttribute("data-settings-visible-rule", JSON.stringify(rule));
+        }
+    }
+
+    function applySettingsOpenMetadata(element, rule) {
+        if (!element || !rule || !rule.key) {
+            return;
+        }
+        element.setAttribute("data-settings-open-key", rule.key);
+        if (typeof rule.equals !== "undefined") {
+            element.setAttribute("data-settings-open-equals", rule.equals);
+        }
+    }
+
+    function refreshSettingsThemeVisibility() {
+        var nodes = document.querySelectorAll("[data-settings-visible-key], [data-settings-visible-rule]");
+        var i;
+        var rule;
+        var input;
+        var value;
+        var equals;
+        var visible;
+        for (i = 0; i < nodes.length; i++) {
+            rule = null;
+            if (nodes[i].getAttribute("data-settings-visible-rule")) {
+                try {
+                    rule = JSON.parse(nodes[i].getAttribute("data-settings-visible-rule"));
+                } catch (error) {
+                    rule = null;
+                }
+            }
+            if (rule) {
+                visible = settingsVisibleWhenMatches(rule);
+            } else {
+                input = byId(nodes[i].getAttribute("data-settings-visible-key"));
+                value = input ? (input.type === "checkbox" ? !!input.checked : input.value) : "";
+                equals = nodes[i].getAttribute("data-settings-visible-equals");
+                visible = equals === null || String(value) === String(equals);
+            }
+            nodes[i].hidden = !visible;
+            nodes[i].classList.toggle("is-settings-condition-hidden", !visible);
+        }
+        nodes = document.querySelectorAll("[data-settings-open-key]");
+        for (i = 0; i < nodes.length; i++) {
+            input = byId(nodes[i].getAttribute("data-settings-open-key"));
+            value = input ? input.value : "";
+            equals = nodes[i].getAttribute("data-settings-open-equals");
+            if (equals !== null) {
+                setSettingsThemeGroupOpen(nodes[i], String(value) === String(equals));
+            }
+        }
+    }
+
+    function handleSettingsFieldChange(fieldKey, value) {
+        if (fieldKey === "proceduralIconMode") {
+            applyProceduralIconMode(value);
+            refreshSettingsThemePresentation();
+            saveSettings();
+        } else if (fieldKey === "toolIconDarkSourceMode") {
+            applyProceduralIconDarkSourceMode(value);
+            saveSettings();
+        } else if (fieldKey === "toolIconDarkPaletteId") {
+            applyProceduralIconDarkPaletteId(value, { suggestThemeAccent: true });
+            saveSettings();
+        }
+    }
+
+    function createSettingsThemeField(field) {
+        var fieldRow;
+        var controls;
+        var select;
+        if (!field || !field.key) {
+            return null;
+        }
+        if (field.type === "select") {
+            fieldRow = createSharedSettingsFieldRow("select", field, field.key === "proceduralIconMode" ? "" : field.descriptionKey, "");
+            select = createSharedSettingsSelect(field.key, field, field.defaultValue);
+            fieldRow.row.removeChild(fieldRow.controls);
+            fieldRow.row.appendChild(select);
+            select.addEventListener("change", function () {
+                handleSettingsFieldChange(field.key, this.value);
+            });
+        } else if (field.type === "color") {
+            fieldRow = createSharedSettingsFieldRow("color", field, field.descriptionKey, "");
+            controls = createSharedSettingsColorControl(field, field.key, "#ffffff", "theme-color-shell");
+            fieldRow.row.removeChild(fieldRow.controls);
+            fieldRow.row.appendChild(controls);
+        } else {
+            return null;
+        }
+        fieldRow.row.setAttribute("data-settings-field-key", field.key);
+        applySettingsVisibilityMetadata(fieldRow.row, field.visibleWhen);
+        return fieldRow.row;
+    }
+
+    function setSettingsThemeGroupOpen(root, open) {
+        var toggle;
+        if (!root) {
+            return;
+        }
+        root.classList.toggle("is-collapsed", !open);
+        toggle = root.querySelector(".settings-theme-group-title");
+        if (toggle) {
+            toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        }
+    }
+
+    function createSettingsThemeGroup(group) {
+        var root = document.createElement("section");
+        var body = root;
+        var title;
+        var titleText;
+        var chevron;
+        root.className = "settings-theme-group" + (group.collapsible ? " settings-theme-group--collapsible" : "");
+        if (group.collapsible) {
+            root.className += " collapsible-card";
+        }
+        root.setAttribute("data-settings-theme-group", group.id || "");
+        applySettingsVisibilityMetadata(root, group.visibleWhen);
+        applySettingsOpenMetadata(root, group.openWhen);
+        if (group.collapsible) {
+            title = document.createElement("button");
+            title.className = "settings-theme-group-title settings-section-toggle collapsible-heading";
+            title.type = "button";
+            title.setAttribute("aria-expanded", group.defaultCollapsed === true ? "false" : "true");
+            title.setAttribute("aria-controls", "settingsThemeGroupBody-" + (group.id || "group"));
+            titleText = document.createElement("span");
+            titleText.setAttribute("data-i18n", group.titleKey || "");
+            titleText.textContent = tr(group.titleKey || "");
+            chevron = document.createElement("span");
+            chevron.className = "collapse-chevron";
+            chevron.setAttribute("aria-hidden", "true");
+            title.appendChild(titleText);
+            title.appendChild(chevron);
+            root.appendChild(title);
+            body = document.createElement("div");
+            body.className = "settings-theme-group-body";
+            body.classList.add("collapsible-body");
+            body.id = "settingsThemeGroupBody-" + (group.id || "group");
+            root.appendChild(body);
+            title.addEventListener("click", function () {
+                setSettingsThemeGroupOpen(root, root.classList.contains("is-collapsed"));
+            });
+            setSettingsThemeGroupOpen(root, group.defaultCollapsed !== true);
+        } else if (group.titleKey) {
+            title = document.createElement("h4");
+            title.className = "settings-theme-group-title";
+            title.setAttribute("data-i18n", group.titleKey);
+            title.textContent = tr(group.titleKey);
+            root.appendChild(title);
+        }
+        return { root: root, body: body };
+    }
+
+    function openPaletteWorkspaceFromSettings() {
+        var controller = initializePaletteWorkspaceController();
+        if (controller && typeof controller.open === "function") {
+            controller.open();
+        }
+    }
+
+    function getPaletteSummaryData() {
+        var store = window.ProceduralPaletteStore;
+        var palettes;
+        var exported;
+        if (!store || typeof store.listResolvedPalettes !== "function") {
+            return { builtIn: 0, custom: 0, overrides: 0, swatches: [] };
+        }
+        palettes = store.listResolvedPalettes(false);
+        exported = typeof store.exportData === "function" ? store.exportData() : {};
+        return {
+            builtIn: palettes.filter(function (palette) { return palette.isBuiltIn === true; }).length,
+            custom: palettes.filter(function (palette) { return palette.isCustom === true; }).length,
+            overrides: Object.keys(exported.toolPaletteMap || {}).length,
+            swatches: palettes.slice(0, 4).map(function (palette) { return palette.colors.base; })
+        };
+    }
+
+    function renderPaletteSummaryElement(element) {
+        var data = getPaletteSummaryData();
+        var title = document.createElement("strong");
+        var count = document.createElement("span");
+        var swatches = document.createElement("span");
+        var button = document.createElement("button");
+        var i;
+        element.innerHTML = "";
+        element.className = "settings-source-summary settings-theme-presentation";
+        title.className = "settings-source-summary-title";
+        title.textContent = tr("settings.paletteLibrary");
+        count.className = "settings-source-summary-count";
+        count.textContent = data.builtIn + " " + tr("settings.paletteSummary.builtIn") + " · " + data.custom + " " + tr("settings.paletteSummary.custom") + " · " + data.overrides + " " + tr("settings.paletteSummary.overrides");
+        swatches.className = "settings-source-summary-swatches";
+        for (i = 0; i < data.swatches.length; i++) {
+            var swatch = document.createElement("span");
+            swatch.style.backgroundColor = data.swatches[i];
+            swatch.setAttribute("aria-hidden", "true");
+            swatches.appendChild(swatch);
+        }
+        button.type = "button";
+        button.className = "panel-button settings-source-summary-action";
+        button.textContent = tr(element.getAttribute("data-settings-palette-action") || "settings.palette.manage");
+        button.addEventListener("click", openPaletteWorkspaceFromSettings);
+        element.appendChild(title);
+        element.appendChild(count);
+        element.appendChild(swatches);
+        element.appendChild(button);
+    }
+
+    function refreshSettingsPaletteSummary() {
+        var summaries = document.querySelectorAll(".settings-source-summary");
+        var i;
+        for (i = 0; i < summaries.length; i++) {
+            renderPaletteSummaryElement(summaries[i]);
+        }
+    }
+
+    function refreshSettingsPaletteOptions() {
+        var field = findSettingsSchemaField("toolIconDarkPaletteId");
+        var select = byId("toolIconDarkPaletteId");
+        var current;
+        var next;
+        if (!field || !select || field.optionsProvider !== "proceduralPalettes") {
+            return;
+        }
+        current = select.value;
+        appendSettingsSelectOptions(select, field, current);
+        next = select.value;
+        rebuildCustomSelectOptions(select);
+        syncCustomSelect(select);
+        if (next !== current) {
+            applyProceduralIconDarkPaletteId(next);
+            saveSettings();
+        }
+    }
+
+    function bindThemePaletteStore() {
+        var store = window.ProceduralPaletteStore;
+        if (!store || typeof store.subscribe !== "function" || ThemeSettingsStoreListener) {
+            return;
+        }
+        ThemeSettingsStoreListener = function () {
+            if (!panelShuttingDown) {
+                refreshSettingsPaletteOptions();
+                refreshSettingsPaletteSummary();
+                updateProceduralHomeIconAppearance();
+                refreshSettingsThemePresentation();
+            }
+        };
+        store.subscribe(ThemeSettingsStoreListener);
+    }
+
+    function unbindThemePaletteStore() {
+        var store = window.ProceduralPaletteStore;
+        if (store && ThemeSettingsStoreListener && typeof store.unsubscribe === "function") {
+            store.unsubscribe(ThemeSettingsStoreListener);
+        }
+        ThemeSettingsStoreListener = null;
+    }
+
+    function getResolvedProceduralPalette(paletteId) {
+        var store = window.ProceduralPaletteStore;
+        var palettes;
+        var i;
+        if (!store) {
+            return null;
+        }
+        if (typeof store.getResolvedPalette === "function") {
+            try {
+                return store.getResolvedPalette(paletteId);
+            } catch (error) {
+            }
+        }
+        if (typeof store.listResolvedPalettes !== "function") {
+            return null;
+        }
+        try {
+            palettes = store.listResolvedPalettes(false) || [];
+        } catch (error) {
+            return null;
+        }
+        for (i = 0; i < palettes.length; i++) {
+            if (palettes[i] && palettes[i].id === paletteId) {
+                return palettes[i];
+            }
+        }
+        return null;
+    }
+
+    function normalizeToolIconDarkSourceMode(value) {
+        if (value === "manualEndpoints" || value === "custom") {
+            return "manualEndpoints";
+        }
+        if (value === "paletteScale" || value === "paletteBase") {
+            return "paletteScale";
+        }
+        return "manualEndpoints";
+    }
+
+    function resolveProceduralPaletteScaleColors() {
+        var paletteInput = byId("toolIconDarkPaletteId");
+        var palette = getResolvedProceduralPalette(paletteInput ? paletteInput.value : DefaultSettings.toolIconDarkPaletteId);
+        var themeMap = window.ProceduralThemeMap;
+        if (themeMap && typeof themeMap.derivePaletteScaleColors === "function" && palette) {
+            return themeMap.derivePaletteScaleColors(palette);
+        }
+        return null;
+    }
+
+    function resolveProceduralThemeColors() {
+        var customInput = byId("toolIconColor");
+        var sourceInput = byId("toolIconDarkSourceMode");
+        var lightInput = byId("toolIconLine");
+        var customColor = normalizeHex(customInput ? customInput.value : DefaultSettings.toolIconColor, DefaultSettings.toolIconColor);
+        var sourceMode = normalizeToolIconDarkSourceMode(sourceInput ? sourceInput.value : DefaultSettings.toolIconDarkSourceMode);
+        var lightColor = normalizeHex(lightInput ? lightInput.value : DefaultSettings.toolIconLine, DefaultSettings.toolIconLine);
+        var paletteColors;
+        if (sourceMode === "paletteScale") {
+            paletteColors = resolveProceduralPaletteScaleColors();
+            if (paletteColors) {
+                return paletteColors;
+            }
+        }
+        return { dark: customColor, mid: "", light: lightColor };
+    }
+
+    function resolveProceduralDarkColor() {
+        return resolveProceduralThemeColors().dark;
+    }
+
+    function applyProceduralIconDarkSourceMode(value) {
+        var mode = normalizeToolIconDarkSourceMode(value);
+        var select = byId("toolIconDarkSourceMode");
+        if (select) {
+            select.value = mode;
+            syncCustomSelect(select);
+        }
+        updateProceduralHomeIconAppearance();
+        refreshSettingsThemePresentation();
+    }
+
+    function applyProceduralIconDarkPaletteId(value) {
+        var options = getProceduralPaletteOptions();
+        var selected = String(value || "");
+        var select = byId("toolIconDarkPaletteId");
+        var i;
+        var valid = false;
+        for (i = 0; i < options.length; i++) {
+            if (options[i].value === selected) {
+                valid = true;
+                break;
+            }
+        }
+        if (!valid) {
+            selected = options.length ? options[0].value : "";
+        }
+        if (select) {
+            select.value = selected;
+            syncCustomSelect(select);
+        }
+        if (arguments.length > 1 && arguments[1] && arguments[1].suggestThemeAccent) {
+            suggestThemeAccentFromPalette(selected);
+        }
+        updateProceduralHomeIconAppearance();
+        refreshSettingsThemePresentation();
+    }
+
+    function suggestThemeAccentFromPalette(paletteId) {
+        var palette = getResolvedProceduralPalette(paletteId);
+        if (!palette || !palette.colors || !palette.colors.secondary) {
+            return;
+        }
+        applyThemeAccent(palette.colors.secondary);
+        setStatus(tr("status.paletteAccentSuggested"));
+    }
+
+    function renderSettingsColorRamp(element) {
+        var dark = byId("toolIconColor");
+        var light = byId("toolIconLine");
+        var ramp = element.querySelector(".settings-color-ramp");
+        if (!ramp || !dark || !light) {
+            return;
+        }
+        var colors = resolveProceduralThemeColors();
+        var midLabel = element.querySelector(".settings-color-ramp-label-mid");
+        element.classList.toggle("is-three-stop", !!colors.mid);
+        ramp.style.setProperty("--settings-ramp-dark", colors.dark);
+        ramp.style.setProperty("--settings-ramp-mid", colors.mid || colors.dark);
+        ramp.style.setProperty("--settings-ramp-light", colors.light);
+        if (midLabel) {
+            midLabel.hidden = !colors.mid;
+        }
+    }
+
+    function refreshSettingsColorRamps() {
+        var ramps = document.querySelectorAll("[data-settings-presentation='colorRampPreview']");
+        var i;
+        for (i = 0; i < ramps.length; i++) {
+            renderSettingsColorRamp(ramps[i]);
+        }
+    }
+
+    function refreshSettingsThemePresentation() {
+        refreshSettingsThemeVisibility();
+        refreshSettingsColorRamps();
+        refreshSettingsPaletteSummary();
+    }
+
+    function createSettingsThemePresentation(presentation) {
+        var element = document.createElement("div");
+        var label;
+        var rampShell;
+        var ramp;
+        var darkLabel;
+        var midLabel;
+        var lightLabel;
+        element.className = "settings-theme-presentation";
+        element.setAttribute("data-settings-presentation", presentation.type);
+        applySettingsVisibilityMetadata(element, presentation.visibleWhen);
+        if (presentation.type === "note") {
+            element.classList.add("settings-theme-note");
+            element.setAttribute("data-i18n", presentation.textKey || "");
+            element.textContent = tr(presentation.textKey);
+        } else if (presentation.type === "colorRampPreview") {
+            element.classList.add("settings-color-ramp-preview");
+            label = document.createElement("span");
+            label.className = "settings-presentation-label";
+            label.setAttribute("data-i18n", "settings.theme.colorRamp");
+            label.textContent = tr("settings.theme.colorRamp");
+            rampShell = document.createElement("span");
+            rampShell.className = "settings-color-ramp-shell";
+            ramp = document.createElement("span");
+            ramp.className = "settings-color-ramp";
+            ramp.setAttribute("role", "img");
+            ramp.setAttribute("data-i18n-aria-label", "settings.theme.colorRamp");
+            ramp.setAttribute("aria-label", tr("settings.theme.colorRamp"));
+            rampShell.appendChild(ramp);
+            darkLabel = document.createElement("small");
+            darkLabel.className = "settings-color-ramp-label-dark";
+            darkLabel.setAttribute("data-i18n", "settings.theme.darkEndpoint");
+            darkLabel.textContent = tr("settings.theme.darkEndpoint");
+            midLabel = document.createElement("small");
+            midLabel.className = "settings-color-ramp-label-mid";
+            midLabel.setAttribute("data-i18n", "settings.theme.midEndpoint");
+            midLabel.textContent = tr("settings.theme.midEndpoint");
+            lightLabel = document.createElement("small");
+            lightLabel.className = "settings-color-ramp-label-light";
+            lightLabel.setAttribute("data-i18n", "settings.theme.lightEndpoint");
+            lightLabel.textContent = tr("settings.theme.lightEndpoint");
+            element.appendChild(label);
+            element.appendChild(darkLabel);
+            element.appendChild(midLabel);
+            element.appendChild(rampShell);
+            element.appendChild(lightLabel);
+            renderSettingsColorRamp(element);
+        } else if (presentation.type === "paletteSummary") {
+            element.setAttribute("data-settings-palette-action", presentation.actionKey || "settings.palette.manage");
+            renderPaletteSummaryElement(element);
+        }
+        return element;
+    }
+
     function renderSettingsTheme() {
         var mount = byId("settingsThemeMount");
         var section = findSettingsSchemaSection("theme");
         var heading;
         var fields;
         var field;
-        var fieldRow;
-        var controls;
+        var fieldMap = {};
+        var groups;
+        var groupView;
+        var group;
+        var fieldElement;
+        var presentationElement;
         var i;
+        var j;
 
         if (!mount || !section) {
             return;
@@ -1704,16 +2261,28 @@
 
         fields = section.fields || [];
         for (i = 0; i < fields.length; i++) {
-            field = fields[i];
-            if (!field || field.type !== "color" || !field.key) {
-                continue;
+            if (fields[i] && fields[i].key) {
+                fieldMap[fields[i].key] = fields[i];
             }
-            fieldRow = createSharedSettingsFieldRow("color", field, field.descriptionKey, "");
-            controls = createSharedSettingsColorControl(field, field.key, "#ffffff", "theme-color-shell");
-            fieldRow.row.removeChild(fieldRow.controls);
-            fieldRow.row.appendChild(controls);
-            mount.appendChild(fieldRow.row);
         }
+        groups = section.groups || [{ id: "theme", fields: fields.map(function (item) { return item.key; }) }];
+        for (i = 0; i < groups.length; i++) {
+            group = groups[i];
+            groupView = createSettingsThemeGroup(group);
+            for (j = 0; j < (group.fields || []).length; j++) {
+                field = fieldMap[group.fields[j]] || group.fields[j];
+                fieldElement = createSettingsThemeField(field);
+                if (fieldElement) {
+                    groupView.body.appendChild(fieldElement);
+                }
+            }
+            for (j = 0; j < (group.presentations || []).length; j++) {
+                presentationElement = createSettingsThemePresentation(group.presentations[j]);
+                groupView.body.appendChild(presentationElement);
+            }
+            mount.appendChild(groupView.root);
+        }
+        refreshSettingsThemePresentation();
     }
 
     function refreshPaletteDrivenHomeIcons() {
@@ -5502,6 +6071,7 @@
         }
         syncAllCustomSelects();
         refreshPaletteWorkspaceI18n();
+        refreshSettingsThemePresentation();
     }
 
     function setupLanguageSelector() {
@@ -6166,6 +6736,40 @@
         root.style.setProperty("--tool-icon-fill", rgba(line, 0.13));
         setColorValue("toolIconColor", icon);
         setColorValue("toolIconLine", line);
+        updateProceduralHomeIconAppearance();
+        refreshSettingsThemePresentation();
+    }
+
+    function normalizeProceduralIconMode(value) {
+        return window.ProceduralThemeMap && typeof window.ProceduralThemeMap.normalizeMode === "function"
+            ? window.ProceduralThemeMap.normalizeMode(value)
+            : (value === "themeMapped" ? "themeMapped" : "colorful");
+    }
+
+    function updateProceduralHomeIconAppearance() {
+        var controller = window.ProceduralHomeIcons;
+        var modeSelect = byId("proceduralIconMode");
+        var colors = resolveProceduralThemeColors();
+        if (!controller || typeof controller.updateAppearance !== "function") {
+            return;
+        }
+        controller.updateAppearance({
+            mode: normalizeProceduralIconMode(modeSelect ? modeSelect.value : DefaultSettings.proceduralIconMode),
+            darkColor: colors.dark,
+            midColor: colors.mid,
+            lightColor: colors.light
+        });
+    }
+
+    function applyProceduralIconMode(value) {
+        var mode = normalizeProceduralIconMode(value);
+        var select = byId("proceduralIconMode");
+        if (select) {
+            select.value = mode;
+            syncCustomSelect(select);
+        }
+        updateProceduralHomeIconAppearance();
+        refreshSettingsThemePresentation();
     }
 
     function applyHomeIconRadius(value) {
@@ -6399,6 +7003,7 @@
         if (window.ProceduralPaletteStore && typeof window.ProceduralPaletteStore.flush === "function") {
             window.ProceduralPaletteStore.flush();
         }
+        unbindThemePaletteStore();
         teardownPaletteWorkspace();
         if (statusTimer) {
             window.clearTimeout(statusTimer);
@@ -6489,6 +7094,42 @@
             return tr(option.getAttribute("data-i18n"));
         }
         return option.textContent;
+    }
+
+    function rebuildCustomSelectOptions(select) {
+        var control;
+        var menu;
+        var optionButton;
+        var options;
+        var i;
+
+        if (!select) {
+            return;
+        }
+        control = select.getAttribute("data-custom-select-id");
+        control = control ? document.querySelector('.custom-select[data-select-for="' + control + '"]') : null;
+        menu = getCustomSelectMenu(control);
+        if (!menu) {
+            return;
+        }
+        menu.innerHTML = "";
+        options = select.options || [];
+        for (i = 0; i < options.length; i++) {
+            optionButton = document.createElement("button");
+            optionButton.type = "button";
+            optionButton.className = "select-option";
+            optionButton.setAttribute("role", "option");
+            optionButton.setAttribute("data-value", options[i].value);
+            if (options[i].getAttribute("data-i18n")) {
+                optionButton.setAttribute("data-option-i18n", options[i].getAttribute("data-i18n"));
+            }
+            optionButton.textContent = getSelectOptionLabel(options[i]);
+            optionButton.addEventListener("click", function () {
+                setNativeSelectValue(select, this.getAttribute("data-value"), true);
+                closeCustomSelectMenus();
+            });
+            menu.appendChild(optionButton);
+        }
     }
 
     function syncCustomSelect(select) {
@@ -6595,26 +7236,9 @@
         menu.setAttribute("role", "listbox");
         menu.setAttribute("data-select-menu-for", selectId);
 
-        for (i = 0; i < select.options.length; i++) {
-            option = select.options[i];
-            optionButton = document.createElement("button");
-            optionButton.type = "button";
-            optionButton.className = "select-option";
-            optionButton.setAttribute("role", "option");
-            optionButton.setAttribute("data-value", option.value);
-            if (option.getAttribute("data-i18n")) {
-                optionButton.setAttribute("data-option-i18n", option.getAttribute("data-i18n"));
-            }
-            optionButton.textContent = getSelectOptionLabel(option);
-            optionButton.addEventListener("click", function () {
-                setNativeSelectValue(select, this.getAttribute("data-value"), true);
-                closeCustomSelectMenus();
-            });
-            menu.appendChild(optionButton);
-        }
-
         document.body.appendChild(menu);
         select.parentNode.insertBefore(control, select.nextSibling);
+        rebuildCustomSelectOptions(select);
 
         trigger.addEventListener("click", function (event) {
             event.preventDefault();
@@ -6671,6 +7295,7 @@
 
     function setupCustomSelectInputs() {
         var selects = document.querySelectorAll("select.select-input");
+        var settingsContent;
         var i;
         for (i = 0; i < selects.length; i++) {
             createCustomSelect(selects[i], i);
@@ -6685,6 +7310,12 @@
             window.addEventListener("resize", function () {
                 closeCustomSelectMenus();
             });
+            settingsContent = document.querySelector(".settings-content");
+            if (settingsContent) {
+                settingsContent.addEventListener("scroll", function () {
+                    closeCustomSelectMenus();
+                });
+            }
         }
         bindPanelLifecycle();
     }
@@ -6834,6 +7465,9 @@
             homeBackground: normalizeHex(byId("homeBackground").value, DefaultSettings.homeBackground),
             toolIconColor: normalizeHex(byId("toolIconColor").value, DefaultSettings.toolIconColor),
             toolIconLine: normalizeHex(byId("toolIconLine").value, DefaultSettings.toolIconLine),
+            proceduralIconMode: normalizeProceduralIconMode(byId("proceduralIconMode") ? byId("proceduralIconMode").value : DefaultSettings.proceduralIconMode),
+            toolIconDarkSourceMode: normalizeToolIconDarkSourceMode(byId("toolIconDarkSourceMode") ? byId("toolIconDarkSourceMode").value : DefaultSettings.toolIconDarkSourceMode),
+            toolIconDarkPaletteId: byId("toolIconDarkPaletteId") ? String(byId("toolIconDarkPaletteId").value || "") : DefaultSettings.toolIconDarkPaletteId,
             homeIconRadius: byId("homeIconRadiusNumber") ? clampNumber(byId("homeIconRadiusNumber").value, DefaultSettings.homeIconRadius, 18, 40) : DefaultSettings.homeIconRadius,
             homeDragShadowIntensity: byId("homeDragShadowIntensityNumber") ? clampNumber(byId("homeDragShadowIntensityNumber").value, DefaultSettings.homeDragShadowIntensity, 0, 1.5) : DefaultSettings.homeDragShadowIntensity,
             autoStatus: autoStatus ? !!autoStatus.checked : true,
@@ -6859,6 +7493,9 @@
         applyThemeAccent(data.themeAccent || DefaultSettings.themeAccent);
         applyHomeBackground(data.homeBackground || DefaultSettings.homeBackground);
         applyToolIconTheme(data.toolIconColor || DefaultSettings.toolIconColor, data.toolIconLine || DefaultSettings.toolIconLine);
+        applyProceduralIconDarkSourceMode(data.toolIconDarkSourceMode || DefaultSettings.toolIconDarkSourceMode);
+        applyProceduralIconDarkPaletteId(data.toolIconDarkPaletteId || DefaultSettings.toolIconDarkPaletteId);
+        applyProceduralIconMode(data.proceduralIconMode || DefaultSettings.proceduralIconMode);
         applyHomeIconRadius(data.homeIconRadius || DefaultSettings.homeIconRadius);
         applyHomeDragShadowIntensity(typeof data.homeDragShadowIntensity !== "undefined" ? data.homeDragShadowIntensity : DefaultSettings.homeDragShadowIntensity);
     }
@@ -7077,6 +7714,7 @@
                 library: window.ProceduralPaletteLibrary
             });
         }
+        bindThemePaletteStore();
         renderSettingsContent();
         renderSettingsTheme();
         renderPaletteLibrarySettings();

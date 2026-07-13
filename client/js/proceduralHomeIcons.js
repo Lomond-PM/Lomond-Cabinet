@@ -45,7 +45,12 @@
         resizeRafId: null,
         batchSize: DEFAULT_BATCH_SIZE,
         shuttingDown: false,
-        generatedCount: 0
+        generatedCount: 0,
+        appearance: {
+            mode: "colorful",
+            darkColor: "#15120c",
+            lightColor: "#fff0be"
+        }
     };
     var storeSubscriptionBound = false;
 
@@ -117,11 +122,68 @@
         return copy;
     }
 
-    function invalidateRendered() {
-        state.rendered = {};
-        if (root && root.ProceduralAppearance && typeof root.ProceduralAppearance.clearCache === "function") {
-            root.ProceduralAppearance.clearCache();
+    function getThemeMap() {
+        return root && root.ProceduralThemeMap;
+    }
+
+    function normalizeAppearance(next) {
+        var themeMap = getThemeMap();
+        var input = next || {};
+        var mode = themeMap && typeof themeMap.normalizeMode === "function"
+            ? themeMap.normalizeMode(input.mode)
+            : (input.mode === "themeMapped" ? "themeMapped" : "colorful");
+        var normalizeHex = themeMap && typeof themeMap.normalizeHexColor === "function"
+            ? themeMap.normalizeHexColor
+            : function (value, fallback) { return value || fallback; };
+        return {
+            mode: mode,
+            darkColor: normalizeHex(input.darkColor, "#15120c"),
+            midColor: input.midColor ? normalizeHex(input.midColor, "#15120c") : "",
+            lightColor: normalizeHex(input.lightColor, "#fff0be")
+        };
+    }
+
+    function getThemeMapSignature(appearance) {
+        var themeMap = getThemeMap();
+        if (themeMap && typeof themeMap.getThemeMapSignature === "function") {
+            return themeMap.getThemeMapSignature(appearance);
         }
+        return "theme-map-v2|" + appearance.mode + "|" + appearance.darkColor + "|" + (appearance.midColor || "") + "|" + appearance.lightColor;
+    }
+
+    function getSourceSignature(toolId, size) {
+        return [
+            "source-v1",
+            trimToolId(toolId),
+            resolveHomePaletteId(toolId),
+            size.logicalWidth,
+            size.logicalHeight,
+            size.width,
+            size.height,
+            size.ratio
+        ].join("|");
+    }
+
+    function getPresentationSignature(sourceSignature, appearance) {
+        return sourceSignature + "|presentation|" + getThemeMapSignature(appearance);
+    }
+
+    function invalidatePresentation() {
+        state.rendered = {};
+        if (state.initialized && !state.shuttingDown) {
+            refresh({ root: state.root });
+        }
+    }
+
+    function invalidateSource() {
+        state.rendered = {};
+        if (state.initialized && !state.shuttingDown) {
+            refresh({ root: state.root });
+        }
+    }
+
+    function invalidateRendered() {
+        invalidateSource();
     }
 
     function createIconInput(input) {
@@ -285,6 +347,9 @@
         var canvas;
         var ctx;
         var size;
+        var sourceSignature;
+        var presentationSignature;
+        var themeMap;
 
         if (state.shuttingDown || !id || !card || !card.parentNode) {
             return false;
@@ -309,6 +374,8 @@
         }
         try {
             size = getIconRenderSize(icon, engine);
+            sourceSignature = getSourceSignature(id, size);
+            presentationSignature = getPresentationSignature(sourceSignature, state.appearance);
             engine.render(canvas, {
                 target: ICON_TARGET,
                 seed: id,
@@ -320,8 +387,25 @@
                 clipToCanvas: false
             });
             markCanvasSize(canvas, size);
+            if (state.appearance.mode === "themeMapped") {
+                themeMap = getThemeMap();
+                if (themeMap && typeof themeMap.applyToCanvas === "function") {
+                    try {
+                        if (!themeMap.applyToCanvas(canvas, state.appearance.darkColor, state.appearance.lightColor, state.appearance.midColor)) {
+                            warnOnce("theme-map-unavailable", "Theme-mapped presentation is unavailable; keeping the Colorful source image.");
+                        }
+                    } catch (mapError) {
+                        warnOnce("theme-map-error", "Theme-mapped Home icon presentation failed; keeping the Colorful source image.", mapError);
+                    }
+                } else {
+                    warnOnce("missing-theme-map", "Theme Map is not available; keeping the Colorful source image.");
+                }
+            }
             markRendered(icon);
-            state.rendered[id] = true;
+            state.rendered[id] = {
+                sourceSignature: sourceSignature,
+                presentationSignature: presentationSignature
+            };
             state.generatedCount += 1;
             return true;
         } catch (error) {
@@ -385,7 +469,12 @@
             icon = getIconContainer(item.card);
             canvas = icon ? icon.querySelector(".procedural-home-icon-canvas") : null;
             if (canvas && isCanvasSizeCurrent(canvas, getIconRenderSize(icon, engine))) {
-                continue;
+                var size = getIconRenderSize(icon, engine);
+                var sourceSignature = getSourceSignature(item.toolId, size);
+                var presentationSignature = getPresentationSignature(sourceSignature, state.appearance);
+                if (state.rendered[item.toolId] && state.rendered[item.toolId].presentationSignature === presentationSignature) {
+                    continue;
+                }
             }
             state.queued[item.toolId] = true;
             state.queue[state.queue.length] = item;
@@ -457,6 +546,17 @@
         refresh(options);
     }
 
+    function updateAppearance(next) {
+        var normalized = normalizeAppearance(next);
+        var previous = state.appearance;
+        if (previous.mode === normalized.mode && previous.darkColor === normalized.darkColor && previous.midColor === normalized.midColor && previous.lightColor === normalized.lightColor) {
+            return false;
+        }
+        state.appearance = normalized;
+        invalidatePresentation();
+        return true;
+    }
+
     function teardown() {
         state.shuttingDown = true;
         if (state.rafId !== null) {
@@ -476,6 +576,7 @@
         state.root = null;
         state.engine = null;
         state.initialized = false;
+        state.appearance = normalizeAppearance({ mode: "colorful" });
     }
 
     function getStats() {
@@ -492,6 +593,12 @@
         resolveHomePaletteId: resolveHomePaletteId,
         getHomeIconPaletteMap: getHomeIconPaletteMap,
         invalidateRendered: invalidateRendered,
+        invalidatePresentation: invalidatePresentation,
+        invalidateSource: invalidateSource,
+        updateAppearance: updateAppearance,
+        getAppearance: function () { return normalizeAppearance(state.appearance); },
+        getSourceSignature: getSourceSignature,
+        getPresentationSignature: getPresentationSignature,
         createIconInput: createIconInput,
         getIconRenderSize: getIconRenderSize,
         setIconRenderState: setIconRenderState,

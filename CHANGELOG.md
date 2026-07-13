@@ -21,6 +21,10 @@ This project follows simple semantic versioning for development handoff:
 - Added Colorful procedural Home tool icons driven only by stable tool ids, with a dedicated Home icon controller and pure identity/queue tests.
 - Added an Apple-inspired curated procedural palette library with 8 fixed versioned palettes, stable palette signatures, and pure palette validation tests.
 - Added stable Home tool `paletteId` mapping for Colorful procedural icons while keeping icon seed identity based only on tool id.
+- Added optional Home procedural icon Theme-mapped presentation mode, using source-image luminance between the Settings tool icon base and accent colors.
+- Added a standalone deterministic Theme Map helper and tests without adding theme colors to procedural recipes or engine cache identity.
+- Added Theme Settings dark-endpoint source selection between compatible manual endpoints and a visible Palette Library scale.
+- Added Palette Scale presentation mapping from resolved `shadow` / `base` / `highlight` roles, with a one-time secondary-color suggestion for Interface Accent when a source palette is actively selected.
 - Added Procedural Appearance Lab palette selection for the fixed palette library.
 - Added a Settings Palette Library editor backed by `lomond.proceduralPaletteStore.v1` for custom palettes, built-in overrides, Home tool palette assignment, live icon/background previews, and copy/paste JSON import/export.
 - Added `scripts/test-procedural-palette-store.js` for Palette Store validation, persistence, signatures, imports, and tool mapping behavior.
@@ -40,21 +44,27 @@ This project follows simple semantic versioning for development handoff:
 - Included `paletteId` and palette signature in procedural recipe/cache identity for fixed palettes without changing seed, engine version, or geometry recipe fields.
 - Resolved procedural palettes through a Palette Store layer so factory palettes remain source-controlled defaults while user edits stay in localStorage.
 - Extracted the Settings Palette Library / Palette Workspace runtime controller from `client/js/main.js` into `client/js/proceduralPaletteWorkspace.js`, keeping Store persistence, editor draft helpers, and Workspace DOM lifecycle responsibilities separated without changing Palette Store schema or user-visible behavior.
+- Added `proceduralIconMode` to the existing Settings schema, defaulting to Colorful and persisting with the existing Settings object.
+- Added schema-driven Theme Settings groups for Interface Appearance and Tool Icon Appearance, including conditional endpoint controls, a compact luminance ramp, and a Palette Library summary entry.
+- Clarified Home Base Color as the existing `--bg-main` surface base, and refreshed Theme palette controls, dynamic source options, and shared disclosure styling.
 
 ### Fixed
 
 - Added procedural preview lifecycle cleanup for pending animation-frame renders when switching tools, closing details, or entering panel shutdown.
 - Added safe procedural preview fallback handling for missing engines, invalid schema input, unavailable canvas contexts, and render exceptions.
+- Added generic Settings visibility/open-state metadata for Theme groups and preserved Settings scroll position when returning from Palette Workspace.
+- Fixed Theme-mapped dark endpoint and ramp refreshes after Palette Store changes; the ramp now uses one clipped shell and a borderless inner gradient.
+- Fixed shared Settings custom-select overflow with constrained trigger/menu text, viewport-clamped portal menus, and scroll/close cleanup.
 
 ### Notes
 
 - The Lab does not replace production Home icons or the current BackgroundEngine.
-- Theme-mapped icon recolor and procedural background production wiring remain future work.
+- Procedural background production wiring remains future work. Theme-mapped icon recolor is now available as an optional Home presentation mode.
 - Procedural preview contract work does not change the procedural generation algorithm, engine version, seed behavior, recipe output, or deterministic snapshot expectations.
 - Procedural cache/DPR work does not change palette, warp, ribbon, grain/noise, recipe fields, seed hashing, or production Home/background wiring.
 - The curated palette library is Apple-inspired / Apple-like only; it is not an Apple official palette set.
 - `algorithmDefault` keeps the existing procedural color path and deterministic snapshot behavior.
-- Theme-mapped palette remapping, user-editable palettes, and production procedural background wiring remain future work.
+- User-editable palette changes remain separate from Theme-mapped presentation; production procedural background wiring remains future work.
 - File picker-based palette import/export remains future work; the current editor supports copy/paste JSON import/export.
 - The original 0.2.4 color picker / eyedropper / Ad Component Kit cleanup / Shape Add collapsible behavior remains out of scope for this workstream.
 - The current duplicate i18n tool-key count is retained because the duplicates are core Settings preset keys also mirrored by Settings Renderer Lab for validation.

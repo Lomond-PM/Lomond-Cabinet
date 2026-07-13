@@ -112,6 +112,7 @@ function checkRequiredEntrypoints() {
         "client/js/proceduralPaletteEditor.js",
         "client/js/proceduralPaletteWorkspace.js",
         "client/js/proceduralAppearance.js",
+        "client/js/proceduralThemeMap.js",
         "client/js/proceduralPreviewContract.js",
         "client/js/proceduralHomeIcons.js",
         "host/index.jsx"
@@ -186,6 +187,7 @@ function checkIndexHtml() {
         "js/proceduralPaletteEditor.js",
         "js/proceduralPaletteWorkspace.js",
         "js/proceduralAppearance.js",
+        "js/proceduralThemeMap.js",
         "js/proceduralPreviewContract.js",
         "js/proceduralHomeIcons.js",
         "js/main.js"

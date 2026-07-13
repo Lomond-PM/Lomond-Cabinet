@@ -59,6 +59,15 @@ Current 0.2.5 procedural appearance status:
 - Procedural Appearance now supports fixed Apple-inspired `paletteId` values through a versioned Palette Library. These are curated project palettes, not Apple official palettes.
 - The first palette library contains 8 fixed palettes: `pacificCyan`, `blueLavender`, `tealLuminous`, `mossGold`, `plumRose`, `slateIce`, `warmCoral`, and `graphiteSilver`.
 - Home Colorful icons use a stable `toolId -> paletteId` mapping, with deterministic fallback for unmapped tools. The seed remains the stable tool id only.
+- Home icons now support `colorful` and optional `themeMapped` presentation modes. Theme-mapped mode applies a linear-RGB luminance gradient from the resolved dark endpoint to `toolIconLine` after the Colorful source raster is rendered.
+- `proceduralIconMode` is stored in the existing Settings object and defaults safely to `colorful` when absent or invalid.
+- Theme Settings stores `toolIconDarkSourceMode` (`manualEndpoints` or `paletteScale`) and `toolIconDarkPaletteId` in the existing Settings object. Legacy values `custom` and `paletteBase` normalize to the new modes. `paletteScale` derives dark/mid/light from the selected visible palette without changing the compatible `toolIconColor` value.
+- Theme mode, theme endpoint colors, language, Home order, and Developer Mode do not enter source recipe identity or ProceduralAppearance cache identity. Source and presentation signatures are tracked separately by `proceduralHomeIcons.js`.
+- Theme-map failures keep the already-rendered Colorful raster and do not restore the legacy glyph or display a blank icon.
+- Settings Theme is now schema-grouped into Interface Appearance and Tool Icon Appearance. The icon mode, endpoint colors, ramp note, and Palette Library summary use generic Settings group/presentation metadata.
+- Palette summary data comes only from Palette Store public APIs; Manage Palettes opens the existing Palette Workspace controller and does not manipulate its DOM or lifecycle.
+- Colorful mode keeps endpoint colors inside a collapsed fallback group. Theme-mapped mode opens the same endpoint controls and shows the two-color ramp plus source-palette explanation.
+- `homeBackground` remains a compatible Settings key and is shown as `Home Base Color`; its runtime path is the existing `--bg-main` base surface color, not a separate complete background renderer.
 - Procedural Appearance Lab can select `algorithmDefault` or any fixed palette. `algorithmDefault` preserves the existing algorithmic color path.
 - Palette signatures are part of fixed-palette cache identity so palette content/version changes invalidate color recipes without changing geometry seed identity.
 - Settings now includes a Palette Library editor. Factory palettes remain in source-controlled `proceduralPaletteLibrary.js`; user custom palettes, built-in overrides, hidden built-ins, and Home tool palette mappings persist under `lomond.proceduralPaletteStore.v1`.
@@ -67,7 +76,7 @@ Current 0.2.5 procedural appearance status:
 - User palette display names do not participate in visual identity. Color, stop, weight, and guidance changes do affect resolved palette signatures.
 - The Palette Store layer resolves factory defaults + built-in overrides + custom palettes for ProceduralAppearance and Home icons. It must not write back to source files.
 - Palette Store storage key `lomond.proceduralPaletteStore.v1` and schema version remain unchanged by the Palette Workspace controller extraction.
-- Theme-mapped recolor and production procedural background wiring are not implemented yet.
+- Production procedural background wiring is not implemented yet. Theme-mapped Home icon presentation is implemented, but remains separate from BackgroundEngine and Palette Store data.
 - File picker-based palette import/export is deferred; the current editor supports copy/paste JSON replace/merge.
 - Eyedropper overlay lifecycle limitations remain known limitations and are not part of this workstream.
 
