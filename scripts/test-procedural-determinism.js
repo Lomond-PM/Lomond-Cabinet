@@ -79,7 +79,10 @@ function run() {
     let assertions = 0;
 
     assert(engine.engineVersion === "procedural-appearance-v7", "Unexpected engineVersion; update snapshots intentionally when the visual identity algorithm changes.");
-    assertions += 1;
+    assert(stableStringify(engine.normalizeParams({ target: "icon" })) === stableStringify(engine.normalizeParams({ target: "background" })), "Target must not select a separate normalized parameter default set.");
+    assert(stableStringify(defaultParams) === stableStringify(engine.normalizeParams({})), "Icon and background targets must share the same normalizeParams default source.");
+    assert(typeof engine.getDefaultParams === "function" && stableStringify(defaultParams) === stableStringify(engine.getDefaultParams()), "Public default parameter API must use normalizeParams({}).");
+    assertions += 4;
 
     TOOL_IDS.forEach((toolId) => {
         ["icon", "background"].forEach((target) => {
@@ -119,7 +122,7 @@ function run() {
     assert(normalized.warp === 0, "warp lower clamp changed.");
     assert(normalized.ribbonWidth === 0.22, "ribbonWidth upper clamp changed.");
     assert(normalized.hueShift === 30, "hueShift upper clamp changed.");
-    assert(normalized.brightness === 0.84, "brightness invalid-input fallback changed.");
+    assert(normalized.brightness === 0.88, "brightness invalid-input fallback changed.");
     assert(normalized.paletteStrategy === "curatedLuminous", "palette strategy fallback changed.");
     assertions += 5;
 

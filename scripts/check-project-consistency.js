@@ -115,6 +115,7 @@ function checkRequiredEntrypoints() {
         "client/js/proceduralThemeMap.js",
         "client/js/proceduralPreviewContract.js",
         "client/js/proceduralHomeIcons.js",
+        "client/js/proceduralHomeBackground.js",
         "host/index.jsx"
     ].forEach((file) => {
         check("Required entry exists: " + file, exists(file), file + " is required.");
@@ -190,6 +191,7 @@ function checkIndexHtml() {
         "js/proceduralThemeMap.js",
         "js/proceduralPreviewContract.js",
         "js/proceduralHomeIcons.js",
+        "js/proceduralHomeBackground.js",
         "js/main.js"
     ];
     expected.forEach((item) => {
@@ -203,11 +205,17 @@ function checkIndexHtml() {
     const frontendPaths = frontendRefs.map((ref) => ref.path);
     const editorIndex = frontendPaths.indexOf("js/proceduralPaletteEditor.js");
     const workspaceIndex = frontendPaths.indexOf("js/proceduralPaletteWorkspace.js");
+    const backgroundIndex = frontendPaths.indexOf("js/proceduralHomeBackground.js");
     const mainIndex = frontendPaths.indexOf("js/main.js");
     check(
         "Palette Workspace loads after editor before main",
         editorIndex !== -1 && workspaceIndex !== -1 && mainIndex !== -1 && editorIndex < workspaceIndex && workspaceIndex < mainIndex,
         "client/index.html must load js/proceduralPaletteWorkspace.js after js/proceduralPaletteEditor.js and before js/main.js."
+    );
+    check(
+        "Procedural Home Background loads before main",
+        backgroundIndex !== -1 && mainIndex !== -1 && backgroundIndex < mainIndex,
+        "client/index.html must load js/proceduralHomeBackground.js before js/main.js."
     );
 }
 

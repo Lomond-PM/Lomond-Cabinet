@@ -29,13 +29,17 @@ Implemented scope:
 - Home icon identity is based only on stable tool id / `data-tool`.
 - Home Colorful icons use stable `toolId -> paletteId` mapping; palette selection changes color identity but not geometry seed identity.
 - Home icon presentation supports `colorful` and `themeMapped` modes. Theme-mapped mode is a post-render luminance mapping from resolved dark/mid/light endpoints, not a recipe or palette change.
+- Optional production Home background wiring now lives in `client/js/proceduralHomeBackground.js`. It is selected through Settings and uses the shared `background` target without changing icon identity.
 - Settings exposes the mode through schema-driven Interface Appearance and Tool Icon Appearance groups. Endpoint controls, the compact luminance ramp, and Palette Library summary are conditional presentations; Palette Workspace remains the only palette editor.
+- Developer Mode exposes a collapsible `Procedural Appearance Parameters` section using the shared Settings range/number controls. The shared source fields are `warp`, `warpIrregularity`, `flowComplexity`, `flowContinuity`, `ribbonWidth`, `gradientBias`, `highlightConcentration`, `highlightArea`, `secondaryHueInfluence`, `accentPresence`, `highlightTintShift`, `contrast`, `depth`, `saturation`, `brightness`, and `grain`. The same section also exposes the Theme Map presentation fields `paletteDarkness`, `paletteMidLift`, `paletteLightLift`, `paletteDarkChroma`, `paletteLightChroma`, `paletteMapMidpoint`, and `paletteMapContrast`.
+- These controls are stored inside the existing Settings object, not a new storage key. Source values are normalized through `ProceduralAppearance.normalizeParams()` and Reset reads `ProceduralAppearance.getDefaultParams()`. Theme Map values are normalized through `ProceduralThemeMap.getDefaultMappingParams()` / `normalizeMappingParams()`; neither path duplicates a background-only default table.
+- Both production Home icon and procedural background controllers receive the same normalized source parameter object. Theme Map presentation controls are forwarded to both presentation paths, so palette-derived dark/mid/light endpoints and luminance response stay aligned. Source parameter changes invalidate source identities; mapping and theme endpoint changes remain presentation-only.
 
 The Lab is intentionally isolated:
 
-- It remains the experimentation surface even though Colorful procedural Home icons are now wired to production Home cards.
-- It does not replace the existing BackgroundEngine.
-- It does not modify production Settings semantics or BackgroundEngine behavior; the Palette Library editor is an additive Settings surface for procedural palettes.
+- It remains the experimentation surface for previewing recipes, while the production Home controllers consume the same engine through separate presentation boundaries.
+- It does not replace the existing BackgroundEngine; classic remains the explicit fallback path while the procedural source defaults to `followIconTheme`.
+- It does not modify BackgroundEngine behavior; the procedural background source controls are additive Settings fields and the Palette Library editor remains a separate additive surface.
 - It does not modify color picker / eyedropper behavior.
 - It does not modify Ad Component Kit or Shape Add.
 - Preview contract work does not modify the procedural generation algorithm, engine version, seed hashing, palette mapping, warp, ribbon, grain/noise, or deterministic snapshot behavior.
@@ -96,7 +100,7 @@ Rules:
 - Tool icon seed defaults should come from `toolId` / tool hash.
 - Background previews may use a manual seed.
 - Tool icon output must not overlay letters, initials, or abbreviations.
-- The current BackgroundEngine remains available; procedural background is a future optional mode.
+- The current BackgroundEngine remains available as the classic mode; the optional production procedural source defaults to `followIconTheme` and can be switched back to classic.
 
 ## Visual Style
 
@@ -310,9 +314,26 @@ Home Colorful icon palette mapping:
 
 Unmapped tools use a deterministic fallback based only on stable tool id and the fixed palette id list. Language, Home order, theme color, UI scale, and display title must not affect palette mapping.
 
-Not implemented yet:
+## Procedural Home Background MVP
 
-- Production procedural background palette wiring.
+The production Home surface supports three background sources:
+
+- `classic`: the existing `BackgroundEngine`, backed by `AEToolbox.background.v1`; this remains available as the explicit fallback and is not rewritten.
+- `followIconTheme`: the default procedural source. It renders the shared engine with `target: "background"` into a non-interactive full-surface canvas, then applies the current icon Theme Map relationship as presentation-only luminance mapping.
+- `procedural`: a manual procedural override using the independent background seed and source palette controls.
+
+The procedural modes store their controls in the existing `AEToolbox.settings.v1` object:
+
+- `backgroundSource`
+- `proceduralBackgroundSeed`
+- `proceduralBackgroundPaletteId`
+- `proceduralBackgroundIntensity`
+
+The seed is manually editable and independent from tool ids. A resolved Palette Store palette contributes its stable palette identity/signature; `algorithmDefault` keeps the algorithmic color path. Seed, palette identity, engine version, target, normalized background parameters, logical size, and DPR-clamped raster size form the background source signature. Intensity is presentation-only and does not change the source identity.
+
+`ProceduralHomeBackground` owns the render queue, `ResizeObserver`/resize fallback, visibility checks, DPR-aware sizing, and teardown. It does not start a continuous loop. The canvas has `pointer-events: none`, sits below Home content, and is hidden when classic mode is selected or Home is not visible. A missing engine, invalid canvas, or render exception leaves the classic layers visible and records a low-noise diagnostic.
+
+The procedural background deliberately uses the shared engine with the same normalized parameter defaults as icons. The `background` target changes only composition scale, spatial adaptation, and aspect-ratio handling; it does not maintain a second background-only parameter table. It is not an enlarged tool icon and does not change Home icon seeds or palette mappings. In `followIconTheme`, `paletteScale` reuses the selected source palette relationship; `manualEndpoints` maps the background luminance through the same dark/mid/light endpoint relationship as the icons. The controller caches a 0–255 source luminance field and applies a 256-entry presentation LUT, so theme changes rerender only the presentation without clearing engine caches.
 
 Current editor limitations:
 
@@ -362,7 +383,7 @@ Settings integration boundary:
 
 ## Procedural Background MVP
 
-The Home background already uses procedural CSS layers. 0.2.5 can plan a more coherent procedural background without replacing Settings behavior in one step.
+The Home background still retains its procedural CSS layers for classic behavior. The optional `ProceduralHomeBackground` controller now provides a coherent production path without replacing Settings behavior or `BackgroundEngine`.
 
 MVP direction:
 
@@ -426,15 +447,15 @@ Recommended branch split:
    - Connect Colorful generated icons to Home tool cards.
    - Preserve existing icon text / fallback path.
    - Keep tool id based identity stable.
-   - Do not implement theme-mapped recolor or production procedural background.
+   - Historical scope note: theme-mapped recolor and production procedural background are now implemented on their dedicated branches; keep them out of the icon engine algorithm.
 
 4. `feat/procedural-icon-theme-map`
    - Add optional theme-mapped recolor mode.
    - Ensure theme changes do not alter icon recipes.
 
 5. `feat/procedural-background-mvp`
-   - Add background recipe/render path.
-   - Keep BackgroundEngine storage and Settings semantics intact.
+   - Add the optional production Home background controller and Settings source switch.
+   - Keep BackgroundEngine storage and classic behavior intact.
 
 6. `docs/update-procedural-appearance-state`
    - Record tested behavior and remaining limitations.

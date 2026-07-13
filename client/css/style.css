@@ -181,6 +181,26 @@ body:not(.i18n-ready) .app-shell {
     background: var(--bg-proc-base);
 }
 
+.procedural-home-background-canvas {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    display: none;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background: transparent;
+}
+
+.app-shell.procedural-background-active .home-background .bg-layer {
+    visibility: hidden;
+    opacity: 0;
+}
+
+.app-shell.procedural-background-active .procedural-home-background-canvas {
+    display: block;
+}
+
 .bg-layer {
     position: absolute;
     inset: 0;
@@ -2468,10 +2488,18 @@ p {
 }
 
 .custom-select.select-input-replacement {
-    width: min(150px, 48%);
+    width: 100%;
+    flex: 1 1 158px;
     max-width: 100%;
-    min-width: calc(104px * var(--ui-scale));
+    min-width: 0;
     vertical-align: middle;
+}
+
+.settings-field-control > .custom-select,
+.settings-field > .custom-select,
+.settings-select-control {
+    width: 100%;
+    min-width: 0;
 }
 
 .custom-select.is-open {
@@ -2545,6 +2573,7 @@ p {
     overflow-y: auto;
     max-height: calc(220px * var(--ui-scale));
     max-width: calc(100vw - 16px);
+    min-width: 0;
     border: 1px solid var(--panel-border);
     border-radius: 14px;
     background: #0b0a08;

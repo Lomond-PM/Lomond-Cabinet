@@ -40,6 +40,29 @@ function run() {
     assert(/type: "note"[\s\S]*helper\.proceduralIconSource/.test(schemaText), "Theme-mapped mode must explain the source palette relationship.");
     assertions += 12;
 
+    assert(/id: "proceduralAppearance"[\s\S]*developerOnly: true[\s\S]*collapsible: true[\s\S]*defaultCollapsed: true/.test(schemaText), "Procedural appearance controls must be a Developer-only collapsible Settings section.");
+    [
+        "warp", "warpIrregularity", "flowComplexity", "flowContinuity", "ribbonWidth", "gradientBias",
+        "highlightConcentration", "highlightArea", "secondaryHueInfluence", "accentPresence", "highlightTintShift",
+        "contrast", "depth", "saturation", "brightness", "grain", "paletteDarkness", "paletteMidLift",
+        "paletteLightLift", "paletteDarkChroma", "paletteLightChroma", "paletteMapMidpoint", "paletteMapContrast"
+    ].forEach((key) => {
+        const fieldPattern = new RegExp('key: "' + key + '"[\\s\\S]*?type: "range"[\\s\\S]*?defaultProvider: "proceduralAppearance"');
+        assert(fieldPattern.test(schemaText), "Procedural parameter is missing shared default provider: " + key);
+        assertions += 1;
+    });
+    assert(/key: "resetProceduralAppearanceParams"[\s\S]*type: "button"/.test(schemaText), "Procedural appearance controls must expose a reset action.");
+    assert(/function getProceduralAppearanceDefaults[\s\S]*getDefaultParams[\s\S]*normalizeParams/.test(mainText), "Settings defaults must come from ProceduralAppearance.");
+    assert(/ProceduralAppearanceParams = normalizeProceduralAppearanceParams\(data\.proceduralParams\)/.test(mainText), "Stored procedural params must be normalized through the shared engine.");
+    assert(/proceduralParams: collectProceduralAppearanceParamsFromControls/.test(mainText), "Procedural params must use the existing Settings storage object.");
+    assert(/function updateProceduralHomeIconAppearance[\s\S]*controller\.updateParameters\(getProceduralAppearanceSourceParams\(\)\)/.test(mainText), "Home icons must receive the shared source params.");
+    assert(/controller\.updateAppearance\([\s\S]*mappingParams: getProceduralAppearanceMappingParams\(\)/.test(mainText), "Home icon theme presentation must receive the shared palette mapping params.");
+    assert(/getProceduralAppearanceMappingParams\(\)/.test(mainText) && /params: getProceduralAppearanceSourceParams\(\)/g.test(mainText), "Home and background must receive shared source/mapping parameter paths.");
+    assert(/getDefaultMappingParams|normalizeMappingParams/.test(mainText), "Palette mapping defaults must use the shared Theme Map normalization path.");
+    assert(/function setupProceduralAppearanceParams[\s\S]*applyProceduralAppearanceParams[\s\S]*false/.test(mainText), "Procedural parameter edits must update in real time without per-input persistence.");
+    assert(/function resetProceduralAppearanceParams[\s\S]*getProceduralAppearanceDefaults[\s\S]*applyProceduralAppearanceParams\([\s\S]*true/.test(mainText), "Reset must restore and persist shared defaults.");
+    assertions += 10;
+
     assert(/function settingsVisibleWhenMatches/.test(mainText) && /data-settings-visible-key/.test(mainText), "Settings visibility must use generic schema metadata.");
     assert(/hidden = !visible/.test(mainText) && /is-settings-condition-hidden/.test(mainText), "Hidden Settings fields must leave layout and pointer flow.");
     assert(/function createSettingsThemePresentation/.test(mainText) && /colorRampPreview/.test(mainText), "Color ramp must use a generic Settings presentation helper.");

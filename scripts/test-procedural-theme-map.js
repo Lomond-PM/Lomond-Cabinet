@@ -60,6 +60,14 @@ function run() {
     assert(themeMap.mapLuminanceToColor(0, paletteScale) === paletteScale.dark, "Palette scale luminance zero must map to dark.");
     assert(themeMap.mapLuminanceToColor(0.5, paletteScale) === paletteScale.mid, "Palette scale luminance midpoint must map to derived mid.");
     assert(themeMap.mapLuminanceToColor(1, paletteScale) === paletteScale.light, "Palette scale luminance one must map to light.");
+    const mappingDefaults = themeMap.getDefaultMappingParams();
+    assert(mappingDefaults.paletteDarkness === 0.035 && mappingDefaults.paletteMidLift === 0.045 && mappingDefaults.paletteLightLift === 0.035, "Palette endpoint mapping defaults must remain stable.");
+    assert(mappingDefaults.paletteDarkChroma === 0.94 && mappingDefaults.paletteLightChroma === 0.96, "Palette endpoint chroma defaults must remain stable.");
+    assert(mappingDefaults.paletteMapMidpoint === 0.5 && mappingDefaults.paletteMapContrast === 1, "Palette luminance mapping defaults must preserve the existing midpoint response.");
+    const tunedPaletteScale = themeMap.derivePaletteScaleColors({ colors: { shadow: "#102936", base: "#26728d", highlight: "#d8f7ff" } }, { paletteMidLift: 0.08 });
+    assert(tunedPaletteScale.mid !== paletteScale.mid, "Mapping parameters must change derived presentation colors.");
+    assert(themeMap.mapLuminanceToColor(0.4, paletteScale.dark, paletteScale.light, paletteScale.mid, { paletteMapMidpoint: 0.4 }) === paletteScale.mid, "Mapping midpoint must control the source luminance for the middle stop.");
+    assert(themeMap.getThemeMapSignature({ mode: "themeMapped", darkColor: "#101010", lightColor: "#f0d080", mappingParams: { paletteMapContrast: 1.2 } }) !== themeMap.getThemeMapSignature({ mode: "themeMapped", darkColor: "#101010", lightColor: "#f0d080" }), "Mapping parameters must enter presentation identity.");
     paletteLibrary.listPalettes().forEach((palette) => {
         const derived = themeMap.derivePaletteScaleColors(palette);
         const darkLuminance = themeMap.getRelativeLuminance(paletteRgb(derived.dark));
@@ -70,7 +78,7 @@ function run() {
         assert(darkLuminance < midLuminance && midLuminance < lightLuminance, "Every palette scale must have ordered dark/mid/light luminance.");
         assertions += 2;
     });
-    assertions += 12;
+    assertions += 19;
 
     const source = {
         data: new Uint8ClampedArray([0, 0, 0, 17, 255, 255, 255, 129, 128, 128, 128, 255]),

@@ -8,11 +8,11 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 153 |
+| A | Core / Global; keep | 159 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
-| E | Deferred / uncertain | 135 |
+| E | Deferred / uncertain | 193 |
 
 ## Registry Tools i18n Table
 
@@ -34,7 +34,9 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | button.createBackgroundBox | button | Create Rounded Rectangle | 创建圆角矩形 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | button.randomize | button | Randomize | 随机 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | button.refreshSelection | button | Refresh Selection | 刷新选择 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| button.regenerateBackgroundSeed | button | Regenerate Seed | 重新生成种子 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | button.resetDefaults | button | Reset Defaults | 恢复默认 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| button.resetProceduralAppearanceParams | button | Restore Procedural Defaults | 恢复程序化默认参数 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.apply | common | Apply | 应用 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.auto | common | Auto | 自动 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.back | common | Back | 返回 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -75,6 +77,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | common.yPosition | common | Y Position | Y 位置 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | helper.accentColor | helper | Used for primary actions, focus states, and key interface accents. | 用于主要操作、焦点状态和界面重点元素。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.autoSelectionStatus | helper | Refresh selected text layer count while the panel is open. | 面板打开时刷新选中文本层数量。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.backgroundSource | helper | Classic keeps the existing Background Engine. Follow Icon Theme mirro... | 经典模式保留现有 Background Engine。跟随图标主题会复用图标的主题关系。手动程序化使用下方的背景种子和色卡。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.enableMotion | helper | Uses slow opacity and transform only. | 仅使用缓慢的透明度和位移动画。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.fallbackIconColors | helper | Only used when a procedural icon cannot render and the fallback glyph... | 仅在程序化图标无法渲染并显示回退图标时使用。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.homeBaseColor | helper | Sets the underlying base color of the Home surface; it does not defin... | 设置主页表面的底层基底色，不代表完整背景处理。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -83,10 +86,37 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | helper.iconDarkSource | helper | Choose a manual dark endpoint or use the base color from a visible so... | 选择手动暗端色，或使用可见源色卡的主体色。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.motionSpeed | helper | Adjust panel transitions. 1.00 is balanced. | 调整面板过渡动画。1.00 为平衡值。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.preset | helper | Start from a designed procedural look. | 从设计好的程序化外观开始。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralAppearanceParams | helper | Developer-only shared parameters for procedural icon and background s... | 仅开发者模式可见，调整图标和背景共用的程序化渲染参数，并实时更新两者。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralBackgroundIntensity | helper | Controls procedural background visibility without changing its source... | 控制程序化背景的可见度，不改变源图像身份。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralBackgroundPalette | helper | Use a resolved palette as the procedural background color source. | 使用解析后的色卡作为程序化背景的色彩来源。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralBackgroundSeed | helper | A stable manual seed controls the procedural background composition a... | 固定种子控制程序化背景构图，且与工具图标 id 独立。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.proceduralIconMode | helper | Colorful mode uses each tool's assigned palette. Theme-mapped mode ma... | 彩色模式使用每个工具的分配色卡。主题映射模式按生成图像明度在底色和重点色之间映射。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.proceduralIconModeColorful | helper | Uses each tool's assigned palette as its final color appearance. | 使用每个工具分配的色卡作为最终颜色外观。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.proceduralIconModeThemeMapped | helper | Preserves the generated texture and remaps its luminance between two ... | 保留生成纹理，并将其明度映射到两种主题颜色之间。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.proceduralIconSource | helper | Source palettes still define each tool's generated texture and lumina... | 源色卡仍决定各工具的生成纹理和明度结构。主题映射只替换最终色相，不改变程序化身份。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.accentPresence | helper | Controls the amount of local accent color. | 控制局部强调色的数量。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.brightness | helper | Controls the overall luminous level. | 控制整体光亮水平。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.contrast | helper | Controls separation between light and dark structure. | 控制亮暗结构的分离度。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.depth | helper | Controls layered depth and fold shading. | 控制分层深度和折叠阴影。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.flowComplexity | helper | Controls the number of layered flow influences. | 控制多层流场影响的数量。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.flowContinuity | helper | Controls how smoothly flow structures blend. | 控制流动结构的平滑融合。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.gradientBias | helper | Remaps the gradient toward its brighter or darker range. | 将渐变重映射到更亮或更暗的范围。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.grain | helper | Adds a restrained deterministic surface texture. | 增加克制的确定性表面质感。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.highlightArea | helper | Limits the area occupied by highlights. | 限制高光占据的面积。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.highlightConcentration | helper | Controls how tightly highlights gather. | 控制高光的聚集程度。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.highlightTintShift | helper | Controls the hue shift applied to highlights. | 控制高光的色相偏移。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.paletteDarkChroma | helper | Controls shadow chroma compression during palette mapping. | 控制色卡映射时阴影的彩度压缩。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.paletteDarkness | helper | Darkens the palette shadow endpoint in OKLab. | 在 OKLab 中压暗色卡阴影端点。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.paletteLightChroma | helper | Controls highlight chroma compression during palette mapping. | 控制色卡映射时高光的彩度压缩。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.paletteLightLift | helper | Lifts the palette highlight endpoint in OKLab. | 在 OKLab 中提升色卡高光端点。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.paletteMapContrast | helper | Shapes the dark-to-mid and mid-to-light luminance response. | 调整暗到中和中到亮的明度响应。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.paletteMapMidpoint | helper | Sets the source luminance that maps to the palette middle stop. | 设置映射到色卡中间节点的源图像明度。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.paletteMidLift | helper | Lifts the palette base into the middle mapping stop. | 提升色卡主色并用于中间映射节点。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.ribbonWidth | helper | Controls the width of continuous flow bands. | 控制连续流动色带的宽度。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.saturation | helper | Controls overall color intensity. | 控制整体色彩强度。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.secondaryHueInfluence | helper | Controls the visible contribution of the secondary hue. | 控制辅色相的可见贡献。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.warp | helper | Overall coordinate displacement strength. | 控制坐标扭曲强度。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.proceduralParam.warpIrregularity | helper | Adds uneven local field movement. | 增加不均匀的局部流动。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.refreshSelectionPrompt | helper | Click Refresh Selection to inspect the current comp selection. | 点击“刷新选择”以检查当前合成选区。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.registryDebugTools | helper | Show debug, probe, and lab registry tools for development testing. | 显示仅用于开发测试的 debug、probe 和 lab registry 工具。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.sourcePalette | helper | The resolved palette base color becomes the Theme-mapped dark endpoint. | 选中色卡的主体色将成为主题映射暗端。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -99,6 +129,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | label.accentColor | label | Interface Accent | 界面强调色 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.autoSelectionStatus | label | Auto selection status | 自动选择状态 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.background | label | Background | 背景 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.backgroundSource | label | Background Source | 背景来源 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.cellHeight | label | Cell Height | 单元格高度 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.cellWidth | label | Cell Width | 单元格宽度 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.columns | label | Columns | 列数 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -138,7 +169,33 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | label.patternDensity | label | Pattern Density | 图案密度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.pillWidthMode | label | Pill Width Mode | 胶囊宽度模式 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.preset | label | Preset | 预设 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralBackgroundIntensity | label | Background Intensity | 背景强度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralBackgroundPalette | label | Source Palette | 源色卡 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralBackgroundSeed | label | Procedural Seed | 程序化种子 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.proceduralIconMode | label | Icon Color Mode | 图标配色模式 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.accentPresence | label | Accent presence | 强调色存在度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.brightness | label | Brightness | 亮度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.contrast | label | Contrast | 对比度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.depth | label | Depth | 深度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.flowComplexity | label | Flow complexity | 流场复杂度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.flowContinuity | label | Flow continuity | 流动连续性 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.gradientBias | label | Gradient bias | 渐变偏置 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.grain | label | Grain | 颗粒质感 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.highlightArea | label | Highlight area | 高光面积 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.highlightConcentration | label | Highlight concentration | 高光聚集 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.highlightTintShift | label | Highlight tint shift | 高光色相偏移 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.paletteDarkChroma | label | Palette shadow chroma | 色卡阴影彩度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.paletteDarkness | label | Palette shadow darkening | 色卡阴影压暗 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.paletteLightChroma | label | Palette highlight chroma | 色卡高光彩度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.paletteLightLift | label | Palette highlight lightness lift | 色卡高光亮度提升 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.paletteMapContrast | label | Palette mapping contrast | 色卡映射对比度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.paletteMapMidpoint | label | Palette mapping midpoint | 色卡映射中点 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.paletteMidLift | label | Palette base lightness lift | 色卡主色亮度提升 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.ribbonWidth | label | Ribbon width | 流动色带宽度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.saturation | label | Saturation | 饱和度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.secondaryHueInfluence | label | Secondary hue influence | 辅色相影响 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.warp | label | Warp | 扭曲 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.proceduralParam.warpIrregularity | label | Warp irregularity | 扭曲不规则度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.registryDebugTools | label | Developer Mode | 开发者模式 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.ringOpacity | label | Ring Opacity | 圆环不透明度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.ringScale | label | Ring Scale | 圆环缩放 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -259,12 +316,16 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | selection.noSelection | selection | No selection | 未选择 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | selection.noShapeTarget | selection | No shape target | 无形状目标 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | selection.shapeTarget | selection | Shape target | 形状目标 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.backgroundPalette.algorithmDefault | settings | Current Algorithm | 当前算法配色 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.blackGold | settings | Black Gold Default | 黑金默认 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.custom | settings | Custom | 自定义 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.midnightBlueprint | settings | Midnight Blueprint | 午夜蓝图 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.minimalDark | settings | Minimal Dark | 极简深色 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.obsidianRings | settings | Obsidian Rings | 黑曜圆环 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.solarGrid | settings | Solar Grid | 太阳网格 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.backgroundSource.classic | settings | Classic | 经典 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.backgroundSource.followIconTheme | settings | Follow Icon Theme | 跟随图标主题 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.backgroundSource.procedural | settings | Manual Procedural | 手动程序化 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.iconDarkSource.manualEndpoints | settings | Manual Endpoints | 手动端点 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.iconDarkSource.paletteScale | settings | Palette Scale | 色卡明度缩放 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.palette.manage | settings | Manage Palettes | 管理色卡 | client/js/main.js, client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -276,6 +337,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.paletteSummary.overrides | settings | tool overrides | 个工具覆盖 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.proceduralIconMode.colorful | settings | Colorful | 彩色 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.proceduralIconMode.themeMapped | settings | Theme-mapped | 主题映射 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.sections.proceduralAppearance | settings | Procedural Appearance Parameters | 程序化外观参数 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.colorRamp | settings | Dark endpoint to light endpoint | 暗端到亮端 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.darkEndpoint | settings | Dark | 暗端 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.fallbackIconColors | settings | Fallback Icon Colors | 回退图标颜色 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -310,6 +372,8 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | status.noTextLayer | status | Please select at least one text layer | 请至少选择一个文本层 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.openComp | status | Please open a composition | 请打开合成 | host/tools/shapeAdd.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.paletteAccentSuggested | status | Palette secondary color applied to Interface Accent; it can be adjust... | 已将色卡辅色设为界面强调色，之后可独立调整。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| status.proceduralAppearanceDefaultsRestored | status | Procedural appearance defaults restored. | 程序化外观默认参数已恢复。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| status.proceduralBackgroundSeedRegenerated | status | Procedural background seed regenerated. | 程序化背景种子已重新生成。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.readingSelection | status | Reading selection... | 正在读取选择... | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.ready | status | Ready | 就绪 | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.readyPeriod | status | Ready. | 就绪。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -339,8 +403,10 @@ No low-risk delete candidates found.
 | key | reason | what must be checked before deleting |
 | --- | --- | --- |
 | button.createBackgroundBox | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| button.regenerateBackgroundSeed | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.accentColor | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.autoSelectionStatus | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.backgroundSource | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.enableMotion | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.fallbackIconColors | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.homeBaseColor | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
@@ -349,10 +415,37 @@ No low-risk delete candidates found.
 | helper.iconDarkSource | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.motionSpeed | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.preset | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralAppearanceParams | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralBackgroundIntensity | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralBackgroundPalette | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralBackgroundSeed | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.proceduralIconMode | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.proceduralIconModeColorful | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.proceduralIconModeThemeMapped | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.proceduralIconSource | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.accentPresence | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.brightness | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.contrast | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.depth | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.flowComplexity | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.flowContinuity | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.gradientBias | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.grain | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.highlightArea | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.highlightConcentration | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.highlightTintShift | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.paletteDarkChroma | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.paletteDarkness | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.paletteLightChroma | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.paletteLightLift | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.paletteMapContrast | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.paletteMapMidpoint | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.paletteMidLift | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.ribbonWidth | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.saturation | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.secondaryHueInfluence | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.warp | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| helper.proceduralParam.warpIrregularity | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.refreshSelectionPrompt | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.registryDebugTools | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | helper.sourcePalette | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
@@ -365,6 +458,7 @@ No low-risk delete candidates found.
 | label.accentColor | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | label.autoSelectionStatus | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | label.background | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.backgroundSource | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | label.cellHeight | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | label.cellWidth | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | label.columns | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
@@ -404,7 +498,33 @@ No low-risk delete candidates found.
 | label.patternDensity | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | label.pillWidthMode | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | label.preset | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralBackgroundIntensity | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralBackgroundPalette | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralBackgroundSeed | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | label.proceduralIconMode | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.accentPresence | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.brightness | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.contrast | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.depth | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.flowComplexity | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.flowContinuity | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.gradientBias | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.grain | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.highlightArea | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.highlightConcentration | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.highlightTintShift | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.paletteDarkChroma | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.paletteDarkness | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.paletteLightChroma | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.paletteLightLift | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.paletteMapContrast | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.paletteMapMidpoint | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.paletteMidLift | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.ribbonWidth | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.saturation | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.secondaryHueInfluence | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.warp | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| label.proceduralParam.warpIrregularity | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | label.registryDebugTools | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | label.ringOpacity | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | label.ringScale | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
@@ -467,6 +587,8 @@ No low-risk delete candidates found.
 | status.noTextLayer | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.openComp | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.paletteAccentSuggested | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| status.proceduralAppearanceDefaultsRestored | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| status.proceduralBackgroundSeedRegenerated | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.readingSelection | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.readyPeriod | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.selectShapeLayer | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
