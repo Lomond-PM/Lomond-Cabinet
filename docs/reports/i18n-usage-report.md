@@ -152,72 +152,72 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | label.trimOffset | label | Trim Offset | 修剪偏移 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.trimStart | label | Trim Start | 修剪开始 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.uiScale | label | UI scale | UI 缩放 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| paletteLibrary.backToSettings | paletteLibrary | Back to Settings | 返回设置 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.backToSettings | paletteLibrary | Back to Settings | 返回设置 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.base | paletteLibrary | Base | 主色 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.builtIn | paletteLibrary | Built-in | 内置 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.cancel | paletteLibrary | Cancel | 取消 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.clear | paletteLibrary | Clear | 清空 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.copyJson | paletteLibrary | Copy Export JSON | 复制导出 JSON | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.custom | paletteLibrary | Custom | 自定义 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.delete | paletteLibrary | Delete | 删除 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.deleteConfirmation | paletteLibrary | Delete {name}? This palette is used by {count} tools. | 删除 {name}？当前有 {count} 个工具使用此色卡。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.deletePalette | paletteLibrary | Delete Palette | 删除色卡 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.description | paletteLibrary | Edit curated procedural palettes, custom palettes, and Home tool colo... | 编辑程序化精选色卡、自定义色卡和 Home 工具配色分配。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.discardChanges | paletteLibrary | Discard Changes | 放弃更改 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.displayName | paletteLibrary | Display name | 显示名称 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.duplicate | paletteLibrary | Duplicate | 复制 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.duplicatePalette | paletteLibrary | Duplicate Palette | 复制色卡 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.export | paletteLibrary | Export | 导出 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.exportConfiguration | paletteLibrary | Export Palette Configuration | 导出色卡配置 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.exportCopied | paletteLibrary | Export Copied | 导出内容已复制 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.exportDescription | paletteLibrary | Export custom palettes, built-in overrides, and Home tool assignments... | 导出自定义色卡、内置色卡修改和 Home 工具映射，用于备份或迁移。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.exportResult | paletteLibrary | Export Result | 导出结果 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.generateJson | paletteLibrary | Generate JSON | 生成 JSON | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.hide | paletteLibrary | Hide | 隐藏 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.builtIn | paletteLibrary | Built-in | 内置 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.cancel | paletteLibrary | Cancel | 取消 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.clear | paletteLibrary | Clear | 清空 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.copyJson | paletteLibrary | Copy Export JSON | 复制导出 JSON | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.custom | paletteLibrary | Custom | 自定义 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.delete | paletteLibrary | Delete | 删除 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.deleteConfirmation | paletteLibrary | Delete {name}? This palette is used by {count} tools. | 删除 {name}？当前有 {count} 个工具使用此色卡。 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.deletePalette | paletteLibrary | Delete Palette | 删除色卡 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.description | paletteLibrary | Edit curated procedural palettes, custom palettes, and Home tool colo... | 编辑程序化精选色卡、自定义色卡和 Home 工具配色分配。 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.discardChanges | paletteLibrary | Discard Changes | 放弃更改 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.displayName | paletteLibrary | Display name | 显示名称 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.duplicate | paletteLibrary | Duplicate | 复制 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.duplicatePalette | paletteLibrary | Duplicate Palette | 复制色卡 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.export | paletteLibrary | Export | 导出 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.exportConfiguration | paletteLibrary | Export Palette Configuration | 导出色卡配置 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.exportCopied | paletteLibrary | Export Copied | 导出内容已复制 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.exportDescription | paletteLibrary | Export custom palettes, built-in overrides, and Home tool assignments... | 导出自定义色卡、内置色卡修改和 Home 工具映射，用于备份或迁移。 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.exportResult | paletteLibrary | Export Result | 导出结果 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.generateJson | paletteLibrary | Generate JSON | 生成 JSON | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.hide | paletteLibrary | Hide | 隐藏 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.highlight | paletteLibrary | Highlight | 高光 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.import | paletteLibrary | Import | 导入 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.importConfiguration | paletteLibrary | Import Palette Configuration | 导入色卡配置 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.importDescription | paletteLibrary | Paste previously exported JSON, then merge it with or replace the cur... | 粘贴之前导出的 JSON，然后选择合并或替换当前用户配置。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.importExport | paletteLibrary | Import / Export JSON | 导入 / 导出 JSON | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.importInput | paletteLibrary | Paste Import JSON | 粘贴导入 JSON | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.importSuccessful | paletteLibrary | Import Successful | 导入成功 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.invalidJson | paletteLibrary | Invalid JSON | 无效 JSON | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.invalidPalette | paletteLibrary | Invalid Palette | 无效色卡 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.jsonValid | paletteLibrary | JSON is valid | JSON 验证通过 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.merge | paletteLibrary | Merge | 合并 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.mergeImport | paletteLibrary | Merge Import | 合并导入 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.modified | paletteLibrary | Modified | 已修改 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.new | paletteLibrary | New Palette | 新建色卡 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.open | paletteLibrary | Open Palette Library | 打开色卡库 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.paletteDeleted | paletteLibrary | Palette deleted | 色卡已删除 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.import | paletteLibrary | Import | 导入 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.importConfiguration | paletteLibrary | Import Palette Configuration | 导入色卡配置 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.importDescription | paletteLibrary | Paste previously exported JSON, then merge it with or replace the cur... | 粘贴之前导出的 JSON，然后选择合并或替换当前用户配置。 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.importExport | paletteLibrary | Import / Export JSON | 导入 / 导出 JSON | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.importInput | paletteLibrary | Paste Import JSON | 粘贴导入 JSON | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.importSuccessful | paletteLibrary | Import Successful | 导入成功 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.invalidJson | paletteLibrary | Invalid JSON | 无效 JSON | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.invalidPalette | paletteLibrary | Invalid Palette | 无效色卡 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.jsonValid | paletteLibrary | JSON is valid | JSON 验证通过 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.merge | paletteLibrary | Merge | 合并 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.mergeImport | paletteLibrary | Merge Import | 合并导入 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.modified | paletteLibrary | Modified | 已修改 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.new | paletteLibrary | New Palette | 新建色卡 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.open | paletteLibrary | Open Palette Library | 打开色卡库 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.paletteDeleted | paletteLibrary | Palette deleted | 色卡已删除 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.paletteInUse | paletteLibrary | Palette In Use | 色卡正在使用 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.pasteJsonPlaceholder | paletteLibrary | Paste exported palette JSON here | 在此粘贴已导出的色卡 JSON | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.replace | paletteLibrary | Replace | 替换 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.replaceConfirmation | paletteLibrary | Replace all custom palettes, built-in overrides, and Home assignments... | 替换所有自定义色卡、内置色卡修改和 Home 映射？内置原始色卡仍会保留。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.replaceImport | paletteLibrary | Replace Import | 替换导入 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.resizePaletteList | paletteLibrary | Resize Palette List | 调整色卡列表宽度 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.restoreDefaults | paletteLibrary | Restore Defaults | 恢复默认 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.save | paletteLibrary | Save | 保存 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.saveAndContinue | paletteLibrary | Save and Continue | 保存并继续 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.saved | paletteLibrary | Saved | 已保存 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.pasteJsonPlaceholder | paletteLibrary | Paste exported palette JSON here | 在此粘贴已导出的色卡 JSON | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.replace | paletteLibrary | Replace | 替换 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.replaceConfirmation | paletteLibrary | Replace all custom palettes, built-in overrides, and Home assignments... | 替换所有自定义色卡、内置色卡修改和 Home 映射？内置原始色卡仍会保留。 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.replaceImport | paletteLibrary | Replace Import | 替换导入 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.resizePaletteList | paletteLibrary | Resize Palette List | 调整色卡列表宽度 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.restoreDefaults | paletteLibrary | Restore Defaults | 恢复默认 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.save | paletteLibrary | Save | 保存 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.saveAndContinue | paletteLibrary | Save and Continue | 保存并继续 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.saved | paletteLibrary | Saved | 已保存 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.secondary | paletteLibrary | Secondary | 辅色 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.shadow | paletteLibrary | Shadow | 阴影 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.show | paletteLibrary | Show | 显示 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.show | paletteLibrary | Show | 显示 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.stop1 | paletteLibrary | Stop 1 | 色标 1 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.stop2 | paletteLibrary | Stop 2 | 色标 2 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.stop3 | paletteLibrary | Stop 3 | 色标 3 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.stop4 | paletteLibrary | Stop 4 | 色标 4 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.title | paletteLibrary | Palette Library | 色卡库 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.tool.ecommerceLayout | paletteLibrary | Ad Component Kit | Ad Component Kit | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.tool.proceduralAppearanceLab | paletteLibrary | Procedural Appearance Lab | 程序化外观实验室 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.tool.registryControlLab | paletteLibrary | Registry Control Lab | 注册器控制实验室 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.tool.selectionInfo | paletteLibrary | Selection Info | Selection Info | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.tool.settingsRendererLab | paletteLibrary | Settings Renderer Lab | Settings Renderer Lab | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.tool.shapeAdd | paletteLibrary | Shape Add | Shape Add | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.tool.textBackgroundBox | paletteLibrary | Text Background Box | Text Background Box | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.toolMapping | paletteLibrary | Home tool palette mapping | Home 工具色卡映射 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.unsavedChanges | paletteLibrary | Unsaved Changes | 未保存更改 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| paletteLibrary.validate | paletteLibrary | Validate | 验证 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.title | paletteLibrary | Palette Library | 色卡库 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.tool.ecommerceLayout | paletteLibrary | Ad Component Kit | Ad Component Kit | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.tool.proceduralAppearanceLab | paletteLibrary | Procedural Appearance Lab | 程序化外观实验室 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.tool.registryControlLab | paletteLibrary | Registry Control Lab | 注册器控制实验室 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.tool.selectionInfo | paletteLibrary | Selection Info | Selection Info | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.tool.settingsRendererLab | paletteLibrary | Settings Renderer Lab | Settings Renderer Lab | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.tool.shapeAdd | paletteLibrary | Shape Add | Shape Add | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.tool.textBackgroundBox | paletteLibrary | Text Background Box | Text Background Box | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.toolMapping | paletteLibrary | Home tool palette mapping | Home 工具色卡映射 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.unsavedChanges | paletteLibrary | Unsaved Changes | 未保存更改 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.validate | paletteLibrary | Validate | 验证 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.weight.base | paletteLibrary | Base weight | 主色权重 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.weight.highlight | paletteLibrary | Highlight weight | 高光权重 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.weight.secondary | paletteLibrary | Secondary weight | 辅色权重 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -236,7 +236,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | section.motion | section | Motion | 动效 | client/js/main.js, client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | section.nativeShapeItems | section | Native shape items | 原生形状元素 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | section.outline | section | Outline | 轮廓 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| section.procedural | section | Procedural | 程序化 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| section.procedural | section | Procedural | 程序化 | client/js/proceduralPaletteWorkspace.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | section.selection | section | Selection | 选择 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | section.shape | section | Shape | 形状 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | section.stroke | section | Stroke | 描边 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |

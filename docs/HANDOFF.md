@@ -103,6 +103,8 @@ Current 0.2.5 development note:
 - The 0.2.5 development line also includes Colorful Home icons and a fixed Apple-inspired Palette Library. These palettes are curated project palettes, not Apple official palettes.
 - Home icon seed identity remains stable tool id only. `paletteId` controls fixed color selection and must not be derived from language, title, Home order, theme color, or UI Scale.
 - Palette Store user data lives in localStorage key `lomond.proceduralPaletteStore.v1`. Do not write user palette edits back into `client/js/proceduralPaletteLibrary.js`.
+- Palette Workspace runtime now lives in `client/js/proceduralPaletteWorkspace.js`; keep Palette Workspace DOM rendering, event binding, dirty guards, preview lifecycle, import/export UI, splitter/resize handling, Settings transition state, Store subscription, and teardown in that controller instead of moving them back into `client/js/main.js`.
+- Current Palette boundaries: `proceduralPaletteStore.js` owns persistence/validation/resolved palettes/tool mappings, `proceduralPaletteEditor.js` owns pure draft/layout/number helpers, and `proceduralPaletteWorkspace.js` owns UI/runtime lifecycle. The Palette Store storage key and schema version are unchanged.
 - Built-in palette edits are stored as overrides; custom palettes use generated stable ids; display names do not affect visual identity.
 - Settings Palette Library currently supports copy/paste JSON import/export. File picker import/export and dynamic Lab options for user-created palettes are deferred.
 - `algorithmDefault` keeps the existing procedural color path; theme-mapped palette remapping and production procedural background wiring are still future work.

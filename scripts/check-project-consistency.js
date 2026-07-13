@@ -108,8 +108,9 @@ function checkRequiredEntrypoints() {
         "client/js/settingsSchema.js",
         "client/js/proceduralCache.js",
         "client/js/proceduralPaletteLibrary.js",
-    "client/js/proceduralPaletteStore.js",
-    "client/js/proceduralPaletteEditor.js",
+        "client/js/proceduralPaletteStore.js",
+        "client/js/proceduralPaletteEditor.js",
+        "client/js/proceduralPaletteWorkspace.js",
         "client/js/proceduralAppearance.js",
         "client/js/proceduralPreviewContract.js",
         "client/js/proceduralHomeIcons.js",
@@ -181,8 +182,9 @@ function checkIndexHtml() {
         "js/settingsSchema.js",
         "js/proceduralCache.js",
         "js/proceduralPaletteLibrary.js",
-    "js/proceduralPaletteStore.js",
-    "js/proceduralPaletteEditor.js",
+        "js/proceduralPaletteStore.js",
+        "js/proceduralPaletteEditor.js",
+        "js/proceduralPaletteWorkspace.js",
         "js/proceduralAppearance.js",
         "js/proceduralPreviewContract.js",
         "js/proceduralHomeIcons.js",
@@ -195,6 +197,16 @@ function checkIndexHtml() {
             "client/index.html must reference " + item + "."
         );
     });
+
+    const frontendPaths = frontendRefs.map((ref) => ref.path);
+    const editorIndex = frontendPaths.indexOf("js/proceduralPaletteEditor.js");
+    const workspaceIndex = frontendPaths.indexOf("js/proceduralPaletteWorkspace.js");
+    const mainIndex = frontendPaths.indexOf("js/main.js");
+    check(
+        "Palette Workspace loads after editor before main",
+        editorIndex !== -1 && workspaceIndex !== -1 && mainIndex !== -1 && editorIndex < workspaceIndex && workspaceIndex < mainIndex,
+        "client/index.html must load js/proceduralPaletteWorkspace.js after js/proceduralPaletteEditor.js and before js/main.js."
+    );
 }
 
 function listToolFiles() {

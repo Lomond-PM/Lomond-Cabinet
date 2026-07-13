@@ -23,6 +23,7 @@ Implemented scope:
 - DPR-aware internal raster rendering with render scale clamped to the range 1-2.
 - Apple-inspired curated Palette Library in `client/js/proceduralPaletteLibrary.js`.
 - Palette Store in `client/js/proceduralPaletteStore.js`.
+- Palette Workspace controller in `client/js/proceduralPaletteWorkspace.js`, loaded after `proceduralPaletteEditor.js`, owns the Settings Palette Library DOM, CRUD/event binding, dirty transition guards, live preview RAF lifecycle, resize/splitter lifecycle, JSON import/export UI, Settings-to-workspace transitions, Store subscription, and teardown.
 - Fixed `paletteId` support for ProceduralAppearance recipes and cache identity.
 - Colorful production Home tool icon wiring in `client/js/proceduralHomeIcons.js`.
 - Home icon identity is based only on stable tool id / `data-tool`.
@@ -40,6 +41,7 @@ The Lab is intentionally isolated:
 - Home icon wiring does not modify the procedural generation algorithm, `engineVersion`, seed hashing, warp, ribbon, grain/noise, or deterministic snapshot behavior.
 - Palette Library work does not modify the confirmed default shape parameters, geometry recipe, seed hashing, PRNG sequence, `engineVersion`, Home layout/order, or BackgroundEngine.
 - Palette Store work does not write user edits back into source files and does not change geometry seed identity.
+- Palette Workspace controller extraction does not change Palette Store storage key, schema version, factory palette data, procedural algorithms, engine version, seed/hash/PRNG behavior, Home icon identity, or user-visible Palette Library behavior.
 
 ## Goal
 
@@ -249,6 +251,8 @@ Rules:
 
 - Factory palettes remain in `client/js/proceduralPaletteLibrary.js`.
 - The GUI never writes back to `proceduralPaletteLibrary.js`.
+- `proceduralPaletteWorkspace.js` manages the Palette Library UI and calls only Palette Store public APIs; it does not directly read/write `localStorage` or hold Store internal arrays.
+- `proceduralPaletteEditor.js` remains a pure helper layer for editable drafts, layout thresholds, width parsing/clamping, stop clamping, and weight totals; it does not own DOM, persistence, or Home icon refresh.
 - Built-in edits are stored as overrides.
 - Custom palettes use stable generated ids.
 - `displayName` is user data and does not affect visual identity.
