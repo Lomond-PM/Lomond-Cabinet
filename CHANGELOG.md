@@ -39,6 +39,7 @@ This project follows simple semantic versioning for development handoff:
 - Kept procedural Home icon identity independent from language, Home order, Developer Mode, theme colors, and Settings changes.
 - Included `paletteId` and palette signature in procedural recipe/cache identity for fixed palettes without changing seed, engine version, or geometry recipe fields.
 - Resolved procedural palettes through a Palette Store layer so factory palettes remain source-controlled defaults while user edits stay in localStorage.
+- Extracted the Settings Palette Library / Palette Workspace runtime controller from `client/js/main.js` into `client/js/proceduralPaletteWorkspace.js`, keeping Store persistence, editor draft helpers, and Workspace DOM lifecycle responsibilities separated without changing Palette Store schema or user-visible behavior.
 
 ### Fixed
 

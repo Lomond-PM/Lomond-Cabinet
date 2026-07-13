@@ -7,6 +7,7 @@ const ROOT = path.resolve(__dirname, "..");
 const LIBRARY_PATH = path.join(ROOT, "client", "js", "proceduralPaletteLibrary.js");
 const STORE_PATH = path.join(ROOT, "client", "js", "proceduralPaletteStore.js");
 const EDITOR_PATH = path.join(ROOT, "client", "js", "proceduralPaletteEditor.js");
+const WORKSPACE_PATH = path.join(ROOT, "client", "js", "proceduralPaletteWorkspace.js");
 const MAIN_PATH = path.join(ROOT, "client", "js", "main.js");
 const CSS_PATH = path.join(ROOT, "client", "css", "style.css");
 
@@ -38,6 +39,7 @@ function run() {
     const editor = require(EDITOR_PATH);
     const storage = makeStorage();
     const mainText = fs.readFileSync(MAIN_PATH, "utf8");
+    const workspaceText = fs.readFileSync(WORKSPACE_PATH, "utf8");
     const cssText = fs.readFileSync(CSS_PATH, "utf8");
     let assertions = 0;
     let result;
@@ -126,28 +128,32 @@ function run() {
     assert(editor.hasPositiveWeightTotal({ shadow: 0, base: 0.5, secondary: 0, highlight: 0 }), "A positive weight total should be saveable.");
     assertions += 6;
 
-    assert(/className\s*=\s*"registry-text-input palette-editor-text"/.test(mainText), "Display name must use the internal text input class.");
-    assert(/className\s*=\s*"registry-textarea palette-json-box palette-json-(?:export|import)"/.test(mainText), "JSON must use the internal textarea class.");
-    assert(/className\s*=\s*"palette-editor-action-bar"/.test(mainText), "Sticky action bar class must exist.");
-    assert(/clearPaletteWorkspaceBindings[\s\S]*disconnect\(\)/.test(mainText), "Workspace teardown must disconnect resize observation.");
+    assert(/className\s*=\s*"registry-text-input palette-editor-text"/.test(workspaceText), "Display name must use the internal text input class.");
+    assert(/className\s*=\s*"registry-textarea palette-json-box palette-json-(?:export|import)"/.test(workspaceText), "JSON must use the internal textarea class.");
+    assert(/className\s*=\s*"palette-editor-action-bar"/.test(workspaceText), "Sticky action bar class must exist.");
+    assert(/clearWorkspaceBindings[\s\S]*disconnect\(\)/.test(workspaceText), "Workspace teardown must disconnect resize observation.");
     assert(/\.palette-workspace\.is-stacked\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\)/.test(cssText), "Stacked layout must not force two columns.");
     assert(/\.palette-editor-action-bar\s*\{[\s\S]*flex:\s*0 0 auto/.test(cssText), "Action bar must remain visible outside the editor scroller.");
     assert(!/palette-editor-text[^\{]*\{[^\}]*background:\s*white/i.test(cssText), "Palette text input must not use a browser-default white background.");
-    assert(/palette-preview-shell--background/.test(mainText) && /\.palette-preview-shell--background\s*\{[\s\S]*border-radius:\s*var\(--radius-lg\)/.test(cssText), "Background preview must use the horizontal preview radius token.");
+    assert(/--radius-palette-preview:\s*var\(--radius-lg\)/.test(cssText), "Palette previews must expose one shared outer radius token.");
+    assert(/\.palette-preview-shell\s*\{[^}]*border-radius:\s*var\(--radius-palette-preview\)/.test(cssText), "Icon and background preview shells must inherit the same outer radius.");
+    assert(!/\.palette-preview-shell--(?:icon|background)\s*\{[^}]*border-radius:/.test(cssText), "Target-specific preview shells must not override the shared radius.");
     assert(/\.palette-preview-canvas\s*\{[\s\S]*border-radius:\s*0/.test(cssText), "Preview canvas must not own a radius.");
     assert(/\.palette-preview-shell\s*\{[\s\S]*overflow:\s*hidden/.test(cssText), "Preview shell must be the clipping owner.");
-    assert(/requestAnimationFrame\(function \(\) \{[\s\S]*requestAnimationFrame\(function \(\)/.test(mainText), "Initial preview should wait for stable layout frames.");
-    assert(/ResizeObserver[\s\S]*schedulePaletteEditorPreview\(\)/.test(mainText), "Workspace resize should schedule preview raster redraw.");
-    assert(/clearPaletteWorkspaceBindings[\s\S]*PaletteWorkspaceResizeObserver\.disconnect/.test(mainText), "Teardown should stop preview resize observation.");
+    assert(/\.palette-workspace\.is-stacked \.palette-editor-field\s*\{[^}]*gap:\s*calc\(8px \* var\(--ui-scale\)\)/.test(cssText), "Stacked fields must preserve readable label-to-control spacing.");
+    assert(/\.palette-workspace\.is-stacked \.palette-editor-color-control\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) minmax\(calc\(82px \* var\(--ui-scale\)\), 0\.55fr\)/.test(cssText), "Stacked color controls must reserve usable swatch and Hex widths.");
+    assert(/requestAnimationFrame\(function \(\) \{[\s\S]*requestAnimationFrame\(function \(\)/.test(workspaceText), "Initial preview should wait for stable layout frames.");
+    assert(/ResizeObserver[\s\S]*schedulePreview\(\)/.test(workspaceText), "Workspace resize should schedule preview raster redraw.");
+    assert(/clearWorkspaceBindings[\s\S]*resizeObserver\.disconnect/.test(workspaceText), "Teardown should stop preview resize observation.");
     assert(/\.palette-library-list,[\s\S]*\.palette-editor-scroll,[\s\S]*\.palette-json-box\s*\{[\s\S]*scrollbar-color/.test(cssText), "Palette scroll regions must share internal scrollbar styling.");
-    assert(/createPaletteNumberInput[\s\S]*setupRegistryNumberDrag/.test(mainText), "Palette numeric inputs must reuse the shared number helper.");
+    assert(/createPaletteNumberInput[\s\S]*setupRegistryNumberDrag/.test(workspaceText), "Palette numeric inputs must reuse the shared number helper.");
     assert(/setupRegistryNumberDrag[\s\S]*keyCode === 13[\s\S]*keyCode === 27[\s\S]*keyCode === 38/.test(mainText), "Shared number helper must cover Enter, Escape, and arrow stepping.");
-    assert(/palette-editor-number/.test(mainText) && /registry-range-number/.test(mainText), "Palette numbers must use internal number input classes.");
-    assert(/is-palette-workspace-entering/.test(mainText) && /is-palette-workspace-leaving/.test(mainText), "Settings and Palette Workspace must have symmetric transition states.");
-    assert(/clearPaletteWorkspaceTransition/.test(mainText) && /is-palette-workspace-transitioning/.test(cssText), "Workspace transition cleanup and pointer blocking must exist.");
-    assert(/palette-json-export/.test(mainText) && /readOnly\s*=\s*true/.test(mainText), "Export JSON must use a read-only output area.");
-    assert(/palette-json-import/.test(mainText) && /pasteJsonPlaceholder/.test(mainText), "Import JSON must use a distinct editable input area.");
-    assertions += 21;
+    assert(/palette-editor-number/.test(workspaceText) && /registry-range-number/.test(workspaceText), "Palette numbers must use internal number input classes.");
+    assert(/is-palette-workspace-entering/.test(workspaceText) && /is-palette-workspace-leaving/.test(workspaceText), "Settings and Palette Workspace must have symmetric transition states.");
+    assert(/clearTransition/.test(workspaceText) && /is-palette-workspace-transitioning/.test(cssText), "Workspace transition cleanup and pointer blocking must exist.");
+    assert(/palette-json-export/.test(workspaceText) && /readOnly\s*=\s*true/.test(workspaceText), "Export JSON must use a read-only output area.");
+    assert(/palette-json-import/.test(workspaceText) && /pasteJsonPlaceholder/.test(workspaceText), "Import JSON must use a distinct editable input area.");
+    assertions += 25;
 
     const deleteCandidate = store.createPalette(Object.assign({}, factory, { displayName: "Delete Persisted" })).palette;
     const countBeforeDelete = store.listResolvedPalettes(true).length;
@@ -161,8 +167,8 @@ function run() {
     store.flush();
     store.initialize({ library, storage });
     assert(!store.getResolvedPalette(deleteCandidate.id), "Deleted palette must not return after Store reload.");
-    assert(/currentKind === "builtIn"[\s\S]*restoreDefaults/.test(mainText), "Built-in action policy should use Restore Defaults.");
-    assert(/currentKind === "custom"[\s\S]*deletePalette/.test(mainText), "Delete action must be limited to custom palettes.");
+    assert(/currentKind === "builtIn"[\s\S]*restoreDefaults/.test(workspaceText), "Built-in action policy should use Restore Defaults.");
+    assert(/currentKind === "custom"[\s\S]*deletePalette/.test(workspaceText), "Delete action must be limited to custom palettes.");
     assertions += 8;
 
     const beforeInvalidImport = JSON.stringify(store.exportData());

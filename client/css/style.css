@@ -46,6 +46,7 @@
 
     --radius-xl: calc(30px * var(--ui-scale));
     --radius-lg: calc(22px * var(--ui-scale));
+    --radius-palette-preview: var(--radius-lg);
     --radius-md: calc(16px * var(--ui-scale));
     --radius-sm: calc(10px * var(--ui-scale));
 
@@ -489,6 +490,12 @@ body:not(.i18n-ready) .app-shell {
     flex: 1 1 0;
 }
 
+.settings-view:not(.is-palette-workspace) .palette-workspace-section,
+.settings-view:not(.is-palette-workspace) .palette-workspace {
+    display: none;
+    pointer-events: none;
+}
+
 .settings-view.is-palette-workspace .settings-panel {
     width: min(920px, calc(100% - 28px));
     max-width: calc(100% - 28px);
@@ -859,19 +866,18 @@ body:not(.i18n-ready) .app-shell {
     min-width: 0;
     overflow: hidden;
     border: 1px solid var(--separator);
+    border-radius: var(--radius-palette-preview);
     background: rgba(255, 255, 255, 0.02);
 }
 
 .palette-preview-shell--icon {
     width: calc(74px * var(--ui-scale));
     height: calc(74px * var(--ui-scale));
-    border-radius: var(--radius-home-icon);
 }
 
 .palette-preview-shell--background {
     min-width: 0;
     height: calc(74px * var(--ui-scale));
-    border-radius: var(--radius-lg);
 }
 
 .palette-preview-canvas {
@@ -1055,8 +1061,18 @@ body:not(.i18n-ready) .app-shell {
 
     .palette-editor-field {
         grid-template-columns: minmax(0, 1fr);
-        gap: calc(5px * var(--ui-scale));
+        gap: calc(8px * var(--ui-scale));
         align-items: stretch;
+        padding-bottom: calc(5px * var(--ui-scale));
+    }
+
+    .palette-editor-field > .control-label {
+        line-height: 1.25;
+    }
+
+    .palette-editor-color-control {
+        grid-template-columns: minmax(0, 1fr) minmax(calc(82px * var(--ui-scale)), 0.55fr);
+        gap: calc(8px * var(--ui-scale));
     }
 
     .palette-editor-field > .settings-field-control,
@@ -1114,8 +1130,18 @@ body:not(.i18n-ready) .app-shell {
 
 .palette-workspace.is-stacked .palette-editor-field {
     grid-template-columns: minmax(0, 1fr);
-    gap: calc(5px * var(--ui-scale));
+    gap: calc(8px * var(--ui-scale));
     align-items: stretch;
+    padding-bottom: calc(5px * var(--ui-scale));
+}
+
+.palette-workspace.is-stacked .palette-editor-field > .control-label {
+    line-height: 1.25;
+}
+
+.palette-workspace.is-stacked .palette-editor-color-control {
+    grid-template-columns: minmax(0, 1fr) minmax(calc(82px * var(--ui-scale)), 0.55fr);
+    gap: calc(8px * var(--ui-scale));
 }
 
 .palette-workspace.is-stacked .palette-tool-map-row {

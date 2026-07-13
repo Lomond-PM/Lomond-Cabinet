@@ -62,8 +62,11 @@ Current 0.2.5 procedural appearance status:
 - Procedural Appearance Lab can select `algorithmDefault` or any fixed palette. `algorithmDefault` preserves the existing algorithmic color path.
 - Palette signatures are part of fixed-palette cache identity so palette content/version changes invalidate color recipes without changing geometry seed identity.
 - Settings now includes a Palette Library editor. Factory palettes remain in source-controlled `proceduralPaletteLibrary.js`; user custom palettes, built-in overrides, hidden built-ins, and Home tool palette mappings persist under `lomond.proceduralPaletteStore.v1`.
+- Palette Workspace runtime UI is now owned by `client/js/proceduralPaletteWorkspace.js`. `main.js` loads and initializes the controller, forwards Settings lifecycle/language/shutdown events, and supplies shared callbacks; it no longer owns Palette Workspace selected state, draft state, preview RAFs, resize/splitter listeners, transition timers, delete confirmation, import/export state, or CRUD UI binding.
+- Palette Workspace boundaries: `proceduralPaletteStore.js` owns persistence, validation, resolved palettes, built-in overrides, custom palettes, and tool mappings; `proceduralPaletteEditor.js` owns pure draft/layout/number helpers; `proceduralPaletteWorkspace.js` owns DOM rendering, event binding, draft lifecycle, dirty guards, preview scheduling, Settings transitions, splitter width callbacks, Store subscription, and teardown.
 - User palette display names do not participate in visual identity. Color, stop, weight, and guidance changes do affect resolved palette signatures.
 - The Palette Store layer resolves factory defaults + built-in overrides + custom palettes for ProceduralAppearance and Home icons. It must not write back to source files.
+- Palette Store storage key `lomond.proceduralPaletteStore.v1` and schema version remain unchanged by the Palette Workspace controller extraction.
 - Theme-mapped recolor and production procedural background wiring are not implemented yet.
 - File picker-based palette import/export is deferred; the current editor supports copy/paste JSON replace/merge.
 - Eyedropper overlay lifecycle limitations remain known limitations and are not part of this workstream.
