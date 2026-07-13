@@ -28,6 +28,7 @@
     var splitterCleanup = null;
     var transitionTimer = null;
     var transitionToken = 0;
+    var settingsScrollTop = 0;
     var deleteConfirmationId = "";
     var initialized = false;
     var storeListener = null;
@@ -573,7 +574,7 @@
             settingsRenderer.setAttribute("aria-hidden", "false");
         }
         if (content) {
-            content.scrollTop = 0;
+            content.scrollTop = resetOptions.restoreSettingsScroll ? settingsScrollTop : 0;
         }
         if (mount && resetOptions.renderLauncher !== false) {
             renderLauncher(mount);
@@ -592,6 +593,9 @@
         }
         if (workspaceOpen && view.classList.contains("is-palette-workspace") && !view.classList.contains("is-palette-workspace-leaving")) {
             return;
+        }
+        if (content) {
+            settingsScrollTop = content.scrollTop;
         }
         resetWorkspaceDomState({ discardDraft: false, renderLauncher: false });
         workspaceOpen = true;
@@ -637,7 +641,7 @@
         animate = closeOptions.animate !== false && !closeOptions.immediate && reason === "back";
 
         if (!view || !animate || !view.classList.contains("is-palette-workspace")) {
-            resetWorkspaceDomState({ discardDraft: true, renderLauncher: true });
+            resetWorkspaceDomState({ discardDraft: true, renderLauncher: true, restoreSettingsScroll: reason === "back" });
             return;
         }
 

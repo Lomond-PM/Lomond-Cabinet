@@ -28,6 +28,8 @@ Implemented scope:
 - Colorful production Home tool icon wiring in `client/js/proceduralHomeIcons.js`.
 - Home icon identity is based only on stable tool id / `data-tool`.
 - Home Colorful icons use stable `toolId -> paletteId` mapping; palette selection changes color identity but not geometry seed identity.
+- Home icon presentation supports `colorful` and `themeMapped` modes. Theme-mapped mode is a post-render luminance mapping from resolved dark/mid/light endpoints, not a recipe or palette change.
+- Settings exposes the mode through schema-driven Interface Appearance and Tool Icon Appearance groups. Endpoint controls, the compact luminance ramp, and Palette Library summary are conditional presentations; Palette Workspace remains the only palette editor.
 
 The Lab is intentionally isolated:
 
@@ -115,7 +117,7 @@ Default icon mode:
 
 Optional icon mode:
 
-- `themeMapped`: preserve generated luminance / composition but remap colors toward the current theme background and accent range.
+- `themeMapped`: preserve generated luminance / composition but remap colors between the resolved dark endpoint and the `toolIconLine` light endpoint.
 
 Theme changes must not change the generated seed, shape composition, or tool identity.
 
@@ -310,7 +312,6 @@ Unmapped tools use a deterministic fallback based only on stable tool id and the
 
 Not implemented yet:
 
-- Theme-mapped recolor from app theme tokens.
 - Production procedural background palette wiring.
 
 Current editor limitations:
@@ -321,22 +322,22 @@ Current editor limitations:
 
 ## Theme-Mapped Recolor
 
-Theme-mapped mode should be optional and reversible.
+Theme-mapped mode is optional and reversible in the Home icon controller.
 
 Principle:
 
 - Preserve generated composition and relative luminance.
-- Map generated dark regions toward Home background color.
-- Map generated bright / accent regions toward theme accent color.
-- Keep hue variance so icons do not collapse into a one-note palette.
+- Map generated dark regions toward the resolved dark endpoint: the compatible Settings `toolIconColor` value in `manualEndpoints` mode, or the selected visible palette scale in `paletteScale` mode.
+- Map generated bright regions toward the Settings `toolIconLine` endpoint.
+- Preserve the source composition, alpha, folds, texture, and relative luminance structure.
 
 Possible mapping:
 
 ```text
-generated color -> luminance t
-theme background -> low end
-theme accent -> high end
-secondary generated hue -> hue offset / local variation
+generated color -> relative luminance t
+toolIconColor -> low end
+toolIconLine -> high end
+linear-RGB interpolation -> sRGB presentation color
 ```
 
 Rules:
@@ -344,8 +345,20 @@ Rules:
 - Do not recompute seed.
 - Do not change blob positions or shapes.
 - Do not rewrite saved Home order or tool ids.
-- Do not map every icon to identical accent/background gradients.
-- Keep a per-tool hue offset derived from seed so theme-mapped icons remain distinguishable.
+- Do not add theme colors to recipe, palette signature, or ProceduralAppearance cache keys.
+- Colorful mode remains the default and renders the existing source path directly.
+- If pixel read/write is unavailable, retain the Colorful source raster.
+- `manualEndpoints` maps luminance directly between the stored dark and light endpoint colors.
+- `paletteScale` derives a presentation-only scale from the resolved palette: dark from `shadow`, mid from `base` with a small OKLab lightness lift, and light from `highlight`, with strict dark < mid < light ordering. The derived mid is used by both the Home presentation mapper and the three-stop Settings preview; the factory palette is never modified.
+- Palette selection may suggest `colors.secondary` for the one-time `themeAccent` update, but later Theme Accent edits and Store refreshes never reapply that suggestion.
+
+Settings integration boundary:
+
+- `proceduralIconMode`, `toolIconColor`, `toolIconLine`, `toolIconDarkSourceMode`, and `toolIconDarkPaletteId` are persisted in the existing Settings object.
+- `toolIconDarkSourceMode` defaults to `manualEndpoints`; `paletteScale` reads only the resolved public Palette Store value and never writes over `toolIconColor`.
+- Theme endpoint changes update Home presentation only; `themeAccent` and `homeBackground` do not invalidate Home icon source identity.
+- Palette summary reads Store public APIs and opens `ProceduralPaletteWorkspace.open()` without directly manipulating Workspace DOM.
+- `homeBackground` is retained as `Home Base Color` for compatibility and continues to set the existing `--bg-main` base surface color.
 
 ## Procedural Background MVP
 

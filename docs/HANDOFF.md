@@ -107,7 +107,10 @@ Current 0.2.5 development note:
 - Current Palette boundaries: `proceduralPaletteStore.js` owns persistence/validation/resolved palettes/tool mappings, `proceduralPaletteEditor.js` owns pure draft/layout/number helpers, and `proceduralPaletteWorkspace.js` owns UI/runtime lifecycle. The Palette Store storage key and schema version are unchanged.
 - Built-in palette edits are stored as overrides; custom palettes use generated stable ids; display names do not affect visual identity.
 - Settings Palette Library currently supports copy/paste JSON import/export. File picker import/export and dynamic Lab options for user-created palettes are deferred.
-- `algorithmDefault` keeps the existing procedural color path; theme-mapped palette remapping and production procedural background wiring are still future work.
+- `algorithmDefault` keeps the existing procedural color path. Home `themeMapped` is a presentation-only luminance mapping from resolved dark/mid/light endpoints; `manualEndpoints` uses `toolIconColor` / `toolIconLine`, while `paletteScale` derives from the selected visible palette's `shadow` / `base` / `highlight`. It does not change palette mappings, source recipes, or engine cache identity.
+- `proceduralHomeIcons.js` exposes separate source/presentation invalidation paths. Theme Settings changes must use `updateAppearance()` and must not call `ProceduralAppearance.clearCache()`.
+- Theme Settings is schema-driven: Interface Appearance contains `themeAccent` and compatible `homeBackground` shown as Home Base Color; Tool Icon Appearance contains the mode, dark source mode/palette selector, conditional endpoint group, luminance ramp, and Palette Library summary. Keep Manage Palettes routed through `ProceduralPaletteWorkspace.open()`.
+- Theme mapping failures keep the Colorful source raster. Production procedural background wiring remains future work.
 - Do not change `VERSION`, `CSXS/manifest.xml`, helper scripts, color picker, Ad Component Kit, Shape Add, or production Settings semantics in this workstream.
 - 0.2.5 should continue from the 0.2.4 stable feature line and focus on deterministic procedural icons and a procedural background MVP.
 - Do not continue Windows eyedropper overlay lifecycle fixes in this workstream; those limitations remain documented known issues.
@@ -366,7 +369,7 @@ Procedural Home icon wiring:
 - The only seed source is the stable tool id from `data-tool`; do not use title text, current language, Home order, DOM index, Developer Mode state, theme color, or Settings values.
 - Static Home anchors and dynamic registry tools must pass through the same controller path and dedupe by tool id.
 - Existing glyph/text icons are fallback only. Successful procedural canvas rendering should cover the rounded-square icon area and hide the fallback visually.
-- Theme-mapped recolor and procedural background production wiring are not implemented yet.
+- Theme-mapped Home presentation is implemented. Production procedural background wiring remains future work.
 
 Suggested branch sequence:
 

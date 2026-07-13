@@ -128,8 +128,8 @@
                     {
                         key: "homeBackground",
                         type: "color",
-                        labelKey: "label.homeBackground",
-                        descriptionKey: "helper.homeBackground",
+                        labelKey: "label.homeBaseColor",
+                        descriptionKey: "helper.homeBaseColor",
                         defaultValue: "#050403"
                     },
                     {
@@ -137,14 +137,119 @@
                         type: "color",
                         labelKey: "label.toolIconColor",
                         descriptionKey: "helper.toolIconColor",
-                        defaultValue: "#15120c"
+                        defaultValue: "#15120c",
+                        visibleWhen: {
+                            any: [
+                                { key: "proceduralIconMode", equals: "colorful" },
+                                {
+                                    all: [
+                                        { key: "proceduralIconMode", equals: "themeMapped" },
+                                        { key: "toolIconDarkSourceMode", equals: "manualEndpoints" }
+                                    ]
+                                }
+                            ]
+                        }
                     },
                     {
                         key: "toolIconLine",
                         type: "color",
                         labelKey: "label.toolIconLine",
                         descriptionKey: "helper.toolIconLine",
-                        defaultValue: "#fff0be"
+                        defaultValue: "#fff0be",
+                        visibleWhen: {
+                            any: [
+                                { key: "proceduralIconMode", equals: "colorful" },
+                                {
+                                    all: [
+                                        { key: "proceduralIconMode", equals: "themeMapped" },
+                                        { key: "toolIconDarkSourceMode", equals: "manualEndpoints" }
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        key: "proceduralIconMode",
+                        type: "select",
+                        labelKey: "label.proceduralIconMode",
+                        descriptionKey: "helper.proceduralIconMode",
+                        defaultValue: "colorful",
+                        options: [
+                            { value: "colorful", labelKey: "settings.proceduralIconMode.colorful" },
+                            { value: "themeMapped", labelKey: "settings.proceduralIconMode.themeMapped" }
+                        ]
+                    },
+                    {
+                        key: "toolIconDarkSourceMode",
+                        type: "select",
+                        labelKey: "label.iconDarkSource",
+                        descriptionKey: "helper.iconDarkSource",
+                        defaultValue: "manualEndpoints",
+                        options: [
+                            { value: "manualEndpoints", labelKey: "settings.iconDarkSource.manualEndpoints" },
+                            { value: "paletteScale", labelKey: "settings.iconDarkSource.paletteScale" }
+                        ],
+                        visibleWhen: { key: "proceduralIconMode", equals: "themeMapped" }
+                    },
+                    {
+                        key: "toolIconDarkPaletteId",
+                        type: "select",
+                        labelKey: "label.sourcePalette",
+                        descriptionKey: "helper.sourcePalette",
+                        defaultValue: "",
+                        optionsProvider: "proceduralPalettes",
+                        visibleWhen: {
+                            all: [
+                                { key: "proceduralIconMode", equals: "themeMapped" },
+                                { key: "toolIconDarkSourceMode", equals: "paletteScale" }
+                            ]
+                        }
+                    }
+                ],
+                groups: [
+                    {
+                        id: "interfaceAppearance",
+                        titleKey: "settings.theme.interfaceAppearance",
+                        fields: ["themeAccent", "homeBackground"]
+                    },
+                    {
+                        id: "toolIconAppearance",
+                        titleKey: "settings.theme.toolIconAppearance",
+                        fields: ["proceduralIconMode"],
+                        presentations: [
+                            {
+                                type: "note",
+                                key: "proceduralIconModeColorfulNote",
+                                textKey: "helper.proceduralIconModeColorful",
+                                visibleWhen: { key: "proceduralIconMode", equals: "colorful" }
+                            },
+                            {
+                                type: "note",
+                                key: "proceduralIconModeThemeNote",
+                                textKey: "helper.proceduralIconModeThemeMapped",
+                                visibleWhen: { key: "proceduralIconMode", equals: "themeMapped" }
+                            },
+                            {
+                                type: "paletteSummary",
+                                key: "proceduralPaletteSummary",
+                                actionKey: "settings.palette.manage",
+                                visibleWhen: { key: "proceduralIconMode", equals: "colorful" }
+                            }
+                        ]
+                    },
+                    {
+                        id: "iconColors",
+                        titleKey: "settings.theme.iconColors",
+                        collapsible: true,
+                        defaultCollapsed: true,
+                        openWhen: { key: "proceduralIconMode", equals: "themeMapped" },
+                        fields: ["toolIconDarkSourceMode", "toolIconDarkPaletteId", "toolIconColor", "toolIconLine"],
+                        presentations: [
+                            { type: "colorRampPreview", key: "proceduralIconColorRamp", visibleWhen: { key: "proceduralIconMode", equals: "themeMapped" } },
+                            { type: "note", key: "proceduralFallbackNote", textKey: "helper.fallbackIconColors", visibleWhen: { key: "proceduralIconMode", equals: "colorful" } },
+                            { type: "note", key: "proceduralIconSourceNote", textKey: "helper.proceduralIconSource", visibleWhen: { key: "proceduralIconMode", equals: "themeMapped" } },
+                            { type: "paletteSummary", key: "proceduralIconSourcePalettes", actionKey: "settings.palette.manageSource", visibleWhen: { key: "proceduralIconMode", equals: "themeMapped" } }
+                        ]
                     }
                 ]
             },
