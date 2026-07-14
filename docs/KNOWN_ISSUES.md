@@ -174,7 +174,7 @@ Future investigation should check duplicate event binding, stale open/active cla
 
 Status:
 
-Accepted 0.2.5 release-candidate limitation.
+Accepted 0.2.5 limitation.
 
 Area:
 
@@ -202,6 +202,6 @@ Do not solve these by hard-coding tool-specific DOM hacks into the registry rend
 
 Status:
 
-Accepted 0.2.5 release-candidate limitation.
+Accepted 0.2.5 limitation.
 
 The first source/geometry parameter change after plugin startup may incur a one-time render warm-up delay. Subsequent source changes are noticeably faster. This is currently acceptable for the Developer Mode procedural controls. Palette/theme presentation changes should remain presentation-only and must not trigger the complete source rebuild.
