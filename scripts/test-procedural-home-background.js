@@ -141,12 +141,16 @@ function run() {
         id: "pacificCyan",
         colors: { shadow: "#102936", base: "#26728D", secondary: "#69B9CC", highlight: "#D8F7FF" }
     };
+    const warmPalette = {
+        id: "warmCoral",
+        colors: { shadow: "#402127", base: "#A54F59", secondary: "#E28A79", highlight: "#FFE0C5" }
+    };
     const resolver = {
         getResolvedPalette(id) {
-            return id === "pacificCyan" ? palette : null;
+            return id === "pacificCyan" ? palette : (id === "warmCoral" ? warmPalette : null);
         },
         getResolvedPaletteSignature(id) {
-            return id === "pacificCyan" ? "pacificCyan-v1" : "algorithmDefault";
+            return id === "pacificCyan" ? "pacificCyan-v1" : (id === "warmCoral" ? "warmCoral-v1" : "algorithmDefault");
         }
     };
     const inputA = background.buildBackgroundInput({ seed: "background-demo-01", paletteId: "pacificCyan", paletteResolver: resolver });
@@ -278,7 +282,7 @@ function run() {
     };
     const themeMap = {
         getThemeMapSignature(options) {
-            return "theme-map-v2|" + options.darkColor + "|" + options.midColor + "|" + options.lightColor + "|" + JSON.stringify(options.mappingParams || {});
+            return "theme-map-v2|" + options.darkColor + "|" + options.midColor + "|" + options.lightColor + "|" + (options.paletteId || "") + "|" + (options.paletteSignature || "") + "|" + JSON.stringify(options.mappingParams || {});
         },
         getRelativeLuminance(r, g, b) {
             const value = typeof r === "object" ? (r.r + r.g + r.b) / 3 : (r + g + b) / 3;
@@ -335,7 +339,14 @@ function run() {
     });
     paletteThemeEnv.runFrames();
     assert(paletteThemeController.getState().config.iconAppearance.darkSourceMode === "paletteScale" && themeRenderCount === 2, "Palette Scale follow mode must reuse the selected source palette relationship.");
-    assertions += 1;
+    const paletteSourceBeforeSwitch = paletteThemeController.getState().sourceSignature;
+    const palettePresentationBeforeSwitch = paletteThemeController.getState().presentationSignature;
+    paletteThemeController.update({
+        iconAppearance: { mode: "themeMapped", darkSourceMode: "paletteScale", darkPaletteId: "warmCoral" }
+    });
+    paletteThemeEnv.runFrames();
+    assert(themeRenderCount === 2 && clearCacheCount === 0 && paletteThemeController.getState().sourceGenerationCount === 1 && paletteThemeController.getState().presentationGenerationCount === 2 && paletteThemeController.getState().sourceSignature === paletteSourceBeforeSwitch && paletteThemeController.getState().presentationSignature !== palettePresentationBeforeSwitch && paletteThemeController.getState().presentationSignature.indexOf("warmCoral") !== -1, "Switching followIconTheme paletteScale palettes must refresh presentation without regenerating the palette-independent source field or clearing the engine cache.");
+    assertions += 2;
 
     console.log("Procedural Home Background tests passed: " + assertions + " assertions.");
 }

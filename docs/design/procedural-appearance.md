@@ -335,6 +335,8 @@ The seed is manually editable and independent from tool ids. A resolved Palette 
 
 The procedural background deliberately uses the shared engine with the same normalized parameter defaults as icons. The `background` target changes only composition scale, spatial adaptation, and aspect-ratio handling; it does not maintain a second background-only parameter table. It is not an enlarged tool icon and does not change Home icon seeds or palette mappings. In `followIconTheme`, `paletteScale` reuses the selected source palette relationship; `manualEndpoints` maps the background luminance through the same dark/mid/light endpoint relationship as the icons. The controller caches a 0–255 source luminance field and applies a 256-entry presentation LUT, so theme changes rerender only the presentation without clearing engine caches.
 
+For `followIconTheme`, the source luminance field is intentionally palette-independent. The selected palette id/signature and its derived dark/mid/light values are presentation inputs only; switching source palettes rebuilds the presentation LUT over the existing field. The manual `procedural` source mode retains its selected palette in source identity.
+
 Current editor limitations:
 
 - The Settings Palette Library editor supports user-editable palettes and Home tool mapping.

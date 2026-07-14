@@ -59,6 +59,8 @@ function run() {
     assert(/controller\.updateAppearance\([\s\S]*mappingParams: getProceduralAppearanceMappingParams\(\)/.test(mainText), "Home icon theme presentation must receive the shared palette mapping params.");
     assert(/getProceduralAppearanceMappingParams\(\)/.test(mainText) && /params: getProceduralAppearanceSourceParams\(\)/g.test(mainText), "Home and background must receive shared source/mapping parameter paths.");
     assert(/getDefaultMappingParams|normalizeMappingParams/.test(mainText), "Palette mapping defaults must use the shared Theme Map normalization path.");
+    assert(/PROCEDURAL_APPEARANCE_SOURCE_DEBOUNCE_MS\s*=\s*150/.test(mainText) && /function scheduleProceduralAppearanceSourceUpdate[\s\S]*setTimeout/.test(mainText), "Shared procedural source parameter updates must use a trailing debounce.");
+    assert(/function applyProceduralAppearanceParams[\s\S]*scheduleProceduralAppearanceSourceUpdate/.test(mainText) && /function applyToolIconTheme[\s\S]*updateProceduralHomeIconAppearance/.test(mainText), "Source parameter edits must be debounced while Theme endpoint updates remain immediate.");
     assert(/function setupProceduralAppearanceParams[\s\S]*applyProceduralAppearanceParams[\s\S]*false/.test(mainText), "Procedural parameter edits must update in real time without per-input persistence.");
     assert(/function resetProceduralAppearanceParams[\s\S]*getProceduralAppearanceDefaults[\s\S]*applyProceduralAppearanceParams\([\s\S]*true/.test(mainText), "Reset must restore and persist shared defaults.");
     assertions += 10;

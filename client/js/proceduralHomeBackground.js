@@ -273,6 +273,7 @@
         function resolvePalette(id) {
             var resolver = getPaletteResolver();
             var palette;
+            var signature;
             if (!resolver || !id || id === DEFAULT_PALETTE_ID) {
                 return null;
             }
@@ -282,7 +283,19 @@
                 } else if (typeof resolver.getPalette === "function") {
                     palette = resolver.getPalette(id);
                 }
-                return palette || null;
+                if (!palette) {
+                    return null;
+                }
+                if (typeof resolver.getResolvedPaletteSignature === "function") {
+                    signature = resolver.getResolvedPaletteSignature(id);
+                } else if (typeof resolver.getPaletteSignature === "function") {
+                    signature = resolver.getPaletteSignature(id);
+                }
+                return {
+                    id: id,
+                    signature: String(signature || id),
+                    palette: palette
+                };
             } catch (error) {
                 return null;
             }
@@ -291,17 +304,19 @@
         function resolvePresentationColors() {
             var appearance = state.config.iconAppearance;
             var themeMap = getThemeMap();
-            var palette;
+            var resolved;
             var colors;
 
             if (state.config.mode !== DEFAULT_MODE || appearance.mode !== "themeMapped" || !themeMap) {
                 return null;
             }
             if (appearance.darkSourceMode === "paletteScale") {
-                palette = resolvePalette(appearance.darkPaletteId);
-                if (palette && typeof themeMap.derivePaletteScaleColors === "function") {
-                    colors = themeMap.derivePaletteScaleColors(palette, appearance.mappingParams);
+                resolved = resolvePalette(appearance.darkPaletteId);
+                if (resolved && typeof themeMap.derivePaletteScaleColors === "function") {
+                    colors = themeMap.derivePaletteScaleColors(resolved.palette, appearance.mappingParams);
                     if (colors) {
+                        colors.paletteId = resolved.id;
+                        colors.paletteSignature = resolved.signature;
                         return colors;
                     }
                 }
@@ -309,7 +324,9 @@
             colors = {
                 dark: appearance.darkColor,
                 mid: appearance.midColor,
-                light: appearance.lightColor
+                light: appearance.lightColor,
+                paletteId: "",
+                paletteSignature: ""
             };
             if (!colors.mid && typeof themeMap.mapLuminanceToColor === "function") {
                 colors.mid = themeMap.mapLuminanceToColor(0.5, colors.dark, colors.light);
@@ -317,20 +334,16 @@
             return colors;
         }
 
-        function getEffectivePaletteIdForConfig(config) {
+        function getSourcePaletteIdForConfig(config) {
             var input = config || state.config;
-            var appearance = input.iconAppearance || normalizeIconAppearance({});
-            if (input.mode === DEFAULT_MODE && appearance.mode === "themeMapped" && appearance.darkSourceMode === "paletteScale" && appearance.darkPaletteId !== DEFAULT_PALETTE_ID) {
-                return appearance.darkPaletteId;
-            }
-            if (input.mode === DEFAULT_MODE && appearance.mode === "themeMapped" && appearance.darkSourceMode === "manualEndpoints") {
+            if (input.mode === DEFAULT_MODE) {
                 return DEFAULT_PALETTE_ID;
             }
-            return input.paletteId;
+            return normalizePaletteId(input.paletteId);
         }
 
-        function getEffectivePaletteId() {
-            return getEffectivePaletteIdForConfig(state.config);
+        function getSourcePaletteId() {
+            return getSourcePaletteIdForConfig(state.config);
         }
 
         function parseHexColor(value) {
@@ -378,6 +391,8 @@
                 darkColor: colors.dark,
                 midColor: colors.mid,
                 lightColor: colors.light,
+                paletteId: colors.paletteId || "",
+                paletteSignature: colors.paletteSignature || "",
                 mappingParams: state.config.iconAppearance.mappingParams
             });
         }
@@ -665,7 +680,7 @@
             }
             input = buildBackgroundInput({
                 seed: state.config.seed,
-                paletteId: getEffectivePaletteId(),
+                paletteId: getSourcePaletteId(),
                 paletteResolver: getPaletteResolver(),
                 params: state.config.params,
                 normalizeParams: engine.normalizeParams
@@ -806,11 +821,10 @@
                 normalizeParams: options.normalizeParams,
                 iconAppearance: typeof options.iconAppearance === "undefined" ? state.config.iconAppearance : options.iconAppearance
             });
-            var oldEffectivePaletteId = getEffectivePaletteIdForConfig(state.config);
-            var nextEffectivePaletteId = getEffectivePaletteIdForConfig(next);
+            var oldSourcePaletteId = getSourcePaletteIdForConfig(state.config);
+            var nextSourcePaletteId = getSourcePaletteIdForConfig(next);
             var sourceChanged = next.mode !== state.config.mode || next.seed !== state.config.seed ||
-                next.paletteId !== state.config.paletteId ||
-                nextEffectivePaletteId !== oldEffectivePaletteId ||
+                nextSourcePaletteId !== oldSourcePaletteId ||
                 JSON.stringify(next.params) !== JSON.stringify(state.config.params);
             var presentationChanged = JSON.stringify(next.iconAppearance) !== JSON.stringify(state.config.iconAppearance);
             state.config = next;

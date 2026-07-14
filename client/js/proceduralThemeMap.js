@@ -266,7 +266,11 @@
         if (input.midColor) {
             signature += normalizeHexColor(input.midColor, "#15120c") + "|";
         }
-        return signature + normalizeHexColor(input.lightColor, "#fff0be") + "|" + JSON.stringify(normalizeMappingParams(input.mappingParams || input));
+        signature += normalizeHexColor(input.lightColor, "#fff0be") + "|";
+        if (input.paletteId || input.paletteSignature) {
+            signature += String(input.paletteId || "") + "|" + String(input.paletteSignature || "") + "|";
+        }
+        return signature + JSON.stringify(normalizeMappingParams(input.mappingParams || input));
     }
 
     return {

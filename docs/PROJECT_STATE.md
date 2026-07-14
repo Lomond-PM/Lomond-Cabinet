@@ -83,6 +83,7 @@ Current 0.2.5 procedural appearance status:
 - The Palette Store layer resolves factory defaults + built-in overrides + custom palettes for ProceduralAppearance and Home icons. It must not write back to source files.
 - Palette Store storage key `lomond.proceduralPaletteStore.v1` and schema version remain unchanged by the Palette Workspace controller extraction.
 - Procedural Home background is an optional mode separate from Theme-mapped Home icon presentation. It uses Palette Store public APIs without changing Palette Store schema/key, icon palette mappings, icon seeds, or BackgroundEngine behavior.
+- In `followIconTheme`, the procedural Home background source field is palette-independent. Theme palette id/signature and derived dark/mid/light colors are presentation-only and rebuild the 256-entry LUT; manual `procedural` mode still includes its selected source palette in source identity.
 - File picker-based palette import/export is deferred; the current editor supports copy/paste JSON replace/merge.
 - Eyedropper overlay lifecycle limitations remain known limitations and are not part of this workstream.
 

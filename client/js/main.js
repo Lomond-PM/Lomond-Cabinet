@@ -58,6 +58,8 @@
     var selectionPollTimer = null;
     var ThemeSettingsStoreListener = null;
     var ProceduralAppearanceParams = null;
+    var ProceduralAppearanceSourceDebounceTimer = null;
+    var PROCEDURAL_APPEARANCE_SOURCE_DEBOUNCE_MS = 150;
     var DefaultSettings = {
         motionSpeed: 1,
         uiScale: 0.92,
@@ -1616,6 +1618,40 @@
         return normalizeProceduralAppearanceParams(ProceduralAppearanceParams);
     }
 
+    function clearProceduralAppearanceSourceDebounce() {
+        if (ProceduralAppearanceSourceDebounceTimer === null) {
+            return;
+        }
+        if (window && typeof window.clearTimeout === "function") {
+            window.clearTimeout(ProceduralAppearanceSourceDebounceTimer);
+        }
+        ProceduralAppearanceSourceDebounceTimer = null;
+    }
+
+    function scheduleProceduralAppearanceSourceUpdate() {
+        clearProceduralAppearanceSourceDebounce();
+        if (panelShuttingDown) {
+            return;
+        }
+        if (window && typeof window.setTimeout === "function") {
+            ProceduralAppearanceSourceDebounceTimer = window.setTimeout(function () {
+                ProceduralAppearanceSourceDebounceTimer = null;
+                if (!panelShuttingDown) {
+                    updateProceduralHomeIconAppearance();
+                }
+            }, PROCEDURAL_APPEARANCE_SOURCE_DEBOUNCE_MS);
+        } else {
+            updateProceduralHomeIconAppearance();
+        }
+    }
+
+    function flushProceduralAppearanceSourceUpdate() {
+        clearProceduralAppearanceSourceDebounce();
+        if (!panelShuttingDown) {
+            updateProceduralHomeIconAppearance();
+        }
+    }
+
     function setProceduralAppearanceParamControls(params) {
         var fields = getProceduralAppearanceParameterFields();
         var normalized = normalizeProceduralAppearanceParams(params);
@@ -1657,12 +1693,20 @@
     function applyProceduralAppearanceParams(params, persist, syncControls) {
         var normalized = normalizeProceduralAppearanceParams(params);
         var previous = ProceduralAppearanceParams ? JSON.stringify(ProceduralAppearanceParams) : "";
+        var previousSource = ProceduralAppearanceParams ? JSON.stringify(getProceduralAppearanceSourceParams(ProceduralAppearanceParams)) : "";
+        var nextSource = JSON.stringify(getProceduralAppearanceSourceParams(normalized));
+        var previousMapping = ProceduralAppearanceParams ? JSON.stringify(getProceduralAppearanceMappingParams(ProceduralAppearanceParams)) : "";
+        var nextMapping = JSON.stringify(getProceduralAppearanceMappingParams(normalized));
         ProceduralAppearanceParams = normalized;
         if (syncControls !== false) {
             setProceduralAppearanceParamControls(normalized);
         }
         if (previous !== JSON.stringify(normalized)) {
-            updateProceduralHomeIconAppearance();
+            if (previousSource !== nextSource) {
+                scheduleProceduralAppearanceSourceUpdate();
+            } else if (previousMapping !== nextMapping) {
+                updateProceduralHomeIconAppearance({ presentationOnly: true });
+            }
         }
         if (persist) {
             saveSettings();
@@ -1672,6 +1716,7 @@
 
     function resetProceduralAppearanceParams() {
         applyProceduralAppearanceParams(getProceduralAppearanceDefaults(), true, true);
+        flushProceduralAppearanceSourceUpdate();
         setStatus(tr("status.proceduralAppearanceDefaultsRestored"), "ok");
     }
 
@@ -2355,21 +2400,24 @@
         }
     }
 
-    function updateProceduralHomeBackground() {
+    function updateProceduralHomeBackground(options) {
         var controller = window.ProceduralHomeBackground;
         var source = byId("backgroundSource");
         var seed = byId("proceduralBackgroundSeed");
         var palette = byId("proceduralBackgroundPaletteId");
         var intensity = byId("proceduralBackgroundIntensityNumber");
+        var current = options && options.presentationOnly && controller && typeof controller.getState === "function"
+            ? controller.getState()
+            : null;
         if (!controller || typeof controller.update !== "function") {
             return;
         }
         controller.update({
-            mode: normalizeBackgroundSource(source ? source.value : DefaultSettings.backgroundSource),
-            seed: normalizeProceduralBackgroundSeed(seed ? seed.value : DefaultSettings.proceduralBackgroundSeed),
-            paletteId: normalizeProceduralBackgroundPaletteId(palette ? palette.value : DefaultSettings.proceduralBackgroundPaletteId),
-            intensity: normalizeProceduralBackgroundIntensity(intensity ? intensity.value : DefaultSettings.proceduralBackgroundIntensity),
-            params: getProceduralAppearanceSourceParams(),
+            mode: current ? current.config.mode : normalizeBackgroundSource(source ? source.value : DefaultSettings.backgroundSource),
+            seed: current ? current.config.seed : normalizeProceduralBackgroundSeed(seed ? seed.value : DefaultSettings.proceduralBackgroundSeed),
+            paletteId: current ? current.config.paletteId : normalizeProceduralBackgroundPaletteId(palette ? palette.value : DefaultSettings.proceduralBackgroundPaletteId),
+            intensity: current ? current.config.intensity : normalizeProceduralBackgroundIntensity(intensity ? intensity.value : DefaultSettings.proceduralBackgroundIntensity),
+            params: current ? current.config.params : getProceduralAppearanceSourceParams(),
             iconAppearance: getProceduralHomeBackgroundIconAppearance()
         });
     }
@@ -2379,6 +2427,21 @@
         if (controller && typeof controller.refresh === "function") {
             controller.refresh();
         }
+    }
+
+    function refreshProceduralHomeBackgroundForPaletteStore() {
+        var controller = window.ProceduralHomeBackground;
+        var state;
+        if (controller && typeof controller.getState === "function") {
+            state = controller.getState();
+        }
+        if (state && state.config && state.config.mode === "followIconTheme" &&
+                state.config.iconAppearance && state.config.iconAppearance.mode === "themeMapped" &&
+                state.config.iconAppearance.darkSourceMode === "paletteScale") {
+            updateProceduralHomeBackground({ presentationOnly: true });
+            return;
+        }
+        refreshProceduralHomeBackground();
     }
 
     function applyBackgroundSource(value) {
@@ -2499,8 +2562,8 @@
                 refreshSettingsPaletteOptions();
                 refreshSettingsBackgroundPaletteOptions();
                 refreshSettingsPaletteSummary();
-                updateProceduralHomeIconAppearance();
-                refreshProceduralHomeBackground();
+                updateProceduralHomeIconAppearance({ presentationOnly: true });
+                refreshProceduralHomeBackgroundForPaletteStore();
                 refreshSettingsThemePresentation();
             }
         };
@@ -2608,7 +2671,7 @@
             select.value = mode;
             syncCustomSelect(select);
         }
-        updateProceduralHomeIconAppearance();
+        updateProceduralHomeIconAppearance({ presentationOnly: true });
         refreshSettingsThemePresentation();
     }
 
@@ -2634,7 +2697,7 @@
         if (arguments.length > 1 && arguments[1] && arguments[1].suggestThemeAccent) {
             suggestThemeAccentFromPalette(selected);
         }
-        updateProceduralHomeIconAppearance();
+        updateProceduralHomeIconAppearance({ presentationOnly: true });
         refreshSettingsThemePresentation();
     }
 
@@ -7299,7 +7362,7 @@
         root.style.setProperty("--tool-icon-fill", rgba(line, 0.13));
         setColorValue("toolIconColor", icon);
         setColorValue("toolIconLine", line);
-        updateProceduralHomeIconAppearance();
+        updateProceduralHomeIconAppearance({ presentationOnly: true });
         refreshSettingsThemePresentation();
     }
 
@@ -7309,15 +7372,15 @@
             : (value === "themeMapped" ? "themeMapped" : "colorful");
     }
 
-    function updateProceduralHomeIconAppearance() {
+    function updateProceduralHomeIconAppearance(options) {
         var controller = window.ProceduralHomeIcons;
         var modeSelect = byId("proceduralIconMode");
         var colors = resolveProceduralThemeColors();
         if (!controller || typeof controller.updateAppearance !== "function") {
-            updateProceduralHomeBackground();
+            updateProceduralHomeBackground(options);
             return;
         }
-        if (typeof controller.updateParameters === "function") {
+        if (!(options && options.presentationOnly) && typeof controller.updateParameters === "function") {
             controller.updateParameters(getProceduralAppearanceSourceParams());
         }
         controller.updateAppearance({
@@ -7327,7 +7390,7 @@
             lightColor: colors.light,
             mappingParams: getProceduralAppearanceMappingParams()
         });
-        updateProceduralHomeBackground();
+        updateProceduralHomeBackground(options);
     }
 
     function applyProceduralIconMode(value) {
@@ -7337,7 +7400,7 @@
             select.value = mode;
             syncCustomSelect(select);
         }
-        updateProceduralHomeIconAppearance();
+        updateProceduralHomeIconAppearance({ presentationOnly: true });
         refreshSettingsThemePresentation();
     }
 
@@ -7560,6 +7623,7 @@
         }
         lifecycleDebug("panel close start");
         panelShuttingDown = true;
+        clearProceduralAppearanceSourceDebounce();
         stopSelectionPolling();
         stopRegistryStatePolling();
         clearRegistrySaveTimers();

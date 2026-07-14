@@ -45,6 +45,7 @@ This project follows simple semantic versioning for development handoff:
 - Updated procedural preview rendering to generate internal rasters at a controlled device-pixel-ratio scale capped at 2 while preserving logical canvas size.
 - Split procedural Home background rendering into a cached 0–255 source luminance field and a presentation-only 256-entry theme LUT. Theme changes now reuse the source field and do not clear the engine cache.
 - Unified procedural Home background parameter normalization with the shared `ProceduralAppearance.normalizeParams()` defaults; background no longer maintains a separate default parameter table.
+- Clarified procedural background invalidation: `followIconTheme` keeps a palette-independent luminance source field while palette id/signature and derived colors only rebuild presentation; manual procedural source palette changes retain source invalidation.
 - Exposed shared procedural parameters through the existing `AEToolbox.settings.v1` Settings object, with safe normalization for missing or invalid saved values and a shared-default reset action.
 - Tuned the shared default value structure toward cleaner highlights and deeper mid/dark values: brightness `0.88`, highlight concentration `0.52`, highlight area `0.06`, contrast `0.92`, and depth `0.80`.
 - Kept procedural Home icon identity independent from language, Home order, Developer Mode, theme colors, and Settings changes.

@@ -36,6 +36,36 @@ jobs:
       - name: Test procedural determinism
         run: node scripts/test-procedural-determinism.js
 
+      - name: Test procedural preview contract
+        run: node scripts/test-procedural-preview-contract.js
+
+      - name: Test procedural cache
+        run: node scripts/test-procedural-cache.js
+
+      - name: Test procedural Home icons
+        run: node scripts/test-procedural-home-icons.js
+
+      - name: Test procedural Home background
+        run: node scripts/test-procedural-home-background.js
+
+      - name: Test procedural Theme Map
+        run: node scripts/test-procedural-theme-map.js
+
+      - name: Test procedural palette library
+        run: node scripts/test-procedural-palette-library.js
+
+      - name: Test procedural palette store
+        run: node scripts/test-procedural-palette-store.js
+
+      - name: Test procedural palette editor
+        run: node scripts/test-procedural-palette-editor.js
+
+      - name: Test procedural palette workspace
+        run: node scripts/test-procedural-palette-workspace.js
+
+      - name: Test Theme Settings integration
+        run: node scripts/test-theme-settings-integration.js
+
       - name: Refresh i18n report
         run: node scripts/report-i18n-usage.js
 
