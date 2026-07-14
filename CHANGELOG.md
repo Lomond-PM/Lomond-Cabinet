@@ -10,7 +10,79 @@ This project follows simple semantic versioning for development handoff:
 
 ## [Unreleased]
 
-- No unreleased changes yet.
+_No unreleased changes._
+
+## [0.2.5] - 2026-07-14
+
+### Added
+
+- Added a Developer Mode-only Procedural Appearance Lab for testing deterministic procedural icon and background generation.
+- Added a shared procedural visual engine skeleton with seeded hash, seeded random, normalized params, canvas rendering, and memory cache keys.
+- Drafted the 0.2.5 procedural appearance plan for deterministic tool icons, optional theme-mapped recolor, and a procedural background MVP.
+- Added `scripts/check-project-consistency.js` for release/version, entrypoint, cache-query, and registry tool structure checks.
+- Added an explicit `proceduralPreview` registry field contract and pure contract helper tests for Procedural Appearance Lab previews.
+- Added bounded procedural appearance cache helpers and tests for recipe/raster cache limits, LRU behavior, cache stats, and DPR render scaling.
+- Added Colorful procedural Home tool icons driven only by stable tool ids, with a dedicated Home icon controller and pure identity/queue tests.
+- Added an Apple-inspired curated procedural palette library with 8 fixed versioned palettes, stable palette signatures, and pure palette validation tests.
+- Added stable Home tool `paletteId` mapping for Colorful procedural icons while keeping icon seed identity based only on tool id.
+- Added optional Home procedural icon Theme-mapped presentation mode, using source-image luminance between the Settings tool icon base and accent colors.
+- Added a standalone deterministic Theme Map helper and tests without adding theme colors to procedural recipes or engine cache identity.
+- Added Theme Settings dark-endpoint source selection between compatible manual endpoints and a visible Palette Library scale.
+- Added an optional production Home procedural background controller with classic/follow-icon-theme/manual-procedural source selection, stable manual seed, resolved palette selection, intensity control, and deterministic background rendering.
+- Added a Developer Mode-only collapsible Procedural Appearance Parameters section. Its range/number controls use the shared ProceduralAppearance defaults and update Home icons and the procedural background together.
+- Added Developer Mode controls for palette presentation mapping: shadow darkening/chroma, middle-stop lift and position, highlight lift/chroma, and mapping contrast. These affect only Theme-mapped icon/background presentation and keep source recipes unchanged.
+- Added Palette Scale presentation mapping from resolved `shadow` / `base` / `highlight` roles, with a one-time secondary-color suggestion for Interface Accent when a source palette is actively selected.
+- Added Procedural Appearance Lab palette selection for the fixed palette library.
+- Added a Settings Palette Library editor backed by `lomond.proceduralPaletteStore.v1` for custom palettes, built-in overrides, Home tool palette assignment, live icon/background previews, and copy/paste JSON import/export.
+- Added `scripts/test-procedural-palette-store.js` for Palette Store validation, persistence, signatures, imports, and tool mapping behavior.
+
+### Changed
+
+- Confirmed `AEToolbox.settings.v1` as the formal production Settings storage contract for the 0.2.5 release line; no v2 migration is included before release.
+- Recorded the one-time procedural source-render warm-up after startup as an accepted limitation; palette/theme presentation changes remain presentation-only.
+- Aligned 0.2.5 release documentation with the current Git state: 0.2.4 is the `main` / `v0.2.4` stable baseline and 0.2.5 is the current release candidate.
+- Replaced the handoff new-tool workflow with a registry-first default path.
+- Unified frontend CSS/JS cache query strings to the formal 0.2.5 release build id.
+- Clarified host API version versus project release version semantics in `host/index.jsx`.
+- Refreshed the i18n usage report after Procedural Appearance Lab entered the registry tool set.
+- Scoped Procedural Appearance Lab preview refreshes to declared target, seed, and parameter dependencies instead of passing full registry values to the engine.
+- Moved generic procedural preview layout and fallback styling from renderer inline styles into `client/css/style.css`.
+- Added ProceduralAppearance `clearCache()` and `getCacheStats()` debug APIs without persisting cache state.
+- Updated procedural preview rendering to generate internal rasters at a controlled device-pixel-ratio scale capped at 2 while preserving logical canvas size.
+- Split procedural Home background rendering into a cached 0–255 source luminance field and a presentation-only 256-entry theme LUT. Theme changes now reuse the source field and do not clear the engine cache.
+- Unified procedural Home background parameter normalization with the shared `ProceduralAppearance.normalizeParams()` defaults; background no longer maintains a separate default parameter table.
+- Clarified procedural background invalidation: `followIconTheme` keeps a palette-independent luminance source field while palette id/signature and derived colors only rebuild presentation; manual procedural source palette changes retain source invalidation.
+- Exposed shared procedural parameters through the existing `AEToolbox.settings.v1` Settings object, with safe normalization for missing or invalid saved values and a shared-default reset action.
+- Tuned the shared default value structure toward cleaner highlights and deeper mid/dark values: brightness `0.88`, highlight concentration `0.52`, highlight area `0.06`, contrast `0.92`, and depth `0.80`.
+- Kept procedural Home icon identity independent from language, Home order, Developer Mode, theme colors, and Settings changes.
+- Included `paletteId` and palette signature in procedural recipe/cache identity for fixed palettes without changing seed, engine version, or geometry recipe fields.
+- Resolved procedural palettes through a Palette Store layer so factory palettes remain source-controlled defaults while user edits stay in localStorage.
+- Extracted the Settings Palette Library / Palette Workspace runtime controller from `client/js/main.js` into `client/js/proceduralPaletteWorkspace.js`, keeping Store persistence, editor draft helpers, and Workspace DOM lifecycle responsibilities separated without changing Palette Store schema or user-visible behavior.
+- Added `proceduralIconMode` to the existing Settings schema, defaulting to Colorful and persisting with the existing Settings object.
+- Added schema-driven Theme Settings groups for Interface Appearance and Tool Icon Appearance, including conditional endpoint controls, a compact luminance ramp, and a Palette Library summary entry.
+- Clarified Home Base Color as the existing `--bg-main` surface base, and refreshed Theme palette controls, dynamic source options, and shared disclosure styling.
+
+### Fixed
+
+- Added procedural preview lifecycle cleanup for pending animation-frame renders when switching tools, closing details, or entering panel shutdown.
+- Added safe procedural preview fallback handling for missing engines, invalid schema input, unavailable canvas contexts, and render exceptions.
+- Added generic Settings visibility/open-state metadata for Theme groups and preserved Settings scroll position when returning from Palette Workspace.
+- Fixed Theme-mapped dark endpoint and ramp refreshes after Palette Store changes; the ramp now uses one clipped shell and a borderless inner gradient.
+- Fixed shared Settings custom-select overflow with constrained trigger/menu text, viewport-clamped portal menus, and scroll/close cleanup.
+
+### Notes
+
+- The Lab does not replace production Home icons or the current BackgroundEngine.
+- Procedural Home background is now an optional production mode; classic BackgroundEngine remains available as the explicit fallback, while the procedural source defaults to following the icon theme. Theme-mapped icon recolor remains separate from source recipe identity.
+- Developer Mode controls are an editor surface only; disabling Developer Mode hides the parameter section without changing the stored or active normalized values.
+- Procedural preview contract work does not change the procedural generation algorithm, engine version, seed behavior, recipe output, or deterministic snapshot expectations.
+- Procedural cache/DPR work does not change palette, warp, ribbon, grain/noise, recipe fields, seed hashing, or production Home/background wiring.
+- The curated palette library is Apple-inspired / Apple-like only; it is not an Apple official palette set.
+- `algorithmDefault` keeps the existing procedural color path and deterministic snapshot behavior.
+- User-editable palette changes remain separate from Theme-mapped presentation; procedural Home background uses the same resolved palette API without changing icon mappings.
+- File picker-based palette import/export remains future work; the current editor supports copy/paste JSON import/export.
+- The original 0.2.4 color picker / eyedropper / Ad Component Kit cleanup / Shape Add collapsible behavior remains out of scope for this workstream.
+- The current duplicate i18n tool-key count is retained because the duplicates are core Settings preset keys also mirrored by Settings Renderer Lab for validation.
 
 ## [0.2.4] - 2026-07-09
 

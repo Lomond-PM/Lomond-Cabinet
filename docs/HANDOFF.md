@@ -86,13 +86,41 @@ ExtensionBundleVersion
 4. Commit the handoff state.
 5. Package only source and documentation, not runtime cache, archives, logs, or scratch files.
 
-Current release-prep note:
+Historical 0.2.4 stable baseline note:
 
-- `VERSION` is `0.2.4` on `release/0.2.4`.
-- `CSXS/manifest.xml` is `0.2.4` on `release/0.2.4`.
-- `CHANGELOG.md` contains the formal `0.2.4` release section and a clean `Unreleased` placeholder.
-- Do not claim 0.2.4 is published until `release/0.2.4` is merged through `dev` / `main` and tag `v0.2.4` is created.
+- `CHANGELOG.md` contains the formal `0.2.4` release section.
+- Git state confirms `v0.2.4` exists and is contained by `main`.
+- Treat 0.2.4 as the stable main baseline.
 - Do not create or move tags during documentation-only handoff work.
+
+Current 0.2.5 release-candidate note:
+
+- Procedural Appearance Phase 1 Lab and the production procedural appearance MVP are included in the release candidate.
+- The release candidate metadata is `0.2.5` in `VERSION`, both manifest version fields, and `AEToolbox.projectVersion`; `AEToolbox.hostApiVersion` remains `1.0.0`.
+- 0.2.5 is not published and the `v0.2.5` tag has not been created.
+- Main plan: `docs/design/procedural-appearance.md`.
+- Phase 1 adds a Developer Mode-only Lab and shared procedural engine skeleton.
+- The 0.2.5 release candidate also includes Colorful Home icons and a fixed Apple-inspired Palette Library. These palettes are curated project palettes, not Apple official palettes.
+- Home icon seed identity remains stable tool id only. `paletteId` controls fixed color selection and must not be derived from language, title, Home order, theme color, or UI Scale.
+- Palette Store user data lives in localStorage key `lomond.proceduralPaletteStore.v1`. Do not write user palette edits back into `client/js/proceduralPaletteLibrary.js`.
+- Palette Workspace runtime now lives in `client/js/proceduralPaletteWorkspace.js`; keep Palette Workspace DOM rendering, event binding, dirty guards, preview lifecycle, import/export UI, splitter/resize handling, Settings transition state, Store subscription, and teardown in that controller instead of moving them back into `client/js/main.js`.
+- Current Palette boundaries: `proceduralPaletteStore.js` owns persistence/validation/resolved palettes/tool mappings, `proceduralPaletteEditor.js` owns pure draft/layout/number helpers, and `proceduralPaletteWorkspace.js` owns UI/runtime lifecycle. The Palette Store storage key and schema version are unchanged.
+- Built-in palette edits are stored as overrides; custom palettes use generated stable ids; display names do not affect visual identity.
+- Settings Palette Library currently supports copy/paste JSON import/export. File picker import/export and dynamic Lab options for user-created palettes are deferred.
+- `algorithmDefault` keeps the existing procedural color path. Home `themeMapped` is a presentation-only luminance mapping from resolved dark/mid/light endpoints; `manualEndpoints` uses `toolIconColor` / `toolIconLine`, while `paletteScale` derives from the selected visible palette's `shadow` / `base` / `highlight`. It does not change palette mappings, source recipes, or engine cache identity.
+- `proceduralHomeIcons.js` exposes separate source/presentation invalidation paths. Theme Settings changes must use `updateAppearance()` and must not call `ProceduralAppearance.clearCache()`.
+- Theme Settings is schema-driven: Interface Appearance contains `themeAccent` and compatible `homeBackground` shown as Home Base Color; Tool Icon Appearance contains the mode, dark source mode/palette selector, conditional endpoint group, luminance ramp, and Palette Library summary. Keep Manage Palettes routed through `ProceduralPaletteWorkspace.open()`.
+- Theme mapping failures keep the Colorful source raster. Optional production procedural Home background wiring now lives in `client/js/proceduralHomeBackground.js`; it is separate from Theme Map and BackgroundEngine.
+- `ProceduralHomeBackground` exposes `initialize`, `update`, `invalidateSource`, `invalidatePresentation`, `refresh`, `regenerate`, `getState`, and `teardown`. It uses `target: "background"`, a manual seed independent from tool ids, a resolved Palette Store palette id/signature, and a low-intensity presentation layer. `followIconTheme` is the default procedural source; `classic` remains the explicit fallback and `procedural` remains the manual override.
+- Background rendering separates a shared-parameter source field from presentation mapping: the engine renders a hidden source canvas once per seed/size/palette/normalized-params signature, the controller caches 0–255 luminance plus alpha, and theme changes build/reuse a 256-entry dark/mid/light LUT without calling `ProceduralAppearance.clearCache()`. Background renderScale is independently clamped to 1–1.25; icon DPR behavior is unchanged. Rapid presentation updates are generation-token guarded and coalesced while the previous canvas remains visible.
+- Developer Mode now exposes a collapsible `Procedural Appearance Parameters` group using the existing Settings range/number interaction. Shared engine fields plus the seven Theme Map presentation fields (`paletteDarkness`, `paletteMidLift`, `paletteLightLift`, `paletteDarkChroma`, `paletteLightChroma`, `paletteMapMidpoint`, and `paletteMapContrast`) are persisted in the existing `AEToolbox.settings.v1` object. Engine fields go to both source renderers; mapping fields go to Home/background Theme-mapped presentation only. Reset uses shared defaults; disabling Developer Mode only hides the controls.
+- Shared defaults currently prioritize a cleaner, smaller highlight structure: `brightness: 0.88`, `highlightConcentration: 0.52`, `highlightArea: 0.06`, `contrast: 0.92`, `depth: 0.80`. Theme Map defaults are `paletteDarkness: 0.035`, `paletteMidLift: 0.045`, `paletteLightLift: 0.035`, `paletteDarkChroma: 0.94`, `paletteLightChroma: 0.96`, `paletteMapMidpoint: 0.5`, and `paletteMapContrast: 1`. Do not add a second background defaults table. Engine parameter changes are source invalidations; mapping and theme endpoint changes remain presentation invalidations.
+- Procedural background settings use the existing `AEToolbox.settings.v1` object. Do not add a new storage key or change `AEToolbox.background.v1`; classic BackgroundEngine controls and presets remain compatible.
+- `AEToolbox.settings.v1` is the formal Settings schema/runtime storage contract for the 0.2.5 release line. Do not introduce a pre-release v2 migration.
+- `followIconTheme + paletteScale` must keep a palette-independent source luminance field. Palette id/signature and derived endpoints belong only to presentation signature/LUT; only manual `procedural` source palette changes invalidate source.
+- Do not change `VERSION`, `CSXS/manifest.xml`, helper scripts, color picker, Ad Component Kit, Shape Add, or production Settings semantics in this workstream.
+- 0.2.5 continues from the 0.2.4 stable feature line with deterministic procedural icons and an optional procedural Home background MVP. Keep background source identity separate from icon identity.
+- Do not continue Windows eyedropper overlay lifecycle fixes in this workstream; those limitations remain documented known issues.
 
 On a new machine:
 
@@ -153,17 +181,27 @@ Use this as the first prompt:
 
 ## Suggested Workflow For Adding A Tool
 
-1. Read `client/index.html`, `client/js/main.js`, `client/js/i18n.js`, `host/index.jsx`.
-2. Add a Home card in `index.html`.
-3. Add a `ToolRegistry` entry in `main.js`.
-4. Add detail UI panels with `data-tool-panel`.
-5. Add bottom action footer with `data-tool-actions` if needed.
-6. Add i18n keys in both dictionaries.
-7. Add parameter collection and event binding in `main.js`.
-8. Add a host module in `host/tools/`.
-9. Include it in `host/index.jsx`.
-10. Return JSON strings from host functions.
-11. Test active code path with a version/debug field if behavior does not change.
+Default to the registry-first path for ordinary new tools:
+
+1. Create `host/tools/<toolId>.tool.jsx`.
+2. Register the tool with `AEToolbox.registerTool(toolDef)`.
+3. Put tool metadata, schema, actions, state declarations, and tool-local i18n in the `.tool.jsx` file.
+4. Let the core registry renderer own DOM, control behavior, status display, persistence, and action execution.
+5. Put AE execution logic in `host/tools/<toolId>.jsx` when the tool needs host behavior, then call it through registry actions.
+6. Return JSON strings from host functions, preferably with `ok`, `messageKey`, and structured details.
+7. If a UI capability is missing, add it as a generic registry renderer capability before using it in the tool schema.
+8. Test the active code path in AE; add temporary debug result fields only while confirming routing.
+
+Ordinary registry tools must not default to:
+
+- Dedicated Home card DOM.
+- Dedicated detail page DOM.
+- Dedicated CSS.
+- Dedicated frontend event binding.
+- Direct `localStorage` writes.
+- Bypassing `AEToolbox.runRegisteredToolAction(...)` for normal actions.
+
+Static Home anchors are only for explicit compatibility needs during legacy migration, such as preserving saved Home order, storage ids, or a known startup fallback path.
 
 ## Common Pitfalls
 
@@ -292,25 +330,85 @@ Recent lifecycle note:
 
 Future eyedropper work should focus on a dedicated helper replacement or a small, isolated overlay lifecycle task. A future C# / C++ helper can replace the PowerShell MVP behind the same `ColorSampler` provider interface. Do not change color picker UI, color model, H/S/V/R/G/B sliders, axis modes, Settings semantics, or registry field behavior as part of helper follow-up unless the task explicitly asks.
 
-## 0.2.4 Release Checklist
+## 0.2.5 Procedural Appearance Handoff
 
-Use this checklist before the manual 0.2.4 release commit / merge / tag.
+The 0.2.5 visual direction is documented in:
 
-1. Confirm current branch is `release/0.2.4`.
-2. Confirm `VERSION` is `0.2.4`.
-3. Confirm `CSXS/manifest.xml` `ExtensionBundleVersion` and extension `Version` are `0.2.4`.
-4. Check `package.json` version if one exists.
-5. Confirm the final `CHANGELOG.md` 0.2.4 section.
-6. AE regression: panel close from Home, Home Edit, Settings, Shape Add detail, Ad Component Kit detail, Developer Mode off, and Developer Mode on.
-7. AE regression: color picker H / S / V / R / G / B axes, channel sliders, Hex input select-all, popup flip / clamp, and Windows eyedropper MVP.
-8. AE regression: Ad Component Kit Feature Stack / Icon Grid creation, removable artifact metadata, and Remove Selected Generated Component.
-9. AE regression: Shape Add native components section collapse, native item creation, Stroke / Fill creation, and number input editing.
-10. AE regression: Settings, Text Background Box, Selection Info, Home Edit order persistence, and language switching.
-11. Commit `release: 0.2.4`.
-12. Merge `release/0.2.4` into `dev`.
-13. Merge `dev` into `main`.
-14. Tag `v0.2.4` from the release commit on `main`.
-15. Push `dev`, `main`, and `v0.2.4`.
+```text
+docs/design/procedural-appearance.md
+```
+
+Core decisions:
+
+- Tool icons should be generated from stable `toolId` / hash seeds.
+- Changing theme colors must not regenerate icon identity.
+- Default icon mode is colorful procedural artwork.
+- Optional theme-mapped mode should recolor by luminance / accent mapping while preserving composition.
+- Icons should fill the rounded-square app-icon area.
+- Visual style is soft abstract warped gradients.
+- Do not use dot/line decoration as the main style.
+- Do not introduce transparent glass UI.
+- Background artwork may share visual language with icons, but icon and background generation must remain separate.
+- Phase 1 Lab uses `engineVersion + target + seed + normalizedParams` as the deterministic output and cache key basis.
+
+Current Phase 1 files:
+
+- `client/js/proceduralAppearance.js`
+- `client/js/proceduralPreviewContract.js`
+- `client/js/proceduralHomeIcons.js`
+- `host/tools/proceduralAppearanceLab.tool.jsx`
+- `client/js/main.js` generic `proceduralPreview` registry field support
+- `docs/design/procedural-appearance.md`
+
+Procedural preview contract:
+
+- Registry tools declare `type: "proceduralPreview"` with `engine`, `targetKey`, `seedKey`, and `parameterKeys`.
+- The core renderer reads only the declared target, seed, and parameter keys. Do not pass full registry value objects into the procedural engine.
+- Preview refresh is dependency-scoped: target, seed, or declared parameter changes can schedule a render; unrelated registry field changes should not enter the procedural preview path.
+- Pending preview animation-frame work is cleaned up when changing tools, closing detail views, or entering panel shutdown.
+- Preview boundary failures use fallback UI rather than uncaught exceptions. Missing engine, missing canvas, invalid target/seed, and render exceptions should remain contained at the renderer boundary.
+- Preview layout and fallback styling belong in generic registry/procedural preview CSS, not inline renderer styles.
+- Do not change `client/js/proceduralAppearance.js`, engine version, seed hashing, palette, warp, ribbon, grain/noise, or deterministic snapshots during preview contract work.
+
+Procedural Home icon wiring:
+
+- Colorful Home icons are rendered by `client/js/proceduralHomeIcons.js`.
+- The only seed source is the stable tool id from `data-tool`; do not use title text, current language, Home order, DOM index, Developer Mode state, theme color, or Settings values.
+- Static Home anchors and dynamic registry tools must pass through the same controller path and dedupe by tool id.
+- Existing glyph/text icons are fallback only. Successful procedural canvas rendering should cover the rounded-square icon area and hide the fallback visually.
+- Theme-mapped Home presentation is implemented. Optional procedural Home background presentation is implemented by `client/js/proceduralHomeBackground.js` and remains independent from icon identity and BackgroundEngine.
+
+Suggested branch sequence:
+
+1. `feature/procedural-appearance-lab`
+2. `feat/procedural-home-icons`
+3. `feat/procedural-icon-theme-map`
+4. `feat/procedural-background-mvp`
+5. `docs/update-procedural-appearance-state`
+
+Recommended first implementation step:
+
+- Validate the Developer Mode Lab in AE before replacing production Home icons.
+
+Risk areas:
+
+- CEP performance from canvas rendering.
+- Generated icons becoming too similar.
+- Theme-mapped mode collapsing into a one-color palette.
+- Regressing Home Edit order, Settings, color picker, eyedropper MVP, Ad Component Kit cleanup, Shape Add collapsible, or panel close shutdown guards.
+
+## Historical 0.2.4 Release Baseline
+
+0.2.4 has been merged to `main` and tagged `v0.2.4`. Treat it as the stable baseline for the 0.2.5 release candidate.
+
+Baseline facts:
+
+1. `CHANGELOG.md` contains the final 0.2.4 section.
+2. No `package.json` version file exists in the current workspace.
+3. `v0.2.4` exists and is contained by `main`.
+4. The current release candidate metadata is maintained separately at `0.2.5` on `release/0.2.5`.
+
+For future releases, create a dedicated release branch, run AE regression, update release metadata only when requested, merge through `dev` and `main`, then create a new version tag from `main`.
 
 ## Current Active Tool Bridge Summary
 

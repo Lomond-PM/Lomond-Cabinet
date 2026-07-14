@@ -46,19 +46,36 @@
     var DynamicToolOrder = [];
     var RegistryToolState = {};
     var RegistrySaveTimers = {};
+    var ProceduralPreviewTimers = {};
+    var ProceduralPreviewWarnings = {};
+    var ProceduralPreviewLastInputKeys = {};
+    var PaletteWorkspaceController = null;
     var RegistryRuntimeStates = {};
     var CustomSelectGlobalListenersBound = false;
     var PanelLifecycleListenersBound = false;
     var panelShuttingDown = false;
     var panelSuspended = false;
     var selectionPollTimer = null;
+    var ThemeSettingsStoreListener = null;
+    var ProceduralAppearanceParams = null;
+    var ProceduralAppearanceSourceDebounceTimer = null;
+    var PROCEDURAL_APPEARANCE_SOURCE_DEBOUNCE_MS = 150;
     var DefaultSettings = {
         motionSpeed: 1,
         uiScale: 0.92,
         themeAccent: "#d6b25e",
         homeBackground: "#050403",
+        backgroundSource: "followIconTheme",
+        proceduralBackgroundSeed: "background-demo-01",
+        proceduralBackgroundPaletteId: "algorithmDefault",
+        proceduralBackgroundIntensity: 0.28,
         toolIconColor: "#15120c",
         toolIconLine: "#fff0be",
+        proceduralIconMode: "colorful",
+        toolIconDarkSourceMode: "manualEndpoints",
+        toolIconDarkPaletteId: "",
+        homeIconRadius: 25.5,
+        homeDragShadowIntensity: 1,
         autoStatus: true,
         registryDebugTools: false
     };
@@ -1204,6 +1221,19 @@
             button.appendChild(title);
             grid.insertBefore(button, more);
         }
+        refreshProceduralHomeIcons();
+    }
+
+    function refreshProceduralHomeIcons() {
+        if (panelShuttingDown) {
+            return;
+        }
+        if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.refresh === "function") {
+            window.ProceduralHomeIcons.refresh({
+                root: byId("toolGrid"),
+                shuttingDown: panelShuttingDown
+            });
+        }
     }
 
     function applyRegistryDebugTools(enabled) {
@@ -1211,6 +1241,7 @@
         if (byId("registryDebugTools")) {
             byId("registryDebugTools").checked = window.AETOOLBOX_DEBUG_REGISTRY === true;
         }
+        syncSettingsDeveloperOnlyFields();
         if (panelShuttingDown) {
             lifecycleDebug("skipped home render because panelShuttingDown");
             return;
@@ -1224,6 +1255,7 @@
             HomeLayoutManager.renderOrder();
             HomeLayoutManager.bindIconEvents();
         }
+        refreshProceduralHomeIcons();
     }
 
     function findSettingsSchemaField(key) {
@@ -1276,6 +1308,7 @@
         renderer.appendChild(createSettingsSectionMount("settingsDeveloperModeMount", "settings-section"));
         renderer.appendChild(createSettingsSectionMount("settingsMotionMount", "settings-section"));
         renderer.appendChild(createSettingsSectionMount("settingsThemeMount", "settings-section"));
+        renderer.appendChild(createSettingsSectionMount("settingsPaletteLibraryMount", "settings-section settings-section--palette-library"));
         renderer.appendChild(createSettingsSectionMount("backgroundSettingsCard", "settings-section settings-section--background settings-section--collapsible collapsible-card"));
         content.appendChild(renderer);
     }
@@ -1349,27 +1382,74 @@
         };
     }
 
-    function createSharedSettingsSelect(id, field, selectedValue) {
-        var select = document.createElement("select");
+    function getProceduralPaletteOptions() {
+        var store = window.ProceduralPaletteStore;
+        var palettes;
+        if (!store || typeof store.listResolvedPalettes !== "function") {
+            return [{ value: "", labelKey: "settings.palette.none" }];
+        }
+        try {
+            palettes = store.listResolvedPalettes(false) || [];
+        } catch (error) {
+            return [{ value: "", labelKey: "settings.palette.none" }];
+        }
+        palettes = palettes.map(function (palette) {
+            return {
+                value: palette.id,
+                labelText: palette.displayName || palette.id
+            };
+        });
+        return palettes.length ? palettes : [{ value: "", labelKey: "settings.palette.none" }];
+    }
+
+    function getProceduralBackgroundPaletteOptions() {
+        return [{ value: "algorithmDefault", labelKey: "settings.backgroundPalette.algorithmDefault" }].concat(
+            getProceduralPaletteOptions().filter(function (option) {
+                return option && option.value;
+            })
+        );
+    }
+
+    function getSettingsFieldOptions(field) {
+        if (field && field.optionsProvider === "proceduralPalettes") {
+            return getProceduralPaletteOptions();
+        }
+        if (field && field.optionsProvider === "proceduralBackgroundPalettes") {
+            return getProceduralBackgroundPaletteOptions();
+        }
+        return field && field.options ? field.options : [];
+    }
+
+    function appendSettingsSelectOptions(select, field, selectedValue) {
+        var options = getSettingsFieldOptions(field);
         var option;
         var i;
-
-        select.id = id;
-        select.className = "select-input settings-select";
-        for (i = 0; field.options && i < field.options.length; i++) {
+        select.innerHTML = "";
+        for (i = 0; i < options.length; i++) {
             option = document.createElement("option");
-            option.value = field.options[i].value;
-            if (field.options[i].labelKey) {
-                option.setAttribute("data-i18n", field.options[i].labelKey);
-                option.textContent = tr(field.options[i].labelKey);
+            option.value = options[i].value;
+            if (options[i].labelKey) {
+                option.setAttribute("data-i18n", options[i].labelKey);
+                option.textContent = tr(options[i].labelKey);
             } else {
-                option.textContent = field.options[i].value === "zh-CN" ? "\u7b80\u4f53\u4e2d\u6587" : "English";
+                option.textContent = options[i].labelText || (options[i].value === "zh-CN" ? "\u7b80\u4f53\u4e2d\u6587" : (options[i].value === "en" ? "English" : options[i].value));
             }
-            if (field.options[i].value === selectedValue) {
+            if (options[i].value === selectedValue) {
                 option.selected = true;
             }
             select.appendChild(option);
         }
+        if (!select.value && options.length) {
+            select.value = options[0].value;
+        }
+    }
+
+    function createSharedSettingsSelect(id, field, selectedValue) {
+        var select = document.createElement("select");
+
+        select.id = id;
+        select.className = "select-input settings-select";
+        appendSettingsSelectOptions(select, field, selectedValue);
         return select;
     }
 
@@ -1423,15 +1503,324 @@
         });
     }
 
-    function createSharedSettingsRangeNumber(field, rangeId, numberId, minValue, maxValue, rangeHookClass, numberHookClass) {
+    function getProceduralAppearanceDefaults() {
+        var engine = window.ProceduralAppearance;
+        var themeMap = window.ProceduralThemeMap;
+        var defaults;
+        var mappingDefaults;
+        var key;
+        if (!engine) {
+            defaults = {};
+        } else {
+            try {
+                if (typeof engine.getDefaultParams === "function") {
+                    defaults = engine.getDefaultParams();
+                } else if (typeof engine.normalizeParams === "function") {
+                    defaults = engine.normalizeParams({});
+                }
+            } catch (error) {
+                defaults = null;
+            }
+        }
+        defaults = defaults || {};
+        if (themeMap && typeof themeMap.getDefaultMappingParams === "function") {
+            mappingDefaults = themeMap.getDefaultMappingParams();
+            for (key in mappingDefaults) {
+                if (Object.prototype.hasOwnProperty.call(mappingDefaults, key)) {
+                    defaults[key] = mappingDefaults[key];
+                }
+            }
+        }
+        return defaults;
+    }
+
+    function normalizeProceduralAppearanceParams(value) {
+        var engine = window.ProceduralAppearance;
+        var themeMap = window.ProceduralThemeMap;
+        var input = value || {};
+        var normalized;
+        var mapping;
+        var key;
+        if (!engine || typeof engine.normalizeParams !== "function") {
+            normalized = getProceduralAppearanceDefaults();
+        } else {
+            try {
+                normalized = engine.normalizeParams(input);
+            } catch (error) {
+                normalized = null;
+            }
+        }
+        normalized = normalized || getProceduralAppearanceDefaults();
+        if (themeMap && typeof themeMap.normalizeMappingParams === "function") {
+            mapping = themeMap.normalizeMappingParams(input);
+            for (key in mapping) {
+                if (Object.prototype.hasOwnProperty.call(mapping, key)) {
+                    normalized[key] = mapping[key];
+                }
+            }
+        }
+        return normalized;
+    }
+
+    function getProceduralAppearanceSourceParams(value) {
+        var engine = window.ProceduralAppearance;
+        var input = value || getProceduralAppearanceParams();
+        if (engine && typeof engine.normalizeParams === "function") {
+            try {
+                return engine.normalizeParams(input);
+            } catch (error) {
+            }
+        }
+        return input;
+    }
+
+    function getProceduralAppearanceMappingParams(value) {
+        var themeMap = window.ProceduralThemeMap;
+        var input = value || getProceduralAppearanceParams();
+        if (themeMap && typeof themeMap.normalizeMappingParams === "function") {
+            return themeMap.normalizeMappingParams(input);
+        }
+        return {};
+    }
+
+    function getProceduralAppearanceParameterFields() {
+        var section = findSettingsSchemaSection("proceduralAppearance");
+        return section && section.fields ? section.fields.filter(function (field) {
+            return field && (field.type === "range" || field.type === "number");
+        }) : [];
+    }
+
+    function getSettingsFieldDefaultValue(field) {
+        var defaults;
+        if (field && field.defaultProvider === "proceduralAppearance") {
+            defaults = getProceduralAppearanceDefaults();
+            return typeof defaults[field.key] === "undefined" ? 0 : defaults[field.key];
+        }
+        return schemaDefaultValue(field);
+    }
+
+    function materializeSettingsFieldDefault(field) {
+        var materialized = {};
+        var key;
+        for (key in (field || {})) {
+            if (Object.prototype.hasOwnProperty.call(field, key)) {
+                materialized[key] = field[key];
+            }
+        }
+        materialized.defaultValue = getSettingsFieldDefaultValue(field);
+        return materialized;
+    }
+
+    function getProceduralAppearanceParams() {
+        if (!ProceduralAppearanceParams) {
+            ProceduralAppearanceParams = normalizeProceduralAppearanceParams({});
+        }
+        return normalizeProceduralAppearanceParams(ProceduralAppearanceParams);
+    }
+
+    function clearProceduralAppearanceSourceDebounce() {
+        if (ProceduralAppearanceSourceDebounceTimer === null) {
+            return;
+        }
+        if (window && typeof window.clearTimeout === "function") {
+            window.clearTimeout(ProceduralAppearanceSourceDebounceTimer);
+        }
+        ProceduralAppearanceSourceDebounceTimer = null;
+    }
+
+    function scheduleProceduralAppearanceSourceUpdate() {
+        clearProceduralAppearanceSourceDebounce();
+        if (panelShuttingDown) {
+            return;
+        }
+        if (window && typeof window.setTimeout === "function") {
+            ProceduralAppearanceSourceDebounceTimer = window.setTimeout(function () {
+                ProceduralAppearanceSourceDebounceTimer = null;
+                if (!panelShuttingDown) {
+                    updateProceduralHomeIconAppearance();
+                }
+            }, PROCEDURAL_APPEARANCE_SOURCE_DEBOUNCE_MS);
+        } else {
+            updateProceduralHomeIconAppearance();
+        }
+    }
+
+    function flushProceduralAppearanceSourceUpdate() {
+        clearProceduralAppearanceSourceDebounce();
+        if (!panelShuttingDown) {
+            updateProceduralHomeIconAppearance();
+        }
+    }
+
+    function setProceduralAppearanceParamControls(params) {
+        var fields = getProceduralAppearanceParameterFields();
+        var normalized = normalizeProceduralAppearanceParams(params);
+        var i;
+        var key;
+        var range;
+        var number;
+        for (i = 0; i < fields.length; i++) {
+            key = fields[i].key;
+            range = byId("proceduralParam_" + key);
+            number = byId("proceduralParam_" + key + "Number");
+            if (range) {
+                range.value = String(normalized[key]);
+            }
+            if (number) {
+                number.value = String(normalized[key]);
+            }
+        }
+    }
+
+    function collectProceduralAppearanceParamsFromControls() {
+        var params = getProceduralAppearanceParams();
+        var fields = getProceduralAppearanceParameterFields();
+        var i;
+        var number;
+        var range;
+        for (i = 0; i < fields.length; i++) {
+            number = byId("proceduralParam_" + fields[i].key + "Number");
+            range = byId("proceduralParam_" + fields[i].key);
+            if (number && number.value !== "") {
+                params[fields[i].key] = number.value;
+            } else if (range) {
+                params[fields[i].key] = range.value;
+            }
+        }
+        return normalizeProceduralAppearanceParams(params);
+    }
+
+    function applyProceduralAppearanceParams(params, persist, syncControls) {
+        var normalized = normalizeProceduralAppearanceParams(params);
+        var previous = ProceduralAppearanceParams ? JSON.stringify(ProceduralAppearanceParams) : "";
+        var previousSource = ProceduralAppearanceParams ? JSON.stringify(getProceduralAppearanceSourceParams(ProceduralAppearanceParams)) : "";
+        var nextSource = JSON.stringify(getProceduralAppearanceSourceParams(normalized));
+        var previousMapping = ProceduralAppearanceParams ? JSON.stringify(getProceduralAppearanceMappingParams(ProceduralAppearanceParams)) : "";
+        var nextMapping = JSON.stringify(getProceduralAppearanceMappingParams(normalized));
+        ProceduralAppearanceParams = normalized;
+        if (syncControls !== false) {
+            setProceduralAppearanceParamControls(normalized);
+        }
+        if (previous !== JSON.stringify(normalized)) {
+            if (previousSource !== nextSource) {
+                scheduleProceduralAppearanceSourceUpdate();
+            } else if (previousMapping !== nextMapping) {
+                updateProceduralHomeIconAppearance({ presentationOnly: true });
+            }
+        }
+        if (persist) {
+            saveSettings();
+        }
+        return normalized;
+    }
+
+    function resetProceduralAppearanceParams() {
+        applyProceduralAppearanceParams(getProceduralAppearanceDefaults(), true, true);
+        flushProceduralAppearanceSourceUpdate();
+        setStatus(tr("status.proceduralAppearanceDefaultsRestored"), "ok");
+    }
+
+    function renderProceduralAppearanceParameterRow(field) {
+        var row = createSharedSettingsFieldRow("range", field, field.descriptionKey, "");
+        var prepared = materializeSettingsFieldDefault(field);
+        var prefix = "proceduralParam_" + field.key;
+        var controls = createSharedSettingsRangeNumber(prepared, prefix, prefix + "Number", field.min, field.max, "procedural-param-range", "procedural-param-number", {
+            dispatchChange: false,
+            onCommit: function (value) {
+                var number = byId(prefix + "Number");
+                if (number) {
+                    number.value = value;
+                }
+                applyProceduralAppearanceParams(collectProceduralAppearanceParamsFromControls(), true, true);
+            },
+            onCancel: function (value) {
+                var number = byId(prefix + "Number");
+                var range = byId(prefix);
+                if (number) {
+                    number.value = value;
+                }
+                if (range) {
+                    range.value = value;
+                }
+                applyProceduralAppearanceParams(collectProceduralAppearanceParamsFromControls(), false, false);
+            }
+        });
+        row.row.removeChild(row.controls);
+        row.row.appendChild(controls);
+        row.row.setAttribute("data-procedural-param-key", field.key);
+        return row.row;
+    }
+
+    function setupProceduralAppearanceParams() {
+        var fields = getProceduralAppearanceParameterFields();
+        var i;
+        var field;
+        var materialized;
+        var range;
+        var number;
+        var prefix;
+        if (!fields.length) {
+            return;
+        }
+        for (i = 0; i < fields.length; i++) {
+            field = fields[i];
+            prefix = "proceduralParam_" + field.key;
+            range = byId(prefix);
+            number = byId(prefix + "Number");
+            if (!range || !number || number.getAttribute("data-procedural-param-bound") === "true") {
+                continue;
+            }
+            materialized = materializeSettingsFieldDefault(field);
+            number.setAttribute("data-procedural-param-bound", "true");
+            range.addEventListener("input", function () {
+                var currentKey = this.getAttribute("data-procedural-param-key");
+                var currentNumber = byId("proceduralParam_" + currentKey + "Number");
+                if (currentNumber) {
+                    currentNumber.value = this.value;
+                }
+                applyProceduralAppearanceParams(collectProceduralAppearanceParamsFromControls(), false, false);
+            });
+            range.addEventListener("change", function () {
+                applyProceduralAppearanceParams(collectProceduralAppearanceParamsFromControls(), true, false);
+            });
+            range.setAttribute("data-procedural-param-key", field.key);
+            number.addEventListener("input", function () {
+                var currentField = this._proceduralField;
+                var currentRange;
+                if (isSchemaNumberDraftValue(this.value)) {
+                    return;
+                }
+                currentRange = byId("proceduralParam_" + currentField.key);
+                if (currentRange) {
+                    currentRange.value = normalizeSchemaNumber(this.value, currentField, this.value);
+                }
+                applyProceduralAppearanceParams(collectProceduralAppearanceParamsFromControls(), false, false);
+            });
+            number.addEventListener("change", function () {
+                var currentField = this._proceduralField;
+                commitSchemaNumberInput(this, currentField, getSettingsFieldDefaultValue(currentField), function () {
+                    var currentRange = byId("proceduralParam_" + currentField.key);
+                    if (currentRange) {
+                        currentRange.value = this.value;
+                    }
+                    applyProceduralAppearanceParams(collectProceduralAppearanceParamsFromControls(), true, true);
+                }.bind(this));
+            });
+            number._proceduralField = materialized;
+        }
+        setProceduralAppearanceParamControls(getProceduralAppearanceParams());
+    }
+
+    function createSharedSettingsRangeNumber(field, rangeId, numberId, minValue, maxValue, rangeHookClass, numberHookClass, dragOptions) {
         var controls = document.createElement("span");
         var range = document.createElement("input");
         var number = document.createElement("input");
+        var defaultValue = getSettingsFieldDefaultValue(field);
         var dragField = {
             min: minValue,
             max: maxValue,
             step: field.step,
-            defaultValue: field.defaultValue
+            defaultValue: defaultValue
         };
 
         controls.className = "control-inputs settings-field-control registry-range-control";
@@ -1441,7 +1830,7 @@
         range.min = String(minValue);
         range.max = String(maxValue);
         range.step = String(field.step);
-        range.value = String(field.defaultValue);
+        range.value = String(defaultValue);
 
         number.id = numberId;
         number.className = "num-input registry-range-number settings-number" + (numberHookClass ? " " + numberHookClass : "");
@@ -1449,15 +1838,17 @@
         number.min = String(minValue);
         number.max = String(maxValue);
         number.step = String(field.step);
-        number.value = String(field.defaultValue);
+        number.value = String(defaultValue);
 
         controls.appendChild(number);
         controls.appendChild(range);
         setupRegistryNumberDrag(number, dragField, function (value) {
             range.value = value;
             dispatchSettingsControlEvent(number, "input");
-            dispatchSettingsControlEvent(number, "change");
-        });
+            if (!dragOptions || dragOptions.dispatchChange !== false) {
+                dispatchSettingsControlEvent(number, "change");
+            }
+        }, dragOptions);
         return controls;
     }
 
@@ -1577,9 +1968,22 @@
     function renderSettingsDeveloperMode() {
         var mount = byId("settingsDeveloperModeMount");
         var field = findSettingsSchemaField("registryDebugTools");
+        var radiusField = findSettingsSchemaField("homeIconRadius");
+        var shadowField = findSettingsSchemaField("homeDragShadowIntensity");
         var heading;
         var fieldRow;
         var switchWrap;
+        var radiusRow;
+        var radiusControls;
+        var shadowRow;
+        var shadowControls;
+        var proceduralSection;
+        var proceduralGroup;
+        var proceduralField;
+        var proceduralRow;
+        var proceduralNote;
+        var resetButton;
+        var i;
 
         if (!mount || !field) {
             return;
@@ -1595,6 +1999,57 @@
         fieldRow.controls.appendChild(switchWrap);
         mount.appendChild(heading);
         mount.appendChild(fieldRow.row);
+
+        if (radiusField) {
+            radiusRow = createSharedSettingsFieldRow("range", radiusField, radiusField.descriptionKey, "");
+            radiusRow.row.classList.add("settings-developer-only");
+            radiusRow.controls.parentNode && radiusRow.row.removeChild(radiusRow.controls);
+            radiusControls = createSharedSettingsRangeNumber(radiusField, "homeIconRadius", "homeIconRadiusNumber", radiusField.min, radiusField.max, "", "");
+            radiusRow.row.appendChild(radiusControls);
+            mount.appendChild(radiusRow.row);
+        }
+        if (shadowField) {
+            shadowRow = createSharedSettingsFieldRow("range", shadowField, shadowField.descriptionKey, "");
+            shadowRow.row.classList.add("settings-developer-only");
+            shadowRow.controls.parentNode && shadowRow.row.removeChild(shadowRow.controls);
+            shadowControls = createSharedSettingsRangeNumber(shadowField, "homeDragShadowIntensity", "homeDragShadowIntensityNumber", shadowField.min, shadowField.max, "", "");
+            shadowRow.row.appendChild(shadowControls);
+            mount.appendChild(shadowRow.row);
+        }
+        proceduralSection = findSettingsSchemaSection("proceduralAppearance");
+        if (proceduralSection) {
+            proceduralGroup = createSettingsThemeGroup(proceduralSection);
+            proceduralGroup.root.classList.add("settings-developer-only", "settings-procedural-params-group");
+            if (proceduralSection.descriptionKey) {
+                proceduralNote = document.createElement("p");
+                proceduralNote.className = "settings-theme-note settings-procedural-params-note";
+                proceduralNote.setAttribute("data-i18n", proceduralSection.descriptionKey);
+                proceduralNote.textContent = tr(proceduralSection.descriptionKey);
+                proceduralGroup.body.appendChild(proceduralNote);
+            }
+            for (i = 0; i < (proceduralSection.fields || []).length; i++) {
+                proceduralField = proceduralSection.fields[i];
+                if (!proceduralField) {
+                    continue;
+                }
+                if (proceduralField.type === "button" && proceduralField.key === "resetProceduralAppearanceParams") {
+                    resetButton = document.createElement("button");
+                    resetButton.id = proceduralField.key;
+                    resetButton.type = "button";
+                    resetButton.className = "panel-button settings-action-button registry-large-button";
+                    resetButton.setAttribute("data-i18n", proceduralField.labelKey);
+                    resetButton.textContent = tr(proceduralField.labelKey);
+                    resetButton.addEventListener("click", resetProceduralAppearanceParams);
+                    proceduralGroup.body.appendChild(resetButton);
+                } else if (proceduralField.type === "range" || proceduralField.type === "number") {
+                    proceduralRow = renderProceduralAppearanceParameterRow(proceduralField);
+                    proceduralGroup.body.appendChild(proceduralRow);
+                }
+            }
+            mount.appendChild(proceduralGroup.root);
+        }
+        setupProceduralAppearanceParams();
+        syncSettingsDeveloperOnlyFields();
     }
 
     function renderSettingsRangeRow(field, numberId) {
@@ -1636,15 +2091,725 @@
         }
     }
 
+    function settingsVisibleWhenMatches(rule) {
+        var input;
+        var value;
+        var i;
+        if (!rule) {
+            return true;
+        }
+        if (rule.all instanceof Array) {
+            for (i = 0; i < rule.all.length; i++) {
+                if (!settingsVisibleWhenMatches(rule.all[i])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        if (rule.any instanceof Array) {
+            for (i = 0; i < rule.any.length; i++) {
+                if (settingsVisibleWhenMatches(rule.any[i])) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (!rule.key) {
+            return true;
+        }
+        input = byId(rule.key);
+        if (!input) {
+            return false;
+        }
+        value = input.type === "checkbox" ? !!input.checked : input.value;
+        if (typeof rule.equals !== "undefined") {
+            return String(value) === String(rule.equals);
+        }
+        if (rule["in"] instanceof Array) {
+            return rule["in"].indexOf(value) !== -1;
+        }
+        return true;
+    }
+
+    function applySettingsVisibilityMetadata(element, rule) {
+        if (!element || !rule || (!rule.key && !(rule.all instanceof Array) && !(rule.any instanceof Array))) {
+            return;
+        }
+        if (rule.key) {
+            element.setAttribute("data-settings-visible-key", rule.key);
+        }
+        if (rule.key && typeof rule.equals !== "undefined") {
+            element.setAttribute("data-settings-visible-equals", rule.equals);
+        }
+        if (rule.all instanceof Array || rule.any instanceof Array) {
+            element.setAttribute("data-settings-visible-rule", JSON.stringify(rule));
+        }
+    }
+
+    function applySettingsOpenMetadata(element, rule) {
+        if (!element || !rule || !rule.key) {
+            return;
+        }
+        element.setAttribute("data-settings-open-key", rule.key);
+        if (typeof rule.equals !== "undefined") {
+            element.setAttribute("data-settings-open-equals", rule.equals);
+        }
+    }
+
+    function refreshSettingsThemeVisibility() {
+        var nodes = document.querySelectorAll("[data-settings-visible-key], [data-settings-visible-rule]");
+        var i;
+        var rule;
+        var input;
+        var value;
+        var equals;
+        var visible;
+        for (i = 0; i < nodes.length; i++) {
+            rule = null;
+            if (nodes[i].getAttribute("data-settings-visible-rule")) {
+                try {
+                    rule = JSON.parse(nodes[i].getAttribute("data-settings-visible-rule"));
+                } catch (error) {
+                    rule = null;
+                }
+            }
+            if (rule) {
+                visible = settingsVisibleWhenMatches(rule);
+            } else {
+                input = byId(nodes[i].getAttribute("data-settings-visible-key"));
+                value = input ? (input.type === "checkbox" ? !!input.checked : input.value) : "";
+                equals = nodes[i].getAttribute("data-settings-visible-equals");
+                visible = equals === null || String(value) === String(equals);
+            }
+            nodes[i].hidden = !visible;
+            nodes[i].classList.toggle("is-settings-condition-hidden", !visible);
+        }
+        nodes = document.querySelectorAll("[data-settings-open-key]");
+        for (i = 0; i < nodes.length; i++) {
+            input = byId(nodes[i].getAttribute("data-settings-open-key"));
+            value = input ? input.value : "";
+            equals = nodes[i].getAttribute("data-settings-open-equals");
+            if (equals !== null) {
+                setSettingsThemeGroupOpen(nodes[i], String(value) === String(equals));
+            }
+        }
+    }
+
+    function handleSettingsFieldChange(fieldKey, value) {
+        if (fieldKey === "proceduralIconMode") {
+            applyProceduralIconMode(value);
+            refreshSettingsThemePresentation();
+            saveSettings();
+        } else if (fieldKey === "toolIconDarkSourceMode") {
+            applyProceduralIconDarkSourceMode(value);
+            saveSettings();
+        } else if (fieldKey === "toolIconDarkPaletteId") {
+            applyProceduralIconDarkPaletteId(value, { suggestThemeAccent: true });
+            saveSettings();
+        }
+    }
+
+    function createSettingsThemeField(field) {
+        var fieldRow;
+        var controls;
+        var select;
+        if (!field || !field.key) {
+            return null;
+        }
+        if (field.type === "select") {
+            fieldRow = createSharedSettingsFieldRow("select", field, field.key === "proceduralIconMode" ? "" : field.descriptionKey, "");
+            select = createSharedSettingsSelect(field.key, field, field.defaultValue);
+            fieldRow.row.removeChild(fieldRow.controls);
+            fieldRow.row.appendChild(select);
+            select.addEventListener("change", function () {
+                handleSettingsFieldChange(field.key, this.value);
+            });
+        } else if (field.type === "color") {
+            fieldRow = createSharedSettingsFieldRow("color", field, field.descriptionKey, "");
+            controls = createSharedSettingsColorControl(field, field.key, "#ffffff", "theme-color-shell");
+            fieldRow.row.removeChild(fieldRow.controls);
+            fieldRow.row.appendChild(controls);
+        } else {
+            return null;
+        }
+        fieldRow.row.setAttribute("data-settings-field-key", field.key);
+        applySettingsVisibilityMetadata(fieldRow.row, field.visibleWhen);
+        return fieldRow.row;
+    }
+
+    function setSettingsThemeGroupOpen(root, open) {
+        var toggle;
+        if (!root) {
+            return;
+        }
+        root.classList.toggle("is-collapsed", !open);
+        toggle = root.querySelector(".settings-theme-group-title");
+        if (toggle) {
+            toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        }
+    }
+
+    function createSettingsThemeGroup(group) {
+        var root = document.createElement("section");
+        var body = root;
+        var title;
+        var titleText;
+        var chevron;
+        root.className = "settings-theme-group" + (group.collapsible ? " settings-theme-group--collapsible" : "");
+        if (group.collapsible) {
+            root.className += " collapsible-card";
+        }
+        root.setAttribute("data-settings-theme-group", group.id || "");
+        applySettingsVisibilityMetadata(root, group.visibleWhen);
+        applySettingsOpenMetadata(root, group.openWhen);
+        if (group.collapsible) {
+            title = document.createElement("button");
+            title.className = "settings-theme-group-title settings-section-toggle collapsible-heading";
+            title.type = "button";
+            title.setAttribute("aria-expanded", group.defaultCollapsed === true ? "false" : "true");
+            title.setAttribute("aria-controls", "settingsThemeGroupBody-" + (group.id || "group"));
+            titleText = document.createElement("span");
+            titleText.setAttribute("data-i18n", group.titleKey || "");
+            titleText.textContent = tr(group.titleKey || "");
+            chevron = document.createElement("span");
+            chevron.className = "collapse-chevron";
+            chevron.setAttribute("aria-hidden", "true");
+            title.appendChild(titleText);
+            title.appendChild(chevron);
+            root.appendChild(title);
+            body = document.createElement("div");
+            body.className = "settings-theme-group-body";
+            body.classList.add("collapsible-body");
+            body.id = "settingsThemeGroupBody-" + (group.id || "group");
+            root.appendChild(body);
+            title.addEventListener("click", function () {
+                setSettingsThemeGroupOpen(root, root.classList.contains("is-collapsed"));
+            });
+            setSettingsThemeGroupOpen(root, group.defaultCollapsed !== true);
+        } else if (group.titleKey) {
+            title = document.createElement("h4");
+            title.className = "settings-theme-group-title";
+            title.setAttribute("data-i18n", group.titleKey);
+            title.textContent = tr(group.titleKey);
+            root.appendChild(title);
+        }
+        return { root: root, body: body };
+    }
+
+    function openPaletteWorkspaceFromSettings() {
+        var controller = initializePaletteWorkspaceController();
+        if (controller && typeof controller.open === "function") {
+            controller.open();
+        }
+    }
+
+    function getPaletteSummaryData() {
+        var store = window.ProceduralPaletteStore;
+        var palettes;
+        var exported;
+        if (!store || typeof store.listResolvedPalettes !== "function") {
+            return { builtIn: 0, custom: 0, overrides: 0, swatches: [] };
+        }
+        palettes = store.listResolvedPalettes(false);
+        exported = typeof store.exportData === "function" ? store.exportData() : {};
+        return {
+            builtIn: palettes.filter(function (palette) { return palette.isBuiltIn === true; }).length,
+            custom: palettes.filter(function (palette) { return palette.isCustom === true; }).length,
+            overrides: Object.keys(exported.toolPaletteMap || {}).length,
+            swatches: palettes.slice(0, 4).map(function (palette) { return palette.colors.base; })
+        };
+    }
+
+    function renderPaletteSummaryElement(element) {
+        var data = getPaletteSummaryData();
+        var title = document.createElement("strong");
+        var count = document.createElement("span");
+        var swatches = document.createElement("span");
+        var button = document.createElement("button");
+        var i;
+        element.innerHTML = "";
+        element.className = "settings-source-summary settings-theme-presentation";
+        title.className = "settings-source-summary-title";
+        title.textContent = tr("settings.paletteLibrary");
+        count.className = "settings-source-summary-count";
+        count.textContent = data.builtIn + " " + tr("settings.paletteSummary.builtIn") + " · " + data.custom + " " + tr("settings.paletteSummary.custom") + " · " + data.overrides + " " + tr("settings.paletteSummary.overrides");
+        swatches.className = "settings-source-summary-swatches";
+        for (i = 0; i < data.swatches.length; i++) {
+            var swatch = document.createElement("span");
+            swatch.style.backgroundColor = data.swatches[i];
+            swatch.setAttribute("aria-hidden", "true");
+            swatches.appendChild(swatch);
+        }
+        button.type = "button";
+        button.className = "panel-button settings-source-summary-action";
+        button.textContent = tr(element.getAttribute("data-settings-palette-action") || "settings.palette.manage");
+        button.addEventListener("click", openPaletteWorkspaceFromSettings);
+        element.appendChild(title);
+        element.appendChild(count);
+        element.appendChild(swatches);
+        element.appendChild(button);
+    }
+
+    function refreshSettingsPaletteSummary() {
+        var summaries = document.querySelectorAll(".settings-source-summary");
+        var i;
+        for (i = 0; i < summaries.length; i++) {
+            renderPaletteSummaryElement(summaries[i]);
+        }
+    }
+
+    function normalizeBackgroundSource(value) {
+        if (value === "classic") {
+            return "classic";
+        }
+        if (value === "procedural" || value === "manual") {
+            return "procedural";
+        }
+        return "followIconTheme";
+    }
+
+    function normalizeProceduralBackgroundSeed(value) {
+        var seed = String(value || "").replace(/^\s+|\s+$/g, "");
+        return seed || DefaultSettings.proceduralBackgroundSeed;
+    }
+
+    function normalizeProceduralBackgroundPaletteId(value) {
+        var id = String(value || "").replace(/^\s+|\s+$/g, "");
+        return id || DefaultSettings.proceduralBackgroundPaletteId;
+    }
+
+    function normalizeProceduralBackgroundIntensity(value) {
+        return clampNumber(value, DefaultSettings.proceduralBackgroundIntensity, 0.05, 0.7);
+    }
+
+    function renderProceduralBackgroundModeVisibility() {
+        var card = byId("backgroundSettingsCard");
+        var source = byId("backgroundSource");
+        var procedural = normalizeBackgroundSource(source ? source.value : DefaultSettings.backgroundSource) !== "classic";
+        var classicControls = card ? card.querySelector(".background-classic-controls") : null;
+        var proceduralControls = card ? card.querySelector(".background-procedural-controls") : null;
+
+        if (card) {
+            card.classList.toggle("is-procedural-background", procedural);
+        }
+        if (classicControls) {
+            classicControls.hidden = procedural;
+        }
+        if (proceduralControls) {
+            proceduralControls.hidden = !procedural;
+        }
+    }
+
+    function updateProceduralHomeBackground(options) {
+        var controller = window.ProceduralHomeBackground;
+        var source = byId("backgroundSource");
+        var seed = byId("proceduralBackgroundSeed");
+        var palette = byId("proceduralBackgroundPaletteId");
+        var intensity = byId("proceduralBackgroundIntensityNumber");
+        var current = options && options.presentationOnly && controller && typeof controller.getState === "function"
+            ? controller.getState()
+            : null;
+        if (!controller || typeof controller.update !== "function") {
+            return;
+        }
+        controller.update({
+            mode: current ? current.config.mode : normalizeBackgroundSource(source ? source.value : DefaultSettings.backgroundSource),
+            seed: current ? current.config.seed : normalizeProceduralBackgroundSeed(seed ? seed.value : DefaultSettings.proceduralBackgroundSeed),
+            paletteId: current ? current.config.paletteId : normalizeProceduralBackgroundPaletteId(palette ? palette.value : DefaultSettings.proceduralBackgroundPaletteId),
+            intensity: current ? current.config.intensity : normalizeProceduralBackgroundIntensity(intensity ? intensity.value : DefaultSettings.proceduralBackgroundIntensity),
+            params: current ? current.config.params : getProceduralAppearanceSourceParams(),
+            iconAppearance: getProceduralHomeBackgroundIconAppearance()
+        });
+    }
+
+    function refreshProceduralHomeBackground() {
+        var controller = window.ProceduralHomeBackground;
+        if (controller && typeof controller.refresh === "function") {
+            controller.refresh();
+        }
+    }
+
+    function refreshProceduralHomeBackgroundForPaletteStore() {
+        var controller = window.ProceduralHomeBackground;
+        var state;
+        if (controller && typeof controller.getState === "function") {
+            state = controller.getState();
+        }
+        if (state && state.config && state.config.mode === "followIconTheme" &&
+                state.config.iconAppearance && state.config.iconAppearance.mode === "themeMapped" &&
+                state.config.iconAppearance.darkSourceMode === "paletteScale") {
+            updateProceduralHomeBackground({ presentationOnly: true });
+            return;
+        }
+        refreshProceduralHomeBackground();
+    }
+
+    function applyBackgroundSource(value) {
+        var source = normalizeBackgroundSource(value);
+        var select = byId("backgroundSource");
+        if (select) {
+            select.value = source;
+            syncCustomSelect(select);
+        }
+        renderProceduralBackgroundModeVisibility();
+        updateProceduralHomeBackground();
+    }
+
+    function refreshSettingsBackgroundPaletteOptions() {
+        var field = findSettingsSchemaField("proceduralBackgroundPaletteId");
+        var select = byId("proceduralBackgroundPaletteId");
+        var current;
+        var next;
+        if (!field || !select || field.optionsProvider !== "proceduralBackgroundPalettes") {
+            return;
+        }
+        current = select.value;
+        appendSettingsSelectOptions(select, field, current);
+        next = select.value;
+        rebuildCustomSelectOptions(select);
+        syncCustomSelect(select);
+        if (next !== current) {
+            updateProceduralHomeBackground();
+            saveSettings();
+        }
+    }
+
+    function setupProceduralBackgroundControls() {
+        var source = byId("backgroundSource");
+        var seed = byId("proceduralBackgroundSeed");
+        var palette = byId("proceduralBackgroundPaletteId");
+        var regenerate = byId("proceduralBackgroundRegenerate");
+        var intensity = byId("proceduralBackgroundIntensity");
+        var intensityNumber = byId("proceduralBackgroundIntensityNumber");
+
+        if (source && source.getAttribute("data-procedural-background-bound") !== "true") {
+            source.setAttribute("data-procedural-background-bound", "true");
+            source.addEventListener("change", function () {
+                applyBackgroundSource(this.value);
+                saveSettings();
+            });
+        }
+        if (seed && seed.getAttribute("data-procedural-background-bound") !== "true") {
+            seed.setAttribute("data-procedural-background-bound", "true");
+            seed.addEventListener("input", updateProceduralHomeBackground);
+            seed.addEventListener("change", function () {
+                seed.value = normalizeProceduralBackgroundSeed(seed.value);
+                updateProceduralHomeBackground();
+                saveSettings();
+            });
+        }
+        if (palette && palette.getAttribute("data-procedural-background-bound") !== "true") {
+            palette.setAttribute("data-procedural-background-bound", "true");
+            palette.addEventListener("change", function () {
+                updateProceduralHomeBackground();
+                saveSettings();
+            });
+        }
+        if (intensity && intensityNumber && intensity.getAttribute("data-procedural-background-bound") !== "true") {
+            intensity.setAttribute("data-procedural-background-bound", "true");
+            linkPersistedRange("proceduralBackgroundIntensity", "proceduralBackgroundIntensityNumber", 0.05, 0.7, function () {
+                updateProceduralHomeBackground();
+                saveSettings();
+            });
+        }
+        if (regenerate && regenerate.getAttribute("data-procedural-background-bound") !== "true") {
+            regenerate.setAttribute("data-procedural-background-bound", "true");
+            regenerate.addEventListener("click", function () {
+                var controller = window.ProceduralHomeBackground;
+                var nextSeed;
+                if (controller && typeof controller.regenerate === "function") {
+                    nextSeed = controller.regenerate();
+                } else {
+                    nextSeed = "background-" + new Date().getTime().toString(36);
+                }
+                if (seed) {
+                    seed.value = nextSeed;
+                }
+                updateProceduralHomeBackground();
+                saveSettings();
+                setStatus(tr("status.proceduralBackgroundSeedRegenerated"), "ok");
+            });
+        }
+        renderProceduralBackgroundModeVisibility();
+    }
+
+    function refreshSettingsPaletteOptions() {
+        var field = findSettingsSchemaField("toolIconDarkPaletteId");
+        var select = byId("toolIconDarkPaletteId");
+        var current;
+        var next;
+        if (!field || !select || field.optionsProvider !== "proceduralPalettes") {
+            return;
+        }
+        current = select.value;
+        appendSettingsSelectOptions(select, field, current);
+        next = select.value;
+        rebuildCustomSelectOptions(select);
+        syncCustomSelect(select);
+        if (next !== current) {
+            applyProceduralIconDarkPaletteId(next);
+            saveSettings();
+        }
+    }
+
+    function bindThemePaletteStore() {
+        var store = window.ProceduralPaletteStore;
+        if (!store || typeof store.subscribe !== "function" || ThemeSettingsStoreListener) {
+            return;
+        }
+        ThemeSettingsStoreListener = function () {
+            if (!panelShuttingDown) {
+                refreshSettingsPaletteOptions();
+                refreshSettingsBackgroundPaletteOptions();
+                refreshSettingsPaletteSummary();
+                updateProceduralHomeIconAppearance({ presentationOnly: true });
+                refreshProceduralHomeBackgroundForPaletteStore();
+                refreshSettingsThemePresentation();
+            }
+        };
+        store.subscribe(ThemeSettingsStoreListener);
+    }
+
+    function unbindThemePaletteStore() {
+        var store = window.ProceduralPaletteStore;
+        if (store && ThemeSettingsStoreListener && typeof store.unsubscribe === "function") {
+            store.unsubscribe(ThemeSettingsStoreListener);
+        }
+        ThemeSettingsStoreListener = null;
+    }
+
+    function getResolvedProceduralPalette(paletteId) {
+        var store = window.ProceduralPaletteStore;
+        var palettes;
+        var i;
+        if (!store) {
+            return null;
+        }
+        if (typeof store.getResolvedPalette === "function") {
+            try {
+                return store.getResolvedPalette(paletteId);
+            } catch (error) {
+            }
+        }
+        if (typeof store.listResolvedPalettes !== "function") {
+            return null;
+        }
+        try {
+            palettes = store.listResolvedPalettes(false) || [];
+        } catch (error) {
+            return null;
+        }
+        for (i = 0; i < palettes.length; i++) {
+            if (palettes[i] && palettes[i].id === paletteId) {
+                return palettes[i];
+            }
+        }
+        return null;
+    }
+
+    function normalizeToolIconDarkSourceMode(value) {
+        if (value === "manualEndpoints" || value === "custom") {
+            return "manualEndpoints";
+        }
+        if (value === "paletteScale" || value === "paletteBase") {
+            return "paletteScale";
+        }
+        return "manualEndpoints";
+    }
+
+    function resolveProceduralPaletteScaleColors() {
+        var paletteInput = byId("toolIconDarkPaletteId");
+        var palette = getResolvedProceduralPalette(paletteInput ? paletteInput.value : DefaultSettings.toolIconDarkPaletteId);
+        var themeMap = window.ProceduralThemeMap;
+        if (themeMap && typeof themeMap.derivePaletteScaleColors === "function" && palette) {
+            return themeMap.derivePaletteScaleColors(palette, getProceduralAppearanceMappingParams());
+        }
+        return null;
+    }
+
+    function resolveProceduralThemeColors() {
+        var customInput = byId("toolIconColor");
+        var sourceInput = byId("toolIconDarkSourceMode");
+        var lightInput = byId("toolIconLine");
+        var customColor = normalizeHex(customInput ? customInput.value : DefaultSettings.toolIconColor, DefaultSettings.toolIconColor);
+        var sourceMode = normalizeToolIconDarkSourceMode(sourceInput ? sourceInput.value : DefaultSettings.toolIconDarkSourceMode);
+        var lightColor = normalizeHex(lightInput ? lightInput.value : DefaultSettings.toolIconLine, DefaultSettings.toolIconLine);
+        var paletteColors;
+        if (sourceMode === "paletteScale") {
+            paletteColors = resolveProceduralPaletteScaleColors();
+            if (paletteColors) {
+                return paletteColors;
+            }
+        }
+        return { dark: customColor, mid: "", light: lightColor };
+    }
+
+    function getProceduralHomeBackgroundIconAppearance() {
+        var modeInput = byId("proceduralIconMode");
+        var sourceInput = byId("toolIconDarkSourceMode");
+        var paletteInput = byId("toolIconDarkPaletteId");
+        var colors = resolveProceduralThemeColors();
+        return {
+            mode: normalizeProceduralIconMode(modeInput ? modeInput.value : DefaultSettings.proceduralIconMode),
+            darkSourceMode: normalizeToolIconDarkSourceMode(sourceInput ? sourceInput.value : DefaultSettings.toolIconDarkSourceMode),
+            darkPaletteId: paletteInput ? String(paletteInput.value || "") : DefaultSettings.toolIconDarkPaletteId,
+            darkColor: colors.dark,
+            midColor: colors.mid,
+            lightColor: colors.light,
+            mappingParams: getProceduralAppearanceMappingParams()
+        };
+    }
+
+    function resolveProceduralDarkColor() {
+        return resolveProceduralThemeColors().dark;
+    }
+
+    function applyProceduralIconDarkSourceMode(value) {
+        var mode = normalizeToolIconDarkSourceMode(value);
+        var select = byId("toolIconDarkSourceMode");
+        if (select) {
+            select.value = mode;
+            syncCustomSelect(select);
+        }
+        updateProceduralHomeIconAppearance({ presentationOnly: true });
+        refreshSettingsThemePresentation();
+    }
+
+    function applyProceduralIconDarkPaletteId(value) {
+        var options = getProceduralPaletteOptions();
+        var selected = String(value || "");
+        var select = byId("toolIconDarkPaletteId");
+        var i;
+        var valid = false;
+        for (i = 0; i < options.length; i++) {
+            if (options[i].value === selected) {
+                valid = true;
+                break;
+            }
+        }
+        if (!valid) {
+            selected = options.length ? options[0].value : "";
+        }
+        if (select) {
+            select.value = selected;
+            syncCustomSelect(select);
+        }
+        if (arguments.length > 1 && arguments[1] && arguments[1].suggestThemeAccent) {
+            suggestThemeAccentFromPalette(selected);
+        }
+        updateProceduralHomeIconAppearance({ presentationOnly: true });
+        refreshSettingsThemePresentation();
+    }
+
+    function suggestThemeAccentFromPalette(paletteId) {
+        var palette = getResolvedProceduralPalette(paletteId);
+        if (!palette || !palette.colors || !palette.colors.secondary) {
+            return;
+        }
+        applyThemeAccent(palette.colors.secondary);
+        setStatus(tr("status.paletteAccentSuggested"));
+    }
+
+    function renderSettingsColorRamp(element) {
+        var dark = byId("toolIconColor");
+        var light = byId("toolIconLine");
+        var ramp = element.querySelector(".settings-color-ramp");
+        if (!ramp || !dark || !light) {
+            return;
+        }
+        var colors = resolveProceduralThemeColors();
+        var midLabel = element.querySelector(".settings-color-ramp-label-mid");
+        element.classList.toggle("is-three-stop", !!colors.mid);
+        ramp.style.setProperty("--settings-ramp-dark", colors.dark);
+        ramp.style.setProperty("--settings-ramp-mid", colors.mid || colors.dark);
+        ramp.style.setProperty("--settings-ramp-light", colors.light);
+        if (midLabel) {
+            midLabel.hidden = !colors.mid;
+        }
+    }
+
+    function refreshSettingsColorRamps() {
+        var ramps = document.querySelectorAll("[data-settings-presentation='colorRampPreview']");
+        var i;
+        for (i = 0; i < ramps.length; i++) {
+            renderSettingsColorRamp(ramps[i]);
+        }
+    }
+
+    function refreshSettingsThemePresentation() {
+        refreshSettingsThemeVisibility();
+        refreshSettingsColorRamps();
+        refreshSettingsPaletteSummary();
+    }
+
+    function createSettingsThemePresentation(presentation) {
+        var element = document.createElement("div");
+        var label;
+        var rampShell;
+        var ramp;
+        var darkLabel;
+        var midLabel;
+        var lightLabel;
+        element.className = "settings-theme-presentation";
+        element.setAttribute("data-settings-presentation", presentation.type);
+        applySettingsVisibilityMetadata(element, presentation.visibleWhen);
+        if (presentation.type === "note") {
+            element.classList.add("settings-theme-note");
+            element.setAttribute("data-i18n", presentation.textKey || "");
+            element.textContent = tr(presentation.textKey);
+        } else if (presentation.type === "colorRampPreview") {
+            element.classList.add("settings-color-ramp-preview");
+            label = document.createElement("span");
+            label.className = "settings-presentation-label";
+            label.setAttribute("data-i18n", "settings.theme.colorRamp");
+            label.textContent = tr("settings.theme.colorRamp");
+            rampShell = document.createElement("span");
+            rampShell.className = "settings-color-ramp-shell";
+            ramp = document.createElement("span");
+            ramp.className = "settings-color-ramp";
+            ramp.setAttribute("role", "img");
+            ramp.setAttribute("data-i18n-aria-label", "settings.theme.colorRamp");
+            ramp.setAttribute("aria-label", tr("settings.theme.colorRamp"));
+            rampShell.appendChild(ramp);
+            darkLabel = document.createElement("small");
+            darkLabel.className = "settings-color-ramp-label-dark";
+            darkLabel.setAttribute("data-i18n", "settings.theme.darkEndpoint");
+            darkLabel.textContent = tr("settings.theme.darkEndpoint");
+            midLabel = document.createElement("small");
+            midLabel.className = "settings-color-ramp-label-mid";
+            midLabel.setAttribute("data-i18n", "settings.theme.midEndpoint");
+            midLabel.textContent = tr("settings.theme.midEndpoint");
+            lightLabel = document.createElement("small");
+            lightLabel.className = "settings-color-ramp-label-light";
+            lightLabel.setAttribute("data-i18n", "settings.theme.lightEndpoint");
+            lightLabel.textContent = tr("settings.theme.lightEndpoint");
+            element.appendChild(label);
+            element.appendChild(darkLabel);
+            element.appendChild(midLabel);
+            element.appendChild(rampShell);
+            element.appendChild(lightLabel);
+            renderSettingsColorRamp(element);
+        } else if (presentation.type === "paletteSummary") {
+            element.setAttribute("data-settings-palette-action", presentation.actionKey || "settings.palette.manage");
+            renderPaletteSummaryElement(element);
+        }
+        return element;
+    }
+
     function renderSettingsTheme() {
         var mount = byId("settingsThemeMount");
         var section = findSettingsSchemaSection("theme");
         var heading;
         var fields;
         var field;
-        var fieldRow;
-        var controls;
+        var fieldMap = {};
+        var groups;
+        var groupView;
+        var group;
+        var fieldElement;
+        var presentationElement;
         var i;
+        var j;
 
         if (!mount || !section) {
             return;
@@ -1658,15 +2823,135 @@
 
         fields = section.fields || [];
         for (i = 0; i < fields.length; i++) {
-            field = fields[i];
-            if (!field || field.type !== "color" || !field.key) {
-                continue;
+            if (fields[i] && fields[i].key) {
+                fieldMap[fields[i].key] = fields[i];
             }
-            fieldRow = createSharedSettingsFieldRow("color", field, field.descriptionKey, "");
-            controls = createSharedSettingsColorControl(field, field.key, "#ffffff", "theme-color-shell");
-            fieldRow.row.removeChild(fieldRow.controls);
-            fieldRow.row.appendChild(controls);
-            mount.appendChild(fieldRow.row);
+        }
+        groups = section.groups || [{ id: "theme", fields: fields.map(function (item) { return item.key; }) }];
+        for (i = 0; i < groups.length; i++) {
+            group = groups[i];
+            groupView = createSettingsThemeGroup(group);
+            for (j = 0; j < (group.fields || []).length; j++) {
+                field = fieldMap[group.fields[j]] || group.fields[j];
+                fieldElement = createSettingsThemeField(field);
+                if (fieldElement) {
+                    groupView.body.appendChild(fieldElement);
+                }
+            }
+            for (j = 0; j < (group.presentations || []).length; j++) {
+                presentationElement = createSettingsThemePresentation(group.presentations[j]);
+                groupView.body.appendChild(presentationElement);
+            }
+            mount.appendChild(groupView.root);
+        }
+        refreshSettingsThemePresentation();
+    }
+
+    function refreshPaletteDrivenHomeIcons() {
+        if (window.ProceduralAppearance && typeof window.ProceduralAppearance.clearCache === "function") {
+            window.ProceduralAppearance.clearCache();
+        }
+        if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.invalidateRendered === "function") {
+            window.ProceduralHomeIcons.invalidateRendered();
+        }
+        refreshProceduralHomeIcons();
+    }
+
+    function readUiStorageValue(key) {
+        try {
+            return window.localStorage ? window.localStorage.getItem(key) : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function writeUiStorageValue(key, value) {
+        try {
+            if (window.localStorage) {
+                window.localStorage.setItem(key, String(value));
+            }
+        } catch (error) {
+        }
+    }
+
+    function getPaletteWorkspaceController() {
+        return PaletteWorkspaceController || window.ProceduralPaletteWorkspace || null;
+    }
+
+    function initializePaletteWorkspaceController() {
+        var controller = getPaletteWorkspaceController();
+        if (!controller || typeof controller.initialize !== "function") {
+            return null;
+        }
+        PaletteWorkspaceController = controller.initialize({
+            window: window,
+            document: document,
+            PaletteStore: window.ProceduralPaletteStore,
+            ProceduralAppearance: window.ProceduralAppearance,
+            ProceduralPaletteEditor: window.ProceduralPaletteEditor,
+            translate: tr,
+            setStatus: setStatus,
+            refreshHomeIcons: refreshProceduralHomeIcons,
+            invalidateHomeIcons: function () {
+                if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.invalidateRendered === "function") {
+                    window.ProceduralHomeIcons.invalidateRendered();
+                }
+            },
+            panelShutdownPredicate: function () {
+                return panelShuttingDown;
+            },
+            duration: duration,
+            nextFrame: nextFrame,
+            createSettingsSectionHeader: createSettingsSectionHeader,
+            closeCustomSelectMenus: closeCustomSelectMenus,
+            setupCustomSelectInputs: setupCustomSelectInputs,
+            normalizeHex: normalizeHex,
+            bindHexInputSelectBehavior: bindHexInputSelectBehavior,
+            openRegistryColorPicker: openRegistryColorPicker,
+            applySchemaNumberAttributes: applySchemaNumberAttributes,
+            isSchemaNumberDraftValue: isSchemaNumberDraftValue,
+            setupRegistryNumberDrag: setupRegistryNumberDrag,
+            normalizeSchemaNumber: normalizeSchemaNumber,
+            escapeHtml: escapeHtml,
+            applyI18n: applyI18n,
+            readStorageValue: readUiStorageValue,
+            writeStorageValue: writeUiStorageValue
+        });
+        return PaletteWorkspaceController;
+    }
+
+    function renderPaletteLibrarySettings() {
+        var controller = initializePaletteWorkspaceController();
+        if (controller && typeof controller.refresh === "function") {
+            controller.refresh();
+        }
+    }
+
+    function closePaletteWorkspace(options) {
+        var controller = getPaletteWorkspaceController();
+        if (controller && typeof controller.close === "function") {
+            controller.close(options);
+        }
+    }
+
+    function ensurePaletteWorkspaceClosed() {
+        var controller = initializePaletteWorkspaceController();
+        if (controller && typeof controller.ensureClosedState === "function") {
+            controller.ensureClosedState();
+        }
+    }
+
+    function teardownPaletteWorkspace() {
+        var controller = getPaletteWorkspaceController();
+        if (controller && typeof controller.teardown === "function") {
+            controller.teardown();
+        }
+    }
+
+    function refreshPaletteWorkspaceI18n() {
+        var controller = getPaletteWorkspaceController();
+        if (controller && typeof controller.refreshI18n === "function") {
+            controller.refreshI18n();
         }
     }
 
@@ -1679,6 +2964,22 @@
             }
         }
         return null;
+    }
+
+    function renderSettingsBackgroundText(field, inputId) {
+        var fieldRow = createSharedSettingsFieldRow("text", field, field.descriptionKey, "");
+        var input = document.createElement("input");
+
+        input.id = inputId;
+        input.type = "text";
+        input.className = "registry-text-input settings-text-input";
+        input.value = field.defaultValue || "";
+        input.setAttribute("spellcheck", "false");
+        fieldRow.row.className += " bg-control-row";
+        fieldRow.row.removeChild(fieldRow.controls);
+        fieldRow.controls.appendChild(input);
+        fieldRow.row.appendChild(fieldRow.controls);
+        return fieldRow.row;
     }
 
     function renderSettingsBackgroundRange(field, controlId, minValue, maxValue) {
@@ -1713,6 +3014,9 @@
         var field;
         var fieldRow;
         var select;
+        var sourceRow;
+        var classicControls;
+        var proceduralControls;
         var colors;
         var ranges;
         var motionFields;
@@ -1749,15 +3053,27 @@
         body.className = "collapsible-body";
         body.id = "backgroundSettingsBody";
 
+        field = findSettingsSectionField(section, "backgroundSource");
+        if (field) {
+            sourceRow = createSharedSettingsFieldRow("select", field, field.descriptionKey, "");
+            select = createSharedSettingsSelect("backgroundSource", field, field.defaultValue);
+            sourceRow.row.removeChild(sourceRow.controls);
+            sourceRow.row.appendChild(select);
+            body.appendChild(sourceRow.row);
+        }
+
+        classicControls = document.createElement("div");
+        classicControls.className = "background-classic-controls";
+
         field = findSettingsSectionField(section, "preset");
         if (field) {
             fieldRow = createSharedSettingsFieldRow("select", field, field.descriptionKey, "");
             select = createSharedSettingsSelect("bgPreset", field, field.defaultValue);
             fieldRow.controls.appendChild(select);
-            body.appendChild(fieldRow.row);
+            classicControls.appendChild(fieldRow.row);
         }
 
-        body.appendChild(createSettingsGroupLabel("section.color"));
+        classicControls.appendChild(createSettingsGroupLabel("section.color"));
 
         colors = [
             ["baseColor", "bgBaseColor"],
@@ -1770,11 +3086,11 @@
         for (i = 0; i < colors.length; i++) {
             field = findSettingsSectionField(section, colors[i][0]);
             if (field) {
-                body.appendChild(renderSettingsBackgroundColor(field, colors[i][1]));
+                classicControls.appendChild(renderSettingsBackgroundColor(field, colors[i][1]));
             }
         }
 
-        body.appendChild(createSettingsGroupLabel("section.shape"));
+        classicControls.appendChild(createSettingsGroupLabel("section.shape"));
 
         ranges = [
             ["glowOpacity", "bgGlowOpacity"],
@@ -1793,18 +3109,18 @@
         for (i = 0; i < ranges.length; i++) {
             field = findSettingsSectionField(section, ranges[i][0]);
             if (field) {
-                body.appendChild(renderSettingsBackgroundRange(field, ranges[i][1], field.min, field.max));
+                classicControls.appendChild(renderSettingsBackgroundRange(field, ranges[i][1], field.min, field.max));
             }
         }
 
-        body.appendChild(createSettingsGroupLabel("section.motion"));
+        classicControls.appendChild(createSettingsGroupLabel("section.motion"));
 
         field = findSettingsSectionField(section, "motionEnable");
         if (field) {
             fieldRow = createSharedSettingsFieldRow("checkbox", field, field.descriptionKey, "");
             switchWrap = createSharedSettingsSwitch("bgMotionEnable", field.defaultValue === true);
             fieldRow.controls.appendChild(switchWrap);
-            body.appendChild(fieldRow.row);
+            classicControls.appendChild(fieldRow.row);
         }
 
         motionFields = [
@@ -1814,7 +3130,7 @@
         for (i = 0; i < motionFields.length; i++) {
             field = findSettingsSectionField(section, motionFields[i][0]);
             if (field) {
-                body.appendChild(renderSettingsBackgroundRange(field, motionFields[i][1], field.min, field.max));
+                classicControls.appendChild(renderSettingsBackgroundRange(field, motionFields[i][1], field.min, field.max));
             }
         }
 
@@ -1840,7 +3156,39 @@
             button.textContent = tr(field.labelKey);
             actions.appendChild(button);
         }
-        body.appendChild(actions);
+        classicControls.appendChild(actions);
+
+        proceduralControls = document.createElement("div");
+        proceduralControls.className = "background-procedural-controls";
+        field = findSettingsSectionField(section, "proceduralBackgroundSeed");
+        if (field) {
+            proceduralControls.appendChild(renderSettingsBackgroundText(field, "proceduralBackgroundSeed"));
+        }
+        field = findSettingsSectionField(section, "proceduralBackgroundPaletteId");
+        if (field) {
+            fieldRow = createSharedSettingsFieldRow("select", field, field.descriptionKey, "");
+            select = createSharedSettingsSelect("proceduralBackgroundPaletteId", field, field.defaultValue);
+            fieldRow.row.removeChild(fieldRow.controls);
+            fieldRow.row.appendChild(select);
+            proceduralControls.appendChild(fieldRow.row);
+        }
+        field = findSettingsSectionField(section, "proceduralBackgroundIntensity");
+        if (field) {
+            proceduralControls.appendChild(renderSettingsBackgroundRange(field, "proceduralBackgroundIntensity", field.min, field.max));
+        }
+        field = findSettingsSectionField(section, "proceduralBackgroundRegenerate");
+        if (field) {
+            button = document.createElement("button");
+            button.className = "panel-button registry-large-button is-full-width settings-action-button";
+            button.id = "proceduralBackgroundRegenerate";
+            button.type = "button";
+            button.setAttribute("data-i18n", field.labelKey);
+            button.textContent = tr(field.labelKey);
+            proceduralControls.appendChild(button);
+        }
+
+        body.appendChild(classicControls);
+        body.appendChild(proceduralControls);
 
         mount.appendChild(toggle);
         mount.appendChild(body);
@@ -2335,6 +3683,7 @@
         var detail = byId("detailView");
 
         stopRegistryStatePolling();
+        clearRegistryProceduralPreviewTimer(activeToolId);
         resetDetailMorphStyles();
         clearDetailContentClasses();
         detail.classList.remove("is-active", "is-closing", "is-entering", "is-morphing");
@@ -2342,6 +3691,7 @@
         window.setTimeout(function () {
             home.classList.remove("is-returning");
         }, duration("normal"));
+        updateProceduralHomeBackground();
     }
 
     function getActiveToolButton() {
@@ -2534,6 +3884,7 @@
                 RegistrySaveTimers[key] = null;
             }
         }
+        clearRegistryProceduralPreviewTimer();
     }
 
     function resetRegistryToolValues(toolId) {
@@ -2676,17 +4027,25 @@
         }
     }
 
-    function setupRegistryNumberDrag(input, field, onUpdate) {
+    function setupRegistryNumberDrag(input, field, onUpdate, options) {
         var suppressNextClick = false;
+        var editStartValue = input.value;
+        var skipNextBlurCommit = false;
+        options = options || null;
 
         input.classList.add("registry-number-input", "is-drag-ready");
 
         input.addEventListener("focus", function () {
+            editStartValue = input.value;
             input.classList.add("is-editing-number");
         });
 
         input.addEventListener("blur", function () {
             input.classList.remove("is-editing-number");
+            if (options && options.onCommit && !skipNextBlurCommit) {
+                commitSchemaNumberInput(input, field, editStartValue, options.onCommit);
+            }
+            skipNextBlurCommit = false;
         });
 
         input.addEventListener("click", function (event) {
@@ -2704,9 +4063,33 @@
 
         input.addEventListener("keydown", function (event) {
             if (event.keyCode === 13) {
+                if (options && options.onCommit) {
+                    commitSchemaNumberInput(input, field, editStartValue, options.onCommit);
+                    skipNextBlurCommit = true;
+                }
                 input.blur();
             } else if (event.keyCode === 27) {
+                if (options && options.onCancel) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setSchemaNumberValue(input, editStartValue, field);
+                    options.onCancel(input.value);
+                    skipNextBlurCommit = true;
+                }
                 input.blur();
+            } else if (options && (event.keyCode === 38 || event.keyCode === 40)) {
+                var direction = event.keyCode === 38 ? 1 : -1;
+                var step = Number(field.step);
+                var current = normalizeSchemaNumber(input.value, field, editStartValue);
+                event.preventDefault();
+                event.stopPropagation();
+                if (isNaN(step) || step <= 0) {
+                    step = 1;
+                }
+                setSchemaNumberValue(input, current + direction * step, field);
+                if (onUpdate) {
+                    onUpdate(input.value);
+                }
             }
         });
 
@@ -4316,6 +5699,7 @@
 
         function scheduleSave() {
             scheduleRegistryToolSave(toolDef);
+            scheduleRegistryProceduralPreviewUpdate(toolDef, field && field.key);
         }
 
         if (!field) {
@@ -4336,6 +5720,44 @@
             row.textContent = tr(field.labelKey || field.textKey || field.text || "");
             applyVisibleWhenMetadata(row, field);
             row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
+            return row;
+        }
+
+        if (fieldType === "proceduralPreview") {
+            row = document.createElement("div");
+            row.className = "registry-info-note registry-schema-field registry-procedural-preview is-preview-icon";
+            row.setAttribute("data-procedural-preview-tool", toolId);
+            applyVisibleWhenMetadata(row, field);
+            row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
+
+            label = document.createElement("strong");
+            label.className = "registry-title-primary";
+            label.textContent = tr(field.labelKey || field.key || "");
+            row.appendChild(label);
+
+            hintText = schemaHintText(field);
+            if (hintText) {
+                hint = document.createElement("small");
+                hint.className = "registry-field-hint registry-text-muted";
+                hint.textContent = hintText;
+                row.appendChild(hint);
+            }
+
+            input = document.createElement("canvas");
+            input.className = "registry-procedural-preview-canvas";
+            input.setAttribute("data-procedural-preview-canvas", "true");
+            row.appendChild(input);
+
+            hint = document.createElement("span");
+            hint.className = "registry-procedural-preview-fallback registry-text-muted";
+            hint.setAttribute("data-procedural-preview-fallback", "true");
+            hint.setAttribute("role", "status");
+            row.appendChild(hint);
+
+            colorValue = document.createElement("code");
+            colorValue.className = "registry-text-muted registry-procedural-preview-meta";
+            colorValue.setAttribute("data-procedural-preview-meta", "true");
+            row.appendChild(colorValue);
             return row;
         }
 
@@ -4618,6 +6040,238 @@
 
     function renderDynamicField(toolId, field) {
         return renderSchemaField(field, { id: toolId });
+    }
+
+    function proceduralPreviewContractApi() {
+        return window.ProceduralPreviewContract || null;
+    }
+
+    function findRegistryProceduralPreviewField(toolDef) {
+        var api = proceduralPreviewContractApi();
+        var sections;
+        var fields;
+        var i;
+        var j;
+        if (api && api.findProceduralPreviewField) {
+            return api.findProceduralPreviewField(toolDef);
+        }
+        sections = getToolSections(toolDef);
+        for (i = 0; i < sections.length; i++) {
+            fields = sections[i] && sections[i].fields ? sections[i].fields : [];
+            for (j = 0; j < fields.length; j++) {
+                if (fields[j] && fields[j].type === "proceduralPreview") {
+                    return fields[j];
+                }
+            }
+        }
+        return null;
+    }
+
+    function shouldRefreshRegistryProceduralPreview(toolDef, changedKey) {
+        var field = findRegistryProceduralPreviewField(toolDef);
+        var api = proceduralPreviewContractApi();
+        if (!field) {
+            return false;
+        }
+        if (api && api.shouldRefreshProceduralPreview) {
+            return api.shouldRefreshProceduralPreview(field, changedKey);
+        }
+        return !changedKey;
+    }
+
+    function clearRegistryProceduralPreviewTimer(toolId) {
+        var key;
+        if (toolId) {
+            if (ProceduralPreviewTimers[toolId]) {
+                window.cancelAnimationFrame(ProceduralPreviewTimers[toolId]);
+                ProceduralPreviewTimers[toolId] = null;
+            }
+            delete ProceduralPreviewLastInputKeys[toolId];
+            return;
+        }
+        for (key in ProceduralPreviewTimers) {
+            if (Object.prototype.hasOwnProperty.call(ProceduralPreviewTimers, key) && ProceduralPreviewTimers[key]) {
+                window.cancelAnimationFrame(ProceduralPreviewTimers[key]);
+                ProceduralPreviewTimers[key] = null;
+            }
+        }
+        ProceduralPreviewLastInputKeys = {};
+    }
+
+    function warnProceduralPreviewOnce(code, detail) {
+        if (!code || ProceduralPreviewWarnings[code]) {
+            return;
+        }
+        ProceduralPreviewWarnings[code] = true;
+        if (window.console && console.warn) {
+            console.warn("[AE Toolbox] Procedural preview " + code + (detail ? ": " + detail : ""));
+        }
+    }
+
+    function setProceduralPreviewFallback(preview, field, code) {
+        var canvas = preview ? preview.querySelector("[data-procedural-preview-canvas]") : null;
+        var fallback = preview ? preview.querySelector("[data-procedural-preview-fallback]") : null;
+        var meta = preview ? preview.querySelector("[data-procedural-preview-meta]") : null;
+        if (!preview) {
+            return;
+        }
+        preview.classList.add("is-preview-fallback");
+        preview.setAttribute("data-preview-state", "fallback");
+        if (canvas) {
+            canvas.setAttribute("aria-hidden", "true");
+        }
+        if (fallback) {
+            fallback.textContent = tr((field && field.fallbackKey) || "status.ready");
+        }
+        if (meta) {
+            meta.textContent = code || "";
+        }
+    }
+
+    function clearProceduralPreviewFallback(preview) {
+        var canvas = preview ? preview.querySelector("[data-procedural-preview-canvas]") : null;
+        var fallback = preview ? preview.querySelector("[data-procedural-preview-fallback]") : null;
+        if (!preview) {
+            return;
+        }
+        preview.classList.remove("is-preview-fallback");
+        preview.setAttribute("data-preview-state", "ready");
+        if (canvas) {
+            canvas.removeAttribute("aria-hidden");
+        }
+        if (fallback) {
+            fallback.textContent = "";
+        }
+    }
+
+    function getProceduralPreviewEngine(engineName) {
+        var name = engineName || "proceduralAppearance";
+        if (name === "proceduralAppearance") {
+            return window.ProceduralAppearance || null;
+        }
+        return null;
+    }
+
+    function stablePreviewInputKey(input) {
+        if (!input || !input.ok) {
+            return "";
+        }
+        return JSON.stringify({
+            engine: input.engine,
+            target: input.target,
+            seed: input.seed,
+            params: input.params || {}
+        });
+    }
+
+    function scheduleRegistryProceduralPreviewUpdate(toolDef, changedKey) {
+        if (!toolDef || !toolDef.id || panelShuttingDown) {
+            return;
+        }
+        if (!shouldRefreshRegistryProceduralPreview(toolDef, changedKey)) {
+            return;
+        }
+        if (ProceduralPreviewTimers[toolDef.id]) {
+            window.cancelAnimationFrame(ProceduralPreviewTimers[toolDef.id]);
+        }
+        ProceduralPreviewTimers[toolDef.id] = window.requestAnimationFrame(function () {
+            ProceduralPreviewTimers[toolDef.id] = null;
+            refreshRegistryProceduralPreviews(toolDef);
+        });
+    }
+
+    function refreshRegistryProceduralPreviews(toolDef) {
+        var previews = toolDef && toolDef.id ? document.querySelectorAll('[data-procedural-preview-tool="' + toolDef.id + '"]') : [];
+        var field = findRegistryProceduralPreviewField(toolDef);
+        var api = proceduralPreviewContractApi();
+        var values;
+        var input;
+        var inputKey;
+        var engine;
+        var options;
+        var i;
+        var canvas;
+        var context;
+        var meta;
+        var result;
+        var rendered = false;
+
+        if (panelShuttingDown || !previews.length || !field) {
+            return;
+        }
+
+        values = collectSchemaValues(toolDef);
+        if (!api || !api.extractProceduralPreviewInput) {
+            warnProceduralPreviewOnce("CONTRACT_MISSING", "client/js/proceduralPreviewContract.js is not available.");
+            input = {
+                ok: false,
+                errorCode: "CONTRACT_MISSING"
+            };
+        } else {
+            input = api.extractProceduralPreviewInput(field, values);
+        }
+        if (!input.ok) {
+            warnProceduralPreviewOnce(input.errorCode || "INVALID_CONTRACT", input.message || "");
+            for (i = 0; i < previews.length; i++) {
+                setProceduralPreviewFallback(previews[i], field, input.errorCode || "INVALID_CONTRACT");
+            }
+            return;
+        }
+
+        inputKey = stablePreviewInputKey(input);
+        if (ProceduralPreviewLastInputKeys[toolDef.id] === inputKey) {
+            return;
+        }
+
+        engine = getProceduralPreviewEngine(input.engine);
+        if (!engine || !engine.render) {
+            warnProceduralPreviewOnce("ENGINE_UNAVAILABLE_" + input.engine, "Unknown or unavailable engine.");
+            for (i = 0; i < previews.length; i++) {
+                setProceduralPreviewFallback(previews[i], field, "ENGINE_UNAVAILABLE");
+            }
+            return;
+        }
+
+        options = {
+            target: input.target,
+            seed: input.seed,
+            params: input.params
+        };
+
+        for (i = 0; i < previews.length; i++) {
+            canvas = previews[i].querySelector('[data-procedural-preview-canvas]');
+            meta = previews[i].querySelector('[data-procedural-preview-meta]');
+            if (!canvas || !document.documentElement.contains(canvas)) {
+                setProceduralPreviewFallback(previews[i], field, "CANVAS_MISSING");
+                continue;
+            }
+            if (!canvas.getContext) {
+                setProceduralPreviewFallback(previews[i], field, "CANVAS_CONTEXT_UNAVAILABLE");
+                continue;
+            }
+            context = canvas.getContext("2d");
+            if (!context) {
+                setProceduralPreviewFallback(previews[i], field, "CANVAS_CONTEXT_UNAVAILABLE");
+                continue;
+            }
+            try {
+                result = engine.render(canvas, options);
+            } catch (err) {
+                warnProceduralPreviewOnce("RENDER_FAILED", err && err.message ? err.message : String(err));
+                setProceduralPreviewFallback(previews[i], field, "RENDER_FAILED");
+                continue;
+            }
+            clearProceduralPreviewFallback(previews[i]);
+            previews[i].classList.toggle("is-preview-background", result.target === "background");
+            previews[i].classList.toggle("is-preview-icon", result.target !== "background");
+            rendered = true;
+            if (meta) {
+                meta.textContent = result.engineVersion + " | " + result.target + " | seedHash=" + result.seedHash + " | " + result.cacheKey;
+            }
+        }
+        if (rendered) {
+            ProceduralPreviewLastInputKeys[toolDef.id] = inputKey;
+        }
     }
 
     function getToolSections(toolDef) {
@@ -4942,6 +6596,7 @@
         }
 
         closeRegistryColorPicker();
+        clearRegistryProceduralPreviewTimer(tool.id);
         oldMenus = document.querySelectorAll(".select-menu[data-select-menu-for^='dynamic_']");
         for (i = 0; i < oldMenus.length; i++) {
             oldMenus[i].parentNode.removeChild(oldMenus[i]);
@@ -4973,6 +6628,7 @@
         setupCustomSelectInputs();
         updateRegistryVisibleFields(tool);
         updateRegistryStateDependentUi(tool);
+        refreshRegistryProceduralPreviews(tool);
         startRegistryStatePolling(tool);
     }
 
@@ -4986,8 +6642,12 @@
         var actions = document.querySelectorAll(".tool-actions");
         var i;
         var dynamic = isDynamicTool(toolId);
+        var previousToolId = activeToolId;
 
         activeToolId = toolId || "shapeAdd";
+        if (previousToolId && previousToolId !== activeToolId) {
+            clearRegistryProceduralPreviewTimer(previousToolId);
+        }
         byId("detailHeading").textContent = toolText(meta, "titleKey", "title", tr("app.title"));
 
         if (dynamic) {
@@ -5036,6 +6696,8 @@
             languageSelect.value = window.I18n.getLanguage();
         }
         syncAllCustomSelects();
+        refreshPaletteWorkspaceI18n();
+        refreshSettingsThemePresentation();
     }
 
     function setupLanguageSelector() {
@@ -5156,6 +6818,7 @@
             return;
         }
 
+        clearRegistryProceduralPreviewTimer(activeToolId);
         beginAnimation();
         exitDetailContent(function () {
             iconRect = getHomeToolIconRect(toolButton);
@@ -5699,6 +7362,117 @@
         root.style.setProperty("--tool-icon-fill", rgba(line, 0.13));
         setColorValue("toolIconColor", icon);
         setColorValue("toolIconLine", line);
+        updateProceduralHomeIconAppearance({ presentationOnly: true });
+        refreshSettingsThemePresentation();
+    }
+
+    function normalizeProceduralIconMode(value) {
+        return window.ProceduralThemeMap && typeof window.ProceduralThemeMap.normalizeMode === "function"
+            ? window.ProceduralThemeMap.normalizeMode(value)
+            : (value === "themeMapped" ? "themeMapped" : "colorful");
+    }
+
+    function updateProceduralHomeIconAppearance(options) {
+        var controller = window.ProceduralHomeIcons;
+        var modeSelect = byId("proceduralIconMode");
+        var colors = resolveProceduralThemeColors();
+        if (!controller || typeof controller.updateAppearance !== "function") {
+            updateProceduralHomeBackground(options);
+            return;
+        }
+        if (!(options && options.presentationOnly) && typeof controller.updateParameters === "function") {
+            controller.updateParameters(getProceduralAppearanceSourceParams());
+        }
+        controller.updateAppearance({
+            mode: normalizeProceduralIconMode(modeSelect ? modeSelect.value : DefaultSettings.proceduralIconMode),
+            darkColor: colors.dark,
+            midColor: colors.mid,
+            lightColor: colors.light,
+            mappingParams: getProceduralAppearanceMappingParams()
+        });
+        updateProceduralHomeBackground(options);
+    }
+
+    function applyProceduralIconMode(value) {
+        var mode = normalizeProceduralIconMode(value);
+        var select = byId("proceduralIconMode");
+        if (select) {
+            select.value = mode;
+            syncCustomSelect(select);
+        }
+        updateProceduralHomeIconAppearance({ presentationOnly: true });
+        refreshSettingsThemePresentation();
+    }
+
+    function applyHomeIconRadius(value) {
+        var radius = clampNumber(value, DefaultSettings.homeIconRadius, 18, 40);
+        var range = byId("homeIconRadius");
+        var number = byId("homeIconRadiusNumber");
+
+        document.documentElement.style.setProperty("--radius-home-icon", String(radius) + "%");
+        if (range) {
+            range.value = radius;
+        }
+        if (number) {
+            number.value = radius;
+        }
+    }
+
+    function setupHomeIconRadius() {
+        var input = byId("homeIconRadius");
+        var number = byId("homeIconRadiusNumber");
+
+        if (!input || !number) {
+            return;
+        }
+
+        linkPersistedRange("homeIconRadius", "homeIconRadiusNumber", 18, 40, function () {
+            applyHomeIconRadius(number.value);
+            saveSettings();
+        });
+        applyHomeIconRadius(number.value);
+    }
+
+    function applyHomeDragShadowIntensity(value) {
+        var intensity = clampNumber(value, DefaultSettings.homeDragShadowIntensity, 0, 1.5);
+        var range = byId("homeDragShadowIntensity");
+        var number = byId("homeDragShadowIntensityNumber");
+        var primary = Math.min(0.72, Math.max(0, 0.48 * intensity));
+        var secondary = Math.min(0.48, Math.max(0, 0.32 * intensity));
+
+        document.documentElement.style.setProperty("--home-drag-shadow-primary", "rgba(0, 0, 0, " + primary.toFixed(3) + ")");
+        document.documentElement.style.setProperty("--home-drag-shadow-secondary", "rgba(0, 0, 0, " + secondary.toFixed(3) + ")");
+        if (range) {
+            range.value = intensity;
+        }
+        if (number) {
+            number.value = intensity;
+        }
+    }
+
+    function setupHomeDragShadowIntensity() {
+        var input = byId("homeDragShadowIntensity");
+        var number = byId("homeDragShadowIntensityNumber");
+
+        if (!input || !number) {
+            return;
+        }
+
+        linkPersistedRange("homeDragShadowIntensity", "homeDragShadowIntensityNumber", 0, 1.5, function () {
+            applyHomeDragShadowIntensity(number.value);
+            saveSettings();
+        });
+        applyHomeDragShadowIntensity(number.value);
+    }
+
+    function syncSettingsDeveloperOnlyFields() {
+        var enabled = window.AETOOLBOX_DEBUG_REGISTRY === true;
+        var rows = document.querySelectorAll(".settings-developer-only");
+        var i;
+        for (i = 0; i < rows.length; i++) {
+            rows[i].hidden = !enabled;
+            rows[i].classList.toggle("is-settings-hidden", !enabled);
+        }
     }
 
     function pickColorWithAE(inputId) {
@@ -5849,12 +7623,24 @@
         }
         lifecycleDebug("panel close start");
         panelShuttingDown = true;
+        clearProceduralAppearanceSourceDebounce();
         stopSelectionPolling();
         stopRegistryStatePolling();
         clearRegistrySaveTimers();
         if (HomeLayoutManager && HomeLayoutManager.teardownForShutdown) {
             HomeLayoutManager.teardownForShutdown();
         }
+        if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.teardown === "function") {
+            window.ProceduralHomeIcons.teardown();
+        }
+        if (window.ProceduralHomeBackground && typeof window.ProceduralHomeBackground.teardown === "function") {
+            window.ProceduralHomeBackground.teardown();
+        }
+        if (window.ProceduralPaletteStore && typeof window.ProceduralPaletteStore.flush === "function") {
+            window.ProceduralPaletteStore.flush();
+        }
+        unbindThemePaletteStore();
+        teardownPaletteWorkspace();
         if (statusTimer) {
             window.clearTimeout(statusTimer);
             statusTimer = null;
@@ -5917,7 +7703,8 @@
         rect = control.getBoundingClientRect();
         viewportWidth = window.innerWidth || document.documentElement.clientWidth || 320;
         viewportHeight = window.innerHeight || document.documentElement.clientHeight || 480;
-        width = Math.min(rect.width, viewportWidth - edge * 2);
+        width = Math.max(rect.width, 220);
+        width = Math.min(width, viewportWidth - edge * 2);
         left = Math.max(edge, Math.min(rect.left, viewportWidth - width - edge));
 
         menu.style.width = width + "px";
@@ -5944,6 +7731,42 @@
             return tr(option.getAttribute("data-i18n"));
         }
         return option.textContent;
+    }
+
+    function rebuildCustomSelectOptions(select) {
+        var control;
+        var menu;
+        var optionButton;
+        var options;
+        var i;
+
+        if (!select) {
+            return;
+        }
+        control = select.getAttribute("data-custom-select-id");
+        control = control ? document.querySelector('.custom-select[data-select-for="' + control + '"]') : null;
+        menu = getCustomSelectMenu(control);
+        if (!menu) {
+            return;
+        }
+        menu.innerHTML = "";
+        options = select.options || [];
+        for (i = 0; i < options.length; i++) {
+            optionButton = document.createElement("button");
+            optionButton.type = "button";
+            optionButton.className = "select-option";
+            optionButton.setAttribute("role", "option");
+            optionButton.setAttribute("data-value", options[i].value);
+            if (options[i].getAttribute("data-i18n")) {
+                optionButton.setAttribute("data-option-i18n", options[i].getAttribute("data-i18n"));
+            }
+            optionButton.textContent = getSelectOptionLabel(options[i]);
+            optionButton.addEventListener("click", function () {
+                setNativeSelectValue(select, this.getAttribute("data-value"), true);
+                closeCustomSelectMenus();
+            });
+            menu.appendChild(optionButton);
+        }
     }
 
     function syncCustomSelect(select) {
@@ -6050,26 +7873,9 @@
         menu.setAttribute("role", "listbox");
         menu.setAttribute("data-select-menu-for", selectId);
 
-        for (i = 0; i < select.options.length; i++) {
-            option = select.options[i];
-            optionButton = document.createElement("button");
-            optionButton.type = "button";
-            optionButton.className = "select-option";
-            optionButton.setAttribute("role", "option");
-            optionButton.setAttribute("data-value", option.value);
-            if (option.getAttribute("data-i18n")) {
-                optionButton.setAttribute("data-option-i18n", option.getAttribute("data-i18n"));
-            }
-            optionButton.textContent = getSelectOptionLabel(option);
-            optionButton.addEventListener("click", function () {
-                setNativeSelectValue(select, this.getAttribute("data-value"), true);
-                closeCustomSelectMenus();
-            });
-            menu.appendChild(optionButton);
-        }
-
         document.body.appendChild(menu);
         select.parentNode.insertBefore(control, select.nextSibling);
+        rebuildCustomSelectOptions(select);
 
         trigger.addEventListener("click", function (event) {
             event.preventDefault();
@@ -6126,6 +7932,7 @@
 
     function setupCustomSelectInputs() {
         var selects = document.querySelectorAll("select.select-input");
+        var settingsContent;
         var i;
         for (i = 0; i < selects.length; i++) {
             createCustomSelect(selects[i], i);
@@ -6140,6 +7947,12 @@
             window.addEventListener("resize", function () {
                 closeCustomSelectMenus();
             });
+            settingsContent = document.querySelector(".settings-content");
+            if (settingsContent) {
+                settingsContent.addEventListener("scroll", function () {
+                    closeCustomSelectMenus();
+                });
+            }
         }
         bindPanelLifecycle();
     }
@@ -6287,8 +8100,18 @@
             uiScale: clampNumber(byId("uiScaleNumber").value, DefaultSettings.uiScale, 0.62, 1.18),
             themeAccent: normalizeHex(byId("themeAccent").value, DefaultSettings.themeAccent),
             homeBackground: normalizeHex(byId("homeBackground").value, DefaultSettings.homeBackground),
+            backgroundSource: normalizeBackgroundSource(byId("backgroundSource") ? byId("backgroundSource").value : DefaultSettings.backgroundSource),
+            proceduralBackgroundSeed: normalizeProceduralBackgroundSeed(byId("proceduralBackgroundSeed") ? byId("proceduralBackgroundSeed").value : DefaultSettings.proceduralBackgroundSeed),
+            proceduralBackgroundPaletteId: normalizeProceduralBackgroundPaletteId(byId("proceduralBackgroundPaletteId") ? byId("proceduralBackgroundPaletteId").value : DefaultSettings.proceduralBackgroundPaletteId),
+            proceduralBackgroundIntensity: normalizeProceduralBackgroundIntensity(byId("proceduralBackgroundIntensityNumber") ? byId("proceduralBackgroundIntensityNumber").value : DefaultSettings.proceduralBackgroundIntensity),
             toolIconColor: normalizeHex(byId("toolIconColor").value, DefaultSettings.toolIconColor),
             toolIconLine: normalizeHex(byId("toolIconLine").value, DefaultSettings.toolIconLine),
+            proceduralIconMode: normalizeProceduralIconMode(byId("proceduralIconMode") ? byId("proceduralIconMode").value : DefaultSettings.proceduralIconMode),
+            toolIconDarkSourceMode: normalizeToolIconDarkSourceMode(byId("toolIconDarkSourceMode") ? byId("toolIconDarkSourceMode").value : DefaultSettings.toolIconDarkSourceMode),
+            toolIconDarkPaletteId: byId("toolIconDarkPaletteId") ? String(byId("toolIconDarkPaletteId").value || "") : DefaultSettings.toolIconDarkPaletteId,
+            proceduralParams: collectProceduralAppearanceParamsFromControls(),
+            homeIconRadius: byId("homeIconRadiusNumber") ? clampNumber(byId("homeIconRadiusNumber").value, DefaultSettings.homeIconRadius, 18, 40) : DefaultSettings.homeIconRadius,
+            homeDragShadowIntensity: byId("homeDragShadowIntensityNumber") ? clampNumber(byId("homeDragShadowIntensityNumber").value, DefaultSettings.homeDragShadowIntensity, 0, 1.5) : DefaultSettings.homeDragShadowIntensity,
             autoStatus: autoStatus ? !!autoStatus.checked : true,
             registryDebugTools: registryDebugTools ? !!registryDebugTools.checked : false
         };
@@ -6304,6 +8127,8 @@
         byId("motionSpeed").value = speed;
         byId("motionSpeedNumber").value = speed;
         motionScale = speed;
+        ProceduralAppearanceParams = normalizeProceduralAppearanceParams(data.proceduralParams);
+        setProceduralAppearanceParamControls(ProceduralAppearanceParams);
         applyUiScale(data.uiScale || DefaultSettings.uiScale);
         if (byId("autoStatus")) {
             byId("autoStatus").checked = data.autoStatus !== false;
@@ -6311,7 +8136,22 @@
         applyRegistryDebugTools(data.registryDebugTools === true);
         applyThemeAccent(data.themeAccent || DefaultSettings.themeAccent);
         applyHomeBackground(data.homeBackground || DefaultSettings.homeBackground);
+        applyBackgroundSource(data.backgroundSource || DefaultSettings.backgroundSource);
+        if (byId("proceduralBackgroundSeed")) {
+            byId("proceduralBackgroundSeed").value = normalizeProceduralBackgroundSeed(data.proceduralBackgroundSeed);
+        }
+        if (byId("proceduralBackgroundPaletteId")) {
+            byId("proceduralBackgroundPaletteId").value = normalizeProceduralBackgroundPaletteId(data.proceduralBackgroundPaletteId);
+            syncCustomSelect(byId("proceduralBackgroundPaletteId"));
+        }
+        setLinkedRangeValue("proceduralBackgroundIntensity", normalizeProceduralBackgroundIntensity(data.proceduralBackgroundIntensity), DefaultSettings.proceduralBackgroundIntensity);
+        updateProceduralHomeBackground();
         applyToolIconTheme(data.toolIconColor || DefaultSettings.toolIconColor, data.toolIconLine || DefaultSettings.toolIconLine);
+        applyProceduralIconDarkSourceMode(data.toolIconDarkSourceMode || DefaultSettings.toolIconDarkSourceMode);
+        applyProceduralIconDarkPaletteId(data.toolIconDarkPaletteId || DefaultSettings.toolIconDarkPaletteId);
+        applyProceduralIconMode(data.proceduralIconMode || DefaultSettings.proceduralIconMode);
+        applyHomeIconRadius(data.homeIconRadius || DefaultSettings.homeIconRadius);
+        applyHomeDragShadowIntensity(typeof data.homeDragShadowIntensity !== "undefined" ? data.homeDragShadowIntensity : DefaultSettings.homeDragShadowIntensity);
     }
 
     function loadPersistentState() {
@@ -6369,6 +8209,7 @@
 
         nextFrame(function () {
             resetSettingsMorphStyles();
+            closePaletteWorkspace({ reason: "settings-close", animate: false });
             clearSettingsContentClasses();
             nextFrame(function () {
                 view.classList.remove("no-transition");
@@ -6389,6 +8230,7 @@
         if (!view || byId("appShell").classList.contains("is-animating") || view.classList.contains("is-open")) {
             return;
         }
+        ensurePaletteWorkspaceClosed();
         closeCustomSelectMenus();
         panel = view.querySelector(".settings-panel");
         backdrop = byId("settingsBackdrop");
@@ -6459,6 +8301,7 @@
         if (!view || byId("appShell").classList.contains("is-animating") || !view.classList.contains("is-open")) {
             return;
         }
+        closePaletteWorkspace({ reason: "settings-close", animate: false });
         closeCustomSelectMenus();
         beginAnimation();
         exitSettingsContent(function () {
@@ -6520,21 +8363,49 @@
         var settingsBackdrop;
         var refreshBtn;
 
+        if (window.ProceduralPaletteStore && typeof window.ProceduralPaletteStore.initialize === "function") {
+            window.ProceduralPaletteStore.initialize({
+                library: window.ProceduralPaletteLibrary
+            });
+        }
+        bindThemePaletteStore();
         renderSettingsContent();
         renderSettingsTheme();
+        renderPaletteLibrarySettings();
         renderSettingsBackgroundEngine();
+        setupProceduralBackgroundControls();
         setupColorControls();
         renderSettingsMotion();
         setupMotionSpeed();
         setupUiScale();
         renderSettingsLanguage();
         renderSettingsDeveloperMode();
+        setupHomeIconRadius();
+        setupHomeDragShadowIntensity();
         loadPersistentState();
         setupLanguageSelector();
         setupCollapsibleSettings();
         BackgroundEngine.init();
+        if (window.ProceduralHomeBackground && typeof window.ProceduralHomeBackground.initialize === "function") {
+            window.ProceduralHomeBackground.initialize({
+                rootElement: byId("appShell"),
+                canvas: byId("proceduralHomeBackgroundCanvas"),
+                mode: byId("backgroundSource") ? byId("backgroundSource").value : DefaultSettings.backgroundSource,
+                seed: byId("proceduralBackgroundSeed") ? byId("proceduralBackgroundSeed").value : DefaultSettings.proceduralBackgroundSeed,
+                paletteId: byId("proceduralBackgroundPaletteId") ? byId("proceduralBackgroundPaletteId").value : DefaultSettings.proceduralBackgroundPaletteId,
+                intensity: byId("proceduralBackgroundIntensityNumber") ? byId("proceduralBackgroundIntensityNumber").value : DefaultSettings.proceduralBackgroundIntensity,
+                params: getProceduralAppearanceSourceParams(),
+                iconAppearance: getProceduralHomeBackgroundIconAppearance()
+            });
+        }
         setupCustomSelectInputs();
         HomeLayoutManager.init();
+        if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.initialize === "function") {
+            window.ProceduralHomeIcons.initialize({
+                root: byId("toolGrid"),
+                params: getProceduralAppearanceSourceParams()
+            });
+        }
         configureToolDetail(activeToolId);
         refreshLanguage();
 
