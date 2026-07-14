@@ -115,6 +115,40 @@
                 ]
             },
             {
+                id: "proceduralAppearance",
+                titleKey: "settings.sections.proceduralAppearance",
+                descriptionKey: "helper.proceduralAppearanceParams",
+                developerOnly: true,
+                collapsible: true,
+                defaultCollapsed: true,
+                fields: [
+                    { key: "warp", type: "range", labelKey: "label.proceduralParam.warp", descriptionKey: "helper.proceduralParam.warp", defaultProvider: "proceduralAppearance", min: 0, max: 1, step: 0.01 },
+                    { key: "warpIrregularity", type: "range", labelKey: "label.proceduralParam.warpIrregularity", descriptionKey: "helper.proceduralParam.warpIrregularity", defaultProvider: "proceduralAppearance", min: 0, max: 1, step: 0.01 },
+                    { key: "flowComplexity", type: "range", labelKey: "label.proceduralParam.flowComplexity", descriptionKey: "helper.proceduralParam.flowComplexity", defaultProvider: "proceduralAppearance", min: 0, max: 1, step: 0.01 },
+                    { key: "flowContinuity", type: "range", labelKey: "label.proceduralParam.flowContinuity", descriptionKey: "helper.proceduralParam.flowContinuity", defaultProvider: "proceduralAppearance", min: 0, max: 1, step: 0.01 },
+                    { key: "ribbonWidth", type: "range", labelKey: "label.proceduralParam.ribbonWidth", descriptionKey: "helper.proceduralParam.ribbonWidth", defaultProvider: "proceduralAppearance", min: 0.06, max: 0.22, step: 0.01 },
+                    { key: "gradientBias", type: "range", labelKey: "label.proceduralParam.gradientBias", descriptionKey: "helper.proceduralParam.gradientBias", defaultProvider: "proceduralAppearance", min: 0.15, max: 0.75, step: 0.01 },
+                    { key: "highlightConcentration", type: "range", labelKey: "label.proceduralParam.highlightConcentration", descriptionKey: "helper.proceduralParam.highlightConcentration", defaultProvider: "proceduralAppearance", min: 0.35, max: 1, step: 0.01 },
+                    { key: "highlightArea", type: "range", labelKey: "label.proceduralParam.highlightArea", descriptionKey: "helper.proceduralParam.highlightArea", defaultProvider: "proceduralAppearance", min: 0.04, max: 0.12, step: 0.01 },
+                    { key: "secondaryHueInfluence", type: "range", labelKey: "label.proceduralParam.secondaryHueInfluence", descriptionKey: "helper.proceduralParam.secondaryHueInfluence", defaultProvider: "proceduralAppearance", min: 0, max: 1, step: 0.01 },
+                    { key: "accentPresence", type: "range", labelKey: "label.proceduralParam.accentPresence", descriptionKey: "helper.proceduralParam.accentPresence", defaultProvider: "proceduralAppearance", min: 0, max: 1, step: 0.01 },
+                    { key: "highlightTintShift", type: "range", labelKey: "label.proceduralParam.highlightTintShift", descriptionKey: "helper.proceduralParam.highlightTintShift", defaultProvider: "proceduralAppearance", min: 0, max: 1, step: 0.01 },
+                    { key: "contrast", type: "range", labelKey: "label.proceduralParam.contrast", descriptionKey: "helper.proceduralParam.contrast", defaultProvider: "proceduralAppearance", min: 0, max: 1, step: 0.01 },
+                    { key: "depth", type: "range", labelKey: "label.proceduralParam.depth", descriptionKey: "helper.proceduralParam.depth", defaultProvider: "proceduralAppearance", min: 0, max: 1, step: 0.01 },
+                    { key: "saturation", type: "range", labelKey: "label.proceduralParam.saturation", descriptionKey: "helper.proceduralParam.saturation", defaultProvider: "proceduralAppearance", min: 0, max: 1.4, step: 0.01 },
+                    { key: "brightness", type: "range", labelKey: "label.proceduralParam.brightness", descriptionKey: "helper.proceduralParam.brightness", defaultProvider: "proceduralAppearance", min: 0.2, max: 1.4, step: 0.01 },
+                    { key: "grain", type: "range", labelKey: "label.proceduralParam.grain", descriptionKey: "helper.proceduralParam.grain", defaultProvider: "proceduralAppearance", min: 0, max: 0.5, step: 0.01 },
+                    { key: "paletteDarkness", type: "range", labelKey: "label.proceduralParam.paletteDarkness", descriptionKey: "helper.proceduralParam.paletteDarkness", defaultProvider: "proceduralAppearance", min: 0, max: 0.12, step: 0.005 },
+                    { key: "paletteMidLift", type: "range", labelKey: "label.proceduralParam.paletteMidLift", descriptionKey: "helper.proceduralParam.paletteMidLift", defaultProvider: "proceduralAppearance", min: 0, max: 0.12, step: 0.005 },
+                    { key: "paletteLightLift", type: "range", labelKey: "label.proceduralParam.paletteLightLift", descriptionKey: "helper.proceduralParam.paletteLightLift", defaultProvider: "proceduralAppearance", min: 0, max: 0.12, step: 0.005 },
+                    { key: "paletteDarkChroma", type: "range", labelKey: "label.proceduralParam.paletteDarkChroma", descriptionKey: "helper.proceduralParam.paletteDarkChroma", defaultProvider: "proceduralAppearance", min: 0.7, max: 1.1, step: 0.01 },
+                    { key: "paletteLightChroma", type: "range", labelKey: "label.proceduralParam.paletteLightChroma", descriptionKey: "helper.proceduralParam.paletteLightChroma", defaultProvider: "proceduralAppearance", min: 0.7, max: 1.1, step: 0.01 },
+                    { key: "paletteMapMidpoint", type: "range", labelKey: "label.proceduralParam.paletteMapMidpoint", descriptionKey: "helper.proceduralParam.paletteMapMidpoint", defaultProvider: "proceduralAppearance", min: 0.35, max: 0.65, step: 0.01 },
+                    { key: "paletteMapContrast", type: "range", labelKey: "label.proceduralParam.paletteMapContrast", descriptionKey: "helper.proceduralParam.paletteMapContrast", defaultProvider: "proceduralAppearance", min: 0.75, max: 1.25, step: 0.01 },
+                    { key: "resetProceduralAppearanceParams", type: "button", labelKey: "button.resetProceduralAppearanceParams" }
+                ]
+            },
+            {
                 id: "theme",
                 titleKey: "section.theme",
                 fields: [
@@ -264,6 +298,48 @@
                     "BackgroundEngine.syncControls remains the behavior layer"
                 ],
                 fields: [
+                    {
+                        key: "backgroundSource",
+                        type: "select",
+                        labelKey: "label.backgroundSource",
+                        descriptionKey: "helper.backgroundSource",
+                        defaultValue: "followIconTheme",
+                        options: [
+                            { value: "classic", labelKey: "settings.backgroundSource.classic" },
+                            { value: "followIconTheme", labelKey: "settings.backgroundSource.followIconTheme" },
+                            { value: "procedural", labelKey: "settings.backgroundSource.procedural" }
+                        ]
+                    },
+                    {
+                        key: "proceduralBackgroundSeed",
+                        type: "text",
+                        labelKey: "label.proceduralBackgroundSeed",
+                        descriptionKey: "helper.proceduralBackgroundSeed",
+                        defaultValue: "background-demo-01"
+                    },
+                    {
+                        key: "proceduralBackgroundPaletteId",
+                        type: "select",
+                        labelKey: "label.proceduralBackgroundPalette",
+                        descriptionKey: "helper.proceduralBackgroundPalette",
+                        defaultValue: "algorithmDefault",
+                        optionsProvider: "proceduralBackgroundPalettes"
+                    },
+                    {
+                        key: "proceduralBackgroundIntensity",
+                        type: "range",
+                        labelKey: "label.proceduralBackgroundIntensity",
+                        descriptionKey: "helper.proceduralBackgroundIntensity",
+                        defaultValue: 0.28,
+                        min: 0.05,
+                        max: 0.7,
+                        step: 0.01
+                    },
+                    {
+                        key: "proceduralBackgroundRegenerate",
+                        type: "button",
+                        labelKey: "button.regenerateBackgroundSeed"
+                    },
                     {
                         key: "preset",
                         type: "select",

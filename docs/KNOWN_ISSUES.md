@@ -197,3 +197,11 @@ Known limitations:
 - The current persistence layer is localStorage only. A user data JSON file location can be added later if needed.
 
 Do not solve these by hard-coding tool-specific DOM hacks into the registry renderer or by writing generated palette data back into `proceduralPaletteLibrary.js`.
+
+## Procedural source render warm-up
+
+Status:
+
+Accepted 0.2.5 development limitation.
+
+The first source/geometry parameter change after plugin startup may incur a one-time render warm-up delay. Subsequent source changes are noticeably faster. This is currently acceptable for the Developer Mode procedural controls. Palette/theme presentation changes should remain presentation-only and must not trigger the complete source rebuild.

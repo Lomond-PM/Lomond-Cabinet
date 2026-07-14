@@ -247,20 +247,33 @@ function run() {
     let renderOptions = null;
     const renderIcon = makeIcon(76, 76);
     const renderCard = makeRenderableCard("shapeAdd", renderIcon);
-    const renderOk = icons.renderTool(renderCard, "shapeAdd", {
+    const parameterEngine = {
+        normalizeParams(value) {
+            return Object.assign({ warp: 1, brightness: 0.88 }, value || {});
+        },
+        normalizeRenderScale() {
+            return 1;
+        },
         render(canvas, options) {
             renderOptions = options;
             canvas.width = 76;
             canvas.height = 76;
-        },
-        normalizeRenderScale() {
-            return 1;
         }
+    };
+    icons.initialize({ root: makeRoot([]), engine: parameterEngine, params: { warp: 0.42 } });
+    const renderOk = icons.renderTool(renderCard, "shapeAdd", {
+        normalizeParams: parameterEngine.normalizeParams,
+        render: parameterEngine.render,
+        normalizeRenderScale: parameterEngine.normalizeRenderScale
     });
     assert(renderOk === true, "Renderable Home icon card should render successfully.");
     assert(renderOptions.params.paletteId === icons.resolveHomePaletteId("shapeAdd"), "Home icon render should pass stable paletteId without changing seed.");
+    assert(renderOptions.params.warp === 0.42, "Home icon render should use the shared normalized parameter object.");
     assert(renderOptions && renderOptions.clipToCanvas === false, "Home icon render should disable internal engine clipping so shell radius is authoritative.");
-    assertions += 3;
+    icons.updateParameters({ warp: 0.73 });
+    icons.renderTool(renderCard, "shapeAdd", parameterEngine);
+    assert(renderOptions.params.warp === 0.73, "Updating shared parameters should invalidate and pass the new source parameters.");
+    assertions += 5;
 
     assert(/--radius-home-icon:\s*25\.5%;/.test(STYLE_CSS), "Home icon radius should use the shared proportional token.");
     assert(/--home-tool-icon-radius:\s*var\(--radius-home-icon\);/.test(STYLE_CSS), "Legacy Home icon alias should reference the shared radius token.");

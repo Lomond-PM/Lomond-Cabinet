@@ -46,6 +46,7 @@
         batchSize: DEFAULT_BATCH_SIZE,
         shuttingDown: false,
         generatedCount: 0,
+        params: {},
         appearance: {
             mode: "colorful",
             darkColor: "#15120c",
@@ -135,11 +136,15 @@
         var normalizeHex = themeMap && typeof themeMap.normalizeHexColor === "function"
             ? themeMap.normalizeHexColor
             : function (value, fallback) { return value || fallback; };
+        var mappingParams = themeMap && typeof themeMap.normalizeMappingParams === "function"
+            ? themeMap.normalizeMappingParams(input.mappingParams || {})
+            : (input.mappingParams || {});
         return {
             mode: mode,
             darkColor: normalizeHex(input.darkColor, "#15120c"),
             midColor: input.midColor ? normalizeHex(input.midColor, "#15120c") : "",
-            lightColor: normalizeHex(input.lightColor, "#fff0be")
+            lightColor: normalizeHex(input.lightColor, "#fff0be"),
+            mappingParams: mappingParams
         };
     }
 
@@ -151,7 +156,29 @@
         return "theme-map-v2|" + appearance.mode + "|" + appearance.darkColor + "|" + (appearance.midColor || "") + "|" + appearance.lightColor;
     }
 
-    function getSourceSignature(toolId, size) {
+    function getEngine() {
+        return state.engine || (root && root.ProceduralAppearance) || null;
+    }
+
+    function normalizeParameters(value, engineOverride) {
+        var engine = engineOverride || getEngine();
+        if (engine && typeof engine.normalizeParams === "function") {
+            try {
+                return engine.normalizeParams(value || {});
+            } catch (error) {
+                return {};
+            }
+        }
+        return value || {};
+    }
+
+    function getIconParams(toolId, engineOverride) {
+        var params = normalizeParameters(state.params || {}, engineOverride);
+        params.paletteId = resolveHomePaletteId(toolId);
+        return params;
+    }
+
+    function getSourceSignature(toolId, size, params) {
         return [
             "source-v1",
             trimToolId(toolId),
@@ -160,7 +187,8 @@
             size.logicalHeight,
             size.width,
             size.height,
-            size.ratio
+            size.ratio,
+            JSON.stringify(params || {})
         ].join("|");
     }
 
@@ -374,14 +402,12 @@
         }
         try {
             size = getIconRenderSize(icon, engine);
-            sourceSignature = getSourceSignature(id, size);
+            sourceSignature = getSourceSignature(id, size, getIconParams(id, engine));
             presentationSignature = getPresentationSignature(sourceSignature, state.appearance);
             engine.render(canvas, {
                 target: ICON_TARGET,
                 seed: id,
-                params: {
-                    paletteId: resolveHomePaletteId(id)
-                },
+                params: getIconParams(id, engine),
                 logicalWidth: size.logicalWidth,
                 logicalHeight: size.logicalHeight,
                 clipToCanvas: false
@@ -391,7 +417,7 @@
                 themeMap = getThemeMap();
                 if (themeMap && typeof themeMap.applyToCanvas === "function") {
                     try {
-                        if (!themeMap.applyToCanvas(canvas, state.appearance.darkColor, state.appearance.lightColor, state.appearance.midColor)) {
+                        if (!themeMap.applyToCanvas(canvas, state.appearance.darkColor, state.appearance.lightColor, state.appearance.midColor, state.appearance.mappingParams)) {
                             warnOnce("theme-map-unavailable", "Theme-mapped presentation is unavailable; keeping the Colorful source image.");
                         }
                     } catch (mapError) {
@@ -470,7 +496,7 @@
             canvas = icon ? icon.querySelector(".procedural-home-icon-canvas") : null;
             if (canvas && isCanvasSizeCurrent(canvas, getIconRenderSize(icon, engine))) {
                 var size = getIconRenderSize(icon, engine);
-                var sourceSignature = getSourceSignature(item.toolId, size);
+                var sourceSignature = getSourceSignature(item.toolId, size, getIconParams(item.toolId));
                 var presentationSignature = getPresentationSignature(sourceSignature, state.appearance);
                 if (state.rendered[item.toolId] && state.rendered[item.toolId].presentationSignature === presentationSignature) {
                     continue;
@@ -528,6 +554,9 @@
     function initialize(options) {
         options = options || {};
         if (state.initialized) {
+            if (typeof options.params !== "undefined") {
+                updateParameters(options.params);
+            }
             refresh(options);
             return;
         }
@@ -535,6 +564,7 @@
         state.shuttingDown = false;
         state.root = options.root || (root && root.document);
         state.engine = options.engine || (root && root.ProceduralAppearance);
+        state.params = normalizeParameters(options.params || {});
         state.batchSize = options.batchSize || DEFAULT_BATCH_SIZE;
         if (!storeSubscriptionBound && root && root.ProceduralPaletteStore && typeof root.ProceduralPaletteStore.subscribe === "function") {
             storeSubscriptionBound = true;
@@ -549,11 +579,22 @@
     function updateAppearance(next) {
         var normalized = normalizeAppearance(next);
         var previous = state.appearance;
-        if (previous.mode === normalized.mode && previous.darkColor === normalized.darkColor && previous.midColor === normalized.midColor && previous.lightColor === normalized.lightColor) {
+        if (previous.mode === normalized.mode && previous.darkColor === normalized.darkColor && previous.midColor === normalized.midColor && previous.lightColor === normalized.lightColor && JSON.stringify(previous.mappingParams) === JSON.stringify(normalized.mappingParams)) {
             return false;
         }
         state.appearance = normalized;
         invalidatePresentation();
+        return true;
+    }
+
+    function updateParameters(next) {
+        var normalized = normalizeParameters(next || {});
+        var previous = JSON.stringify(state.params || {});
+        state.params = normalized;
+        if (previous === JSON.stringify(normalized)) {
+            return false;
+        }
+        invalidateSource();
         return true;
     }
 
@@ -575,6 +616,7 @@
         state.resizeObserver = null;
         state.root = null;
         state.engine = null;
+        state.params = {};
         state.initialized = false;
         state.appearance = normalizeAppearance({ mode: "colorful" });
     }
@@ -596,6 +638,7 @@
         invalidatePresentation: invalidatePresentation,
         invalidateSource: invalidateSource,
         updateAppearance: updateAppearance,
+        updateParameters: updateParameters,
         getAppearance: function () { return normalizeAppearance(state.appearance); },
         getSourceSignature: getSourceSignature,
         getPresentationSignature: getPresentationSignature,

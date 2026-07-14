@@ -12,11 +12,41 @@
     "use strict";
 
     var VERSION = "theme-map-v2";
-    var PALETTE_SCALE_MID_LIGHTNESS_DELTA = 0.045;
+    var DEFAULT_MAPPING_PARAMS = {
+        paletteDarkness: 0.035,
+        paletteMidLift: 0.045,
+        paletteLightLift: 0.035,
+        paletteDarkChroma: 0.94,
+        paletteLightChroma: 0.96,
+        paletteMapMidpoint: 0.5,
+        paletteMapContrast: 1
+    };
     var HEX_PATTERN = /^#?([0-9a-f]{6})$/i;
 
     function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    function finiteOrDefault(value, fallback) {
+        var number = Number(value);
+        return isFinite(number) ? number : fallback;
+    }
+
+    function normalizeMappingParams(value) {
+        var input = value || {};
+        return {
+            paletteDarkness: clamp(finiteOrDefault(input.paletteDarkness, DEFAULT_MAPPING_PARAMS.paletteDarkness), 0, 0.12),
+            paletteMidLift: clamp(finiteOrDefault(input.paletteMidLift, DEFAULT_MAPPING_PARAMS.paletteMidLift), 0, 0.12),
+            paletteLightLift: clamp(finiteOrDefault(input.paletteLightLift, DEFAULT_MAPPING_PARAMS.paletteLightLift), 0, 0.12),
+            paletteDarkChroma: clamp(finiteOrDefault(input.paletteDarkChroma, DEFAULT_MAPPING_PARAMS.paletteDarkChroma), 0.7, 1.1),
+            paletteLightChroma: clamp(finiteOrDefault(input.paletteLightChroma, DEFAULT_MAPPING_PARAMS.paletteLightChroma), 0.7, 1.1),
+            paletteMapMidpoint: clamp(finiteOrDefault(input.paletteMapMidpoint, DEFAULT_MAPPING_PARAMS.paletteMapMidpoint), 0.35, 0.65),
+            paletteMapContrast: clamp(finiteOrDefault(input.paletteMapContrast, DEFAULT_MAPPING_PARAMS.paletteMapContrast), 0.75, 1.25)
+        };
+    }
+
+    function getDefaultMappingParams() {
+        return normalizeMappingParams({});
     }
 
     function normalizeMode(value) {
@@ -129,30 +159,39 @@
         };
     }
 
-    function mapLuminanceToStops(luminance, stops) {
+    function mapLuminanceToStops(luminance, stops, mappingParams) {
         var normalized = normalizeColorStops(stops || {});
+        var mapping = normalizeMappingParams(mappingParams);
         var t = clamp(Number(luminance), 0, 1);
+        var midpoint = mapping.paletteMapMidpoint;
+        var contrast = mapping.paletteMapContrast;
+        var segment;
         if (!normalized.mid) {
             return interpolateColor(t, normalized.dark, normalized.light);
         }
-        if (t <= 0.5) {
-            return interpolateColor(t * 2, normalized.dark, normalized.mid);
+        if (t <= midpoint) {
+            segment = midpoint > 0 ? t / midpoint : 0;
+            segment = Math.pow(clamp(segment, 0, 1), 1 / contrast);
+            return interpolateColor(segment, normalized.dark, normalized.mid);
         }
-        return interpolateColor((t - 0.5) * 2, normalized.mid, normalized.light);
+        segment = (t - midpoint) / (1 - midpoint);
+        segment = Math.pow(clamp(segment, 0, 1), 1 / contrast);
+        return interpolateColor(segment, normalized.mid, normalized.light);
     }
 
-    function mapLuminanceToColor(luminance, darkColor, lightColor, midColor) {
-        return mapLuminanceToStops(luminance, normalizeColorStops(darkColor, lightColor, midColor));
+    function mapLuminanceToColor(luminance, darkColor, lightColor, midColor, mappingParams) {
+        return mapLuminanceToStops(luminance, normalizeColorStops(darkColor, lightColor, midColor), mappingParams);
     }
 
-    function derivePaletteScaleColors(palette) {
+    function derivePaletteScaleColors(palette, mappingParams) {
         var colors = palette && palette.colors ? palette.colors : {};
+        var mapping = normalizeMappingParams(mappingParams);
         var shadow = normalizeHexColor(colors.shadow, "#151c24");
         var base = normalizeHexColor(colors.base, "#3d5262");
         var highlight = normalizeHexColor(colors.highlight, "#e2edf2");
-        var dark = adjustOklab(shadow, -0.035, 0.94);
-        var mid = adjustOklab(base, PALETTE_SCALE_MID_LIGHTNESS_DELTA, 1);
-        var light = adjustOklab(highlight, 0.035, 0.96);
+        var dark = adjustOklab(shadow, -mapping.paletteDarkness, mapping.paletteDarkChroma);
+        var mid = adjustOklab(base, mapping.paletteMidLift, 1);
+        var light = adjustOklab(highlight, mapping.paletteLightLift, mapping.paletteLightChroma);
         var midLuminance = getRelativeLuminance(hexToRgb(mid));
         var darkLuminance = getRelativeLuminance(hexToRgb(dark));
         var lightLuminance = getRelativeLuminance(hexToRgb(light));
@@ -175,7 +214,7 @@
         return { dark: dark, mid: mid, light: light };
     }
 
-    function mapImageData(imageData, darkColor, lightColor, midColor) {
+    function mapImageData(imageData, darkColor, lightColor, midColor, mappingParams) {
         var source = imageData && imageData.data;
         var mapped;
         var i;
@@ -186,7 +225,7 @@
         }
         mapped = new Uint8ClampedArray(source.length);
         for (i = 0; i < source.length; i += 4) {
-            color = mapLuminanceToColor(getRelativeLuminance(source[i], source[i + 1], source[i + 2]), darkColor, lightColor, midColor);
+            color = mapLuminanceToColor(getRelativeLuminance(source[i], source[i + 1], source[i + 2]), darkColor, lightColor, midColor, mappingParams);
             rgb = hexToRgb(color);
             mapped[i] = rgb.r;
             mapped[i + 1] = rgb.g;
@@ -196,7 +235,7 @@
         return { data: mapped, width: imageData.width, height: imageData.height };
     }
 
-    function applyToCanvas(canvas, darkColor, lightColor, midColor) {
+    function applyToCanvas(canvas, darkColor, lightColor, midColor, mappingParams) {
         var context;
         var source;
         var mapped;
@@ -210,7 +249,7 @@
         }
         try {
             source = context.getImageData(0, 0, canvas.width, canvas.height);
-            mapped = mapImageData(source, darkColor, lightColor, midColor);
+            mapped = mapImageData(source, darkColor, lightColor, midColor, mappingParams);
             output = context.createImageData(mapped.width, mapped.height);
             output.data.set(mapped.data);
             context.putImageData(output, 0, 0);
@@ -227,13 +266,19 @@
         if (input.midColor) {
             signature += normalizeHexColor(input.midColor, "#15120c") + "|";
         }
-        return signature + normalizeHexColor(input.lightColor, "#fff0be");
+        signature += normalizeHexColor(input.lightColor, "#fff0be") + "|";
+        if (input.paletteId || input.paletteSignature) {
+            signature += String(input.paletteId || "") + "|" + String(input.paletteSignature || "") + "|";
+        }
+        return signature + JSON.stringify(normalizeMappingParams(input.mappingParams || input));
     }
 
     return {
         version: VERSION,
         normalizeMode: normalizeMode,
         normalizeHexColor: normalizeHexColor,
+        normalizeMappingParams: normalizeMappingParams,
+        getDefaultMappingParams: getDefaultMappingParams,
         getRelativeLuminance: getRelativeLuminance,
         mapLuminanceToColor: mapLuminanceToColor,
         mapLuminanceToStops: mapLuminanceToStops,

@@ -57,11 +57,18 @@
     var panelSuspended = false;
     var selectionPollTimer = null;
     var ThemeSettingsStoreListener = null;
+    var ProceduralAppearanceParams = null;
+    var ProceduralAppearanceSourceDebounceTimer = null;
+    var PROCEDURAL_APPEARANCE_SOURCE_DEBOUNCE_MS = 150;
     var DefaultSettings = {
         motionSpeed: 1,
         uiScale: 0.92,
         themeAccent: "#d6b25e",
         homeBackground: "#050403",
+        backgroundSource: "followIconTheme",
+        proceduralBackgroundSeed: "background-demo-01",
+        proceduralBackgroundPaletteId: "algorithmDefault",
+        proceduralBackgroundIntensity: 0.28,
         toolIconColor: "#15120c",
         toolIconLine: "#fff0be",
         proceduralIconMode: "colorful",
@@ -1395,9 +1402,20 @@
         return palettes.length ? palettes : [{ value: "", labelKey: "settings.palette.none" }];
     }
 
+    function getProceduralBackgroundPaletteOptions() {
+        return [{ value: "algorithmDefault", labelKey: "settings.backgroundPalette.algorithmDefault" }].concat(
+            getProceduralPaletteOptions().filter(function (option) {
+                return option && option.value;
+            })
+        );
+    }
+
     function getSettingsFieldOptions(field) {
         if (field && field.optionsProvider === "proceduralPalettes") {
             return getProceduralPaletteOptions();
+        }
+        if (field && field.optionsProvider === "proceduralBackgroundPalettes") {
+            return getProceduralBackgroundPaletteOptions();
         }
         return field && field.options ? field.options : [];
     }
@@ -1485,15 +1503,324 @@
         });
     }
 
-    function createSharedSettingsRangeNumber(field, rangeId, numberId, minValue, maxValue, rangeHookClass, numberHookClass) {
+    function getProceduralAppearanceDefaults() {
+        var engine = window.ProceduralAppearance;
+        var themeMap = window.ProceduralThemeMap;
+        var defaults;
+        var mappingDefaults;
+        var key;
+        if (!engine) {
+            defaults = {};
+        } else {
+            try {
+                if (typeof engine.getDefaultParams === "function") {
+                    defaults = engine.getDefaultParams();
+                } else if (typeof engine.normalizeParams === "function") {
+                    defaults = engine.normalizeParams({});
+                }
+            } catch (error) {
+                defaults = null;
+            }
+        }
+        defaults = defaults || {};
+        if (themeMap && typeof themeMap.getDefaultMappingParams === "function") {
+            mappingDefaults = themeMap.getDefaultMappingParams();
+            for (key in mappingDefaults) {
+                if (Object.prototype.hasOwnProperty.call(mappingDefaults, key)) {
+                    defaults[key] = mappingDefaults[key];
+                }
+            }
+        }
+        return defaults;
+    }
+
+    function normalizeProceduralAppearanceParams(value) {
+        var engine = window.ProceduralAppearance;
+        var themeMap = window.ProceduralThemeMap;
+        var input = value || {};
+        var normalized;
+        var mapping;
+        var key;
+        if (!engine || typeof engine.normalizeParams !== "function") {
+            normalized = getProceduralAppearanceDefaults();
+        } else {
+            try {
+                normalized = engine.normalizeParams(input);
+            } catch (error) {
+                normalized = null;
+            }
+        }
+        normalized = normalized || getProceduralAppearanceDefaults();
+        if (themeMap && typeof themeMap.normalizeMappingParams === "function") {
+            mapping = themeMap.normalizeMappingParams(input);
+            for (key in mapping) {
+                if (Object.prototype.hasOwnProperty.call(mapping, key)) {
+                    normalized[key] = mapping[key];
+                }
+            }
+        }
+        return normalized;
+    }
+
+    function getProceduralAppearanceSourceParams(value) {
+        var engine = window.ProceduralAppearance;
+        var input = value || getProceduralAppearanceParams();
+        if (engine && typeof engine.normalizeParams === "function") {
+            try {
+                return engine.normalizeParams(input);
+            } catch (error) {
+            }
+        }
+        return input;
+    }
+
+    function getProceduralAppearanceMappingParams(value) {
+        var themeMap = window.ProceduralThemeMap;
+        var input = value || getProceduralAppearanceParams();
+        if (themeMap && typeof themeMap.normalizeMappingParams === "function") {
+            return themeMap.normalizeMappingParams(input);
+        }
+        return {};
+    }
+
+    function getProceduralAppearanceParameterFields() {
+        var section = findSettingsSchemaSection("proceduralAppearance");
+        return section && section.fields ? section.fields.filter(function (field) {
+            return field && (field.type === "range" || field.type === "number");
+        }) : [];
+    }
+
+    function getSettingsFieldDefaultValue(field) {
+        var defaults;
+        if (field && field.defaultProvider === "proceduralAppearance") {
+            defaults = getProceduralAppearanceDefaults();
+            return typeof defaults[field.key] === "undefined" ? 0 : defaults[field.key];
+        }
+        return schemaDefaultValue(field);
+    }
+
+    function materializeSettingsFieldDefault(field) {
+        var materialized = {};
+        var key;
+        for (key in (field || {})) {
+            if (Object.prototype.hasOwnProperty.call(field, key)) {
+                materialized[key] = field[key];
+            }
+        }
+        materialized.defaultValue = getSettingsFieldDefaultValue(field);
+        return materialized;
+    }
+
+    function getProceduralAppearanceParams() {
+        if (!ProceduralAppearanceParams) {
+            ProceduralAppearanceParams = normalizeProceduralAppearanceParams({});
+        }
+        return normalizeProceduralAppearanceParams(ProceduralAppearanceParams);
+    }
+
+    function clearProceduralAppearanceSourceDebounce() {
+        if (ProceduralAppearanceSourceDebounceTimer === null) {
+            return;
+        }
+        if (window && typeof window.clearTimeout === "function") {
+            window.clearTimeout(ProceduralAppearanceSourceDebounceTimer);
+        }
+        ProceduralAppearanceSourceDebounceTimer = null;
+    }
+
+    function scheduleProceduralAppearanceSourceUpdate() {
+        clearProceduralAppearanceSourceDebounce();
+        if (panelShuttingDown) {
+            return;
+        }
+        if (window && typeof window.setTimeout === "function") {
+            ProceduralAppearanceSourceDebounceTimer = window.setTimeout(function () {
+                ProceduralAppearanceSourceDebounceTimer = null;
+                if (!panelShuttingDown) {
+                    updateProceduralHomeIconAppearance();
+                }
+            }, PROCEDURAL_APPEARANCE_SOURCE_DEBOUNCE_MS);
+        } else {
+            updateProceduralHomeIconAppearance();
+        }
+    }
+
+    function flushProceduralAppearanceSourceUpdate() {
+        clearProceduralAppearanceSourceDebounce();
+        if (!panelShuttingDown) {
+            updateProceduralHomeIconAppearance();
+        }
+    }
+
+    function setProceduralAppearanceParamControls(params) {
+        var fields = getProceduralAppearanceParameterFields();
+        var normalized = normalizeProceduralAppearanceParams(params);
+        var i;
+        var key;
+        var range;
+        var number;
+        for (i = 0; i < fields.length; i++) {
+            key = fields[i].key;
+            range = byId("proceduralParam_" + key);
+            number = byId("proceduralParam_" + key + "Number");
+            if (range) {
+                range.value = String(normalized[key]);
+            }
+            if (number) {
+                number.value = String(normalized[key]);
+            }
+        }
+    }
+
+    function collectProceduralAppearanceParamsFromControls() {
+        var params = getProceduralAppearanceParams();
+        var fields = getProceduralAppearanceParameterFields();
+        var i;
+        var number;
+        var range;
+        for (i = 0; i < fields.length; i++) {
+            number = byId("proceduralParam_" + fields[i].key + "Number");
+            range = byId("proceduralParam_" + fields[i].key);
+            if (number && number.value !== "") {
+                params[fields[i].key] = number.value;
+            } else if (range) {
+                params[fields[i].key] = range.value;
+            }
+        }
+        return normalizeProceduralAppearanceParams(params);
+    }
+
+    function applyProceduralAppearanceParams(params, persist, syncControls) {
+        var normalized = normalizeProceduralAppearanceParams(params);
+        var previous = ProceduralAppearanceParams ? JSON.stringify(ProceduralAppearanceParams) : "";
+        var previousSource = ProceduralAppearanceParams ? JSON.stringify(getProceduralAppearanceSourceParams(ProceduralAppearanceParams)) : "";
+        var nextSource = JSON.stringify(getProceduralAppearanceSourceParams(normalized));
+        var previousMapping = ProceduralAppearanceParams ? JSON.stringify(getProceduralAppearanceMappingParams(ProceduralAppearanceParams)) : "";
+        var nextMapping = JSON.stringify(getProceduralAppearanceMappingParams(normalized));
+        ProceduralAppearanceParams = normalized;
+        if (syncControls !== false) {
+            setProceduralAppearanceParamControls(normalized);
+        }
+        if (previous !== JSON.stringify(normalized)) {
+            if (previousSource !== nextSource) {
+                scheduleProceduralAppearanceSourceUpdate();
+            } else if (previousMapping !== nextMapping) {
+                updateProceduralHomeIconAppearance({ presentationOnly: true });
+            }
+        }
+        if (persist) {
+            saveSettings();
+        }
+        return normalized;
+    }
+
+    function resetProceduralAppearanceParams() {
+        applyProceduralAppearanceParams(getProceduralAppearanceDefaults(), true, true);
+        flushProceduralAppearanceSourceUpdate();
+        setStatus(tr("status.proceduralAppearanceDefaultsRestored"), "ok");
+    }
+
+    function renderProceduralAppearanceParameterRow(field) {
+        var row = createSharedSettingsFieldRow("range", field, field.descriptionKey, "");
+        var prepared = materializeSettingsFieldDefault(field);
+        var prefix = "proceduralParam_" + field.key;
+        var controls = createSharedSettingsRangeNumber(prepared, prefix, prefix + "Number", field.min, field.max, "procedural-param-range", "procedural-param-number", {
+            dispatchChange: false,
+            onCommit: function (value) {
+                var number = byId(prefix + "Number");
+                if (number) {
+                    number.value = value;
+                }
+                applyProceduralAppearanceParams(collectProceduralAppearanceParamsFromControls(), true, true);
+            },
+            onCancel: function (value) {
+                var number = byId(prefix + "Number");
+                var range = byId(prefix);
+                if (number) {
+                    number.value = value;
+                }
+                if (range) {
+                    range.value = value;
+                }
+                applyProceduralAppearanceParams(collectProceduralAppearanceParamsFromControls(), false, false);
+            }
+        });
+        row.row.removeChild(row.controls);
+        row.row.appendChild(controls);
+        row.row.setAttribute("data-procedural-param-key", field.key);
+        return row.row;
+    }
+
+    function setupProceduralAppearanceParams() {
+        var fields = getProceduralAppearanceParameterFields();
+        var i;
+        var field;
+        var materialized;
+        var range;
+        var number;
+        var prefix;
+        if (!fields.length) {
+            return;
+        }
+        for (i = 0; i < fields.length; i++) {
+            field = fields[i];
+            prefix = "proceduralParam_" + field.key;
+            range = byId(prefix);
+            number = byId(prefix + "Number");
+            if (!range || !number || number.getAttribute("data-procedural-param-bound") === "true") {
+                continue;
+            }
+            materialized = materializeSettingsFieldDefault(field);
+            number.setAttribute("data-procedural-param-bound", "true");
+            range.addEventListener("input", function () {
+                var currentKey = this.getAttribute("data-procedural-param-key");
+                var currentNumber = byId("proceduralParam_" + currentKey + "Number");
+                if (currentNumber) {
+                    currentNumber.value = this.value;
+                }
+                applyProceduralAppearanceParams(collectProceduralAppearanceParamsFromControls(), false, false);
+            });
+            range.addEventListener("change", function () {
+                applyProceduralAppearanceParams(collectProceduralAppearanceParamsFromControls(), true, false);
+            });
+            range.setAttribute("data-procedural-param-key", field.key);
+            number.addEventListener("input", function () {
+                var currentField = this._proceduralField;
+                var currentRange;
+                if (isSchemaNumberDraftValue(this.value)) {
+                    return;
+                }
+                currentRange = byId("proceduralParam_" + currentField.key);
+                if (currentRange) {
+                    currentRange.value = normalizeSchemaNumber(this.value, currentField, this.value);
+                }
+                applyProceduralAppearanceParams(collectProceduralAppearanceParamsFromControls(), false, false);
+            });
+            number.addEventListener("change", function () {
+                var currentField = this._proceduralField;
+                commitSchemaNumberInput(this, currentField, getSettingsFieldDefaultValue(currentField), function () {
+                    var currentRange = byId("proceduralParam_" + currentField.key);
+                    if (currentRange) {
+                        currentRange.value = this.value;
+                    }
+                    applyProceduralAppearanceParams(collectProceduralAppearanceParamsFromControls(), true, true);
+                }.bind(this));
+            });
+            number._proceduralField = materialized;
+        }
+        setProceduralAppearanceParamControls(getProceduralAppearanceParams());
+    }
+
+    function createSharedSettingsRangeNumber(field, rangeId, numberId, minValue, maxValue, rangeHookClass, numberHookClass, dragOptions) {
         var controls = document.createElement("span");
         var range = document.createElement("input");
         var number = document.createElement("input");
+        var defaultValue = getSettingsFieldDefaultValue(field);
         var dragField = {
             min: minValue,
             max: maxValue,
             step: field.step,
-            defaultValue: field.defaultValue
+            defaultValue: defaultValue
         };
 
         controls.className = "control-inputs settings-field-control registry-range-control";
@@ -1503,7 +1830,7 @@
         range.min = String(minValue);
         range.max = String(maxValue);
         range.step = String(field.step);
-        range.value = String(field.defaultValue);
+        range.value = String(defaultValue);
 
         number.id = numberId;
         number.className = "num-input registry-range-number settings-number" + (numberHookClass ? " " + numberHookClass : "");
@@ -1511,15 +1838,17 @@
         number.min = String(minValue);
         number.max = String(maxValue);
         number.step = String(field.step);
-        number.value = String(field.defaultValue);
+        number.value = String(defaultValue);
 
         controls.appendChild(number);
         controls.appendChild(range);
         setupRegistryNumberDrag(number, dragField, function (value) {
             range.value = value;
             dispatchSettingsControlEvent(number, "input");
-            dispatchSettingsControlEvent(number, "change");
-        });
+            if (!dragOptions || dragOptions.dispatchChange !== false) {
+                dispatchSettingsControlEvent(number, "change");
+            }
+        }, dragOptions);
         return controls;
     }
 
@@ -1648,6 +1977,13 @@
         var radiusControls;
         var shadowRow;
         var shadowControls;
+        var proceduralSection;
+        var proceduralGroup;
+        var proceduralField;
+        var proceduralRow;
+        var proceduralNote;
+        var resetButton;
+        var i;
 
         if (!mount || !field) {
             return;
@@ -1680,6 +2016,39 @@
             shadowRow.row.appendChild(shadowControls);
             mount.appendChild(shadowRow.row);
         }
+        proceduralSection = findSettingsSchemaSection("proceduralAppearance");
+        if (proceduralSection) {
+            proceduralGroup = createSettingsThemeGroup(proceduralSection);
+            proceduralGroup.root.classList.add("settings-developer-only", "settings-procedural-params-group");
+            if (proceduralSection.descriptionKey) {
+                proceduralNote = document.createElement("p");
+                proceduralNote.className = "settings-theme-note settings-procedural-params-note";
+                proceduralNote.setAttribute("data-i18n", proceduralSection.descriptionKey);
+                proceduralNote.textContent = tr(proceduralSection.descriptionKey);
+                proceduralGroup.body.appendChild(proceduralNote);
+            }
+            for (i = 0; i < (proceduralSection.fields || []).length; i++) {
+                proceduralField = proceduralSection.fields[i];
+                if (!proceduralField) {
+                    continue;
+                }
+                if (proceduralField.type === "button" && proceduralField.key === "resetProceduralAppearanceParams") {
+                    resetButton = document.createElement("button");
+                    resetButton.id = proceduralField.key;
+                    resetButton.type = "button";
+                    resetButton.className = "panel-button settings-action-button registry-large-button";
+                    resetButton.setAttribute("data-i18n", proceduralField.labelKey);
+                    resetButton.textContent = tr(proceduralField.labelKey);
+                    resetButton.addEventListener("click", resetProceduralAppearanceParams);
+                    proceduralGroup.body.appendChild(resetButton);
+                } else if (proceduralField.type === "range" || proceduralField.type === "number") {
+                    proceduralRow = renderProceduralAppearanceParameterRow(proceduralField);
+                    proceduralGroup.body.appendChild(proceduralRow);
+                }
+            }
+            mount.appendChild(proceduralGroup.root);
+        }
+        setupProceduralAppearanceParams();
         syncSettingsDeveloperOnlyFields();
     }
 
@@ -1989,6 +2358,181 @@
         }
     }
 
+    function normalizeBackgroundSource(value) {
+        if (value === "classic") {
+            return "classic";
+        }
+        if (value === "procedural" || value === "manual") {
+            return "procedural";
+        }
+        return "followIconTheme";
+    }
+
+    function normalizeProceduralBackgroundSeed(value) {
+        var seed = String(value || "").replace(/^\s+|\s+$/g, "");
+        return seed || DefaultSettings.proceduralBackgroundSeed;
+    }
+
+    function normalizeProceduralBackgroundPaletteId(value) {
+        var id = String(value || "").replace(/^\s+|\s+$/g, "");
+        return id || DefaultSettings.proceduralBackgroundPaletteId;
+    }
+
+    function normalizeProceduralBackgroundIntensity(value) {
+        return clampNumber(value, DefaultSettings.proceduralBackgroundIntensity, 0.05, 0.7);
+    }
+
+    function renderProceduralBackgroundModeVisibility() {
+        var card = byId("backgroundSettingsCard");
+        var source = byId("backgroundSource");
+        var procedural = normalizeBackgroundSource(source ? source.value : DefaultSettings.backgroundSource) !== "classic";
+        var classicControls = card ? card.querySelector(".background-classic-controls") : null;
+        var proceduralControls = card ? card.querySelector(".background-procedural-controls") : null;
+
+        if (card) {
+            card.classList.toggle("is-procedural-background", procedural);
+        }
+        if (classicControls) {
+            classicControls.hidden = procedural;
+        }
+        if (proceduralControls) {
+            proceduralControls.hidden = !procedural;
+        }
+    }
+
+    function updateProceduralHomeBackground(options) {
+        var controller = window.ProceduralHomeBackground;
+        var source = byId("backgroundSource");
+        var seed = byId("proceduralBackgroundSeed");
+        var palette = byId("proceduralBackgroundPaletteId");
+        var intensity = byId("proceduralBackgroundIntensityNumber");
+        var current = options && options.presentationOnly && controller && typeof controller.getState === "function"
+            ? controller.getState()
+            : null;
+        if (!controller || typeof controller.update !== "function") {
+            return;
+        }
+        controller.update({
+            mode: current ? current.config.mode : normalizeBackgroundSource(source ? source.value : DefaultSettings.backgroundSource),
+            seed: current ? current.config.seed : normalizeProceduralBackgroundSeed(seed ? seed.value : DefaultSettings.proceduralBackgroundSeed),
+            paletteId: current ? current.config.paletteId : normalizeProceduralBackgroundPaletteId(palette ? palette.value : DefaultSettings.proceduralBackgroundPaletteId),
+            intensity: current ? current.config.intensity : normalizeProceduralBackgroundIntensity(intensity ? intensity.value : DefaultSettings.proceduralBackgroundIntensity),
+            params: current ? current.config.params : getProceduralAppearanceSourceParams(),
+            iconAppearance: getProceduralHomeBackgroundIconAppearance()
+        });
+    }
+
+    function refreshProceduralHomeBackground() {
+        var controller = window.ProceduralHomeBackground;
+        if (controller && typeof controller.refresh === "function") {
+            controller.refresh();
+        }
+    }
+
+    function refreshProceduralHomeBackgroundForPaletteStore() {
+        var controller = window.ProceduralHomeBackground;
+        var state;
+        if (controller && typeof controller.getState === "function") {
+            state = controller.getState();
+        }
+        if (state && state.config && state.config.mode === "followIconTheme" &&
+                state.config.iconAppearance && state.config.iconAppearance.mode === "themeMapped" &&
+                state.config.iconAppearance.darkSourceMode === "paletteScale") {
+            updateProceduralHomeBackground({ presentationOnly: true });
+            return;
+        }
+        refreshProceduralHomeBackground();
+    }
+
+    function applyBackgroundSource(value) {
+        var source = normalizeBackgroundSource(value);
+        var select = byId("backgroundSource");
+        if (select) {
+            select.value = source;
+            syncCustomSelect(select);
+        }
+        renderProceduralBackgroundModeVisibility();
+        updateProceduralHomeBackground();
+    }
+
+    function refreshSettingsBackgroundPaletteOptions() {
+        var field = findSettingsSchemaField("proceduralBackgroundPaletteId");
+        var select = byId("proceduralBackgroundPaletteId");
+        var current;
+        var next;
+        if (!field || !select || field.optionsProvider !== "proceduralBackgroundPalettes") {
+            return;
+        }
+        current = select.value;
+        appendSettingsSelectOptions(select, field, current);
+        next = select.value;
+        rebuildCustomSelectOptions(select);
+        syncCustomSelect(select);
+        if (next !== current) {
+            updateProceduralHomeBackground();
+            saveSettings();
+        }
+    }
+
+    function setupProceduralBackgroundControls() {
+        var source = byId("backgroundSource");
+        var seed = byId("proceduralBackgroundSeed");
+        var palette = byId("proceduralBackgroundPaletteId");
+        var regenerate = byId("proceduralBackgroundRegenerate");
+        var intensity = byId("proceduralBackgroundIntensity");
+        var intensityNumber = byId("proceduralBackgroundIntensityNumber");
+
+        if (source && source.getAttribute("data-procedural-background-bound") !== "true") {
+            source.setAttribute("data-procedural-background-bound", "true");
+            source.addEventListener("change", function () {
+                applyBackgroundSource(this.value);
+                saveSettings();
+            });
+        }
+        if (seed && seed.getAttribute("data-procedural-background-bound") !== "true") {
+            seed.setAttribute("data-procedural-background-bound", "true");
+            seed.addEventListener("input", updateProceduralHomeBackground);
+            seed.addEventListener("change", function () {
+                seed.value = normalizeProceduralBackgroundSeed(seed.value);
+                updateProceduralHomeBackground();
+                saveSettings();
+            });
+        }
+        if (palette && palette.getAttribute("data-procedural-background-bound") !== "true") {
+            palette.setAttribute("data-procedural-background-bound", "true");
+            palette.addEventListener("change", function () {
+                updateProceduralHomeBackground();
+                saveSettings();
+            });
+        }
+        if (intensity && intensityNumber && intensity.getAttribute("data-procedural-background-bound") !== "true") {
+            intensity.setAttribute("data-procedural-background-bound", "true");
+            linkPersistedRange("proceduralBackgroundIntensity", "proceduralBackgroundIntensityNumber", 0.05, 0.7, function () {
+                updateProceduralHomeBackground();
+                saveSettings();
+            });
+        }
+        if (regenerate && regenerate.getAttribute("data-procedural-background-bound") !== "true") {
+            regenerate.setAttribute("data-procedural-background-bound", "true");
+            regenerate.addEventListener("click", function () {
+                var controller = window.ProceduralHomeBackground;
+                var nextSeed;
+                if (controller && typeof controller.regenerate === "function") {
+                    nextSeed = controller.regenerate();
+                } else {
+                    nextSeed = "background-" + new Date().getTime().toString(36);
+                }
+                if (seed) {
+                    seed.value = nextSeed;
+                }
+                updateProceduralHomeBackground();
+                saveSettings();
+                setStatus(tr("status.proceduralBackgroundSeedRegenerated"), "ok");
+            });
+        }
+        renderProceduralBackgroundModeVisibility();
+    }
+
     function refreshSettingsPaletteOptions() {
         var field = findSettingsSchemaField("toolIconDarkPaletteId");
         var select = byId("toolIconDarkPaletteId");
@@ -2016,8 +2560,10 @@
         ThemeSettingsStoreListener = function () {
             if (!panelShuttingDown) {
                 refreshSettingsPaletteOptions();
+                refreshSettingsBackgroundPaletteOptions();
                 refreshSettingsPaletteSummary();
-                updateProceduralHomeIconAppearance();
+                updateProceduralHomeIconAppearance({ presentationOnly: true });
+                refreshProceduralHomeBackgroundForPaletteStore();
                 refreshSettingsThemePresentation();
             }
         };
@@ -2076,7 +2622,7 @@
         var palette = getResolvedProceduralPalette(paletteInput ? paletteInput.value : DefaultSettings.toolIconDarkPaletteId);
         var themeMap = window.ProceduralThemeMap;
         if (themeMap && typeof themeMap.derivePaletteScaleColors === "function" && palette) {
-            return themeMap.derivePaletteScaleColors(palette);
+            return themeMap.derivePaletteScaleColors(palette, getProceduralAppearanceMappingParams());
         }
         return null;
     }
@@ -2098,6 +2644,22 @@
         return { dark: customColor, mid: "", light: lightColor };
     }
 
+    function getProceduralHomeBackgroundIconAppearance() {
+        var modeInput = byId("proceduralIconMode");
+        var sourceInput = byId("toolIconDarkSourceMode");
+        var paletteInput = byId("toolIconDarkPaletteId");
+        var colors = resolveProceduralThemeColors();
+        return {
+            mode: normalizeProceduralIconMode(modeInput ? modeInput.value : DefaultSettings.proceduralIconMode),
+            darkSourceMode: normalizeToolIconDarkSourceMode(sourceInput ? sourceInput.value : DefaultSettings.toolIconDarkSourceMode),
+            darkPaletteId: paletteInput ? String(paletteInput.value || "") : DefaultSettings.toolIconDarkPaletteId,
+            darkColor: colors.dark,
+            midColor: colors.mid,
+            lightColor: colors.light,
+            mappingParams: getProceduralAppearanceMappingParams()
+        };
+    }
+
     function resolveProceduralDarkColor() {
         return resolveProceduralThemeColors().dark;
     }
@@ -2109,7 +2671,7 @@
             select.value = mode;
             syncCustomSelect(select);
         }
-        updateProceduralHomeIconAppearance();
+        updateProceduralHomeIconAppearance({ presentationOnly: true });
         refreshSettingsThemePresentation();
     }
 
@@ -2135,7 +2697,7 @@
         if (arguments.length > 1 && arguments[1] && arguments[1].suggestThemeAccent) {
             suggestThemeAccentFromPalette(selected);
         }
-        updateProceduralHomeIconAppearance();
+        updateProceduralHomeIconAppearance({ presentationOnly: true });
         refreshSettingsThemePresentation();
     }
 
@@ -2404,6 +2966,22 @@
         return null;
     }
 
+    function renderSettingsBackgroundText(field, inputId) {
+        var fieldRow = createSharedSettingsFieldRow("text", field, field.descriptionKey, "");
+        var input = document.createElement("input");
+
+        input.id = inputId;
+        input.type = "text";
+        input.className = "registry-text-input settings-text-input";
+        input.value = field.defaultValue || "";
+        input.setAttribute("spellcheck", "false");
+        fieldRow.row.className += " bg-control-row";
+        fieldRow.row.removeChild(fieldRow.controls);
+        fieldRow.controls.appendChild(input);
+        fieldRow.row.appendChild(fieldRow.controls);
+        return fieldRow.row;
+    }
+
     function renderSettingsBackgroundRange(field, controlId, minValue, maxValue) {
         var fieldRow;
         var controls;
@@ -2436,6 +3014,9 @@
         var field;
         var fieldRow;
         var select;
+        var sourceRow;
+        var classicControls;
+        var proceduralControls;
         var colors;
         var ranges;
         var motionFields;
@@ -2472,15 +3053,27 @@
         body.className = "collapsible-body";
         body.id = "backgroundSettingsBody";
 
+        field = findSettingsSectionField(section, "backgroundSource");
+        if (field) {
+            sourceRow = createSharedSettingsFieldRow("select", field, field.descriptionKey, "");
+            select = createSharedSettingsSelect("backgroundSource", field, field.defaultValue);
+            sourceRow.row.removeChild(sourceRow.controls);
+            sourceRow.row.appendChild(select);
+            body.appendChild(sourceRow.row);
+        }
+
+        classicControls = document.createElement("div");
+        classicControls.className = "background-classic-controls";
+
         field = findSettingsSectionField(section, "preset");
         if (field) {
             fieldRow = createSharedSettingsFieldRow("select", field, field.descriptionKey, "");
             select = createSharedSettingsSelect("bgPreset", field, field.defaultValue);
             fieldRow.controls.appendChild(select);
-            body.appendChild(fieldRow.row);
+            classicControls.appendChild(fieldRow.row);
         }
 
-        body.appendChild(createSettingsGroupLabel("section.color"));
+        classicControls.appendChild(createSettingsGroupLabel("section.color"));
 
         colors = [
             ["baseColor", "bgBaseColor"],
@@ -2493,11 +3086,11 @@
         for (i = 0; i < colors.length; i++) {
             field = findSettingsSectionField(section, colors[i][0]);
             if (field) {
-                body.appendChild(renderSettingsBackgroundColor(field, colors[i][1]));
+                classicControls.appendChild(renderSettingsBackgroundColor(field, colors[i][1]));
             }
         }
 
-        body.appendChild(createSettingsGroupLabel("section.shape"));
+        classicControls.appendChild(createSettingsGroupLabel("section.shape"));
 
         ranges = [
             ["glowOpacity", "bgGlowOpacity"],
@@ -2516,18 +3109,18 @@
         for (i = 0; i < ranges.length; i++) {
             field = findSettingsSectionField(section, ranges[i][0]);
             if (field) {
-                body.appendChild(renderSettingsBackgroundRange(field, ranges[i][1], field.min, field.max));
+                classicControls.appendChild(renderSettingsBackgroundRange(field, ranges[i][1], field.min, field.max));
             }
         }
 
-        body.appendChild(createSettingsGroupLabel("section.motion"));
+        classicControls.appendChild(createSettingsGroupLabel("section.motion"));
 
         field = findSettingsSectionField(section, "motionEnable");
         if (field) {
             fieldRow = createSharedSettingsFieldRow("checkbox", field, field.descriptionKey, "");
             switchWrap = createSharedSettingsSwitch("bgMotionEnable", field.defaultValue === true);
             fieldRow.controls.appendChild(switchWrap);
-            body.appendChild(fieldRow.row);
+            classicControls.appendChild(fieldRow.row);
         }
 
         motionFields = [
@@ -2537,7 +3130,7 @@
         for (i = 0; i < motionFields.length; i++) {
             field = findSettingsSectionField(section, motionFields[i][0]);
             if (field) {
-                body.appendChild(renderSettingsBackgroundRange(field, motionFields[i][1], field.min, field.max));
+                classicControls.appendChild(renderSettingsBackgroundRange(field, motionFields[i][1], field.min, field.max));
             }
         }
 
@@ -2563,7 +3156,39 @@
             button.textContent = tr(field.labelKey);
             actions.appendChild(button);
         }
-        body.appendChild(actions);
+        classicControls.appendChild(actions);
+
+        proceduralControls = document.createElement("div");
+        proceduralControls.className = "background-procedural-controls";
+        field = findSettingsSectionField(section, "proceduralBackgroundSeed");
+        if (field) {
+            proceduralControls.appendChild(renderSettingsBackgroundText(field, "proceduralBackgroundSeed"));
+        }
+        field = findSettingsSectionField(section, "proceduralBackgroundPaletteId");
+        if (field) {
+            fieldRow = createSharedSettingsFieldRow("select", field, field.descriptionKey, "");
+            select = createSharedSettingsSelect("proceduralBackgroundPaletteId", field, field.defaultValue);
+            fieldRow.row.removeChild(fieldRow.controls);
+            fieldRow.row.appendChild(select);
+            proceduralControls.appendChild(fieldRow.row);
+        }
+        field = findSettingsSectionField(section, "proceduralBackgroundIntensity");
+        if (field) {
+            proceduralControls.appendChild(renderSettingsBackgroundRange(field, "proceduralBackgroundIntensity", field.min, field.max));
+        }
+        field = findSettingsSectionField(section, "proceduralBackgroundRegenerate");
+        if (field) {
+            button = document.createElement("button");
+            button.className = "panel-button registry-large-button is-full-width settings-action-button";
+            button.id = "proceduralBackgroundRegenerate";
+            button.type = "button";
+            button.setAttribute("data-i18n", field.labelKey);
+            button.textContent = tr(field.labelKey);
+            proceduralControls.appendChild(button);
+        }
+
+        body.appendChild(classicControls);
+        body.appendChild(proceduralControls);
 
         mount.appendChild(toggle);
         mount.appendChild(body);
@@ -3066,6 +3691,7 @@
         window.setTimeout(function () {
             home.classList.remove("is-returning");
         }, duration("normal"));
+        updateProceduralHomeBackground();
     }
 
     function getActiveToolButton() {
@@ -6736,7 +7362,7 @@
         root.style.setProperty("--tool-icon-fill", rgba(line, 0.13));
         setColorValue("toolIconColor", icon);
         setColorValue("toolIconLine", line);
-        updateProceduralHomeIconAppearance();
+        updateProceduralHomeIconAppearance({ presentationOnly: true });
         refreshSettingsThemePresentation();
     }
 
@@ -6746,19 +7372,25 @@
             : (value === "themeMapped" ? "themeMapped" : "colorful");
     }
 
-    function updateProceduralHomeIconAppearance() {
+    function updateProceduralHomeIconAppearance(options) {
         var controller = window.ProceduralHomeIcons;
         var modeSelect = byId("proceduralIconMode");
         var colors = resolveProceduralThemeColors();
         if (!controller || typeof controller.updateAppearance !== "function") {
+            updateProceduralHomeBackground(options);
             return;
+        }
+        if (!(options && options.presentationOnly) && typeof controller.updateParameters === "function") {
+            controller.updateParameters(getProceduralAppearanceSourceParams());
         }
         controller.updateAppearance({
             mode: normalizeProceduralIconMode(modeSelect ? modeSelect.value : DefaultSettings.proceduralIconMode),
             darkColor: colors.dark,
             midColor: colors.mid,
-            lightColor: colors.light
+            lightColor: colors.light,
+            mappingParams: getProceduralAppearanceMappingParams()
         });
+        updateProceduralHomeBackground(options);
     }
 
     function applyProceduralIconMode(value) {
@@ -6768,7 +7400,7 @@
             select.value = mode;
             syncCustomSelect(select);
         }
-        updateProceduralHomeIconAppearance();
+        updateProceduralHomeIconAppearance({ presentationOnly: true });
         refreshSettingsThemePresentation();
     }
 
@@ -6991,6 +7623,7 @@
         }
         lifecycleDebug("panel close start");
         panelShuttingDown = true;
+        clearProceduralAppearanceSourceDebounce();
         stopSelectionPolling();
         stopRegistryStatePolling();
         clearRegistrySaveTimers();
@@ -6999,6 +7632,9 @@
         }
         if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.teardown === "function") {
             window.ProceduralHomeIcons.teardown();
+        }
+        if (window.ProceduralHomeBackground && typeof window.ProceduralHomeBackground.teardown === "function") {
+            window.ProceduralHomeBackground.teardown();
         }
         if (window.ProceduralPaletteStore && typeof window.ProceduralPaletteStore.flush === "function") {
             window.ProceduralPaletteStore.flush();
@@ -7067,7 +7703,8 @@
         rect = control.getBoundingClientRect();
         viewportWidth = window.innerWidth || document.documentElement.clientWidth || 320;
         viewportHeight = window.innerHeight || document.documentElement.clientHeight || 480;
-        width = Math.min(rect.width, viewportWidth - edge * 2);
+        width = Math.max(rect.width, 220);
+        width = Math.min(width, viewportWidth - edge * 2);
         left = Math.max(edge, Math.min(rect.left, viewportWidth - width - edge));
 
         menu.style.width = width + "px";
@@ -7463,11 +8100,16 @@
             uiScale: clampNumber(byId("uiScaleNumber").value, DefaultSettings.uiScale, 0.62, 1.18),
             themeAccent: normalizeHex(byId("themeAccent").value, DefaultSettings.themeAccent),
             homeBackground: normalizeHex(byId("homeBackground").value, DefaultSettings.homeBackground),
+            backgroundSource: normalizeBackgroundSource(byId("backgroundSource") ? byId("backgroundSource").value : DefaultSettings.backgroundSource),
+            proceduralBackgroundSeed: normalizeProceduralBackgroundSeed(byId("proceduralBackgroundSeed") ? byId("proceduralBackgroundSeed").value : DefaultSettings.proceduralBackgroundSeed),
+            proceduralBackgroundPaletteId: normalizeProceduralBackgroundPaletteId(byId("proceduralBackgroundPaletteId") ? byId("proceduralBackgroundPaletteId").value : DefaultSettings.proceduralBackgroundPaletteId),
+            proceduralBackgroundIntensity: normalizeProceduralBackgroundIntensity(byId("proceduralBackgroundIntensityNumber") ? byId("proceduralBackgroundIntensityNumber").value : DefaultSettings.proceduralBackgroundIntensity),
             toolIconColor: normalizeHex(byId("toolIconColor").value, DefaultSettings.toolIconColor),
             toolIconLine: normalizeHex(byId("toolIconLine").value, DefaultSettings.toolIconLine),
             proceduralIconMode: normalizeProceduralIconMode(byId("proceduralIconMode") ? byId("proceduralIconMode").value : DefaultSettings.proceduralIconMode),
             toolIconDarkSourceMode: normalizeToolIconDarkSourceMode(byId("toolIconDarkSourceMode") ? byId("toolIconDarkSourceMode").value : DefaultSettings.toolIconDarkSourceMode),
             toolIconDarkPaletteId: byId("toolIconDarkPaletteId") ? String(byId("toolIconDarkPaletteId").value || "") : DefaultSettings.toolIconDarkPaletteId,
+            proceduralParams: collectProceduralAppearanceParamsFromControls(),
             homeIconRadius: byId("homeIconRadiusNumber") ? clampNumber(byId("homeIconRadiusNumber").value, DefaultSettings.homeIconRadius, 18, 40) : DefaultSettings.homeIconRadius,
             homeDragShadowIntensity: byId("homeDragShadowIntensityNumber") ? clampNumber(byId("homeDragShadowIntensityNumber").value, DefaultSettings.homeDragShadowIntensity, 0, 1.5) : DefaultSettings.homeDragShadowIntensity,
             autoStatus: autoStatus ? !!autoStatus.checked : true,
@@ -7485,6 +8127,8 @@
         byId("motionSpeed").value = speed;
         byId("motionSpeedNumber").value = speed;
         motionScale = speed;
+        ProceduralAppearanceParams = normalizeProceduralAppearanceParams(data.proceduralParams);
+        setProceduralAppearanceParamControls(ProceduralAppearanceParams);
         applyUiScale(data.uiScale || DefaultSettings.uiScale);
         if (byId("autoStatus")) {
             byId("autoStatus").checked = data.autoStatus !== false;
@@ -7492,6 +8136,16 @@
         applyRegistryDebugTools(data.registryDebugTools === true);
         applyThemeAccent(data.themeAccent || DefaultSettings.themeAccent);
         applyHomeBackground(data.homeBackground || DefaultSettings.homeBackground);
+        applyBackgroundSource(data.backgroundSource || DefaultSettings.backgroundSource);
+        if (byId("proceduralBackgroundSeed")) {
+            byId("proceduralBackgroundSeed").value = normalizeProceduralBackgroundSeed(data.proceduralBackgroundSeed);
+        }
+        if (byId("proceduralBackgroundPaletteId")) {
+            byId("proceduralBackgroundPaletteId").value = normalizeProceduralBackgroundPaletteId(data.proceduralBackgroundPaletteId);
+            syncCustomSelect(byId("proceduralBackgroundPaletteId"));
+        }
+        setLinkedRangeValue("proceduralBackgroundIntensity", normalizeProceduralBackgroundIntensity(data.proceduralBackgroundIntensity), DefaultSettings.proceduralBackgroundIntensity);
+        updateProceduralHomeBackground();
         applyToolIconTheme(data.toolIconColor || DefaultSettings.toolIconColor, data.toolIconLine || DefaultSettings.toolIconLine);
         applyProceduralIconDarkSourceMode(data.toolIconDarkSourceMode || DefaultSettings.toolIconDarkSourceMode);
         applyProceduralIconDarkPaletteId(data.toolIconDarkPaletteId || DefaultSettings.toolIconDarkPaletteId);
@@ -7719,6 +8373,7 @@
         renderSettingsTheme();
         renderPaletteLibrarySettings();
         renderSettingsBackgroundEngine();
+        setupProceduralBackgroundControls();
         setupColorControls();
         renderSettingsMotion();
         setupMotionSpeed();
@@ -7731,11 +8386,24 @@
         setupLanguageSelector();
         setupCollapsibleSettings();
         BackgroundEngine.init();
+        if (window.ProceduralHomeBackground && typeof window.ProceduralHomeBackground.initialize === "function") {
+            window.ProceduralHomeBackground.initialize({
+                rootElement: byId("appShell"),
+                canvas: byId("proceduralHomeBackgroundCanvas"),
+                mode: byId("backgroundSource") ? byId("backgroundSource").value : DefaultSettings.backgroundSource,
+                seed: byId("proceduralBackgroundSeed") ? byId("proceduralBackgroundSeed").value : DefaultSettings.proceduralBackgroundSeed,
+                paletteId: byId("proceduralBackgroundPaletteId") ? byId("proceduralBackgroundPaletteId").value : DefaultSettings.proceduralBackgroundPaletteId,
+                intensity: byId("proceduralBackgroundIntensityNumber") ? byId("proceduralBackgroundIntensityNumber").value : DefaultSettings.proceduralBackgroundIntensity,
+                params: getProceduralAppearanceSourceParams(),
+                iconAppearance: getProceduralHomeBackgroundIconAppearance()
+            });
+        }
         setupCustomSelectInputs();
         HomeLayoutManager.init();
         if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.initialize === "function") {
             window.ProceduralHomeIcons.initialize({
-                root: byId("toolGrid")
+                root: byId("toolGrid"),
+                params: getProceduralAppearanceSourceParams()
             });
         }
         configureToolDetail(activeToolId);
