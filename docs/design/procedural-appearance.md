@@ -1,5 +1,7 @@
 # Procedural Appearance Plan for 0.2.5
 
+The 0.2.5 release candidate is prepared on `release/0.2.5`. The documented procedural appearance scope is included for release review; `v0.2.5` has not been tagged or published. The 0.2.4 feature line remains the stable `main` baseline.
+
 ## Phase 1 Lab Status
 
 The first 0.2.5 implementation phase adds a Developer Mode-only Procedural Appearance Lab.
@@ -202,7 +204,7 @@ Algorithm versioning:
 
 ### Curated Palette Library
 
-The 0.2.5 development line now includes a fixed, versioned, Apple-inspired palette library. These palettes are curated for the Lomond Cabinet procedural visual system and must not be described as Apple official palettes.
+The 0.2.5 release candidate includes a fixed, versioned, Apple-inspired palette library. These palettes are curated for the Lomond Cabinet procedural visual system and must not be described as Apple official palettes.
 
 First palette ids:
 

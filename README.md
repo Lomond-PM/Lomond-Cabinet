@@ -15,16 +15,16 @@ AE Toolbox
 Current project version:
 
 ```text
-0.2.4
+0.2.5
 ```
 
-Current development track:
+Current release track:
 
 ```text
-0.2.4 is the current stable main baseline. The `v0.2.4` tag exists on `main`, and 0.2.5 development and release hardening are in progress; 0.2.5 is not released.
+0.2.5 is the current release candidate. 0.2.4 remains the stable main baseline and the `v0.2.4` tag exists on `main`. The `v0.2.5` tag has not been created or published.
 ```
 
-`VERSION` and `CSXS/manifest.xml` remain at 0.2.4 during 0.2.5 development until a future release task explicitly updates release metadata.
+This release-preparation branch updates `VERSION` and `CSXS/manifest.xml` to 0.2.5. Do not create or move a release tag until the manual release checks are complete.
 
 ## Project Type
 
@@ -257,7 +257,7 @@ Current 0.2.4 release highlights:
 - Ad Component Kit removable artifacts for newly created Feature Stack / Icon Grid output using Lomond metadata and signed tool expressions.
 - Shape Add Add Native Components / 添加原生组件 section collapse.
 
-0.2.4 has been published to `main` and tagged `v0.2.4`. Current 0.2.5 work has begun with the Procedural Appearance Lab, but production Home icons and the production background path still use the existing implementations.
+0.2.4 has been published to `main` and tagged `v0.2.4`. The 0.2.5 release candidate includes the Procedural Appearance Lab, production Colorful and Theme-mapped Home icons, and optional procedural Home background support while preserving the classic BackgroundEngine fallback.
 
 ## Continue Development On Another Machine
 

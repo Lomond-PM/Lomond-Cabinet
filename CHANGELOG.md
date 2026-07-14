@@ -10,6 +10,10 @@ This project follows simple semantic versioning for development handoff:
 
 ## [Unreleased]
 
+_No unreleased changes._
+
+## [0.2.5] - 2026-07-14
+
 ### Added
 
 - Added a Developer Mode-only Procedural Appearance Lab for testing deterministic procedural icon and background generation.
@@ -36,9 +40,9 @@ This project follows simple semantic versioning for development handoff:
 
 - Confirmed `AEToolbox.settings.v1` as the formal production Settings storage contract for the 0.2.5 release line; no v2 migration is included before release.
 - Recorded the one-time procedural source-render warm-up after startup as an accepted limitation; palette/theme presentation changes remain presentation-only.
-- Aligned 0.2.5 baseline documentation with the current Git state: 0.2.4 is the `main` / `v0.2.4` stable baseline and 0.2.5 development has started.
+- Aligned 0.2.5 release documentation with the current Git state: 0.2.4 is the `main` / `v0.2.4` stable baseline and 0.2.5 is the current release candidate.
 - Replaced the handoff new-tool workflow with a registry-first default path.
-- Unified frontend CSS/JS cache query strings to the 0.2.5 development build id.
+- Unified frontend CSS/JS cache query strings to the formal 0.2.5 release build id.
 - Clarified host API version versus project release version semantics in `host/index.jsx`.
 - Refreshed the i18n usage report after Procedural Appearance Lab entered the registry tool set.
 - Scoped Procedural Appearance Lab preview refreshes to declared target, seed, and parameter dependencies instead of passing full registry values to the engine.

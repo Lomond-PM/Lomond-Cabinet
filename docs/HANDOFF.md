@@ -86,22 +86,21 @@ ExtensionBundleVersion
 4. Commit the handoff state.
 5. Package only source and documentation, not runtime cache, archives, logs, or scratch files.
 
-Current release baseline note:
+Historical 0.2.4 stable baseline note:
 
-- `VERSION` is `0.2.4`.
-- `CSXS/manifest.xml` is `0.2.4`.
 - `CHANGELOG.md` contains the formal `0.2.4` release section.
 - Git state confirms `v0.2.4` exists and is contained by `main`.
 - Treat 0.2.4 as the stable main baseline.
 - Do not create or move tags during documentation-only handoff work.
 
-Current 0.2.5 development note:
+Current 0.2.5 release-candidate note:
 
-- Procedural Appearance Phase 1 Lab has entered `dev`.
-- 0.2.5 release hardening is in progress; 0.2.5 is not published and release metadata remains `0.2.4`.
+- Procedural Appearance Phase 1 Lab and the production procedural appearance MVP are included in the release candidate.
+- The release candidate metadata is `0.2.5` in `VERSION`, both manifest version fields, and `AEToolbox.projectVersion`; `AEToolbox.hostApiVersion` remains `1.0.0`.
+- 0.2.5 is not published and the `v0.2.5` tag has not been created.
 - Main plan: `docs/design/procedural-appearance.md`.
 - Phase 1 adds a Developer Mode-only Lab and shared procedural engine skeleton.
-- The 0.2.5 development line also includes Colorful Home icons and a fixed Apple-inspired Palette Library. These palettes are curated project palettes, not Apple official palettes.
+- The 0.2.5 release candidate also includes Colorful Home icons and a fixed Apple-inspired Palette Library. These palettes are curated project palettes, not Apple official palettes.
 - Home icon seed identity remains stable tool id only. `paletteId` controls fixed color selection and must not be derived from language, title, Home order, theme color, or UI Scale.
 - Palette Store user data lives in localStorage key `lomond.proceduralPaletteStore.v1`. Do not write user palette edits back into `client/js/proceduralPaletteLibrary.js`.
 - Palette Workspace runtime now lives in `client/js/proceduralPaletteWorkspace.js`; keep Palette Workspace DOM rendering, event binding, dirty guards, preview lifecycle, import/export UI, splitter/resize handling, Settings transition state, Store subscription, and teardown in that controller instead of moving them back into `client/js/main.js`.
@@ -398,17 +397,16 @@ Risk areas:
 - Theme-mapped mode collapsing into a one-color palette.
 - Regressing Home Edit order, Settings, color picker, eyedropper MVP, Ad Component Kit cleanup, Shape Add collapsible, or panel close shutdown guards.
 
-## 0.2.4 Release Baseline
+## Historical 0.2.4 Release Baseline
 
-0.2.4 has been merged to `main` and tagged `v0.2.4`. Treat it as the stable baseline while 0.2.5 work continues on `dev`.
+0.2.4 has been merged to `main` and tagged `v0.2.4`. Treat it as the stable baseline for the 0.2.5 release candidate.
 
 Baseline facts:
 
-1. `VERSION` is `0.2.4`.
-2. `CSXS/manifest.xml` `ExtensionBundleVersion` and extension `Version` are `0.2.4`.
-3. `CHANGELOG.md` contains the final 0.2.4 section.
-4. No `package.json` version file exists in the current workspace.
-5. `v0.2.4` exists and is contained by `main`.
+1. `CHANGELOG.md` contains the final 0.2.4 section.
+2. No `package.json` version file exists in the current workspace.
+3. `v0.2.4` exists and is contained by `main`.
+4. The current release candidate metadata is maintained separately at `0.2.5` on `release/0.2.5`.
 
 For future releases, create a dedicated release branch, run AE regression, update release metadata only when requested, merge through `dev` and `main`, then create a new version tag from `main`.
 
