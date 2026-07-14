@@ -98,6 +98,7 @@ Current release baseline note:
 Current 0.2.5 development note:
 
 - Procedural Appearance Phase 1 Lab has entered `dev`.
+- 0.2.5 release hardening is in progress; 0.2.5 is not published and release metadata remains `0.2.4`.
 - Main plan: `docs/design/procedural-appearance.md`.
 - Phase 1 adds a Developer Mode-only Lab and shared procedural engine skeleton.
 - The 0.2.5 development line also includes Colorful Home icons and a fixed Apple-inspired Palette Library. These palettes are curated project palettes, not Apple official palettes.
@@ -116,6 +117,7 @@ Current 0.2.5 development note:
 - Developer Mode now exposes a collapsible `Procedural Appearance Parameters` group using the existing Settings range/number interaction. Shared engine fields plus the seven Theme Map presentation fields (`paletteDarkness`, `paletteMidLift`, `paletteLightLift`, `paletteDarkChroma`, `paletteLightChroma`, `paletteMapMidpoint`, and `paletteMapContrast`) are persisted in the existing `AEToolbox.settings.v1` object. Engine fields go to both source renderers; mapping fields go to Home/background Theme-mapped presentation only. Reset uses shared defaults; disabling Developer Mode only hides the controls.
 - Shared defaults currently prioritize a cleaner, smaller highlight structure: `brightness: 0.88`, `highlightConcentration: 0.52`, `highlightArea: 0.06`, `contrast: 0.92`, `depth: 0.80`. Theme Map defaults are `paletteDarkness: 0.035`, `paletteMidLift: 0.045`, `paletteLightLift: 0.035`, `paletteDarkChroma: 0.94`, `paletteLightChroma: 0.96`, `paletteMapMidpoint: 0.5`, and `paletteMapContrast: 1`. Do not add a second background defaults table. Engine parameter changes are source invalidations; mapping and theme endpoint changes remain presentation invalidations.
 - Procedural background settings use the existing `AEToolbox.settings.v1` object. Do not add a new storage key or change `AEToolbox.background.v1`; classic BackgroundEngine controls and presets remain compatible.
+- `AEToolbox.settings.v1` is the formal Settings schema/runtime storage contract for the 0.2.5 release line. Do not introduce a pre-release v2 migration.
 - `followIconTheme + paletteScale` must keep a palette-independent source luminance field. Palette id/signature and derived endpoints belong only to presentation signature/LUT; only manual `procedural` source palette changes invalidate source.
 - Do not change `VERSION`, `CSXS/manifest.xml`, helper scripts, color picker, Ad Component Kit, Shape Add, or production Settings semantics in this workstream.
 - 0.2.5 continues from the 0.2.4 stable feature line with deterministic procedural icons and an optional procedural Home background MVP. Keep background source identity separate from icon identity.

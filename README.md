@@ -21,7 +21,7 @@ Current project version:
 Current development track:
 
 ```text
-0.2.4 is the current stable main baseline. The `v0.2.4` tag exists on `main`, and 0.2.5 development has started on `dev`.
+0.2.4 is the current stable main baseline. The `v0.2.4` tag exists on `main`, and 0.2.5 development and release hardening are in progress; 0.2.5 is not released.
 ```
 
 `VERSION` and `CSXS/manifest.xml` remain at 0.2.4 during 0.2.5 development until a future release task explicitly updates release metadata.

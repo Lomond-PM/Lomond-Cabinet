@@ -1,10 +1,10 @@
 /*
  * Global Settings Schema
  *
- * This file documents the future app-level Settings data model.
- * The production panel now uses this schema for the migrated Settings
- * sections. Behavior adapters still preserve legacy storage and the
- * BackgroundEngine runtime where required.
+ * This file documents the app-level Settings data model.
+ * The production panel uses this schema for the migrated Settings
+ * sections. Production storage remains v1 for the 0.2.5 release line;
+ * behavior adapters still preserve the BackgroundEngine runtime where required.
  */
 (function (global) {
     "use strict";
@@ -12,9 +12,8 @@
     var AEToolboxSettingsSchema = {
         id: "globalSettings",
         version: 1,
-        storageKey: "AEToolbox.settings.v2",
+        storageKey: "AEToolbox.settings.v1",
         legacyStorageKeys: [
-            "AEToolbox.settings.v1",
             "AEToolbox.background.v1",
             "AEToolbox.backgroundSettingsCollapsed.v1",
             "aeToolbox.language"
@@ -22,7 +21,8 @@
         notes: [
             "Settings is an app-level core panel, not a registry tool.",
             "Migrated Settings fields are rendered from this app-level schema.",
-            "Behavior adapters preserve legacy storage keys where required.",
+            "AEToolbox.settings.v1 remains the formal production Settings storage key for 0.2.5.",
+            "No v2 Settings migration is included in the 0.2.5 release hardening pass.",
             "Developer Mode is a core setting for debug/probe/lab registry tool visibility.",
             "Background Engine UI is schema-rendered; BackgroundEngine behavior remains the runtime authority."
         ],

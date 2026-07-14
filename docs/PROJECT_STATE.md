@@ -459,11 +459,11 @@ Current Settings storage:
 - `AEToolbox.backgroundSettingsCollapsed.v1`
 - `aeToolbox.language`
 
-Draft future Settings storage:
+Settings schema contract for the 0.2.5 release line:
 
-- `AEToolbox.settings.v2`
-
-The v2 key is documented only. Runtime code still writes to the v1 and background legacy keys.
+- `AEToolbox.settings.v1` is both the schema-declared and runtime production Settings key.
+- No `AEToolbox.settings.v2` migration is planned as part of release hardening.
+- Runtime code continues to keep `AEToolbox.background.v1` and the other compatibility keys separate.
 
 Developer Mode storage:
 

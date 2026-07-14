@@ -34,6 +34,8 @@ This project follows simple semantic versioning for development handoff:
 
 ### Changed
 
+- Confirmed `AEToolbox.settings.v1` as the formal production Settings storage contract for the 0.2.5 release line; no v2 migration is included before release.
+- Recorded the one-time procedural source-render warm-up after startup as an accepted limitation; palette/theme presentation changes remain presentation-only.
 - Aligned 0.2.5 baseline documentation with the current Git state: 0.2.4 is the `main` / `v0.2.4` stable baseline and 0.2.5 development has started.
 - Replaced the handoff new-tool workflow with a registry-first default path.
 - Unified frontend CSS/JS cache query strings to the 0.2.5 development build id.
