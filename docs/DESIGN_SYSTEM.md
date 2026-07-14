@@ -506,4 +506,4 @@ Before the 0.2.3 release, the current design-system-relevant cleanup state is:
 - Closing the CEP panel is mitigated on the 0.2.4 development line through lifecycle guards and Home teardown. This is still a lifecycle/performance concern, not a visual design-system concern.
 - Color picker updates include axis modes, channel sliders, Hex input select-all, popup flip / clamp positioning, and a Windows-only eyedropper helper MVP.
 - Shape Add native components now use the generic registry section collapse behavior.
-- 0.2.5 procedural appearance work is not part of 0.2.4 release prep and should not be mixed into release documentation or stabilization branches.
+- 0.2.5 procedural appearance is part of the current stable release line; future visual changes should be planned separately from the 0.2.4 baseline notes above.

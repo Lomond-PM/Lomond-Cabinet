@@ -21,10 +21,10 @@ Current project version:
 Current release track:
 
 ```text
-0.2.5 is the current release candidate. 0.2.4 remains the stable main baseline and the `v0.2.4` tag exists on `main`. The `v0.2.5` tag has not been created or published.
+0.2.5 is the current stable release. 0.2.4 is the previous stable release, and both `v0.2.4` and `v0.2.5` are published tags. The next development version has not been designated.
 ```
 
-This release-preparation branch updates `VERSION` and `CSXS/manifest.xml` to 0.2.5. Do not create or move a release tag until the manual release checks are complete.
+`VERSION` and `CSXS/manifest.xml` identify the current stable release as 0.2.5. Do not assume a next version until a separate release task defines it.
 
 ## Project Type
 
@@ -257,7 +257,7 @@ Current 0.2.4 release highlights:
 - Ad Component Kit removable artifacts for newly created Feature Stack / Icon Grid output using Lomond metadata and signed tool expressions.
 - Shape Add Add Native Components / 添加原生组件 section collapse.
 
-0.2.4 has been published to `main` and tagged `v0.2.4`. The 0.2.5 release candidate includes the Procedural Appearance Lab, production Colorful and Theme-mapped Home icons, and optional procedural Home background support while preserving the classic BackgroundEngine fallback.
+0.2.4 has been published to `main` and tagged `v0.2.4`. 0.2.5 is now the stable release and includes the Procedural Appearance Lab, production Colorful and Theme-mapped Home icons, and optional procedural Home background support while preserving the classic BackgroundEngine fallback.
 
 ## Continue Development On Another Machine
 

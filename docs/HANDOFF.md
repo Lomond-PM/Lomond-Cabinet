@@ -93,14 +93,14 @@ Historical 0.2.4 stable baseline note:
 - Treat 0.2.4 as the stable main baseline.
 - Do not create or move tags during documentation-only handoff work.
 
-Current 0.2.5 release-candidate note:
+Current 0.2.5 stable-release note:
 
-- Procedural Appearance Phase 1 Lab and the production procedural appearance MVP are included in the release candidate.
-- The release candidate metadata is `0.2.5` in `VERSION`, both manifest version fields, and `AEToolbox.projectVersion`; `AEToolbox.hostApiVersion` remains `1.0.0`.
-- 0.2.5 is not published and the `v0.2.5` tag has not been created.
+- Procedural Appearance Phase 1 Lab and the production procedural appearance MVP shipped in 0.2.5.
+- The current release metadata is `0.2.5` in `VERSION`, both manifest version fields, and `AEToolbox.projectVersion`; `AEToolbox.hostApiVersion` remains `1.0.0`.
+- 0.2.5 is published and the `v0.2.5` tag has been created.
 - Main plan: `docs/design/procedural-appearance.md`.
 - Phase 1 adds a Developer Mode-only Lab and shared procedural engine skeleton.
-- The 0.2.5 release candidate also includes Colorful Home icons and a fixed Apple-inspired Palette Library. These palettes are curated project palettes, not Apple official palettes.
+- The 0.2.5 release also includes Colorful Home icons and a fixed Apple-inspired Palette Library. These palettes are curated project palettes, not Apple official palettes.
 - Home icon seed identity remains stable tool id only. `paletteId` controls fixed color selection and must not be derived from language, title, Home order, theme color, or UI Scale.
 - Palette Store user data lives in localStorage key `lomond.proceduralPaletteStore.v1`. Do not write user palette edits back into `client/js/proceduralPaletteLibrary.js`.
 - Palette Workspace runtime now lives in `client/js/proceduralPaletteWorkspace.js`; keep Palette Workspace DOM rendering, event binding, dirty guards, preview lifecycle, import/export UI, splitter/resize handling, Settings transition state, Store subscription, and teardown in that controller instead of moving them back into `client/js/main.js`.
@@ -399,14 +399,14 @@ Risk areas:
 
 ## Historical 0.2.4 Release Baseline
 
-0.2.4 has been merged to `main` and tagged `v0.2.4`. Treat it as the stable baseline for the 0.2.5 release candidate.
+0.2.4 has been merged to `main` and tagged `v0.2.4`. Treat it as the previous stable baseline for current 0.2.5.
 
 Baseline facts:
 
 1. `CHANGELOG.md` contains the final 0.2.4 section.
 2. No `package.json` version file exists in the current workspace.
 3. `v0.2.4` exists and is contained by `main`.
-4. The current release candidate metadata is maintained separately at `0.2.5` on `release/0.2.5`.
+4. Current release metadata is `0.2.5`, and the `v0.2.5` tag is published.
 
 For future releases, create a dedicated release branch, run AE regression, update release metadata only when requested, merge through `dev` and `main`, then create a new version tag from `main`.
 
