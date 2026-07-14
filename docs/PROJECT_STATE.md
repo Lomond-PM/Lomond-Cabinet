@@ -19,10 +19,10 @@ Current stable baseline:
 Current release track:
 
 ```text
-0.2.5 is the current release candidate on release/0.2.5. The v0.2.5 tag has not been created or published.
+0.2.5 is the current stable release on `main`. The `v0.2.5` tag has been created and published. The next development version has not been designated.
 ```
 
-`VERSION` and `CSXS/manifest.xml` are prepared at `0.2.5` on this release branch. Do not create or move a release tag until the manual release checks are complete.
+`VERSION` and `CSXS/manifest.xml` identify the current stable release as `0.2.5`. Do not assume or introduce a next version without a dedicated release task.
 
 Historical 0.2.4 stable baseline:
 
@@ -31,9 +31,9 @@ Historical 0.2.4 stable baseline:
 - Git state confirms tag `v0.2.4` exists and `main` contains it.
 - 0.2.4 is the stable release baseline; do not describe it as still awaiting main/tag publication.
 
-The release candidate metadata is separate from that historical baseline: `VERSION`, both manifest version fields, and `AEToolbox.projectVersion` are `0.2.5`; `AEToolbox.hostApiVersion` remains `1.0.0`.
+The current release metadata is separate from that historical baseline: `VERSION`, both manifest version fields, and `AEToolbox.projectVersion` are `0.2.5`; `AEToolbox.hostApiVersion` remains `1.0.0`.
 
-Current 0.2.5 procedural appearance status:
+Current 0.2.5 stable release status:
 
 - Main design document: `docs/design/procedural-appearance.md`.
 - Phase 1 Lab is implemented as a Developer Mode-only registry tool: `host/tools/proceduralAppearanceLab.tool.jsx`.
@@ -44,12 +44,12 @@ Current 0.2.5 procedural appearance status:
 - Curated palette library: `client/js/proceduralPaletteLibrary.js`.
 - User palette store: `client/js/proceduralPaletteStore.js`.
 - Home icon controller: `client/js/proceduralHomeIcons.js`.
-- Scope in the release candidate remains deterministic procedural tool icons, optional theme-mapped recolor, and procedural background MVP.
+- The shipped scope is deterministic procedural tool icons, optional theme-mapped recolor, and procedural background MVP.
 - Default icon mode: colorful seed-based icons generated from stable tool ids.
 - Theme changes must not regenerate icon identity.
-- Colorful procedural icons are wired to production Home cards in the 0.2.5 release candidate. Stable `data-tool` / tool id is the only icon seed source.
+- Colorful procedural icons are wired to production Home cards in 0.2.5. Stable `data-tool` / tool id is the only icon seed source.
 - The current BackgroundEngine remains the classic path and explicit fallback. Optional production procedural Home background wiring is implemented by `client/js/proceduralHomeBackground.js`; its default source follows the icon theme without replacing or rewriting BackgroundEngine.
-- Procedural Appearance Phase 1 Lab is included in the release candidate; 0.2.5 is no longer documentation-only planning.
+- Procedural Appearance Phase 1 Lab shipped in 0.2.5; it is no longer documentation-only planning.
 - The registry preview contract is explicit: tools declare the preview engine, target field, seed field, and parameter keys instead of relying on hard-coded `target` / `seed` names or passing all registry values into the renderer.
 - Procedural preview refreshes are dependency-scoped, batched per animation frame, cleaned up on tool/detail shutdown, and use safe fallback UI for missing engines, invalid input, or canvas/render failures.
 - Procedural Appearance recipe cache is bounded with a 128-entry LRU; raster cache remains bounded at 24 entries.
@@ -566,7 +566,7 @@ These are based on current code and recent project history. Verify visually afte
 - Settings schema migration is phased. The internal UI shell is now on the Settings Renderer path, but do not replace remaining behavior layers such as `BackgroundEngine` without a dedicated migration and AE regression pass.
 - 0.2.4 stable baseline: closing the CEP panel has been noticeably mitigated after `fix/panel-close-freeze-audit`; tool detail close is behaving normally in current testing and Home close has little to no perceptible impact. Continue monitoring across AE / CEP environments.
 - Color picker eyedropper helper limitations: the current Windows helper may briefly flash the Windows taskbar during sampling, first-run Esc cancellation can be unreliable, and right-click cancel may show the CEP WebView context menu. These are lower-priority MVP limitations unless they begin to affect core pick success.
-- 0.2.5 release candidate: Phase 1 Lab and production procedural appearance paths are included. Tool icons are generated from stable `toolId` / hash seeds; theme color changes should not regenerate icon structure; theme-mapped mode should recolor without destroying per-tool visual memory.
+- 0.2.5 stable release: Phase 1 Lab and production procedural appearance paths are included. Tool icons are generated from stable `toolId` / hash seeds; theme color changes should not regenerate icon structure; theme-mapped mode should recolor without destroying per-tool visual memory.
 
 ## 0.2.5 Procedural Appearance Scope
 
@@ -576,7 +576,7 @@ Detailed plan:
 docs/design/procedural-appearance.md
 ```
 
-Included scope in the release candidate:
+Shipped scope in 0.2.5:
 
 - Deterministic procedural icon engine. Phase 1 skeleton is implemented in `client/js/proceduralAppearance.js`.
 - Seed / hash / deterministic random helpers. Phase 1 uses stable hash and seeded PRNG; uncontrolled `Math.random()` is not used.
@@ -626,14 +626,14 @@ Non-goals:
 
 ## Historical 0.2.4 Release Baseline
 
-0.2.4 has been merged to `main` and tagged `v0.2.4`. Use it as the stable baseline for the 0.2.5 release candidate.
+0.2.4 has been merged to `main` and tagged `v0.2.4`. Treat it as the previous stable baseline for current 0.2.5.
 
 Baseline checks:
 
 1. No `package.json` version file exists in the current workspace.
 2. `CHANGELOG.md` has the final 0.2.4 section.
 3. Git tag `v0.2.4` exists and is contained by `main`.
-4. The current release candidate metadata is maintained at `0.2.5` on `release/0.2.5`.
+4. Current release metadata is `0.2.5`; the `v0.2.5` tag is published.
 
 For future releases, create a dedicated release branch and update `VERSION`, `CSXS/manifest.xml`, and release notes only when explicitly requested.
 
