@@ -111,6 +111,25 @@ function run() {
     });
     expectCode(() => protocolModule.createProtocol(Object.assign({}, runtime, { randomId: () => { throw new Error("secret"); } })).randomId("cand"), protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Runtime id exceptions must become stable errors.");
     check(/^cand_[a-z0-9]{32,96}$/.test(protocol.randomId("cand")), "The Node runtime adapter must return a valid ASCII local id.");
+    check(/^req_[a-z0-9]{32,96}$/.test(protocol.randomId("req")), "The trusted protocol runtime must generate request ids.");
+    [
+        "",
+        "req_" + "a".repeat(31),
+        "req_" + "a".repeat(97),
+        "req_" + "a".repeat(32) + " ",
+        "req_" + "a".repeat(31) + "\u4e2d"
+    ].forEach((invalidId) => {
+        expectCode(() => protocolModule.createProtocol(Object.assign({}, runtime, { randomId: () => invalidId })).randomId("req"), protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Invalid request ids must fail closed.");
+    });
+    expectCode(() => protocolModule.createProtocol(Object.assign({}, runtime, { randomId: () => "cand_" + "a".repeat(32) })).randomId("req"), protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Runtime ids with the wrong kind must fail closed.");
+    [
+        "PROVIDER_CONFIG_INVALID", "PROVIDER_REQUEST_IN_FLIGHT", "PROVIDER_REQUEST_ABORTED", "PROVIDER_TIMEOUT",
+        "PROVIDER_CONNECTION_FAILED", "PROVIDER_HTTP_ERROR", "PROVIDER_RESPONSE_INVALID", "PROVIDER_RESPONSE_TOO_LARGE"
+    ].forEach((key) => {
+        const providerError = protocol.createCanonicalErrorResponse(new protocol.VelaProtocolError(protocol.ERROR_CODES[key], "untrusted provider text", { stage: "provider" }), { requestId: "req_test", provider: "lmstudio", model: "test-model" });
+        check(providerError.envelope.error.code === protocol.ERROR_CODES[key] && providerError.envelope.error.message.indexOf("untrusted") === -1, key + " must produce a stable canonical provider error.");
+        check(protocol.validateCanonicalResponse(providerError).envelope.error.code === protocol.ERROR_CODES[key], key + " canonical provider errors must validate.");
+    });
     const mutableRuntime = Object.assign({}, runtime);
     const snapshottedProtocol = protocolModule.createProtocol(mutableRuntime);
     mutableRuntime.utf8ByteLength = () => 0;
