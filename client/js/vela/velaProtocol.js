@@ -102,6 +102,14 @@
         MODULE_ALREADY_REGISTERED: "MODULE_ALREADY_REGISTERED",
         UNTRUSTED_PLAN_STORE: "UNTRUSTED_PLAN_STORE",
         PROTOCOL_AUTHORITY_MISMATCH: "PROTOCOL_AUTHORITY_MISMATCH",
+        PROVIDER_CONFIG_INVALID: "PROVIDER_CONFIG_INVALID",
+        PROVIDER_REQUEST_IN_FLIGHT: "PROVIDER_REQUEST_IN_FLIGHT",
+        PROVIDER_REQUEST_ABORTED: "PROVIDER_REQUEST_ABORTED",
+        PROVIDER_TIMEOUT: "PROVIDER_TIMEOUT",
+        PROVIDER_CONNECTION_FAILED: "PROVIDER_CONNECTION_FAILED",
+        PROVIDER_HTTP_ERROR: "PROVIDER_HTTP_ERROR",
+        PROVIDER_RESPONSE_INVALID: "PROVIDER_RESPONSE_INVALID",
+        PROVIDER_RESPONSE_TOO_LARGE: "PROVIDER_RESPONSE_TOO_LARGE",
         UNKNOWN_ACTION_KIND: "UNKNOWN_ACTION_KIND",
         UNKNOWN_TOOL: "UNKNOWN_TOOL",
         UNKNOWN_TOOL_ACTION: "UNKNOWN_TOOL_ACTION",
@@ -151,7 +159,7 @@
         maxLocalIdBytes: 128,
         maxIdCollisionRetries: 4
     });
-    var LOCAL_ID_KINDS = Object.freeze(["session", "plan", "cand", "res", "confirm"]);
+    var LOCAL_ID_KINDS = Object.freeze(["session", "plan", "cand", "res", "confirm", "req"]);
     var TARGET_KEYS = Object.freeze([
         "contextFingerprint", "contextTier", "compId", "targetId", "layerId", "layerIndex",
         "layerIndices", "layerIds", "propertyPath", "propertyMatchName", "propertyValueDigest",
@@ -190,6 +198,14 @@
         MODULE_ALREADY_REGISTERED: "The Vela browser module is already registered.",
         UNTRUSTED_PLAN_STORE: "The execution guard requires a trusted plan store.",
         PROTOCOL_AUTHORITY_MISMATCH: "The validator authority belongs to another protocol instance.",
+        PROVIDER_CONFIG_INVALID: "The local provider configuration is invalid.",
+        PROVIDER_REQUEST_IN_FLIGHT: "A local provider request is already in flight.",
+        PROVIDER_REQUEST_ABORTED: "The local provider request was cancelled.",
+        PROVIDER_TIMEOUT: "The local provider request timed out.",
+        PROVIDER_CONNECTION_FAILED: "The local provider connection failed.",
+        PROVIDER_HTTP_ERROR: "The local provider returned an HTTP error.",
+        PROVIDER_RESPONSE_INVALID: "The local provider response is invalid.",
+        PROVIDER_RESPONSE_TOO_LARGE: "The local provider response exceeded its size limit.",
         UNKNOWN_ACTION_KIND: "The action kind is not supported.",
         UNKNOWN_TOOL: "The local tool is not available.",
         UNKNOWN_TOOL_ACTION: "The local tool action is not available.",
