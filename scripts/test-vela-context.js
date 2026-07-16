@@ -16,6 +16,8 @@ function expectCode(callback, code, message) { assert.throws(callback, (error) =
 function makeSnapshot(overrides) {
     return Object.assign({
         sessionId: "ae-session-01",
+        hostInstanceId: "host_0123456789abcdef0123456789abcdef0123456789abcdef",
+        hostReloadEpoch: 1,
         tier: 3,
         capturedAt: "volatile-a",
         locale: "en",
@@ -33,6 +35,12 @@ function run() {
     check(first.fingerprint === reordered.fingerprint, "Canonical context fingerprinting must ignore volatile fields and object key order.");
     check(first.canonicalJson.indexOf("capturedAt") === -1 && first.canonicalJson.indexOf("Comp A") === -1, "Volatile timestamps and display names must not enter default fingerprints.");
     check(first.fingerprint.indexOf("sha256:") === 0, "Context fingerprint must use the sha256 prefix.");
+    check(first.canonicalJson.indexOf("host_0123456789abcdef0123456789abcdef0123456789abcdef") !== -1 && first.canonicalJson.indexOf("hostReloadEpoch") !== -1, "Stable fingerprints must include exact Host authority.");
+    expectCode(() => context.fingerprintContext(makeSnapshot({ hostInstanceId: undefined }), { requireStableContext: true }), protocol.ERROR_CODES.UNSAFE_JSON_VALUE, "Missing Host instance authority must be rejected.");
+    expectCode(() => context.fingerprintContext(makeSnapshot({ hostReloadEpoch: 0 }), { requireStableContext: true }), protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Host reload epoch must be positive.");
+    expectCode(() => context.fingerprintContext(makeSnapshot({ hostInstanceId: "host_bad" }), { requireStableContext: true }), protocol.ERROR_CODES.UNKNOWN_TARGET, "Host instance identity must use the fixed opaque format.");
+    const changedHost = context.fingerprintContext(makeSnapshot({ hostReloadEpoch: 2 }), { requireStableContext: true });
+    check(changedHost.fingerprint !== first.fingerprint, "Host reload authority changes must alter the context fingerprint.");
     const changedProperty = context.fingerprintContext(makeSnapshot({ target: Object.assign({}, makeSnapshot().target, { propertyValueDigest: "sha256:value-02" }) }), { requireStableContext: true });
     check(first.fingerprint !== changedProperty.fingerprint, "A covered property digest change must stale the context.");
     const changedSelection = context.fingerprintContext(makeSnapshot({ selection: [{ layerId: "layer-session-04", layerIndex: 4, matchName: "ADBE Text Layer", type: "Text" }], target: { compId: "comp-session-01", layerId: "layer-session-04", layerIndex: 4, propertyPath: ["ADBE Position", 2], propertyMatchName: "ADBE Position", propertyValueDigest: "sha256:value-01", expressionDigest: "sha256:expression-01" } }), { requireStableContext: true });

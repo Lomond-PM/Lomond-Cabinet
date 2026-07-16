@@ -4,9 +4,11 @@ var AEToolbox = AEToolbox || {};
     var REQUEST_PROTOCOL = "vela.host-context-request.v1";
     var RESULT_PROTOCOL = "vela.host-context-result.v1";
     var SCHEMA_VERSION = "1.0";
-    var HOST_ADAPTER_REVISION = "vela-context-host-v1";
+    var HOST_ADAPTER_REVISION = "vela-context-host-v2";
     var MAX_SELECTED_LAYERS = 32;
+    var MAX_TIER_TWO_LAYERS = 8;
     var MAX_NUMBER_ABS = 1000000;
+    var HOST_INSTANCE_ID_PATTERN = /^host_[a-f0-9]{48}$/;
     var json = null;
     var jsonBootstrap = null;
     var jsonDescriptor = null;
@@ -18,11 +20,55 @@ var AEToolbox = AEToolbox || {};
     var projectGeneration = 1;
     var nativeLayerIdObserved = false;
     var sessionResetRequired = false;
+    var hostReloadEpoch = 1;
+    var hostIdCounter = 0;
+    var issuedHostInstanceIds = {};
+    var hostInstanceId = createHostInstanceId();
 
     function hostError(code, message) {
         var error = new Error(message);
         error.code = code;
         return error;
+    }
+
+    function fixedHex(value) {
+        var hex = Math.floor(value >>> 0).toString(16);
+        while (hex.length < 8) { hex = "0" + hex; }
+        return hex.substring(hex.length - 8);
+    }
+
+    function createHostInstanceId() {
+        var attempts = 5;
+        var now;
+        var randomA;
+        var randomB;
+        var randomC;
+        var candidate;
+        while (attempts > 0) {
+            attempts--;
+            try {
+                now = (new Date()).getTime();
+                randomA = Math.floor(Math.random() * 4294967296);
+                randomB = Math.floor(Math.random() * 4294967296);
+                randomC = Math.floor(Math.random() * 4294967296);
+                hostIdCounter++;
+            } catch (ignoredRandom) {
+                throw hostError("HOST_CONTEXT_UNAVAILABLE", "The Host context authority is unavailable.");
+            }
+            if (typeof now !== "number" || !isFinite(now) || now < 0 ||
+                    typeof randomA !== "number" || !isFinite(randomA) || randomA < 0 || randomA > 4294967295 ||
+                    typeof randomB !== "number" || !isFinite(randomB) || randomB < 0 || randomB > 4294967295 ||
+                    typeof randomC !== "number" || !isFinite(randomC) || randomC < 0 || randomC > 4294967295) {
+                continue;
+            }
+            candidate = "host_" + fixedHex(Math.floor(now / 4294967296)) + fixedHex(now) +
+                fixedHex(randomA) + fixedHex(randomB) + fixedHex(randomC) + fixedHex(hostIdCounter);
+            if (HOST_INSTANCE_ID_PATTERN.test(candidate) && !issuedHostInstanceIds[candidate]) {
+                issuedHostInstanceIds[candidate] = true;
+                return candidate;
+            }
+        }
+        throw hostError("HOST_CONTEXT_UNAVAILABLE", "The Host context authority is unavailable.");
     }
 
     if (Object.prototype.hasOwnProperty.call(AEToolbox, "VelaContext")) {
@@ -120,6 +166,31 @@ var AEToolbox = AEToolbox || {};
         return value;
     }
 
+    function assertDetails(details) {
+        var allowed = { name: true, textPreview: true, bounds: true };
+        var seen = {};
+        var i;
+        if (!(details instanceof Array) || details.length < 1 || details.length > 3) {
+            fail("HOST_CONTEXT_REQUEST_INVALID");
+        }
+        for (i = 0; i < details.length; i++) {
+            if (typeof details[i] !== "string" || !allowed[details[i]] || seen[details[i]]) {
+                fail("HOST_CONTEXT_REQUEST_INVALID");
+            }
+            seen[details[i]] = true;
+        }
+        return details;
+    }
+
+    function hasDetail(request, detail) {
+        var details = request.scope.details;
+        var i;
+        for (i = 0; i < details.length; i++) {
+            if (details[i] === detail) { return true; }
+        }
+        return false;
+    }
+
     function validateRequest(value) {
         var operation;
         assertKeys(value, ["protocol", "schemaVersion", "requestId", "sessionId", "operation", "tier", "scope"]);
@@ -129,25 +200,30 @@ var AEToolbox = AEToolbox || {};
         assertLocalId(value.requestId, "req");
         assertLocalId(value.sessionId, "session");
         operation = value.operation;
-        if (operation !== "getCapabilities" && operation !== "captureContext") {
+        if (operation !== "getCapabilities" && operation !== "captureContext" && operation !== "captureLayerDetails") {
             fail("HOST_CONTEXT_OPERATION_UNSUPPORTED");
         }
-        if ((value.tier !== 0 && value.tier !== 1) ||
-            (operation === "getCapabilities" && value.tier !== 0)) {
+        if ((operation === "getCapabilities" && value.tier !== 0) ||
+                (operation === "captureContext" && value.tier !== 1) ||
+                (operation === "captureLayerDetails" && value.tier !== 2)) {
             fail("HOST_CONTEXT_REQUEST_INVALID");
         }
-        assertKeys(value.scope, ["purpose", "selectionOrderMeaningful"]);
+        assertKeys(value.scope, operation === "captureLayerDetails" ? ["purpose", "selectionOrderMeaningful", "details"] : ["purpose", "selectionOrderMeaningful"]);
         if (value.scope.purpose !== "display" && value.scope.purpose !== "binding") {
             fail("HOST_CONTEXT_REQUEST_INVALID");
         }
         if (typeof value.scope.selectionOrderMeaningful !== "boolean") {
             fail("HOST_CONTEXT_REQUEST_INVALID");
         }
+        if (operation === "captureLayerDetails") {
+            if (value.scope.purpose !== "display") { fail("HOST_CONTEXT_REQUEST_INVALID"); }
+            assertDetails(value.scope.details);
+        }
         return value;
     }
 
     function makeBase(request, ok) {
-        var safeOperation = request && (request.operation === "getCapabilities" || request.operation === "captureContext") ? request.operation : "unknown";
+        var safeOperation = request && (request.operation === "getCapabilities" || request.operation === "captureContext" || request.operation === "captureLayerDetails") ? request.operation : "unknown";
         return {
             protocol: RESULT_PROTOCOL,
             schemaVersion: SCHEMA_VERSION,
@@ -179,9 +255,11 @@ var AEToolbox = AEToolbox || {};
 
     function getCapabilitiesSnapshot() {
         return {
+            hostInstanceId: hostInstanceId,
+            hostReloadEpoch: hostReloadEpoch,
             tier: 0,
             capabilities: {
-                maxTier: 1,
+                maxTier: 2,
                 nativeLayerIdAvailable: sessionResetRequired ? false : nativeLayerIdObserved,
                 bindingContextAvailable: sessionResetRequired ? false : nativeLayerIdObserved,
                 hostAdapterRevision: HOST_ADAPTER_REVISION
@@ -190,6 +268,10 @@ var AEToolbox = AEToolbox || {};
     }
 
     function reload() {
+        if (hostReloadEpoch >= MAX_NUMBER_ABS) {
+            throw hostError("HOST_CONTEXT_SESSION_RESET_REQUIRED", "The Host context reload epoch is exhausted.");
+        }
+        hostReloadEpoch++;
         projectInitialized = false;
         currentProjectReference = null;
         projectGeneration = 1;
@@ -276,6 +358,8 @@ var AEToolbox = AEToolbox || {};
                 fail("HOST_CONTEXT_UNAVAILABLE");
             }
             return {
+                hostInstanceId: hostInstanceId,
+                hostReloadEpoch: hostReloadEpoch,
                 tier: 1,
                 projectGeneration: projectGeneration,
                 activeComp: null,
@@ -292,6 +376,8 @@ var AEToolbox = AEToolbox || {};
                 fail("HOST_CONTEXT_UNAVAILABLE");
             }
             return {
+                hostInstanceId: hostInstanceId,
+                hostReloadEpoch: hostReloadEpoch,
                 tier: 1,
                 projectGeneration: projectGeneration,
                 activeComp: null,
@@ -309,6 +395,8 @@ var AEToolbox = AEToolbox || {};
                 fail("HOST_CONTEXT_BUDGET_EXCEEDED");
             }
             return {
+                hostInstanceId: hostInstanceId,
+                hostReloadEpoch: hostReloadEpoch,
                 tier: 1,
                 projectGeneration: projectGeneration,
                 activeComp: {
@@ -359,6 +447,8 @@ var AEToolbox = AEToolbox || {};
             fail("HOST_CONTEXT_UNAVAILABLE");
         }
         snapshot = {
+            hostInstanceId: hostInstanceId,
+            hostReloadEpoch: hostReloadEpoch,
             tier: 1,
             projectGeneration: projectGeneration,
             activeComp: {
@@ -379,6 +469,220 @@ var AEToolbox = AEToolbox || {};
         return snapshot;
     }
 
+    function truncateDisplayString(value, maximumBytes) {
+        var originalBytes;
+        var output = "";
+        var outputBytes = 0;
+        var i = 0;
+        var code;
+        var piece;
+        var pieceBytes;
+        if (typeof value !== "string") { return null; }
+        originalBytes = json.utf8ByteLength(value);
+        if (typeof originalBytes !== "number" || !isFinite(originalBytes) || originalBytes < 0 || originalBytes > MAX_NUMBER_ABS) {
+            return null;
+        }
+        while (i < value.length) {
+            code = value.charCodeAt(i);
+            piece = value.charAt(i);
+            if (code >= 0xD800 && code <= 0xDBFF) {
+                if (i + 1 >= value.length || value.charCodeAt(i + 1) < 0xDC00 || value.charCodeAt(i + 1) > 0xDFFF) {
+                    return null;
+                }
+                piece += value.charAt(i + 1);
+            } else if (code >= 0xDC00 && code <= 0xDFFF) {
+                return null;
+            }
+            pieceBytes = json.utf8ByteLength(piece);
+            if (outputBytes + pieceBytes > maximumBytes) { break; }
+            output += piece;
+            outputBytes += pieceBytes;
+            i += piece.length;
+        }
+        return {
+            value: output,
+            truncated: originalBytes > outputBytes,
+            originalBytes: originalBytes
+        };
+    }
+
+    function addOmitted(item, field) {
+        var i;
+        for (i = 0; i < item.omittedFields.length; i++) {
+            if (item.omittedFields[i] === field) { return; }
+        }
+        item.omittedFields[item.omittedFields.length] = field;
+    }
+
+    function readTextPreview(layer) {
+        var textProperties;
+        var textDocumentProperty;
+        var textDocument;
+        var text;
+        if (typeof layer.property !== "function") { return null; }
+        textProperties = layer.property("ADBE Text Properties");
+        if (!textProperties || textProperties.matchName !== "ADBE Text Properties" || typeof textProperties.property !== "function") { return null; }
+        textDocumentProperty = textProperties.property("ADBE Text Document");
+        if (!textDocumentProperty || textDocumentProperty.matchName !== "ADBE Text Document") { return null; }
+        textDocument = textDocumentProperty.value;
+        if (!textDocument) { return null; }
+        text = textDocument.text;
+        if (typeof text !== "string") { return null; }
+        return truncateDisplayString(text, 512);
+    }
+
+    function readBounds(layer, time) {
+        var rect;
+        var left;
+        var top;
+        var width;
+        var height;
+        if (typeof layer.sourceRectAtTime !== "function") { return null; }
+        rect = layer.sourceRectAtTime(time, false);
+        if (!rect || typeof rect !== "object") { return null; }
+        left = rect.left;
+        top = rect.top;
+        width = rect.width;
+        height = rect.height;
+        if (typeof left !== "number" || !isFinite(left) || (left === 0 && 1 / left === -Infinity) || Math.abs(left) > MAX_NUMBER_ABS ||
+                typeof top !== "number" || !isFinite(top) || (top === 0 && 1 / top === -Infinity) || Math.abs(top) > MAX_NUMBER_ABS ||
+                typeof width !== "number" || !isFinite(width) || (width === 0 && 1 / width === -Infinity) || width < 0 || Math.abs(width) > MAX_NUMBER_ABS ||
+                typeof height !== "number" || !isFinite(height) || (height === 0 && 1 / height === -Infinity) || height < 0 || Math.abs(height) > MAX_NUMBER_ABS) {
+            return null;
+        }
+        return { left: left, top: top, width: width, height: height };
+    }
+
+    function readTierTwo(request) {
+        var project;
+        var activeItem;
+        var selected;
+        var itemId;
+        var items = [];
+        var allNative = true;
+        var seenIds = {};
+        var wantsName = hasDetail(request, "name");
+        var wantsText = hasDetail(request, "textPreview");
+        var wantsBounds = hasDetail(request, "bounds");
+        var compTime = null;
+        var compTimeAvailable = false;
+        var i;
+        var layer;
+        var nativeId;
+        var matchName;
+        var item;
+        var display;
+        var bounds;
+
+        if (sessionResetRequired) { fail("HOST_CONTEXT_SESSION_RESET_REQUIRED"); }
+        try { project = app && app.project ? app.project : null; }
+        catch (ignoredProject) { fail("HOST_CONTEXT_READ_FAILED"); }
+        observeProject(project);
+        if (!project) {
+            return {
+                hostInstanceId: hostInstanceId,
+                hostReloadEpoch: hostReloadEpoch,
+                tier: 2,
+                projectGeneration: projectGeneration,
+                activeComp: null,
+                selection: { count: 0, identityQuality: "index-only", items: [] }
+            };
+        }
+        try { activeItem = project.activeItem; }
+        catch (ignoredActive) { fail("HOST_CONTEXT_READ_FAILED"); }
+        if (!activeItem || typeof CompItem === "undefined" || !(activeItem instanceof CompItem)) {
+            return {
+                hostInstanceId: hostInstanceId,
+                hostReloadEpoch: hostReloadEpoch,
+                tier: 2,
+                projectGeneration: projectGeneration,
+                activeComp: null,
+                selection: { count: 0, identityQuality: "index-only", items: [] }
+            };
+        }
+        try {
+            itemId = assertFiniteNumber(activeItem.id, true, 1, MAX_NUMBER_ABS);
+            selected = activeItem.selectedLayers || [];
+        } catch (ignoredComp) { fail("HOST_CONTEXT_READ_FAILED"); }
+        if (selected.length > MAX_TIER_TWO_LAYERS) { fail("HOST_CONTEXT_BUDGET_EXCEEDED"); }
+        if (wantsBounds) {
+            try {
+                compTime = activeItem.time;
+                compTimeAvailable = typeof compTime === "number" && isFinite(compTime) && !(compTime === 0 && 1 / compTime === -Infinity) && Math.abs(compTime) <= MAX_NUMBER_ABS;
+            } catch (ignoredTime) { compTimeAvailable = false; }
+        }
+        for (i = 0; i < selected.length; i++) {
+            layer = selected[i];
+            nativeId = readNativeLayerId(layer);
+            matchName = assertBoundedString(String(layer.matchName || ""), 256, true);
+            if (nativeId === null) { allNative = false; }
+            else {
+                if (seenIds[String(nativeId)]) { fail("HOST_CONTEXT_READ_FAILED"); }
+                seenIds[String(nativeId)] = true;
+            }
+            item = {
+                layerIndex: assertFiniteNumber(layer.index, true, 1, MAX_NUMBER_ABS),
+                selectedOrder: i,
+                matchName: matchName,
+                type: assertBoundedString(layerType(matchName), 256, false),
+                omittedFields: []
+            };
+            if (nativeId !== null) { item.nativeLayerId = nativeId; }
+            if (wantsName) {
+                try { display = truncateDisplayString(layer.name, 256); }
+                catch (ignoredName) { display = null; }
+                if (display) {
+                    item.name = display.value;
+                    item.nameTruncated = display.truncated;
+                    item.nameOriginalBytes = display.originalBytes;
+                } else { addOmitted(item, "name"); }
+            }
+            if (wantsText) {
+                display = null;
+                if (matchName === "ADBE Text Layer") {
+                    try { display = readTextPreview(layer); }
+                    catch (ignoredText) { display = null; }
+                }
+                if (display) {
+                    item.textPreview = display.value;
+                    item.textPreviewTruncated = display.truncated;
+                    item.textPreviewOriginalBytes = display.originalBytes;
+                } else { addOmitted(item, "textPreview"); }
+            }
+            if (wantsBounds) {
+                bounds = null;
+                if (compTimeAvailable) {
+                    try { bounds = readBounds(layer, compTime); }
+                    catch (ignoredBounds) { bounds = null; }
+                }
+                if (bounds) { item.bounds = bounds; }
+                else { addOmitted(item, "bounds"); }
+            }
+            items[items.length] = item;
+        }
+        if (selected.length > 0 && allNative) { nativeLayerIdObserved = true; }
+        return {
+            hostInstanceId: hostInstanceId,
+            hostReloadEpoch: hostReloadEpoch,
+            tier: 2,
+            projectGeneration: projectGeneration,
+            activeComp: {
+                itemId: itemId,
+                projectGeneration: projectGeneration,
+                type: "CompItem",
+                width: assertFiniteNumber(activeItem.width, true, 1, 30000),
+                height: assertFiniteNumber(activeItem.height, true, 1, 30000),
+                duration: assertFiniteNumber(activeItem.duration, false, 0, MAX_NUMBER_ABS),
+                frameRate: assertFiniteNumber(activeItem.frameRate, false, 0.000001, MAX_NUMBER_ABS)
+            },
+            selection: {
+                count: selected.length,
+                identityQuality: allNative && nativeLayerIdObserved ? "native-layer-id" : "index-only",
+                items: items
+            }
+        };
+    }
+
     function handle(requestJson) {
         var request = null;
         var result;
@@ -395,13 +699,15 @@ var AEToolbox = AEToolbox || {};
             result = makeBase(request, true);
             if (request.operation === "getCapabilities" || request.tier === 0) {
                 result.snapshot = getCapabilitiesSnapshot();
-            } else {
+            } else if (request.operation === "captureContext") {
                 result.snapshot = readTierOne(request);
+            } else {
+                result.snapshot = readTierTwo(request);
             }
             return json.stringifyBounded(result, {
                 maxBytes: 16 * 1024,
                 maxStringBytes: 8 * 1024,
-                maxDepth: 5,
+                maxDepth: 6,
                 maxArrayLength: 64,
                 maxObjectProperties: 64
             });
@@ -416,7 +722,7 @@ var AEToolbox = AEToolbox || {};
                     maxObjectProperties: 64
                 });
             } catch (ignoredResult) {
-                return "{\"error\":{\"code\":\"HOST_CONTEXT_READ_FAILED\",\"message\":\"The Host context could not be read.\"},\"hostAdapterRevision\":\"vela-context-host-v1\",\"ok\":false,\"operation\":\"unknown\",\"protocol\":\"vela.host-context-result.v1\",\"requestId\":\"unknown\",\"schemaVersion\":\"1.0\",\"sessionId\":\"unknown\"}";
+                return "{\"error\":{\"code\":\"HOST_CONTEXT_READ_FAILED\",\"message\":\"The Host context could not be read.\"},\"hostAdapterRevision\":\"vela-context-host-v2\",\"ok\":false,\"operation\":\"unknown\",\"protocol\":\"vela.host-context-result.v1\",\"requestId\":\"unknown\",\"schemaVersion\":\"1.0\",\"sessionId\":\"unknown\"}";
             }
         }
     }
