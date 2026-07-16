@@ -116,10 +116,35 @@ function checkRequiredEntrypoints() {
         "client/js/proceduralPreviewContract.js",
         "client/js/proceduralHomeIcons.js",
         "client/js/proceduralHomeBackground.js",
+        "client/js/vela/velaContextBridge.js",
+        "host/vela/velaJson.jsx",
+        "host/vela/velaContext.jsx",
+        "scripts/test-vela-context-bridge.js",
+        "scripts/test-vela-context-host.js",
         "host/index.jsx"
     ].forEach((file) => {
         check("Required entry exists: " + file, exists(file), file + " is required.");
     });
+}
+
+function checkVelaContextHostIncludes() {
+    if (!exists("host/index.jsx")) {
+        return;
+    }
+    const hostIndex = readText("host/index.jsx");
+    const jsonInclude = hostIndex.indexOf('#include "vela/velaJson.jsx"');
+    const contextInclude = hostIndex.indexOf('#include "vela/velaContext.jsx"');
+    const firstToolInclude = hostIndex.indexOf('#include "tools/textBackgroundBox.jsx"');
+    check(
+        "Vela Host JSON helper loads before context facade",
+        jsonInclude !== -1 && contextInclude > jsonInclude,
+        "host/index.jsx must statically include velaJson.jsx before velaContext.jsx."
+    );
+    check(
+        "Vela context facade loads before existing tool includes",
+        contextInclude !== -1 && firstToolInclude > contextInclude,
+        "host/index.jsx must load the read-only Vela context facade before existing tools."
+    );
 }
 
 function collectLocalRefs(indexHtml) {
@@ -251,6 +276,7 @@ function main() {
     checkChangelog(version);
     checkRequiredEntrypoints();
     checkIndexHtml();
+    checkVelaContextHostIncludes();
     checkRegistryTools();
 
     let failed = 0;
