@@ -55,6 +55,20 @@ function tierTwoRequest(details, overrides) {
     }), overrides || {});
 }
 
+function tierThreeRequest(targets, overrides) {
+    return Object.assign(request({
+        operation: "resolvePropertyTargets",
+        tier: 3,
+        scope: {
+            purpose: "binding",
+            expectedHostInstanceId: "host_0123456789abcdef0123456789abcdef0123456789abcdef",
+            expectedHostReloadEpoch: 1,
+            expectedProjectGeneration: 1,
+            targets
+        }
+    }), overrides || {});
+}
+
 function parseResult(text) { return JSON.parse(text); }
 function inRealm(realm, source) { return vm.runInContext(source, realm); }
 
@@ -158,9 +172,9 @@ function makeAeRealm(layerOptions) {
         source: null
     }, layerOptions || {});
     const comp = new CompItem();
-    Object.assign(comp, { id: 12, width: 1920, height: 1080, duration: 10, frameRate: 30, selectedLayers: [layer] });
+    Object.assign(comp, { id: 12, width: 1920, height: 1080, duration: 10, frameRate: 30, selectedLayers: [layer], layer(index) { return index === layer.index ? layer : null; } });
     const project = { activeItem: comp };
-    const realm = makeRealm({ app: { version: "24.0", project }, CompItem, FootageItem });
+    const realm = makeRealm({ app: { version: "24.0", project }, CompItem, FootageItem, PropertyType: { PROPERTY: "property", NAMED_GROUP: "named", INDEXED_GROUP: "indexed" } });
     loadFacade(realm);
     return { realm, facade: realm.AEToolbox.VelaContext, project, comp, layer };
 }
@@ -359,7 +373,7 @@ function runFacadeTests() {
     const tierZeroRequest = request({ operation: "getCapabilities", tier: 0 });
     const tierZero = parseResult(tierZeroFacade.handle(JSON.stringify(tierZeroRequest)));
     check(tierZero.ok === true && tierZero.snapshot.tier === 0 && projectReads === 0, "Tier 0 must not access app.project.");
-    check(tierZero.snapshot.capabilities.maxTier === 2 && tierZero.snapshot.capabilities.nativeLayerIdAvailable === false, "Tier 0 must report conservative capabilities.");
+    check(tierZero.snapshot.capabilities.maxTier === 3 && tierZero.snapshot.capabilities.nativeLayerIdAvailable === false, "Tier 0 must report conservative capabilities.");
 
     const ae = makeAeRealm();
     const facadeDescriptor = Object.getOwnPropertyDescriptor(ae.realm.AEToolbox, "VelaContext");
@@ -407,7 +421,7 @@ function runFacadeTests() {
     check(replaced.snapshot.projectGeneration === originalGeneration + 1, "Project reference replacement must advance projectGeneration.");
 
     let fakeContextCalls = 0;
-    const fakeContext = { hostAdapterRevision: "vela-context-host-v2", handle() { fakeContextCalls += 1; } };
+    const fakeContext = { hostAdapterRevision: "vela-context-host-v3", handle() { fakeContextCalls += 1; } };
     const fakeContextRealm = makeRealm();
     fakeContextRealm.AEToolbox.VelaContext = fakeContext;
     expectCode(() => loadFacade(fakeContextRealm), "VELA_CONTEXT_MODULE_CONFLICT", "A preloaded context facade must conflict.");
@@ -552,6 +566,89 @@ function runStaticTests() {
     check(productionRealm.AEToolbox.VelaJson && productionRealm.AEToolbox.VelaContext && productionRealm.__velaHostJsonInstallTokenV1 === undefined, "Production-style Host loading must install both modules without exposing the private install token.");
 }
 
+function runTierThreeTests() {
+    const ae = makeAeRealm();
+    const types = ae.realm.PropertyType;
+    let propertyCalls = 0;
+    let forbiddenReads = 0;
+    const position = { matchName: "ADBE Position", propertyIndex: 2, propertyType: types.PROPERTY };
+    ["value", "expression", "expressionEnabled", "expressionError", "name", "valueAtTime"].forEach((key) => {
+        Object.defineProperty(position, key, { get() { forbiddenReads += 1; throw new Error("forbidden raw read"); } });
+    });
+    const transform = {
+        matchName: "ADBE Transform Group",
+        propertyIndex: 0,
+        propertyType: types.NAMED_GROUP,
+        property(name) { propertyCalls += 1; return name === "ADBE Position" ? position : null; }
+    };
+    ae.layer.property = function (name) { propertyCalls += 1; return name === "ADBE Transform Group" ? transform : null; };
+    const binding = parseResult(ae.facade.handle(JSON.stringify(request({ scope: { purpose: "binding", selectionOrderMeaningful: true } }))));
+    const target = { targetOrdinal: 0, itemId: 12, nativeLayerId: 45, layerIndex: 3, propertyPath: ["named", "ADBE Transform Group", 0, "named", "ADBE Position", 0] };
+    const resolved = parseResult(ae.facade.handle(JSON.stringify(tierThreeRequest([target], {
+        scope: {
+            purpose: "binding",
+            expectedHostInstanceId: binding.snapshot.hostInstanceId,
+            expectedHostReloadEpoch: binding.snapshot.hostReloadEpoch,
+            expectedProjectGeneration: binding.snapshot.projectGeneration,
+            targets: [target]
+        }
+    }))));
+    check(resolved.ok === true && resolved.snapshot.tier === 3 && resolved.snapshot.targets[0].propertyMatchName === "ADBE Position" && resolved.snapshot.targets[0].propertyIndex === 2, "Tier 3 must resolve a mixed named terminal Property path.");
+    check(propertyCalls === 2, "Tier 3 must call property exactly once per path segment.");
+    check(forbiddenReads === 0 && JSON.stringify(resolved).indexOf("value") === -1 && JSON.stringify(resolved).indexOf("expression") === -1, "Tier 3 must not read or return raw value/expression fields.");
+
+    let siblingReads = 0;
+    const slider = { matchName: "ADBE Slider Control-0001", propertyIndex: 1, propertyType: types.PROPERTY };
+    const effect = { matchName: "ADBE Slider Control", propertyIndex: 1, propertyType: types.NAMED_GROUP, property(name) { propertyCalls += 1; return name === "ADBE Slider Control-0001" ? slider : null; } };
+    const effectParade = { matchName: "ADBE Effect Parade", propertyIndex: 0, propertyType: types.INDEXED_GROUP, property(index) { propertyCalls += 1; return index === 1 ? effect : null; } };
+    Object.defineProperty(effectParade, "numProperties", { get() { siblingReads += 1; throw new Error("sibling traversal"); } });
+    ae.layer.property = function (name) { propertyCalls += 1; return name === "ADBE Effect Parade" ? effectParade : null; };
+    propertyCalls = 0;
+    const effectTarget = { targetOrdinal: 0, itemId: 12, nativeLayerId: 45, layerIndex: 3, propertyPath: ["named", "ADBE Effect Parade", 0, "indexed", "ADBE Slider Control", 1, "named", "ADBE Slider Control-0001", 0] };
+    const effectResult = parseResult(ae.facade.handle(JSON.stringify(tierThreeRequest([effectTarget], {
+        scope: { purpose: "binding", expectedHostInstanceId: binding.snapshot.hostInstanceId, expectedHostReloadEpoch: binding.snapshot.hostReloadEpoch, expectedProjectGeneration: binding.snapshot.projectGeneration, targets: [effectTarget] }
+    }))));
+    check(effectResult.ok === true && effectResult.snapshot.targets[0].propertyIndex === 1, "Tier 3 must resolve a named/indexed/named duplicate-effect path.");
+    check(propertyCalls === 3 && siblingReads === 0, "Tier 3 must use exactly one property call per segment and never enumerate siblings.");
+
+    effectParade.property = function (index) { propertyCalls += 1; return index === 1 ? Object.assign({}, effect, { propertyIndex: 2 }) : null; };
+    const mismatchTarget = effectTarget;
+    const mismatchResult = parseResult(ae.facade.handle(JSON.stringify(tierThreeRequest([mismatchTarget], {
+        scope: { purpose: "binding", expectedHostInstanceId: binding.snapshot.hostInstanceId, expectedHostReloadEpoch: binding.snapshot.hostReloadEpoch, expectedProjectGeneration: binding.snapshot.projectGeneration, targets: [mismatchTarget] }
+    }))));
+    check(mismatchResult.ok === false && mismatchResult.error.code === "HOST_CONTEXT_TARGET_NOT_FOUND", "Tier 3 must reject indexed child property-index drift without a fallback search.");
+
+    const namedAgainstIndexedTarget = Object.assign({}, effectTarget, { propertyPath: ["named", "ADBE Effect Parade", 0, "named", "ADBE Slider Control", 0] });
+    const namedAgainstIndexedResult = parseResult(ae.facade.handle(JSON.stringify(tierThreeRequest([namedAgainstIndexedTarget], {
+        scope: { purpose: "binding", expectedHostInstanceId: binding.snapshot.hostInstanceId, expectedHostReloadEpoch: binding.snapshot.hostReloadEpoch, expectedProjectGeneration: binding.snapshot.projectGeneration, targets: [namedAgainstIndexedTarget] }
+    }))));
+    check(namedAgainstIndexedResult.ok === false && namedAgainstIndexedResult.error.code === "HOST_CONTEXT_TARGET_NOT_FOUND", "Tier 3 must reject named traversal from an indexed group.");
+
+    const terminalGroup = { matchName: "ADBE Group", propertyIndex: 0, propertyType: types.NAMED_GROUP, property() { propertyCalls += 1; return null; } };
+    ae.layer.property = function () { propertyCalls += 1; return terminalGroup; };
+    const groupTarget = { targetOrdinal: 0, itemId: 12, nativeLayerId: 45, layerIndex: 3, propertyPath: ["named", "ADBE Group", 0] };
+    const groupResult = parseResult(ae.facade.handle(JSON.stringify(tierThreeRequest([groupTarget], {
+        scope: { purpose: "binding", expectedHostInstanceId: binding.snapshot.hostInstanceId, expectedHostReloadEpoch: binding.snapshot.hostReloadEpoch, expectedProjectGeneration: binding.snapshot.projectGeneration, targets: [groupTarget] }
+    }))));
+    check(groupResult.ok === false && groupResult.error.code === "HOST_CONTEXT_TARGET_NOT_FOUND", "Tier 3 must reject a terminal PropertyGroup.");
+
+    const missingTarget = { targetOrdinal: 0, itemId: 12, nativeLayerId: 45, layerIndex: 3, propertyPath: ["named", "ADBE Missing", 0] };
+    const partialResult = parseResult(ae.facade.handle(JSON.stringify(tierThreeRequest([groupTarget, missingTarget], {
+        scope: { purpose: "binding", expectedHostInstanceId: binding.snapshot.hostInstanceId, expectedHostReloadEpoch: binding.snapshot.hostReloadEpoch, expectedProjectGeneration: binding.snapshot.projectGeneration, targets: [groupTarget, missingTarget] }
+    }))));
+    check(partialResult.ok === false && partialResult.snapshot === undefined, "A failed Tier 3 target must reject the entire request without a partial result.");
+    const invalid = parseResult(ae.facade.handle(JSON.stringify(tierThreeRequest([Object.assign({}, target, { propertyPath: ["indexed", "ADBE Position", 0] })], {
+        scope: { purpose: "binding", expectedHostInstanceId: binding.snapshot.hostInstanceId, expectedHostReloadEpoch: binding.snapshot.hostReloadEpoch, expectedProjectGeneration: binding.snapshot.projectGeneration, targets: [Object.assign({}, target, { propertyPath: ["indexed", "ADBE Position", 0] })] }
+    }))));
+    check(invalid.ok === false && invalid.error.code === "HOST_CONTEXT_REQUEST_INVALID", "Tier 3 must reject invalid indexed path schema before resolving.");
+    const overlongPath = [];
+    for (let index = 0; index < 13; index += 1) { overlongPath.push("indexed", "ADBE Group " + index, index + 1); }
+    const overlong = parseResult(ae.facade.handle(JSON.stringify(tierThreeRequest([Object.assign({}, target, { propertyPath: overlongPath })], {
+        scope: { purpose: "binding", expectedHostInstanceId: binding.snapshot.hostInstanceId, expectedHostReloadEpoch: binding.snapshot.hostReloadEpoch, expectedProjectGeneration: binding.snapshot.projectGeneration, targets: [Object.assign({}, target, { propertyPath: overlongPath })] }
+    }))));
+    check(overlong.ok === false && overlong.error.code === "HOST_CONTEXT_REQUEST_INVALID", "Tier 3 Host validation must reject thirteen property-path levels before resolution.");
+}
+
 function runRuntimeReloadTests() {
     let projectReads = 0;
     let mutationCalls = 0;
@@ -565,7 +662,7 @@ function runRuntimeReloadTests() {
     const runtime = realm.AEToolbox.__velaHostRuntimeV1;
     const json = realm.AEToolbox.VelaJson;
     const context = realm.AEToolbox.VelaContext;
-    check(runtime && runtime.revision === "vela-host-runtime-v2", "A fresh engine must publish the Vela Host runtime after both modules are constructed.");
+    check(runtime && runtime.revision === "vela-host-runtime-v3", "A fresh engine must publish the Vela Host runtime after both modules are constructed.");
     check(runtime.json === json && runtime.context === context, "Public Host aliases must exactly reference the runtime modules.");
     const firstAuthority = parseResult(context.handle(JSON.stringify({ ...request(), operation: "getCapabilities", tier: 0 }))).snapshot;
     check(/^host_[a-f0-9]{48}$/.test(firstAuthority.hostInstanceId) && firstAuthority.hostReloadEpoch === 1, "Fresh Host installation must issue fixed-format authority at epoch one.");
@@ -597,8 +694,12 @@ function runRuntimeReloadTests() {
     check(incompatibleRealm.AEToolbox.__velaHostRuntimeV1 === incompatibleRuntime && incompatibleRealm.AEToolbox.VelaJson === undefined && incompatibleRealm.AEToolbox.VelaContext === undefined, "An incompatible runtime must not be overwritten or gain aliases.");
     const v1Runtime = { revision: "vela-host-runtime-v1", json: {}, context: {}, reload() {} };
     const v1Realm = makeFullHostRealm({ AEToolbox: { __velaHostRuntimeV1: v1Runtime } });
-    expectCode(() => runFullHost(v1Realm), "VELA_HOST_RUNTIME_CONFLICT", "An existing v1 runtime must not be adopted by the v2 loader.");
-    check(v1Realm.AEToolbox.__velaHostRuntimeV1 === v1Runtime, "The v2 loader must not overwrite an existing v1 runtime.");
+    expectCode(() => runFullHost(v1Realm), "VELA_HOST_RUNTIME_CONFLICT", "An existing v1 runtime must not be adopted by the v3 loader.");
+    check(v1Realm.AEToolbox.__velaHostRuntimeV1 === v1Runtime, "The v3 loader must not overwrite an existing v1 runtime.");
+    const v2Runtime = { revision: "vela-host-runtime-v2", json: {}, context: {}, reload() {} };
+    const v2Realm = makeFullHostRealm({ AEToolbox: { __velaHostRuntimeV1: v2Runtime } });
+    expectCode(() => runFullHost(v2Realm), "VELA_HOST_RUNTIME_CONFLICT", "An existing v2 runtime must not be adopted by the v3 loader.");
+    check(v2Realm.AEToolbox.__velaHostRuntimeV1 === v2Runtime, "The v3 loader must not overwrite an existing v2 runtime.");
 
     ["VelaJson", "VelaContext"].forEach((name) => {
         const fake = {};
@@ -654,6 +755,7 @@ try {
     runAeArrayProfileTests();
     runFacadeTests();
     runTierTwoTests();
+    runTierThreeTests();
     runStaticTests();
     runRuntimeReloadTests();
     console.log("PASS Vela context Host: " + assertions + " assertions.");

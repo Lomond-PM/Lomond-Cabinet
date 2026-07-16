@@ -51,7 +51,7 @@ function successResult(request, snapshot) {
         sessionId: request.sessionId,
         operation: request.operation,
         ok: true,
-        hostAdapterRevision: "vela-context-host-v2",
+        hostAdapterRevision: "vela-context-host-v3",
         snapshot
     });
 }
@@ -64,14 +64,14 @@ function errorResult(request, code) {
         sessionId: request.sessionId,
         operation: request.operation,
         ok: false,
-        hostAdapterRevision: "vela-context-host-v2",
+        hostAdapterRevision: "vela-context-host-v3",
         error: { code, message: "A local safe Host context error." }
     });
 }
 
 function tierZeroSnapshot(options) {
     options = options || {};
-    return { hostInstanceId: options.hostInstanceId || HOST_A, hostReloadEpoch: options.hostReloadEpoch || 1, tier: 0, capabilities: { maxTier: 2, nativeLayerIdAvailable: false, bindingContextAvailable: false, hostAdapterRevision: "vela-context-host-v2" } };
+    return { hostInstanceId: options.hostInstanceId || HOST_A, hostReloadEpoch: options.hostReloadEpoch || 1, tier: 0, capabilities: { maxTier: 3, nativeLayerIdAvailable: false, bindingContextAvailable: false, hostAdapterRevision: "vela-context-host-v3" } };
 }
 
 function tierOneSnapshot(options) {
@@ -570,6 +570,92 @@ async function runCurrentHostAuthorityTests() {
     check(stableHarness.bridge.compareCaptures(stableOne, stableTwo).fresh === true, "host_error_does_not_update: a Host error must not invalidate confirmed authority.");
 }
 
+async function runTierThreeBridgeTests() {
+    const harness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") {
+            callback(successResult(req, tierOneSnapshot()));
+            return;
+        }
+        if (req.operation === "captureLayerDetails") {
+            callback(successResult(req, tierTwoSnapshot({ details: req.scope.details })));
+            return;
+        }
+        check(req.operation === "resolvePropertyTargets" && req.tier === 3 && req.scope.purpose === "binding", "Tier 3 Bridge must emit the fixed Host operation.");
+        check(!Object.prototype.hasOwnProperty.call(req.scope.targets[0], "layerId"), "Tier 3 Host targets must not receive public layerId metadata.");
+        callback(successResult(req, {
+            hostInstanceId: HOST_A,
+            hostReloadEpoch: 1,
+            projectGeneration: 3,
+            tier: 3,
+            targets: req.scope.targets.map((target) => ({
+                targetOrdinal: target.targetOrdinal,
+                nativeLayerId: target.nativeLayerId,
+                layerIndex: target.layerIndex,
+                propertyPath: target.propertyPath,
+                propertyMatchName: target.propertyPath[target.propertyPath.length - 2],
+                propertyIndex: target.propertyPath[target.propertyPath.length - 3] === "indexed" ? target.propertyPath[target.propertyPath.length - 1] : 2,
+                propertyType: "property"
+            }))
+        }));
+    });
+    const binding = await harness.bridge.capture({ tier: 1, purpose: "binding" });
+    const path = ["named", "ADBE Transform Group", 0, "named", "ADBE Position", 0];
+    const resolved = await harness.bridge.resolvePropertyTargets(binding, [{ layerId: binding.snapshot.selection[0].layerId, propertyPath: path }]);
+    check(resolved.tier === 3 && resolved.purpose === "target-resolution" && resolved.executable === false && resolved.fingerprint === null, "Tier 3 Bridge results must be frozen non-executable target metadata.");
+    check(resolved.snapshot.targets[0].propertyMatchName === "ADBE Position" && resolved.snapshot.targets[0].propertyIndex === 2 && !JSON.stringify(resolved).includes("nativeLayerId"), "Tier 3 public capture must not expose native target identifiers.");
+    check(harness.bridge.compareCaptures(resolved, resolved).reason === "CONTEXT_CAPTURE_NOT_EXECUTABLE", "Tier 3 target resolution must not authorize freshness comparison.");
+    await expectCode(harness.bridge.resolvePropertyTargets(protocol.deepFreeze(protocol.cloneJson(binding)), [{ layerId: binding.snapshot.selection[0].layerId, propertyPath: path }]), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "A cloned Tier 1 binding must not authorize Tier 3 resolution.");
+    await expectCode(harness.bridge.resolvePropertyTargets(binding, [{ layerId: "layer-not-bound", propertyPath: path }]), protocol.ERROR_CODES.UNKNOWN_TARGET, "Tier 3 must reject a layer outside the private binding record.");
+    await expectCode(harness.bridge.resolvePropertyTargets(binding, [{ layerId: binding.snapshot.selection[0].layerId, propertyPath: path }, { layerId: binding.snapshot.selection[0].layerId, propertyPath: path }]), protocol.ERROR_CODES.UNKNOWN_TARGET, "Tier 3 must reject duplicate public targets.");
+    await expectCode(harness.bridge.resolvePropertyTargets(binding, []), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 3 must reject an empty target list.");
+    await expectCode(harness.bridge.resolvePropertyTargets(binding, Array.from({ length: 5 }, (_, index) => ({ layerId: binding.snapshot.selection[0].layerId, propertyPath: ["named", "ADBE Group " + index, 0] }))), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 3 must reject more than four targets.");
+    await expectCode(harness.bridge.resolvePropertyTargets(binding, [{ layerId: binding.snapshot.selection[0].layerId, propertyPath: path, nativeLayerId: 45 }]), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 3 must reject caller-supplied native Host metadata.");
+    const display = await harness.bridge.capture({ tier: 1, purpose: "display" });
+    const details = await harness.bridge.captureLayerDetails({ details: ["name"] });
+    await expectCode(harness.bridge.resolvePropertyTargets(display, [{ layerId: binding.snapshot.selection[0].layerId, propertyPath: path }]), protocol.ERROR_CODES.UNKNOWN_TARGET, "Tier 3 must reject display-only Tier 1 captures.");
+    await expectCode(harness.bridge.resolvePropertyTargets(details, [{ layerId: binding.snapshot.selection[0].layerId, propertyPath: path }]), protocol.ERROR_CODES.UNKNOWN_TARGET, "Tier 3 must reject Tier 2 captures.");
+
+    const otherBridge = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        callback(successResult(req, req.operation === "captureContext" ? tierOneSnapshot() : tierTwoSnapshot({ details: ["name"] })));
+    }).bridge;
+    await expectCode(otherBridge.resolvePropertyTargets(binding, [{ layerId: binding.snapshot.selection[0].layerId, propertyPath: path }]), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 3 must reject a binding capture from another bridge.");
+
+    const staleHarness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") { callback(successResult(req, tierOneSnapshot())); }
+        else { callback(errorResult(req, "HOST_CONTEXT_AUTHORITY_MISMATCH")); }
+    });
+    const staleBinding = await staleHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    await expectCode(staleHarness.bridge.resolvePropertyTargets(staleBinding, [{ layerId: staleBinding.snapshot.selection[0].layerId, propertyPath: path }]), protocol.ERROR_CODES.CONTEXT_STALE, "A Host authority mismatch during Tier 3 resolution must stale the binding.");
+
+    const terminalMismatchHarness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") { callback(successResult(req, tierOneSnapshot())); return; }
+        callback(successResult(req, {
+            hostInstanceId: HOST_A,
+            hostReloadEpoch: 1,
+            projectGeneration: 3,
+            tier: 3,
+            targets: [{
+                targetOrdinal: 0,
+                nativeLayerId: 45,
+                layerIndex: 3,
+                propertyPath: req.scope.targets[0].propertyPath,
+                propertyMatchName: "ADBE Slider Control",
+                propertyIndex: 2,
+                propertyType: "property"
+            }]
+        }));
+    });
+    const indexedBinding = await terminalMismatchHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    await expectCode(terminalMismatchHarness.bridge.resolvePropertyTargets(indexedBinding, [{
+        layerId: indexedBinding.snapshot.selection[0].layerId,
+        propertyPath: ["indexed", "ADBE Slider Control", 1]
+    }]), protocol.ERROR_CODES.CONTEXT_STALE, "Tier 3 must reject a Host terminal index that differs from an indexed path segment.");
+}
+
 function runQuoteAndModuleTests() {
     const quoted = bridgeModule.quoteForExtendScript('"\\\r\n\u2028\u2029中🙂');
     check(quoted.indexOf("\\\"") !== -1 && quoted.indexOf("\\\\") !== -1 && quoted.indexOf("\\u2028") !== -1 && quoted.indexOf("\\u2029") !== -1, "Quote helper must escape quotes, slashes and line separators.");
@@ -620,6 +706,7 @@ async function run() {
         await runDriftTests();
         await runOwnershipAndTierTwoTests();
         await runCurrentHostAuthorityTests();
+        await runTierThreeBridgeTests();
         runQuoteAndModuleTests();
         await new Promise((resolve) => setImmediate(resolve));
         check(unhandled.length === 0, "Bridge tests must not produce unhandled Promise rejections.");
