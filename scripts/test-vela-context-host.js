@@ -47,6 +47,14 @@ function request(overrides) {
     }, overrides || {});
 }
 
+function tierTwoRequest(details, overrides) {
+    return Object.assign(request({
+        operation: "captureLayerDetails",
+        tier: 2,
+        scope: { purpose: "display", selectionOrderMeaningful: true, details: details === undefined ? ["name"] : details }
+    }), overrides || {});
+}
+
 function parseResult(text) { return JSON.parse(text); }
 function inRealm(realm, source) { return vm.runInContext(source, realm); }
 
@@ -351,7 +359,7 @@ function runFacadeTests() {
     const tierZeroRequest = request({ operation: "getCapabilities", tier: 0 });
     const tierZero = parseResult(tierZeroFacade.handle(JSON.stringify(tierZeroRequest)));
     check(tierZero.ok === true && tierZero.snapshot.tier === 0 && projectReads === 0, "Tier 0 must not access app.project.");
-    check(tierZero.snapshot.capabilities.maxTier === 1 && tierZero.snapshot.capabilities.nativeLayerIdAvailable === false, "Tier 0 must report conservative capabilities.");
+    check(tierZero.snapshot.capabilities.maxTier === 2 && tierZero.snapshot.capabilities.nativeLayerIdAvailable === false, "Tier 0 must report conservative capabilities.");
 
     const ae = makeAeRealm();
     const facadeDescriptor = Object.getOwnPropertyDescriptor(ae.realm.AEToolbox, "VelaContext");
@@ -360,6 +368,7 @@ function runFacadeTests() {
     check(ae.realm.AEToolbox.VelaContext === ae.facade, "A repeated load must not replace the installed context facade.");
     const display = parseResult(ae.facade.handle(JSON.stringify(request())));
     check(display.ok === true && display.snapshot.activeComp.itemId === 12 && display.snapshot.selection.items[0].nativeLayerId === 45, "Tier 1 should return bounded comp and layer identity.");
+    check(/^host_[a-f0-9]{48}$/.test(display.snapshot.hostInstanceId) && display.snapshot.hostReloadEpoch === 1, "Tier 1 must return exact Host instance and reload authority.");
     check(display.snapshot.selection.items[0].matchName === "ADBE Text Layer" && display.snapshot.selection.items[0].type === "text", "Tier 1 should return the allowed layer metadata.");
     ["source", "nullLayer", "adjustmentLayer", "name", "text", "expression"].forEach((key) => {
         Object.defineProperty(ae.layer, key, { configurable: true, get() { throw new Error("forbidden layer read: " + key); } });
@@ -398,7 +407,7 @@ function runFacadeTests() {
     check(replaced.snapshot.projectGeneration === originalGeneration + 1, "Project reference replacement must advance projectGeneration.");
 
     let fakeContextCalls = 0;
-    const fakeContext = { hostAdapterRevision: "vela-context-host-v1", handle() { fakeContextCalls += 1; } };
+    const fakeContext = { hostAdapterRevision: "vela-context-host-v2", handle() { fakeContextCalls += 1; } };
     const fakeContextRealm = makeRealm();
     fakeContextRealm.AEToolbox.VelaContext = fakeContext;
     expectCode(() => loadFacade(fakeContextRealm), "VELA_CONTEXT_MODULE_CONFLICT", "A preloaded context facade must conflict.");
@@ -433,6 +442,91 @@ function runFacadeTests() {
     check(overflowProjectReads === readsAfterOverflow, "Latched Tier 1 requests must not read the project document again.");
     const overflowTierZero = parseResult(overflowFacade.handle(JSON.stringify(tierZeroRequest)));
     check(overflowTierZero.ok === true && overflowTierZero.snapshot.capabilities.bindingContextAvailable === false, "Tier 0 must report binding unavailable while reset is latched.");
+}
+
+function runTierTwoTests() {
+    const ae = makeAeRealm();
+    ae.comp.time = 2.5;
+    let propertyCalls = 0;
+    let boundsCalls = 0;
+    let textReads = 0;
+    const textDocument = { styleSecret: "MUST_NOT_LEAK" };
+    Object.defineProperty(textDocument, "text", { get() { textReads += 1; return "中🙂".repeat(200); } });
+    const textDocumentProperty = { matchName: "ADBE Text Document", value: textDocument };
+    const textProperties = {
+        matchName: "ADBE Text Properties",
+        property(name) { propertyCalls += 1; return name === "ADBE Text Document" ? textDocumentProperty : null; }
+    };
+    ae.layer.name = "层🙂".repeat(200);
+    ae.layer.property = function (name) { propertyCalls += 1; return name === "ADBE Text Properties" ? textProperties : null; };
+    ae.layer.sourceRectAtTime = function (time, includeExtents) {
+        boundsCalls += 1;
+        check(time === 2.5 && includeExtents === false, "Tier 2 bounds must use active comp time and false extents.");
+        return { left: -10, top: 5, width: 100, height: 50 };
+    };
+
+    const none = parseResult(ae.facade.handle(JSON.stringify(tierTwoRequest(["name"]))));
+    check(none.ok === true && none.snapshot.tier === 2 && none.snapshot.selection.items.length === 1, "Tier 2 name-only capture must succeed.");
+    check(propertyCalls === 0 && boundsCalls === 0, "Unrequested Tier 2 text and bounds reads must remain at zero calls.");
+    const nameItem = none.snapshot.selection.items[0];
+    check(nameItem.nameTruncated === true && Buffer.byteLength(nameItem.name, "utf8") <= 256 && !/[\uD800-\uDBFF]$/.test(nameItem.name), "Tier 2 name truncation must use UTF-8 bytes without splitting a surrogate pair.");
+    check(nameItem.nameOriginalBytes === Buffer.byteLength(ae.layer.name, "utf8") && nameItem.textPreview === undefined && nameItem.bounds === undefined, "Tier 2 must return only requested optional fields and exact name byte metadata.");
+
+    const text = parseResult(ae.facade.handle(JSON.stringify(tierTwoRequest(["textPreview"]))));
+    const textItem = text.snapshot.selection.items[0];
+    check(textItem.textPreviewTruncated === true && Buffer.byteLength(textItem.textPreview, "utf8") <= 512 && propertyCalls === 2 && textReads === 1, "Tier 2 text preview must use the fixed two-level path, one text read and UTF-8 budget.");
+    check(JSON.stringify(text).indexOf("MUST_NOT_LEAK") === -1 && textItem.name === undefined && textItem.bounds === undefined, "TextDocument objects and unrequested fields must not enter the result.");
+
+    const bounds = parseResult(ae.facade.handle(JSON.stringify(tierTwoRequest(["bounds"]))));
+    check(bounds.ok === true && bounds.snapshot.selection.items[0].bounds.width === 100 && boundsCalls === 1, "Tier 2 bounds must call sourceRectAtTime at most once per selected layer; calls=" + boundsCalls + " result=" + JSON.stringify(bounds));
+    const combined = parseResult(ae.facade.handle(JSON.stringify(tierTwoRequest(["name", "textPreview", "bounds"]))));
+    check(combined.ok === true && combined.snapshot.selection.items[0].omittedFields.length === 0 && boundsCalls === 2, "Tier 2 combined details must remain bounded and avoid duplicate omissions.");
+    check(Buffer.byteLength(JSON.stringify(combined), "utf8") <= 16 * 1024, "Tier 2 Host response must remain within 16 KiB.");
+
+    const empty = makeAeRealm();
+    empty.comp.selectedLayers = [];
+    const emptyResult = parseResult(empty.facade.handle(JSON.stringify(tierTwoRequest(["name"]))));
+    check(emptyResult.ok === true && emptyResult.snapshot.selection.count === 0 && emptyResult.snapshot.selection.items.length === 0, "Tier 2 must accept an empty explicit selection.");
+
+    const eight = makeAeRealm();
+    eight.comp.selectedLayers = Array.from({ length: 8 }, (_, index) => ({ id: index + 1, index: index + 1, matchName: "ADBE AV Layer", name: "L" + index }));
+    const eightResult = parseResult(eight.facade.handle(JSON.stringify(tierTwoRequest(["name"]))));
+    check(eightResult.ok === true && eightResult.snapshot.selection.items.length === 8, "Tier 2 must accept exactly eight selected layers.");
+    const nine = makeAeRealm();
+    nine.comp.selectedLayers = Array.from({ length: 9 }, (_, index) => ({ id: index + 1, index: index + 1, matchName: "ADBE AV Layer", name: "L" + index }));
+    const nineResult = parseResult(nine.facade.handle(JSON.stringify(tierTwoRequest(["name"]))));
+    check(nineResult.ok === false && nineResult.error.code === "HOST_CONTEXT_BUDGET_EXCEEDED", "Tier 2 must reject nine selected layers without truncation.");
+
+    [[], ["name", "name"], ["unknown"]].forEach((details) => {
+        const invalid = parseResult(ae.facade.handle(JSON.stringify(tierTwoRequest(details))));
+        check(invalid.ok === false && invalid.error.code === "HOST_CONTEXT_REQUEST_INVALID", "Tier 2 must reject empty, duplicate and unknown detail lists.");
+    });
+    const forbidden = parseResult(ae.facade.handle(JSON.stringify(Object.assign(tierTwoRequest(["name"]), { propertyPath: ["bad", 1] }))));
+    check(forbidden.ok === false && forbidden.error.code === "HOST_CONTEXT_REQUEST_INVALID", "Tier 2 must reject caller property paths and unknown request fields.");
+
+    const nonText = makeAeRealm({ matchName: "ADBE AV Layer", name: "AV" });
+    let nonTextPropertyReads = 0;
+    nonText.layer.property = function () { nonTextPropertyReads += 1; throw new Error("must not read"); };
+    const nonTextResult = parseResult(nonText.facade.handle(JSON.stringify(tierTwoRequest(["textPreview"]))));
+    check(nonTextResult.ok === true && nonTextPropertyReads === 0 && nonTextResult.snapshot.selection.items[0].omittedFields[0] === "textPreview", "Non-text layers must omit textPreview without touching Text Source.");
+
+    const badBounds = makeAeRealm({ name: "bad" });
+    let badBoundsCalls = 0;
+    badBounds.comp.time = 0;
+    badBounds.layer.sourceRectAtTime = function () { badBoundsCalls += 1; return { left: -0, top: 0, width: Infinity, height: -1 }; };
+    const badBoundsResult = parseResult(badBounds.facade.handle(JSON.stringify(tierTwoRequest(["bounds"]))));
+    check(badBoundsResult.ok === true && badBoundsCalls === 1 && badBoundsResult.snapshot.selection.items[0].bounds === undefined && badBoundsResult.snapshot.selection.items[0].omittedFields[0] === "bounds", "Illegal bounds must be omitted without leaking native failure data.");
+
+    const forbiddenReads = makeAeRealm();
+    forbiddenReads.comp.time = 0;
+    let forbiddenNameReads = 0;
+    let forbiddenTextPathReads = 0;
+    let allowedBoundsReads = 0;
+    Object.defineProperty(forbiddenReads.layer, "name", { configurable: true, get() { forbiddenNameReads += 1; throw new Error("name must not be read"); } });
+    Object.defineProperty(forbiddenReads.layer, "property", { configurable: true, get() { forbiddenTextPathReads += 1; throw new Error("text path must not be read"); } });
+    forbiddenReads.layer.sourceRectAtTime = function () { allowedBoundsReads += 1; return { left: 0, top: 0, width: 1, height: 1 }; };
+    const boundsOnly = parseResult(forbiddenReads.facade.handle(JSON.stringify(tierTwoRequest(["bounds"]))));
+    check(boundsOnly.ok === true && forbiddenNameReads === 0 && forbiddenTextPathReads === 0 && allowedBoundsReads === 1, "Tier 2 must perform zero forbidden optional reads and exactly one requested bounds read.");
 }
 
 function runStaticTests() {
@@ -471,18 +565,40 @@ function runRuntimeReloadTests() {
     const runtime = realm.AEToolbox.__velaHostRuntimeV1;
     const json = realm.AEToolbox.VelaJson;
     const context = realm.AEToolbox.VelaContext;
-    check(runtime && runtime.revision === "vela-host-runtime-v1", "A fresh engine must publish the Vela Host runtime after both modules are constructed.");
+    check(runtime && runtime.revision === "vela-host-runtime-v2", "A fresh engine must publish the Vela Host runtime after both modules are constructed.");
     check(runtime.json === json && runtime.context === context, "Public Host aliases must exactly reference the runtime modules.");
+    const firstAuthority = parseResult(context.handle(JSON.stringify({ ...request(), operation: "getCapabilities", tier: 0 }))).snapshot;
+    check(/^host_[a-f0-9]{48}$/.test(firstAuthority.hostInstanceId) && firstAuthority.hostReloadEpoch === 1, "Fresh Host installation must issue fixed-format authority at epoch one.");
     check(projectReads === 0, "The first complete Host load must not read the project.");
     runFullHost(realm);
     check(realm.AEToolbox.__velaHostRuntimeV1 === runtime && realm.AEToolbox.VelaJson === json && realm.AEToolbox.VelaContext === context, "A second complete Host load must reuse runtime, JSON and Context identities.");
     check(projectReads === 0, "A legal Host reload must not read project, activeItem or selection.");
     check(mutationCalls === 0, "Initial Host load and legal reload must not call Host mutation APIs.");
+    const secondAuthority = parseResult(context.handle(JSON.stringify({ ...request(), operation: "getCapabilities", tier: 0 }))).snapshot;
+    check(secondAuthority.hostInstanceId === firstAuthority.hostInstanceId && secondAuthority.hostReloadEpoch === 2, "Compatible reload must preserve Host instance identity and increment reload epoch exactly once.");
+    const freshRealm = makeFullHostRealm();
+    runFullHost(freshRealm);
+    const freshAuthority = parseResult(freshRealm.AEToolbox.VelaContext.handle(JSON.stringify({ ...request(), operation: "getCapabilities", tier: 0 }))).snapshot;
+    check(freshAuthority.hostInstanceId !== firstAuthority.hostInstanceId && freshAuthority.hostReloadEpoch === 1, "A fresh Host realm must issue a different instance identity at epoch one.");
+    const idFailureRealm = makeRealm();
+    expectCode(() => vm.runInContext(contextSource.replace(/Math\.random\(\)/g, "(0/0)"), idFailureRealm, { filename: "velaContext-id-failure.jsx" }), "HOST_CONTEXT_UNAVAILABLE", "Invalid Host authority entropy must fail closed after bounded retries.");
+    check(idFailureRealm.AEToolbox.VelaContext === undefined, "Host authority generation failure must not publish a partial Context facade.");
+    const fullIdFailureRealm = makeFullHostRealm();
+    const fullIdFailureReplacements = {};
+    fullIdFailureReplacements[path.normalize(CONTEXT_PATH)] = contextSource.replace(/Math\.random\(\)/g, "(0/0)");
+    expectCode(() => runFullHost(fullIdFailureRealm, fullIdFailureReplacements), "HOST_CONTEXT_UNAVAILABLE", "Host authority failure inside staging must escape with a stable code.");
+    check(fullIdFailureRealm.AEToolbox.__velaHostRuntimeV1 === undefined && fullIdFailureRealm.AEToolbox.VelaJson === undefined && fullIdFailureRealm.AEToolbox.VelaContext === undefined, "Host authority failure must transactionally publish no runtime aliases.");
+    runFullHost(fullIdFailureRealm);
+    check(fullIdFailureRealm.AEToolbox.__velaHostRuntimeV1 && fullIdFailureRealm.AEToolbox.VelaContext, "A fresh retry after Host authority failure must recover cleanly.");
 
     const incompatibleRuntime = { revision: "wrong", json: {}, context: {}, reload() {} };
     const incompatibleRealm = makeFullHostRealm({ AEToolbox: { __velaHostRuntimeV1: incompatibleRuntime } });
     expectCode(() => runFullHost(incompatibleRealm), "VELA_HOST_RUNTIME_CONFLICT", "An incompatible root runtime must be rejected.");
     check(incompatibleRealm.AEToolbox.__velaHostRuntimeV1 === incompatibleRuntime && incompatibleRealm.AEToolbox.VelaJson === undefined && incompatibleRealm.AEToolbox.VelaContext === undefined, "An incompatible runtime must not be overwritten or gain aliases.");
+    const v1Runtime = { revision: "vela-host-runtime-v1", json: {}, context: {}, reload() {} };
+    const v1Realm = makeFullHostRealm({ AEToolbox: { __velaHostRuntimeV1: v1Runtime } });
+    expectCode(() => runFullHost(v1Realm), "VELA_HOST_RUNTIME_CONFLICT", "An existing v1 runtime must not be adopted by the v2 loader.");
+    check(v1Realm.AEToolbox.__velaHostRuntimeV1 === v1Runtime, "The v2 loader must not overwrite an existing v1 runtime.");
 
     ["VelaJson", "VelaContext"].forEach((name) => {
         const fake = {};
@@ -523,12 +639,21 @@ function runRuntimeReloadTests() {
     check(overflowReads === readsAtLatch, "Runtime reload must clear the latch without reading the project.");
     const afterReload = parseResult(overflowContext.handle(JSON.stringify(request())));
     check(afterReload.ok === true && afterReload.snapshot.projectGeneration === 1, "The first capture after legal reload must restart project generation at one.");
+
+    const reloadOverflowRealm = makeFullHostRealm();
+    const reloadOverflowReplacements = {};
+    reloadOverflowReplacements[path.normalize(CONTEXT_PATH)] = contextSource.replace("var hostReloadEpoch = 1;", "var hostReloadEpoch = 1000000;");
+    runFullHost(reloadOverflowRealm, reloadOverflowReplacements);
+    const reloadOverflowRuntime = reloadOverflowRealm.AEToolbox.__velaHostRuntimeV1;
+    expectCode(() => runFullHost(reloadOverflowRealm, reloadOverflowReplacements), "HOST_CONTEXT_SESSION_RESET_REQUIRED", "Host reload epoch overflow must fail closed with a stable code.");
+    check(reloadOverflowRealm.AEToolbox.__velaHostRuntimeV1 === reloadOverflowRuntime, "Reload overflow must preserve the installed runtime without partial replacement.");
 }
 
 try {
     runJsonTests();
     runAeArrayProfileTests();
     runFacadeTests();
+    runTierTwoTests();
     runStaticTests();
     runRuntimeReloadTests();
     console.log("PASS Vela context Host: " + assertions + " assertions.");

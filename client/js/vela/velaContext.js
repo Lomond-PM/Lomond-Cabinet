@@ -48,6 +48,7 @@
         "capabilityPolicyRevision", "registrySchemaRevision", "hostAdapterRevision",
         "expressionTemplateRevision", "scriptRegistryRevision", "targetResolutionRevision"
     ]);
+    var HOST_INSTANCE_ID_PATTERN = /^host_[a-f0-9]{48}$/;
 
     function requireProtocol(protocol) {
         if (!protocolModule.isTrustedProtocol(protocol) || typeof protocol.assertSafeJson !== "function") {
@@ -198,6 +199,32 @@
             return output;
         }
 
+        function normalizeHostAuthority(snapshot, requireStableContext) {
+            var hasInstanceId = Object.prototype.hasOwnProperty.call(snapshot, "hostInstanceId");
+            var hasReloadEpoch = Object.prototype.hasOwnProperty.call(snapshot, "hostReloadEpoch");
+            if (hasInstanceId !== hasReloadEpoch || (requireStableContext && (!hasInstanceId || !hasReloadEpoch))) {
+                protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "Stable context requires Host authority.", {
+                    stage: "context-fingerprint"
+                });
+            }
+            if (!hasInstanceId) { return undefined; }
+            var hostInstanceId = protocol.getOwnDataProperty(snapshot, "hostInstanceId");
+            var hostReloadEpoch = protocol.getOwnDataProperty(snapshot, "hostReloadEpoch");
+            if (typeof hostInstanceId !== "string" || !HOST_INSTANCE_ID_PATTERN.test(hostInstanceId) ||
+                protocol.utf8ByteLength(hostInstanceId) !== 53) {
+                protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "Host instance identity is invalid.", {
+                    stage: "context-fingerprint"
+                });
+            }
+            if (!Number.isInteger(hostReloadEpoch) || hostReloadEpoch < 1 ||
+                hostReloadEpoch > protocol.HARD_LIMITS.maxNumberAbs) {
+                protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Host reload epoch is invalid.", {
+                    stage: "context-fingerprint"
+                });
+            }
+            return { hostInstanceId: hostInstanceId, hostReloadEpoch: hostReloadEpoch };
+        }
+
         function buildFingerprintInput(snapshot, options) {
             options = options || {};
             if (!protocol.isPlainObject(options)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Context options must be an object."); }
@@ -206,13 +233,18 @@
             protocol.assertSafeJson(snapshot);
             if (!protocol.isPlainObject(snapshot)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Context snapshot must be an object."); }
             protocol.assertNoUnknownKeys(snapshot, [
-                "tier", "sessionId", "activeComp", "selection", "target", "relevantToolState", "actionScope", "requiredFields"
+                "tier", "sessionId", "hostInstanceId", "hostReloadEpoch", "activeComp", "selection", "target", "relevantToolState", "actionScope", "requiredFields"
             ].concat(OMIT_KEYS), "context.snapshot");
             var tier = snapshot.tier === undefined ? 1 : snapshot.tier;
             if (!Number.isInteger(tier) || tier < 0 || tier > 3) { protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Context tier is invalid."); }
             if (options.requireStableContext && !snapshot.sessionId) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "Executable context requires a session identity."); }
             var input = { fingerprintSchemaVersion: "1", tier: tier };
             if (snapshot.sessionId !== undefined) { input.sessionId = protocol.assertString(snapshot.sessionId, "context.sessionId"); }
+            var hostAuthority = normalizeHostAuthority(snapshot, options.requireStableContext);
+            if (hostAuthority) {
+                input.hostInstanceId = hostAuthority.hostInstanceId;
+                input.hostReloadEpoch = hostAuthority.hostReloadEpoch;
+            }
             var activeComp = normalizeActiveComp(snapshot.activeComp, options);
             if (activeComp !== undefined) { input.activeComp = activeComp; }
             var selection = normalizeSelection(snapshot.selection, options);

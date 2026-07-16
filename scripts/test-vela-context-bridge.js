@@ -14,6 +14,8 @@ const nodeRuntime = require("./velaNodeRuntime");
 const ROOT = path.resolve(__dirname, "..");
 const protocol = protocolModule.createProtocol(nodeRuntime);
 const contextApi = contextModule.createContextApi(protocol);
+const HOST_A = "host_0123456789abcdef0123456789abcdef0123456789abcdef";
+const HOST_B = "host_fedcba9876543210fedcba9876543210fedcba9876543210";
 let assertions = 0;
 
 function check(condition, message) { assert.ok(condition, message); assertions += 1; }
@@ -49,7 +51,7 @@ function successResult(request, snapshot) {
         sessionId: request.sessionId,
         operation: request.operation,
         ok: true,
-        hostAdapterRevision: "vela-context-host-v1",
+        hostAdapterRevision: "vela-context-host-v2",
         snapshot
     });
 }
@@ -62,13 +64,14 @@ function errorResult(request, code) {
         sessionId: request.sessionId,
         operation: request.operation,
         ok: false,
-        hostAdapterRevision: "vela-context-host-v1",
+        hostAdapterRevision: "vela-context-host-v2",
         error: { code, message: "A local safe Host context error." }
     });
 }
 
-function tierZeroSnapshot() {
-    return { tier: 0, capabilities: { maxTier: 1, nativeLayerIdAvailable: false, bindingContextAvailable: false, hostAdapterRevision: "vela-context-host-v1" } };
+function tierZeroSnapshot(options) {
+    options = options || {};
+    return { hostInstanceId: options.hostInstanceId || HOST_A, hostReloadEpoch: options.hostReloadEpoch || 1, tier: 0, capabilities: { maxTier: 2, nativeLayerIdAvailable: false, bindingContextAvailable: false, hostAdapterRevision: "vela-context-host-v2" } };
 }
 
 function tierOneSnapshot(options) {
@@ -77,10 +80,36 @@ function tierOneSnapshot(options) {
     const item = { layerIndex: options.layerIndex || 3, selectedOrder: options.selectedOrder || 0, matchName: "ADBE Text Layer", type: "text" };
     if (native) { item.nativeLayerId = options.nativeLayerId || 45; }
     return {
+        hostInstanceId: options.hostInstanceId || HOST_A,
+        hostReloadEpoch: options.hostReloadEpoch || 1,
         tier: 1,
         projectGeneration: options.projectGeneration || 3,
         activeComp: options.noComp ? null : { itemId: 12, projectGeneration: options.projectGeneration || 3, type: "CompItem", width: 1920, height: 1080, duration: 10, frameRate: 30 },
         selection: { count: options.noComp ? 0 : 1, identityQuality: native ? "native-layer-id" : "index-only", items: options.noComp ? [] : [item] }
+    };
+}
+
+function tierTwoSnapshot(options) {
+    options = options || {};
+    const item = {
+        nativeLayerId: 45,
+        layerIndex: 3,
+        selectedOrder: 0,
+        matchName: "ADBE Text Layer",
+        type: "text",
+        omittedFields: []
+    };
+    const details = options.details || ["name", "textPreview", "bounds"];
+    if (details.includes("name")) Object.assign(item, { name: "标题🙂", nameTruncated: false, nameOriginalBytes: Buffer.byteLength("标题🙂") });
+    if (details.includes("textPreview")) Object.assign(item, { textPreview: "正文", textPreviewTruncated: false, textPreviewOriginalBytes: Buffer.byteLength("正文") });
+    if (details.includes("bounds")) item.bounds = { left: 0, top: 0, width: 100, height: 50 };
+    return {
+        hostInstanceId: options.hostInstanceId || HOST_A,
+        hostReloadEpoch: options.hostReloadEpoch || 1,
+        tier: 2,
+        projectGeneration: 3,
+        activeComp: { itemId: 12, projectGeneration: 3, type: "CompItem", width: 1920, height: 1080, duration: 10, frameRate: 30 },
+        selection: { count: 1, identityQuality: "native-layer-id", items: [item] }
     };
 }
 
@@ -247,9 +276,10 @@ async function runSessionIdentityTests() {
     const exhaustedPending = exhausted.bridge.capture({ tier: 0 });
     const exhaustedRequestId = exhausted.bridge.getState().requestId;
     const exhaustedGeneration = exhausted.bridge.getState().generation;
+    const exhaustedLifecycleEpoch = exhausted.bridge.getState().bridgeLifecycleEpoch;
     assert.throws(() => exhausted.bridge.resetSession(), (error) => error && error.code === exhaustedPair.protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
     assertions += 1;
-    check(exhausted.bridge.getSessionId() === s1 && exhausted.bridge.getState().state === "pending" && exhausted.bridge.getState().requestId === exhaustedRequestId && exhausted.bridge.getState().generation === exhaustedGeneration, "Failed reset must preserve the old session, generation and pending request atomically.");
+    check(exhausted.bridge.getSessionId() === s1 && exhausted.bridge.getState().state === "pending" && exhausted.bridge.getState().requestId === exhaustedRequestId && exhausted.bridge.getState().generation === exhaustedGeneration && exhausted.bridge.getState().bridgeLifecycleEpoch === exhaustedLifecycleEpoch, "Failed reset must preserve the old session, lifecycle epoch, generation and pending request atomically.");
     check(exhausted.bridge.cancel(exhaustedRequestId) === true, "The preserved pending request must remain cancellable after reset failure.");
     await expectCode(exhaustedPending, exhaustedPair.protocol.ERROR_CODES.LIFECYCLE_BLOCKED);
 
@@ -288,14 +318,18 @@ async function runSessionIdentityTests() {
 }
 
 async function runDriftTests() {
-    const bindingHarness = makeHarness((source, callback) => { const req = decodeSource(source); callback(successResult(req, tierOneSnapshot())); });
+    const bindingHarness = makeHarness((source, callback, callIndex) => { const req = decodeSource(source); callback(successResult(req, tierOneSnapshot({ layerIndex: callIndex < 2 ? 3 : 4 }))); });
     const a = await bindingHarness.bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
     const b = await bindingHarness.bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
     check(bindingHarness.bridge.compareCaptures(a, b, { selectionOrderMeaningful: true }).fresh === true, "Equivalent captures must compare fresh.");
-    const reordered = protocol.deepFreeze(protocol.cloneJson(b));
-    const changedIndex = protocol.cloneJson(reordered);
-    changedIndex.snapshot.selection[0].layerIndex = 4;
-    check(bindingHarness.bridge.compareCaptures(a, changedIndex, { selectionOrderMeaningful: true }).reason === protocol.ERROR_CODES.CONTEXT_STALE, "Layer reorder must be stale even with the same layerId.");
+    const changed = await bindingHarness.bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
+    const changedComparison = bindingHarness.bridge.compareCaptures(a, changed, { selectionOrderMeaningful: true });
+    check(changedComparison.reason === "CONTEXT_STALE", "Owned captures with changed layer position must compare stale; got " + JSON.stringify(changedComparison));
+    const clone = protocol.deepFreeze(protocol.cloneJson(b));
+    check(bindingHarness.bridge.compareCaptures(a, clone, { selectionOrderMeaningful: true }).reason === "CONTEXT_CAPTURE_UNTRUSTED", "A deep clone must not inherit capture ownership.");
+    check(bindingHarness.bridge.compareCaptures(a, JSON.parse(JSON.stringify(b))).reason === "CONTEXT_CAPTURE_UNTRUSTED", "A JSON round-trip must not inherit capture ownership.");
+    check(bindingHarness.bridge.compareCaptures(a, { ...b }).reason === "CONTEXT_CAPTURE_UNTRUSTED", "A spread clone must not inherit capture ownership.");
+    check(bindingHarness.bridge.compareCaptures(a, new Proxy(b, {})).reason === "CONTEXT_CAPTURE_UNTRUSTED", "A Proxy wrapper must not inherit capture ownership.");
 
     const displayHarness = makeHarness((source, callback, callIndex) => {
         const req = decodeSource(source);
@@ -304,7 +338,7 @@ async function runDriftTests() {
     });
     const d1 = await displayHarness.bridge.capture({ tier: 1, purpose: "display" });
     const d2 = await displayHarness.bridge.capture({ tier: 1, purpose: "display" });
-    check(displayHarness.bridge.compareCaptures(d1, d2, { selectionOrderMeaningful: false }).fresh === false, "Selection identity changes must be stale for set-like comparison.");
+    check(displayHarness.bridge.compareCaptures(d1, d2, { selectionOrderMeaningful: false }).reason === "CONTEXT_CAPTURE_NOT_EXECUTABLE", "Display captures must not authorize freshness comparison.");
 
     const setLeft = {
         sessionId: "session-local", tier: 1, fingerprint: null,
@@ -318,8 +352,222 @@ async function runDriftTests() {
         Object.assign({}, setLeft.snapshot.selection[1], { selectedOrder: 0 }),
         Object.assign({}, setLeft.snapshot.selection[0], { selectedOrder: 1 })
     ];
-    check(displayHarness.bridge.compareCaptures(setLeft, setRight, { selectionOrderMeaningful: false }).fresh === true, "Set-like comparison must ignore selection order and selectedOrder.");
-    check(displayHarness.bridge.compareCaptures(setLeft, setRight, { selectionOrderMeaningful: true }).fresh === false, "Ordered comparison must detect selection order drift.");
+    check(displayHarness.bridge.compareCaptures(setLeft, setRight, { selectionOrderMeaningful: false }).reason === "CONTEXT_CAPTURE_UNTRUSTED", "Ordinary JSON objects must not enter freshness comparison.");
+}
+
+async function runOwnershipAndTierTwoTests() {
+    const tierTwoHarness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        check(req.operation === "captureLayerDetails" && req.tier === 2 && req.scope.purpose === "display", "Tier 2 bridge must use the fixed Host operation and display purpose.");
+        callback(successResult(req, tierTwoSnapshot({ details: req.scope.details })));
+    });
+    const tierTwo = await tierTwoHarness.bridge.captureLayerDetails({ details: ["name", "textPreview", "bounds"], selectionOrderMeaningful: false });
+    check(tierTwo.tier === 2 && tierTwo.executable === false && tierTwo.fingerprint === null && Object.isFrozen(tierTwo.snapshot.selection[0]), "Tier 2 bridge captures must be deeply frozen, display-only and non-executable.");
+    check(tierTwo.snapshot.selection[0].name === "标题🙂" && tierTwo.snapshot.selection[0].bounds.width === 100, "Tier 2 bridge must preserve only validated display details.");
+    check(tierTwoHarness.bridge.compareCaptures(tierTwo, tierTwo).reason === "CONTEXT_CAPTURE_NOT_EXECUTABLE", "Tier 2 ownership must never authorize freshness comparison.");
+    await expectCode(tierTwoHarness.bridge.captureLayerDetails({ details: ["name", "name"] }), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Duplicate Tier 2 details must be rejected.");
+    await expectCode(tierTwoHarness.bridge.captureLayerDetails({ details: ["unknown"] }), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Unknown Tier 2 details must be rejected.");
+    await expectCode(tierTwoHarness.bridge.captureLayerDetails({ details: ["name"], target: {} }), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 2 bridge options must reject target-like fields.");
+    const getterOptions = {};
+    let detailGetterReads = 0;
+    Object.defineProperty(getterOptions, "details", { enumerable: true, get() { detailGetterReads += 1; return ["name"]; } });
+    await expectCode(tierTwoHarness.bridge.captureLayerDetails(getterOptions), protocol.ERROR_CODES.UNSAFE_JSON_VALUE, "Tier 2 option getters must fail closed.");
+    check(detailGetterReads === 0, "Tier 2 option getters must not execute.");
+    check(!JSON.stringify(tierTwoHarness.bridge.getState()).includes("标题") && !JSON.stringify(tierTwoHarness.bridge.getState()).includes("正文"), "Tier 2 raw display data must not enter bridge diagnostics state.");
+    const badAuthorityHarness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        callback(successResult(req, tierTwoSnapshot({ details: req.scope.details, hostInstanceId: "host_bad" })));
+    });
+    await expectCode(badAuthorityHarness.bridge.captureLayerDetails({ details: ["name"] }), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 2 must reject malformed Host authority before returning a capture.");
+
+    const firstHarness = makeHarness((source, callback) => { const req = decodeSource(source); callback(successResult(req, tierOneSnapshot())); });
+    const secondHarness = makeHarness((source, callback) => { const req = decodeSource(source); callback(successResult(req, tierOneSnapshot())); });
+    const first = await firstHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    const second = await secondHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    check(firstHarness.bridge.compareCaptures(first, second).reason === "CONTEXT_CAPTURE_UNTRUSTED", "Cross-bridge captures must be rejected before content comparison.");
+    check(firstHarness.bridge.compareCaptures(first, {}).reason === "CONTEXT_CAPTURE_UNTRUSTED", "Ordinary fake captures must be rejected.");
+
+    const resetHarness = makeHarness((source, callback) => { const req = decodeSource(source); callback(successResult(req, tierOneSnapshot())); });
+    const beforeReset = await resetHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    resetHarness.bridge.resetSession();
+    check(resetHarness.bridge.compareCaptures(beforeReset, beforeReset).reason === "CONTEXT_AUTHORITY_MISMATCH", "A resetSession transition must invalidate old capture authority.");
+
+    const suspendHarness = makeHarness((source, callback) => { const req = decodeSource(source); callback(successResult(req, tierOneSnapshot())); });
+    const beforeSuspend = await suspendHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    const epochBeforeSuspend = suspendHarness.bridge.getState().bridgeLifecycleEpoch;
+    check(suspendHarness.bridge.suspend() === true && suspendHarness.bridge.suspend() === false && suspendHarness.bridge.resume() === true, "Suspend must transition once and resume without a second invalidation.");
+    check(suspendHarness.bridge.getState().bridgeLifecycleEpoch === epochBeforeSuspend + 1 && suspendHarness.bridge.compareCaptures(beforeSuspend, beforeSuspend).reason === "CONTEXT_AUTHORITY_MISMATCH", "Suspend must increment lifecycle authority exactly once and invalidate old captures.");
+
+    const epochHarness = makeHarness((source, callback, callIndex) => {
+        const req = decodeSource(source);
+        callback(successResult(req, tierOneSnapshot({ hostReloadEpoch: callIndex + 1 })));
+    });
+    const oldHost = await epochHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    const newHost = await epochHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    check(epochHarness.bridge.compareCaptures(oldHost, newHost).reason === "CONTEXT_AUTHORITY_MISMATCH", "Host reload epoch changes must reject comparison even when project generation is unchanged.");
+
+    let hold = false;
+    const cancelHarness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (!hold) callback(successResult(req, tierOneSnapshot()));
+    });
+    const beforeCancel = await cancelHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    hold = true;
+    const pending = cancelHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    const pendingId = decodeSource(cancelHarness.calls[cancelHarness.calls.length - 1]).requestId;
+    check(cancelHarness.bridge.cancel(pendingId) === true, "The current pending request must be cancellable.");
+    await expectCode(pending, protocol.ERROR_CODES.LIFECYCLE_BLOCKED);
+    hold = false;
+    const afterCancel = await cancelHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    check(cancelHarness.bridge.compareCaptures(beforeCancel, afterCancel).fresh === true, "Cancel and request generation changes must not invalidate existing capture authority.");
+    hold = true;
+    const timedOut = cancelHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    cancelHarness.scheduler.fireAll();
+    await expectCode(timedOut, protocol.ERROR_CODES.LIFECYCLE_BLOCKED, "Timeout must settle without changing capture authority.");
+    hold = false;
+    const afterTimeout = await cancelHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    check(cancelHarness.bridge.compareCaptures(beforeCancel, afterTimeout).fresh === true, "Timeout must not invalidate an existing trusted capture.");
+
+    const originalWeakMap = global.WeakMap;
+    try {
+        global.WeakMap = undefined;
+        assert.throws(() => makeHarness(null), (error) => error && error.code === protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Bridge creation must fail closed without WeakMap.");
+        assertions += 1;
+    } finally {
+        global.WeakMap = originalWeakMap;
+    }
+}
+
+async function runCurrentHostAuthorityTests() {
+    const epochHarness = makeHarness((source, callback, callIndex) => {
+        const req = decodeSource(source);
+        callback(successResult(req, tierOneSnapshot({ hostReloadEpoch: callIndex + 1 })));
+    });
+    const oldHost = await epochHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    const newHost = await epochHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    check(epochHarness.bridge.compareCaptures(oldHost, newHost).reason === "CONTEXT_AUTHORITY_MISMATCH", "old_new: a newly observed Host epoch must invalidate cross-epoch comparison.");
+    check(epochHarness.bridge.compareCaptures(oldHost, oldHost).reason === "CONTEXT_AUTHORITY_MISMATCH", "old_old_after_new: a newly observed Host epoch must invalidate the old capture against itself.");
+    check(epochHarness.bridge.compareCaptures(newHost, newHost).fresh === true, "new_new: the capture from the current Host epoch must remain fresh against itself.");
+
+    const tierZeroHarness = makeHarness((source, callback, callIndex) => {
+        const req = decodeSource(source);
+        const snapshot = callIndex === 0 ? tierOneSnapshot({ hostReloadEpoch: 1 }) : tierZeroSnapshot({ hostReloadEpoch: 2 });
+        callback(successResult(req, snapshot));
+    });
+    const beforeTierZero = await tierZeroHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    await tierZeroHarness.bridge.capture({ tier: 0, purpose: "display" });
+    check(tierZeroHarness.bridge.compareCaptures(beforeTierZero, beforeTierZero).reason === "CONTEXT_AUTHORITY_MISMATCH", "tier0_authority_update: a valid Tier 0 response must update current Host authority.");
+
+    const tierTwoHarness = makeHarness((source, callback, callIndex) => {
+        const req = decodeSource(source);
+        const snapshot = callIndex === 0 ? tierOneSnapshot({ hostReloadEpoch: 1 }) : tierTwoSnapshot({ hostReloadEpoch: 2, details: req.scope.details });
+        callback(successResult(req, snapshot));
+    });
+    const beforeTierTwo = await tierTwoHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    const tierTwo = await tierTwoHarness.bridge.captureLayerDetails({ details: ["name"] });
+    check(tierTwoHarness.bridge.compareCaptures(beforeTierTwo, beforeTierTwo).reason === "CONTEXT_AUTHORITY_MISMATCH", "tier2_authority_update: a valid Tier 2 response must update current Host authority.");
+    check(tierTwoHarness.bridge.compareCaptures(tierTwo, tierTwo).reason === "CONTEXT_CAPTURE_NOT_EXECUTABLE", "Tier 2 must remain non-executable after updating current Host authority.");
+
+    async function rejectedResponseDoesNotUpdate(label, responder, expectedCode) {
+        const harness = makeHarness((source, callback, callIndex) => {
+            const req = decodeSource(source);
+            if (callIndex === 0) callback(successResult(req, tierOneSnapshot({ hostReloadEpoch: 1 })));
+            else responder(req, callback);
+        });
+        const trusted = await harness.bridge.capture({ tier: 1, purpose: "binding" });
+        await expectCode(harness.bridge.capture({ tier: 1, purpose: "binding" }), expectedCode, label + " must be rejected.");
+        check(harness.bridge.compareCaptures(trusted, trusted).fresh === true, label + "_does_not_update: rejected Host data must not update current authority.");
+    }
+
+    await rejectedResponseDoesNotUpdate("malformed", (req, callback) => callback("not-json"), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+    await rejectedResponseDoesNotUpdate("host_error", (req, callback) => callback(errorResult(req, "HOST_CONTEXT_UNAVAILABLE")), protocol.ERROR_CODES.UNKNOWN_TARGET);
+    await rejectedResponseDoesNotUpdate("requestId_mismatch", (req, callback) => callback(successResult(Object.assign({}, req, { requestId: "req_" + "x".repeat(32) }), tierOneSnapshot({ hostReloadEpoch: 2 }))), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+    await rejectedResponseDoesNotUpdate("sessionId_mismatch", (req, callback) => callback(successResult(Object.assign({}, req, { sessionId: "session_" + "x".repeat(32) }), tierOneSnapshot({ hostReloadEpoch: 2 }))), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+    await rejectedResponseDoesNotUpdate("operation_mismatch", (req, callback) => callback(successResult(Object.assign({}, req, { operation: "captureLayerDetails" }), tierOneSnapshot({ hostReloadEpoch: 2 }))), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+    await rejectedResponseDoesNotUpdate("invalid_snapshot", (req, callback) => {
+        const snapshot = tierOneSnapshot({ hostReloadEpoch: 2 });
+        snapshot.selection.count = 2;
+        callback(successResult(req, snapshot));
+    }, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+    await rejectedResponseDoesNotUpdate("unknown_snapshot_field", (req, callback) => {
+        const snapshot = tierOneSnapshot({ hostReloadEpoch: 2 });
+        snapshot.untrusted = true;
+        callback(successResult(req, snapshot));
+    }, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+
+    const synchronousThrowHarness = makeHarness((source, callback, callIndex) => {
+        const request = decodeSource(source);
+        if (callIndex === 0) callback(successResult(request, tierOneSnapshot({ hostReloadEpoch: 1 })));
+        else throw new Error("local invoke failure");
+    });
+    const beforeSynchronousThrow = await synchronousThrowHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    await expectCode(synchronousThrowHarness.bridge.capture({ tier: 1, purpose: "binding" }), protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
+    check(synchronousThrowHarness.bridge.compareCaptures(beforeSynchronousThrow, beforeSynchronousThrow).fresh === true, "invokeHost_sync_throw_does_not_update: synchronous Host invocation failure must preserve current authority.");
+
+    const timeoutHarness = makeHarness();
+    const timeoutInitial = timeoutHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    let req = decodeSource(timeoutHarness.calls[0]);
+    timeoutHarness.callbacks[0](successResult(req, tierOneSnapshot({ hostReloadEpoch: 1 })));
+    const beforeTimeout = await timeoutInitial;
+    const timedOut = timeoutHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    req = decodeSource(timeoutHarness.calls[1]);
+    timeoutHarness.scheduler.fireAll();
+    await expectCode(timedOut, protocol.ERROR_CODES.LIFECYCLE_BLOCKED, "Timeout must settle before a late authority response.");
+    timeoutHarness.callbacks[1](successResult(req, tierOneSnapshot({ hostReloadEpoch: 2 })));
+    check(timeoutHarness.bridge.compareCaptures(beforeTimeout, beforeTimeout).fresh === true, "late_callback_does_not_update: a response after timeout must not update current authority.");
+
+    const cancelHarness = makeHarness();
+    const cancelInitial = cancelHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    req = decodeSource(cancelHarness.calls[0]);
+    cancelHarness.callbacks[0](successResult(req, tierOneSnapshot({ hostReloadEpoch: 1 })));
+    const beforeCancel = await cancelInitial;
+    const cancelled = cancelHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    req = decodeSource(cancelHarness.calls[1]);
+    check(cancelHarness.bridge.cancel(req.requestId) === true, "The authority regression request must be cancellable.");
+    await expectCode(cancelled, protocol.ERROR_CODES.LIFECYCLE_BLOCKED);
+    cancelHarness.callbacks[1](successResult(req, tierOneSnapshot({ hostReloadEpoch: 2 })));
+    check(cancelHarness.bridge.compareCaptures(beforeCancel, beforeCancel).fresh === true, "cancelled_late_callback_does_not_update: a response after cancellation must not update current authority.");
+
+    const twiceHarness = makeHarness((source, callback) => {
+        const request = decodeSource(source);
+        callback(successResult(request, tierOneSnapshot({ hostReloadEpoch: 1 })));
+        callback(successResult(request, tierOneSnapshot({ hostReloadEpoch: 2 })));
+    });
+    const firstCallbackCapture = await twiceHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    check(twiceHarness.bridge.compareCaptures(firstCallbackCapture, firstCallbackCapture).fresh === true, "callback_twice_second_does_not_update: a second callback must not update current authority.");
+
+    const rollbackHarness = makeHarness((source, callback, callIndex) => {
+        const request = decodeSource(source);
+        const epoch = callIndex === 0 ? 1 : (callIndex === 1 ? 2 : 1);
+        callback(successResult(request, tierOneSnapshot({ hostReloadEpoch: epoch })));
+    });
+    const epochOne = await rollbackHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    const epochTwo = await rollbackHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    await expectCode(rollbackHarness.bridge.capture({ tier: 1, purpose: "binding" }), "CONTEXT_AUTHORITY_ROLLBACK", "A lower epoch from the same Host must be rejected.");
+    check(rollbackHarness.bridge.compareCaptures(epochTwo, epochTwo).fresh === true, "lower_epoch_does_not_rollback: rejecting an older epoch must preserve current authority.");
+    check(rollbackHarness.bridge.compareCaptures(epochOne, epochOne).reason === "CONTEXT_AUTHORITY_MISMATCH", "A rejected lower epoch must not revive the earlier capture.");
+
+    const instanceHarness = makeHarness((source, callback, callIndex) => {
+        const request = decodeSource(source);
+        callback(successResult(request, tierOneSnapshot(callIndex === 0 ? { hostInstanceId: HOST_A, hostReloadEpoch: 3 } : { hostInstanceId: HOST_B, hostReloadEpoch: 1 })));
+    });
+    const instanceA = await instanceHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    const instanceB = await instanceHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    check(instanceHarness.bridge.compareCaptures(instanceA, instanceA).reason === "CONTEXT_AUTHORITY_MISMATCH", "different_instance_invalidates_old: adopting a fresh Host instance must invalidate old captures.");
+    check(instanceHarness.bridge.compareCaptures(instanceB, instanceB).fresh === true, "A capture from the newly observed Host instance must remain fresh.");
+
+    let sameAuthorityCall = 0;
+    const stableHarness = makeHarness((source, callback) => {
+        const request = decodeSource(source);
+        sameAuthorityCall += 1;
+        if (sameAuthorityCall === 3) callback(errorResult(request, "HOST_CONTEXT_UNAVAILABLE"));
+        else callback(successResult(request, tierOneSnapshot({ hostReloadEpoch: 1 })));
+    });
+    const stableOne = await stableHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    const stableTwo = await stableHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    check(stableHarness.bridge.compareCaptures(stableOne, stableTwo).fresh === true, "Repeated captures from the same authority must remain comparable.");
+    await expectCode(stableHarness.bridge.capture({ tier: 1, purpose: "binding" }), protocol.ERROR_CODES.UNKNOWN_TARGET);
+    check(stableHarness.bridge.compareCaptures(stableOne, stableTwo).fresh === true, "host_error_does_not_update: a Host error must not invalidate confirmed authority.");
 }
 
 function runQuoteAndModuleTests() {
@@ -370,6 +618,8 @@ async function run() {
         await runCollisionTest();
         await runSessionIdentityTests();
         await runDriftTests();
+        await runOwnershipAndTierTwoTests();
+        await runCurrentHostAuthorityTests();
         runQuoteAndModuleTests();
         await new Promise((resolve) => setImmediate(resolve));
         check(unhandled.length === 0, "Bridge tests must not produce unhandled Promise rejections.");

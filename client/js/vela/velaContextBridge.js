@@ -77,7 +77,7 @@
     var REQUEST_PROTOCOL = "vela.host-context-request.v1";
     var RESULT_PROTOCOL = "vela.host-context-result.v1";
     var SCHEMA_VERSION = "1.0";
-    var HOST_ADAPTER_REVISION = "vela-context-host-v1";
+    var HOST_ADAPTER_REVISION = "vela-context-host-v2";
     var FIXED_FACADE_PREFIX = "AE" + "Toolbox.VelaContext.handle(";
     var HOST_ERROR_CODES = Object.freeze([
         "HOST_CONTEXT_REQUEST_INVALID",
@@ -88,6 +88,11 @@
         "HOST_CONTEXT_SESSION_RESET_REQUIRED",
         "HOST_CONTEXT_READ_FAILED"
     ]);
+    var HOST_INSTANCE_ID_PATTERN = /^host_[a-f0-9]{48}$/;
+    var CAPTURE_REASON_UNTRUSTED = "CONTEXT_CAPTURE_UNTRUSTED";
+    var CAPTURE_REASON_NOT_EXECUTABLE = "CONTEXT_CAPTURE_NOT_EXECUTABLE";
+    var CAPTURE_REASON_AUTHORITY_MISMATCH = "CONTEXT_AUTHORITY_MISMATCH";
+    var CAPTURE_REASON_STALE = "CONTEXT_STALE";
 
     function protocolError(protocol, code, stage) {
         return new protocol.VelaProtocolError(code, undefined, { stage: stage || "context-bridge" });
@@ -153,11 +158,18 @@
         if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 120000) {
             protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Context bridge timeout is invalid.");
         }
+        if (typeof WeakMap !== "function") {
+            throw protocolError(protocol, protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
+        }
 
         var usedSessionIds = new Set();
         var usedRequestIds = new Set();
+        var bridgeToken = Object.freeze({});
+        var captureRecords = new WeakMap();
+        var currentHostAuthority = null;
         var sessionId = issueUniqueSessionId(null);
-        var generation = 0;
+        var requestGeneration = 0;
+        var bridgeLifecycleEpoch = 1;
         var state = "idle";
         var active = null;
 
@@ -225,6 +237,82 @@
             return value;
         }
 
+        function normalizeHostAuthority(snapshot) {
+            var hostInstanceId = protocol.getOwnDataProperty(snapshot, "hostInstanceId");
+            var hostReloadEpoch = protocol.getOwnDataProperty(snapshot, "hostReloadEpoch");
+            if (typeof hostInstanceId !== "string" || !HOST_INSTANCE_ID_PATTERN.test(hostInstanceId) ||
+                protocol.utf8ByteLength(hostInstanceId) !== 53) {
+                protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host context authority is invalid.");
+            }
+            assertRawNumber(hostReloadEpoch, "hostReloadEpoch", true, 1, protocol.HARD_LIMITS.maxNumberAbs);
+            return { hostInstanceId: hostInstanceId, hostReloadEpoch: hostReloadEpoch };
+        }
+
+        function authorityRollbackError() {
+            var error = new Error("Validated Host authority moved backwards.");
+            error.code = "CONTEXT_AUTHORITY_ROLLBACK";
+            return error;
+        }
+
+        function isBridgeLocalError(error) {
+            return Boolean(error && error.code === "CONTEXT_AUTHORITY_ROLLBACK");
+        }
+
+        function observeValidatedHostAuthority(hostInstanceId, hostReloadEpoch) {
+            if (currentHostAuthority && currentHostAuthority.hostInstanceId === hostInstanceId) {
+                if (hostReloadEpoch < currentHostAuthority.hostReloadEpoch) {
+                    throw authorityRollbackError();
+                }
+                if (hostReloadEpoch === currentHostAuthority.hostReloadEpoch) {
+                    return currentHostAuthority;
+                }
+            }
+            currentHostAuthority = Object.freeze({
+                hostInstanceId: hostInstanceId,
+                hostReloadEpoch: hostReloadEpoch
+            });
+            return currentHostAuthority;
+        }
+
+        function makePrivateRecord(capture, details) {
+            var nativeBindings = (details.nativeBindings || []).map(function (binding) {
+                return Object.freeze({
+                    layerId: binding.layerId,
+                    nativeLayerId: binding.nativeLayerId,
+                    layerIndex: binding.layerIndex,
+                    selectedOrder: binding.selectedOrder,
+                    matchName: binding.matchName,
+                    type: binding.type
+                });
+            });
+            Object.freeze(nativeBindings);
+            return Object.freeze({
+                protocol: protocol,
+                bridgeToken: bridgeToken,
+                sessionId: sessionId,
+                bridgeLifecycleEpoch: bridgeLifecycleEpoch,
+                hostInstanceId: details.hostInstanceId,
+                hostReloadEpoch: details.hostReloadEpoch,
+                tier: capture.tier,
+                purpose: details.purpose,
+                executable: capture.executable,
+                fingerprint: capture.fingerprint,
+                projectGeneration: details.projectGeneration === undefined ? null : details.projectGeneration,
+                itemId: details.itemId === undefined ? null : details.itemId,
+                selectionOrderMeaningful: details.selectionOrderMeaningful,
+                nativeBindings: nativeBindings,
+                publicCanonical: protocol.canonicalStringify(capture)
+            });
+        }
+
+        function registerCapture(capture, details) {
+            if (!Object.isFrozen(capture)) {
+                protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Context capture is not immutable.");
+            }
+            captureRecords.set(capture, makePrivateRecord(capture, details));
+            return capture;
+        }
+
         function normalizeRawResult(raw, request) {
             if (typeof raw !== "string" || protocol.utf8ByteLength(raw) > 16 * 1024) {
                 protocol.fail(protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED, "Host context result exceeds its limit.");
@@ -255,14 +343,19 @@
         function normalizeTierZero(result, request) {
             var snapshot = result.snapshot;
             if (!protocol.isPlainObject(snapshot)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 0 context is invalid."); }
-            protocol.assertNoUnknownKeys(snapshot, ["tier", "capabilities"], "hostContext.snapshot");
+            protocol.assertNoUnknownKeys(snapshot, ["hostInstanceId", "hostReloadEpoch", "tier", "capabilities"], "hostContext.snapshot");
             if (snapshot.tier !== 0 || !protocol.isPlainObject(snapshot.capabilities)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 0 context is invalid."); }
+            var authority = normalizeHostAuthority(snapshot);
             protocol.assertNoUnknownKeys(snapshot.capabilities, ["maxTier", "nativeLayerIdAvailable", "bindingContextAvailable", "hostAdapterRevision"], "hostContext.capabilities");
-            if (snapshot.capabilities.maxTier !== 1 || typeof snapshot.capabilities.nativeLayerIdAvailable !== "boolean" ||
+            if (snapshot.capabilities.maxTier !== 2 || typeof snapshot.capabilities.nativeLayerIdAvailable !== "boolean" ||
                 typeof snapshot.capabilities.bindingContextAvailable !== "boolean" || snapshot.capabilities.hostAdapterRevision !== HOST_ADAPTER_REVISION) {
                 protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 0 capabilities are invalid.");
             }
-            return protocol.deepFreeze({
+            var normalizedSource = { sessionId: sessionId, hostInstanceId: authority.hostInstanceId, hostReloadEpoch: authority.hostReloadEpoch, tier: 0, capabilities: snapshot.capabilities };
+            protocol.assertJsonBudget(normalizedSource, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes });
+            observeValidatedHostAuthority(authority.hostInstanceId, authority.hostReloadEpoch);
+            var normalizedSnapshot = protocol.cloneJson(normalizedSource, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes });
+            var capture = protocol.deepFreeze({
                 contextId: request.requestId,
                 requestId: request.requestId,
                 sessionId: sessionId,
@@ -270,22 +363,30 @@
                 executable: false,
                 fingerprint: null,
                 hostAdapterRevision: HOST_ADAPTER_REVISION,
-                snapshot: protocol.cloneJson({ sessionId: sessionId, tier: 0, capabilities: snapshot.capabilities }, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes })
+                snapshot: normalizedSnapshot
+            });
+            return registerCapture(capture, {
+                hostInstanceId: authority.hostInstanceId,
+                hostReloadEpoch: authority.hostReloadEpoch,
+                purpose: "display",
+                selectionOrderMeaningful: request.scope.selectionOrderMeaningful
             });
         }
 
         function normalizeTierOne(result, request) {
             var raw = result.snapshot;
             if (!protocol.isPlainObject(raw)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 1 context is invalid."); }
-            protocol.assertNoUnknownKeys(raw, ["tier", "projectGeneration", "activeComp", "selection"], "hostContext.snapshot");
+            protocol.assertNoUnknownKeys(raw, ["hostInstanceId", "hostReloadEpoch", "tier", "projectGeneration", "activeComp", "selection"], "hostContext.snapshot");
             if (raw.tier !== 1) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 1 context is invalid."); }
+            var authority = normalizeHostAuthority(raw);
             var projectGeneration = assertRawNumber(raw.projectGeneration, "projectGeneration", true, 1, protocol.HARD_LIMITS.maxNumberAbs);
-            var normalized = { sessionId: sessionId, tier: 1 };
+            var normalized = { sessionId: sessionId, hostInstanceId: authority.hostInstanceId, hostReloadEpoch: authority.hostReloadEpoch, tier: 1 };
             var compId = null;
+            var itemId = null;
             if (raw.activeComp !== null) {
                 if (!protocol.isPlainObject(raw.activeComp)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host active comp is invalid."); }
                 protocol.assertNoUnknownKeys(raw.activeComp, ["itemId", "projectGeneration", "type", "width", "height", "duration", "frameRate"], "hostContext.activeComp");
-                var itemId = assertRawNumber(raw.activeComp.itemId, "activeComp.itemId", true, 1, protocol.HARD_LIMITS.maxNumberAbs);
+                itemId = assertRawNumber(raw.activeComp.itemId, "activeComp.itemId", true, 1, protocol.HARD_LIMITS.maxNumberAbs);
                 if (raw.activeComp.projectGeneration !== projectGeneration || raw.activeComp.type !== "CompItem") {
                     protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host active comp identity is invalid.");
                 }
@@ -343,23 +444,46 @@
                     normalized.selection.some(function (item) { return !item.layerId; })) {
                     protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "Binding context requires native layer identities.");
                 }
-                var captured = contextApi.captureContext(normalized, {
+                var fingerprinted = contextApi.fingerprintContext(normalized, {
                     selectionOrderMeaningful: request.scope.selectionOrderMeaningful,
                     bindsToDisplayName: false,
                     requireStableContext: true
                 });
-                return protocol.deepFreeze({
+                observeValidatedHostAuthority(authority.hostInstanceId, authority.hostReloadEpoch);
+                var bindingSnapshot = protocol.cloneJson(fingerprinted.input, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes });
+                var bindingCapture = protocol.deepFreeze({
                     contextId: request.requestId,
                     requestId: request.requestId,
                     sessionId: sessionId,
                     tier: 1,
                     executable: true,
-                    fingerprint: captured.fingerprint,
+                    fingerprint: fingerprinted.fingerprint,
                     hostAdapterRevision: HOST_ADAPTER_REVISION,
-                    snapshot: captured.snapshot
+                    snapshot: bindingSnapshot
+                });
+                return registerCapture(bindingCapture, {
+                    hostInstanceId: authority.hostInstanceId,
+                    hostReloadEpoch: authority.hostReloadEpoch,
+                    purpose: "binding",
+                    projectGeneration: projectGeneration,
+                    itemId: itemId,
+                    selectionOrderMeaningful: request.scope.selectionOrderMeaningful,
+                    nativeBindings: normalized.selection.map(function (item, index) {
+                        return {
+                            layerId: item.layerId,
+                            nativeLayerId: raw.selection.items[index].nativeLayerId,
+                            layerIndex: item.layerIndex,
+                            selectedOrder: item.selectedOrder,
+                            matchName: item.matchName,
+                            type: item.type
+                        };
+                    })
                 });
             }
-            return protocol.deepFreeze({
+            protocol.assertJsonBudget(normalized, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes });
+            observeValidatedHostAuthority(authority.hostInstanceId, authority.hostReloadEpoch);
+            var displaySnapshot = protocol.cloneJson(normalized, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes });
+            var displayCapture = protocol.deepFreeze({
                 contextId: request.requestId,
                 requestId: request.requestId,
                 sessionId: sessionId,
@@ -367,7 +491,150 @@
                 executable: false,
                 fingerprint: null,
                 hostAdapterRevision: HOST_ADAPTER_REVISION,
-                snapshot: protocol.cloneJson(normalized, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes })
+                snapshot: displaySnapshot
+            });
+            return registerCapture(displayCapture, {
+                hostInstanceId: authority.hostInstanceId,
+                hostReloadEpoch: authority.hostReloadEpoch,
+                purpose: "display",
+                projectGeneration: projectGeneration,
+                itemId: itemId,
+                selectionOrderMeaningful: request.scope.selectionOrderMeaningful
+            });
+        }
+
+        function detailRequested(request, detail) {
+            return request.scope.details.indexOf(detail) !== -1;
+        }
+
+        function normalizeDisplayString(item, output, field, maximumBytes, omitted) {
+            var truncatedKey = field + "Truncated";
+            var originalBytesKey = field + "OriginalBytes";
+            var isOmitted = omitted.indexOf(field) !== -1;
+            var hasAny = item[field] !== undefined || item[truncatedKey] !== undefined || item[originalBytesKey] !== undefined;
+            if (isOmitted) {
+                if (hasAny) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Omitted Host display data is inconsistent."); }
+                return;
+            }
+            if (typeof item[field] !== "string" || typeof item[truncatedKey] !== "boolean") {
+                protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host display data is invalid.");
+            }
+            var actualBytes = protocol.utf8ByteLength(item[field]);
+            if (actualBytes > maximumBytes) { protocol.fail(protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED, "Host display data exceeds its limit."); }
+            var originalBytes = assertRawNumber(item[originalBytesKey], "selection." + originalBytesKey, true, 0, protocol.HARD_LIMITS.maxNumberAbs);
+            if ((item[truncatedKey] && originalBytes <= actualBytes) || (!item[truncatedKey] && originalBytes !== actualBytes)) {
+                protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host display truncation metadata is invalid.");
+            }
+            output[field] = item[field];
+            output[truncatedKey] = item[truncatedKey];
+            output[originalBytesKey] = originalBytes;
+        }
+
+        function normalizeTierTwo(result, request) {
+            var raw = result.snapshot;
+            if (!protocol.isPlainObject(raw)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 2 context is invalid."); }
+            protocol.assertNoUnknownKeys(raw, ["hostInstanceId", "hostReloadEpoch", "tier", "projectGeneration", "activeComp", "selection"], "hostContext.snapshot");
+            if (raw.tier !== 2) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 2 context is invalid."); }
+            var authority = normalizeHostAuthority(raw);
+            var projectGeneration = assertRawNumber(raw.projectGeneration, "projectGeneration", true, 1, protocol.HARD_LIMITS.maxNumberAbs);
+            var normalized = { sessionId: sessionId, hostInstanceId: authority.hostInstanceId, hostReloadEpoch: authority.hostReloadEpoch, tier: 2 };
+            var compId = null;
+            var itemId = null;
+            if (raw.activeComp !== null) {
+                if (!protocol.isPlainObject(raw.activeComp)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host active comp is invalid."); }
+                protocol.assertNoUnknownKeys(raw.activeComp, ["itemId", "projectGeneration", "type", "width", "height", "duration", "frameRate"], "hostContext.activeComp");
+                itemId = assertRawNumber(raw.activeComp.itemId, "activeComp.itemId", true, 1, protocol.HARD_LIMITS.maxNumberAbs);
+                if (raw.activeComp.projectGeneration !== projectGeneration || raw.activeComp.type !== "CompItem") {
+                    protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host active comp identity is invalid.");
+                }
+                compId = "ae-project-" + projectGeneration + "-item-" + itemId;
+                normalized.activeComp = {
+                    compId: compId,
+                    type: "CompItem",
+                    width: assertRawNumber(raw.activeComp.width, "activeComp.width", true, 1, 30000),
+                    height: assertRawNumber(raw.activeComp.height, "activeComp.height", true, 1, 30000),
+                    duration: assertRawNumber(raw.activeComp.duration, "activeComp.duration", false, 0, protocol.HARD_LIMITS.maxNumberAbs),
+                    frameRate: assertRawNumber(raw.activeComp.frameRate, "activeComp.frameRate", false, 0.000001, protocol.HARD_LIMITS.maxNumberAbs)
+                };
+            }
+            if (!protocol.isPlainObject(raw.selection)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host selection is invalid."); }
+            protocol.assertNoUnknownKeys(raw.selection, ["count", "identityQuality", "items"], "hostContext.selection");
+            var count = assertRawNumber(raw.selection.count, "selection.count", true, 0, 8);
+            if ((raw.selection.identityQuality !== "native-layer-id" && raw.selection.identityQuality !== "index-only") ||
+                !Array.isArray(raw.selection.items) || raw.selection.items.length !== count || raw.selection.items.length > 8) {
+                protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host selection is invalid.");
+            }
+            var seenLayerIds = new Set();
+            normalized.selection = raw.selection.items.map(function (item, index) {
+                if (!protocol.isPlainObject(item)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host selection item is invalid."); }
+                var allowed = ["nativeLayerId", "layerIndex", "selectedOrder", "matchName", "type", "omittedFields"];
+                if (detailRequested(request, "name")) { allowed = allowed.concat(["name", "nameTruncated", "nameOriginalBytes"]); }
+                if (detailRequested(request, "textPreview")) { allowed = allowed.concat(["textPreview", "textPreviewTruncated", "textPreviewOriginalBytes"]); }
+                if (detailRequested(request, "bounds")) { allowed.push("bounds"); }
+                protocol.assertNoUnknownKeys(item, allowed, "hostContext.selection.items[" + index + "]");
+                if (!Array.isArray(item.omittedFields) || item.omittedFields.length > 3) {
+                    protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host omitted fields are invalid.");
+                }
+                var omittedSeen = new Set();
+                var omitted = item.omittedFields.map(function (field) {
+                    if ((field !== "name" && field !== "textPreview" && field !== "bounds") ||
+                        !detailRequested(request, field) || omittedSeen.has(field)) {
+                        protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host omitted fields are invalid.");
+                    }
+                    omittedSeen.add(field);
+                    return field;
+                });
+                var output = {
+                    layerIndex: assertRawNumber(item.layerIndex, "selection.layerIndex", true, 1, protocol.HARD_LIMITS.maxNumberAbs),
+                    selectedOrder: assertRawNumber(item.selectedOrder, "selection.selectedOrder", true, 0, 7),
+                    matchName: protocol.assertString(item.matchName, "selection.matchName", 256),
+                    type: protocol.assertNonEmptyString(item.type, "selection.type", 256),
+                    omittedFields: omitted
+                };
+                if (item.nativeLayerId !== undefined) {
+                    var nativeLayerId = assertRawNumber(item.nativeLayerId, "selection.nativeLayerId", true, 1, protocol.HARD_LIMITS.maxNumberAbs);
+                    var layerId = compId ? compId + "-layer-" + nativeLayerId : null;
+                    if (!layerId || seenLayerIds.has(layerId)) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "Host selection layer identity is invalid."); }
+                    seenLayerIds.add(layerId);
+                    output.layerId = layerId;
+                }
+                if (detailRequested(request, "name")) { normalizeDisplayString(item, output, "name", 256, omitted); }
+                if (detailRequested(request, "textPreview")) { normalizeDisplayString(item, output, "textPreview", 512, omitted); }
+                if (detailRequested(request, "bounds") && omitted.indexOf("bounds") === -1) {
+                    if (!protocol.isPlainObject(item.bounds)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host bounds are invalid."); }
+                    protocol.assertNoUnknownKeys(item.bounds, ["left", "top", "width", "height"], "hostContext.bounds");
+                    output.bounds = {
+                        left: assertRawNumber(item.bounds.left, "bounds.left", false, -protocol.HARD_LIMITS.maxNumberAbs, protocol.HARD_LIMITS.maxNumberAbs),
+                        top: assertRawNumber(item.bounds.top, "bounds.top", false, -protocol.HARD_LIMITS.maxNumberAbs, protocol.HARD_LIMITS.maxNumberAbs),
+                        width: assertRawNumber(item.bounds.width, "bounds.width", false, 0, protocol.HARD_LIMITS.maxNumberAbs),
+                        height: assertRawNumber(item.bounds.height, "bounds.height", false, 0, protocol.HARD_LIMITS.maxNumberAbs)
+                    };
+                }
+                return output;
+            });
+            if (raw.selection.identityQuality === "native-layer-id" && normalized.selection.some(function (item) { return !item.layerId; })) {
+                protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host selection identity quality is invalid.");
+            }
+            protocol.assertJsonBudget(normalized, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes });
+            observeValidatedHostAuthority(authority.hostInstanceId, authority.hostReloadEpoch);
+            var displaySnapshot = protocol.cloneJson(normalized, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes });
+            var capture = protocol.deepFreeze({
+                contextId: request.requestId,
+                requestId: request.requestId,
+                sessionId: sessionId,
+                tier: 2,
+                executable: false,
+                fingerprint: null,
+                hostAdapterRevision: HOST_ADAPTER_REVISION,
+                snapshot: displaySnapshot
+            });
+            return registerCapture(capture, {
+                hostInstanceId: authority.hostInstanceId,
+                hostReloadEpoch: authority.hostReloadEpoch,
+                purpose: "display",
+                projectGeneration: projectGeneration,
+                itemId: itemId,
+                selectionOrderMeaningful: request.scope.selectionOrderMeaningful
             });
         }
 
@@ -399,18 +666,20 @@
                 tier: tier,
                 scope: { purpose: purpose, selectionOrderMeaningful: selectionOrderMeaningful }
             };
+            return startRequest(request, tier === 0 ? normalizeTierZero : normalizeTierOne);
+        }
+
+        function startRequest(request, normalizer) {
             var requestJson;
             try {
                 protocol.assertJsonBudget(request, { maxBytes: 32 * 1024 });
                 requestJson = JSON.stringify(request);
-            } catch (error) {
-                return Promise.reject(error);
-            }
-            generation++;
-            var capturedGeneration = generation;
+            } catch (error) { return Promise.reject(error); }
+            requestGeneration++;
+            var capturedGeneration = requestGeneration;
             return new Promise(function (resolve, reject) {
                 var record = {
-                    requestId: requestId,
+                    requestId: request.requestId,
                     sessionId: sessionId,
                     generation: capturedGeneration,
                     request: request,
@@ -435,16 +704,61 @@
                         if (!recordMatches(record, capturedGeneration)) { return; }
                         try {
                             var result = normalizeRawResult(raw, request);
-                            var captureResult = tier === 0 ? normalizeTierZero(result, request) : normalizeTierOne(result, request);
+                            var captureResult = normalizer(result, request);
                             settle(record, capturedGeneration, null, captureResult);
                         } catch (error) {
-                            settle(record, capturedGeneration, error instanceof protocol.VelaProtocolError ? error : protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED), null);
+                            settle(record, capturedGeneration, error instanceof protocol.VelaProtocolError || isBridgeLocalError(error) ? error : protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED), null);
                         }
                     });
                 } catch (error) {
                     settle(record, capturedGeneration, protocolError(protocol, protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE), null);
                 }
             });
+        }
+
+        function captureLayerDetails(detailOptions) {
+            detailOptions = detailOptions || {};
+            try { protocol.assertSafeJson(detailOptions); }
+            catch (error) { return Promise.reject(error); }
+            if (!protocol.isPlainObject(detailOptions)) {
+                return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED));
+            }
+            try { protocol.assertNoUnknownKeys(detailOptions, ["details", "selectionOrderMeaningful"], "contextBridge.captureLayerDetails"); }
+            catch (error) { return Promise.reject(error); }
+            if (state === "suspended") { return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED)); }
+            if (state === "pending") { return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.EXECUTION_BUSY)); }
+            var details = protocol.getOwnDataProperty(detailOptions, "details");
+            var selectionOrderMeaningful = detailOptions.selectionOrderMeaningful === undefined ? true : detailOptions.selectionOrderMeaningful;
+            if (!Array.isArray(details) || details.length < 1 || details.length > 3 || typeof selectionOrderMeaningful !== "boolean") {
+                return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED));
+            }
+            var seen = new Set();
+            var normalizedDetails = [];
+            var i;
+            for (i = 0; i < details.length; i++) {
+                if ((details[i] !== "name" && details[i] !== "textPreview" && details[i] !== "bounds") || seen.has(details[i])) {
+                    return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED));
+                }
+                seen.add(details[i]);
+                normalizedDetails.push(details[i]);
+            }
+            var requestId;
+            try { requestId = nextRequestId(); }
+            catch (error) { return Promise.reject(error); }
+            var request = {
+                protocol: REQUEST_PROTOCOL,
+                schemaVersion: SCHEMA_VERSION,
+                requestId: requestId,
+                sessionId: sessionId,
+                operation: "captureLayerDetails",
+                tier: 2,
+                scope: {
+                    purpose: "display",
+                    selectionOrderMeaningful: selectionOrderMeaningful,
+                    details: normalizedDetails
+                }
+            };
+            return startRequest(request, normalizeTierTwo);
         }
 
         function cancel(requestId) {
@@ -454,8 +768,12 @@
 
         function suspend() {
             if (state === "suspended") { return false; }
+            if (bridgeLifecycleEpoch >= protocol.HARD_LIMITS.maxNumberAbs) {
+                throw protocolError(protocol, protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
+            }
             if (active) { settle(active, active.generation, protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED), null); }
-            generation++;
+            requestGeneration++;
+            bridgeLifecycleEpoch++;
             state = "suspended";
             return true;
         }
@@ -467,48 +785,91 @@
         }
 
         function resetSession() {
+            if (bridgeLifecycleEpoch >= protocol.HARD_LIMITS.maxNumberAbs) {
+                throw protocolError(protocol, protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
+            }
             var nextSessionId = issueUniqueSessionId(sessionId);
             if (active) { settle(active, active.generation, protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED), null); }
-            generation++;
+            requestGeneration++;
             sessionId = nextSessionId;
+            bridgeLifecycleEpoch++;
             state = "idle";
             return sessionId;
         }
 
         function compareCaptures(left, right, compareOptions) {
             compareOptions = compareOptions || {};
-            protocol.assertSafeJson(left);
-            protocol.assertSafeJson(right);
-            if (!protocol.isPlainObject(left) || !protocol.isPlainObject(right) || !protocol.isPlainObject(compareOptions)) {
-                protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Context captures are invalid.");
-            }
+            if (!protocol.isPlainObject(compareOptions)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Context comparison options are invalid."); }
             protocol.assertNoUnknownKeys(compareOptions, ["selectionOrderMeaningful"], "contextBridge.compare");
             var orderMeaningful = compareOptions.selectionOrderMeaningful === undefined ? true : compareOptions.selectionOrderMeaningful;
             if (typeof orderMeaningful !== "boolean") { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Context comparison option is invalid."); }
-            function comparable(capture) {
-                var snapshot = capture.snapshot || {};
-                var selection = Array.isArray(snapshot.selection) ? snapshot.selection.map(function (item) {
+            var leftRecord = captureRecords.get(left);
+            var rightRecord = captureRecords.get(right);
+            if (!leftRecord || !rightRecord || leftRecord.bridgeToken !== bridgeToken || rightRecord.bridgeToken !== bridgeToken ||
+                leftRecord.protocol !== protocol || rightRecord.protocol !== protocol) {
+                return protocol.deepFreeze({ fresh: false, reason: CAPTURE_REASON_UNTRUSTED });
+            }
+            if (!Object.isFrozen(left) || !Object.isFrozen(right) ||
+                protocol.canonicalStringify(left) !== leftRecord.publicCanonical ||
+                protocol.canonicalStringify(right) !== rightRecord.publicCanonical) {
+                return protocol.deepFreeze({ fresh: false, reason: CAPTURE_REASON_UNTRUSTED });
+            }
+            if (leftRecord.purpose !== "binding" || rightRecord.purpose !== "binding" ||
+                leftRecord.executable !== true || rightRecord.executable !== true) {
+                return protocol.deepFreeze({ fresh: false, reason: CAPTURE_REASON_NOT_EXECUTABLE });
+            }
+            if (leftRecord.sessionId !== sessionId || rightRecord.sessionId !== sessionId ||
+                leftRecord.bridgeLifecycleEpoch !== bridgeLifecycleEpoch || rightRecord.bridgeLifecycleEpoch !== bridgeLifecycleEpoch ||
+                leftRecord.sessionId !== rightRecord.sessionId ||
+                leftRecord.bridgeLifecycleEpoch !== rightRecord.bridgeLifecycleEpoch) {
+                return protocol.deepFreeze({ fresh: false, reason: CAPTURE_REASON_AUTHORITY_MISMATCH });
+            }
+            if (!currentHostAuthority ||
+                leftRecord.hostInstanceId !== currentHostAuthority.hostInstanceId ||
+                leftRecord.hostReloadEpoch !== currentHostAuthority.hostReloadEpoch ||
+                rightRecord.hostInstanceId !== currentHostAuthority.hostInstanceId ||
+                rightRecord.hostReloadEpoch !== currentHostAuthority.hostReloadEpoch) {
+                return protocol.deepFreeze({ fresh: false, reason: CAPTURE_REASON_AUTHORITY_MISMATCH });
+            }
+            if (
+                leftRecord.hostInstanceId !== rightRecord.hostInstanceId ||
+                leftRecord.hostReloadEpoch !== rightRecord.hostReloadEpoch || leftRecord.tier !== rightRecord.tier) {
+                return protocol.deepFreeze({ fresh: false, reason: CAPTURE_REASON_AUTHORITY_MISMATCH });
+            }
+            if (leftRecord.selectionOrderMeaningful !== rightRecord.selectionOrderMeaningful) {
+                return protocol.deepFreeze({ fresh: false, reason: CAPTURE_REASON_STALE });
+            }
+            function comparable(record, capture) {
+                var bindings = record.nativeBindings.map(function (item) {
                     return {
-                        identity: item.layerId || ("index:" + item.layerIndex),
+                        layerId: item.layerId,
+                        nativeLayerId: item.nativeLayerId,
                         layerIndex: item.layerIndex,
                         selectedOrder: orderMeaningful ? item.selectedOrder : null,
                         matchName: item.matchName,
                         type: item.type
                     };
-                }) : [];
+                });
                 if (!orderMeaningful) {
-                    selection.sort(function (a, b) { return String(a.identity).localeCompare(String(b.identity)); });
+                    bindings.sort(function (a, b) { return String(a.layerId).localeCompare(String(b.layerId)); });
                 }
                 return {
-                    sessionId: capture.sessionId,
-                    tier: capture.tier,
-                    compId: snapshot.activeComp ? snapshot.activeComp.compId : null,
-                    selection: selection,
-                    fingerprint: capture.fingerprint
+                    sessionId: record.sessionId,
+                    bridgeLifecycleEpoch: record.bridgeLifecycleEpoch,
+                    hostInstanceId: record.hostInstanceId,
+                    hostReloadEpoch: record.hostReloadEpoch,
+                    tier: record.tier,
+                    projectGeneration: record.projectGeneration,
+                    itemId: record.itemId,
+                    compId: capture.snapshot && capture.snapshot.activeComp ? capture.snapshot.activeComp.compId : null,
+                    selectionOrderMeaningful: orderMeaningful,
+                    capturedSelectionOrderMeaningful: record.selectionOrderMeaningful,
+                    selection: bindings,
+                    fingerprint: record.fingerprint
                 };
             }
-            var fresh = protocol.canonicalStringify(comparable(left)) === protocol.canonicalStringify(comparable(right));
-            return protocol.deepFreeze({ fresh: fresh, reason: fresh ? null : protocol.ERROR_CODES.CONTEXT_STALE });
+            var fresh = protocol.canonicalStringify(comparable(leftRecord, left)) === protocol.canonicalStringify(comparable(rightRecord, right));
+            return protocol.deepFreeze({ fresh: fresh, reason: fresh ? null : CAPTURE_REASON_STALE });
         }
 
         function getState() {
@@ -516,12 +877,14 @@
                 state: state,
                 sessionId: sessionId,
                 requestId: active ? active.requestId : null,
-                generation: generation
+                generation: requestGeneration,
+                bridgeLifecycleEpoch: bridgeLifecycleEpoch
             });
         }
 
         return Object.freeze({
             capture: capture,
+            captureLayerDetails: captureLayerDetails,
             cancel: cancel,
             suspend: suspend,
             resume: resume,
