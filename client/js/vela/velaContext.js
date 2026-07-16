@@ -38,6 +38,8 @@
 }(typeof self !== "undefined" ? self : this, function (protocolModule) {
     "use strict";
 
+    var trustedContextApis = new WeakMap();
+
     var OMIT_KEYS = Object.freeze([
         "capturedAt", "timestamp", "locale", "displayLanguage", "homeOrder", "provider", "model",
         "credentials", "rawCredentials", "unrelatedProjectData"
@@ -59,16 +61,18 @@
 
         function stableIdentity(value) {
             if (!value || typeof value !== "object") { return String(value); }
-            return String(value.sessionId || value.layerId || value.targetId || value.layerIndex || value.compId || "");
+            return String(value.layerId || value.targetId || value.compId || "");
         }
 
-        function requireStableIdentity(value, label) {
-            if (!value || typeof value !== "object" || !(value.sessionId || value.layerId || value.targetId || value.compId)) {
+        function requireOwnIdentity(value, key, label) {
+            if (!value || typeof value !== "object" || !Object.prototype.hasOwnProperty.call(value, key) ||
+                typeof protocol.getOwnDataProperty(value, key) !== "string" || !protocol.getOwnDataProperty(value, key).length) {
                 protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "A context item has no stable session-local identity.", {
                     stage: "context-fingerprint",
                     details: { field: label }
                 });
             }
+            return protocol.assertNonEmptyString(protocol.getOwnDataProperty(value, key), label + "." + key);
         }
 
         function normalizeValue(value, options, key, depth) {
@@ -112,11 +116,12 @@
         function normalizeActiveComp(activeComp, options) {
             if (activeComp === undefined || activeComp === null) { return undefined; }
             if (!protocol.isPlainObject(activeComp)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "activeComp must be an object."); }
-            requireStableIdentity(activeComp, "activeComp");
-            var allowed = ["sessionId", "compId", "itemType", "type", "width", "height", "duration", "frameRate", "pixelAspect"];
-            if (options.bindsToDisplayName && activeComp.name !== undefined) { allowed.push("name"); }
+            var allowed = ["compId", "itemType", "type", "width", "height", "duration", "frameRate", "pixelAspect", "name"];
+            protocol.assertNoUnknownKeys(activeComp, allowed, "context.activeComp");
+            requireOwnIdentity(activeComp, "compId", "activeComp");
             var output = Object.create(null);
             allowed.forEach(function (key) {
+                if (key === "name" && !options.bindsToDisplayName) { return; }
                 if (Object.prototype.hasOwnProperty.call(activeComp, key)) {
                     output[key] = normalizeValue(protocol.getOwnDataProperty(activeComp, key), options, key, 0);
                 }
@@ -129,13 +134,20 @@
             if (!Array.isArray(selection) || selection.length > protocol.HARD_LIMITS.maxArrayLength) {
                 protocol.fail(protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED, "Selection exceeds the context limit.");
             }
-            var allowed = ["sessionId", "layerId", "layerIndex", "matchName", "type", "selectedOrder"];
-            if (options.bindsToDisplayName) { allowed.push("name"); }
+            var allowed = ["layerId", "layerIndex", "matchName", "type", "selectedOrder", "name"];
+            var seenLayerIds = Object.create(null);
             return selection.map(function (layer, index) {
                 if (!protocol.isPlainObject(layer)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Selection item is invalid.", { details: { index: index } }); }
-                requireStableIdentity(layer, "selection[" + index + "]");
+                protocol.assertNoUnknownKeys(layer, allowed, "context.selection[" + index + "]");
+                var layerId = requireOwnIdentity(layer, "layerId", "selection[" + index + "]");
+                if (seenLayerIds[layerId]) {
+                    protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "Selection contains a duplicate stable layer identity.", { details: { index: index } });
+                }
+                seenLayerIds[layerId] = true;
                 var output = Object.create(null);
                 allowed.forEach(function (key) {
+                    if (key === "name" && !options.bindsToDisplayName) { return; }
+                    if (key === "selectedOrder" && options.selectionOrderMeaningful === false) { return; }
                     if (Object.prototype.hasOwnProperty.call(layer, key)) {
                         output[key] = normalizeValue(protocol.getOwnDataProperty(layer, key), options, key, 0);
                     }
@@ -149,17 +161,39 @@
         function normalizeTarget(target, options) {
             if (target === undefined || target === null) { return undefined; }
             if (!protocol.isPlainObject(target)) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "context.target must be an object."); }
-            var allowed = ["targetId", "compId", "layerId", "layerIndex", "layerIndices", "layerIds", "propertyPath", "propertyMatchName", "propertyValueDigest", "expressionDigest"];
-            if (options.bindsToDisplayName) { allowed.push("name"); }
+            var allowed = ["targetId", "compId", "layerId", "layerIndex", "layerIndices", "layerIds", "propertyPath", "propertyMatchName", "propertyValueDigest", "expressionDigest", "name"];
+            protocol.assertNoUnknownKeys(target, allowed, "context.target");
             var output = Object.create(null);
             allowed.forEach(function (key) {
+                if (key === "name" && !options.bindsToDisplayName) { return; }
                 if (Object.prototype.hasOwnProperty.call(target, key)) {
                     output[key] = normalizeValue(protocol.getOwnDataProperty(target, key), options, key, 0);
                 }
             });
-            requireStableIdentity(output, "context.target");
-            if (!output.propertyPath && !output.propertyMatchName && !output.targetId && !output.layerId && !output.layerIndex && !output.compId) {
-                protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "context.target has no explicit reference.");
+            requireOwnIdentity(output, "compId", "context.target");
+            var hasLayerReference = output.layerId !== undefined || output.layerIndex !== undefined ||
+                output.layerIndices !== undefined || output.layerIds !== undefined || output.propertyPath !== undefined ||
+                output.propertyMatchName !== undefined;
+            if (hasLayerReference) {
+                requireOwnIdentity(output, "layerId", "context.target");
+            }
+            var hasPropertyReference = output.propertyPath !== undefined || output.propertyMatchName !== undefined ||
+                output.propertyValueDigest !== undefined || output.expressionDigest !== undefined;
+            if (hasPropertyReference) {
+                if (!Array.isArray(output.propertyPath) || output.propertyPath.length === 0 || output.propertyPath.length > 24 || output.propertyPath.length % 2 !== 0) {
+                    protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "context.target propertyPath is invalid.");
+                }
+                output.propertyPath.forEach(function (part, index) {
+                    if (index % 2 === 0) {
+                        protocol.assertNonEmptyString(part, "context.target.propertyPath[" + index + "]");
+                    } else if (!Number.isInteger(part) || part < 1 || part > protocol.HARD_LIMITS.maxNumberAbs) {
+                        protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "context.target property index is invalid.", { details: { index: index } });
+                    }
+                });
+                protocol.assertNonEmptyString(output.propertyMatchName, "context.target.propertyMatchName");
+                if (output.propertyPath[output.propertyPath.length - 2] !== output.propertyMatchName) {
+                    protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "context.target property match name does not match its path.");
+                }
             }
             return output;
         }
@@ -171,6 +205,9 @@
             options = Object.assign({ selectionOrderMeaningful: true, bindsToDisplayName: false, requireStableContext: false }, options);
             protocol.assertSafeJson(snapshot);
             if (!protocol.isPlainObject(snapshot)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Context snapshot must be an object."); }
+            protocol.assertNoUnknownKeys(snapshot, [
+                "tier", "sessionId", "activeComp", "selection", "target", "relevantToolState", "actionScope", "requiredFields"
+            ].concat(OMIT_KEYS), "context.snapshot");
             var tier = snapshot.tier === undefined ? 1 : snapshot.tier;
             if (!Number.isInteger(tier) || tier < 0 || tier > 3) { protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Context tier is invalid."); }
             if (options.requireStableContext && !snapshot.sessionId) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "Executable context requires a session identity."); }
@@ -198,7 +235,10 @@
 
         function captureContext(snapshot, options) {
             var result = fingerprintContext(snapshot, options);
-            return { snapshot: protocol.cloneJson(result.input, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes }), fingerprint: result.fingerprint };
+            return protocol.deepFreeze({
+                snapshot: protocol.cloneJson(result.input, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes }),
+                fingerprint: result.fingerprint
+            });
         }
 
         function fingerprintSettings(settings) {
@@ -213,7 +253,7 @@
             return protocol.sha256Canonical(normalized, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes });
         }
 
-        return {
+        var contextApi = {
             buildFingerprintInput: buildFingerprintInput,
             captureContext: captureContext,
             fingerprintContext: fingerprintContext,
@@ -223,7 +263,16 @@
             normalizeTarget: normalizeTarget,
             normalizeValue: normalizeValue
         };
+        trustedContextApis.set(contextApi, protocol);
+        return Object.freeze(contextApi);
     }
 
-    return { createContextApi: createContextApi };
+    function isTrustedContextApiForProtocol(contextApi, protocol) {
+        return Boolean(contextApi && protocolModule.isTrustedProtocol(protocol) && trustedContextApis.get(contextApi) === protocol);
+    }
+
+    return {
+        createContextApi: createContextApi,
+        isTrustedContextApiForProtocol: isTrustedContextApiForProtocol
+    };
 }));
