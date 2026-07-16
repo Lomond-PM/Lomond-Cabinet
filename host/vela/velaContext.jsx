@@ -4,9 +4,11 @@ var AEToolbox = AEToolbox || {};
     var REQUEST_PROTOCOL = "vela.host-context-request.v1";
     var RESULT_PROTOCOL = "vela.host-context-result.v1";
     var SCHEMA_VERSION = "1.0";
-    var HOST_ADAPTER_REVISION = "vela-context-host-v2";
+    var HOST_ADAPTER_REVISION = "vela-context-host-v3";
     var MAX_SELECTED_LAYERS = 32;
     var MAX_TIER_TWO_LAYERS = 8;
+    var MAX_PROPERTY_TARGETS = 4;
+    var MAX_PROPERTY_PATH_LEVELS = 12;
     var MAX_NUMBER_ABS = 1000000;
     var HOST_INSTANCE_ID_PATTERN = /^host_[a-f0-9]{48}$/;
     var json = null;
@@ -100,7 +102,8 @@ var AEToolbox = AEToolbox || {};
             HOST_CONTEXT_UNAVAILABLE: "The requested Host context is unavailable.",
             HOST_CONTEXT_TARGET_NOT_FOUND: "The requested Host context target was not found.",
             HOST_CONTEXT_SESSION_RESET_REQUIRED: "The Host context session must be reset.",
-            HOST_CONTEXT_READ_FAILED: "The Host context could not be read."
+            HOST_CONTEXT_READ_FAILED: "The Host context could not be read.",
+            HOST_CONTEXT_AUTHORITY_MISMATCH: "The Host context authority changed."
         };
         throw hostError(code, messages[code] || messages.HOST_CONTEXT_READ_FAILED);
     }
@@ -191,6 +194,56 @@ var AEToolbox = AEToolbox || {};
         return false;
     }
 
+    function assertHostAuthority(instanceId, reloadEpoch) {
+        if (typeof instanceId !== "string" || !HOST_INSTANCE_ID_PATTERN.test(instanceId) || json.utf8ByteLength(instanceId) !== 53) {
+            fail("HOST_CONTEXT_REQUEST_INVALID");
+        }
+        assertFiniteNumber(reloadEpoch, true, 1, MAX_NUMBER_ABS);
+    }
+
+    function assertPropertyPath(propertyPath) {
+        var i;
+        var mode;
+        var matchName;
+        var propertyIndex;
+        if (!(propertyPath instanceof Array) || propertyPath.length < 3 || propertyPath.length > MAX_PROPERTY_PATH_LEVELS * 3 || propertyPath.length % 3 !== 0) {
+            fail("HOST_CONTEXT_REQUEST_INVALID");
+        }
+        for (i = 0; i < propertyPath.length; i += 3) {
+            mode = propertyPath[i];
+            matchName = propertyPath[i + 1];
+            propertyIndex = propertyPath[i + 2];
+            if ((mode !== "named" && mode !== "indexed") || typeof matchName !== "string" || !matchName.length || json.utf8ByteLength(matchName) > 56) {
+                fail("HOST_CONTEXT_REQUEST_INVALID");
+            }
+            if (mode === "named") {
+                if (propertyIndex !== 0) { fail("HOST_CONTEXT_REQUEST_INVALID"); }
+            } else {
+                if (typeof propertyIndex !== "number" || !isFinite(propertyIndex) || (propertyIndex === 0 && 1 / propertyIndex === -Infinity) ||
+                        Math.floor(propertyIndex) !== propertyIndex || propertyIndex < 1 || propertyIndex > MAX_NUMBER_ABS) {
+                    fail("HOST_CONTEXT_REQUEST_INVALID");
+                }
+            }
+        }
+    }
+
+    function assertPropertyTargets(targets) {
+        var i;
+        var target;
+        if (!(targets instanceof Array) || targets.length < 1 || targets.length > MAX_PROPERTY_TARGETS) {
+            fail("HOST_CONTEXT_REQUEST_INVALID");
+        }
+        for (i = 0; i < targets.length; i++) {
+            target = targets[i];
+            assertKeys(target, ["targetOrdinal", "itemId", "nativeLayerId", "layerIndex", "propertyPath"]);
+            if (target.targetOrdinal !== i) { fail("HOST_CONTEXT_REQUEST_INVALID"); }
+            assertFiniteNumber(target.itemId, true, 1, MAX_NUMBER_ABS);
+            assertFiniteNumber(target.nativeLayerId, true, 1, MAX_NUMBER_ABS);
+            assertFiniteNumber(target.layerIndex, true, 1, MAX_NUMBER_ABS);
+            assertPropertyPath(target.propertyPath);
+        }
+    }
+
     function validateRequest(value) {
         var operation;
         assertKeys(value, ["protocol", "schemaVersion", "requestId", "sessionId", "operation", "tier", "scope"]);
@@ -200,30 +253,38 @@ var AEToolbox = AEToolbox || {};
         assertLocalId(value.requestId, "req");
         assertLocalId(value.sessionId, "session");
         operation = value.operation;
-        if (operation !== "getCapabilities" && operation !== "captureContext" && operation !== "captureLayerDetails") {
+        if (operation !== "getCapabilities" && operation !== "captureContext" && operation !== "captureLayerDetails" && operation !== "resolvePropertyTargets") {
             fail("HOST_CONTEXT_OPERATION_UNSUPPORTED");
         }
         if ((operation === "getCapabilities" && value.tier !== 0) ||
                 (operation === "captureContext" && value.tier !== 1) ||
-                (operation === "captureLayerDetails" && value.tier !== 2)) {
+                (operation === "captureLayerDetails" && value.tier !== 2) ||
+                (operation === "resolvePropertyTargets" && value.tier !== 3)) {
             fail("HOST_CONTEXT_REQUEST_INVALID");
         }
-        assertKeys(value.scope, operation === "captureLayerDetails" ? ["purpose", "selectionOrderMeaningful", "details"] : ["purpose", "selectionOrderMeaningful"]);
+        assertKeys(value.scope, operation === "captureLayerDetails" ? ["purpose", "selectionOrderMeaningful", "details"] :
+            (operation === "resolvePropertyTargets" ? ["purpose", "expectedHostInstanceId", "expectedHostReloadEpoch", "expectedProjectGeneration", "targets"] : ["purpose", "selectionOrderMeaningful"]));
         if (value.scope.purpose !== "display" && value.scope.purpose !== "binding") {
             fail("HOST_CONTEXT_REQUEST_INVALID");
         }
-        if (typeof value.scope.selectionOrderMeaningful !== "boolean") {
+        if (operation !== "resolvePropertyTargets" && typeof value.scope.selectionOrderMeaningful !== "boolean") {
             fail("HOST_CONTEXT_REQUEST_INVALID");
         }
         if (operation === "captureLayerDetails") {
             if (value.scope.purpose !== "display") { fail("HOST_CONTEXT_REQUEST_INVALID"); }
             assertDetails(value.scope.details);
         }
+        if (operation === "resolvePropertyTargets") {
+            if (value.scope.purpose !== "binding") { fail("HOST_CONTEXT_REQUEST_INVALID"); }
+            assertHostAuthority(value.scope.expectedHostInstanceId, value.scope.expectedHostReloadEpoch);
+            assertFiniteNumber(value.scope.expectedProjectGeneration, true, 1, MAX_NUMBER_ABS);
+            assertPropertyTargets(value.scope.targets);
+        }
         return value;
     }
 
     function makeBase(request, ok) {
-        var safeOperation = request && (request.operation === "getCapabilities" || request.operation === "captureContext" || request.operation === "captureLayerDetails") ? request.operation : "unknown";
+        var safeOperation = request && (request.operation === "getCapabilities" || request.operation === "captureContext" || request.operation === "captureLayerDetails" || request.operation === "resolvePropertyTargets") ? request.operation : "unknown";
         return {
             protocol: RESULT_PROTOCOL,
             schemaVersion: SCHEMA_VERSION,
@@ -243,7 +304,8 @@ var AEToolbox = AEToolbox || {};
             HOST_CONTEXT_UNAVAILABLE: "The requested Host context is unavailable.",
             HOST_CONTEXT_TARGET_NOT_FOUND: "The requested Host context target was not found.",
             HOST_CONTEXT_SESSION_RESET_REQUIRED: "The Host context session must be reset.",
-            HOST_CONTEXT_READ_FAILED: "The Host context could not be read."
+            HOST_CONTEXT_READ_FAILED: "The Host context could not be read.",
+            HOST_CONTEXT_AUTHORITY_MISMATCH: "The Host context authority changed."
         };
         var result = makeBase(request, false);
         result.error = {
@@ -259,7 +321,7 @@ var AEToolbox = AEToolbox || {};
             hostReloadEpoch: hostReloadEpoch,
             tier: 0,
             capabilities: {
-                maxTier: 2,
+                maxTier: 3,
                 nativeLayerIdAvailable: sessionResetRequired ? false : nativeLayerIdObserved,
                 bindingContextAvailable: sessionResetRequired ? false : nativeLayerIdObserved,
                 hostAdapterRevision: HOST_ADAPTER_REVISION
@@ -683,6 +745,91 @@ var AEToolbox = AEToolbox || {};
         };
     }
 
+    function isPropertyType(value, name) {
+        return typeof PropertyType !== "undefined" && value === PropertyType[name];
+    }
+
+    function resolvePropertyPath(layer, propertyPath) {
+        var current = layer;
+        var child;
+        var i;
+        var mode;
+        var matchName;
+        var propertyIndex;
+        var root = true;
+        for (i = 0; i < propertyPath.length; i += 3) {
+            mode = propertyPath[i];
+            matchName = propertyPath[i + 1];
+            propertyIndex = propertyPath[i + 2];
+            try {
+                if (!current || typeof current.property !== "function") { fail("HOST_CONTEXT_TARGET_NOT_FOUND"); }
+                if (mode === "named") {
+                    if (!root && !isPropertyType(current.propertyType, "NAMED_GROUP")) { fail("HOST_CONTEXT_TARGET_NOT_FOUND"); }
+                    child = current.property(matchName);
+                } else {
+                    if (!isPropertyType(current.propertyType, "INDEXED_GROUP")) { fail("HOST_CONTEXT_TARGET_NOT_FOUND"); }
+                    child = current.property(propertyIndex);
+                }
+                if (!child || child.matchName !== matchName) { fail("HOST_CONTEXT_TARGET_NOT_FOUND"); }
+                if (mode === "indexed" && child.propertyIndex !== propertyIndex) { fail("HOST_CONTEXT_TARGET_NOT_FOUND"); }
+            } catch (error) {
+                if (error && error.code) { throw error; }
+                fail("HOST_CONTEXT_TARGET_NOT_FOUND");
+            }
+            current = child;
+            root = false;
+        }
+        if (!current || !isPropertyType(current.propertyType, "PROPERTY")) { fail("HOST_CONTEXT_TARGET_NOT_FOUND"); }
+        return current;
+    }
+
+    function readTierThree(request) {
+        var project;
+        var activeItem;
+        var target;
+        var layer;
+        var terminal;
+        var terminalPropertyIndex;
+        var targets = [];
+        var i;
+        if (sessionResetRequired) { fail("HOST_CONTEXT_SESSION_RESET_REQUIRED"); }
+        try { project = app && app.project ? app.project : null; }
+        catch (ignoredProject) { fail("HOST_CONTEXT_READ_FAILED"); }
+        observeProject(project);
+        if (request.scope.expectedHostInstanceId !== hostInstanceId || request.scope.expectedHostReloadEpoch !== hostReloadEpoch || request.scope.expectedProjectGeneration !== projectGeneration) {
+            fail("HOST_CONTEXT_AUTHORITY_MISMATCH");
+        }
+        try { activeItem = project && project.activeItem; }
+        catch (ignoredActive) { fail("HOST_CONTEXT_READ_FAILED"); }
+        if (!activeItem || typeof CompItem === "undefined" || !(activeItem instanceof CompItem)) { fail("HOST_CONTEXT_UNAVAILABLE"); }
+        for (i = 0; i < request.scope.targets.length; i++) {
+            target = request.scope.targets[i];
+            if (activeItem.id !== target.itemId) { fail("HOST_CONTEXT_AUTHORITY_MISMATCH"); }
+            try { layer = activeItem.layer(target.layerIndex); }
+            catch (ignoredLayer) { fail("HOST_CONTEXT_TARGET_NOT_FOUND"); }
+            if (!layer || readNativeLayerId(layer) !== target.nativeLayerId || layer.index !== target.layerIndex) { fail("HOST_CONTEXT_TARGET_NOT_FOUND"); }
+            terminal = resolvePropertyPath(layer, target.propertyPath);
+            try { terminalPropertyIndex = assertFiniteNumber(terminal.propertyIndex, true, 1, MAX_NUMBER_ABS); }
+            catch (ignoredPropertyIndex) { fail("HOST_CONTEXT_TARGET_NOT_FOUND"); }
+            targets[targets.length] = {
+                targetOrdinal: target.targetOrdinal,
+                nativeLayerId: target.nativeLayerId,
+                layerIndex: target.layerIndex,
+                propertyPath: target.propertyPath.slice(0),
+                propertyMatchName: terminal.matchName,
+                propertyIndex: terminalPropertyIndex,
+                propertyType: "property"
+            };
+        }
+        return {
+            hostInstanceId: hostInstanceId,
+            hostReloadEpoch: hostReloadEpoch,
+            projectGeneration: projectGeneration,
+            tier: 3,
+            targets: targets
+        };
+    }
+
     function handle(requestJson) {
         var request = null;
         var result;
@@ -696,13 +843,18 @@ var AEToolbox = AEToolbox || {};
                 maxObjectProperties: 64
             });
             validateRequest(request);
+            if (request.operation === "resolvePropertyTargets" && json.utf8ByteLength(requestJson) > 8 * 1024) {
+                fail("HOST_CONTEXT_BUDGET_EXCEEDED");
+            }
             result = makeBase(request, true);
             if (request.operation === "getCapabilities" || request.tier === 0) {
                 result.snapshot = getCapabilitiesSnapshot();
             } else if (request.operation === "captureContext") {
                 result.snapshot = readTierOne(request);
-            } else {
+            } else if (request.operation === "captureLayerDetails") {
                 result.snapshot = readTierTwo(request);
+            } else {
+                result.snapshot = readTierThree(request);
             }
             return json.stringifyBounded(result, {
                 maxBytes: 16 * 1024,
@@ -722,7 +874,7 @@ var AEToolbox = AEToolbox || {};
                     maxObjectProperties: 64
                 });
             } catch (ignoredResult) {
-                return "{\"error\":{\"code\":\"HOST_CONTEXT_READ_FAILED\",\"message\":\"The Host context could not be read.\"},\"hostAdapterRevision\":\"vela-context-host-v2\",\"ok\":false,\"operation\":\"unknown\",\"protocol\":\"vela.host-context-result.v1\",\"requestId\":\"unknown\",\"schemaVersion\":\"1.0\",\"sessionId\":\"unknown\"}";
+                return "{\"error\":{\"code\":\"HOST_CONTEXT_READ_FAILED\",\"message\":\"The Host context could not be read.\"},\"hostAdapterRevision\":\"vela-context-host-v3\",\"ok\":false,\"operation\":\"unknown\",\"protocol\":\"vela.host-context-result.v1\",\"requestId\":\"unknown\",\"schemaVersion\":\"1.0\",\"sessionId\":\"unknown\"}";
             }
         }
     }

@@ -159,6 +159,28 @@
             });
         }
 
+        function normalizePropertyPath(propertyPath) {
+            if (!Array.isArray(propertyPath) || propertyPath.length === 0 || propertyPath.length > 36 || propertyPath.length % 3 !== 0) {
+                protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "context.target propertyPath is invalid.");
+            }
+            return propertyPath.map(function (part, index) {
+                var offset = index % 3;
+                if (offset === 0) {
+                    if (part !== "named" && part !== "indexed") {
+                        protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "context.target property access mode is invalid.");
+                    }
+                    return part;
+                }
+                if (offset === 1) {
+                    return protocol.assertNonEmptyString(part, "context.target.propertyPath[" + index + "]", 56);
+                }
+                if (!Number.isInteger(part) || (propertyPath[index - 2] === "named" ? part !== 0 : part < 1 || part > protocol.HARD_LIMITS.maxNumberAbs)) {
+                    protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "context.target property index is invalid.", { details: { index: index } });
+                }
+                return part;
+            });
+        }
+
         function normalizeTarget(target, options) {
             if (target === undefined || target === null) { return undefined; }
             if (!protocol.isPlainObject(target)) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "context.target must be an object."); }
@@ -181,17 +203,8 @@
             var hasPropertyReference = output.propertyPath !== undefined || output.propertyMatchName !== undefined ||
                 output.propertyValueDigest !== undefined || output.expressionDigest !== undefined;
             if (hasPropertyReference) {
-                if (!Array.isArray(output.propertyPath) || output.propertyPath.length === 0 || output.propertyPath.length > 24 || output.propertyPath.length % 2 !== 0) {
-                    protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "context.target propertyPath is invalid.");
-                }
-                output.propertyPath.forEach(function (part, index) {
-                    if (index % 2 === 0) {
-                        protocol.assertNonEmptyString(part, "context.target.propertyPath[" + index + "]");
-                    } else if (!Number.isInteger(part) || part < 1 || part > protocol.HARD_LIMITS.maxNumberAbs) {
-                        protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "context.target property index is invalid.", { details: { index: index } });
-                    }
-                });
-                protocol.assertNonEmptyString(output.propertyMatchName, "context.target.propertyMatchName");
+                output.propertyPath = normalizePropertyPath(output.propertyPath);
+                output.propertyMatchName = protocol.assertNonEmptyString(output.propertyMatchName, "context.target.propertyMatchName", 56);
                 if (output.propertyPath[output.propertyPath.length - 2] !== output.propertyMatchName) {
                     protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "context.target property match name does not match its path.");
                 }
@@ -291,6 +304,7 @@
             fingerprintContext: fingerprintContext,
             fingerprintSettings: fingerprintSettings,
             normalizeActiveComp: normalizeActiveComp,
+            normalizePropertyPath: normalizePropertyPath,
             normalizeSelection: normalizeSelection,
             normalizeTarget: normalizeTarget,
             normalizeValue: normalizeValue

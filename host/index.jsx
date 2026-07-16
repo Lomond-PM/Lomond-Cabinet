@@ -288,7 +288,7 @@ AEToolbox.ping = function () {
 #include "effectUtils.jsx"
 #include "shapeUtils.jsx"
 (function (velaHostNamespace) {
-    var RUNTIME_REVISION = "vela-host-runtime-v2";
+    var RUNTIME_REVISION = "vela-host-runtime-v3";
     var runtimeDescriptor;
     var jsonDescriptor;
     var contextDescriptor;
@@ -335,7 +335,7 @@ AEToolbox.ping = function () {
     }
 
     function validateContext(context) {
-        return context && ownDataDescriptor(context, "hostAdapterRevision").value === "vela-context-host-v2" &&
+        return context && ownDataDescriptor(context, "hostAdapterRevision").value === "vela-context-host-v3" &&
             typeof ownDataDescriptor(context, "handle").value === "function" &&
             typeof ownDataDescriptor(context, "reload").value === "function";
     }

@@ -77,7 +77,7 @@
     var REQUEST_PROTOCOL = "vela.host-context-request.v1";
     var RESULT_PROTOCOL = "vela.host-context-result.v1";
     var SCHEMA_VERSION = "1.0";
-    var HOST_ADAPTER_REVISION = "vela-context-host-v2";
+    var HOST_ADAPTER_REVISION = "vela-context-host-v3";
     var FIXED_FACADE_PREFIX = "AE" + "Toolbox.VelaContext.handle(";
     var HOST_ERROR_CODES = Object.freeze([
         "HOST_CONTEXT_REQUEST_INVALID",
@@ -86,7 +86,8 @@
         "HOST_CONTEXT_UNAVAILABLE",
         "HOST_CONTEXT_TARGET_NOT_FOUND",
         "HOST_CONTEXT_SESSION_RESET_REQUIRED",
-        "HOST_CONTEXT_READ_FAILED"
+        "HOST_CONTEXT_READ_FAILED",
+        "HOST_CONTEXT_AUTHORITY_MISMATCH"
     ]);
     var HOST_INSTANCE_ID_PATTERN = /^host_[a-f0-9]{48}$/;
     var CAPTURE_REASON_UNTRUSTED = "CONTEXT_CAPTURE_UNTRUSTED";
@@ -225,7 +226,7 @@
         function mapHostError(code) {
             if (code === "HOST_CONTEXT_BUDGET_EXCEEDED") { return protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED; }
             if (code === "HOST_CONTEXT_UNAVAILABLE" || code === "HOST_CONTEXT_TARGET_NOT_FOUND") { return protocol.ERROR_CODES.UNKNOWN_TARGET; }
-            if (code === "HOST_CONTEXT_SESSION_RESET_REQUIRED") { return protocol.ERROR_CODES.CONTEXT_STALE; }
+            if (code === "HOST_CONTEXT_SESSION_RESET_REQUIRED" || code === "HOST_CONTEXT_AUTHORITY_MISMATCH") { return protocol.ERROR_CODES.CONTEXT_STALE; }
             return protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED;
         }
 
@@ -299,6 +300,7 @@
                 fingerprint: capture.fingerprint,
                 projectGeneration: details.projectGeneration === undefined ? null : details.projectGeneration,
                 itemId: details.itemId === undefined ? null : details.itemId,
+                compId: details.compId === undefined ? null : details.compId,
                 selectionOrderMeaningful: details.selectionOrderMeaningful,
                 nativeBindings: nativeBindings,
                 publicCanonical: protocol.canonicalStringify(capture)
@@ -347,7 +349,7 @@
             if (snapshot.tier !== 0 || !protocol.isPlainObject(snapshot.capabilities)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 0 context is invalid."); }
             var authority = normalizeHostAuthority(snapshot);
             protocol.assertNoUnknownKeys(snapshot.capabilities, ["maxTier", "nativeLayerIdAvailable", "bindingContextAvailable", "hostAdapterRevision"], "hostContext.capabilities");
-            if (snapshot.capabilities.maxTier !== 2 || typeof snapshot.capabilities.nativeLayerIdAvailable !== "boolean" ||
+            if (snapshot.capabilities.maxTier !== 3 || typeof snapshot.capabilities.nativeLayerIdAvailable !== "boolean" ||
                 typeof snapshot.capabilities.bindingContextAvailable !== "boolean" || snapshot.capabilities.hostAdapterRevision !== HOST_ADAPTER_REVISION) {
                 protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 0 capabilities are invalid.");
             }
@@ -467,6 +469,7 @@
                     purpose: "binding",
                     projectGeneration: projectGeneration,
                     itemId: itemId,
+                    compId: compId,
                     selectionOrderMeaningful: request.scope.selectionOrderMeaningful,
                     nativeBindings: normalized.selection.map(function (item, index) {
                         return {
@@ -761,6 +764,133 @@
             return startRequest(request, normalizeTierTwo);
         }
 
+        function trustedBindingRecord(bindingCapture) {
+            var record = captureRecords.get(bindingCapture);
+            if (!record || record.bridgeToken !== bridgeToken || record.protocol !== protocol ||
+                !Object.isFrozen(bindingCapture) || protocol.canonicalStringify(bindingCapture) !== record.publicCanonical) {
+                protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property target resolution requires a trusted binding capture.");
+            }
+            if (record.tier !== 1 || record.purpose !== "binding" || record.executable !== true) {
+                protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "Property target resolution requires an executable Tier 1 binding capture.");
+            }
+            if (record.sessionId !== sessionId || record.bridgeLifecycleEpoch !== bridgeLifecycleEpoch || !currentHostAuthority ||
+                record.hostInstanceId !== currentHostAuthority.hostInstanceId || record.hostReloadEpoch !== currentHostAuthority.hostReloadEpoch) {
+                protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Property target binding is stale.");
+            }
+            return record;
+        }
+
+        function normalizeTierThree(result, request, bindingRecord, publicTargets) {
+            var raw = result.snapshot;
+            if (!protocol.isPlainObject(raw)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 3 context is invalid."); }
+            protocol.assertNoUnknownKeys(raw, ["hostInstanceId", "hostReloadEpoch", "projectGeneration", "tier", "targets"], "hostContext.snapshot");
+            if (raw.tier !== 3 || raw.projectGeneration !== bindingRecord.projectGeneration || !Array.isArray(raw.targets) || raw.targets.length !== publicTargets.length) {
+                protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 3 context is invalid.");
+            }
+            var authority = normalizeHostAuthority(raw);
+            if (authority.hostInstanceId !== bindingRecord.hostInstanceId || authority.hostReloadEpoch !== bindingRecord.hostReloadEpoch ||
+                authority.hostInstanceId !== currentHostAuthority.hostInstanceId || authority.hostReloadEpoch !== currentHostAuthority.hostReloadEpoch) {
+                protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Tier 3 Host authority is stale.");
+            }
+            var normalizedTargets = raw.targets.map(function (target, index) {
+                var expected = publicTargets[index];
+                var terminalMode = expected.propertyPath[expected.propertyPath.length - 3];
+                var terminalPropertyIndex;
+                protocol.assertNoUnknownKeys(target, ["targetOrdinal", "nativeLayerId", "layerIndex", "propertyPath", "propertyMatchName", "propertyIndex", "propertyType"], "hostContext.targets[" + index + "]");
+                if (target.targetOrdinal !== index || target.nativeLayerId !== expected.nativeLayerId || target.layerIndex !== expected.layerIndex ||
+                    target.propertyType !== "property" || protocol.canonicalStringify(target.propertyPath) !== protocol.canonicalStringify(expected.propertyPath) ||
+                    target.propertyMatchName !== expected.propertyPath[expected.propertyPath.length - 2]) {
+                    protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Tier 3 property target changed.");
+                }
+                terminalPropertyIndex = assertRawNumber(target.propertyIndex, "targets[" + index + "].propertyIndex", true, 1, protocol.HARD_LIMITS.maxNumberAbs);
+                if (terminalMode === "indexed" && terminalPropertyIndex !== expected.propertyPath[expected.propertyPath.length - 1]) {
+                    protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Tier 3 property target changed.");
+                }
+                return {
+                    layerId: expected.layerId,
+                    layerIndex: expected.layerIndex,
+                    propertyPath: protocol.cloneJson(expected.propertyPath, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes }),
+                    propertyMatchName: target.propertyMatchName,
+                    propertyIndex: terminalPropertyIndex,
+                    propertyType: "property"
+                };
+            });
+            var capture = protocol.deepFreeze({
+                contextId: request.requestId,
+                requestId: request.requestId,
+                sessionId: sessionId,
+                tier: 3,
+                purpose: "target-resolution",
+                executable: false,
+                fingerprint: null,
+                hostAdapterRevision: HOST_ADAPTER_REVISION,
+                snapshot: {
+                    hostInstanceId: authority.hostInstanceId,
+                    hostReloadEpoch: authority.hostReloadEpoch,
+                    projectGeneration: bindingRecord.projectGeneration,
+                    activeComp: { compId: bindingRecord.compId },
+                    targets: normalizedTargets
+                }
+            });
+            return registerCapture(capture, {
+                hostInstanceId: authority.hostInstanceId,
+                hostReloadEpoch: authority.hostReloadEpoch,
+                purpose: "target-resolution",
+                projectGeneration: bindingRecord.projectGeneration,
+                itemId: bindingRecord.itemId,
+                selectionOrderMeaningful: bindingRecord.selectionOrderMeaningful
+            });
+        }
+
+        function resolvePropertyTargets(bindingCapture, targets) {
+            try {
+                var bindingRecord = trustedBindingRecord(bindingCapture);
+                protocol.assertSafeJson(targets);
+                if (!Array.isArray(targets) || targets.length < 1 || targets.length > 4) {
+                    protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property target count is invalid.");
+                }
+                var seen = new Set();
+                var normalizedTargets = targets.map(function (target) {
+                    if (!protocol.isPlainObject(target)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property target is invalid."); }
+                    protocol.assertNoUnknownKeys(target, ["layerId", "propertyPath"], "contextBridge.propertyTarget");
+                    var layerId = protocol.assertNonEmptyString(protocol.getOwnDataProperty(target, "layerId"), "contextBridge.propertyTarget.layerId", 256);
+                    var propertyPath = contextApi.normalizePropertyPath(protocol.getOwnDataProperty(target, "propertyPath"));
+                    var key = layerId + "|" + protocol.canonicalStringify(propertyPath);
+                    var nativeBinding = bindingRecord.nativeBindings.filter(function (item) { return item.layerId === layerId; })[0];
+                    if (seen.has(key) || !nativeBinding) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "Property target is not bound to the current selection."); }
+                    seen.add(key);
+                    return {
+                        layerId: layerId,
+                        nativeLayerId: nativeBinding.nativeLayerId,
+                        layerIndex: nativeBinding.layerIndex,
+                        propertyPath: propertyPath
+                    };
+                });
+                var requestId = nextRequestId();
+                var request = {
+                    protocol: REQUEST_PROTOCOL,
+                    schemaVersion: SCHEMA_VERSION,
+                    requestId: requestId,
+                    sessionId: sessionId,
+                    operation: "resolvePropertyTargets",
+                    tier: 3,
+                    scope: {
+                        purpose: "binding",
+                        expectedHostInstanceId: bindingRecord.hostInstanceId,
+                        expectedHostReloadEpoch: bindingRecord.hostReloadEpoch,
+                        expectedProjectGeneration: bindingRecord.projectGeneration,
+                        targets: normalizedTargets.map(function (target, index) {
+                            return { targetOrdinal: index, itemId: bindingRecord.itemId, nativeLayerId: target.nativeLayerId, layerIndex: target.layerIndex, propertyPath: target.propertyPath };
+                        })
+                    }
+                };
+                protocol.assertJsonBudget(request, { maxBytes: 8 * 1024 });
+                return startRequest(request, function (result, hostRequest) { return normalizeTierThree(result, hostRequest, bindingRecord, normalizedTargets); });
+            } catch (error) {
+                return Promise.reject(error);
+            }
+        }
+
         function cancel(requestId) {
             if (!active || active.requestId !== requestId || state !== "pending") { return false; }
             return settle(active, active.generation, protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED), null);
@@ -885,6 +1015,7 @@
         return Object.freeze({
             capture: capture,
             captureLayerDetails: captureLayerDetails,
+            resolvePropertyTargets: resolvePropertyTargets,
             cancel: cancel,
             suspend: suspend,
             resume: resume,
