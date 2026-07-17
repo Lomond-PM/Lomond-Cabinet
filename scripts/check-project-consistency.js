@@ -122,6 +122,7 @@ function checkRequiredEntrypoints() {
         "scripts/test-vela-context-bridge.js",
         "scripts/test-vela-context-host.js",
         "scripts/test-vela-context-target.js",
+        "scripts/test-vela-context-property-value.js",
         "host/index.jsx"
     ].forEach((file) => {
         check("Required entry exists: " + file, exists(file), file + " is required.");

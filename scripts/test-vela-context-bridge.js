@@ -51,7 +51,7 @@ function successResult(request, snapshot) {
         sessionId: request.sessionId,
         operation: request.operation,
         ok: true,
-        hostAdapterRevision: "vela-context-host-v3",
+        hostAdapterRevision: "vela-context-host-v4",
         snapshot
     });
 }
@@ -64,14 +64,14 @@ function errorResult(request, code) {
         sessionId: request.sessionId,
         operation: request.operation,
         ok: false,
-        hostAdapterRevision: "vela-context-host-v3",
+        hostAdapterRevision: "vela-context-host-v4",
         error: { code, message: "A local safe Host context error." }
     });
 }
 
 function tierZeroSnapshot(options) {
     options = options || {};
-    return { hostInstanceId: options.hostInstanceId || HOST_A, hostReloadEpoch: options.hostReloadEpoch || 1, tier: 0, capabilities: { maxTier: 3, nativeLayerIdAvailable: false, bindingContextAvailable: false, hostAdapterRevision: "vela-context-host-v3" } };
+    return { hostInstanceId: options.hostInstanceId || HOST_A, hostReloadEpoch: options.hostReloadEpoch || 1, tier: 0, capabilities: { maxTier: 3, nativeLayerIdAvailable: false, bindingContextAvailable: false, hostAdapterRevision: "vela-context-host-v4" } };
 }
 
 function tierOneSnapshot(options) {

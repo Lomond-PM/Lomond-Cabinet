@@ -421,7 +421,7 @@ function runFacadeTests() {
     check(replaced.snapshot.projectGeneration === originalGeneration + 1, "Project reference replacement must advance projectGeneration.");
 
     let fakeContextCalls = 0;
-    const fakeContext = { hostAdapterRevision: "vela-context-host-v3", handle() { fakeContextCalls += 1; } };
+    const fakeContext = { hostAdapterRevision: "vela-context-host-v4", handle() { fakeContextCalls += 1; } };
     const fakeContextRealm = makeRealm();
     fakeContextRealm.AEToolbox.VelaContext = fakeContext;
     expectCode(() => loadFacade(fakeContextRealm), "VELA_CONTEXT_MODULE_CONFLICT", "A preloaded context facade must conflict.");
@@ -649,6 +649,122 @@ function runTierThreeTests() {
     check(overlong.ok === false && overlong.error.code === "HOST_CONTEXT_REQUEST_INVALID", "Tier 3 Host validation must reject thirteen property-path levels before resolution.");
 }
 
+function runPropertyValueTests() {
+    const ae = makeAeRealm();
+    const types = ae.realm.PropertyType;
+    const target = { targetOrdinal: 0, itemId: 12, nativeLayerId: 45, layerIndex: 3, propertyPath: ["named", "ADBE Transform Group", 0, "named", "ADBE Position", 0] };
+    const binding = parseResult(ae.facade.handle(JSON.stringify(request({ scope: { purpose: "binding", selectionOrderMeaningful: true } }))));
+    let propertyCalls = 0;
+    let valueReads = 0;
+    let capabilityReads = 0;
+    let enabledReads = 0;
+    let forbiddenReads = 0;
+    let timeReads = 0;
+    let durationReads = 0;
+    function requestValues(targets, extra) {
+        return Object.assign(tierThreeRequest(targets, {
+            operation: "capturePropertyValues",
+            scope: { purpose: "binding", expectedHostInstanceId: binding.snapshot.hostInstanceId, expectedHostReloadEpoch: binding.snapshot.hostReloadEpoch, expectedProjectGeneration: binding.snapshot.projectGeneration, targets }
+        }), extra || {});
+    }
+    function installTerminal(value, canSetExpression, expressionEnabled, behavior) {
+        const position = { matchName: "ADBE Position", propertyIndex: 2, propertyType: types.PROPERTY };
+        behavior = behavior || {};
+        Object.defineProperty(position, "canSetExpression", { get() { capabilityReads += 1; if (behavior.canThrow) { throw new Error("CAN_SENTINEL"); } return canSetExpression; } });
+        Object.defineProperty(position, "expressionEnabled", { get() { enabledReads += 1; if (behavior.enabledThrow) { throw new Error("ENABLED_SENTINEL"); } return expressionEnabled; } });
+        Object.defineProperty(position, "value", { get() { valueReads += 1; return behavior.valueForRead ? behavior.valueForRead(valueReads) : value; } });
+        ["expression", "expressionError", "name"].forEach((key) => Object.defineProperty(position, key, { get() { forbiddenReads += 1; throw new Error("forbidden raw read"); } }));
+        position.valueAtTime = function () { forbiddenReads += 1; throw new Error("forbidden raw call"); };
+        const transform = { matchName: "ADBE Transform Group", propertyIndex: 0, propertyType: types.NAMED_GROUP, property(name) { propertyCalls += 1; return name === "ADBE Position" ? position : null; } };
+        ae.layer.property = function (name) { propertyCalls += 1; return name === "ADBE Transform Group" ? transform : null; };
+    }
+    Object.defineProperty(ae.comp, "time", { configurable: true, get() { timeReads += 1; return 0; } });
+    Object.defineProperty(ae.comp, "duration", { configurable: true, get() { durationReads += 1; return 10; } });
+    installTerminal(50, false, false);
+    let result = parseResult(ae.facade.handle(JSON.stringify(requestValues([target]))));
+    check(result.ok === true && result.snapshot.sampleTime === 0 && result.snapshot.targets[0].value.kind === "number" && result.snapshot.targets[0].value.data === 50, "Property values must return only an allowed primitive payload and one request-local sample time.");
+    check(timeReads === 1 && propertyCalls === 2 && capabilityReads === 1 && enabledReads === 0 && valueReads === 1 && forbiddenReads === 0, "A non-expression property must read time once, capability once and value once without forbidden reads.");
+    check(durationReads === 1, "A one-target request must read active comp duration within its fixed one-read budget.");
+    propertyCalls = valueReads = capabilityReads = enabledReads = forbiddenReads = timeReads = durationReads = 0;
+    installTerminal(inRealm(ae.realm, "[0, 1, 1.5]"), true, false);
+    result = parseResult(ae.facade.handle(JSON.stringify(requestValues([target]))));
+    check(result.ok === true && result.snapshot.targets[0].value.kind === "number-array" && result.snapshot.targets[0].value.data.length === 3, "A dense one-to-four number array must be accepted.");
+    check(capabilityReads === 1 && enabledReads === 1 && valueReads === 1 && forbiddenReads === 0 && timeReads === 1, "A disabled expression-capable property must read expressionEnabled once and value once.");
+    propertyCalls = valueReads = capabilityReads = enabledReads = forbiddenReads = timeReads = durationReads = 0;
+    installTerminal(99, true, true);
+    result = parseResult(ae.facade.handle(JSON.stringify(requestValues([target]))));
+    check(result.ok === false && result.error.code === "HOST_CONTEXT_VALUE_EVALUATION_DISALLOWED", "An expression-enabled property must fail closed.");
+    check(capabilityReads === 1 && enabledReads === 1 && valueReads === 0 && forbiddenReads === 0 && timeReads === 1, "An enabled expression must never evaluate its value or inspect expression source fields.");
+    propertyCalls = valueReads = capabilityReads = enabledReads = forbiddenReads = timeReads = durationReads = 0;
+    const aeArrayProfile = installAeArrayDescriptorProfile(ae.realm);
+    const nativeArray = inRealm(ae.realm, "[0, 1]");
+    aeArrayProfile.control(nativeArray, {});
+    installTerminal(nativeArray, false, false);
+    result = parseResult(ae.facade.handle(JSON.stringify(requestValues([target]))));
+    check(result.ok === true && result.snapshot.targets[0].value.kind === "number-array", "The Host value normalizer must accept the bounded AE native-array descriptor profile.");
+    check(valueReads === 1 && forbiddenReads === 0, "The native-array value path must read only the value getter and descriptor data.");
+    propertyCalls = valueReads = capabilityReads = enabledReads = forbiddenReads = timeReads = durationReads = 0;
+    installTerminal({ unsafe: true }, false, false);
+    result = parseResult(ae.facade.handle(JSON.stringify(requestValues([target]))));
+    check(result.ok === false && result.error.code === "HOST_CONTEXT_VALUE_UNSUPPORTED" && result.snapshot === undefined, "Unsupported property values must reject the whole request without a partial result.");
+    propertyCalls = valueReads = capabilityReads = enabledReads = forbiddenReads = timeReads = durationReads = 0;
+    installTerminal(7, false, false);
+    const fourTargets = [0, 1, 2, 3].map((targetOrdinal) => Object.assign({}, target, { targetOrdinal }));
+    result = parseResult(ae.facade.handle(JSON.stringify(requestValues(fourTargets))));
+    check(result.ok === true && result.snapshot.targets.length === 4 && result.snapshot.targets.every((item) => item.sampleTime === undefined) && result.snapshot.sampleTime === 0, "Four targets must share the snapshot sample time without target-local times.");
+    check(timeReads === 1 && durationReads === 1 && valueReads === 4 && forbiddenReads === 0, "A four-target request must read time and duration once and each value at most once.");
+    propertyCalls = valueReads = capabilityReads = enabledReads = forbiddenReads = timeReads = durationReads = 0;
+    installTerminal("a".repeat(1024), false, false);
+    result = parseResult(ae.facade.handle(JSON.stringify(requestValues([target]))));
+    check(result.ok === true && result.snapshot.targets[0].value.data.length === 1024, "A 1024-byte ASCII property payload must be accepted.");
+    installTerminal("a".repeat(1025), false, false);
+    result = parseResult(ae.facade.handle(JSON.stringify(requestValues([target]))));
+    check(result.ok === false && result.error.code === "HOST_CONTEXT_BUDGET_EXCEEDED" && result.snapshot === undefined, "A 1025-byte ASCII property payload must reject without a partial result.");
+    installTerminal("\u4e2d".repeat(341) + "a", false, false);
+    result = parseResult(ae.facade.handle(JSON.stringify(requestValues([target]))));
+    check(result.ok === true, "A mixed UTF-8 property string at exactly 1024 bytes must be accepted.");
+    installTerminal("\u4e2d".repeat(341) + "aa", false, false);
+    result = parseResult(ae.facade.handle(JSON.stringify(requestValues([target]))));
+    check(result.ok === false && result.error.code === "HOST_CONTEXT_BUDGET_EXCEEDED", "A mixed UTF-8 property string at 1025 bytes must reject.");
+    installTerminal("b".repeat(1024), false, false);
+    result = parseResult(ae.facade.handle(JSON.stringify(requestValues(fourTargets))));
+    check(result.ok === true && result.snapshot.targets.length === 4, "Four exact-limit payloads must meet the 4096-byte aggregate boundary.");
+    installTerminal("b".repeat(1025), false, false);
+    result = parseResult(ae.facade.handle(JSON.stringify(requestValues(fourTargets))));
+    check(result.ok === false && result.error.code === "HOST_CONTEXT_BUDGET_EXCEEDED" && result.snapshot === undefined, "The first representable value beyond the 4096-byte aggregate boundary must reject without partial targets.");
+    [null, 0, 1, "true", undefined].forEach((invalid) => {
+        propertyCalls = valueReads = capabilityReads = enabledReads = forbiddenReads = timeReads = durationReads = 0;
+        installTerminal(1, invalid, false);
+        result = parseResult(ae.facade.handle(JSON.stringify(requestValues([target]))));
+        check(result.ok === false && result.error.code === "HOST_CONTEXT_VALUE_INVALID" && valueReads === 0 && enabledReads === 0 && forbiddenReads === 0, "Non-boolean canSetExpression must fail closed without raw reads.");
+    });
+    propertyCalls = valueReads = capabilityReads = enabledReads = forbiddenReads = timeReads = durationReads = 0;
+    installTerminal(1, false, false, { canThrow: true });
+    result = parseResult(ae.facade.handle(JSON.stringify(requestValues([target]))));
+    check(result.ok === false && result.error.code === "HOST_CONTEXT_READ_FAILED" && valueReads === 0 && enabledReads === 0 && JSON.stringify(result).indexOf("CAN_SENTINEL") === -1, "A throwing canSetExpression getter must fail closed without leaking native text.");
+    [null, 0, 1, "false", undefined].forEach((invalid) => {
+        propertyCalls = valueReads = capabilityReads = enabledReads = forbiddenReads = timeReads = durationReads = 0;
+        installTerminal(1, true, invalid);
+        result = parseResult(ae.facade.handle(JSON.stringify(requestValues([target]))));
+        check(result.ok === false && result.error.code === "HOST_CONTEXT_VALUE_INVALID" && valueReads === 0 && enabledReads === 1 && forbiddenReads === 0, "Non-boolean expressionEnabled must fail closed without raw reads.");
+    });
+    propertyCalls = valueReads = capabilityReads = enabledReads = forbiddenReads = timeReads = durationReads = 0;
+    installTerminal(1, true, false, { enabledThrow: true });
+    result = parseResult(ae.facade.handle(JSON.stringify(requestValues([target]))));
+    check(result.ok === false && result.error.code === "HOST_CONTEXT_READ_FAILED" && valueReads === 0 && enabledReads === 1 && JSON.stringify(result).indexOf("ENABLED_SENTINEL") === -1, "A throwing expressionEnabled getter must fail closed without leaking native text.");
+    const sentinel = "VELA_RAW_SENTINEL_6c7a0c4f";
+    propertyCalls = valueReads = capabilityReads = enabledReads = forbiddenReads = timeReads = durationReads = 0;
+    const sentinelTargets = [Object.assign({}, target, { targetOrdinal: 0 }), Object.assign({}, target, { targetOrdinal: 1 })];
+    installTerminal(sentinel, false, false, { valueForRead(read) { return read === 1 ? sentinel : { invalid: true }; } });
+    result = parseResult(ae.facade.handle(JSON.stringify(requestValues(sentinelTargets))));
+    check(result.ok === false && result.snapshot === undefined && JSON.stringify(result).indexOf(sentinel) === -1 && JSON.stringify(ae.realm.AEToolbox).indexOf(sentinel) === -1, "A prior target raw sentinel must not leak when a later target fails.");
+    installTerminal(1, false, false);
+    result = parseResult(ae.facade.handle(JSON.stringify(requestValues([target]))));
+    check(result.ok === true && JSON.stringify(result).indexOf(sentinel) === -1, "A later successful request must not expose a previous request raw sentinel.");
+    const malformed = parseResult(ae.facade.handle(JSON.stringify(requestValues([], {}))));
+    check(malformed.ok === false && malformed.error.code === "HOST_CONTEXT_REQUEST_INVALID", "Property-value requests must require one to four targets.");
+}
+
 function runRuntimeReloadTests() {
     let projectReads = 0;
     let mutationCalls = 0;
@@ -662,7 +778,7 @@ function runRuntimeReloadTests() {
     const runtime = realm.AEToolbox.__velaHostRuntimeV1;
     const json = realm.AEToolbox.VelaJson;
     const context = realm.AEToolbox.VelaContext;
-    check(runtime && runtime.revision === "vela-host-runtime-v3", "A fresh engine must publish the Vela Host runtime after both modules are constructed.");
+    check(runtime && runtime.revision === "vela-host-runtime-v4", "A fresh engine must publish the Vela Host runtime after both modules are constructed.");
     check(runtime.json === json && runtime.context === context, "Public Host aliases must exactly reference the runtime modules.");
     const firstAuthority = parseResult(context.handle(JSON.stringify({ ...request(), operation: "getCapabilities", tier: 0 }))).snapshot;
     check(/^host_[a-f0-9]{48}$/.test(firstAuthority.hostInstanceId) && firstAuthority.hostReloadEpoch === 1, "Fresh Host installation must issue fixed-format authority at epoch one.");
@@ -694,12 +810,19 @@ function runRuntimeReloadTests() {
     check(incompatibleRealm.AEToolbox.__velaHostRuntimeV1 === incompatibleRuntime && incompatibleRealm.AEToolbox.VelaJson === undefined && incompatibleRealm.AEToolbox.VelaContext === undefined, "An incompatible runtime must not be overwritten or gain aliases.");
     const v1Runtime = { revision: "vela-host-runtime-v1", json: {}, context: {}, reload() {} };
     const v1Realm = makeFullHostRealm({ AEToolbox: { __velaHostRuntimeV1: v1Runtime } });
-    expectCode(() => runFullHost(v1Realm), "VELA_HOST_RUNTIME_CONFLICT", "An existing v1 runtime must not be adopted by the v3 loader.");
-    check(v1Realm.AEToolbox.__velaHostRuntimeV1 === v1Runtime, "The v3 loader must not overwrite an existing v1 runtime.");
+    expectCode(() => runFullHost(v1Realm), "VELA_HOST_RUNTIME_CONFLICT", "An existing v1 runtime must not be adopted by the v4 loader.");
+    check(v1Realm.AEToolbox.__velaHostRuntimeV1 === v1Runtime, "The v4 loader must not overwrite an existing v1 runtime.");
     const v2Runtime = { revision: "vela-host-runtime-v2", json: {}, context: {}, reload() {} };
     const v2Realm = makeFullHostRealm({ AEToolbox: { __velaHostRuntimeV1: v2Runtime } });
-    expectCode(() => runFullHost(v2Realm), "VELA_HOST_RUNTIME_CONFLICT", "An existing v2 runtime must not be adopted by the v3 loader.");
-    check(v2Realm.AEToolbox.__velaHostRuntimeV1 === v2Runtime, "The v3 loader must not overwrite an existing v2 runtime.");
+    expectCode(() => runFullHost(v2Realm), "VELA_HOST_RUNTIME_CONFLICT", "An existing v2 runtime must not be adopted by the v4 loader.");
+    check(v2Realm.AEToolbox.__velaHostRuntimeV1 === v2Runtime, "The v4 loader must not overwrite an existing v2 runtime.");
+    let v3Calls = 0;
+    const v3Json = { revision: "vela-json-host-v1", parseBounded() { v3Calls += 1; }, stringifyBounded() { v3Calls += 1; }, utf8ByteLength() { v3Calls += 1; } };
+    const v3Context = { hostAdapterRevision: "vela-context-host-v3", handle() { v3Calls += 1; }, reload() { v3Calls += 1; } };
+    const v3Runtime = { revision: "vela-host-runtime-v3", json: v3Json, context: v3Context, reload() { v3Calls += 1; } };
+    const v3Realm = makeFullHostRealm({ AEToolbox: { __velaHostRuntimeV1: v3Runtime, VelaJson: v3Json, VelaContext: v3Context } });
+    expectCode(() => runFullHost(v3Realm), "VELA_HOST_RUNTIME_CONFLICT", "An existing complete v3 runtime must conflict with the v4 loader.");
+    check(v3Realm.AEToolbox.__velaHostRuntimeV1 === v3Runtime && v3Realm.AEToolbox.VelaJson === v3Json && v3Realm.AEToolbox.VelaContext === v3Context && v3Calls === 0, "A v3 conflict must not call or replace legacy runtime aliases or publish partial v4 state.");
 
     ["VelaJson", "VelaContext"].forEach((name) => {
         const fake = {};
@@ -756,6 +879,7 @@ try {
     runFacadeTests();
     runTierTwoTests();
     runTierThreeTests();
+    runPropertyValueTests();
     runStaticTests();
     runRuntimeReloadTests();
     console.log("PASS Vela context Host: " + assertions + " assertions.");
