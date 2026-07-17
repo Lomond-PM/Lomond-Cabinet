@@ -82,6 +82,36 @@ function run() {
     [-1, 0, 1.5].forEach((index) => expectCode(() => context.normalizePropertyPath(["indexed", "ADBE Position", index]), protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Indexed property segments must use a positive integer."));
     expectCode(() => context.normalizePropertyPath(["named", "", 0]), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property match names must be non-empty.");
     expectCode(() => context.normalizePropertyPath(["named", "x".repeat(57), 0]), protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED, "Property match names must be bounded in UTF-8 bytes.");
+    [
+        ["null", null], ["boolean", true], ["number", 50], ["string", "\u8305"], ["number-array", [0, 1, -0.1, 1.5]]
+    ].forEach(([kind, value]) => {
+        const descriptor = context.describePropertyValue(kind, value);
+        check(Object.isFrozen(descriptor) && Object.keys(descriptor).sort().join(",") === "payloadBytes,valueDigest,valueKind" && descriptor.valueKind === kind && /^sha256:[a-f0-9]{64}$/.test(descriptor.valueDigest), "Property-value descriptors must be digest-only for " + kind + ".");
+        check(!Object.prototype.hasOwnProperty.call(descriptor, "data") && !Object.prototype.hasOwnProperty.call(descriptor, "value"), "Property-value descriptors must not retain raw material for " + kind + ".");
+    });
+    const propertyValueFingerprintInput = {
+        fingerprintSchemaVersion: "property-value-capture-v1",
+        bindingFingerprint: "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        sessionId: "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        bridgeLifecycleEpoch: 1,
+        hostInstanceId: "host_0123456789abcdef0123456789abcdef0123456789abcdef",
+        hostReloadEpoch: 1,
+        projectGeneration: 3,
+        compId: "ae-project-3-item-12",
+        tier: 3,
+        purpose: "property-value-binding",
+        sampleTime: 1,
+        targetOrderMeaningful: true,
+        targets: [{ layerId: "ae-project-3-item-12-layer-45", propertyPath: ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0], propertyMatchName: "ADBE Opacity", valueKind: "number", valueDigest: context.digestPropertyValue("number", 50) }]
+    };
+    const propertyValueFingerprint = context.fingerprintPropertyValueCapture(propertyValueFingerprintInput);
+    check(propertyValueFingerprint.fingerprint === "sha256:21ad53019aae10f040528f8b5c824e2ba39fe196fa46ddf52f0b228dd257af8a", "Property-value capture fingerprint vector must remain fixed.");
+    check(propertyValueFingerprint.input.bindingFingerprint === propertyValueFingerprintInput.bindingFingerprint && propertyValueFingerprint.input.targets[0].valueDigest === propertyValueFingerprintInput.targets[0].valueDigest, "Property-value fingerprints must bind the Tier 1 fingerprint and digest-only targets.");
+    check(context.fingerprintPropertyValueCapture(Object.assign({}, propertyValueFingerprintInput, { sampleTime: 2 })).fingerprint !== propertyValueFingerprint.fingerprint, "Property-value fingerprints must bind sampleTime.");
+    check(context.fingerprintPropertyValueCapture(Object.assign({}, propertyValueFingerprintInput, { bindingFingerprint: "sha256:1123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" })).fingerprint !== propertyValueFingerprint.fingerprint, "Property-value fingerprints must bind Tier 1 ancestry.");
+    expectCode(() => context.fingerprintPropertyValueCapture(Object.assign({}, propertyValueFingerprintInput, { sampleTime: -0 })), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property-value fingerprinting must reject negative zero sampleTime.");
+    expectCode(() => context.fingerprintPropertyValueCapture(Object.assign({}, propertyValueFingerprintInput, { sampleTime: Infinity })), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property-value fingerprinting must reject infinite sampleTime.");
+    expectCode(() => context.fingerprintPropertyValueCapture(Object.assign({}, propertyValueFingerprintInput, { targetOrderMeaningful: false })), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property-value fingerprints must retain target ordinal order.");
     const maxPath = [];
     for (let i = 0; i < 12; i += 1) { maxPath.push("indexed", "ADBE Group " + i, i + 1); }
     const maxPathTarget = Object.assign({}, makeSnapshot().target, { propertyPath: maxPath, propertyMatchName: "ADBE Group 11" });

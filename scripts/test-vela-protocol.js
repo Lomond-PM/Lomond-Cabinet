@@ -130,6 +130,11 @@ function run() {
         check(providerError.envelope.error.code === protocol.ERROR_CODES[key] && providerError.envelope.error.message.indexOf("untrusted") === -1, key + " must produce a stable canonical provider error.");
         check(protocol.validateCanonicalResponse(providerError).envelope.error.code === protocol.ERROR_CODES[key], key + " canonical provider errors must validate.");
     });
+    ["CONTEXT_VALUE_EVALUATION_DISALLOWED", "CONTEXT_VALUE_UNSUPPORTED", "CONTEXT_VALUE_INVALID"].forEach((key) => {
+        const contextError = protocol.createCanonicalErrorResponse(new protocol.VelaProtocolError(protocol.ERROR_CODES[key], "untrusted Host payload", { stage: "context-bridge" }), { requestId: "req_test", provider: "lmstudio", model: "test-model" });
+        check(contextError.envelope.error.code === protocol.ERROR_CODES[key] && contextError.envelope.error.message.indexOf("untrusted") === -1, key + " must produce a safe canonical error.");
+        check(protocol.validateCanonicalResponse(contextError).envelope.error.code === protocol.ERROR_CODES[key], key + " canonical errors must validate.");
+    });
     const mutableRuntime = Object.assign({}, runtime);
     const snapshottedProtocol = protocolModule.createProtocol(mutableRuntime);
     mutableRuntime.utf8ByteLength = () => 0;
