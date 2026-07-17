@@ -113,6 +113,26 @@ function tierTwoSnapshot(options) {
     };
 }
 
+function propertyValueSnapshot(request, options) {
+    options = options || {};
+    const values = options.values || request.scope.targets.map(() => ({ kind: "number", data: 50 }));
+    return {
+        hostInstanceId: options.hostInstanceId || HOST_A,
+        hostReloadEpoch: options.hostReloadEpoch || 1,
+        projectGeneration: options.projectGeneration || 3,
+        sampleTime: options.sampleTime === undefined ? 1 : options.sampleTime,
+        tier: 3,
+        targets: request.scope.targets.map((target, index) => ({
+            targetOrdinal: options.targetOrdinal === undefined ? target.targetOrdinal : options.targetOrdinal,
+            nativeLayerId: options.nativeLayerId === undefined ? target.nativeLayerId : options.nativeLayerId,
+            layerIndex: options.layerIndex === undefined ? target.layerIndex : options.layerIndex,
+            propertyPath: options.propertyPath || target.propertyPath,
+            propertyMatchName: options.propertyMatchName || target.propertyPath[target.propertyPath.length - 2],
+            value: values[index]
+        }))
+    };
+}
+
 function makeHarness(handler, customProtocol, customContext) {
     const scheduler = makeScheduler();
     const calls = [];
@@ -656,6 +676,295 @@ async function runTierThreeBridgeTests() {
     }]), protocol.ERROR_CODES.CONTEXT_STALE, "Tier 3 must reject a Host terminal index that differs from an indexed path segment.");
 }
 
+async function runPropertyValueBridgeTests() {
+    const path = ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0];
+    const pathTwo = ["named", "ADBE Transform Group", 0, "named", "ADBE Position", 0];
+    const sentinel = "raw-value-sentinel";
+    const harness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") { callback(successResult(req, tierOneSnapshot())); return; }
+        check(req.operation === "capturePropertyValues" && req.tier === 3 && req.scope.purpose === "binding", "Property-value Bridge must emit the fixed Host operation.");
+        check(!Object.prototype.hasOwnProperty.call(req.scope.targets[0], "layerId") && req.scope.targets[0].targetOrdinal === 0, "Property-value requests must inject private native targets and local ordinals.");
+        callback(successResult(req, propertyValueSnapshot(req, { values: req.scope.targets.map((target, index) => index === 0 ? { kind: "string", data: sentinel } : { kind: "number", data: 50 }) })));
+    });
+    const binding = await harness.bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
+    const target = { layerId: binding.snapshot.selection[0].layerId, propertyPath: path };
+    const capture = await harness.bridge.capturePropertyValues(binding, [target]);
+    check(capture.tier === 3 && capture.purpose === "property-value-binding" && capture.executable === true && /^sha256:[a-f0-9]{64}$/.test(capture.fingerprint), "Property values must produce executable digest-only captures.");
+    check(capture.snapshot.targets[0].valueKind === "string" && /^sha256:[a-f0-9]{64}$/.test(capture.snapshot.targets[0].valueDigest), "Property-value captures must expose only kind and digest.");
+    check(JSON.stringify(capture).indexOf(sentinel) === -1 && JSON.stringify(harness.bridge.getState()).indexOf(sentinel) === -1, "Raw property values must not survive in public captures or bridge state.");
+    check(harness.bridge.compareCaptures(capture, capture).fresh === true, "An unchanged trusted property-value capture must compare fresh.");
+    check(harness.bridge.compareCaptures(binding, capture).reason === "CONTEXT_CAPTURE_INCOMPATIBLE", "Tier 1 bindings and property-value captures must be incompatible.");
+    const resolutionHarness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") { callback(successResult(req, tierOneSnapshot())); return; }
+        callback(successResult(req, { hostInstanceId: HOST_A, hostReloadEpoch: 1, projectGeneration: 3, tier: 3, targets: req.scope.targets.map((item) => ({ targetOrdinal: item.targetOrdinal, nativeLayerId: item.nativeLayerId, layerIndex: item.layerIndex, propertyPath: item.propertyPath, propertyMatchName: item.propertyPath[item.propertyPath.length - 2], propertyIndex: 1, propertyType: "property" })) }));
+    });
+    const resolutionBinding = await resolutionHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    const resolution = await resolutionHarness.bridge.resolvePropertyTargets(resolutionBinding, [{ layerId: resolutionBinding.snapshot.selection[0].layerId, propertyPath: path }]);
+    check(resolutionHarness.bridge.compareCaptures(resolution, resolution).reason === "CONTEXT_CAPTURE_NOT_EXECUTABLE", "Same-class target resolution remains non-executable.");
+    check(harness.bridge.compareCaptures(capture, resolution).reason === "CONTEXT_CAPTURE_UNTRUSTED", "Cross-Bridge comparison must reject before class comparison.");
+    await expectCode(harness.bridge.capturePropertyValues(protocol.deepFreeze(protocol.cloneJson(binding)), [target]), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Cloned bindings must not issue property-value captures.");
+    await expectCode(harness.bridge.capturePropertyValues(binding, [{ layerId: target.layerId, propertyPath: path, nativeLayerId: 45 }]), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Callers must not inject native property-value identity.");
+    await expectCode(harness.bridge.capturePropertyValues(binding, [target, target]), protocol.ERROR_CODES.UNKNOWN_TARGET, "Duplicate property-value targets must reject.");
+    await expectCode(harness.bridge.capturePropertyValues(binding, []), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property-value captures must require at least one target.");
+    await expectCode(harness.bridge.capturePropertyValues(binding, Array.from({ length: 5 }, () => target)), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property-value captures must limit targets to four.");
+    const four = await harness.bridge.capturePropertyValues(binding, [target, { layerId: target.layerId, propertyPath: pathTwo }]);
+    check(four.snapshot.targets.length === 2 && four.snapshot.targets[0].propertyPath[4] === "ADBE Opacity" && four.snapshot.targets[1].propertyPath[4] === "ADBE Position", "Property-value target order must remain public ordinal order.");
+
+    async function expectValueFailure(options, code, message) {
+        const failing = makeHarness((source, callback) => {
+            const req = decodeSource(source);
+            if (req.operation === "captureContext") { callback(successResult(req, tierOneSnapshot())); return; }
+            callback(successResult(req, propertyValueSnapshot(req, options)));
+        });
+        const freshBinding = await failing.bridge.capture({ tier: 1, purpose: "binding" });
+        await expectCode(failing.bridge.capturePropertyValues(freshBinding, [{ layerId: freshBinding.snapshot.selection[0].layerId, propertyPath: path }]), code, message);
+    }
+    const timeBoundaryHarness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") { callback(successResult(req, tierOneSnapshot())); return; }
+        callback(successResult(req, propertyValueSnapshot(req, { sampleTime: 10 })));
+    });
+    const timeBoundaryBinding = await timeBoundaryHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    const atDuration = await timeBoundaryHarness.bridge.capturePropertyValues(timeBoundaryBinding, [{ layerId: timeBoundaryBinding.snapshot.selection[0].layerId, propertyPath: path }]);
+    check(atDuration.snapshot.sampleTime === 10, "sampleTime at composition duration must be accepted.");
+    const toleranceHarness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") { callback(successResult(req, tierOneSnapshot())); return; }
+        callback(successResult(req, propertyValueSnapshot(req, { sampleTime: 10.0000001 })));
+    });
+    const toleranceBinding = await toleranceHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    const atTolerance = await toleranceHarness.bridge.capturePropertyValues(toleranceBinding, [{ layerId: toleranceBinding.snapshot.selection[0].layerId, propertyPath: path }]);
+    check(atTolerance.snapshot.sampleTime === 10.0000001, "sampleTime at Host tolerance must be accepted.");
+    await expectValueFailure({ sampleTime: 10.0000001000001 }, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "sampleTime beyond Host tolerance must reject.");
+    await expectValueFailure({ targetOrdinal: 1 }, protocol.ERROR_CODES.CONTEXT_STALE, "Property-value ordinal drift must reject.");
+    await expectValueFailure({ propertyMatchName: "ADBE Wrong" }, protocol.ERROR_CODES.CONTEXT_STALE, "Property-value match-name drift must reject.");
+    await expectValueFailure({ values: [{ kind: "number", data: Array(1025).fill("x").join("") }] }, protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED, "Oversized property value data must reject without partial capture.");
+
+    for (const [hostCode, code] of [["HOST_CONTEXT_VALUE_EVALUATION_DISALLOWED", protocol.ERROR_CODES.CONTEXT_VALUE_EVALUATION_DISALLOWED], ["HOST_CONTEXT_VALUE_UNSUPPORTED", protocol.ERROR_CODES.CONTEXT_VALUE_UNSUPPORTED], ["HOST_CONTEXT_VALUE_INVALID", protocol.ERROR_CODES.CONTEXT_VALUE_INVALID]]) {
+        const errors = makeHarness((source, callback) => { const req = decodeSource(source); callback(req.operation === "captureContext" ? successResult(req, tierOneSnapshot()) : errorResult(req, hostCode)); });
+        const errorBinding = await errors.bridge.capture({ tier: 1, purpose: "binding" });
+        await expectCode(errors.bridge.capturePropertyValues(errorBinding, [{ layerId: errorBinding.snapshot.selection[0].layerId, propertyPath: path }]), code, "Host property-value errors must map one-to-one.");
+    }
+}
+
+async function runPropertyValueFreshnessTests() {
+    const path = ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0];
+    let value = 50;
+    const harness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") { callback(successResult(req, tierOneSnapshot())); return; }
+        if (req.operation === "resolvePropertyTargets") {
+            callback(successResult(req, { hostInstanceId: HOST_A, hostReloadEpoch: 1, projectGeneration: 3, tier: 3, targets: req.scope.targets.map((target) => ({ targetOrdinal: target.targetOrdinal, nativeLayerId: target.nativeLayerId, layerIndex: target.layerIndex, propertyPath: target.propertyPath, propertyMatchName: target.propertyPath[target.propertyPath.length - 2], propertyIndex: 1, propertyType: "property" })) }));
+            return;
+        }
+        callback(successResult(req, propertyValueSnapshot(req, { values: req.scope.targets.map(() => ({ kind: "number", data: value })) })));
+    });
+    const binding = await harness.bridge.capture({ tier: 1, purpose: "binding" });
+    const target = { layerId: binding.snapshot.selection[0].layerId, propertyPath: path };
+    const first = await harness.bridge.capturePropertyValues(binding, [target]);
+    const resolution = await harness.bridge.resolvePropertyTargets(binding, [target]);
+    check(harness.bridge.compareCaptures(first, resolution).reason === "CONTEXT_CAPTURE_INCOMPATIBLE", "Target-resolution and property-value captures from one Bridge must be incompatible.");
+    const same = await harness.bridge.capturePropertyValues(binding, [target]);
+    check(harness.bridge.compareCaptures(first, same).fresh === true, "Equal property-value captures must compare fresh.");
+    value = 51;
+    const changed = await harness.bridge.capturePropertyValues(binding, [target]);
+    check(harness.bridge.compareCaptures(first, changed).reason === "CONTEXT_STALE", "Property value digest changes must stale comparison.");
+    let bindingGeneration = 0;
+    const ancestryHarness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") {
+            bindingGeneration += 1;
+            callback(successResult(req, tierOneSnapshot({ nativeLayerId: bindingGeneration === 1 ? 45 : 46, layerIndex: bindingGeneration === 1 ? 3 : 4 })));
+            return;
+        }
+        callback(successResult(req, propertyValueSnapshot(req)));
+    });
+    const bindingA = await ancestryHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    const propertyA = await ancestryHarness.bridge.capturePropertyValues(bindingA, [{ layerId: bindingA.snapshot.selection[0].layerId, propertyPath: path }]);
+    const bindingB = await ancestryHarness.bridge.capture({ tier: 1, purpose: "binding" });
+    const propertyB = await ancestryHarness.bridge.capturePropertyValues(bindingB, [{ layerId: bindingB.snapshot.selection[0].layerId, propertyPath: path }]);
+    check(ancestryHarness.bridge.compareCaptures(propertyA, propertyB).reason === "CONTEXT_STALE", "Tier 1 binding fingerprint changes must stale property-value captures.");
+    const oldSession = first;
+    harness.bridge.resetSession();
+    check(harness.bridge.compareCaptures(oldSession, oldSession).reason === "CONTEXT_AUTHORITY_MISMATCH", "Session reset must invalidate property-value captures.");
+}
+
+async function runPropertyValueLifecycleTests() {
+    const path = ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0];
+    let lateCallback = null;
+    const harness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") { callback(successResult(req, tierOneSnapshot())); return; }
+        lateCallback = () => callback(successResult(req, propertyValueSnapshot(req)));
+    });
+    const binding = await harness.bridge.capture({ tier: 1, purpose: "binding" });
+    const target = { layerId: binding.snapshot.selection[0].layerId, propertyPath: path };
+    const pending = harness.bridge.capturePropertyValues(binding, [target]);
+    const requestId = harness.bridge.getState().requestId;
+    await expectCode(harness.bridge.capturePropertyValues(binding, [target]), protocol.ERROR_CODES.EXECUTION_BUSY, "A pending property-value capture must block a second request.");
+    check(harness.bridge.cancel(requestId) === true, "Property-value capture cancellation must settle the active request.");
+    await expectCode(pending, protocol.ERROR_CODES.LIFECYCLE_BLOCKED, "Cancelled property-value captures must reject once.");
+    lateCallback();
+    check(harness.bridge.getState().state === "idle" && harness.bridge.compareCaptures(binding, binding).fresh === true, "Late property-value callbacks must not register captures or invalidate existing bindings.");
+    harness.bridge.suspend();
+    await expectCode(harness.bridge.capturePropertyValues(binding, [target]), protocol.ERROR_CODES.LIFECYCLE_BLOCKED, "Suspended bridges must reject property-value capture.");
+    harness.bridge.resume();
+}
+
+async function runPropertyValueSelectionFreshnessInvariantTests() {
+    const path = ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0];
+    let selectionIncludesB = false;
+    const harness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") {
+            const snapshot = tierOneSnapshot();
+            if (selectionIncludesB) {
+                snapshot.selection.count = 2;
+                snapshot.selection.items.push({ nativeLayerId: 46, layerIndex: 4, selectedOrder: 1, matchName: "ADBE Text Layer", type: "text" });
+            }
+            callback(successResult(req, snapshot));
+            return;
+        }
+        callback(successResult(req, propertyValueSnapshot(req, { sampleTime: 1, values: req.scope.targets.map(() => ({ kind: "number", data: 50 })) })));
+    });
+    const bindingA = await harness.bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
+    const targetA = { layerId: bindingA.snapshot.selection[0].layerId, propertyPath: path };
+    const first = await harness.bridge.capturePropertyValues(bindingA, [targetA]);
+    selectionIncludesB = true;
+
+    // A historical Tier 1 binding remains usable until a fresh binding is captured.
+    // It proves ancestry only, never current selection freshness.
+    const replayedOldBinding = await harness.bridge.capturePropertyValues(bindingA, [targetA]);
+    check(replayedOldBinding.snapshot.sampleTime === first.snapshot.sampleTime && replayedOldBinding.snapshot.targets[0].valueDigest === first.snapshot.targets[0].valueDigest, "Reusing an old binding can still read the same target but must not be treated as a fresh selection verification.");
+
+    // Execution invariant: fresh Tier 1 binding -> capturePropertyValues(freshBinding, targets)
+    // -> compareCaptures(original, fresh). Never reuse a candidate-era binding as current selection proof.
+    const bindingB = await harness.bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
+    const second = await harness.bridge.capturePropertyValues(bindingB, [{ layerId: bindingB.snapshot.selection[0].layerId, propertyPath: path }]);
+    const comparison = harness.bridge.compareCaptures(first, second);
+    check(comparison.fresh === false && comparison.reason === "CONTEXT_STALE", "A fresh Tier 1 selection change must stale property-value captures through bindingFingerprint ancestry.");
+    check(first.snapshot.sampleTime === second.snapshot.sampleTime && first.snapshot.targets[0].valueDigest === second.snapshot.targets[0].valueDigest && JSON.stringify(first.snapshot.targets[0].propertyPath) === JSON.stringify(second.snapshot.targets[0].propertyPath), "Selection-only stale results must retain the same value, sample time and target; ancestry is the differing freshness input.");
+}
+
+async function runPropertyValueBudgetBoundaryTests() {
+    const paths = [
+        ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0],
+        ["named", "ADBE Transform Group", 0, "named", "ADBE Position", 0],
+        ["named", "ADBE Transform Group", 0, "named", "ADBE Scale", 0],
+        ["named", "ADBE Transform Group", 0, "named", "ADBE Rotate Z", 0]
+    ];
+    const exact = "a".repeat(1024);
+    const harness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") { callback(successResult(req, tierOneSnapshot())); return; }
+        callback(successResult(req, propertyValueSnapshot(req, { values: req.scope.targets.map(() => ({ kind: "string", data: exact })) })));
+    });
+    const binding = await harness.bridge.capture({ tier: 1, purpose: "binding" });
+    const targets = paths.map((propertyPath) => ({ layerId: binding.snapshot.selection[0].layerId, propertyPath }));
+    const one = await harness.bridge.capturePropertyValues(binding, [targets[0]]);
+    check(one.snapshot.targets[0].valueKind === "string" && !JSON.stringify(one).includes(exact) && !JSON.stringify(harness.bridge.getState()).includes(exact), "A 1024-byte property value must be accepted while raw text remains undisclosed.");
+    const four = await harness.bridge.capturePropertyValues(binding, targets);
+    check(four.snapshot.targets.length === 4 && four.snapshot.targets.every((target) => target.valueKind === "string" && /^sha256:[a-f0-9]{64}$/.test(target.valueDigest) && !Object.prototype.hasOwnProperty.call(target, "value")), "Four exact 1024-byte targets must meet the 4096-byte aggregate boundary using digest-only output.");
+
+    const oversized = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") { callback(successResult(req, tierOneSnapshot())); return; }
+        callback(successResult(req, propertyValueSnapshot(req, { values: req.scope.targets.map((target, index) => ({ kind: "string", data: index === 3 ? "b".repeat(1025) : "b".repeat(1024) })) })));
+    });
+    const oversizedBinding = await oversized.bridge.capture({ tier: 1, purpose: "binding" });
+    const oversizedTargets = paths.map((propertyPath) => ({ layerId: oversizedBinding.snapshot.selection[0].layerId, propertyPath }));
+    await expectCode(oversized.bridge.capturePropertyValues(oversizedBinding, oversizedTargets), protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED, "The first representable 4097-byte aggregate response must reject without a partial property-value capture.");
+    const recovered = await oversized.bridge.capturePropertyValues(oversizedBinding, [oversizedTargets[0]]);
+    check(recovered.snapshot.targets.length === 1 && recovered.snapshot.targets[0].valueKind === "string", "Budget rejection must not create a partial capture or block subsequent valid response validation.");
+}
+
+async function runPropertyValueLateCallbackAndResponseDriftTests() {
+    const paths = [
+        ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0],
+        ["named", "ADBE Transform Group", 0, "named", "ADBE Position", 0]
+    ];
+    async function captureBinding(harness) {
+        const callIndex = harness.calls.length;
+        const pending = harness.bridge.capture({ tier: 1, purpose: "binding" });
+        const req = decodeSource(harness.calls[callIndex]);
+        harness.callbacks[callIndex](successResult(req, tierOneSnapshot()));
+        return pending;
+    }
+
+    const timeoutHarness = makeHarness();
+    const timeoutBinding = await captureBinding(timeoutHarness);
+    const timeoutTarget = { layerId: timeoutBinding.snapshot.selection[0].layerId, propertyPath: paths[0] };
+    const timedOut = timeoutHarness.bridge.capturePropertyValues(timeoutBinding, [timeoutTarget]);
+    const timeoutRequest = decodeSource(timeoutHarness.calls[1]);
+    timeoutHarness.scheduler.fireAll();
+    await expectCode(timedOut, protocol.ERROR_CODES.LIFECYCLE_BLOCKED, "Property-value timeout must settle before any late callback.");
+    timeoutHarness.callbacks[1](successResult(timeoutRequest, propertyValueSnapshot(timeoutRequest)));
+    timeoutHarness.callbacks[1]("malicious late Host response");
+    check(timeoutHarness.bridge.getState().state === "idle" && timeoutHarness.bridge.compareCaptures(timeoutBinding, timeoutBinding).fresh === true, "Timeout callbacks twice must not normalize, register captures or disturb trusted bindings.");
+    const timeoutRecovery = timeoutHarness.bridge.capturePropertyValues(timeoutBinding, [timeoutTarget]);
+    const timeoutRecoveryRequest = decodeSource(timeoutHarness.calls[2]);
+    timeoutHarness.callbacks[2](successResult(timeoutRecoveryRequest, propertyValueSnapshot(timeoutRecoveryRequest)));
+    check((await timeoutRecovery).executable === true, "Bridge must recover after property-value timeout callbacks.");
+
+    const suspendHarness = makeHarness();
+    const suspendBinding = await captureBinding(suspendHarness);
+    const suspendTarget = { layerId: suspendBinding.snapshot.selection[0].layerId, propertyPath: paths[0] };
+    const suspended = suspendHarness.bridge.capturePropertyValues(suspendBinding, [suspendTarget]);
+    const suspendRequest = decodeSource(suspendHarness.calls[1]);
+    check(suspendHarness.bridge.suspend() === true, "Suspending a pending property-value request must succeed.");
+    await expectCode(suspended, protocol.ERROR_CODES.LIFECYCLE_BLOCKED, "Suspended property-value requests must reject.");
+    suspendHarness.callbacks[1](successResult(suspendRequest, propertyValueSnapshot(suspendRequest)));
+    suspendHarness.callbacks[1]("malicious suspended late Host response");
+    check(suspendHarness.bridge.getState().state === "suspended", "Suspend callbacks twice must not normalize or change Bridge state.");
+    suspendHarness.bridge.resume();
+    const resumedBinding = await captureBinding(suspendHarness);
+    const resumedTarget = { layerId: resumedBinding.snapshot.selection[0].layerId, propertyPath: paths[0] };
+    const suspendRecovery = suspendHarness.bridge.capturePropertyValues(resumedBinding, [resumedTarget]);
+    const suspendRecoveryRequest = decodeSource(suspendHarness.calls[3]);
+    suspendHarness.callbacks[3](successResult(suspendRecoveryRequest, propertyValueSnapshot(suspendRecoveryRequest)));
+    check((await suspendRecovery).executable === true, "Bridge must recover after suspended late callbacks.");
+
+    const reorderHarness = makeHarness();
+    const reorderBinding = await captureBinding(reorderHarness);
+    const reorderTargets = paths.map((propertyPath) => ({ layerId: reorderBinding.snapshot.selection[0].layerId, propertyPath }));
+    const reordered = reorderHarness.bridge.capturePropertyValues(reorderBinding, reorderTargets);
+    const reorderRequest = decodeSource(reorderHarness.calls[1]);
+    const reorderedSnapshot = propertyValueSnapshot(reorderRequest);
+    reorderedSnapshot.targets.reverse();
+    await expectCode((reorderHarness.callbacks[1](successResult(reorderRequest, reorderedSnapshot)), reordered), protocol.ERROR_CODES.CONTEXT_STALE, "Host-reordered property-value targets must reject as one response.");
+    const reorderRecovery = reorderHarness.bridge.capturePropertyValues(reorderBinding, [reorderTargets[0]]);
+    const reorderRecoveryRequest = decodeSource(reorderHarness.calls[2]);
+    reorderHarness.callbacks[2](successResult(reorderRecoveryRequest, propertyValueSnapshot(reorderRecoveryRequest)));
+    check((await reorderRecovery).snapshot.targets.length === 1, "Target reorder rejection must not leave a partial ownership record.");
+
+    const partialHarness = makeHarness();
+    const partialBinding = await captureBinding(partialHarness);
+    const partialTargets = paths.map((propertyPath) => ({ layerId: partialBinding.snapshot.selection[0].layerId, propertyPath }));
+    const partial = partialHarness.bridge.capturePropertyValues(partialBinding, partialTargets);
+    const partialRequest = decodeSource(partialHarness.calls[1]);
+    const partialSnapshot = propertyValueSnapshot(partialRequest);
+    partialSnapshot.targets = partialSnapshot.targets.slice(0, 1);
+    await expectCode((partialHarness.callbacks[1](successResult(partialRequest, partialSnapshot)), partial), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Partial Host property-value targets must reject as one response.");
+    const partialRecovery = partialHarness.bridge.capturePropertyValues(partialBinding, [partialTargets[0]]);
+    const partialRecoveryRequest = decodeSource(partialHarness.calls[2]);
+    partialHarness.callbacks[2](successResult(partialRecoveryRequest, propertyValueSnapshot(partialRecoveryRequest)));
+    check((await partialRecovery).snapshot.targets.length === 1, "Partial target rejection must not leave ownership that blocks a later valid capture.");
+
+    const twiceHarness = makeHarness();
+    const twiceBinding = await captureBinding(twiceHarness);
+    const twiceTarget = { layerId: twiceBinding.snapshot.selection[0].layerId, propertyPath: paths[0] };
+    const firstCallback = twiceHarness.bridge.capturePropertyValues(twiceBinding, [twiceTarget]);
+    const firstRequest = decodeSource(twiceHarness.calls[1]);
+    twiceHarness.callbacks[1](successResult(firstRequest, propertyValueSnapshot(firstRequest, { values: [{ kind: "number", data: 50 }] })));
+    const firstCapture = await firstCallback;
+    const digest = firstCapture.snapshot.targets[0].valueDigest;
+    const fingerprint = firstCapture.fingerprint;
+    twiceHarness.callbacks[1](successResult(firstRequest, propertyValueSnapshot(firstRequest, { values: [{ kind: "number", data: 51 }] })));
+    check(firstCapture.fingerprint === fingerprint && firstCapture.snapshot.targets[0].valueDigest === digest && twiceHarness.bridge.compareCaptures(firstCapture, firstCapture).fresh === true, "A second callback after successful property-value capture must be ignored and cannot alter the registered capture.");
+}
+
 function runQuoteAndModuleTests() {
     const quoted = bridgeModule.quoteForExtendScript('"\\\r\n\u2028\u2029中🙂');
     check(quoted.indexOf("\\\"") !== -1 && quoted.indexOf("\\\\") !== -1 && quoted.indexOf("\\u2028") !== -1 && quoted.indexOf("\\u2029") !== -1, "Quote helper must escape quotes, slashes and line separators.");
@@ -707,6 +1016,12 @@ async function run() {
         await runOwnershipAndTierTwoTests();
         await runCurrentHostAuthorityTests();
         await runTierThreeBridgeTests();
+        await runPropertyValueBridgeTests();
+        await runPropertyValueFreshnessTests();
+        await runPropertyValueLifecycleTests();
+        await runPropertyValueSelectionFreshnessInvariantTests();
+        await runPropertyValueBudgetBoundaryTests();
+        await runPropertyValueLateCallbackAndResponseDriftTests();
         runQuoteAndModuleTests();
         await new Promise((resolve) => setImmediate(resolve));
         check(unhandled.length === 0, "Bridge tests must not produce unhandled Promise rejections.");

@@ -162,6 +162,77 @@
             return "sha256:" + protocol.sha256Hex("vela-property-value-v1\0" + normalized.kind + "\0" + protocol.utf8ByteLength(payload) + "\0" + payload);
         }
 
+        function describePropertyValue(kind, value) {
+            var normalized = normalizePropertyValue(value);
+            var payload;
+            if (normalized.kind !== kind) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property value kind does not match its payload."); }
+            payload = payloadForPropertyValue(normalized.kind, normalized.data);
+            return Object.freeze({
+                valueKind: normalized.kind,
+                valueDigest: "sha256:" + protocol.sha256Hex("vela-property-value-v1\0" + normalized.kind + "\0" + protocol.utf8ByteLength(payload) + "\0" + payload),
+                payloadBytes: protocol.utf8ByteLength(payload)
+            });
+        }
+
+        function fingerprintPropertyValueCapture(snapshot) {
+            var allowed = ["fingerprintSchemaVersion", "bindingFingerprint", "sessionId", "bridgeLifecycleEpoch", "hostInstanceId", "hostReloadEpoch", "projectGeneration", "compId", "tier", "purpose", "sampleTime", "targetOrderMeaningful", "targets"];
+            var normalized;
+            var targets;
+            protocol.assertSafeJson(snapshot);
+            if (!protocol.isPlainObject(snapshot)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property value capture fingerprint input is invalid."); }
+            protocol.assertNoUnknownKeys(snapshot, allowed, "propertyValueCapture");
+            if (protocol.getOwnDataProperty(snapshot, "fingerprintSchemaVersion") !== "property-value-capture-v1" ||
+                protocol.getOwnDataProperty(snapshot, "tier") !== 3 || protocol.getOwnDataProperty(snapshot, "purpose") !== "property-value-binding" ||
+                protocol.getOwnDataProperty(snapshot, "targetOrderMeaningful") !== true) {
+                protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property value capture fingerprint input is invalid.");
+            }
+            protocol.assertFingerprint(protocol.getOwnDataProperty(snapshot, "bindingFingerprint"), "propertyValueCapture.bindingFingerprint");
+            protocol.assertNonEmptyString(protocol.getOwnDataProperty(snapshot, "sessionId"), "propertyValueCapture.sessionId", protocol.HARD_LIMITS.maxLocalIdBytes);
+            if (!Number.isInteger(protocol.getOwnDataProperty(snapshot, "bridgeLifecycleEpoch")) || protocol.getOwnDataProperty(snapshot, "bridgeLifecycleEpoch") < 1 ||
+                !Number.isInteger(protocol.getOwnDataProperty(snapshot, "hostReloadEpoch")) || protocol.getOwnDataProperty(snapshot, "hostReloadEpoch") < 1 ||
+                !Number.isInteger(protocol.getOwnDataProperty(snapshot, "projectGeneration")) || protocol.getOwnDataProperty(snapshot, "projectGeneration") < 1) {
+                protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Property value capture fingerprint identity is invalid.");
+            }
+            protocol.assertNonEmptyString(protocol.getOwnDataProperty(snapshot, "hostInstanceId"), "propertyValueCapture.hostInstanceId", 64);
+            protocol.assertNonEmptyString(protocol.getOwnDataProperty(snapshot, "compId"), "propertyValueCapture.compId", 256);
+            if (typeof protocol.getOwnDataProperty(snapshot, "sampleTime") !== "number" || !Number.isFinite(protocol.getOwnDataProperty(snapshot, "sampleTime")) ||
+                isNegativeZero(protocol.getOwnDataProperty(snapshot, "sampleTime")) || protocol.getOwnDataProperty(snapshot, "sampleTime") < 0) {
+                protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Property value sample time is invalid.");
+            }
+            targets = protocol.getOwnDataProperty(snapshot, "targets");
+            if (!Array.isArray(targets) || targets.length < 1 || targets.length > 4) { protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Property value capture targets are invalid."); }
+            normalized = {
+                fingerprintSchemaVersion: "property-value-capture-v1",
+                bindingFingerprint: protocol.getOwnDataProperty(snapshot, "bindingFingerprint"),
+                sessionId: protocol.getOwnDataProperty(snapshot, "sessionId"),
+                bridgeLifecycleEpoch: protocol.getOwnDataProperty(snapshot, "bridgeLifecycleEpoch"),
+                hostInstanceId: protocol.getOwnDataProperty(snapshot, "hostInstanceId"),
+                hostReloadEpoch: protocol.getOwnDataProperty(snapshot, "hostReloadEpoch"),
+                projectGeneration: protocol.getOwnDataProperty(snapshot, "projectGeneration"),
+                compId: protocol.getOwnDataProperty(snapshot, "compId"),
+                tier: 3,
+                purpose: "property-value-binding",
+                sampleTime: protocol.getOwnDataProperty(snapshot, "sampleTime"),
+                targetOrderMeaningful: true,
+                targets: targets.map(function (target, index) {
+                    var allowedTarget = ["layerId", "propertyPath", "propertyMatchName", "valueKind", "valueDigest"];
+                    if (!protocol.isPlainObject(target)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property value capture target is invalid."); }
+                    protocol.assertNoUnknownKeys(target, allowedTarget, "propertyValueCapture.targets[" + index + "]");
+                    return {
+                        layerId: protocol.assertNonEmptyString(protocol.getOwnDataProperty(target, "layerId"), "propertyValueCapture.targets[" + index + "].layerId", 256),
+                        propertyPath: normalizePropertyPath(protocol.getOwnDataProperty(target, "propertyPath")),
+                        propertyMatchName: protocol.assertNonEmptyString(protocol.getOwnDataProperty(target, "propertyMatchName"), "propertyValueCapture.targets[" + index + "].propertyMatchName", 56),
+                        valueKind: protocol.assertNonEmptyString(protocol.getOwnDataProperty(target, "valueKind"), "propertyValueCapture.targets[" + index + "].valueKind", 32),
+                        valueDigest: protocol.assertFingerprint(protocol.getOwnDataProperty(target, "valueDigest"), "propertyValueCapture.targets[" + index + "].valueDigest")
+                    };
+                })
+            };
+            return Object.freeze({
+                input: protocol.deepFreeze(protocol.cloneJson(normalized, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes })),
+                fingerprint: protocol.sha256Canonical(normalized, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes })
+            });
+        }
+
         function normalizePropertyValueTarget(target) {
             var allowed = ["targetOrdinal", "nativeLayerId", "layerIndex", "propertyPath", "propertyMatchName", "value"];
             var value;
@@ -431,7 +502,9 @@
             fingerprintSettings: fingerprintSettings,
             normalizeActiveComp: normalizeActiveComp,
             canonicalNumberV1: canonicalNumberV1,
+            describePropertyValue: describePropertyValue,
             digestPropertyValue: digestPropertyValue,
+            fingerprintPropertyValueCapture: fingerprintPropertyValueCapture,
             normalizePropertyPath: normalizePropertyPath,
             normalizePropertyValue: normalizePropertyValue,
             normalizePropertyValueTarget: normalizePropertyValueTarget,
