@@ -77,7 +77,7 @@
     var REQUEST_PROTOCOL = "vela.host-context-request.v1";
     var RESULT_PROTOCOL = "vela.host-context-result.v1";
     var SCHEMA_VERSION = "1.0";
-    var HOST_ADAPTER_REVISION = "vela-context-host-v3";
+    var HOST_ADAPTER_REVISION = "vela-context-host-v4";
     var FIXED_FACADE_PREFIX = "AE" + "Toolbox.VelaContext.handle(";
     var HOST_ERROR_CODES = Object.freeze([
         "HOST_CONTEXT_REQUEST_INVALID",

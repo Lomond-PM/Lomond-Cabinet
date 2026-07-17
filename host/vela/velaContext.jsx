@@ -4,12 +4,14 @@ var AEToolbox = AEToolbox || {};
     var REQUEST_PROTOCOL = "vela.host-context-request.v1";
     var RESULT_PROTOCOL = "vela.host-context-result.v1";
     var SCHEMA_VERSION = "1.0";
-    var HOST_ADAPTER_REVISION = "vela-context-host-v3";
+    var HOST_ADAPTER_REVISION = "vela-context-host-v4";
     var MAX_SELECTED_LAYERS = 32;
     var MAX_TIER_TWO_LAYERS = 8;
     var MAX_PROPERTY_TARGETS = 4;
     var MAX_PROPERTY_PATH_LEVELS = 12;
     var MAX_NUMBER_ABS = 1000000;
+    var MAX_PROPERTY_VALUE_BYTES = 1024;
+    var MAX_PROPERTY_VALUE_AGGREGATE_BYTES = 4096;
     var HOST_INSTANCE_ID_PATTERN = /^host_[a-f0-9]{48}$/;
     var json = null;
     var jsonBootstrap = null;
@@ -104,6 +106,9 @@ var AEToolbox = AEToolbox || {};
             HOST_CONTEXT_SESSION_RESET_REQUIRED: "The Host context session must be reset.",
             HOST_CONTEXT_READ_FAILED: "The Host context could not be read.",
             HOST_CONTEXT_AUTHORITY_MISMATCH: "The Host context authority changed."
+            ,HOST_CONTEXT_VALUE_EVALUATION_DISALLOWED: "The requested property value cannot be read while its expression is enabled."
+            ,HOST_CONTEXT_VALUE_UNSUPPORTED: "The requested Host property value type is unsupported."
+            ,HOST_CONTEXT_VALUE_INVALID: "The requested Host property value is invalid."
         };
         throw hostError(code, messages[code] || messages.HOST_CONTEXT_READ_FAILED);
     }
@@ -253,28 +258,29 @@ var AEToolbox = AEToolbox || {};
         assertLocalId(value.requestId, "req");
         assertLocalId(value.sessionId, "session");
         operation = value.operation;
-        if (operation !== "getCapabilities" && operation !== "captureContext" && operation !== "captureLayerDetails" && operation !== "resolvePropertyTargets") {
+        if (operation !== "getCapabilities" && operation !== "captureContext" && operation !== "captureLayerDetails" && operation !== "resolvePropertyTargets" && operation !== "capturePropertyValues") {
             fail("HOST_CONTEXT_OPERATION_UNSUPPORTED");
         }
         if ((operation === "getCapabilities" && value.tier !== 0) ||
                 (operation === "captureContext" && value.tier !== 1) ||
                 (operation === "captureLayerDetails" && value.tier !== 2) ||
-                (operation === "resolvePropertyTargets" && value.tier !== 3)) {
+                (operation === "resolvePropertyTargets" && value.tier !== 3) ||
+                (operation === "capturePropertyValues" && value.tier !== 3)) {
             fail("HOST_CONTEXT_REQUEST_INVALID");
         }
         assertKeys(value.scope, operation === "captureLayerDetails" ? ["purpose", "selectionOrderMeaningful", "details"] :
-            (operation === "resolvePropertyTargets" ? ["purpose", "expectedHostInstanceId", "expectedHostReloadEpoch", "expectedProjectGeneration", "targets"] : ["purpose", "selectionOrderMeaningful"]));
+            ((operation === "resolvePropertyTargets" || operation === "capturePropertyValues") ? ["purpose", "expectedHostInstanceId", "expectedHostReloadEpoch", "expectedProjectGeneration", "targets"] : ["purpose", "selectionOrderMeaningful"]));
         if (value.scope.purpose !== "display" && value.scope.purpose !== "binding") {
             fail("HOST_CONTEXT_REQUEST_INVALID");
         }
-        if (operation !== "resolvePropertyTargets" && typeof value.scope.selectionOrderMeaningful !== "boolean") {
+        if (operation !== "resolvePropertyTargets" && operation !== "capturePropertyValues" && typeof value.scope.selectionOrderMeaningful !== "boolean") {
             fail("HOST_CONTEXT_REQUEST_INVALID");
         }
         if (operation === "captureLayerDetails") {
             if (value.scope.purpose !== "display") { fail("HOST_CONTEXT_REQUEST_INVALID"); }
             assertDetails(value.scope.details);
         }
-        if (operation === "resolvePropertyTargets") {
+        if (operation === "resolvePropertyTargets" || operation === "capturePropertyValues") {
             if (value.scope.purpose !== "binding") { fail("HOST_CONTEXT_REQUEST_INVALID"); }
             assertHostAuthority(value.scope.expectedHostInstanceId, value.scope.expectedHostReloadEpoch);
             assertFiniteNumber(value.scope.expectedProjectGeneration, true, 1, MAX_NUMBER_ABS);
@@ -284,7 +290,7 @@ var AEToolbox = AEToolbox || {};
     }
 
     function makeBase(request, ok) {
-        var safeOperation = request && (request.operation === "getCapabilities" || request.operation === "captureContext" || request.operation === "captureLayerDetails" || request.operation === "resolvePropertyTargets") ? request.operation : "unknown";
+        var safeOperation = request && (request.operation === "getCapabilities" || request.operation === "captureContext" || request.operation === "captureLayerDetails" || request.operation === "resolvePropertyTargets" || request.operation === "capturePropertyValues") ? request.operation : "unknown";
         return {
             protocol: RESULT_PROTOCOL,
             schemaVersion: SCHEMA_VERSION,
@@ -305,7 +311,10 @@ var AEToolbox = AEToolbox || {};
             HOST_CONTEXT_TARGET_NOT_FOUND: "The requested Host context target was not found.",
             HOST_CONTEXT_SESSION_RESET_REQUIRED: "The Host context session must be reset.",
             HOST_CONTEXT_READ_FAILED: "The Host context could not be read.",
-            HOST_CONTEXT_AUTHORITY_MISMATCH: "The Host context authority changed."
+            HOST_CONTEXT_AUTHORITY_MISMATCH: "The Host context authority changed.",
+            HOST_CONTEXT_VALUE_EVALUATION_DISALLOWED: "The requested property value cannot be read while its expression is enabled.",
+            HOST_CONTEXT_VALUE_UNSUPPORTED: "The requested Host property value type is unsupported.",
+            HOST_CONTEXT_VALUE_INVALID: "The requested Host property value is invalid."
         };
         var result = makeBase(request, false);
         result.error = {
@@ -783,6 +792,140 @@ var AEToolbox = AEToolbox || {};
         return current;
     }
 
+    function isNegativeZero(value) {
+        return value === 0 && 1 / value === -Infinity;
+    }
+
+    function canonicalNumberV1(value) {
+        var parts;
+        var mantissa;
+        var exponent;
+        if (typeof value !== "number" || !isFinite(value) || isNegativeZero(value) || Math.abs(value) > MAX_NUMBER_ABS) {
+            fail("HOST_CONTEXT_VALUE_INVALID");
+        }
+        if (value === 0) { return "0"; }
+        parts = value.toExponential(16).split("e");
+        mantissa = parts[0].replace(/0+$/, "").replace(/\.$/, "");
+        exponent = parts[1].replace(/^\+/, "").replace(/^(-?)0+(\d)/, "$1$2");
+        if (exponent === "" || exponent === "-") { exponent = "0"; }
+        return mantissa + "e" + exponent;
+    }
+
+    function assertExactValueString(value) {
+        var i;
+        var code;
+        if (typeof value !== "string") { fail("HOST_CONTEXT_VALUE_UNSUPPORTED"); }
+        for (i = 0; i < value.length; i++) {
+            code = value.charCodeAt(i);
+            if (code >= 0xD800 && code <= 0xDBFF) {
+                if (i + 1 >= value.length || value.charCodeAt(i + 1) < 0xDC00 || value.charCodeAt(i + 1) > 0xDFFF) { fail("HOST_CONTEXT_VALUE_INVALID"); }
+                i++;
+            } else if (code >= 0xDC00 && code <= 0xDFFF) { fail("HOST_CONTEXT_VALUE_INVALID"); }
+        }
+        if (json.utf8ByteLength(value) > MAX_PROPERTY_VALUE_BYTES) { fail("HOST_CONTEXT_BUDGET_EXCEEDED"); }
+        return value;
+    }
+
+    function isCanonicalArrayIndex(name) {
+        return typeof name === "string" && /^(0|[1-9][0-9]*)$/.test(name);
+    }
+
+    function arrayHas(values, expected) {
+        var i;
+        for (i = 0; i < values.length; i++) {
+            if (values[i] === expected) { return true; }
+        }
+        return false;
+    }
+
+    function normalizePropertyNumberArray(value) {
+        var lengthDescriptor;
+        var names;
+        var nativeProfile;
+        var length;
+        var i;
+        var descriptor;
+        var name;
+        var output = [];
+        try {
+            if (Object.prototype.toString.call(value) !== "[object Array]" || Object.getPrototypeOf(value) !== Array.prototype) { fail("HOST_CONTEXT_VALUE_UNSUPPORTED"); }
+            lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+            names = Object.getOwnPropertyNames(value);
+        } catch (ignoredArrayProfile) { fail("HOST_CONTEXT_VALUE_INVALID"); }
+        nativeProfile = !lengthDescriptor && !arrayHas(names, "length");
+        if (nativeProfile) {
+            try { length = value.length; }
+            catch (ignoredNativeLength) { fail("HOST_CONTEXT_VALUE_INVALID"); }
+        } else {
+            if (!lengthDescriptor || lengthDescriptor.get || lengthDescriptor.set || !own(lengthDescriptor, "value") || !arrayHas(names, "length")) { fail("HOST_CONTEXT_VALUE_INVALID"); }
+            length = lengthDescriptor.value;
+        }
+        if (typeof length !== "number" || !isFinite(length) || Math.floor(length) !== length || length < 1 || length > 4 || names.length !== length + (nativeProfile ? 0 : 1)) {
+            fail("HOST_CONTEXT_VALUE_INVALID");
+        }
+        for (i = 0; i < length; i++) {
+            name = String(i);
+            if (!arrayHas(names, name)) { fail("HOST_CONTEXT_VALUE_INVALID"); }
+            try { descriptor = Object.getOwnPropertyDescriptor(value, name); }
+            catch (ignoredArrayIndex) { fail("HOST_CONTEXT_VALUE_INVALID"); }
+            if (!descriptor || descriptor.get || descriptor.set || !own(descriptor, "value") || descriptor.enumerable !== true) { fail("HOST_CONTEXT_VALUE_INVALID"); }
+            output[output.length] = descriptor.value;
+            canonicalNumberV1(descriptor.value);
+        }
+        for (i = 0; i < names.length; i++) {
+            if (names[i] !== "length" && !isCanonicalArrayIndex(names[i])) { fail("HOST_CONTEXT_VALUE_INVALID"); }
+        }
+        return output;
+    }
+
+    function propertyValuePayloadBytes(kind, value) {
+        var i;
+        var payload;
+        if (kind === "null") { return 4; }
+        if (kind === "boolean") { return 1; }
+        if (kind === "number") { return json.utf8ByteLength(canonicalNumberV1(value)); }
+        if (kind === "string") { return json.utf8ByteLength(value); }
+        if (kind === "number-array") {
+            payload = "v1\0" + value.length;
+            for (i = 0; i < value.length; i++) { payload += "\0" + json.utf8ByteLength(canonicalNumberV1(value[i])) + "\0" + canonicalNumberV1(value[i]); }
+            return json.utf8ByteLength(payload);
+        }
+        fail("HOST_CONTEXT_VALUE_INVALID");
+    }
+
+    function normalizePropertyValue(value) {
+        var kind;
+        var data;
+        var payloadBytes;
+        if (value === null) { kind = "null"; data = null; }
+        else if (typeof value === "boolean") { kind = "boolean"; data = value; }
+        else if (typeof value === "number") { canonicalNumberV1(value); kind = "number"; data = value; }
+        else if (typeof value === "string") { kind = "string"; data = assertExactValueString(value); }
+        else if (Object.prototype.toString.call(value) === "[object Array]") { kind = "number-array"; data = normalizePropertyNumberArray(value); }
+        else { fail("HOST_CONTEXT_VALUE_UNSUPPORTED"); }
+        payloadBytes = propertyValuePayloadBytes(kind, data);
+        if (payloadBytes > MAX_PROPERTY_VALUE_BYTES) { fail("HOST_CONTEXT_BUDGET_EXCEEDED"); }
+        return { kind: kind, data: data, payloadBytes: payloadBytes };
+    }
+
+    function readPropertyValue(terminal) {
+        var canSetExpression;
+        var expressionEnabled;
+        var rawValue;
+        try { canSetExpression = terminal.canSetExpression; }
+        catch (ignoredCanSetExpression) { fail("HOST_CONTEXT_READ_FAILED"); }
+        if (typeof canSetExpression !== "boolean") { fail("HOST_CONTEXT_VALUE_INVALID"); }
+        if (canSetExpression) {
+            try { expressionEnabled = terminal.expressionEnabled; }
+            catch (ignoredExpressionEnabled) { fail("HOST_CONTEXT_READ_FAILED"); }
+            if (typeof expressionEnabled !== "boolean") { fail("HOST_CONTEXT_VALUE_INVALID"); }
+            if (expressionEnabled) { fail("HOST_CONTEXT_VALUE_EVALUATION_DISALLOWED"); }
+        }
+        try { rawValue = terminal.value; }
+        catch (ignoredValue) { fail("HOST_CONTEXT_READ_FAILED"); }
+        return normalizePropertyValue(rawValue);
+    }
+
     function readTierThree(request) {
         var project;
         var activeItem;
@@ -830,6 +973,65 @@ var AEToolbox = AEToolbox || {};
         };
     }
 
+    function readPropertyValues(request) {
+        var project;
+        var activeItem;
+        var duration;
+        var sampleTime;
+        var target;
+        var layer;
+        var terminal;
+        var normalizedValue;
+        var targets = [];
+        var aggregateBytes = 0;
+        var i;
+        if (sessionResetRequired) { fail("HOST_CONTEXT_SESSION_RESET_REQUIRED"); }
+        try { project = app && app.project ? app.project : null; }
+        catch (ignoredProject) { fail("HOST_CONTEXT_READ_FAILED"); }
+        observeProject(project);
+        if (request.scope.expectedHostInstanceId !== hostInstanceId || request.scope.expectedHostReloadEpoch !== hostReloadEpoch || request.scope.expectedProjectGeneration !== projectGeneration) {
+            fail("HOST_CONTEXT_AUTHORITY_MISMATCH");
+        }
+        try { activeItem = project && project.activeItem; }
+        catch (ignoredActive) { fail("HOST_CONTEXT_READ_FAILED"); }
+        if (!activeItem || typeof CompItem === "undefined" || !(activeItem instanceof CompItem)) { fail("HOST_CONTEXT_UNAVAILABLE"); }
+        try {
+            duration = activeItem.duration;
+            sampleTime = activeItem.time;
+        } catch (ignoredTime) { fail("HOST_CONTEXT_READ_FAILED"); }
+        if (typeof duration !== "number" || !isFinite(duration) || isNegativeZero(duration) || duration < 0 || duration > MAX_NUMBER_ABS ||
+                typeof sampleTime !== "number" || !isFinite(sampleTime) || isNegativeZero(sampleTime) || sampleTime < 0 || sampleTime > duration + 0.0000001) {
+            fail("HOST_CONTEXT_READ_FAILED");
+        }
+        for (i = 0; i < request.scope.targets.length; i++) {
+            target = request.scope.targets[i];
+            if (activeItem.id !== target.itemId) { fail("HOST_CONTEXT_AUTHORITY_MISMATCH"); }
+            try { layer = activeItem.layer(target.layerIndex); }
+            catch (ignoredLayer) { fail("HOST_CONTEXT_TARGET_NOT_FOUND"); }
+            if (!layer || readNativeLayerId(layer) !== target.nativeLayerId || layer.index !== target.layerIndex) { fail("HOST_CONTEXT_TARGET_NOT_FOUND"); }
+            terminal = resolvePropertyPath(layer, target.propertyPath);
+            normalizedValue = readPropertyValue(terminal);
+            aggregateBytes += normalizedValue.payloadBytes;
+            if (aggregateBytes > MAX_PROPERTY_VALUE_AGGREGATE_BYTES) { fail("HOST_CONTEXT_BUDGET_EXCEEDED"); }
+            targets[targets.length] = {
+                targetOrdinal: target.targetOrdinal,
+                nativeLayerId: target.nativeLayerId,
+                layerIndex: target.layerIndex,
+                propertyPath: target.propertyPath.slice(0),
+                propertyMatchName: terminal.matchName,
+                value: { kind: normalizedValue.kind, data: normalizedValue.data }
+            };
+        }
+        return {
+            hostInstanceId: hostInstanceId,
+            hostReloadEpoch: hostReloadEpoch,
+            projectGeneration: projectGeneration,
+            sampleTime: sampleTime,
+            tier: 3,
+            targets: targets
+        };
+    }
+
     function handle(requestJson) {
         var request = null;
         var result;
@@ -843,7 +1045,7 @@ var AEToolbox = AEToolbox || {};
                 maxObjectProperties: 64
             });
             validateRequest(request);
-            if (request.operation === "resolvePropertyTargets" && json.utf8ByteLength(requestJson) > 8 * 1024) {
+            if ((request.operation === "resolvePropertyTargets" || request.operation === "capturePropertyValues") && json.utf8ByteLength(requestJson) > 8 * 1024) {
                 fail("HOST_CONTEXT_BUDGET_EXCEEDED");
             }
             result = makeBase(request, true);
@@ -853,8 +1055,10 @@ var AEToolbox = AEToolbox || {};
                 result.snapshot = readTierOne(request);
             } else if (request.operation === "captureLayerDetails") {
                 result.snapshot = readTierTwo(request);
-            } else {
+            } else if (request.operation === "resolvePropertyTargets") {
                 result.snapshot = readTierThree(request);
+            } else {
+                result.snapshot = readPropertyValues(request);
             }
             return json.stringifyBounded(result, {
                 maxBytes: 16 * 1024,
@@ -874,7 +1078,7 @@ var AEToolbox = AEToolbox || {};
                     maxObjectProperties: 64
                 });
             } catch (ignoredResult) {
-                return "{\"error\":{\"code\":\"HOST_CONTEXT_READ_FAILED\",\"message\":\"The Host context could not be read.\"},\"hostAdapterRevision\":\"vela-context-host-v3\",\"ok\":false,\"operation\":\"unknown\",\"protocol\":\"vela.host-context-result.v1\",\"requestId\":\"unknown\",\"schemaVersion\":\"1.0\",\"sessionId\":\"unknown\"}";
+                return "{\"error\":{\"code\":\"HOST_CONTEXT_READ_FAILED\",\"message\":\"The Host context could not be read.\"},\"hostAdapterRevision\":\"vela-context-host-v4\",\"ok\":false,\"operation\":\"unknown\",\"protocol\":\"vela.host-context-result.v1\",\"requestId\":\"unknown\",\"schemaVersion\":\"1.0\",\"sessionId\":\"unknown\"}";
             }
         }
     }

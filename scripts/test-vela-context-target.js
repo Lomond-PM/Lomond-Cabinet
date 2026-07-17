@@ -18,7 +18,7 @@ function check(condition, message) {
 }
 
 function run() {
-    const tierThreeSource = hostSource.slice(hostSource.indexOf("function resolvePropertyPath"), hostSource.indexOf("function handle"));
+    const tierThreeSource = hostSource.slice(hostSource.indexOf("function resolvePropertyPath"), hostSource.indexOf("function isNegativeZero"));
     check(/HOST_INSTANCE_ID_PATTERN\s*=\s*\/\^host_\[a-f0-9\]\{48\}\$\//.test(contextSource), "Context core must enforce the fixed Host instance ID format.");
     check(/hostInstanceId/.test(contextSource) && /hostReloadEpoch/.test(contextSource), "Context fingerprint input must include Host authority fields.");
     check(/var captureRecords = new WeakMap\(\)/.test(bridgeSource), "Each bridge must own a private WeakMap capture store.");
@@ -26,8 +26,8 @@ function run() {
     check(/CONTEXT_CAPTURE_UNTRUSTED/.test(bridgeSource) && /CONTEXT_CAPTURE_NOT_EXECUTABLE/.test(bridgeSource) && /CONTEXT_AUTHORITY_MISMATCH/.test(bridgeSource), "Bridge-local capture rejection reasons must be stable.");
     check(/function captureLayerDetails\(/.test(bridgeSource), "Bridge must expose the fixed Tier 2 capture path.");
     check(/operation:\s*"captureLayerDetails"/.test(bridgeSource), "Tier 2 bridge requests must use the fixed Host operation.");
-    check(/HOST_ADAPTER_REVISION\s*=\s*"vela-context-host-v3"/.test(hostSource), "Host context adapter revision must be v3.");
-    check(/RUNTIME_REVISION\s*=\s*"vela-host-runtime-v3"/.test(indexSource), "Host root runtime revision must be v3.");
+    check(/HOST_ADAPTER_REVISION\s*=\s*"vela-context-host-v4"/.test(hostSource), "Host context adapter revision must be v4.");
+    check(/RUNTIME_REVISION\s*=\s*"vela-host-runtime-v4"/.test(indexSource), "Host root runtime revision must be v4.");
     check(/var hostReloadEpoch = 1;/.test(hostSource) && /hostReloadEpoch\+\+/.test(hostSource), "Host reload authority must start at one and advance explicitly.");
     check(/MAX_TIER_TWO_LAYERS\s*=\s*8/.test(hostSource), "Tier 2 Host selection limit must be eight.");
     check(/layer\.sourceRectAtTime\(time, false\)/.test(hostSource), "Tier 2 bounds must use the fixed read-only sourceRectAtTime call.");

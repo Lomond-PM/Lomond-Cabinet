@@ -60,6 +60,132 @@
     function createContextApi(protocol) {
         protocol = requireProtocol(protocol);
 
+        function isNegativeZero(value) { return value === 0 && 1 / value === -Infinity; }
+
+        function assertExactString(value, field, maximumBytes) {
+            var index;
+            var code;
+            if (typeof value !== "string") { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, field + " must be a string."); }
+            for (index = 0; index < value.length; index += 1) {
+                code = value.charCodeAt(index);
+                if (code >= 0xD800 && code <= 0xDBFF) {
+                    if (index + 1 >= value.length || value.charCodeAt(index + 1) < 0xDC00 || value.charCodeAt(index + 1) > 0xDFFF) {
+                        protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, field + " contains an unpaired surrogate.");
+                    }
+                    index += 1;
+                } else if (code >= 0xDC00 && code <= 0xDFFF) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, field + " contains an unpaired surrogate."); }
+            }
+            if (protocol.utf8ByteLength(value) > maximumBytes) { protocol.fail(protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED, field + " exceeds its byte budget."); }
+            return value;
+        }
+
+        function canonicalNumberV1(value) {
+            var parts;
+            var mantissa;
+            var exponent;
+            if (typeof value !== "number" || !Number.isFinite(value) || isNegativeZero(value) || Math.abs(value) > protocol.HARD_LIMITS.maxNumberAbs) {
+                protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Property value number is invalid.");
+            }
+            if (value === 0) { return "0"; }
+            parts = value.toExponential(16).split("e");
+            mantissa = parts[0].replace(/0+$/, "").replace(/\.$/, "");
+            exponent = parts[1].replace(/^\+/, "").replace(/^(-?)0+(\d)/, "$1$2");
+            if (exponent === "" || exponent === "-") { exponent = "0"; }
+            return mantissa + "e" + exponent;
+        }
+
+        function normalizeNumberArray(value) {
+            var lengthDescriptor;
+            var names;
+            var length;
+            var nativeProfile;
+            var normalized = [];
+            var index;
+            var descriptor;
+            if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property value array is unsupported."); }
+            try { lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length"); names = Object.getOwnPropertyNames(value); }
+            catch (ignoredDescriptor) { protocol.fail(protocol.ERROR_CODES.UNSAFE_JSON_VALUE, "Property value array descriptors are unsafe."); }
+            nativeProfile = !lengthDescriptor && names.indexOf("length") === -1;
+            if (nativeProfile) { length = value.length; }
+            else {
+                if (!lengthDescriptor || lengthDescriptor.get || lengthDescriptor.set || !Object.prototype.hasOwnProperty.call(lengthDescriptor, "value") || names.indexOf("length") === -1) {
+                    protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property value array length is invalid.");
+                }
+                length = lengthDescriptor.value;
+            }
+            if (!Number.isInteger(length) || length < 1 || length > 4 || names.length !== length + (nativeProfile ? 0 : 1)) {
+                protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Property value array length is invalid.");
+            }
+            for (index = 0; index < length; index += 1) {
+                if (names.indexOf(String(index)) === -1) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property value array is sparse."); }
+                try { descriptor = Object.getOwnPropertyDescriptor(value, String(index)); }
+                catch (ignoredIndexDescriptor) { protocol.fail(protocol.ERROR_CODES.UNSAFE_JSON_VALUE, "Property value array descriptors are unsafe."); }
+                if (!descriptor || descriptor.get || descriptor.set || !Object.prototype.hasOwnProperty.call(descriptor, "value") || descriptor.enumerable !== true) {
+                    protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property value array index is invalid.");
+                }
+                normalized.push(canonicalNumberV1(descriptor.value));
+            }
+            names.forEach(function (key) {
+                if (key !== "length" && !/^(0|[1-9]\d*)$/.test(key)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property value array has an extra property."); }
+            });
+            return normalized;
+        }
+
+        function normalizePropertyValue(value) {
+            var data;
+            if (value === null) { return Object.freeze({ kind: "null", data: null }); }
+            if (typeof value === "boolean") { return Object.freeze({ kind: "boolean", data: value }); }
+            if (typeof value === "number") { return Object.freeze({ kind: "number", data: canonicalNumberV1(value) }); }
+            if (typeof value === "string") { return Object.freeze({ kind: "string", data: assertExactString(value, "propertyValue", 1024) }); }
+            if (Array.isArray(value)) { data = normalizeNumberArray(value); return Object.freeze({ kind: "number-array", data: Object.freeze(data) }); }
+            protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property value type is unsupported.");
+        }
+
+        function payloadForPropertyValue(kind, data) {
+            var output;
+            if (kind === "null") { return "null"; }
+            if (kind === "boolean") { return data ? "1" : "0"; }
+            if (kind === "number" || kind === "string") { return data; }
+            if (kind === "number-array") {
+                output = "v1\0" + data.length;
+                data.forEach(function (item) { output += "\0" + protocol.utf8ByteLength(item) + "\0" + item; });
+                return output;
+            }
+            protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property value kind is invalid.");
+        }
+
+        function digestPropertyValue(kind, value) {
+            var normalized = normalizePropertyValue(value);
+            var payload;
+            if (normalized.kind !== kind) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property value kind does not match its payload."); }
+            payload = payloadForPropertyValue(normalized.kind, normalized.data);
+            return "sha256:" + protocol.sha256Hex("vela-property-value-v1\0" + normalized.kind + "\0" + protocol.utf8ByteLength(payload) + "\0" + payload);
+        }
+
+        function normalizePropertyValueTarget(target) {
+            var allowed = ["targetOrdinal", "nativeLayerId", "layerIndex", "propertyPath", "propertyMatchName", "value"];
+            var value;
+            var normalized;
+            if (!protocol.isPlainObject(target)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property value target is invalid."); }
+            protocol.assertNoUnknownKeys(target, allowed, "propertyValueTarget");
+            if (!Number.isInteger(protocol.getOwnDataProperty(target, "targetOrdinal")) || protocol.getOwnDataProperty(target, "targetOrdinal") < 0 ||
+                    !Number.isInteger(protocol.getOwnDataProperty(target, "nativeLayerId")) || protocol.getOwnDataProperty(target, "nativeLayerId") < 1 ||
+                    !Number.isInteger(protocol.getOwnDataProperty(target, "layerIndex")) || protocol.getOwnDataProperty(target, "layerIndex") < 1) {
+                protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Property value target identity is invalid.");
+            }
+            value = protocol.getOwnDataProperty(target, "value");
+            if (!protocol.isPlainObject(value)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property value target payload is invalid."); }
+            protocol.assertNoUnknownKeys(value, ["kind", "data"], "propertyValueTarget.value");
+            normalized = normalizePropertyValue(protocol.getOwnDataProperty(value, "data"));
+            if (normalized.kind !== protocol.getOwnDataProperty(value, "kind")) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Property value target kind is invalid."); }
+            return protocol.deepFreeze({
+                targetOrdinal: protocol.getOwnDataProperty(target, "targetOrdinal"), nativeLayerId: protocol.getOwnDataProperty(target, "nativeLayerId"), layerIndex: protocol.getOwnDataProperty(target, "layerIndex"),
+                propertyPath: normalizePropertyPath(protocol.getOwnDataProperty(target, "propertyPath")),
+                propertyMatchName: protocol.assertNonEmptyString(protocol.getOwnDataProperty(target, "propertyMatchName"), "propertyValueTarget.propertyMatchName", 56),
+                value: { kind: normalized.kind, data: normalized.data }
+            });
+        }
+
         function stableIdentity(value) {
             if (!value || typeof value !== "object") { return String(value); }
             return String(value.layerId || value.targetId || value.compId || "");
@@ -304,7 +430,11 @@
             fingerprintContext: fingerprintContext,
             fingerprintSettings: fingerprintSettings,
             normalizeActiveComp: normalizeActiveComp,
+            canonicalNumberV1: canonicalNumberV1,
+            digestPropertyValue: digestPropertyValue,
             normalizePropertyPath: normalizePropertyPath,
+            normalizePropertyValue: normalizePropertyValue,
+            normalizePropertyValueTarget: normalizePropertyValueTarget,
             normalizeSelection: normalizeSelection,
             normalizeTarget: normalizeTarget,
             normalizeValue: normalizeValue
