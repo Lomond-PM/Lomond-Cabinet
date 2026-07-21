@@ -101,6 +101,12 @@
                 return store.failStep(reservation, error);
             }
         });
+        Object.defineProperty(this, "abort", {
+            enumerable: false,
+            value: function (reservation, errorCode) {
+                return store.abortStep(reservation, errorCode);
+            }
+        });
         Object.freeze(this);
     }
 

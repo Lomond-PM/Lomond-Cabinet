@@ -101,6 +101,16 @@
     var MAX_PROPERTY_VALUE_BYTES = 1024;
     var MAX_PROPERTY_VALUE_AGGREGATE_BYTES = 4096;
     var SAMPLE_TIME_TOLERANCE = 0.0000001;
+    var trustedContextBridges = new WeakSet();
+    var contextBridgeProtocols = new WeakMap();
+
+    function isTrustedContextBridge(bridge) {
+        return Boolean(bridge && trustedContextBridges.has(bridge));
+    }
+
+    function isTrustedContextBridgeForProtocol(bridge, protocol) {
+        return Boolean(isTrustedContextBridge(bridge) && protocolModule.isTrustedProtocol(protocol) && contextBridgeProtocols.get(bridge) === protocol);
+    }
 
     function protocolError(protocol, code, stage) {
         return new protocol.VelaProtocolError(code, undefined, { stage: stage || "context-bridge" });
@@ -232,7 +242,8 @@
 
         function mapHostError(code) {
             if (code === "HOST_CONTEXT_BUDGET_EXCEEDED") { return protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED; }
-            if (code === "HOST_CONTEXT_UNAVAILABLE" || code === "HOST_CONTEXT_TARGET_NOT_FOUND") { return protocol.ERROR_CODES.UNKNOWN_TARGET; }
+            if (code === "HOST_CONTEXT_TARGET_NOT_FOUND") { return protocol.ERROR_CODES.UNKNOWN_TARGET; }
+            if (code === "HOST_CONTEXT_UNAVAILABLE") { return protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE; }
             if (code === "HOST_CONTEXT_SESSION_RESET_REQUIRED" || code === "HOST_CONTEXT_AUTHORITY_MISMATCH") { return protocol.ERROR_CODES.CONTEXT_STALE; }
             if (code === "HOST_CONTEXT_VALUE_EVALUATION_DISALLOWED") { return protocol.ERROR_CODES.CONTEXT_VALUE_EVALUATION_DISALLOWED; }
             if (code === "HOST_CONTEXT_VALUE_UNSUPPORTED") { return protocol.ERROR_CODES.CONTEXT_VALUE_UNSUPPORTED; }
@@ -1231,7 +1242,7 @@
             });
         }
 
-        return Object.freeze({
+        var bridge = Object.freeze({
             capture: capture,
             captureLayerDetails: captureLayerDetails,
             capturePropertyValues: capturePropertyValues,
@@ -1244,10 +1255,15 @@
             getState: getState,
             compareCaptures: compareCaptures
         });
+        trustedContextBridges.add(bridge);
+        contextBridgeProtocols.set(bridge, protocol);
+        return bridge;
     }
 
     return Object.freeze({
         createContextBridge: createContextBridge,
+        isTrustedContextBridge: isTrustedContextBridge,
+        isTrustedContextBridgeForProtocol: isTrustedContextBridgeForProtocol,
         quoteForExtendScript: quoteForExtendScript
     });
 }));

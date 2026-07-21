@@ -179,7 +179,7 @@ function run() {
         check(!/(?:require\(["'](?:crypto|fs|net|http|https)["']\)|Buffer\.|process\.|Date\.now\(|randomBytes\(|randomUUID\(|CSInterface|evalScript|\$\.evalFile|AEToolbox|\bapp\b|\bwindow\b|\bdocument\b|localStorage|fetch\(|XMLHttpRequest|WebSocket|\beval\(|\bFunction\s*\()/.test(source), name + " must remain environment-independent.");
     });
 
-    const umdFiles = ["velaProtocol.js", "velaResponseParser.js", "velaContext.js", "velaValidator.js", "velaPlan.js", "velaExecutionGuard.js"];
+    const umdFiles = ["velaProtocol.js", "velaValidator.js", "velaPlan.js", "velaExecutionGuard.js", "velaContext.js", "velaContextBridge.js", "velaExecutionPreflight.js", "velaResponseParser.js"];
     function browserContext() {
         const context = { console, browserRuntime: runtime };
         context.self = context;
@@ -211,16 +211,18 @@ function run() {
         var checked = guard.check(plan.planId, 0, current);
         var reserved = guard.reserve(plan.planId, 0, current);
         var completed = guard.complete(reserved.reservation, { ok: true });
-        return { parsed: parsed.ok, rejected: rejected.error.code, checked: checked.ok, completed: completed.state };
+        return { parsed: parsed.ok, rejected: rejected.error.code, checked: checked.ok, completed: completed.state, preflight: typeof VelaExecutionPreflight.createExecutionPreflight === "function" };
     }())`, browser);
-    check(browserResult.parsed === true && browserResult.rejected === protocol.ERROR_CODES.JSON_PARSE_FAILED && browserResult.checked === true && browserResult.completed === "consumed", "UMD smoke test must exercise parser, validator, PlanStore and ExecutionGuard behavior.");
+    check(browserResult.parsed === true && browserResult.rejected === protocol.ERROR_CODES.JSON_PARSE_FAILED && browserResult.checked === true && browserResult.completed === "consumed" && browserResult.preflight === true, "UMD smoke test must exercise parser, validator, PlanStore, ExecutionGuard and register ExecutionPreflight in dependency order.");
     const originalGlobals = {
         VelaProtocol: browser.VelaProtocol,
         VelaResponseParser: browser.VelaResponseParser,
         VelaContext: browser.VelaContext,
         VelaValidator: browser.VelaValidator,
         VelaPlan: browser.VelaPlan,
-        VelaExecutionGuard: browser.VelaExecutionGuard
+        VelaExecutionGuard: browser.VelaExecutionGuard,
+        VelaContextBridge: browser.VelaContextBridge,
+        VelaExecutionPreflight: browser.VelaExecutionPreflight
     };
     let duplicateProtocolCode = null;
     try { loadUmd(browser, "velaProtocol.js"); } catch (error) { duplicateProtocolCode = error.code; }
@@ -228,6 +230,9 @@ function run() {
     let duplicateValidatorCode = null;
     try { loadUmd(browser, "velaValidator.js"); } catch (error) { duplicateValidatorCode = error.code; }
     check(duplicateValidatorCode === protocol.ERROR_CODES.MODULE_ALREADY_REGISTERED && browser.VelaValidator === originalGlobals.VelaValidator, "Repeated dependent loading must fail without replacing its identity.");
+    let duplicatePreflightCode = null;
+    try { loadUmd(browser, "velaExecutionPreflight.js"); } catch (error) { duplicatePreflightCode = error.code; }
+    check(duplicatePreflightCode === protocol.ERROR_CODES.MODULE_ALREADY_REGISTERED && browser.VelaExecutionPreflight === originalGlobals.VelaExecutionPreflight, "Repeated ExecutionPreflight loading must fail without replacing its identity.");
     const wrongOrder = browserContext();
     let wrongOrderCode = null;
     try { loadUmd(wrongOrder, "velaResponseParser.js"); } catch (error) { wrongOrderCode = error.code; }

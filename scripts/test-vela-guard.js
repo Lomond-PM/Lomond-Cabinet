@@ -67,7 +67,7 @@ function makeStore(options) {
         planIdFactory: options.planIdFactory || (() => localId("plan", ++planCounter)),
         reservationIdFactory: options.reservationIdFactory || (() => localId("res", storeId * 1000 + (++reservation))),
         sessionIdFactory: options.sessionIdFactory || (() => localId("session", storeId)),
-        now: (() => { let tick = 1000; return () => ++tick; })()
+        now: options.now || (() => { let tick = 1000; return () => ++tick; })()
     });
 }
 
@@ -124,6 +124,125 @@ function run() {
     const spentCheck = guard.check(plan.planId, 0, current);
     check(spentCheck.error.code === protocol.ERROR_CODES.PLAN_FAILED && Object.isFrozen(spentCheck.error) && !("stack" in spentCheck.error), "Consumed plans must return a frozen replay rejection without a stack.");
     expectCode(() => guard.complete(reservation.reservation, { ok: true }), protocol.ERROR_CODES.RESERVATION_INVALID, "The reservation handle is one-shot.");
+    const settledAck = guard.abort(reservation.reservation, protocol.ERROR_CODES.PLAN_FAILED);
+    check(settledAck.state === "consumed" && settledAck.emergencyAbort === false, "Abort after normal completion must return the immutable settled acknowledgement without a second transition.");
+
+    const invalidResultStore = makeStore();
+    const invalidResultPlan = makePlan(invalidResultStore);
+    const invalidResultConfirmed = invalidResultStore.confirmPlan(invalidResultPlan.planId, binding);
+    const invalidResultCandidate = invalidResultStore.getCandidate(invalidResultPlan.candidateIds[0]);
+    const invalidResultGuard = guardModule.createExecutionGuard(invalidResultStore);
+    const invalidResultReservation = invalidResultGuard.reserve(invalidResultPlan.planId, 0, currentFor(invalidResultConfirmed, invalidResultCandidate));
+    expectCode(() => invalidResultGuard.complete(invalidResultReservation.reservation, { ok: true, summary: { source: "forbidden" } }), protocol.ERROR_CODES.UNSAFE_JSON_VALUE, "Invalid completion results must fail before state commit.");
+    const invalidAbort = invalidResultGuard.abort(invalidResultReservation.reservation, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+    check(invalidAbort.state === "failed" && invalidAbort.emergencyAbort === true && invalidAbort.errorCode === protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Abort must terminalize an active reservation without clock or result validation.");
+    check(invalidResultStore.getCandidate(invalidResultPlan.candidateIds[0]).state === "failed", "Abort must leave no executing candidate after invalid completion preparation.");
+    check(invalidResultGuard.check(invalidResultPlan.planId, 0, currentFor(invalidResultConfirmed, invalidResultCandidate)).ok === false, "Emergency-aborted replay keys must remain permanently consumed.");
+    const duplicateAbort = invalidResultGuard.abort(invalidResultReservation.reservation, "not an error code");
+    check(duplicateAbort === invalidAbort, "Repeated abort must return the exact immutable acknowledgement without a second mutation.");
+    expectCode(() => invalidResultGuard.abort(Object.assign({}, invalidResultReservation.reservation), protocol.ERROR_CODES.PLAN_FAILED), protocol.ERROR_CODES.RESERVATION_INVALID, "Cloned reservation handles must not reach emergency abort.");
+    const replacementAfterAbort = makePlan(invalidResultStore);
+    const replacementConfirmed = invalidResultStore.confirmPlan(replacementAfterAbort.planId, binding);
+    const replacementCandidate = invalidResultStore.getCandidate(replacementAfterAbort.candidateIds[0]);
+    const replacementReservation = invalidResultGuard.reserve(replacementAfterAbort.planId, 0, currentFor(replacementConfirmed, replacementCandidate));
+    check(replacementReservation.ok === true, "Emergency abort must release the store execution lock for a later plan.");
+    const fallbackAbort = invalidResultGuard.abort(replacementReservation.reservation, { invalid: true });
+    check(fallbackAbort.errorCode === protocol.ERROR_CODES.PLAN_FAILED && fallbackAbort.emergencyAbort === true, "Emergency abort must reduce invalid error codes to bounded PLAN_FAILED metadata.");
+
+    let clockBroken = false;
+    const clockStore = makeStore({ now: () => { if (clockBroken) { throw new Error("clock unavailable"); } return 42; } });
+    const clockPlan = makePlan(clockStore);
+    const clockConfirmed = clockStore.confirmPlan(clockPlan.planId, binding);
+    const clockCandidate = clockStore.getCandidate(clockPlan.candidateIds[0]);
+    const clockGuard = guardModule.createExecutionGuard(clockStore);
+    const clockReservation = clockGuard.reserve(clockPlan.planId, 0, currentFor(clockConfirmed, clockCandidate));
+    clockBroken = true;
+    expectCode(() => clockGuard.complete(clockReservation.reservation, { ok: true }), protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Completion clock failure must occur before any terminal state commit.");
+    const clockFailure = clockGuard.fail(clockReservation.reservation, { code: protocol.ERROR_CODES.PLAN_FAILED });
+    check(clockFailure.emergencyAbort === true && clockStore.getCandidate(clockPlan.candidateIds[0]).state === "failed", "Fail must fall back to emergency abort when its clock-dependent preparation fails.");
+    check(clockGuard.abort(clockReservation.reservation, protocol.ERROR_CODES.PLAN_FAILED) === clockFailure, "Abort after fail fallback must not create a second terminal transition.");
+
+    function reserveFailureCase() {
+        const localStore = makeStore();
+        const localPlan = makePlan(localStore);
+        const localConfirmed = localStore.confirmPlan(localPlan.planId, binding);
+        const localCandidate = localStore.getCandidate(localConfirmed.candidateIds[0]);
+        const localGuard = guardModule.createExecutionGuard(localStore);
+        const localCurrent = currentFor(localConfirmed, localCandidate);
+        return {
+            store: localStore,
+            plan: localPlan,
+            confirmed: localConfirmed,
+            candidate: localCandidate,
+            guard: localGuard,
+            current: localCurrent,
+            reservation: localGuard.reserve(localPlan.planId, 0, localCurrent)
+        };
+    }
+
+    function assertSafeFailureTerminal(error, expectedCode, label) {
+        const local = reserveFailureCase();
+        const terminal = local.guard.fail(local.reservation.reservation, error);
+        const candidateAfter = local.store.getCandidate(local.plan.candidateIds[0]);
+        check(terminal.state === "failed" && candidateAfter.state === "failed", label + " must terminalize the active candidate exactly once.");
+        check(candidateAfter.result.errorCode === expectedCode, label + " must retain only the accepted stable error code.");
+        check(local.store.getPlanView(local.plan.planId).state === "failed", label + " must leave the plan terminal rather than active.");
+        expectCode(() => local.guard.complete(local.reservation.reservation, { ok: true }), protocol.ERROR_CODES.RESERVATION_INVALID, label + " must settle and remove the reservation handle.");
+        const settledAck = local.guard.abort(local.reservation.reservation, protocol.ERROR_CODES.CONTEXT_STALE);
+        check(settledAck.state === "failed" && settledAck.emergencyAbort === false && Object.isFrozen(settledAck), label + " must expose only the existing frozen terminal acknowledgement.");
+        check(local.guard.abort(local.reservation.reservation, protocol.ERROR_CODES.PLAN_FAILED) === settledAck, label + " must not produce a second terminal acknowledgement.");
+        expectCode(() => local.guard.reserve(local.plan.planId, 0, local.current), protocol.ERROR_CODES.PLAN_FAILED, label + " must keep the replayed plan step permanently blocked.");
+        const replacement = makePlan(local.store);
+        const replacementConfirmed = local.store.confirmPlan(replacement.planId, binding);
+        const replacementCandidate = local.store.getCandidate(replacementConfirmed.candidateIds[0]);
+        const replacementReservation = local.guard.reserve(replacement.planId, 0, currentFor(replacementConfirmed, replacementCandidate));
+        check(replacementReservation.ok === true, label + " must release executionActive for a later plan.");
+        local.guard.abort(replacementReservation.reservation, protocol.ERROR_CODES.PLAN_FAILED);
+        return local;
+    }
+
+    let getterReads = 0;
+    const throwingGetter = {};
+    Object.defineProperty(throwingGetter, "code", {
+        enumerable: true,
+        get: function () {
+            getterReads += 1;
+            throw new Error("getter must not escape");
+        }
+    });
+    assertSafeFailureTerminal(throwingGetter, protocol.ERROR_CODES.PLAN_FAILED, "Throwing own code getter");
+    check(getterReads === 0, "safeFailureCode must not execute an own code getter.");
+
+    const inheritedCode = Object.create({ code: protocol.ERROR_CODES.CONTEXT_STALE });
+    assertSafeFailureTerminal(inheritedCode, protocol.ERROR_CODES.PLAN_FAILED, "Inherited error code");
+
+    ["MADE_UP_ERROR", "HOST_CONTEXT_FAKE", "CONTEXT_NOT_REGISTERED"].forEach((unknownCode) => {
+        assertSafeFailureTerminal({ code: unknownCode }, protocol.ERROR_CODES.PLAN_FAILED, "Unknown stable-looking error code " + unknownCode);
+    });
+    assertSafeFailureTerminal({ code: protocol.ERROR_CODES.CONTEXT_STALE }, protocol.ERROR_CODES.CONTEXT_STALE, "Declared protocol error code");
+
+    const unknownAbort = reserveFailureCase();
+    const unknownAbortAck = unknownAbort.guard.abort(unknownAbort.reservation.reservation, "MADE_UP_ERROR");
+    check(unknownAbortAck.errorCode === protocol.ERROR_CODES.PLAN_FAILED && unknownAbort.store.getCandidate(unknownAbort.plan.candidateIds[0]).result.errorCode === protocol.ERROR_CODES.PLAN_FAILED, "Unknown abort codes must not enter acknowledgements or candidate results.");
+    check(unknownAbort.guard.abort(unknownAbort.reservation.reservation, protocol.ERROR_CODES.CONTEXT_STALE) === unknownAbortAck, "Unknown-code aborts must remain exactly-once terminal transitions.");
+
+    if (typeof Proxy === "function") {
+        const descriptorTrap = new Proxy({}, {
+            getOwnPropertyDescriptor: function () {
+                throw new Error("descriptor trap must not escape");
+            }
+        });
+        assertSafeFailureTerminal(descriptorTrap, protocol.ERROR_CODES.PLAN_FAILED, "Throwing Proxy descriptor trap");
+        if (typeof Proxy.revocable === "function") {
+            const revocable = Proxy.revocable({}, {});
+            revocable.revoke();
+            assertSafeFailureTerminal(revocable.proxy, protocol.ERROR_CODES.PLAN_FAILED, "Revoked Proxy error");
+        } else {
+            console.log("SKIP revoked Proxy test: Proxy.revocable is unavailable.");
+        }
+    } else {
+        console.log("SKIP Proxy error tests: Proxy is unavailable.");
+    }
 
     const staleStore = makeStore();
     const stalePlan = makePlan(staleStore);
@@ -151,7 +270,7 @@ function run() {
     const firstCandidate = failureStore.getCandidate(failurePlan.candidateIds[0]);
     const firstReservation = guardModule.createExecutionGuard(failureStore).reserve(failurePlan.planId, 0, currentFor(failurePlan, firstCandidate));
     const failed = failureStore.failStep(firstReservation.reservation, { code: protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED });
-    check(failed.state === "failed/consumed", "Failed execution must consume the candidate.");
+    check(failed.state === "failed", "Failed execution must consume the candidate.");
     const secondCandidate = failureStore.getCandidate(failurePlan.candidateIds[1]);
     expectCode(() => failureStore.reserveStep(failurePlan.planId, 1, currentFor(failurePlan, secondCandidate)), protocol.ERROR_CODES.PLAN_FAILED, "A failed step must stop all later steps.");
     expectCode(() => failureStore.markStale(firstCandidate.candidateId, "late"), protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "Executing/consumed lifecycle states cannot be recovered.");

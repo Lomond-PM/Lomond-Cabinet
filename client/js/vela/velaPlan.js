@@ -83,6 +83,10 @@
         var replayKeys = new Set();
         var reservations = new WeakMap();
         var reservationsByCandidate = new Map();
+        var settledReservations = new WeakMap();
+        var stableErrorCodes = new Set(Object.keys(protocol.ERROR_CODES).map(function (key) {
+            return protocol.ERROR_CODES[key];
+        }));
         var confirmationIds = new Set();
         var reservationIds = new Set();
         var nextRevision = 0;
@@ -442,6 +446,84 @@
             return { ok: true, reservation: handle, candidate: snapshot(prepared.candidate), replayKey: prepared.replayKey, actionIndex: prepared.stepIndex, totalSteps: prepared.plan.actionCount };
         }
 
+        function stableAbortCode(errorCode) {
+            return typeof errorCode === "string" && stableErrorCodes.has(errorCode)
+                ? errorCode
+                : protocol.ERROR_CODES.PLAN_FAILED;
+        }
+
+        function safeFailureCode(error) {
+            var descriptor;
+            if (!error || typeof error !== "object") { return protocol.ERROR_CODES.PLAN_FAILED; }
+            try {
+                descriptor = Object.getOwnPropertyDescriptor(error, "code");
+                if (!descriptor || descriptor.get || descriptor.set || !Object.prototype.hasOwnProperty.call(descriptor, "value")) {
+                    return protocol.ERROR_CODES.PLAN_FAILED;
+                }
+                return stableAbortCode(descriptor.value);
+            } catch (ignored) {
+                return protocol.ERROR_CODES.PLAN_FAILED;
+            }
+        }
+
+        function makeTerminalAcknowledgement(candidate, plan, state, errorCode, emergencyAbort) {
+            var acknowledgement = {
+                candidateId: candidate.candidateId,
+                planId: plan.planId,
+                state: state,
+                emergencyAbort: emergencyAbort === true
+            };
+            if (errorCode !== undefined) { acknowledgement.errorCode = errorCode; }
+            return Object.freeze(acknowledgement);
+        }
+
+        function terminalCandidateView(candidate, state, completedAt, resultSnapshot) {
+            var view = protocol.cloneJson(candidate, {
+                maxBytes: protocol.HARD_LIMITS.maxResponseJsonBytes,
+                allowDangerousPaths: ["candidateId"]
+            });
+            view.state = state;
+            view.completedAt = completedAt;
+            view.result = resultSnapshot;
+            return snapshot(view);
+        }
+
+        function commitTerminal(prepared) {
+            var candidate = prepared.candidate;
+            var plan = prepared.plan;
+            candidate.state = prepared.state;
+            candidate.completedAt = prepared.completedAt;
+            candidate.result = prepared.resultSnapshot;
+            plan.state = prepared.planState;
+            executionActive = false;
+            reservations.delete(prepared.reservation);
+            reservationsByCandidate.delete(candidate.candidateId);
+            settledReservations.set(prepared.reservation, prepared.acknowledgement);
+            return prepared.publicCandidate;
+        }
+
+        function abortStep(reservation, errorCode) {
+            if (reservation && settledReservations.has(reservation)) {
+                return settledReservations.get(reservation);
+            }
+            if (!reservation || !reservations.has(reservation)) {
+                protocol.fail(protocol.ERROR_CODES.RESERVATION_INVALID, "The execution reservation is invalid.");
+            }
+            var prepared = reservations.get(reservation);
+            var candidate = prepared.candidate;
+            var plan = prepared.plan;
+            var stableCode = stableAbortCode(errorCode);
+            var acknowledgement = makeTerminalAcknowledgement(candidate, plan, "failed", stableCode, true);
+            candidate.state = "failed";
+            candidate.result = { ok: false, errorCode: stableCode, emergencyAbort: true };
+            plan.state = "failed";
+            executionActive = false;
+            reservations.delete(reservation);
+            reservationsByCandidate.delete(candidate.candidateId);
+            settledReservations.set(reservation, acknowledgement);
+            return acknowledgement;
+        }
+
         function completeStep(reservation, result) {
             if (!reservation || !reservations.has(reservation)) { protocol.fail(protocol.ERROR_CODES.RESERVATION_INVALID, "The execution reservation is invalid."); }
             var prepared = reservations.get(reservation);
@@ -453,25 +535,32 @@
             if (result.summary !== undefined) { protocol.assertJsonBudget(result.summary, { maxBytes: protocol.HARD_LIMITS.maxErrorDetailsJsonBytes }); }
             var completedAt = safeNow();
             var resultSnapshot = result.summary === undefined ? { ok: result.ok } : protocol.cloneJson(result.summary, { maxBytes: protocol.HARD_LIMITS.maxErrorDetailsJsonBytes });
-            candidate.state = result.ok ? "consumed" : "failed/consumed";
-            candidate.completedAt = completedAt;
-            candidate.result = resultSnapshot;
-            executionActive = false;
-            reservations.delete(reservation);
-            reservationsByCandidate.delete(candidate.candidateId);
-            if (!result.ok) {
-                plan.state = "failed";
-                return getCandidate(candidate.candidateId);
-            }
-            if (plan.nextStep >= plan.actionCount) { plan.state = "consumed"; }
-            else { plan.state = "confirmed"; }
-            return getCandidate(candidate.candidateId);
+            var terminalState = result.ok ? "consumed" : "failed";
+            var terminalPlanState = result.ok ? (plan.nextStep >= plan.actionCount ? "consumed" : "confirmed") : "failed";
+            var acknowledgement = makeTerminalAcknowledgement(candidate, plan, terminalState, undefined, false);
+            var publicCandidate = terminalCandidateView(candidate, terminalState, completedAt, resultSnapshot);
+            return commitTerminal({
+                reservation: reservation,
+                candidate: candidate,
+                plan: plan,
+                state: terminalState,
+                planState: terminalPlanState,
+                completedAt: completedAt,
+                resultSnapshot: resultSnapshot,
+                acknowledgement: acknowledgement,
+                publicCandidate: publicCandidate
+            });
         }
 
         function failStep(reservation, error) {
-            var summary = { ok: false };
-            if (error && typeof error.code === "string") { summary.errorCode = error.code; }
-            return completeStep(reservation, summary);
+            var code = safeFailureCode(error);
+            try { return completeStep(reservation, { ok: false, summary: { errorCode: code } }); }
+            catch (failure) {
+                if (reservation && (reservations.has(reservation) || settledReservations.has(reservation))) {
+                    return abortStep(reservation, code);
+                }
+                throw failure;
+            }
         }
 
         function issue(input) {
@@ -507,6 +596,7 @@
             checkStep: checkStep,
             complete: complete,
             completeStep: completeStep,
+            abortStep: abortStep,
             confirm: confirm,
             confirmCandidate: confirmCandidate,
             confirmPlan: confirmPlan,
