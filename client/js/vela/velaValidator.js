@@ -40,6 +40,8 @@
 
     var trustedAuthorities = new WeakSet();
     var authorityProtocols = new WeakMap();
+    var trustedActionValidators = new WeakSet();
+    var actionValidatorProtocols = new WeakMap();
 
     function requireProtocol(protocol) {
         if (!protocolModule.isTrustedProtocol(protocol) || typeof protocol.validateNormalizedAction !== "function") {
@@ -68,6 +70,14 @@
 
     function isTrustedAuthorityForProtocol(authority, protocol) {
         return Boolean(isTrustedAuthority(authority) && protocolModule.isTrustedProtocol(protocol) && authorityProtocols.get(authority) === protocol);
+    }
+
+    function isTrustedActionValidator(validator) {
+        return Boolean(validator && trustedActionValidators.has(validator));
+    }
+
+    function isTrustedActionValidatorForProtocol(validator, protocol) {
+        return Boolean(isTrustedActionValidator(validator) && protocolModule.isTrustedProtocol(protocol) && actionValidatorProtocols.get(validator) === protocol);
     }
 
     function isolatePlainData(value) {
@@ -427,7 +437,7 @@
             }
         }
 
-        return Object.freeze({
+        var validator = Object.freeze({
             authority: authority,
             getAction: getAction,
             getTool: getTool,
@@ -437,11 +447,16 @@
             validateSchemaValue: validateSchemaValue,
             tryValidateActionProposal: tryValidateActionProposal
         });
+        trustedActionValidators.add(validator);
+        actionValidatorProtocols.set(validator, protocol);
+        return validator;
     }
 
     return {
         createActionValidator: createActionValidator,
         isTrustedAuthority: isTrustedAuthority,
-        isTrustedAuthorityForProtocol: isTrustedAuthorityForProtocol
+        isTrustedAuthorityForProtocol: isTrustedAuthorityForProtocol,
+        isTrustedActionValidator: isTrustedActionValidator,
+        isTrustedActionValidatorForProtocol: isTrustedActionValidatorForProtocol
     };
 }));

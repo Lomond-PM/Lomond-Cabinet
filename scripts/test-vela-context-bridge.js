@@ -159,6 +159,12 @@ async function runBasicTests() {
     assertions += 1;
 
     const h0 = makeHarness((source, callback) => { const req = decodeSource(source); callback(successResult(req, tierZeroSnapshot())); });
+    check(bridgeModule.isTrustedContextBridge(h0.bridge) && bridgeModule.isTrustedContextBridgeForProtocol(h0.bridge, protocol), "A Bridge instance must retain module-private trust for its exact protocol.");
+    check(!bridgeModule.isTrustedContextBridge({ capture: h0.bridge.capture, compareCaptures: h0.bridge.compareCaptures }) && !bridgeModule.isTrustedContextBridge(Object.assign({}, h0.bridge)), "Bridge facades and clones must not inherit trusted instance identity.");
+    const secondProtocol = protocolModule.createProtocol(nodeRuntime);
+    const secondContextApi = contextModule.createContextApi(secondProtocol);
+    const otherBridge = makeHarness((source, callback) => { const req = decodeSource(source); callback(successResult(req, tierZeroSnapshot())); }, secondProtocol, secondContextApi).bridge;
+    check(!bridgeModule.isTrustedContextBridgeForProtocol(h0.bridge, secondProtocol) && !bridgeModule.isTrustedContextBridgeForProtocol(otherBridge, protocol), "A trusted Bridge must not cross protocol instances.");
     check(/^session_[a-z0-9]{32,96}$/.test(h0.bridge.getSessionId()), "Bridge sessionId must be locally generated.");
     const tier0 = await h0.bridge.capture({ tier: 0, purpose: "display", selectionOrderMeaningful: true });
     check(tier0.tier === 0 && tier0.executable === false && tier0.fingerprint === null && Object.isFrozen(tier0), "Tier 0 must be a frozen display-only capture.");
@@ -500,7 +506,7 @@ async function runCurrentHostAuthorityTests() {
     }
 
     await rejectedResponseDoesNotUpdate("malformed", (req, callback) => callback("not-json"), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
-    await rejectedResponseDoesNotUpdate("host_error", (req, callback) => callback(errorResult(req, "HOST_CONTEXT_UNAVAILABLE")), protocol.ERROR_CODES.UNKNOWN_TARGET);
+    await rejectedResponseDoesNotUpdate("host_error", (req, callback) => callback(errorResult(req, "HOST_CONTEXT_UNAVAILABLE")), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE);
     await rejectedResponseDoesNotUpdate("requestId_mismatch", (req, callback) => callback(successResult(Object.assign({}, req, { requestId: "req_" + "x".repeat(32) }), tierOneSnapshot({ hostReloadEpoch: 2 }))), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
     await rejectedResponseDoesNotUpdate("sessionId_mismatch", (req, callback) => callback(successResult(Object.assign({}, req, { sessionId: "session_" + "x".repeat(32) }), tierOneSnapshot({ hostReloadEpoch: 2 }))), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
     await rejectedResponseDoesNotUpdate("operation_mismatch", (req, callback) => callback(successResult(Object.assign({}, req, { operation: "captureLayerDetails" }), tierOneSnapshot({ hostReloadEpoch: 2 }))), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
@@ -586,7 +592,7 @@ async function runCurrentHostAuthorityTests() {
     const stableOne = await stableHarness.bridge.capture({ tier: 1, purpose: "binding" });
     const stableTwo = await stableHarness.bridge.capture({ tier: 1, purpose: "binding" });
     check(stableHarness.bridge.compareCaptures(stableOne, stableTwo).fresh === true, "Repeated captures from the same authority must remain comparable.");
-    await expectCode(stableHarness.bridge.capture({ tier: 1, purpose: "binding" }), protocol.ERROR_CODES.UNKNOWN_TARGET);
+    await expectCode(stableHarness.bridge.capture({ tier: 1, purpose: "binding" }), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE);
     check(stableHarness.bridge.compareCaptures(stableOne, stableTwo).fresh === true, "host_error_does_not_update: a Host error must not invalidate confirmed authority.");
 }
 

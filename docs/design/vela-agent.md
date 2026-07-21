@@ -618,7 +618,7 @@ Candidates are one-shot, locally owned objects with the following lifecycle:
 validated -> pending-confirmation -> confirmed -> executing -> consumed
                     |                    |             |
                     v                    v             v
-                discarded             stale        failed/consumed
+                discarded             stale        failed
 ```
 
 - Local validation creates a fresh `candidateId` in `pending-confirmation`.
@@ -634,8 +634,9 @@ validated -> pending-confirmation -> confirmed -> executing -> consumed
 - At execution start the guard atomically reserves the candidate and records
   the id in a replay-protection set. A successful execution becomes
   `consumed`. A host error, invalid result, timeout, or failed verification
-  becomes `failed/consumed`: the candidate is still spent and cannot be
-  replayed.
+  becomes `failed`: its execution attempt ended unsuccessfully, but the
+  corresponding action index was already atomically consumed when reserved.
+  A failed candidate cannot be replayed; `failed` never means retryable.
 - Retry is implemented by creating a new plan revision and new locally
   generated candidate after fresh context and permission validation. The
   model cannot automatically retry or append steps to a spent candidate.
