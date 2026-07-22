@@ -16,6 +16,7 @@ const MODULES = [
     "velaExecutionGuard.js",
     "velaContextBridge.js",
     "velaExecutionPreflight.js",
+    "velaExecutionAdapter.js",
     "velaRuntime.js"
 ];
 let assertions = 0;
@@ -89,7 +90,7 @@ function run() {
     MODULES.forEach((filename) => runBrowserModule(browser, filename));
     const bootstrap = browser.context.__velaProtocolCoreBootstrapV1;
     check(bootstrap && Object.isFrozen(bootstrap), "A self-referential browser global creates the exact Vela bootstrap even when CommonJS globals exist.");
-    ["VelaProtocol", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaRuntime"].forEach((name) => {
+    ["VelaProtocol", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaRuntime"].forEach((name) => {
         check(bootstrap.getModule(name) === browser.context[name] && Object.isFrozen(browser.context[name]), name + " registers through the browser bootstrap.");
     });
     check(browser.requireCalls() === 0, "Browser-first registration never calls require.");
@@ -116,8 +117,9 @@ function run() {
     const guard = require(path.join(VELA, "velaExecutionGuard.js"));
     const bridge = require(path.join(VELA, "velaContextBridge.js"));
     const preflight = require(path.join(VELA, "velaExecutionPreflight.js"));
+    const executionAdapter = require(path.join(VELA, "velaExecutionAdapter.js"));
     const runtime = require(path.join(VELA, "velaRuntime.js"));
-    check(typeof protocol.createProtocol === "function" && typeof context.createContextApi === "function" && typeof validator.createActionValidator === "function" && typeof plan.createPlanStore === "function" && typeof guard.createExecutionGuard === "function" && typeof bridge.createContextBridge === "function" && typeof preflight.createExecutionPreflight === "function" && typeof runtime.createRuntime === "function", "Modules continue to export their fixed CommonJS APIs without a browser window.");
+    check(typeof protocol.createProtocol === "function" && typeof context.createContextApi === "function" && typeof validator.createActionValidator === "function" && typeof plan.createPlanStore === "function" && typeof guard.createExecutionGuard === "function" && typeof bridge.createContextBridge === "function" && typeof preflight.createExecutionPreflight === "function" && typeof executionAdapter.createExecutionAdapter === "function" && typeof runtime.createRuntime === "function", "Modules continue to export their fixed CommonJS APIs without a browser window.");
 
     console.log("test-vela-browser-bootstrap: " + assertions + " assertions passed.");
 }

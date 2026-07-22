@@ -288,17 +288,22 @@ AEToolbox.ping = function () {
 #include "effectUtils.jsx"
 #include "shapeUtils.jsx"
 (function (velaHostNamespace) {
-    var RUNTIME_REVISION = "vela-host-runtime-v4";
+    var RUNTIME_REVISION = "vela-host-runtime-v5";
     var runtimeDescriptor;
     var jsonDescriptor;
     var contextDescriptor;
+    var executionDescriptor;
     var existingRuntime;
     var staging;
     var stagedJson;
     var stagedContext;
+    var stagedExecution;
+    var stagedDigest;
+    var stagedAuthorityVerifier;
     var runtime;
     var existingJson;
     var existingContext;
+    var existingExecution;
     var existingReload;
 
     function runtimeError() {
@@ -340,6 +345,11 @@ AEToolbox.ping = function () {
             typeof ownDataDescriptor(context, "reload").value === "function";
     }
 
+    function validateExecution(execution) {
+        return execution && ownDataDescriptor(execution, "hostExecutionRevision").value === "vela-execution-host-v1" &&
+            typeof ownDataDescriptor(execution, "handle").value === "function";
+    }
+
     function publish(name, value, enumerable) {
         try {
             Object.defineProperty(velaHostNamespace, name, {
@@ -359,24 +369,26 @@ AEToolbox.ping = function () {
     runtimeDescriptor = optionalOwnDataDescriptor(velaHostNamespace, "__velaHostRuntimeV1");
     jsonDescriptor = optionalOwnDataDescriptor(velaHostNamespace, "VelaJson");
     contextDescriptor = optionalOwnDataDescriptor(velaHostNamespace, "VelaContext");
+    executionDescriptor = optionalOwnDataDescriptor(velaHostNamespace, "VelaExecution");
 
     if (runtimeDescriptor) {
         existingRuntime = runtimeDescriptor.value;
         existingJson = existingRuntime && ownDataDescriptor(existingRuntime, "json").value;
         existingContext = existingRuntime && ownDataDescriptor(existingRuntime, "context").value;
+        existingExecution = existingRuntime && ownDataDescriptor(existingRuntime, "execution").value;
         existingReload = existingRuntime && ownDataDescriptor(existingRuntime, "reload").value;
         if (!existingRuntime || ownDataDescriptor(existingRuntime, "revision").value !== RUNTIME_REVISION ||
-                !validateJson(existingJson) || !validateContext(existingContext) ||
+                !validateJson(existingJson) || !validateContext(existingContext) || !validateExecution(existingExecution) ||
                 typeof existingReload !== "function" ||
                 !jsonDescriptor || jsonDescriptor.value !== existingJson ||
-                !contextDescriptor || contextDescriptor.value !== existingContext) {
+                !contextDescriptor || contextDescriptor.value !== existingContext || !executionDescriptor || executionDescriptor.value !== existingExecution) {
             throw runtimeError();
         }
         existingReload();
         return;
     }
 
-    if (jsonDescriptor || contextDescriptor ||
+    if (jsonDescriptor || contextDescriptor || executionDescriptor ||
             Object.prototype.hasOwnProperty.call(velaHostNamespace, "__velaHostBootstrapV1")) {
         throw runtimeError();
     }
@@ -393,7 +405,21 @@ AEToolbox.ping = function () {
 
     stagedJson = staging.VelaJson;
     stagedContext = staging.VelaContext;
-    if (!validateJson(stagedJson) || !validateContext(stagedContext)) {
+    stagedDigest = ownDataDescriptor(staging, "__velaPropertyValueDigestV1").value;
+    stagedAuthorityVerifier = ownDataDescriptor(staging, "__velaVerifyExecutionAuthorityV1").value;
+    if (typeof stagedDigest !== "function" || typeof stagedAuthorityVerifier !== "function") {
+        throw runtimeError();
+    }
+    delete staging.__velaPropertyValueDigestV1;
+    delete staging.__velaVerifyExecutionAuthorityV1;
+    if (Object.prototype.hasOwnProperty.call(staging, "__velaPropertyValueDigestV1") || Object.prototype.hasOwnProperty.call(staging, "__velaVerifyExecutionAuthorityV1")) {
+        throw runtimeError();
+    }
+    (function (AEToolbox, VelaPropertyValueDigest, VelaVerifyExecutionAuthority) {
+#include "vela/velaExecution.jsx"
+    }(staging, stagedDigest, stagedAuthorityVerifier));
+    stagedExecution = staging.VelaExecution;
+    if (!validateJson(stagedJson) || !validateContext(stagedContext) || !validateExecution(stagedExecution)) {
         throw runtimeError();
     }
 
@@ -401,6 +427,7 @@ AEToolbox.ping = function () {
         revision: RUNTIME_REVISION,
         json: stagedJson,
         context: stagedContext,
+        execution: stagedExecution,
         reload: function () {
             return stagedContext.reload();
         }
@@ -411,6 +438,7 @@ AEToolbox.ping = function () {
 
     publish("VelaJson", stagedJson, true);
     publish("VelaContext", stagedContext, true);
+    publish("VelaExecution", stagedExecution, true);
     publish("__velaHostRuntimeV1", runtime, false);
 }(AEToolbox));
 #include "tools/textBackgroundBox.jsx"

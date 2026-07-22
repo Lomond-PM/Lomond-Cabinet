@@ -154,6 +154,7 @@ function makeHarness() {
             check(Object.isFrozen(action) && Object.isFrozen(metadata) && !Object.prototype.hasOwnProperty.call(metadata, "reservation"), "Executor receives only frozen action and bounded metadata.");
             if (executorMode === "throw") throw new Error("executor failure");
             if (executorMode === "reject") return Promise.reject(new Error("executor rejection"));
+            if (executorMode === "committed-result-unavailable") return Promise.reject(new protocol.VelaProtocolError(protocol.ERROR_CODES.PLAN_FAILED));
             if (executorMode === "failed-result") return { ok: false, summary: { reason: "fake" } };
             if (executorMode === "invalid-result") return { ok: true, summary: { source: "unsafe" } };
             if (executorMode === "accessor-result") { const value = { ok: true }; Object.defineProperty(value, "summary", { enumerable: true, get() { throw new Error("accessor"); } }); return value; }
@@ -362,6 +363,15 @@ async function run() {
     check(failedResult.store.getPlanView(failedResultPlan.planId).state === "failed" && failedResult.store.getPlanView(failedResultPlan.planId).nextStep === 1, "An explicit executor failure must preserve the atomically consumed reservation index.");
     await expectCode(failedResult.preflight.executeStep({ planId: failedResultPlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.CANDIDATE_NOT_FOUND, "An explicit executor failure replay must keep the terminal state and release the preflight operation lock.");
     check(failedResult.executorCalls === 1, "An explicit executor failure replay must not invoke the executor again.");
+
+    const committedUnavailable = makeHarness();
+    committedUnavailable.executorMode = "committed-result-unavailable";
+    const committedUnavailablePlan = await seedAndCreate(committedUnavailable);
+    await confirm(committedUnavailable, committedUnavailablePlan);
+    await expectCode(committedUnavailable.preflight.executeStep({ planId: committedUnavailablePlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.PLAN_FAILED, "Committed-result unavailable must terminalize as a non-retryable plan failure.");
+    check(committedUnavailable.store.getCandidate(committedUnavailablePlan.candidateIds[0]).state === "failed" && committedUnavailable.store.getPlanView(committedUnavailablePlan.planId).state === "failed" && committedUnavailable.store.getPlanView(committedUnavailablePlan.planId).nextStep === 1, "Committed-result unavailable must consume the reservation and must not complete.");
+    await expectCode(committedUnavailable.preflight.executeStep({ planId: committedUnavailablePlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.CANDIDATE_NOT_FOUND, "Committed-result unavailable replay must remain permanently consumed.");
+    check(committedUnavailable.executorCalls === 1, "Committed-result unavailable must not call executor or Host again.");
 
     const reset = makeHarness();
     const resetPlan = await seedAndCreate(reset);

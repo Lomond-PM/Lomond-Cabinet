@@ -778,13 +778,15 @@ function runRuntimeReloadTests() {
     const runtime = realm.AEToolbox.__velaHostRuntimeV1;
     const json = realm.AEToolbox.VelaJson;
     const context = realm.AEToolbox.VelaContext;
-    check(runtime && runtime.revision === "vela-host-runtime-v4", "A fresh engine must publish the Vela Host runtime after both modules are constructed.");
+    const execution = realm.AEToolbox.VelaExecution;
+    check(runtime && runtime.revision === "vela-host-runtime-v5" && execution && execution.hostExecutionRevision === "vela-execution-host-v1", "A fresh engine must publish the v5 Host runtime after all staged Vela modules are constructed.");
+    check(realm.AEToolbox.__velaPropertyValueDigestV1 === undefined && realm.AEToolbox.__velaVerifyExecutionAuthorityV1 === undefined && Object.keys(context).join(",") === "hostAdapterRevision,handle,reload", "Digest and authority helpers stay staging-private and the v4 Context public surface remains unchanged.");
     check(runtime.json === json && runtime.context === context, "Public Host aliases must exactly reference the runtime modules.");
     const firstAuthority = parseResult(context.handle(JSON.stringify({ ...request(), operation: "getCapabilities", tier: 0 }))).snapshot;
     check(/^host_[a-f0-9]{48}$/.test(firstAuthority.hostInstanceId) && firstAuthority.hostReloadEpoch === 1, "Fresh Host installation must issue fixed-format authority at epoch one.");
     check(projectReads === 0, "The first complete Host load must not read the project.");
     runFullHost(realm);
-    check(realm.AEToolbox.__velaHostRuntimeV1 === runtime && realm.AEToolbox.VelaJson === json && realm.AEToolbox.VelaContext === context, "A second complete Host load must reuse runtime, JSON and Context identities.");
+    check(realm.AEToolbox.__velaHostRuntimeV1 === runtime && realm.AEToolbox.VelaJson === json && realm.AEToolbox.VelaContext === context && realm.AEToolbox.VelaExecution === execution, "A second complete Host load must reuse runtime, JSON, Context and Execution identities.");
     check(projectReads === 0, "A legal Host reload must not read project, activeItem or selection.");
     check(mutationCalls === 0, "Initial Host load and legal reload must not call Host mutation APIs.");
     const secondAuthority = parseResult(context.handle(JSON.stringify({ ...request(), operation: "getCapabilities", tier: 0 }))).snapshot;
@@ -800,7 +802,7 @@ function runRuntimeReloadTests() {
     const fullIdFailureReplacements = {};
     fullIdFailureReplacements[path.normalize(CONTEXT_PATH)] = contextSource.replace(/Math\.random\(\)/g, "(0/0)");
     expectCode(() => runFullHost(fullIdFailureRealm, fullIdFailureReplacements), "HOST_CONTEXT_UNAVAILABLE", "Host authority failure inside staging must escape with a stable code.");
-    check(fullIdFailureRealm.AEToolbox.__velaHostRuntimeV1 === undefined && fullIdFailureRealm.AEToolbox.VelaJson === undefined && fullIdFailureRealm.AEToolbox.VelaContext === undefined, "Host authority failure must transactionally publish no runtime aliases.");
+    check(fullIdFailureRealm.AEToolbox.__velaHostRuntimeV1 === undefined && fullIdFailureRealm.AEToolbox.VelaJson === undefined && fullIdFailureRealm.AEToolbox.VelaContext === undefined && fullIdFailureRealm.AEToolbox.VelaExecution === undefined, "Host authority failure must transactionally publish no runtime aliases.");
     runFullHost(fullIdFailureRealm);
     check(fullIdFailureRealm.AEToolbox.__velaHostRuntimeV1 && fullIdFailureRealm.AEToolbox.VelaContext, "A fresh retry after Host authority failure must recover cleanly.");
 
@@ -824,7 +826,7 @@ function runRuntimeReloadTests() {
     expectCode(() => runFullHost(v3Realm), "VELA_HOST_RUNTIME_CONFLICT", "An existing complete v3 runtime must conflict with the v4 loader.");
     check(v3Realm.AEToolbox.__velaHostRuntimeV1 === v3Runtime && v3Realm.AEToolbox.VelaJson === v3Json && v3Realm.AEToolbox.VelaContext === v3Context && v3Calls === 0, "A v3 conflict must not call or replace legacy runtime aliases or publish partial v4 state.");
 
-    ["VelaJson", "VelaContext"].forEach((name) => {
+    ["VelaJson", "VelaContext", "VelaExecution"].forEach((name) => {
         const fake = {};
         const preloadedRealm = makeFullHostRealm({ AEToolbox: { [name]: fake } });
         expectCode(() => runFullHost(preloadedRealm), "VELA_HOST_RUNTIME_CONFLICT", "A preloaded alias without a compatible runtime must be rejected.");
@@ -836,7 +838,7 @@ function runRuntimeReloadTests() {
     const failedReplacements = {};
     failedReplacements[path.normalize(CONTEXT_PATH)] = failedContextSource;
     expectCode(() => runFullHost(failedRealm, failedReplacements), "HOST_CONTEXT_UNAVAILABLE", "A Context construction failure must escape with its stable code.");
-    check(failedRealm.AEToolbox.__velaHostRuntimeV1 === undefined && failedRealm.AEToolbox.VelaJson === undefined && failedRealm.AEToolbox.VelaContext === undefined, "A construction failure must leave no runtime, JSON or Context globals.");
+    check(failedRealm.AEToolbox.__velaHostRuntimeV1 === undefined && failedRealm.AEToolbox.VelaJson === undefined && failedRealm.AEToolbox.VelaContext === undefined && failedRealm.AEToolbox.VelaExecution === undefined, "A construction failure must leave no runtime, JSON, Context or Execution globals.");
     runFullHost(failedRealm);
     check(failedRealm.AEToolbox.__velaHostRuntimeV1 && failedRealm.AEToolbox.VelaJson && failedRealm.AEToolbox.VelaContext, "A clean retry after partial construction failure must succeed.");
 

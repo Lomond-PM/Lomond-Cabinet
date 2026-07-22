@@ -5,14 +5,14 @@
     var BOOTSTRAP_NAME = "__velaProtocolCoreBootstrapV1";
 
     function bootstrapError(code) { var error = new Error(code); error.code = code; return error; }
-    function assertDependencies(protocol, context, validator, plan, guard, bridge, preflight) {
-        if (!protocol || !context || !validator || !plan || !guard || !bridge || !preflight ||
+    function assertDependencies(protocol, context, validator, plan, guard, bridge, preflight, executionAdapter) {
+        if (!protocol || !context || !validator || !plan || !guard || !bridge || !preflight || !executionAdapter ||
             typeof protocol.createProtocol !== "function" || typeof context.createContextApi !== "function" ||
             typeof validator.createActionValidator !== "function" || typeof plan.createPlanStore !== "function" ||
-            typeof bridge.createContextBridge !== "function" || typeof preflight.createExecutionPreflight !== "function") {
+            typeof bridge.createContextBridge !== "function" || typeof bridge.createExecutionPort !== "function" || typeof preflight.createExecutionPreflight !== "function" || typeof executionAdapter.createExecutionAdapter !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE");
         }
-        return { protocol: protocol, context: context, validator: validator, plan: plan, guard: guard, bridge: bridge, preflight: preflight };
+        return { protocol: protocol, context: context, validator: validator, plan: plan, guard: guard, bridge: bridge, preflight: preflight, executionAdapter: executionAdapter };
     }
     function registerBrowserModule(target, name, create) {
         var hasOwn = Object.prototype.hasOwnProperty;
@@ -23,18 +23,18 @@
         bootstrap = target[BOOTSTRAP_NAME];
         if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.getModule !== "function" || typeof bootstrap.hasModule !== "function" || typeof bootstrap.registerModule !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
         if (bootstrap.hasModule(name)) { throw bootstrapError("MODULE_ALREADY_REGISTERED"); }
-        dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaContext"), bootstrap.getModule("VelaValidator"), bootstrap.getModule("VelaPlan"), bootstrap.getModule("VelaExecutionGuard"), bootstrap.getModule("VelaContextBridge"), bootstrap.getModule("VelaExecutionPreflight"));
-        exported = Object.freeze(create(dependencies.protocol, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight));
+        dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaContext"), bootstrap.getModule("VelaValidator"), bootstrap.getModule("VelaPlan"), bootstrap.getModule("VelaExecutionGuard"), bootstrap.getModule("VelaContextBridge"), bootstrap.getModule("VelaExecutionPreflight"), bootstrap.getModule("VelaExecutionAdapter"));
+        exported = Object.freeze(create(dependencies.protocol, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter));
         bootstrap.registerModule(name, exported);
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        var dependencies = assertDependencies(require("./velaProtocol"), require("./velaContext"), require("./velaValidator"), require("./velaPlan"), require("./velaExecutionGuard"), require("./velaContextBridge"), require("./velaExecutionPreflight"));
-        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight));
+        var dependencies = assertDependencies(require("./velaProtocol"), require("./velaContext"), require("./velaValidator"), require("./velaPlan"), require("./velaExecutionGuard"), require("./velaContextBridge"), require("./velaExecutionPreflight"), require("./velaExecutionAdapter"));
+        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter));
     }
-}(typeof self !== "undefined" ? self : this, function (protocolModule, contextModule, validatorModule, planModule, guardModule, bridgeModule, preflightModule) {
+}(typeof self !== "undefined" ? self : this, function (protocolModule, contextModule, validatorModule, planModule, guardModule, bridgeModule, preflightModule, executionAdapterModule) {
     "use strict";
 
     var MODULE_REVISION = "vela-runtime-v1";
@@ -127,6 +127,7 @@
         var planStore = null;
         var bridge = null;
         var preflight = null;
+        var executionAdapter = null;
         var runtime = environment || {};
         function safeStatus() {
             var bridgeState = bridge ? bridge.getState() : null;
@@ -157,16 +158,17 @@
             if (timeoutMs === undefined) { timeoutMs = 10000; }
             protocol = protocolModule.createProtocol(runtimeOptions);
             contextApi = contextModule.createContextApi(protocol);
-            validator = validatorModule.createActionValidator(protocol, { registry: [], expressionTemplates: [], scriptAllowlist: [] });
+            validator = validatorModule.createActionValidator(protocol, { registry: [{ id: "vela", actions: [{ id: "set-opacity-v1", executable: true, risk: "write", targetScope: ["layer", "property"], capabilityRevision: "set-opacity-v1", paramsSchema: { type: "object", additionalProperties: false, required: ["opacity"], properties: { opacity: { type: "number", minimum: 0, maximum: 100 } } } }] }], expressionTemplates: [], scriptAllowlist: [] });
             planStore = planModule.createPlanStore(protocol, { validatorAuthority: validator.authority });
             bridge = bridgeModule.createContextBridge({ protocol: protocol, contextApi: contextApi, invokeHost: invokeHost, runtime: { setTimeout: setTimer, clearTimeout: clearTimer, timeoutMs: timeoutMs } });
+            executionAdapter = executionAdapterModule.createExecutionAdapter({ protocol: protocol, contextApi: contextApi, contextBridge: bridge, executionPort: bridgeModule.createExecutionPort(bridge, protocol), invokeHost: invokeHost });
             preflight = preflightModule.createExecutionPreflight({
                 protocol: protocol,
                 actionValidator: validator,
                 planStore: planStore,
                 contextBridge: bridge,
                 getCurrentExecutionBinding: function () { return { settingsFingerprint: contextApi.fingerprintSettings({}), permissionSnapshot: { mode: "confirm-every-action", grants: [], policyRevision: MODULE_REVISION }, lifecycle: "ready", hasVerifier: false }; },
-                executeValidatedAction: function () { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.ACTION_NOT_EXECUTABLE); }
+                executeValidatedAction: executionAdapter.executeValidatedAction
             });
         }
         function initialize() {
@@ -214,7 +216,7 @@
             if (disposed) { return false; }
             epoch += 1;
             if (bridge) { try { bridge.suspend(); } catch (ignored) {} }
-            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; preflight = null;
+            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; preflight = null; executionAdapter = null;
             initialized = false; suspended = false; disposed = true; state = "disposed";
             return true;
         }
