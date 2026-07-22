@@ -116,6 +116,8 @@ function checkRequiredEntrypoints() {
         "client/js/proceduralPreviewContract.js",
         "client/js/proceduralHomeIcons.js",
         "client/js/proceduralHomeBackground.js",
+        "client/js/vela/velaCepModuleLoader.js",
+        "client/js/vela/velaRuntime.js",
         "client/js/vela/velaContextBridge.js",
         "host/vela/velaJson.jsx",
         "host/vela/velaContext.jsx",
@@ -123,6 +125,10 @@ function checkRequiredEntrypoints() {
         "scripts/test-vela-context-host.js",
         "scripts/test-vela-context-target.js",
         "scripts/test-vela-context-property-value.js",
+        "scripts/test-vela-cep-module-loader.js",
+        "scripts/test-vela-runtime.js",
+        "scripts/test-vela-browser-bootstrap.js",
+        "scripts/test-vela-runtime-status-view.js",
         "host/index.jsx"
     ].forEach((file) => {
         check("Required entry exists: " + file, exists(file), file + " is required.");
@@ -219,6 +225,7 @@ function checkIndexHtml() {
         "js/proceduralPreviewContract.js",
         "js/proceduralHomeIcons.js",
         "js/proceduralHomeBackground.js",
+        "js/vela/velaCepModuleLoader.js",
         "js/main.js"
     ];
     expected.forEach((item) => {
@@ -233,6 +240,7 @@ function checkIndexHtml() {
     const editorIndex = frontendPaths.indexOf("js/proceduralPaletteEditor.js");
     const workspaceIndex = frontendPaths.indexOf("js/proceduralPaletteWorkspace.js");
     const backgroundIndex = frontendPaths.indexOf("js/proceduralHomeBackground.js");
+    const velaLoaderIndex = frontendPaths.indexOf("js/vela/velaCepModuleLoader.js");
     const mainIndex = frontendPaths.indexOf("js/main.js");
     check(
         "Palette Workspace loads after editor before main",
@@ -244,6 +252,47 @@ function checkIndexHtml() {
         backgroundIndex !== -1 && mainIndex !== -1 && backgroundIndex < mainIndex,
         "client/index.html must load js/proceduralHomeBackground.js before js/main.js."
     );
+    check(
+        "Vela CEP loader loads before main",
+        velaLoaderIndex !== -1 && mainIndex !== -1 && velaLoaderIndex < mainIndex,
+        "client/index.html must load the Vela CEP loader before js/main.js."
+    );
+    [
+        "js/vela/velaProtocol.js",
+        "js/vela/velaContext.js",
+        "js/vela/velaValidator.js",
+        "js/vela/velaPlan.js",
+        "js/vela/velaExecutionGuard.js",
+        "js/vela/velaContextBridge.js",
+        "js/vela/velaExecutionPreflight.js",
+        "js/vela/velaRuntime.js"
+    ].forEach((item) => {
+        check(
+            "Protected Vela module is not statically loaded: " + item,
+            !frontendPaths.some((ref) => ref.path === item),
+            "client/index.html must load protected Vela UMD modules only through velaCepModuleLoader.js."
+        );
+    });
+}
+
+function checkVelaRuntimeBootstrap() {
+    const loader = exists("client/js/vela/velaCepModuleLoader.js") ? readText("client/js/vela/velaCepModuleLoader.js") : "";
+    const runtime = exists("client/js/vela/velaRuntime.js") ? readText("client/js/vela/velaRuntime.js") : "";
+    const main = exists("client/js/main.js") ? readText("client/js/main.js") : "";
+    const host = exists("host/vela/velaContext.jsx") ? readText("host/vela/velaContext.jsx") : "";
+    const orderedNames = ["VelaProtocol", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaRuntime"];
+    let previous = -1;
+    orderedNames.forEach((name) => {
+        const index = loader.indexOf('name: "' + name + '"');
+        check("Vela CEP loader declares " + name, index > previous, "velaCepModuleLoader.js must declare the protected Vela modules in dependency order.");
+        previous = index;
+    });
+    check("Vela runtime is the loader final module", previous !== -1 && loader.indexOf('name: "VelaRuntime"') === previous, "velaRuntime.js must be the final production loader module.");
+    check("Vela CEP loader only observes CommonJS descriptors", /commonJsDescriptorSnapshot/.test(loader) && /commonJsDescriptorsUnchanged/.test(loader) && /module/.test(loader) && /exports/.test(loader) && /require/.test(loader) && !/suppressCommonJs/.test(loader) && !/restoreCommonJs/.test(loader), "velaCepModuleLoader.js must only observe, never replace, CEP CommonJS globals.");
+    check("Vela CEP loader captures its own URL synchronously", /captureScriptLocation/.test(loader) && /scriptLocation = captureScriptLocation/.test(loader) && !/initializeScriptLocation/.test(loader), "velaCepModuleLoader.js must capture its own script URL before asynchronous loading begins.");
+    check("Vela Host adapter remains v4", host.indexOf("vela-context-host-v4") !== -1, "PR A must retain the v4 Host adapter.");
+    check("main keeps Vela runtime controller private", main.indexOf("window.velaRuntimeController") === -1 && main.indexOf("window.VelaRuntimeController") === -1, "main.js must not publish a Vela trusted runtime controller.");
+    check("Vela runtime has no Registry passthrough", runtime.indexOf("runRegisteredToolAction") === -1 && runtime.indexOf("AEToolbox.tools") === -1, "velaRuntime.js must not route execution through the Registry.");
 }
 
 function listToolFiles() {
@@ -278,6 +327,7 @@ function main() {
     checkChangelog(version);
     checkRequiredEntrypoints();
     checkIndexHtml();
+    checkVelaRuntimeBootstrap();
     checkVelaContextHostIncludes();
     checkRegistryTools();
 

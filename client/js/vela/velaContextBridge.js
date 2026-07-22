@@ -66,10 +66,10 @@
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
 
-    if (typeof module === "object" && module.exports) {
-        module.exports = Object.freeze(factory(assertProtocolModule(require("./velaProtocol")), assertContextModule(require("./velaContext"))));
-    } else if (root) {
+    if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
+    } else if (typeof module === "object" && module.exports) {
+        module.exports = Object.freeze(factory(assertProtocolModule(require("./velaProtocol")), assertContextModule(require("./velaContext"))));
     }
 }(typeof self !== "undefined" ? self : this, function (protocolModule, contextModule) {
     "use strict";
