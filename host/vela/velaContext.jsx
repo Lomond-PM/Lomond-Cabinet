@@ -908,6 +908,112 @@ var AEToolbox = AEToolbox || {};
         return { kind: kind, data: data, payloadBytes: payloadBytes };
     }
 
+    function payloadForPropertyValue(kind, data) {
+        var i;
+        var output;
+        if (kind === "null") { return "null"; }
+        if (kind === "boolean") { return data ? "1" : "0"; }
+        if (kind === "number") { return canonicalNumberV1(data); }
+        if (kind === "string") { return data; }
+        if (kind === "number-array") {
+            output = "v1\0" + data.length;
+            for (i = 0; i < data.length; i++) {
+                output += "\0" + json.utf8ByteLength(canonicalNumberV1(data[i])) + "\0" + canonicalNumberV1(data[i]);
+            }
+            return output;
+        }
+        fail("HOST_CONTEXT_VALUE_INVALID");
+    }
+
+    /* This is the sole Host SHA-256 implementation.  It is deliberately kept
+       inside the VelaContext closure and is only handed to the staging
+       transaction below; it is never a VelaContext public API. */
+    function sha256Utf8(value) {
+        var bytes = [];
+        var index;
+        var code;
+        var bitLength;
+        var words = [];
+        var output;
+        var hash = [1779033703, -1150833019, 1013904242, -1521486534, 1359893119, -1694144372, 528734635, 1541459225];
+        var constants = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+        function rightRotate(number, amount) { return (number >>> amount) | (number << (32 - amount)); }
+        if (typeof value !== "string") { fail("HOST_CONTEXT_VALUE_INVALID"); }
+        for (index = 0; index < value.length; index++) {
+            code = value.charCodeAt(index);
+            if (code < 0x80) { bytes.push(code); }
+            else if (code < 0x800) { bytes.push(0xC0 | (code >>> 6), 0x80 | (code & 0x3F)); }
+            else if (code >= 0xD800 && code <= 0xDBFF) {
+                if (index + 1 >= value.length || value.charCodeAt(index + 1) < 0xDC00 || value.charCodeAt(index + 1) > 0xDFFF) { fail("HOST_CONTEXT_VALUE_INVALID"); }
+                code = 0x10000 + ((code - 0xD800) << 10) + (value.charCodeAt(index + 1) - 0xDC00);
+                bytes.push(0xF0 | (code >>> 18), 0x80 | ((code >>> 12) & 0x3F), 0x80 | ((code >>> 6) & 0x3F), 0x80 | (code & 0x3F)); index++;
+            } else if (code >= 0xDC00 && code <= 0xDFFF) { fail("HOST_CONTEXT_VALUE_INVALID"); }
+            else { bytes.push(0xE0 | (code >>> 12), 0x80 | ((code >>> 6) & 0x3F), 0x80 | (code & 0x3F)); }
+        }
+        bitLength = bytes.length * 8;
+        bytes.push(0x80);
+        while ((bytes.length % 64) !== 56) { bytes.push(0); }
+        for (index = 7; index >= 0; index--) { bytes.push((bitLength / Math.pow(2, index * 8)) & 0xFF); }
+        for (index = 0; index < bytes.length; index += 64) {
+            var work = [];
+            var i;
+            var a;
+            var b;
+            var c;
+            var d;
+            var e;
+            var f;
+            var g;
+            var h;
+            var t1;
+            var t2;
+            for (i = 0; i < 16; i++) { work[i] = (bytes[index + i * 4] << 24) | (bytes[index + i * 4 + 1] << 16) | (bytes[index + i * 4 + 2] << 8) | bytes[index + i * 4 + 3]; }
+            for (i = 16; i < 64; i++) { work[i] = (rightRotate(work[i - 2], 17) ^ rightRotate(work[i - 2], 19) ^ (work[i - 2] >>> 10)) + work[i - 7] + (rightRotate(work[i - 15], 7) ^ rightRotate(work[i - 15], 18) ^ (work[i - 15] >>> 3)) + work[i - 16]; }
+            a = hash[0]; b = hash[1]; c = hash[2]; d = hash[3]; e = hash[4]; f = hash[5]; g = hash[6]; h = hash[7];
+            for (i = 0; i < 64; i++) { t1 = h + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) + ((e & f) ^ (~e & g)) + constants[i] + work[i]; t2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) + ((a & b) ^ (a & c) ^ (b & c)); h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0; }
+            hash[0] = (hash[0] + a) | 0; hash[1] = (hash[1] + b) | 0; hash[2] = (hash[2] + c) | 0; hash[3] = (hash[3] + d) | 0; hash[4] = (hash[4] + e) | 0; hash[5] = (hash[5] + f) | 0; hash[6] = (hash[6] + g) | 0; hash[7] = (hash[7] + h) | 0;
+        }
+        output = "";
+        for (index = 0; index < hash.length; index++) { output += fixedHex(hash[index]); }
+        return output;
+    }
+
+    function propertyValueDigest(value) {
+        var normalized = normalizePropertyValue(value);
+        var payload = payloadForPropertyValue(normalized.kind, normalized.data);
+        return "sha256:" + sha256Utf8("vela-property-value-v1\0" + normalized.kind + "\0" + json.utf8ByteLength(payload) + "\0" + payload);
+    }
+
+    function verifyExecutionAuthority(expectedAuthority) {
+        var project;
+        var key;
+        var valid = expectedAuthority && Object.prototype.toString.call(expectedAuthority) === "[object Object]" &&
+            own(expectedAuthority, "expectedHostInstanceId") && own(expectedAuthority, "expectedHostReloadEpoch") && own(expectedAuthority, "expectedProjectGeneration");
+        if (!valid) { return { ok: false, code: "HOST_EXECUTION_AUTHORITY_MISMATCH" }; }
+        try {
+            for (key in expectedAuthority) {
+                if (own(expectedAuthority, key) && key !== "expectedHostInstanceId" && key !== "expectedHostReloadEpoch" && key !== "expectedProjectGeneration") {
+                    return { ok: false, code: "HOST_EXECUTION_AUTHORITY_MISMATCH" };
+                }
+            }
+            if (typeof expectedAuthority.expectedHostInstanceId !== "string" || typeof expectedAuthority.expectedHostReloadEpoch !== "number" ||
+                    typeof expectedAuthority.expectedProjectGeneration !== "number" || !isFinite(expectedAuthority.expectedHostReloadEpoch) ||
+                    !isFinite(expectedAuthority.expectedProjectGeneration) || Math.floor(expectedAuthority.expectedHostReloadEpoch) !== expectedAuthority.expectedHostReloadEpoch ||
+                    Math.floor(expectedAuthority.expectedProjectGeneration) !== expectedAuthority.expectedProjectGeneration) {
+                return { ok: false, code: "HOST_EXECUTION_AUTHORITY_MISMATCH" };
+            }
+            project = app && app.project ? app.project : null;
+            observeProject(project);
+        } catch (ignoredAuthorityRead) {
+            return { ok: false, code: "HOST_EXECUTION_AUTHORITY_MISMATCH" };
+        }
+        if (sessionResetRequired || expectedAuthority.expectedHostInstanceId !== hostInstanceId ||
+                expectedAuthority.expectedHostReloadEpoch !== hostReloadEpoch || expectedAuthority.expectedProjectGeneration !== projectGeneration) {
+            return { ok: false, code: "HOST_EXECUTION_AUTHORITY_MISMATCH" };
+        }
+        return { ok: true };
+    }
+
     function readPropertyValue(terminal) {
         var canSetExpression;
         var expressionEnabled;
@@ -1093,6 +1199,14 @@ var AEToolbox = AEToolbox || {};
     };
     if (typeof Object.freeze === "function") {
         Object.freeze(api);
+    }
+    /* These configurable staging-only references are removed by host/index.jsx
+       before the staging namespace is ever published. */
+    try {
+        Object.defineProperty(AEToolbox, "__velaPropertyValueDigestV1", { configurable: true, enumerable: false, value: propertyValueDigest, writable: false });
+        Object.defineProperty(AEToolbox, "__velaVerifyExecutionAuthorityV1", { configurable: true, enumerable: false, value: verifyExecutionAuthority, writable: false });
+    } catch (ignoredPrivateInstall) {
+        throw hostError("HOST_CONTEXT_UNAVAILABLE", "The Host execution staging capability is unavailable.");
     }
     if (typeof Object.defineProperty === "function") {
         try {

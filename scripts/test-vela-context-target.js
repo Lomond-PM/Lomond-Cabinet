@@ -27,7 +27,7 @@ function run() {
     check(/function captureLayerDetails\(/.test(bridgeSource), "Bridge must expose the fixed Tier 2 capture path.");
     check(/operation:\s*"captureLayerDetails"/.test(bridgeSource), "Tier 2 bridge requests must use the fixed Host operation.");
     check(/HOST_ADAPTER_REVISION\s*=\s*"vela-context-host-v4"/.test(hostSource), "Host context adapter revision must be v4.");
-    check(/RUNTIME_REVISION\s*=\s*"vela-host-runtime-v4"/.test(indexSource), "Host root runtime revision must be v4.");
+    check(/RUNTIME_REVISION\s*=\s*"vela-host-runtime-v5"/.test(indexSource), "Host root runtime revision must be v5 while the Context adapter stays v4.");
     check(/var hostReloadEpoch = 1;/.test(hostSource) && /hostReloadEpoch\+\+/.test(hostSource), "Host reload authority must start at one and advance explicitly.");
     check(/MAX_TIER_TWO_LAYERS\s*=\s*8/.test(hostSource), "Tier 2 Host selection limit must be eight.");
     check(/layer\.sourceRectAtTime\(time, false\)/.test(hostSource), "Tier 2 bounds must use the fixed read-only sourceRectAtTime call.");

@@ -11,6 +11,7 @@
         { name: "VelaExecutionGuard", file: "velaExecutionGuard.js" },
         { name: "VelaContextBridge", file: "velaContextBridge.js" },
         { name: "VelaExecutionPreflight", file: "velaExecutionPreflight.js" },
+        { name: "VelaExecutionAdapter", file: "velaExecutionAdapter.js" },
         { name: "VelaRuntime", file: "velaRuntime.js" }
     ]);
     var state = "idle";
@@ -101,8 +102,9 @@
         if (name === "VelaValidator") { return typeof value.createActionValidator === "function" && typeof value.isTrustedActionValidatorForProtocol === "function"; }
         if (name === "VelaPlan") { return typeof value.createPlanStore === "function" && typeof value.isTrustedPlanStoreForProtocol === "function"; }
         if (name === "VelaExecutionGuard") { return typeof value.createExecutionGuard === "function"; }
-        if (name === "VelaContextBridge") { return typeof value.createContextBridge === "function" && typeof value.isTrustedContextBridgeForProtocol === "function"; }
+        if (name === "VelaContextBridge") { return typeof value.createContextBridge === "function" && typeof value.isTrustedContextBridgeForProtocol === "function" && typeof value.isTrustedExecutionPortForProtocol === "function"; }
         if (name === "VelaExecutionPreflight") { return typeof value.createExecutionPreflight === "function"; }
+        if (name === "VelaExecutionAdapter") { return typeof value.createExecutionAdapter === "function" && typeof value.isTrustedExecutionAdapterForProtocol === "function"; }
         if (name === "VelaRuntime") { return typeof value.createRuntime === "function"; }
         return false;
     }

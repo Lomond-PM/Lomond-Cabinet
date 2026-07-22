@@ -103,6 +103,8 @@
     var SAMPLE_TIME_TOLERANCE = 0.0000001;
     var trustedContextBridges = new WeakSet();
     var contextBridgeProtocols = new WeakMap();
+    var executionPorts = new WeakMap();
+    var executionPortProtocols = new WeakMap();
 
     function isTrustedContextBridge(bridge) {
         return Boolean(bridge && trustedContextBridges.has(bridge));
@@ -110,6 +112,20 @@
 
     function isTrustedContextBridgeForProtocol(bridge, protocol) {
         return Boolean(isTrustedContextBridge(bridge) && protocolModule.isTrustedProtocol(protocol) && contextBridgeProtocols.get(bridge) === protocol);
+    }
+
+    function createExecutionPort(bridge, protocol) {
+        var port;
+        if (!isTrustedContextBridgeForProtocol(bridge, protocol)) {
+            throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
+        }
+        port = executionPorts.get(bridge);
+        if (!port) { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
+        return port;
+    }
+
+    function isTrustedExecutionPortForProtocol(port, protocol) {
+        return Boolean(port && protocolModule.isTrustedProtocol(protocol) && executionPortProtocols.get(port) === protocol);
     }
 
     function protocolError(protocol, code, stage) {
@@ -1108,6 +1124,75 @@
             }
         }
 
+        function createPrivateExecutionRequest(action, trustedExecutionContext) {
+            var bindingDescriptor;
+            var valueDescriptor;
+            var bindingCapture;
+            var valueCapture;
+            var bindingRecord;
+            var valueRecord;
+            var target;
+            var payload;
+            var valueTarget;
+            var index;
+            try {
+                bindingDescriptor = Object.getOwnPropertyDescriptor(trustedExecutionContext, "bindingCapture");
+                valueDescriptor = Object.getOwnPropertyDescriptor(trustedExecutionContext, "valueCapture");
+            } catch (error) { throw protocolError(protocol, protocol.ERROR_CODES.CONTEXT_STALE); }
+            if (!trustedExecutionContext || !Object.isFrozen(trustedExecutionContext) || !bindingDescriptor || bindingDescriptor.get || bindingDescriptor.set ||
+                    !valueDescriptor || valueDescriptor.get || valueDescriptor.set) {
+                throw protocolError(protocol, protocol.ERROR_CODES.CONTEXT_STALE);
+            }
+            bindingCapture = bindingDescriptor.value;
+            valueCapture = valueDescriptor.value;
+            bindingRecord = trustedBindingRecord(bindingCapture);
+            valueRecord = captureRecords.get(valueCapture);
+            if (!valueRecord || valueRecord.bridgeToken !== bridgeToken || valueRecord.protocol !== protocol || valueRecord.purpose !== "property-value-binding" ||
+                    valueRecord.bindingFingerprint !== bindingRecord.fingerprint || valueRecord.sessionId !== sessionId ||
+                    valueRecord.bridgeLifecycleEpoch !== bridgeLifecycleEpoch || !currentHostAuthority ||
+                    bindingRecord.hostInstanceId !== currentHostAuthority.hostInstanceId || bindingRecord.hostReloadEpoch !== currentHostAuthority.hostReloadEpoch) {
+                throw protocolError(protocol, protocol.ERROR_CODES.CONTEXT_STALE);
+            }
+            if (!protocol.isPlainObject(action) || action.kind !== "tool") { throw protocolError(protocol, protocol.ERROR_CODES.ACTION_NOT_EXECUTABLE); }
+            target = protocol.getOwnDataProperty(action, "target");
+            payload = protocol.getOwnDataProperty(action, "payload");
+            if (!protocol.isPlainObject(target) || !protocol.isPlainObject(payload) || payload.toolId !== "vela" || payload.actionId !== "set-opacity-v1" ||
+                    !protocol.isPlainObject(payload.params) || typeof protocol.getOwnDataProperty(payload.params, "opacity") !== "number") {
+                throw protocolError(protocol, protocol.ERROR_CODES.ACTION_NOT_EXECUTABLE);
+            }
+            for (index = 0; index < valueRecord.valueTargets.length; index += 1) {
+                if (valueRecord.valueTargets[index].layerId === target.layerId && valueRecord.valueTargets[index].propertyMatchName === target.propertyMatchName &&
+                        protocol.canonicalStringify(valueRecord.valueTargets[index].propertyPath) === protocol.canonicalStringify(target.propertyPath) &&
+                        valueRecord.valueTargets[index].valueDigest === target.propertyValueDigest) {
+                    valueTarget = valueRecord.valueTargets[index];
+                    break;
+                }
+            }
+            if (!valueTarget) { throw protocolError(protocol, protocol.ERROR_CODES.CONTEXT_STALE); }
+            return protocol.deepFreeze({
+                protocol: "vela.host-execution-request.v1",
+                schemaVersion: "1.0",
+                requestId: nextRequestId(),
+                sessionId: sessionId,
+                operation: "executeCapability",
+                capabilityId: "set-opacity-v1",
+                scope: {
+                    expectedHostInstanceId: bindingRecord.hostInstanceId,
+                    expectedHostReloadEpoch: bindingRecord.hostReloadEpoch,
+                    expectedProjectGeneration: bindingRecord.projectGeneration,
+                    target: {
+                        itemId: bindingRecord.itemId,
+                        nativeLayerId: valueTarget.nativeLayerId,
+                        layerIndex: valueTarget.layerIndex,
+                        propertyPath: protocol.cloneJson(valueTarget.propertyPath, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes }),
+                        propertyMatchName: valueTarget.propertyMatchName,
+                        expectedValueDigest: valueTarget.valueDigest
+                    },
+                    params: { opacity: protocol.getOwnDataProperty(payload.params, "opacity") }
+                }
+            });
+        }
+
         function cancel(requestId) {
             if (!active || active.requestId !== requestId || state !== "pending") { return false; }
             return settle(active, active.generation, protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED), null);
@@ -1257,6 +1342,9 @@
         });
         trustedContextBridges.add(bridge);
         contextBridgeProtocols.set(bridge, protocol);
+        var executionPort = Object.freeze({ buildRequest: createPrivateExecutionRequest });
+        executionPorts.set(bridge, executionPort);
+        executionPortProtocols.set(executionPort, protocol);
         return bridge;
     }
 
@@ -1264,6 +1352,8 @@
         createContextBridge: createContextBridge,
         isTrustedContextBridge: isTrustedContextBridge,
         isTrustedContextBridgeForProtocol: isTrustedContextBridgeForProtocol,
+        createExecutionPort: createExecutionPort,
+        isTrustedExecutionPortForProtocol: isTrustedExecutionPortForProtocol,
         quoteForExtendScript: quoteForExtendScript
     });
 }));

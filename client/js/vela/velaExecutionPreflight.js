@@ -320,6 +320,10 @@
                     var terminalized = false;
                     var action = protocol.deepFreeze(protocol.cloneJson(reserved.candidate.action, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes }));
                     var metadata = protocol.deepFreeze({ planId: record.planId, planRevision: record.planRevision, candidateId: record.candidateId, actionIndex: 0 });
+                    /* Capture ownership remains in the bridge WeakMap.  This opaque
+                       value is never cloned, serialized, returned, or stored by
+                       PlanStore; the execution adapter must validate it again. */
+                    var trustedExecutionContext = Object.freeze({ bindingCapture: freshBindingCapture, valueCapture: freshValueCapture });
 
                     function stableExecutorError(error) {
                         return isProtocolError(protocol, error) ? error : protocolError(protocol, protocol.ERROR_CODES.PLAN_FAILED);
@@ -366,7 +370,7 @@
                     }
 
                     var returned;
-                    try { returned = executeValidatedAction(action, metadata); }
+                    try { returned = executeValidatedAction(action, metadata, trustedExecutionContext); }
                     catch (error) { return failTerminal(error); }
                     return Promise.resolve(returned).then(completeReturned, failTerminal);
                 }).catch(function (error) { throw staleFromError(record, error); });
