@@ -66,10 +66,10 @@
         bootstrap.registerModule(name, exported);
     }
 
-    if (typeof module === "object" && module.exports) {
-        module.exports = Object.freeze(factory());
-    } else if (root) {
+    if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
+    } else if (typeof module === "object" && module.exports) {
+        module.exports = Object.freeze(factory());
     }
 }(typeof self !== "undefined" ? self : this, function () {
     "use strict";

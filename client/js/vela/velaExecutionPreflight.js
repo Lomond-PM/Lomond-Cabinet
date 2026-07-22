@@ -42,11 +42,11 @@
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
 
-    if (typeof module === "object" && module.exports) {
+    if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
+        registerBrowserModule(root, MODULE_NAME, factory);
+    } else if (typeof module === "object" && module.exports) {
         var dependencies = assertDependencies(require("./velaProtocol"), require("./velaValidator"), require("./velaPlan"), require("./velaExecutionGuard"), require("./velaContextBridge"));
         module.exports = Object.freeze(factory(dependencies.protocol, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge));
-    } else if (root) {
-        registerBrowserModule(root, MODULE_NAME, factory);
     }
 }(typeof self !== "undefined" ? self : this, function (protocolModule, validatorModule, planModule, guardModule, bridgeModule) {
     "use strict";

@@ -6,11 +6,88 @@
     }
 
     var cs = new CSInterface();
+    var velaRuntimeController = null;
+    var velaRuntimeStatusRevision = 0;
+    var velaRuntimeLastErrorCode = null;
     var hostLoaded = false;
     var statusTimer = null;
     var motionScale = 1;
     var animationWarmupDone = false;
     var activeToolId = "shapeAdd";
+
+    function velaOwnStatusValue(value, key, fallback) {
+        var descriptor;
+        try {
+            descriptor = value && Object.getOwnPropertyDescriptor(value, key);
+            if (!descriptor || descriptor.get || descriptor.set || !Object.prototype.hasOwnProperty.call(descriptor, "value")) {
+                return fallback;
+            }
+            return descriptor.value;
+        } catch (error) {
+            return fallback;
+        }
+    }
+
+    function velaRuntimeStatusSnapshot() {
+        var runtimeStatus = null;
+        var loaderStatus = null;
+        var runtimeState = "idle";
+        var loaderState = "idle";
+        var initialized = false;
+        var suspended = false;
+        var disposed = false;
+        var moduleRevision = null;
+        var hostAdapterRevision = null;
+        var lastErrorCode = velaRuntimeLastErrorCode;
+        try {
+            if (velaRuntimeController && typeof velaRuntimeController.getStatus === "function") {
+                runtimeStatus = velaRuntimeController.getStatus();
+                runtimeState = velaOwnStatusValue(runtimeStatus, "state", runtimeState);
+                initialized = velaOwnStatusValue(runtimeStatus, "initialized", initialized) === true;
+                suspended = velaOwnStatusValue(runtimeStatus, "suspended", suspended) === true;
+                disposed = velaOwnStatusValue(runtimeStatus, "disposed", disposed) === true;
+                moduleRevision = velaOwnStatusValue(runtimeStatus, "moduleRevision", moduleRevision);
+                hostAdapterRevision = velaOwnStatusValue(runtimeStatus, "hostAdapterRevision", hostAdapterRevision);
+                lastErrorCode = velaOwnStatusValue(runtimeStatus, "lastErrorCode", lastErrorCode);
+            }
+            if (window.VelaCepModuleLoader && typeof window.VelaCepModuleLoader.getStatus === "function") {
+                loaderStatus = window.VelaCepModuleLoader.getStatus();
+                loaderState = velaOwnStatusValue(loaderStatus, "state", loaderState);
+            }
+        } catch (error) {
+            lastErrorCode = "RUNTIME_CAPABILITY_UNAVAILABLE";
+        }
+        return Object.freeze({
+            schemaRevision: "vela-runtime-status-view-v1",
+            diagnosticOnly: true,
+            state: typeof runtimeState === "string" ? runtimeState : "idle",
+            initialized: initialized,
+            suspended: suspended,
+            disposed: disposed,
+            loaderState: typeof loaderState === "string" ? loaderState : "idle",
+            moduleRevision: typeof moduleRevision === "string" ? moduleRevision : null,
+            hostAdapterRevision: typeof hostAdapterRevision === "string" ? hostAdapterRevision : null,
+            lastErrorCode: typeof lastErrorCode === "string" ? lastErrorCode : null,
+            statusRevision: velaRuntimeStatusRevision
+        });
+    }
+
+    function installVelaRuntimeStatusView() {
+        if (Object.prototype.hasOwnProperty.call(window, "VelaRuntimeStatusView")) {
+            return;
+        }
+        try {
+            Object.defineProperty(window, "VelaRuntimeStatusView", {
+                configurable: false,
+                enumerable: true,
+                get: velaRuntimeStatusSnapshot
+            });
+        } catch (error) {
+            /* Diagnostic-only surface must never affect the existing toolbox. */
+        }
+    }
+
+    installVelaRuntimeStatusView();
     var Motion = {
         appleOut: "cubic-bezier(0.16, 1, 0.3, 1)",
         appleStandard: "cubic-bezier(0.22, 1, 0.36, 1)",
@@ -3278,10 +3355,49 @@
                         console.log("[AE Toolbox] Host load info:", infoRaw);
                     }
                 });
+                initializeVelaRuntime();
                 loadRegisteredToolsFromHost();
                 refreshSelection();
             });
         });
+    }
+
+    function invokeVelaHost(source, callback) {
+        if (panelShuttingDown || !hostLoaded || typeof source !== "string" || source.indexOf("AEToolbox.VelaContext.handle(") !== 0 || source.charAt(source.length - 1) !== ")") {
+            callback("");
+            return;
+        }
+        try {
+            cs.evalScript(source, callback);
+        } catch (error) {
+            callback("");
+        }
+    }
+
+    function reportVelaRuntimeError(error) {
+        var code = error && typeof error.code === "string" ? error.code : "RUNTIME_CAPABILITY_UNAVAILABLE";
+        velaRuntimeLastErrorCode = code;
+        velaRuntimeStatusRevision += 1;
+        if (window.console && console.warn) {
+            console.warn("[Vela runtime] initialization unavailable:", code);
+        }
+    }
+
+    function initializeVelaRuntime() {
+        if (panelShuttingDown || velaRuntimeController || !window.VelaCepModuleLoader || typeof window.VelaCepModuleLoader.load !== "function") {
+            return;
+        }
+        window.VelaCepModuleLoader.load().then(function () {
+            if (panelShuttingDown || velaRuntimeController || !window.VelaRuntime || typeof window.VelaRuntime.createRuntime !== "function") {
+                return;
+            }
+            velaRuntimeController = window.VelaRuntime.createRuntime({ invokeHost: invokeVelaHost });
+            velaRuntimeStatusRevision += 1;
+            return velaRuntimeController.initialize().then(function (result) {
+                velaRuntimeStatusRevision += 1;
+                return result;
+            });
+        }).catch(reportVelaRuntimeError);
     }
 
     function playAnimation(element, keyframes, options, done) {
@@ -7599,6 +7715,10 @@
 
     function suspendPanelRuntime() {
         panelSuspended = true;
+        if (velaRuntimeController) {
+            velaRuntimeController.suspend();
+            velaRuntimeStatusRevision += 1;
+        }
         stopSelectionPolling();
         stopRegistryStatePolling();
         closeRegistryColorPicker();
@@ -7610,6 +7730,10 @@
             return;
         }
         panelSuspended = false;
+        if (velaRuntimeController) {
+            velaRuntimeController.resume();
+            velaRuntimeStatusRevision += 1;
+        }
         startSelectionPolling();
         if (isDynamicTool(activeToolId)) {
             startRegistryStatePolling(DynamicTools[activeToolId]);
@@ -7623,6 +7747,11 @@
         }
         lifecycleDebug("panel close start");
         panelShuttingDown = true;
+        if (velaRuntimeController) {
+            velaRuntimeController.dispose();
+            velaRuntimeController = null;
+            velaRuntimeStatusRevision += 1;
+        }
         clearProceduralAppearanceSourceDebounce();
         stopSelectionPolling();
         stopRegistryStatePolling();
