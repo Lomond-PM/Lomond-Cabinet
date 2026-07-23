@@ -23,7 +23,7 @@
         if (!guardDependency || typeof guardDependency.createExecutionGuard !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaExecutionPreflight requires VelaExecutionGuard.");
         }
-        if (!bridgeDependency || typeof bridgeDependency.isTrustedContextBridgeForProtocol !== "function") {
+        if (!bridgeDependency || typeof bridgeDependency.isTrustedContextBridgeForProtocol !== "function" || typeof bridgeDependency.isTrustedReviewPortForProtocol !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaExecutionPreflight requires VelaContextBridge.");
         }
         return { protocol: protocolDependency, validator: validatorDependency, plan: planDependency, guard: guardDependency, bridge: bridgeDependency };
@@ -75,11 +75,12 @@
             throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
         }
         if (!protocol.isPlainObject(options)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Execution preflight options must be an object."); }
-        protocol.assertNoUnknownKeys(options, ["protocol", "actionValidator", "planStore", "contextBridge", "getCurrentExecutionBinding", "executeValidatedAction"], "executionPreflight.options");
+        protocol.assertNoUnknownKeys(options, ["protocol", "actionValidator", "planStore", "contextBridge", "reviewPort", "getCurrentExecutionBinding", "executeValidatedAction"], "executionPreflight.options");
 
         var actionValidator = protocol.getOwnDataProperty(options, "actionValidator");
         var planStore = protocol.getOwnDataProperty(options, "planStore");
         var contextBridge = protocol.getOwnDataProperty(options, "contextBridge");
+        var reviewPort = Object.prototype.hasOwnProperty.call(options, "reviewPort") ? protocol.getOwnDataProperty(options, "reviewPort") : null;
         if (!validatorModule.isTrustedActionValidatorForProtocol(actionValidator, protocol) || !validatorModule.isTrustedAuthorityForProtocol(actionValidator.authority, protocol)) {
             protocol.fail(protocol.ERROR_CODES.VALIDATION_AUTHORITY_REQUIRED, "Execution preflight requires a trusted action validator.");
         }
@@ -89,6 +90,12 @@
         if (!bridgeModule.isTrustedContextBridgeForProtocol(contextBridge, protocol)) {
             protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Execution preflight requires a trusted context bridge.");
         }
+        if (!reviewPort) {
+            reviewPort = bridgeModule.createReviewPort(contextBridge, protocol);
+        }
+        if (!bridgeModule.isTrustedReviewPortForProtocol(reviewPort, protocol)) {
+            protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Execution preflight requires a trusted review port.");
+        }
         var getCurrentExecutionBinding = requireOwnFunction(protocol, options, "getCurrentExecutionBinding");
         var executeValidatedAction = requireOwnFunction(protocol, options, "executeValidatedAction");
         var guard = guardModule.createExecutionGuard(planStore);
@@ -97,6 +104,21 @@
         }
         var recordsByPlanId = new Map();
         var active = false;
+
+        function summarizeReview(bindingCapture, valueCapture) {
+            var summarize = requireOwnFunction(protocol, reviewPort, "summarize");
+            var summary;
+            try { summary = summarize(bindingCapture, valueCapture); }
+            catch (error) { throw error instanceof protocol.VelaProtocolError ? error : protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED); }
+            protocol.assertSafeJson(summary);
+            if (!protocol.isPlainObject(summary)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Execution review summary is invalid."); }
+            protocol.assertNoUnknownKeys(summary, ["valueKind", "beforeValue"], "executionPreflight.review");
+            if (summary.valueKind !== "number" || typeof summary.beforeValue !== "number" || !Number.isFinite(summary.beforeValue) || Object.is(summary.beforeValue, -0) ||
+                    summary.beforeValue < 0 || summary.beforeValue > 100) {
+                protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Execution review summary is invalid.");
+            }
+            return protocol.deepFreeze({ valueKind: "number", beforeValue: summary.beforeValue });
+        }
 
         function cloneCurrentBinding() {
             var raw;
@@ -191,17 +213,81 @@
         function createBoundPlan(input) {
             return withActive(function () {
                 if (!protocol.isPlainObject(input)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Bound plan input is invalid."); }
-                protocol.assertNoUnknownKeys(input, ["proposal", "selectionOrderMeaningful"], "executionPreflight.createBoundPlan");
+                protocol.assertNoUnknownKeys(input, ["proposal", "localProposal", "selectionOrderMeaningful"], "executionPreflight.createBoundPlan");
                 if (typeof protocol.getOwnDataProperty(input, "selectionOrderMeaningful") !== "boolean") { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Bound plan selection order is invalid."); }
-                var proposal = protocol.getOwnDataProperty(input, "proposal");
+                var proposal = Object.prototype.hasOwnProperty.call(input, "proposal") ? protocol.getOwnDataProperty(input, "proposal") : undefined;
+                var localProposal = Object.prototype.hasOwnProperty.call(input, "localProposal") ? protocol.getOwnDataProperty(input, "localProposal") : undefined;
+                if ((proposal === undefined) === (localProposal === undefined)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Bound plan requires exactly one proposal source."); }
+                if (localProposal !== undefined) {
+                    var localCapabilityId;
+                    var localParams;
+                    var localOpacity;
+                    if (!protocol.isPlainObject(localProposal)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Local proposal input is invalid."); }
+                    protocol.assertNoUnknownKeys(localProposal, ["capabilityId", "params"], "executionPreflight.localProposal");
+                    localCapabilityId = protocol.getOwnDataProperty(localProposal, "capabilityId");
+                    localParams = protocol.getOwnDataProperty(localProposal, "params");
+                    if (localCapabilityId !== "set-opacity-v1" || !protocol.isPlainObject(localParams)) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TOOL_ACTION, "Local proposal capability is unavailable."); }
+                    protocol.assertNoUnknownKeys(localParams, ["opacity"], "executionPreflight.localProposal.params");
+                    localOpacity = protocol.getOwnDataProperty(localParams, "opacity");
+                    if (typeof localOpacity !== "number" || !Number.isFinite(localOpacity) || Object.is(localOpacity, -0) || localOpacity < 0 || localOpacity > 100) {
+                        protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Local opacity proposal is out of range.");
+                    }
+                    localProposal = protocol.deepFreeze({ capabilityId: localCapabilityId, params: { opacity: localOpacity } });
+                }
                 return freshBinding(protocol.getOwnDataProperty(input, "selectionOrderMeaningful")).then(function (bindingCapture) {
-                    var validated = actionValidator.validateActionProposal(proposal, { expectedContextFingerprint: bindingCapture.fingerprint });
-                    var action = validated && validated.action;
-                    if (!actionValidator.authority.isValidatedAction(action)) { protocol.fail(protocol.ERROR_CODES.VALIDATION_AUTHORITY_REQUIRED, "Validated action provenance is invalid."); }
-                    var target = assertSinglePropertyTarget(action);
-                    if (action.target.contextFingerprint !== bindingCapture.fingerprint) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Validated action context is stale."); }
+                    var selection = bindingCapture.snapshot && bindingCapture.snapshot.selection;
+                    var bindingItems = Array.isArray(selection) ? selection : selection && selection.items;
+                    var layerId;
+                    var target;
+                    if (localProposal !== undefined) {
+                        if (!Array.isArray(bindingItems) || bindingItems.length !== 1 || !bindingItems[0] || typeof bindingItems[0].layerId !== "string") {
+                            protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "Local opacity proposal requires exactly one selected layer.");
+                        }
+                        layerId = bindingItems[0].layerId;
+                        target = {
+                            contextFingerprint: bindingCapture.fingerprint,
+                            contextTier: 3,
+                            layerId: layerId,
+                            propertyPath: ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0],
+                            propertyMatchName: "ADBE Opacity",
+                            propertyValueDigest: null
+                        };
+                    } else {
+                        var validated = actionValidator.validateActionProposal(proposal, { expectedContextFingerprint: bindingCapture.fingerprint });
+                        var action = validated && validated.action;
+                        if (!actionValidator.authority.isValidatedAction(action)) { protocol.fail(protocol.ERROR_CODES.VALIDATION_AUTHORITY_REQUIRED, "Validated action provenance is invalid."); }
+                        target = assertSinglePropertyTarget(action);
+                        if (action.target.contextFingerprint !== bindingCapture.fingerprint) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Validated action context is stale."); }
+                    }
                     return contextBridge.capturePropertyValues(bindingCapture, [{ layerId: target.layerId, propertyPath: target.propertyPath }]).then(function (valueCapture) {
+                        var review;
+                        var action;
+                        if (localProposal !== undefined) {
+                            if (!valueCapture.snapshot || !Array.isArray(valueCapture.snapshot.targets) || valueCapture.snapshot.targets.length !== 1) {
+                                protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Local opacity value capture is invalid.");
+                            }
+                            target.propertyValueDigest = valueCapture.snapshot.targets[0].valueDigest;
+                            proposal = {
+                                providerActionId: "local:set-opacity-v1:" + valueCapture.requestId,
+                                kind: "tool",
+                                title: "Set Opacity",
+                                rationale: "Local deterministic opacity proposal.",
+                                risk: "write",
+                                target: target,
+                                payload: { toolId: "vela", actionId: "set-opacity-v1", params: { opacity: protocol.getOwnDataProperty(protocol.getOwnDataProperty(localProposal, "params"), "opacity") } },
+                                undoGroupLabel: "Vela: Set Opacity",
+                                requiresConfirmation: true
+                            };
+                            var validatedLocal = actionValidator.validateActionProposal(proposal, { expectedContextFingerprint: bindingCapture.fingerprint });
+                            action = validatedLocal && validatedLocal.action;
+                            if (!actionValidator.authority.isValidatedAction(action)) { protocol.fail(protocol.ERROR_CODES.VALIDATION_AUTHORITY_REQUIRED, "Validated local action provenance is invalid."); }
+                            target = assertSinglePropertyTarget(action);
+                        } else {
+                            action = actionValidator.validateActionProposal(proposal, { expectedContextFingerprint: bindingCapture.fingerprint }).action;
+                            if (!actionValidator.authority.isValidatedAction(action)) { protocol.fail(protocol.ERROR_CODES.VALIDATION_AUTHORITY_REQUIRED, "Validated action provenance is invalid."); }
+                        }
                         assertValueCapture(valueCapture, target);
+                        review = summarizeReview(bindingCapture, valueCapture);
                         var current = cloneCurrentBinding();
                         var plan = planStore.createPlan({
                             validatedActions: [action],
@@ -231,7 +317,17 @@
                             try { planStore.discardPlan(plan.planId, "preflight-registration-failed"); } catch (ignored) { /* fail closed without returning a plan */ }
                             protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Execution context binding could not be registered.");
                         }
-                        return plan;
+                        return protocol.deepFreeze({
+                            planId: plan.planId,
+                            planRevision: plan.planRevision,
+                            candidateIds: plan.candidateIds,
+                            candidates: plan.candidates,
+                            actionCount: plan.actionCount,
+                            state: plan.state,
+                            nextStep: plan.nextStep,
+                            createdAt: plan.createdAt,
+                            review: review
+                        });
                     });
                 });
             });

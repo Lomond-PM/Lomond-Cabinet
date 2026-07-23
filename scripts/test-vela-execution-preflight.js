@@ -82,7 +82,10 @@ function valueSnapshot(request, state) {
 }
 
 function capabilities() {
-    return { registry: { local: { id: "local", actions: { mutate: { id: "mutate", executable: true, risk: "write", targetScope: ["property"], capabilityRevision: "v1", paramsSchema: { type: "object", additionalProperties: false, properties: {} } } } } } };
+    return { registry: {
+        local: { id: "local", actions: { mutate: { id: "mutate", executable: true, risk: "write", targetScope: ["property"], capabilityRevision: "v1", paramsSchema: { type: "object", additionalProperties: false, properties: {} } } } },
+        vela: { id: "vela", actions: { "set-opacity-v1": { id: "set-opacity-v1", executable: true, risk: "write", targetScope: ["layer", "property"], capabilityRevision: "set-opacity-v1", paramsSchema: { type: "object", additionalProperties: false, required: ["opacity"], properties: { opacity: { type: "number", minimum: 0, maximum: 100 } } } } } }
+    } };
 }
 
 function proposal(fingerprint, digest, overrides) {
@@ -148,10 +151,12 @@ function makeHarness() {
             events.push("current");
             return { settingsFingerprint, permissionSnapshot, lifecycle: "active", hasVerifier: state.hasVerifier !== false };
         },
-        executeValidatedAction(action, metadata) {
+        executeValidatedAction(action, metadata, trustedExecutionContext) {
             executorCalls += 1;
             events.push("executor");
             check(Object.isFrozen(action) && Object.isFrozen(metadata) && !Object.prototype.hasOwnProperty.call(metadata, "reservation"), "Executor receives only frozen action and bounded metadata.");
+            check(Object.isFrozen(trustedExecutionContext) && Object.isFrozen(trustedExecutionContext.bindingCapture) && Object.isFrozen(trustedExecutionContext.valueCapture) &&
+                !JSON.stringify(action).includes("nativeLayerId") && !JSON.stringify(metadata).includes("nativeLayerId"), "Executor private context carries trusted captures without exposing native identity through action or metadata.");
             if (executorMode === "throw") throw new Error("executor failure");
             if (executorMode === "reject") return Promise.reject(new Error("executor rejection"));
             if (executorMode === "committed-result-unavailable") return Promise.reject(new protocol.VelaProtocolError(protocol.ERROR_CODES.PLAN_FAILED));
@@ -205,6 +210,17 @@ async function run() {
     check(execution.candidate.state === "consumed" && execution.result.ok === true && harness.executorCalls === 1, "Same-state preflight must reserve once and execute the fake executor once.");
     check(harness.events.join(",") === "tier1,tier3,current,executor", "Observable preflight ordering must be Tier 1, Tier 3, one current binding read, then executor; Guard check and reserve are synchronous between current and executor.");
     await expectCode(harness.preflight.executeStep({ planId: plan.planId, stepIndex: 0 }), protocol.ERROR_CODES.CANDIDATE_NOT_FOUND, "Consumed plans must clear their private capture record.");
+
+    const localHarness = makeHarness();
+    localHarness.state.value = 25;
+    const localPlan = await localHarness.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } }, selectionOrderMeaningful: true });
+    check(localPlan.review.beforeValue === 25 && localPlan.review.valueKind === "number" && Object.isFrozen(localPlan.review), "Local proposal must return a frozen bounded review beforeValue from the same Tier 3 capture used for candidate binding.");
+    check(localPlan.candidates.length === 1 && localPlan.candidates[0].action.payload.params.opacity === 57.5, "Local proposal must create exactly one deterministic set-opacity-v1 candidate.");
+    check(!JSON.stringify(localPlan.candidates[0]).includes("beforeValue") &&
+        !JSON.stringify(localPlan).includes("nativeLayerId") && !JSON.stringify(localPlan).includes("capture") && !JSON.stringify(localPlan).includes("reviewPort"), "Review data must not enter public action, candidate, native identity, capture or review port fields.");
+    localHarness.state.value = 30;
+    const editedLocalPlan = await localHarness.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 80 } }, selectionOrderMeaningful: true });
+    check(editedLocalPlan.review.beforeValue === 30 && editedLocalPlan.candidateIds[0] !== localPlan.candidateIds[0], "A new local proposal must create a new candidate with a fresh beforeValue; edit invalidation remains Controller-owned.");
 
     const invalidTier = makeHarness();
     const invalidSeed = await invalidTier.bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });

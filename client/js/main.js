@@ -7,6 +7,7 @@
 
     var cs = new CSInterface();
     var velaRuntimeController = null;
+    var velaUiController = null;
     var velaRuntimeStatusRevision = 0;
     var velaRuntimeLastErrorCode = null;
     var hostLoaded = false;
@@ -112,6 +113,11 @@
             title: "Ad Component Kit",
             description: "Ad Component Kit",
             selectionMode: "layers"
+        },
+        vela: {
+            titleKey: "vela.title",
+            descriptionKey: "vela.description",
+            selectionMode: "property"
         },
         shapeAdd: {
             title: "Shape Add",
@@ -3363,7 +3369,9 @@
     }
 
     function invokeVelaHost(source, callback) {
-        if (panelShuttingDown || !hostLoaded || typeof source !== "string" || source.indexOf("AEToolbox.VelaContext.handle(") !== 0 || source.charAt(source.length - 1) !== ")") {
+        var isContextCall = typeof source === "string" && source.indexOf("AEToolbox.VelaContext.handle(") === 0;
+        var isExecutionCall = typeof source === "string" && source.indexOf("AEToolbox.VelaExecution.handle(") === 0;
+        if (panelShuttingDown || !hostLoaded || (!isContextCall && !isExecutionCall) || source.charAt(source.length - 1) !== ")") {
             callback("");
             return;
         }
@@ -3395,6 +3403,9 @@
             velaRuntimeStatusRevision += 1;
             return velaRuntimeController.initialize().then(function (result) {
                 velaRuntimeStatusRevision += 1;
+                if (activeToolId === "vela") {
+                    renderVelaDetail();
+                }
                 return result;
             });
         }).catch(reportVelaRuntimeError);
@@ -6752,12 +6763,56 @@
         renderRegistryToolDetail(DynamicTools[toolId]);
     }
 
+    function renderVelaDetail() {
+        var panel = byId("registryToolPanel");
+        var actions = byId("registryToolActions");
+        function renderState(state) {
+            if (velaUiController) {
+                velaUiController.render(state || (velaRuntimeController && velaRuntimeController.getUiState ? velaRuntimeController.getUiState() : { state: "idle" }));
+            }
+        }
+        function handleIntent(intent) {
+            var operation;
+            if (panelShuttingDown || !velaRuntimeController || !intent) { return; }
+            if (intent.type === "refresh") { operation = velaRuntimeController.refreshContext(); }
+            else if (intent.type === "proposal") { operation = velaRuntimeController.createOpacityCandidate({ opacity: intent.opacity }); }
+            else if (intent.type === "approve") { operation = velaRuntimeController.approveCandidate({ candidateId: intent.candidateId }); }
+            else if (intent.type === "reject") { operation = velaRuntimeController.rejectCandidate({ candidateId: intent.candidateId }); }
+            else { return; }
+            setStatus(tr("vela.statusWorking"), "busy", true);
+            operation.then(function (state) {
+                velaRuntimeStatusRevision += 1;
+                renderState(state);
+                setStatus(tr("status.ready"), "ok");
+            }, function (error) {
+                var state = velaRuntimeController && velaRuntimeController.getUiState ? velaRuntimeController.getUiState() : { state: "failed", errorCode: "RUNTIME_CAPABILITY_UNAVAILABLE" };
+                velaRuntimeStatusRevision += 1;
+                renderState(state);
+                setStatus(tr("vela.statusFailed", { code: state.errorCode || (error && error.code) || "RUNTIME_CAPABILITY_UNAVAILABLE" }), "error");
+            });
+        }
+        if (!panel || !actions) { return; }
+        stopRegistryStatePolling();
+        clearRegistryProceduralPreviewTimer(activeToolId);
+        if (velaUiController) {
+            velaUiController.teardown();
+            velaUiController = null;
+        }
+        if (!window.VelaUi || typeof window.VelaUi.createVelaUi !== "function") {
+            panel.textContent = tr("vela.runtimeUnavailable");
+            return;
+        }
+        velaUiController = window.VelaUi.createVelaUi({ root: panel, actionsRoot: actions, t: tr, onIntent: handleIntent });
+        renderState(velaRuntimeController && velaRuntimeController.getUiState ? velaRuntimeController.getUiState() : { state: "idle" });
+    }
+
     function configureToolDetail(toolId) {
         var meta = getToolMeta(toolId);
         var panels = document.querySelectorAll(".tool-panel");
         var actions = document.querySelectorAll(".tool-actions");
         var i;
         var dynamic = isDynamicTool(toolId);
+        var vela = toolId === "vela";
         var previousToolId = activeToolId;
 
         activeToolId = toolId || "shapeAdd";
@@ -6766,17 +6821,19 @@
         }
         byId("detailHeading").textContent = toolText(meta, "titleKey", "title", tr("app.title"));
 
-        if (dynamic) {
+        if (vela) {
+            renderVelaDetail();
+        } else if (dynamic) {
             renderDynamicToolDetail(activeToolId);
         } else {
             stopRegistryStatePolling();
         }
 
         for (i = 0; i < panels.length; i++) {
-            panels[i].classList.toggle("is-active", panels[i].getAttribute("data-tool-panel") === (dynamic ? "__dynamic" : activeToolId));
+            panels[i].classList.toggle("is-active", panels[i].getAttribute("data-tool-panel") === (dynamic || vela ? "__dynamic" : activeToolId));
         }
         for (i = 0; i < actions.length; i++) {
-            actions[i].classList.toggle("is-active", actions[i].getAttribute("data-tool-actions") === (dynamic ? "__dynamic" : activeToolId));
+            actions[i].classList.toggle("is-active", actions[i].getAttribute("data-tool-actions") === (dynamic || vela ? "__dynamic" : activeToolId));
         }
     }
 
@@ -6935,6 +6992,10 @@
         }
 
         clearRegistryProceduralPreviewTimer(activeToolId);
+        if (activeToolId === "vela" && velaUiController) {
+            velaUiController.teardown();
+            velaUiController = null;
+        }
         beginAnimation();
         exitDetailContent(function () {
             iconRect = getHomeToolIconRect(toolButton);

@@ -23,6 +23,10 @@ async function expectCode(value, code, message) {
     await assert.rejects(Promise.resolve(value), (error) => error && error.code === code, message || ("Expected " + code));
     assertions += 1;
 }
+function expectThrowCode(fn, code, message) {
+    assert.throws(fn, (error) => error && error.code === code, message || ("Expected " + code));
+    assertions += 1;
+}
 
 function makeScheduler() {
     let nextId = 0;
@@ -797,6 +801,55 @@ async function runPropertyValueFreshnessTests() {
     check(harness.bridge.compareCaptures(oldSession, oldSession).reason === "CONTEXT_AUTHORITY_MISMATCH", "Session reset must invalidate property-value captures.");
 }
 
+async function runPropertyValueReviewPortTests() {
+    const opacityPath = ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0];
+    const positionPath = ["named", "ADBE Transform Group", 0, "named", "ADBE Position", 0];
+    const harness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") { callback(successResult(req, tierOneSnapshot())); return; }
+        callback(successResult(req, propertyValueSnapshot(req, { values: [{ kind: "number", data: 25 }] })));
+    });
+    const binding = await harness.bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
+    const target = { layerId: binding.snapshot.selection[0].layerId, propertyPath: opacityPath };
+    const value = await harness.bridge.capturePropertyValues(binding, [target]);
+    const reviewPort = bridgeModule.createReviewPort(harness.bridge, protocol);
+    const review = reviewPort.summarize(binding, value);
+    check(bridgeModule.isTrustedReviewPortForProtocol(reviewPort, protocol), "Review port must carry exact Bridge and Protocol identity.");
+    check(Object.isFrozen(review) && Object.keys(review).sort().join(",") === "beforeValue,valueKind" && review.beforeValue === 25 && review.valueKind === "number", "Review port must return only a frozen bounded Opacity beforeValue summary.");
+    check(!JSON.stringify(value).includes("beforeValue") && !JSON.stringify(value).includes("\"data\"") && !JSON.stringify(value).includes("\"value\""), "Public property-value capture must not expose beforeValue or raw value.");
+    check(!Object.prototype.hasOwnProperty.call(harness.bridge, "createReviewPort") && !Object.prototype.hasOwnProperty.call(harness.bridge, "reviewPort"), "Review port must not appear on the public Bridge object.");
+    expectThrowCode(() => reviewPort.summarize(protocol.deepFreeze(protocol.cloneJson(binding)), value), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Review port must reject cloned binding captures.");
+    expectThrowCode(() => reviewPort.summarize(binding, protocol.deepFreeze(JSON.parse(JSON.stringify(value)))), protocol.ERROR_CODES.CONTEXT_STALE, "Review port must reject JSON-cloned value captures.");
+
+    const nonOpacity = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") { callback(successResult(req, tierOneSnapshot())); return; }
+        callback(successResult(req, propertyValueSnapshot(req, { values: [{ kind: "number", data: 25 }] })));
+    });
+    const nonOpacityBinding = await nonOpacity.bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
+    const nonOpacityValue = await nonOpacity.bridge.capturePropertyValues(nonOpacityBinding, [{ layerId: nonOpacityBinding.snapshot.selection[0].layerId, propertyPath: positionPath }]);
+    const nonOpacityReview = bridgeModule.createReviewPort(nonOpacity.bridge, protocol);
+    expectThrowCode(() => nonOpacityReview.summarize(nonOpacityBinding, nonOpacityValue), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Review port must reject non-Opacity targets.");
+
+    const stringValue = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") { callback(successResult(req, tierOneSnapshot())); return; }
+        callback(successResult(req, propertyValueSnapshot(req, { values: [{ kind: "string", data: "25" }] })));
+    });
+    const stringBinding = await stringValue.bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
+    const stringCapture = await stringValue.bridge.capturePropertyValues(stringBinding, [{ layerId: stringBinding.snapshot.selection[0].layerId, propertyPath: opacityPath }]);
+    const stringReview = bridgeModule.createReviewPort(stringValue.bridge, protocol);
+    expectThrowCode(() => stringReview.summarize(stringBinding, stringCapture), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Review port must reject non-number Opacity values.");
+
+    const outOfRange = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        if (req.operation === "captureContext") { callback(successResult(req, tierOneSnapshot())); return; }
+        callback(successResult(req, propertyValueSnapshot(req, { values: [{ kind: "number", data: 101 }] })));
+    });
+    const rangeBinding = await outOfRange.bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
+    await expectCode(outOfRange.bridge.capturePropertyValues(rangeBinding, [{ layerId: rangeBinding.snapshot.selection[0].layerId, propertyPath: opacityPath }]), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Out-of-range Opacity beforeValue must fail closed before review.");
+}
+
 async function runPropertyValueLifecycleTests() {
     const path = ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0];
     let lateCallback = null;
@@ -1023,6 +1076,7 @@ async function run() {
         await runCurrentHostAuthorityTests();
         await runTierThreeBridgeTests();
         await runPropertyValueBridgeTests();
+        await runPropertyValueReviewPortTests();
         await runPropertyValueFreshnessTests();
         await runPropertyValueLifecycleTests();
         await runPropertyValueSelectionFreshnessInvariantTests();

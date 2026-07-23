@@ -37,7 +37,8 @@ function createController(options) {
 async function run() {
     const controller = createController();
     check(Object.isFrozen(controller), "Controller is frozen.");
-    check(Object.keys(controller).sort().join(",") === "dispose,getStatus,initialize,resetSession,resume,suspend", "Controller exposes only lifecycle methods.");
+    check(Object.keys(controller).sort().join(",") === "approveCandidate,createOpacityCandidate,dispose,getStatus,getUiState,initialize,refreshContext,rejectCandidate,resetSession,resume,suspend", "Controller exposes only lifecycle and bounded Vela UI methods.");
+    check(!Object.prototype.hasOwnProperty.call(controller, "getPreflight") && !Object.prototype.hasOwnProperty.call(controller, "getBridge") && !Object.prototype.hasOwnProperty.call(controller, "executeHostRequest"), "Controller does not expose private execution objects.");
     const first = controller.initialize();
     const second = controller.initialize();
     check(first === second, "Concurrent initialization shares one Promise.");
@@ -46,6 +47,7 @@ async function run() {
     check(status.hostAdapterRevision === "vela-context-host-v4", "Status reports only the Host revision.");
     check(Object.isFrozen(status) && Object.isFrozen(status.bridgeState), "Status is frozen.");
     check(!Object.prototype.hasOwnProperty.call(status, "sessionId") && !Object.prototype.hasOwnProperty.call(status, "planStore"), "Status does not leak trusted runtime state.");
+    check(Object.isFrozen(controller.getUiState()) && !Object.prototype.hasOwnProperty.call(controller.getUiState(), "planId") && !Object.prototype.hasOwnProperty.call(controller.getUiState(), "propertyValueDigest"), "UI state is frozen and does not leak private plan or digest data.");
     check((await controller.initialize()).state === "ready" && controller.getStatus().state === "ready", "Repeated initialization is idempotent.");
     check(controller.suspend() === true && controller.getStatus().state === "suspended", "Suspend forwards to the private bridge.");
     check(controller.suspend() === false, "Duplicate suspend is inert.");

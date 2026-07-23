@@ -105,6 +105,9 @@
     var contextBridgeProtocols = new WeakMap();
     var executionPorts = new WeakMap();
     var executionPortProtocols = new WeakMap();
+    var reviewPorts = new WeakMap();
+    var reviewPortProtocols = new WeakMap();
+    var OPACITY_PROPERTY_PATH = Object.freeze(["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0]);
 
     function isTrustedContextBridge(bridge) {
         return Boolean(bridge && trustedContextBridges.has(bridge));
@@ -126,6 +129,20 @@
 
     function isTrustedExecutionPortForProtocol(port, protocol) {
         return Boolean(port && protocolModule.isTrustedProtocol(protocol) && executionPortProtocols.get(port) === protocol);
+    }
+
+    function createReviewPort(bridge, protocol) {
+        var port;
+        if (!isTrustedContextBridgeForProtocol(bridge, protocol)) {
+            throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
+        }
+        port = reviewPorts.get(bridge);
+        if (!port) { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
+        return port;
+    }
+
+    function isTrustedReviewPortForProtocol(port, protocol) {
+        return Boolean(port && protocolModule.isTrustedProtocol(protocol) && reviewPortProtocols.get(port) === protocol);
     }
 
     function protocolError(protocol, code, stage) {
@@ -334,7 +351,8 @@
                     propertyPath: protocol.deepFreeze(protocol.cloneJson(target.propertyPath, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes })),
                     propertyMatchName: target.propertyMatchName,
                     valueKind: target.valueKind,
-                    valueDigest: target.valueDigest
+                    valueDigest: target.valueDigest,
+                    reviewValue: target.reviewValue === undefined ? null : target.reviewValue
                 });
             });
             Object.freeze(nativeBindings);
@@ -1007,6 +1025,8 @@
                 var value;
                 var descriptor;
                 var terminalMatchName;
+                var dataDescriptor;
+                var reviewValue = null;
                 protocol.assertNoUnknownKeys(target, ["targetOrdinal", "nativeLayerId", "layerIndex", "propertyPath", "propertyMatchName", "value"], "hostContext.propertyValueTargets[" + index + "]");
                 if (target.targetOrdinal !== index || target.nativeLayerId !== expected.nativeLayerId || target.layerIndex !== expected.layerIndex ||
                     protocol.canonicalStringify(target.propertyPath) !== protocol.canonicalStringify(expected.propertyPath)) {
@@ -1018,6 +1038,17 @@
                 }
                 protocol.assertNoUnknownKeys(target.value, ["kind", "data"], "hostContext.propertyValueTargets[" + index + "].value");
                 descriptor = contextApi.describePropertyValue(protocol.getOwnDataProperty(target.value, "kind"), protocol.getOwnDataProperty(target.value, "data"));
+                if (descriptor.valueKind === "number" && target.propertyMatchName === "ADBE Opacity" &&
+                        protocol.canonicalStringify(expected.propertyPath) === protocol.canonicalStringify(OPACITY_PROPERTY_PATH)) {
+                    try { dataDescriptor = Object.getOwnPropertyDescriptor(target.value, "data"); }
+                    catch (error) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Opacity review value is unavailable."); }
+                    if (!dataDescriptor || dataDescriptor.get || dataDescriptor.set || !Object.prototype.hasOwnProperty.call(dataDescriptor, "value") ||
+                            typeof dataDescriptor.value !== "number" || !Number.isFinite(dataDescriptor.value) || isNegativeZero(dataDescriptor.value) ||
+                            dataDescriptor.value < 0 || dataDescriptor.value > 100) {
+                        protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Opacity review value is invalid.");
+                    }
+                    reviewValue = dataDescriptor.value;
+                }
                 if (descriptor.payloadBytes > MAX_PROPERTY_VALUE_BYTES) {
                     protocol.fail(protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED, "Property value target exceeds its byte budget.");
                 }
@@ -1033,7 +1064,8 @@
                     propertyPath: expected.propertyPath,
                     propertyMatchName: terminalMatchName,
                     valueKind: descriptor.valueKind,
-                    valueDigest: descriptor.valueDigest
+                    valueDigest: descriptor.valueDigest,
+                    reviewValue: reviewValue
                 };
             });
             publicTargets = valueTargets.map(function (target) {
@@ -1193,6 +1225,31 @@
             });
         }
 
+        function createPrivateReviewSummary(bindingCapture, valueCapture) {
+            var bindingRecord = trustedBindingRecord(bindingCapture);
+            var valueRecord = captureRecords.get(valueCapture);
+            var valueTarget;
+            if (!valueRecord || valueRecord.bridgeToken !== bridgeToken || valueRecord.protocol !== protocol || valueRecord.purpose !== "property-value-binding" ||
+                    valueRecord.bindingFingerprint !== bindingRecord.fingerprint || valueRecord.sessionId !== sessionId ||
+                    !Object.isFrozen(valueCapture) || protocol.canonicalStringify(valueCapture) !== valueRecord.publicCanonical ||
+                    valueRecord.bridgeLifecycleEpoch !== bridgeLifecycleEpoch || !currentHostAuthority ||
+                    bindingRecord.hostInstanceId !== currentHostAuthority.hostInstanceId || bindingRecord.hostReloadEpoch !== currentHostAuthority.hostReloadEpoch ||
+                    valueRecord.valueTargets.length !== 1) {
+                throw protocolError(protocol, protocol.ERROR_CODES.CONTEXT_STALE);
+            }
+            valueTarget = valueRecord.valueTargets[0];
+            if (valueTarget.propertyMatchName !== "ADBE Opacity" || valueTarget.valueKind !== "number" ||
+                    protocol.canonicalStringify(valueTarget.propertyPath) !== protocol.canonicalStringify(OPACITY_PROPERTY_PATH) ||
+                    typeof valueTarget.reviewValue !== "number" || !Number.isFinite(valueTarget.reviewValue) || isNegativeZero(valueTarget.reviewValue) ||
+                    valueTarget.reviewValue < 0 || valueTarget.reviewValue > 100) {
+                throw protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+            }
+            return protocol.deepFreeze({
+                valueKind: "number",
+                beforeValue: valueTarget.reviewValue
+            });
+        }
+
         function cancel(requestId) {
             if (!active || active.requestId !== requestId || state !== "pending") { return false; }
             return settle(active, active.generation, protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED), null);
@@ -1345,6 +1402,9 @@
         var executionPort = Object.freeze({ buildRequest: createPrivateExecutionRequest });
         executionPorts.set(bridge, executionPort);
         executionPortProtocols.set(executionPort, protocol);
+        var reviewPort = Object.freeze({ summarize: createPrivateReviewSummary });
+        reviewPorts.set(bridge, reviewPort);
+        reviewPortProtocols.set(reviewPort, protocol);
         return bridge;
     }
 
@@ -1354,6 +1414,8 @@
         isTrustedContextBridgeForProtocol: isTrustedContextBridgeForProtocol,
         createExecutionPort: createExecutionPort,
         isTrustedExecutionPortForProtocol: isTrustedExecutionPortForProtocol,
+        createReviewPort: createReviewPort,
+        isTrustedReviewPortForProtocol: isTrustedReviewPortForProtocol,
         quoteForExtendScript: quoteForExtendScript
     });
 }));
