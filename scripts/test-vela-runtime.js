@@ -37,7 +37,7 @@ function createController(options) {
 async function run() {
     const controller = createController();
     check(Object.isFrozen(controller), "Controller is frozen.");
-    check(Object.keys(controller).sort().join(",") === "approveCandidate,createOpacityCandidate,dispose,getStatus,getUiState,initialize,refreshContext,rejectCandidate,resetSession,resume,suspend", "Controller exposes only lifecycle and bounded Vela UI methods.");
+    check(Object.keys(controller).sort().join(",") === "approveCandidate,cancelProviderRequest,createOpacityCandidate,dispose,getProviderUiState,getStatus,getUiState,initialize,refreshContext,rejectCandidate,resetSession,resume,sendProviderMessage,suspend", "Controller exposes only lifecycle and bounded Vela UI methods.");
     check(!Object.prototype.hasOwnProperty.call(controller, "getPreflight") && !Object.prototype.hasOwnProperty.call(controller, "getBridge") && !Object.prototype.hasOwnProperty.call(controller, "executeHostRequest"), "Controller does not expose private execution objects.");
     const first = controller.initialize();
     const second = controller.initialize();

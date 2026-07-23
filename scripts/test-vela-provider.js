@@ -17,6 +17,12 @@ const DEFAULT_ENDPOINT = "http://127.0.0.1:1234/v1/chat/completions";
 function check(value, message) { assert.ok(value, message); assertions += 1; }
 function equal(actual, expected, message) { assert.strictEqual(actual, expected, message); assertions += 1; }
 function expectCode(callback, code, message) { assert.throws(callback, (error) => error && error.code === code, message); assertions += 1; }
+function collectSchemaValues(value, key, output) {
+    if (!value || typeof value !== "object") return output;
+    if (Object.prototype.hasOwnProperty.call(value, key)) output.push(value[key]);
+    Object.keys(value).forEach((child) => collectSchemaValues(value[child], key, output));
+    return output;
+}
 
 function makeProtocol(overrides) {
     let id = 0;
@@ -58,13 +64,14 @@ function makeScheduler() {
     };
 }
 
-function makeRuntime(scheduler, overrides) {
+function makeRuntime(scheduler, overrides, nowMs) {
     let aborts = 0;
     const runtime = {
         setTimeout: scheduler.setTimeout,
         clearTimeout: scheduler.clearTimeout,
         createAbortController: () => ({ signal: { local: true }, abort() { aborts += 1; } }),
-        parseUrl
+        parseUrl,
+        nowMs: nowMs || (() => 100)
     };
     Object.assign(runtime, overrides || {});
     return { runtime, aborts: () => aborts };
@@ -99,8 +106,43 @@ function wrapper(content, overrides) {
     }, overrides || {}));
 }
 
+function realLmStudioWrapper(protocol, request, overrides) {
+    return Object.assign({
+        id: "chatcmpl-local",
+        object: "chat.completion",
+        created: 1784797754,
+        model: request.body.model,
+        choices: [{
+            index: 0,
+            message: {
+                role: "assistant",
+                content: JSON.stringify({
+                    envelope: { text: "Opacity refers to the degree of transparency or lightness in a material, indicating how much light passes through it.", type: "text" },
+                    model: request.body.model,
+                    protocol: protocol.PROTOCOLS.RESPONSE,
+                    provider: "lmstudio",
+                    requestId: requestIdFromTransport(request),
+                    schemaVersion: protocol.SCHEMA_VERSION
+                }),
+                reasoning_content: "",
+                tool_calls: []
+            },
+            logprobs: null,
+            finish_reason: "stop"
+        }],
+        usage: {
+            prompt_tokens: 239,
+            completion_tokens: 144,
+            total_tokens: 383,
+            completion_tokens_details: { reasoning_tokens: 0 }
+        },
+        stats: {},
+        system_fingerprint: request.body.model
+    }, overrides || {});
+}
+
 function transportResult(bodyText, overrides) {
-    return Object.assign({ status: 200, headers: {}, bodyText, redirected: false, finalUrl: DEFAULT_ENDPOINT }, overrides || {});
+    return Object.assign({ status: 200, contentType: "application/json", bodyText, redirected: false, finalUrl: DEFAULT_ENDPOINT }, overrides || {});
 }
 
 function input(overrides) {
@@ -118,7 +160,7 @@ function createHarness(options) {
     options = options || {};
     const clock = options.clock || makeProtocol();
     const scheduler = options.scheduler || makeScheduler();
-    const runtimeBundle = options.runtimeBundle || makeRuntime(scheduler, options.runtimeOverrides);
+    const runtimeBundle = options.runtimeBundle || makeRuntime(scheduler, options.runtimeOverrides, () => clock.protocol.now());
     const calls = [];
     const responder = options.responder || ((request) => Promise.resolve(transportResult(wrapper(canonicalContent(clock.protocol, request)))));
     const transport = options.transport || { sendJson(request) { calls.push(request); return responder(request); } };
@@ -128,7 +170,7 @@ function createHarness(options) {
         endpoint: options.endpoint,
         model: options.model || "Qwen3.5-4B Q6_K",
         timeoutMs: options.timeoutMs === undefined ? 30000 : options.timeoutMs,
-        supportsJsonObject: options.supportsJsonObject === undefined ? true : options.supportsJsonObject,
+        responseFormatMode: options.responseFormatMode === undefined ? "json-schema" : options.responseFormatMode,
         runtime: runtimeBundle.runtime
     };
     if (config.endpoint === undefined) delete config.endpoint;
@@ -169,7 +211,7 @@ async function run() {
     expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "", runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Empty model ids must be rejected.");
     check(createHarness({ model: "\ud83d\ude00".repeat(64) }).provider.id === "lmstudio", "Model ids at the 256-byte UTF-8 limit must be accepted.");
     expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "\ud83d\ude00".repeat(65), runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Model ids must use UTF-8 byte limits.");
-    expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "m", supportsJsonObject: "true", runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "JSON mode capability must be boolean.");
+    ["text", "json_object", true, null].forEach((responseFormatMode) => expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "m", responseFormatMode, runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Only the explicit json-schema response format mode is accepted."));
 
     ["http://127.0.0.1:1234/v1/chat/completions", "http://localhost:4321/v1/chat/completions", "http://[::1]:65535/v1/chat/completions"].forEach((endpoint) => {
         const value = createHarness({ endpoint }).provider;
@@ -204,13 +246,35 @@ async function run() {
     equal(sent.maxResponseBytes, normal.protocol.HARD_LIMITS.maxResponseJsonBytes, "Transport must receive the response budget.");
     equal(sent.body.stream, false, "Streaming must be disabled.");
     check(Object.isFrozen(sent) && Object.isFrozen(sent.headers) && Object.isFrozen(sent.body), "The complete transport request must be frozen.");
-    equal(sent.body.response_format.type, "json_object", "JSON mode must be enabled only when configured.");
+    equal(sent.body.response_format.type, "json_schema", "Production requests must use the LM Studio json_schema response format.");
+    const responseSchema = sent.body.response_format.json_schema;
+    check(responseSchema && responseSchema.name === "vela_response" && responseSchema.strict === true, "The response schema must have the trusted LM Studio wrapper.");
+    check(responseSchema.schema.type === "object" && responseSchema.schema.additionalProperties === false, "The canonical response root must be closed.");
+    equal(responseSchema.schema.properties.protocol.enum[0], normal.protocol.PROTOCOLS.RESPONSE, "Schema protocol metadata must match the trusted protocol.");
+    equal(responseSchema.schema.properties.schemaVersion.enum[0], normal.protocol.SCHEMA_VERSION, "Schema version metadata must match the trusted protocol.");
+    equal(responseSchema.schema.properties.requestId.enum[0], handle.requestId, "Schema request ids must bind the current local request.");
+    equal(responseSchema.schema.properties.provider.enum[0], "lmstudio", "Schema provider metadata must be local.");
+    equal(responseSchema.schema.properties.model.enum[0], "Qwen3.5-4B Q6_K", "Schema model metadata must bind the configured model.");
+    const envelopeVariants = responseSchema.schema.properties.envelope.oneOf;
+    check(envelopeVariants.length === 2 && envelopeVariants.every((variant) => variant.additionalProperties === false), "The schema must permit only closed text and error envelope variants.");
+    check(envelopeVariants.some((variant) => variant.properties.type.enum[0] === "text" && variant.properties.text.minLength === 1), "The text envelope must require non-empty envelope.text.");
+    check(envelopeVariants.some((variant) => variant.properties.type.enum[0] === "error" && variant.properties.error), "The error envelope must use the canonical structured error form.");
+    const textVariant = envelopeVariants.find((variant) => variant.properties.type.enum[0] === "text");
+    const errorVariant = envelopeVariants.find((variant) => variant.properties.type.enum[0] === "error");
+    equal(textVariant.properties.text.maxLength, 1024, "LM Studio text generation must use the bounded generation cap.");
+    equal(errorVariant.properties.error.properties.stage.maxLength, 128, "LM Studio error stage generation must use the bounded generation cap.");
+    equal(errorVariant.properties.error.properties.message.maxLength, 512, "LM Studio error message generation must use the bounded generation cap.");
+    const schemaMaxLengths = collectSchemaValues(responseSchema.schema, "maxLength", []);
+    check(schemaMaxLengths.length > 0 && schemaMaxLengths.every((value) => Number.isInteger(value) && value <= 1024), "No LM Studio schema repetition bound may exceed the conservative generation limit.");
+    check(!JSON.stringify(sent.body.response_format).includes("json_object") && !JSON.stringify(sent.body.response_format).includes("actionCandidate") && !JSON.stringify(sent.body.response_format).includes("\"plan\""), "Outbound JSON schema must not express deprecated JSON mode or executable envelopes.");
     equal(sent.body.messages[0].role, "system", "The system message must be local and first.");
     check(sent.body.messages[0].content.includes(handle.requestId) && sent.body.messages[0].content.includes("vela.model-response.v1"), "The system message must bind response metadata.");
 
-    const withoutJsonMode = createHarness({ supportsJsonObject: false });
-    await withoutJsonMode.provider.start(input()).promise;
-    check(!Object.prototype.hasOwnProperty.call(withoutJsonMode.calls[0].body, "response_format"), "Unsupported JSON mode must not be requested.");
+    const rebound = createHarness({ model: "another-local-model" });
+    const reboundHandle = rebound.provider.start(input());
+    await reboundHandle.promise;
+    equal(rebound.calls[0].body.response_format.json_schema.schema.properties.requestId.enum[0], reboundHandle.requestId, "Schemas must be regenerated for each local request id.");
+    equal(rebound.calls[0].body.response_format.json_schema.schema.properties.model.enum[0], "another-local-model", "Schemas must be regenerated for each configured model.");
     const inputHarness = createHarness();
     expectCode(() => inputHarness.provider.start({ messages: [], context: input().context, endpoint: DEFAULT_ENDPOINT }), base.protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Unknown start fields must be rejected.");
     expectCode(() => inputHarness.provider.start(input({ messages: [{ role: "system", content: "bad" }] })), base.protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Caller system messages must be rejected.");
@@ -233,6 +297,69 @@ async function run() {
         const harness = createHarness({ responder: (request) => { let content = canonicalContent(base.protocol, request); if (fenced) content = "```json\n" + content + "\n```"; return Promise.resolve(transportResult(wrapper(content))); } });
         equal((await harness.provider.start(input()).promise).envelope.type, "text", "Plain and recognized fenced canonical JSON must parse.");
     }
+    const canonicalLongText = "x".repeat(1025);
+    const longCanonicalHarness = createHarness({ responder: (request) => Promise.resolve(transportResult(wrapper(canonicalContent(base.protocol, request, { type: "text", text: canonicalLongText })))) });
+    equal((await longCanonicalHarness.provider.start(input()).promise).envelope.text.length, canonicalLongText.length, "The strict canonical Parser must retain its existing acceptance range beyond the LM Studio generation subset.");
+    const realFixtureHarness = createHarness({ responder: (request) => Promise.resolve(transportResult(JSON.stringify(realLmStudioWrapper(base.protocol, request)))) });
+    const realFixtureResponse = await realFixtureHarness.provider.start(input()).promise;
+    equal(realFixtureResponse.envelope.type, "text", "The complete LM Studio 0.4.19 completion wrapper fixture must normalize before canonical parsing.");
+    equal(realFixtureResponse.envelope.text, "Opacity refers to the degree of transparency or lightness in a material, indicating how much light passes through it.", "The canonical Parser must preserve exact text from the real LM Studio fixture regardless of JSON key order.");
+    check(!/stats|logprobs|completion_tokens_details|system_fingerprint|reasoning_content|tool_calls/.test(JSON.stringify(realFixtureResponse)) && !/stats|logprobs|completion_tokens_details|system_fingerprint|reasoning_content|tool_calls/.test(JSON.stringify(realFixtureHarness.provider.getDiagnostics())), "Inert LM Studio wrapper metadata must be consumed and discarded before canonical output or diagnostics.");
+    function realFixtureResponseFor(mutator) {
+        const harness = createHarness({ responder: (request) => {
+            const value = realLmStudioWrapper(base.protocol, request);
+            mutator(value);
+            return Promise.resolve(transportResult(JSON.stringify(value)));
+        } });
+        return harness.provider.start(input()).promise;
+    }
+    for (const mutate of [
+        (value) => { delete value.choices[0].logprobs; },
+        (value) => { delete value.stats; },
+        (value) => { delete value.usage.completion_tokens_details; },
+        (value) => { value.system_fingerprint = null; },
+        (value) => { delete value.system_fingerprint; }
+    ]) {
+        equal((await realFixtureResponseFor(mutate)).envelope.type, "text", "Only absent or exact inert LM Studio completion metadata may be accepted.");
+    }
+    for (const mutate of [
+        (value) => { value.choices[0].logprobs = {}; },
+        (value) => { value.choices[0].logprobs = []; },
+        (value) => { value.choices[0].logprobs = "tokens"; },
+        (value) => { value.stats = { queue: 1 }; },
+        (value) => { value.stats = []; },
+        (value) => { value.usage.completion_tokens_details = { reasoning_tokens: 1 }; },
+        (value) => { value.usage.completion_tokens_details = { reasoning_tokens: -1 }; },
+        (value) => { value.usage.completion_tokens_details = { reasoning_tokens: 0, extra: true }; },
+        (value) => { value.usage.prompt_tokens = "239"; },
+        (value) => { value.system_fingerprint = {}; },
+        (value) => { value.system_fingerprint = "x".repeat(257); }
+    ]) {
+        equal((await realFixtureResponseFor(mutate)).envelope.error.code, base.protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "Non-inert LM Studio completion metadata must fail closed.");
+    }
+    for (const extension of [
+        { reasoning_content: "", tool_calls: [] },
+        { reasoning_content: null },
+        { tool_calls: [] },
+        {}
+    ]) {
+        const harness = createHarness({ responder: (request) => {
+            const body = JSON.parse(wrapper(canonicalContent(base.protocol, request)));
+            Object.assign(body.choices[0].message, extension);
+            return Promise.resolve(transportResult(JSON.stringify(body)));
+        } });
+        const response = await harness.provider.start(input()).promise;
+        equal(response.envelope.type, "text", "Empty LM Studio wrapper extensions must be inert.");
+        check(JSON.stringify(response).indexOf("reasoning_content") === -1 && JSON.stringify(response).indexOf("tool_calls") === -1, "Inert wrapper extensions must not enter canonical output.");
+    }
+    for (const extension of [{ reasoning_content: "hidden reasoning" }, { tool_calls: [{}] }, { function_call: null }, { unknown_extension: true }]) {
+        const harness = createHarness({ responder: (request) => {
+            const body = JSON.parse(wrapper(canonicalContent(base.protocol, request)));
+            Object.assign(body.choices[0].message, extension);
+            return Promise.resolve(transportResult(JSON.stringify(body)));
+        } });
+        equal((await harness.provider.start(input()).promise).envelope.error.code, base.protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "Non-inert wrapper extensions must fail closed.");
+    }
 
     const invalidWrappers = [
         ["not-json", "malformed wrapper"], ["<html>bad</html>", "HTML wrapper"], ["```json\n{}\n```", "fenced wrapper"],
@@ -242,7 +369,7 @@ async function run() {
         [JSON.stringify({ choices: [{}] }), "missing message"], [JSON.stringify({ choices: [{ message: { role: "user", content: "x" } }] }), "wrong role"],
         [JSON.stringify({ choices: [{ message: { role: "assistant" } }] }), "missing content"], [JSON.stringify({ choices: [{ message: { role: "assistant", content: 1 } }] }), "non-string content"],
         [JSON.stringify({ choices: [{ message: { role: "assistant", content: " " } }] }), "blank content"], [JSON.stringify({ choices: [{ message: { role: "assistant", content: [] } }] }), "array content"],
-        [JSON.stringify({ choices: [{ message: { role: "assistant", content: "x", tool_calls: [] } }] }), "tool calls"],
+        [JSON.stringify({ choices: [{ message: { role: "assistant", content: "x", tool_calls: [{}] } }] }), "tool calls"],
         [JSON.stringify({ choices: [{ message: { role: "assistant", content: "x", function_call: {} } }] }), "function call"]
     ];
     for (const [bodyText, label] of invalidWrappers) {
@@ -452,7 +579,7 @@ async function run() {
         equal(bodyGetterCalls, 0, "Transport body getters must never execute.");
         await expectInvalidTransport(() => new Proxy(transportResult("{}"), { getOwnPropertyDescriptor() { throw new Error("descriptor secret"); } }), "A descriptor-throwing Proxy");
         await expectInvalidTransport(() => Object.assign(Object.create({ inherited: true }), transportResult("{}")), "A custom-prototype response");
-        await expectInvalidTransport(() => { const value = transportResult("{}"); value.headers.self = value.headers; return value; }, "A cyclic response");
+        await expectInvalidTransport(() => { const value = transportResult("{}"); value.self = value; return value; }, "A cyclic response");
         let proxyGetCalls = 0;
         const proxyPassHarness = createHarness({ responder: (request) => Promise.resolve(new Proxy(transportResult(wrapper(canonicalContent(base.protocol, request))), { get(target, key) { if (key === "then") return undefined; proxyGetCalls += 1; throw new Error("get secret " + String(key)); } })) });
         equal((await proxyPassHarness.provider.start(input()).promise).envelope.type, "text", "A descriptor-safe Proxy must be snapshotted without property gets.");
@@ -503,7 +630,8 @@ async function run() {
                 setTimeout: function () { return 1; },
                 clearTimeout: function () {},
                 createAbortController: function () { return { signal: {}, abort: function () {} }; },
-                parseUrl: function (url) { return { protocol: "http:", hostname: "127.0.0.1", port: "1234", pathname: "/v1/chat/completions", username: "", password: "", search: "", hash: "", href: url }; }
+                parseUrl: function (url) { return { protocol: "http:", hostname: "127.0.0.1", port: "1234", pathname: "/v1/chat/completions", username: "", password: "", search: "", hash: "", href: url }; },
+                nowMs: function () { return 0; }
             }
         }).id;
     }())`, browser);
