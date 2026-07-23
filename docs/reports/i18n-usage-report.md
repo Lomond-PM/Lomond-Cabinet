@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 159 |
+| A | Core / Global; keep | 175 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -58,7 +58,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | common.none | common | None | 无 | host/tools/adComponentKit.tool.jsx, host/tools/registryControlLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.parameters | common | Parameters | 参数 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.ready | common | Ready | 就绪 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.refresh | common | Refresh | 刷新 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.refresh | common | Refresh | 刷新 | client/js/vela/velaUi.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.registry | common | Registry | 注册信息 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.reset | common | Reset | 重置 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.resetDefaults | common | Reset Defaults | 恢复默认值 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -382,6 +382,22 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | status.unableReadSelection | status | Unable to read selection. | 无法读取选择。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | tools.moreTools.title | tools.moreTools | More Tools | 更多工具 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | tools.quickStack.title | tools.quickStack | Quick Stack | 快速堆叠 | none | no | E | Reserved or unused Home label. Confirm no planned implementation before deleting. |
+| vela.approve | vela | Approve | 批准 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.confirmation | vela | Confirmation | 确认 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.contextSummary | vela | Context | 上下文 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.description | vela | Create and approve one local opacity action for the selected layer. | 为当前选中图层创建并确认一个本地不透明度操作。 | client/js/main.js, client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.errorCode | vela | Error code | 错误码 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.opacityLabel | vela | Opacity | 不透明度 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.overline | vela | Local confirmation | 本地确认 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reject | vela | Reject | 拒绝 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewAction | vela | Review Action | 检视操作 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.riskWrite | vela | Write action | 写入操作 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.runtimeUnavailable | vela | Vela runtime is unavailable. | Vela runtime 不可用。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.stateLabel | vela | State | 状态 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.statusFailed | vela | Vela failed: {code} | Vela 失败：{code} | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.statusWorking | vela | Vela is working... | Vela 正在处理... | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.targetUnavailable | vela | Select one layer to review Opacity. | 请选择一个图层以检查 Opacity。 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.title | vela | Vela | Vela | client/index.html, client/js/main.js, client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 
 ## Duplicate Tool Key Table
 
