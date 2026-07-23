@@ -5,14 +5,15 @@
     var BOOTSTRAP_NAME = "__velaProtocolCoreBootstrapV1";
 
     function bootstrapError(code) { var error = new Error(code); error.code = code; return error; }
-    function assertDependencies(protocol, context, validator, plan, guard, bridge, preflight, executionAdapter) {
+    function assertDependencies(protocol, context, validator, plan, guard, bridge, preflight, executionAdapter, controller) {
         if (!protocol || !context || !validator || !plan || !guard || !bridge || !preflight || !executionAdapter ||
             typeof protocol.createProtocol !== "function" || typeof context.createContextApi !== "function" ||
             typeof validator.createActionValidator !== "function" || typeof plan.createPlanStore !== "function" ||
-            typeof bridge.createContextBridge !== "function" || typeof bridge.createExecutionPort !== "function" || typeof preflight.createExecutionPreflight !== "function" || typeof executionAdapter.createExecutionAdapter !== "function") {
+            typeof bridge.createContextBridge !== "function" || typeof bridge.createExecutionPort !== "function" || typeof bridge.createReviewPort !== "function" || typeof preflight.createExecutionPreflight !== "function" || typeof executionAdapter.createExecutionAdapter !== "function" ||
+            !controller || typeof controller.createController !== "function" || typeof controller.isTrustedControllerForProtocol !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE");
         }
-        return { protocol: protocol, context: context, validator: validator, plan: plan, guard: guard, bridge: bridge, preflight: preflight, executionAdapter: executionAdapter };
+        return { protocol: protocol, context: context, validator: validator, plan: plan, guard: guard, bridge: bridge, preflight: preflight, executionAdapter: executionAdapter, controller: controller };
     }
     function registerBrowserModule(target, name, create) {
         var hasOwn = Object.prototype.hasOwnProperty;
@@ -23,18 +24,18 @@
         bootstrap = target[BOOTSTRAP_NAME];
         if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.getModule !== "function" || typeof bootstrap.hasModule !== "function" || typeof bootstrap.registerModule !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
         if (bootstrap.hasModule(name)) { throw bootstrapError("MODULE_ALREADY_REGISTERED"); }
-        dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaContext"), bootstrap.getModule("VelaValidator"), bootstrap.getModule("VelaPlan"), bootstrap.getModule("VelaExecutionGuard"), bootstrap.getModule("VelaContextBridge"), bootstrap.getModule("VelaExecutionPreflight"), bootstrap.getModule("VelaExecutionAdapter"));
-        exported = Object.freeze(create(dependencies.protocol, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter));
+        dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaContext"), bootstrap.getModule("VelaValidator"), bootstrap.getModule("VelaPlan"), bootstrap.getModule("VelaExecutionGuard"), bootstrap.getModule("VelaContextBridge"), bootstrap.getModule("VelaExecutionPreflight"), bootstrap.getModule("VelaExecutionAdapter"), bootstrap.getModule("VelaController"));
+        exported = Object.freeze(create(dependencies.protocol, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller));
         bootstrap.registerModule(name, exported);
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        var dependencies = assertDependencies(require("./velaProtocol"), require("./velaContext"), require("./velaValidator"), require("./velaPlan"), require("./velaExecutionGuard"), require("./velaContextBridge"), require("./velaExecutionPreflight"), require("./velaExecutionAdapter"));
-        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter));
+        var dependencies = assertDependencies(require("./velaProtocol"), require("./velaContext"), require("./velaValidator"), require("./velaPlan"), require("./velaExecutionGuard"), require("./velaContextBridge"), require("./velaExecutionPreflight"), require("./velaExecutionAdapter"), require("./velaController"));
+        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller));
     }
-}(typeof self !== "undefined" ? self : this, function (protocolModule, contextModule, validatorModule, planModule, guardModule, bridgeModule, preflightModule, executionAdapterModule) {
+}(typeof self !== "undefined" ? self : this, function (protocolModule, contextModule, validatorModule, planModule, guardModule, bridgeModule, preflightModule, executionAdapterModule, controllerModule) {
     "use strict";
 
     var MODULE_REVISION = "vela-runtime-v1";
@@ -110,6 +111,36 @@
         }
         return hash.map(function (item) { return (item >>> 0).toString(16).replace(/^(.{0,7})$/, "0000000$1").slice(-8); }).join("");
     }
+    function createSessionProtocolClock(source) {
+        var origin = null;
+        var lastTimestamp = 0;
+        var maxTimestamp = protocolModule.HARD_LIMITS.maxNumberAbs;
+
+        function readSource() {
+            var value = source();
+            if (typeof value !== "number" || !Number.isFinite(value) || Object.is(value, -0)) {
+                throw new Error("clock unavailable");
+            }
+            return value;
+        }
+        function reset() {
+            origin = readSource();
+            lastTimestamp = 0;
+        }
+        function now() {
+            var elapsed = readSource() - origin;
+            var timestamp = elapsed > 0 ? Math.floor(elapsed / 1000) : 0;
+            if (!Number.isFinite(timestamp) || timestamp > maxTimestamp) {
+                throw new Error("protocol clock exhausted");
+            }
+            if (timestamp < lastTimestamp) { return lastTimestamp; }
+            lastTimestamp = timestamp;
+            return timestamp;
+        }
+
+        reset();
+        return Object.freeze({ now: now, reset: reset });
+    }
     function createRuntime(options) {
         var invokeHost = options && ownData(options, "invokeHost");
         var environment = options && ownData(options, "environment");
@@ -128,6 +159,8 @@
         var bridge = null;
         var preflight = null;
         var executionAdapter = null;
+        var controller = null;
+        var protocolClock = null;
         var runtime = environment || {};
         function safeStatus() {
             var bridgeState = bridge ? bridge.getState() : null;
@@ -145,11 +178,13 @@
             return output;
         }
         function setup() {
+            var wallClock = typeof ownData(runtime, "now") === "function" ? ownData(runtime, "now") : function () { return new Date().getTime(); };
+            protocolClock = createSessionProtocolClock(wallClock);
             var runtimeOptions = {
                 utf8ByteLength: typeof ownData(runtime, "utf8ByteLength") === "function" ? ownData(runtime, "utf8ByteLength") : utf8ByteLength,
                 sha256Hex: typeof ownData(runtime, "sha256Hex") === "function" ? ownData(runtime, "sha256Hex") : sha256Hex,
                 randomId: typeof ownData(runtime, "randomId") === "function" ? ownData(runtime, "randomId") : browserRandomId,
-                now: typeof ownData(runtime, "now") === "function" ? ownData(runtime, "now") : function () { return new Date().getTime(); }
+                now: protocolClock.now
             };
             var setTimer = typeof ownData(runtime, "setTimeout") === "function" ? ownData(runtime, "setTimeout") : root && root.setTimeout;
             var clearTimer = typeof ownData(runtime, "clearTimeout") === "function" ? ownData(runtime, "clearTimeout") : root && root.clearTimeout;
@@ -167,9 +202,12 @@
                 actionValidator: validator,
                 planStore: planStore,
                 contextBridge: bridge,
-                getCurrentExecutionBinding: function () { return { settingsFingerprint: contextApi.fingerprintSettings({}), permissionSnapshot: { mode: "confirm-every-action", grants: [], policyRevision: MODULE_REVISION }, lifecycle: "ready", hasVerifier: false }; },
+                reviewPort: bridgeModule.createReviewPort(bridge, protocol),
+                getCurrentExecutionBinding: function () { return { settingsFingerprint: contextApi.fingerprintSettings({}), permissionSnapshot: { mode: "confirm-every-action", grants: [], policyRevision: MODULE_REVISION }, lifecycle: "ready", hasVerifier: true }; },
                 executeValidatedAction: executionAdapter.executeValidatedAction
             });
+            controller = controllerModule.createController({ protocol: protocol, preflight: preflight });
+            if (!controllerModule.isTrustedControllerForProtocol(controller, protocol)) { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
         }
         function initialize() {
             var capturedEpoch;
@@ -195,6 +233,7 @@
         }
         function suspend() {
             if (disposed || state !== "ready") { return false; }
+            if (controller) { controller.invalidate("stale"); }
             if (bridge) { bridge.suspend(); }
             suspended = true;
             state = "suspended";
@@ -209,18 +248,49 @@
         }
         function resetSession() {
             if (disposed || state !== "ready" || !bridge) { return false; }
+            if (controller) { controller.invalidate("idle"); }
             bridge.resetSession();
+            try { protocolClock.reset(); }
+            catch (error) { lastErrorCode = stableErrorCode(error); state = "failed"; return false; }
             return true;
         }
         function dispose() {
             if (disposed) { return false; }
             epoch += 1;
             if (bridge) { try { bridge.suspend(); } catch (ignored) {} }
-            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; preflight = null; executionAdapter = null;
+            if (controller) { try { controller.invalidate("idle"); } catch (ignoredController) {} }
+            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; preflight = null; executionAdapter = null; controller = null; protocolClock = null;
             initialized = false; suspended = false; disposed = true; state = "disposed";
             return true;
         }
-        return Object.freeze({ initialize: initialize, getStatus: safeStatus, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose });
+        function ensureReadyController() {
+            if (disposed || state !== "ready" || !controller) { throw safeError(suspended ? "LIFECYCLE_BLOCKED" : "RUNTIME_CAPABILITY_UNAVAILABLE"); }
+            return controller;
+        }
+        function refreshContext() {
+            try { return ensureReadyController().refreshContext(); }
+            catch (error) { return Promise.reject(error); }
+        }
+        function createOpacityCandidate(input) {
+            try { return ensureReadyController().createOpacityCandidate(input); }
+            catch (error) { return Promise.reject(error); }
+        }
+        function approveCandidate(input) {
+            try { return ensureReadyController().approveCandidate(input); }
+            catch (error) { return Promise.reject(error); }
+        }
+        function rejectCandidate(input) {
+            try { return Promise.resolve(ensureReadyController().rejectCandidate(input)); }
+            catch (error) { return Promise.reject(error); }
+        }
+        function getUiState() {
+            try {
+                return controller ? controller.getUiState() : Object.freeze({ state: state === "ready" ? "input-ready" : state, candidateId: null, capabilityId: null, risk: null, targetSummary: null, beforeValue: null, proposedValue: null, undoGroupLabel: null, errorCode: lastErrorCode, moduleRevision: "vela-controller-v1" });
+            } catch (error) {
+                return Object.freeze({ state: "failed", candidateId: null, capabilityId: null, risk: null, targetSummary: null, beforeValue: null, proposedValue: null, undoGroupLabel: null, errorCode: stableErrorCode(error), moduleRevision: "vela-controller-v1" });
+            }
+        }
+        return Object.freeze({ initialize: initialize, getStatus: safeStatus, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, refreshContext: refreshContext, createOpacityCandidate: createOpacityCandidate, approveCandidate: approveCandidate, rejectCandidate: rejectCandidate, getUiState: getUiState });
     }
     return Object.freeze({ createRuntime: createRuntime });
 }));

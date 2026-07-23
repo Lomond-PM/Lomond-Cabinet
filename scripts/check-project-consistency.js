@@ -116,6 +116,7 @@ function checkRequiredEntrypoints() {
         "client/js/proceduralPreviewContract.js",
         "client/js/proceduralHomeIcons.js",
         "client/js/proceduralHomeBackground.js",
+        "client/js/vela/velaUi.js",
         "client/js/vela/velaCepModuleLoader.js",
         "client/js/vela/velaRuntime.js",
         "client/js/vela/velaContextBridge.js",
@@ -225,6 +226,7 @@ function checkIndexHtml() {
         "js/proceduralPreviewContract.js",
         "js/proceduralHomeIcons.js",
         "js/proceduralHomeBackground.js",
+        "js/vela/velaUi.js",
         "js/vela/velaCepModuleLoader.js",
         "js/main.js"
     ];
@@ -266,6 +268,7 @@ function checkIndexHtml() {
         "js/vela/velaContextBridge.js",
         "js/vela/velaExecutionPreflight.js",
         "js/vela/velaExecutionAdapter.js",
+        "js/vela/velaController.js",
         "js/vela/velaRuntime.js"
     ].forEach((item) => {
         check(
@@ -281,7 +284,7 @@ function checkVelaRuntimeBootstrap() {
     const runtime = exists("client/js/vela/velaRuntime.js") ? readText("client/js/vela/velaRuntime.js") : "";
     const main = exists("client/js/main.js") ? readText("client/js/main.js") : "";
     const host = exists("host/vela/velaContext.jsx") ? readText("host/vela/velaContext.jsx") : "";
-    const orderedNames = ["VelaProtocol", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaRuntime"];
+    const orderedNames = ["VelaProtocol", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaRuntime"];
     let previous = -1;
     orderedNames.forEach((name) => {
         const index = loader.indexOf('name: "' + name + '"');
