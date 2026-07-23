@@ -5,6 +5,9 @@
     var BOOTSTRAP_NAME = "__velaProtocolCoreBootstrapV1";
     var MODULES = Object.freeze([
         { name: "VelaProtocol", file: "velaProtocol.js" },
+        { name: "VelaResponseParser", file: "velaResponseParser.js" },
+        { name: "VelaProviderAdapter", file: "velaProviderAdapter.js" },
+        { name: "VelaLocalTransport", file: "velaLocalTransport.js" },
         { name: "VelaContext", file: "velaContext.js" },
         { name: "VelaValidator", file: "velaValidator.js" },
         { name: "VelaPlan", file: "velaPlan.js" },
@@ -13,6 +16,7 @@
         { name: "VelaExecutionPreflight", file: "velaExecutionPreflight.js" },
         { name: "VelaExecutionAdapter", file: "velaExecutionAdapter.js" },
         { name: "VelaController", file: "velaController.js" },
+        { name: "VelaProviderController", file: "velaProviderController.js" },
         { name: "VelaRuntime", file: "velaRuntime.js" }
     ]);
     var state = "idle";
@@ -99,6 +103,9 @@
     function expectedModuleShape(name, value) {
         if (!value || !Object.isFrozen(value)) { return false; }
         if (name === "VelaProtocol") { return typeof value.createProtocol === "function" && typeof value.isTrustedProtocol === "function" && value.ERROR_CODES; }
+        if (name === "VelaResponseParser") { return typeof value.createResponseParser === "function"; }
+        if (name === "VelaProviderAdapter") { return typeof value.createLocalOpenAICompatibleProvider === "function"; }
+        if (name === "VelaLocalTransport") { return typeof value.createLocalTransport === "function" && typeof value.isTrustedLocalTransportForProtocol === "function"; }
         if (name === "VelaContext") { return typeof value.createContextApi === "function" && typeof value.isTrustedContextApiForProtocol === "function"; }
         if (name === "VelaValidator") { return typeof value.createActionValidator === "function" && typeof value.isTrustedActionValidatorForProtocol === "function"; }
         if (name === "VelaPlan") { return typeof value.createPlanStore === "function" && typeof value.isTrustedPlanStoreForProtocol === "function"; }
@@ -107,6 +114,7 @@
         if (name === "VelaExecutionPreflight") { return typeof value.createExecutionPreflight === "function"; }
         if (name === "VelaExecutionAdapter") { return typeof value.createExecutionAdapter === "function" && typeof value.isTrustedExecutionAdapterForProtocol === "function"; }
         if (name === "VelaController") { return typeof value.createController === "function" && typeof value.isTrustedControllerForProtocol === "function"; }
+        if (name === "VelaProviderController") { return typeof value.createProviderController === "function" && typeof value.isTrustedProviderControllerForProtocol === "function"; }
         if (name === "VelaRuntime") { return typeof value.createRuntime === "function"; }
         return false;
     }

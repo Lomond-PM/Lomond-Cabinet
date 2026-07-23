@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 175 |
+| A | Core / Global; keep | 181 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -386,14 +386,20 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.confirmation | vela | Confirmation | 确认 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.contextSummary | vela | Context | 上下文 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.description | vela | Create and approve one local opacity action for the selected layer. | 为当前选中图层创建并确认一个本地不透明度操作。 | client/js/main.js, client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| vela.errorCode | vela | Error code | 错误码 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.errorCode | vela | Error code | 错误码 | client/js/vela/velaProviderUi.js, client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.opacityLabel | vela | Opacity | 不透明度 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.overline | vela | Local confirmation | 本地确认 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.providerCancel | vela | Cancel request | 取消请求 | client/js/vela/velaProviderUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.providerEndpoint | vela | LM Studio endpoint | LM Studio 端点 | client/js/vela/velaProviderUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.providerMessage | vela | Message | 消息 | client/js/vela/velaProviderUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.providerModel | vela | Model | 模型 | client/js/vela/velaProviderUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.providerSend | vela | Send | 发送 | client/js/vela/velaProviderUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.providerTitle | vela | Local model | 本地模型 | client/js/vela/velaProviderUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.reject | vela | Reject | 拒绝 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.reviewAction | vela | Review Action | 检视操作 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.riskWrite | vela | Write action | 写入操作 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.runtimeUnavailable | vela | Vela runtime is unavailable. | Vela runtime 不可用。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| vela.stateLabel | vela | State | 状态 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.stateLabel | vela | State | 状态 | client/js/vela/velaProviderUi.js, client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.statusFailed | vela | Vela failed: {code} | Vela 失败：{code} | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.statusWorking | vela | Vela is working... | Vela 正在处理... | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.targetUnavailable | vela | Select one layer to review Opacity. | 请选择一个图层以检查 Opacity。 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |

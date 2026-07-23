@@ -8,6 +8,7 @@
     var cs = new CSInterface();
     var velaRuntimeController = null;
     var velaUiController = null;
+    var velaProviderUiController = null;
     var velaRuntimeStatusRevision = 0;
     var velaRuntimeLastErrorCode = null;
     var hostLoaded = false;
@@ -6770,26 +6771,33 @@
             if (velaUiController) {
                 velaUiController.render(state || (velaRuntimeController && velaRuntimeController.getUiState ? velaRuntimeController.getUiState() : { state: "idle" }));
             }
+            renderProviderState();
         }
         function handleIntent(intent) {
             var operation;
+            var providerIntent = false;
             if (panelShuttingDown || !velaRuntimeController || !intent) { return; }
             if (intent.type === "refresh") { operation = velaRuntimeController.refreshContext(); }
             else if (intent.type === "proposal") { operation = velaRuntimeController.createOpacityCandidate({ opacity: intent.opacity }); }
             else if (intent.type === "approve") { operation = velaRuntimeController.approveCandidate({ candidateId: intent.candidateId }); }
             else if (intent.type === "reject") { operation = velaRuntimeController.rejectCandidate({ candidateId: intent.candidateId }); }
+            else if (intent.type === "provider-send") { providerIntent = true; operation = velaRuntimeController.sendProviderMessage({ message: intent.message, endpoint: intent.endpoint, model: intent.model }); renderProviderState(); }
+            else if (intent.type === "provider-cancel") { velaRuntimeController.cancelProviderRequest({ requestId: intent.requestId }); renderProviderState(); return; }
             else { return; }
             setStatus(tr("vela.statusWorking"), "busy", true);
             operation.then(function (state) {
                 velaRuntimeStatusRevision += 1;
-                renderState(state);
+                if (providerIntent) { renderProviderState(); } else { renderState(state); }
                 setStatus(tr("status.ready"), "ok");
             }, function (error) {
                 var state = velaRuntimeController && velaRuntimeController.getUiState ? velaRuntimeController.getUiState() : { state: "failed", errorCode: "RUNTIME_CAPABILITY_UNAVAILABLE" };
                 velaRuntimeStatusRevision += 1;
-                renderState(state);
+                if (providerIntent) { renderProviderState(); } else { renderState(state); }
                 setStatus(tr("vela.statusFailed", { code: state.errorCode || (error && error.code) || "RUNTIME_CAPABILITY_UNAVAILABLE" }), "error");
             });
+        }
+        function renderProviderState() {
+            if (velaProviderUiController) { velaProviderUiController.render(velaRuntimeController && velaRuntimeController.getProviderUiState ? velaRuntimeController.getProviderUiState() : { state: "idle" }); }
         }
         if (!panel || !actions) { return; }
         stopRegistryStatePolling();
@@ -6798,12 +6806,17 @@
             velaUiController.teardown();
             velaUiController = null;
         }
+        if (velaProviderUiController) { velaProviderUiController.teardown(); velaProviderUiController = null; }
         if (!window.VelaUi || typeof window.VelaUi.createVelaUi !== "function") {
             panel.textContent = tr("vela.runtimeUnavailable");
             return;
         }
         velaUiController = window.VelaUi.createVelaUi({ root: panel, actionsRoot: actions, t: tr, onIntent: handleIntent });
+        if (window.VelaProviderUi && typeof window.VelaProviderUi.createProviderUi === "function") {
+            velaProviderUiController = window.VelaProviderUi.createProviderUi({ root: panel, t: tr, onIntent: handleIntent });
+        }
         renderState(velaRuntimeController && velaRuntimeController.getUiState ? velaRuntimeController.getUiState() : { state: "idle" });
+        renderProviderState();
     }
 
     function configureToolDetail(toolId) {
@@ -6996,6 +7009,7 @@
             velaUiController.teardown();
             velaUiController = null;
         }
+        if (activeToolId === "vela" && velaProviderUiController) { velaProviderUiController.teardown(); velaProviderUiController = null; }
         beginAnimation();
         exitDetailContent(function () {
             iconRect = getHomeToolIconRect(toolButton);

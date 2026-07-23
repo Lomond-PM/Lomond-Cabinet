@@ -98,31 +98,104 @@
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
 
-    if (typeof module === "object" && module.exports) {
-        module.exports = Object.freeze(factory(assertProtocolModule(require("./velaProtocol")), assertParserModule(require("./velaResponseParser"))));
-    } else if (root) {
+    if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
+    } else if (typeof module === "object" && module.exports) {
+        module.exports = Object.freeze(factory(assertProtocolModule(require("./velaProtocol")), assertParserModule(require("./velaResponseParser"))));
     }
 }(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule) {
     "use strict";
 
+    var trustedOutboundBodies = new WeakMap();
     var DEFAULT_ENDPOINT = "http://127.0.0.1:1234/v1/chat/completions";
     var PROVIDER_ID = "lmstudio";
     var PROVIDER_KIND = "openai-compatible";
     var RESPONSE_SCHEMA_ID = "vela-response.v1";
+    var RESPONSE_FORMAT_MODE = "json-schema";
+    var LMSTUDIO_TEXT_GENERATION_MAX_CHARS = 1024;
+    var LMSTUDIO_ERROR_STAGE_GENERATION_MAX_CHARS = 128;
+    var LMSTUDIO_ERROR_MESSAGE_GENERATION_MAX_CHARS = 512;
     var MIN_TIMEOUT_MS = 1000;
     var MAX_TIMEOUT_MS = 120000;
     var DEFAULT_TIMEOUT_MS = 30000;
     var MAX_MODEL_BYTES = 256;
     var ENDPOINT_PATTERN = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):([1-9][0-9]{0,4})\/v1\/chat\/completions$/;
     var PARSED_URL_KEYS = ["protocol", "hostname", "port", "pathname", "username", "password", "search", "hash", "href"];
-    var TRANSPORT_RESULT_KEYS = ["status", "headers", "bodyText", "redirected", "finalUrl"];
-    var OPENAI_ROOT_KEYS = ["id", "object", "created", "model", "choices", "usage", "system_fingerprint"];
+    var TRANSPORT_RESULT_KEYS = ["status", "contentType", "bodyText", "redirected", "finalUrl"];
+    var OPENAI_ROOT_KEYS = ["id", "object", "created", "model", "choices", "usage", "system_fingerprint", "stats"];
     var OPENAI_CHOICE_KEYS = ["index", "message", "finish_reason", "logprobs"];
-    var OPENAI_MESSAGE_KEYS = ["role", "content"];
+    var OPENAI_MESSAGE_KEYS = ["role", "content", "reasoning_content", "tool_calls"];
+    var OPENAI_USAGE_KEYS = ["prompt_tokens", "completion_tokens", "total_tokens", "completion_tokens_details"];
+    var OPENAI_COMPLETION_DETAILS_KEYS = ["reasoning_tokens"];
+    var MAX_SYSTEM_FINGERPRINT_CODE_UNITS = 256;
 
     function configFailure(message, stage) {
         return new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.PROVIDER_CONFIG_INVALID, message || "The local provider configuration is invalid.", { stage: stage || "provider-config" });
+    }
+
+    function responseFailure(protocol, message) {
+        protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, message || "The OpenAI response wrapper is invalid.");
+    }
+
+    function hasOwn(value, key) {
+        return Object.prototype.hasOwnProperty.call(value, key);
+    }
+
+    function ownDataValue(protocol, value, key) {
+        try {
+            return protocol.getOwnDataProperty(value, key);
+        } catch (error) {
+            responseFailure(protocol);
+        }
+    }
+
+    function assertEmptyPlainObject(protocol, value, message) {
+        var names;
+        if (!protocol.isPlainObject(value)) { responseFailure(protocol, message); }
+        try {
+            names = typeof Reflect !== "undefined" && Reflect.ownKeys ? Reflect.ownKeys(value) : Object.getOwnPropertyNames(value);
+        } catch (error) {
+            responseFailure(protocol, message);
+        }
+        if (names.length !== 0) { responseFailure(protocol, message); }
+    }
+
+    function assertNonNegativeSafeInteger(protocol, value, message) {
+        if (!Number.isSafeInteger(value) || value < 0) { responseFailure(protocol, message); }
+    }
+
+    function validateInertWrapperMetadata(protocol, wrapper, choice) {
+        var usage;
+        var details;
+        var fingerprint;
+        if (hasOwn(choice, "logprobs") && ownDataValue(protocol, choice, "logprobs") !== null) {
+            responseFailure(protocol, "The OpenAI choice log probabilities are unsupported.");
+        }
+        if (hasOwn(wrapper, "stats")) {
+            assertEmptyPlainObject(protocol, ownDataValue(protocol, wrapper, "stats"), "The OpenAI response stats are invalid.");
+        }
+        if (hasOwn(wrapper, "usage")) {
+            usage = ownDataValue(protocol, wrapper, "usage");
+            if (!protocol.isPlainObject(usage)) { responseFailure(protocol, "The OpenAI response usage is invalid."); }
+            protocol.assertNoUnknownKeys(usage, OPENAI_USAGE_KEYS, "provider.openAiUsage");
+            ["prompt_tokens", "completion_tokens", "total_tokens"].forEach(function (key) {
+                if (hasOwn(usage, key)) { assertNonNegativeSafeInteger(protocol, ownDataValue(protocol, usage, key), "The OpenAI response usage is invalid."); }
+            });
+            if (hasOwn(usage, "completion_tokens_details")) {
+                details = ownDataValue(protocol, usage, "completion_tokens_details");
+                if (!protocol.isPlainObject(details)) { responseFailure(protocol, "The OpenAI response completion details are invalid."); }
+                protocol.assertNoUnknownKeys(details, OPENAI_COMPLETION_DETAILS_KEYS, "provider.openAiCompletionDetails");
+                if (!hasOwn(details, "reasoning_tokens") || ownDataValue(protocol, details, "reasoning_tokens") !== 0) {
+                    responseFailure(protocol, "The OpenAI response reasoning details are unsupported.");
+                }
+            }
+        }
+        if (hasOwn(wrapper, "system_fingerprint")) {
+            fingerprint = ownDataValue(protocol, wrapper, "system_fingerprint");
+            if (fingerprint !== null && (typeof fingerprint !== "string" || fingerprint.length > MAX_SYSTEM_FINGERPRINT_CODE_UNITS)) {
+                responseFailure(protocol, "The OpenAI system fingerprint is invalid.");
+            }
+        }
     }
 
     function ownDataFunction(value, key) {
@@ -174,12 +247,13 @@
         var clearTimer = ownDataFunction(runtime, "clearTimeout");
         var createAbortController = ownDataFunction(runtime, "createAbortController");
         var parseUrl = ownDataFunction(runtime, "parseUrl");
+        var nowMs = ownDataFunction(runtime, "nowMs");
 
         var endpoint = options.endpoint === undefined ? DEFAULT_ENDPOINT : options.endpoint;
         var model = options.model;
         var timeoutMs = options.timeoutMs === undefined ? DEFAULT_TIMEOUT_MS : options.timeoutMs;
-        var supportsJsonObject = options.supportsJsonObject === undefined ? false : options.supportsJsonObject;
-        if (typeof endpoint !== "string" || typeof model !== "string" || typeof supportsJsonObject !== "boolean" ||
+        var responseFormatMode = options.responseFormatMode === undefined ? RESPONSE_FORMAT_MODE : options.responseFormatMode;
+        if (typeof endpoint !== "string" || typeof model !== "string" || responseFormatMode !== RESPONSE_FORMAT_MODE ||
             !Number.isInteger(timeoutMs) || timeoutMs < MIN_TIMEOUT_MS || timeoutMs > MAX_TIMEOUT_MS) {
             throw configFailure();
         }
@@ -209,7 +283,7 @@
         try { validateAbortController(createAbortController()); }
         catch (error) { throw configFailure(); }
 
-        var capabilities = Object.freeze({ chat: true, jsonObject: supportsJsonObject, streaming: false, cancellation: true });
+        var capabilities = Object.freeze({ chat: true, jsonSchema: true, streaming: false, cancellation: true });
         var state = "idle";
         var activeRequest = null;
         var generation = 0;
@@ -231,11 +305,19 @@
 
         function safeNow(fallback) {
             try {
-                var value = protocol.now();
+                var value = nowMs();
                 return typeof value === "number" && Number.isFinite(value) && !Object.is(value, -0) ? value : fallback;
             } catch (error) {
                 return fallback;
             }
+        }
+
+        function readNowMs() {
+            var value;
+            try { value = nowMs(); }
+            catch (error) { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, undefined, { stage: "provider-clock" }); }
+            if (typeof value !== "number" || !Number.isFinite(value) || Object.is(value, -0)) { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, undefined, { stage: "provider-clock" }); }
+            return value;
         }
 
         function safeElapsed(record) {
@@ -321,13 +403,81 @@
             });
         }
 
+        function responseMetadata(requestId) {
+            return Object.freeze({
+                protocol: protocol.PROTOCOLS.RESPONSE,
+                schemaVersion: protocol.SCHEMA_VERSION,
+                requestId: requestId,
+                provider: PROVIDER_ID,
+                model: model
+            });
+        }
+
+        function enumString(value) {
+            return { type: "string", enum: [value] };
+        }
+
+        function buildResponseJsonSchema(requestId) {
+            var metadata = responseMetadata(requestId);
+            var errorCodes = Object.keys(protocol.ERROR_CODES).map(function (key) { return protocol.ERROR_CODES[key]; });
+            var errorSchema = {
+                type: "object",
+                additionalProperties: false,
+                required: ["code", "stage", "retryable", "message", "details"],
+                properties: {
+                    code: { type: "string", enum: errorCodes },
+                    stage: { type: "string", minLength: 1, maxLength: LMSTUDIO_ERROR_STAGE_GENERATION_MAX_CHARS },
+                    retryable: { type: "boolean" },
+                    message: { type: "string", maxLength: LMSTUDIO_ERROR_MESSAGE_GENERATION_MAX_CHARS },
+                    details: { type: "object", additionalProperties: false, maxProperties: 0 }
+                }
+            };
+            var textEnvelope = {
+                type: "object",
+                additionalProperties: false,
+                required: ["type", "text"],
+                properties: {
+                    type: enumString(protocol.ENVELOPE_TYPES.TEXT),
+                    text: { type: "string", minLength: 1, maxLength: LMSTUDIO_TEXT_GENERATION_MAX_CHARS }
+                }
+            };
+            var errorEnvelope = {
+                type: "object",
+                additionalProperties: false,
+                required: ["type", "error"],
+                properties: {
+                    type: enumString(protocol.ENVELOPE_TYPES.ERROR),
+                    error: errorSchema
+                }
+            };
+            return protocol.deepFreeze({
+                name: "vela_response",
+                strict: true,
+                schema: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["protocol", "schemaVersion", "requestId", "provider", "model", "envelope"],
+                    properties: {
+                        protocol: enumString(metadata.protocol),
+                        schemaVersion: enumString(metadata.schemaVersion),
+                        requestId: enumString(metadata.requestId),
+                        provider: enumString(metadata.provider),
+                        model: enumString(metadata.model),
+                        envelope: { type: "object", oneOf: [textEnvelope, errorEnvelope] }
+                    }
+                }
+            });
+        }
+
         function systemMessage(requestId) {
+            var metadata = responseMetadata(requestId);
             return [
                 "Return exactly one complete JSON object and nothing else.",
-                "Use protocol " + protocol.PROTOCOLS.RESPONSE + " and schemaVersion " + protocol.SCHEMA_VERSION + ".",
-                "Use requestId " + requestId + ", provider " + PROVIDER_ID + ", and model " + model + ".",
-                "The envelope type must be text, plan, actionCandidate, or error.",
-                "Do not use Markdown, tool_calls, function_call, source, code, or multiple JSON roots.",
+                "Follow the attached json_schema exactly; it is format guidance and the local Parser will validate again.",
+                "Use protocol " + metadata.protocol + " and schemaVersion " + metadata.schemaVersion + ".",
+                "Use requestId " + metadata.requestId + ", provider " + metadata.provider + ", and model " + metadata.model + ".",
+                "D1 permits only text or error envelopes; never return plan or actionCandidate.",
+                "Do not use Markdown, fences, explanations, prefixes, suffixes, envelopeType, top-level placeholder fields, tool_calls, function_call, source, code, or multiple JSON roots.",
                 "Do not create or claim a trusted candidateId."
             ].join(" ");
         }
@@ -365,29 +515,38 @@
         }
 
         function buildOpenAiBody(request) {
-            var body = { model: model, messages: request.messages, stream: false };
-            if (supportsJsonObject) { body.response_format = { type: "json_object" }; }
-            protocol.assertSafeJson(body);
-            protocol.assertJsonBudget(body, { maxBytes: protocol.HARD_LIMITS.maxRequestJsonBytes, maxStringBytes: protocol.HARD_LIMITS.maxMessageBytes });
-            return protocol.deepFreeze(protocol.cloneJson(body, { maxBytes: protocol.HARD_LIMITS.maxRequestJsonBytes }));
+            var body = {
+                model: model,
+                messages: request.messages,
+                stream: false,
+                response_format: {
+                    type: "json_schema",
+                    json_schema: buildResponseJsonSchema(request.requestId)
+                }
+            };
+            var serialized = JSON.stringify(body);
+            if (typeof serialized !== "string" || protocol.utf8ByteLength(serialized) > protocol.HARD_LIMITS.maxRequestJsonBytes) {
+                protocol.fail(protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED, "The local provider request exceeds its size limit.");
+            }
+            body = protocol.deepFreeze(body);
+            trustedOutboundBodies.set(body, Object.freeze({ protocol: protocol, transport: transport }));
+            return body;
         }
 
         function snapshotTransportResponse(value) {
             if (!protocol.isPlainObject(value)) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The transport response is invalid."); }
             protocol.assertNoUnknownKeys(value, TRANSPORT_RESULT_KEYS, "provider.transportResponse");
             var status = protocol.getOwnDataProperty(value, "status");
-            var headers = protocol.getOwnDataProperty(value, "headers");
+            var contentType = protocol.getOwnDataProperty(value, "contentType");
             var bodyText = protocol.getOwnDataProperty(value, "bodyText");
             var redirected = protocol.getOwnDataProperty(value, "redirected");
             var finalUrl = protocol.getOwnDataProperty(value, "finalUrl");
-            protocol.assertSafeJson(headers);
-            if (!protocol.isPlainObject(headers)) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The transport headers are invalid."); }
-            if (!Number.isInteger(status) || status < 100 || status > 599 || typeof bodyText !== "string" || typeof redirected !== "boolean" || typeof finalUrl !== "string") {
+            if (!Number.isInteger(status) || status < 100 || status > 599 || typeof contentType !== "string" || typeof bodyText !== "string" || typeof redirected !== "boolean" || typeof finalUrl !== "string") {
                 protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The transport response fields are invalid.");
             }
             return Object.freeze({
                 status: status,
-                headers: protocol.deepFreeze(protocol.cloneJson(headers, { maxBytes: protocol.HARD_LIMITS.maxErrorDetailsJsonBytes })),
+                contentType: contentType,
                 bodyText: bodyText,
                 redirected: redirected,
                 finalUrl: finalUrl
@@ -399,6 +558,7 @@
             var bodyText = snapshot.bodyText;
             if (status !== 200) { protocol.fail(protocol.ERROR_CODES.PROVIDER_HTTP_ERROR, "The local provider returned an HTTP error.", { details: { actualType: String(status) } }); }
             if (snapshot.redirected !== false || snapshot.finalUrl !== endpoint) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The local provider redirect result is invalid."); }
+            if (!/^application\/json(?:\s*;\s*[^;]+=[^;]+)*\s*$/i.test(snapshot.contentType)) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The local provider content type is invalid."); }
             if (protocol.utf8ByteLength(bodyText) > protocol.HARD_LIMITS.maxResponseJsonBytes) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_TOO_LARGE, "The local provider response is too large."); }
             var trimmed = bodyText.trim();
             if (!trimmed || trimmed[0] !== "{") { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI response wrapper is invalid."); }
@@ -411,12 +571,17 @@
             var choice = wrapper.choices[0];
             if (!protocol.isPlainObject(choice)) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI choice is invalid."); }
             protocol.assertNoUnknownKeys(choice, OPENAI_CHOICE_KEYS, "provider.openAiChoice");
+            validateInertWrapperMetadata(protocol, wrapper, choice);
             var message = choice.message;
             if (!protocol.isPlainObject(message)) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant message is invalid."); }
-            if (Object.prototype.hasOwnProperty.call(message, "tool_calls") || Object.prototype.hasOwnProperty.call(message, "function_call")) {
+            protocol.assertNoUnknownKeys(message, OPENAI_MESSAGE_KEYS, "provider.openAiMessage");
+            if (Object.prototype.hasOwnProperty.call(message, "function_call")) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant message contains unsupported calls."); }
+            if (Object.prototype.hasOwnProperty.call(message, "reasoning_content") && message.reasoning_content !== "" && message.reasoning_content !== null) {
+                protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant reasoning is unsupported.");
+            }
+            if (Object.prototype.hasOwnProperty.call(message, "tool_calls") && (!Array.isArray(message.tool_calls) || message.tool_calls.length !== 0)) {
                 protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant message contains unsupported calls.");
             }
-            protocol.assertNoUnknownKeys(message, OPENAI_MESSAGE_KEYS, "provider.openAiMessage");
             if (message.role !== "assistant" || typeof message.content !== "string" || !message.content.trim()) {
                 protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant content is invalid.");
             }
@@ -453,7 +618,7 @@
             var requestId = issueUniqueRequestId();
             var request = buildRequest(input, requestId);
             var body = buildOpenAiBody(request);
-            var startedAt = protocol.now();
+            var startedAt = readNowMs();
             var controller;
             try { controller = validateAbortController(createAbortController()); }
             catch (error) { throw configFailure(); }
@@ -470,20 +635,22 @@
                 resolve: resolvePromise,
                 settled: false
             };
-            var transportInput = protocol.deepFreeze(protocol.cloneJson({
+            var transportInput = protocol.deepFreeze({
                 url: endpoint,
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: protocol.deepFreeze({ "Content-Type": "application/json" }),
                 body: body,
+                maxRequestBytes: protocol.HARD_LIMITS.maxRequestJsonBytes,
                 maxResponseBytes: protocol.HARD_LIMITS.maxResponseJsonBytes,
                 allowRedirects: false
-            }, { maxBytes: protocol.HARD_LIMITS.maxRequestJsonBytes, allowDangerousPaths: ["url", "method"] }));
+            });
             var requestForTransport = Object.freeze({
                 url: transportInput.url,
                 method: transportInput.method,
                 headers: transportInput.headers,
                 body: transportInput.body,
                 signal: controller.signal,
+                maxRequestBytes: transportInput.maxRequestBytes,
                 maxResponseBytes: transportInput.maxResponseBytes,
                 allowRedirects: transportInput.allowRedirects
             });
@@ -511,7 +678,9 @@
 
             Promise.resolve().then(function () {
                 if (!isCurrentPending(record, capturedGeneration)) { return undefined; }
-                var pending = sendJson(requestForTransport);
+                var pending;
+                try { pending = sendJson(requestForTransport); }
+                finally { trustedOutboundBodies.delete(body); }
                 if (!pending || (typeof pending !== "object" && typeof pending !== "function") || typeof pending.then !== "function") {
                     throw new Error("The transport did not return a Promise-like value.");
                 }
@@ -577,5 +746,12 @@
         });
     }
 
-    return Object.freeze({ createLocalOpenAICompatibleProvider: createLocalOpenAICompatibleProvider });
+    function isTrustedOutboundBodyForTransport(body, transport, protocol) {
+        var record = trustedOutboundBodies.get(body);
+        return !!record && record.transport === transport && record.protocol === protocol && protocolModule.isTrustedProtocol(protocol);
+    }
+    return Object.freeze({
+        createLocalOpenAICompatibleProvider: createLocalOpenAICompatibleProvider,
+        isTrustedOutboundBodyForTransport: isTrustedOutboundBodyForTransport
+    });
 }));
