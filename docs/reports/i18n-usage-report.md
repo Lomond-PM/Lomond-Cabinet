@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 184 |
+| A | Core / Global; keep | 190 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -405,6 +405,12 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.stateLabel | vela | State | 状态 | client/js/vela/velaProviderUi.js, client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.statusFailed | vela | Vela failed: {code} | Vela 失败：{code} | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.statusWorking | vela | Vela is working... | Vela 正在处理... | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceComposerPlaceholder | vela | Conversation input will be available here. | 对话输入将显示在这里。 | client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceLabel | vela | Vela | Vela | client/index.html, client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceResize | vela | Resize Vela conversation area | 调整 Vela 对话区域大小 | client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceSettings | vela | Vela settings | Vela 设置 | client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceStatusSetup | vela | Interface setup | 界面准备中 | client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceTranscriptIntro | vela | Vela conversation controls are being connected. | Vela 对话界面正在接入。 | client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.targetUnavailable | vela | Select one layer to review Opacity. | 请选择一个图层以检查 Opacity。 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.title | vela | Vela | Vela | client/index.html, client/js/main.js, client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 
