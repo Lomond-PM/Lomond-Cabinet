@@ -317,6 +317,16 @@ controller with `{ opacity }`. The normal local candidate, validation, plan,
 confirmation and execution path then applies; the provider never receives or
 creates a trusted identifier, target binding, capture, digest or approval.
 
+### D2 production closure
+
+D2-C verifies the production composition with only the LM Studio HTTP boundary
+and AE Host boundary faked. D2-A is strict read-only proposal parsing; D2-B is
+private, explicit user-triggered promotion; D2-C confirms their production
+composition. The model contributes only bounded opacity. Review creates a local
+candidate, Approve invokes the existing confirmation and freshness path, and
+only that approved path may reach the Host. These three boundaries must not be
+merged. The sole supported model-promotable capability remains `set-opacity-v1`.
+
 ### Protocol hard limits
 
 JSON Schema describes shape, but the protocol also has hard resource limits.
