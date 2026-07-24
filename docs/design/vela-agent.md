@@ -292,6 +292,28 @@ The response is untrusted data. It enters the protocol parser, then the
 schema/target/permission validator. It can never become an `evalScript` string
 directly.
 
+### D2 local proposal envelope
+
+Schema version `1.0` accepts only `text` and `error` provider envelopes. D2
+uses schema version `1.1`, which additionally permits one untrusted,
+read-only `localProposal` envelope:
+
+```json
+{
+  "type": "localProposal",
+  "proposal": {
+    "capabilityId": "set-opacity-v1",
+    "params": { "opacity": 57.5 }
+  }
+}
+```
+
+All objects are closed. The proposal contains no target, risk, title,
+property path, digest, candidate id, plan id, nonce, reservation, authority,
+or executable source. D2-A only displays this bounded suggestion; it does not
+create a candidate or invoke validation, planning, confirmation, or Host
+execution.
+
 ### Protocol hard limits
 
 JSON Schema describes shape, but the protocol also has hard resource limits.

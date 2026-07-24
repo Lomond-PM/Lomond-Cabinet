@@ -450,6 +450,28 @@
                     error: errorSchema
                 }
             };
+            var localProposalEnvelope = {
+                type: "object",
+                additionalProperties: false,
+                required: ["type", "proposal"],
+                properties: {
+                    type: enumString(protocol.ENVELOPE_TYPES.LOCAL_PROPOSAL),
+                    proposal: {
+                        type: "object",
+                        additionalProperties: false,
+                        required: ["capabilityId", "params"],
+                        properties: {
+                            capabilityId: enumString("set-opacity-v1"),
+                            params: {
+                                type: "object",
+                                additionalProperties: false,
+                                required: ["opacity"],
+                                properties: { opacity: { type: "number", minimum: 0, maximum: 100 } }
+                            }
+                        }
+                    }
+                }
+            };
             return protocol.deepFreeze({
                 name: "vela_response",
                 strict: true,
@@ -463,7 +485,7 @@
                         requestId: enumString(metadata.requestId),
                         provider: enumString(metadata.provider),
                         model: enumString(metadata.model),
-                        envelope: { type: "object", oneOf: [textEnvelope, errorEnvelope] }
+                        envelope: { type: "object", oneOf: [textEnvelope, errorEnvelope, localProposalEnvelope] }
                     }
                 }
             });
@@ -476,8 +498,9 @@
                 "Follow the attached json_schema exactly; it is format guidance and the local Parser will validate again.",
                 "Use protocol " + metadata.protocol + " and schemaVersion " + metadata.schemaVersion + ".",
                 "Use requestId " + metadata.requestId + ", provider " + metadata.provider + ", and model " + metadata.model + ".",
-                "D1 permits only text or error envelopes; never return plan or actionCandidate.",
-                "Do not use Markdown, fences, explanations, prefixes, suffixes, envelopeType, top-level placeholder fields, tool_calls, function_call, source, code, or multiple JSON roots.",
+                "This version permits only text, error, or localProposal envelopes; never return plan or actionCandidate.",
+                "A localProposal may contain only capabilityId set-opacity-v1 and params.opacity from 0 through 100.",
+                "Do not use Markdown, fences, explanations, prefixes, suffixes, envelopeType, top-level placeholder fields, tool_calls, function_call, source, code, target, propertyPath, risk, candidateId, planId, confirmationNonce, reservation, digest, authority, or multiple JSON roots.",
                 "Do not create or claim a trusted candidateId."
             ].join(" ");
         }

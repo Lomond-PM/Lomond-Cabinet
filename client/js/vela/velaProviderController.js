@@ -54,10 +54,12 @@
         var state = "idle";
         var active = null;
         var generation = 1;
-        var publicState = protocol.deepFreeze({ state: state, requestId: null, text: null, errorCode: null, providerId: "lmstudio", modelId: null, moduleRevision: MODULE_REVISION });
-        function publish(nextState, requestId, text, errorCode, model) {
+        var publicState = protocol.deepFreeze({ state: state, requestId: null, text: null, errorCode: null, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: MODULE_REVISION });
+        function publish(nextState, requestId, text, errorCode, model, proposal) {
             state = nextState;
-            publicState = protocol.deepFreeze({ state: nextState, requestId: requestId || null, text: text || null, errorCode: errorCode || null, providerId: "lmstudio", modelId: model || null, moduleRevision: MODULE_REVISION });
+            publicState = protocol.deepFreeze({ state: nextState, requestId: requestId || null, text: text || null, errorCode: errorCode || null,
+                proposalCapabilityId: proposal ? proposal.capabilityId : null, suggestedOpacity: proposal ? proposal.opacity : null,
+                providerId: "lmstudio", modelId: model || null, moduleRevision: MODULE_REVISION });
             return publicState;
         }
         function summaryFromCapture(capture) {
@@ -104,8 +106,12 @@
                 if (!active || active.generation !== capturedGeneration || capturedGeneration !== generation || state !== "pending") { return publicState; }
                 active = null;
                 envelope = response && ownData(response, "envelope");
-                if (!envelope || (envelope.type !== "text" && envelope.type !== "error")) { return publish("failed", publicState.requestId, null, protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, values.model); }
+                if (!envelope || (envelope.type !== "text" && envelope.type !== "error" && envelope.type !== "localProposal")) { return publish("failed", publicState.requestId, null, protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, values.model); }
                 if (envelope.type === "error") { return publish("failed", publicState.requestId, null, safeCode(protocol, ownData(envelope, "error")), values.model); }
+                if (envelope.type === "localProposal") {
+                    var proposal = ownData(envelope, "proposal");
+                    return publish("proposal-ready", publicState.requestId, null, null, values.model, { capabilityId: ownData(proposal, "capabilityId"), opacity: ownData(ownData(proposal, "params"), "opacity") });
+                }
                 return publish("completed", publicState.requestId, protocol.assertString(ownData(envelope, "text"), "provider text", protocol.HARD_LIMITS.maxMessageBytes), null, values.model);
             }, function (error) {
                 if (capturedGeneration !== generation || state !== "pending") { return publicState; }

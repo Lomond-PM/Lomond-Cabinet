@@ -51,7 +51,7 @@ async function run() {
     check(trustedPayload.messages.length === 3 && trustedPayload.messages.map((message) => message.role).join(",") === "system,assistant,user" && trustedPayload.messages[2].content === "current user text", "Trusted serialization must preserve all ordered system, context and user messages.");
     check(trustedSchema.required.length === 6 && trustedSchema.required.join(",") === "protocol,schemaVersion,requestId,provider,model,envelope", "Trusted serialization must preserve every canonical response required field.");
     const variants = trustedSchema.properties.envelope.oneOf;
-    check(variants.length === 2 && variants[0].properties.type.enum[0] === "text" && variants[1].properties.type.enum[0] === "error", "Trusted serialization must preserve both text and error envelope variants in order.");
+    check(variants.length === 3 && variants[0].properties.type.enum[0] === "text" && variants[1].properties.type.enum[0] === "error" && variants[2].properties.type.enum[0] === "localProposal" && variants[2].properties.proposal.properties.params.properties.opacity.maximum === 100, "Trusted serialization must preserve text, error and bounded localProposal envelope variants in order.");
     check(trustedSchema.properties.protocol.enum.length === 1 && !Object.prototype.hasOwnProperty.call(variants[1].properties.error.properties.details, "properties"), "Trusted serialization must preserve single-item and empty arrays or objects without synthetic values.");
     console.log("test-vela-local-transport: " + assertions + " assertions passed.");
 }

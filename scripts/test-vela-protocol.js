@@ -46,7 +46,7 @@ function makeResponse(overrides) {
         requestId: "req_01",
         provider: "local-test",
         model: "test-model",
-        envelope: { type: "plan", summary: "One proposed action.", proposals: [makeAction()] }
+        envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } }
     }, overrides || {});
 }
 
@@ -70,7 +70,14 @@ function run() {
     const textResponse = makeResponse({ envelope: { type: "text", text: "The model can mention JSON and toolId without proposing an action." } });
     check(parser.parseProviderResponse(JSON.stringify(textResponse)).response.envelope.type === "text", "Text must not become an action envelope.");
     const candidateResponse = makeResponse({ envelope: { type: "actionCandidate", proposal: makeAction() } });
-    check(parser.parseProviderResponse(JSON.stringify(candidateResponse)).ok === true, "The actionCandidate envelope should parse.");
+    check(parser.parseProviderResponse(JSON.stringify(candidateResponse)).ok === false, "The actionCandidate envelope remains fail-closed.");
+    const legacyTextResponse = makeResponse({ schemaVersion: "1.0", envelope: { type: "text", text: "legacy text" } });
+    check(parser.parseProviderResponse(JSON.stringify(legacyTextResponse)).ok === true, "Legacy 1.0 text remains compatible.");
+    const legacyErrorResponse = makeResponse({ schemaVersion: "1.0", envelope: { type: "error", error: { code: protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, stage: "provider", retryable: false, message: "untrusted", details: {} } } });
+    check(parser.parseProviderResponse(JSON.stringify(legacyErrorResponse)).ok === true, "Legacy 1.0 error remains compatible.");
+    check(parser.parseProviderResponse(JSON.stringify(makeResponse({ schemaVersion: "1.0" }))).ok === false, "Legacy 1.0 localProposal remains rejected.");
+    [0, 57.5, 100].forEach((opacity) => check(parser.parseProviderResponse(JSON.stringify(makeResponse({ envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity } } } }))).ok === true, "Bounded local opacity parses."));
+    [NaN, Infinity, -0, "57", -1, 101].forEach((opacity) => expectCode(() => protocol.validateCanonicalResponse(makeResponse({ envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity } } } })), opacity === -1 || opacity === 101 ? protocol.ERROR_CODES.PARAM_OUT_OF_RANGE : protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Invalid local opacity is rejected."));
     const errorResponse = makeResponse({ envelope: { type: "error", error: { code: protocol.ERROR_CODES.UNKNOWN_TOOL, stage: "action-validate", retryable: false, message: "Unknown local tool.", details: { toolId: "not-loaded" } } } });
     const parsedErrorResponse = parser.parseProviderResponse(JSON.stringify(errorResponse));
     check(parsedErrorResponse.ok === true, "The structured error envelope should parse.");
@@ -88,7 +95,7 @@ function run() {
     check(Object.isFrozen(parserFailure.error) && !("stack" in parserFailure.error), "Parser rejection must expose only a frozen canonical error record.");
     check(!Object.prototype.hasOwnProperty.call(errorResponse.envelope, "proposals"), "An error envelope must not carry proposals.");
     check(parser.parseProviderResponse(JSON.stringify(makeResponse({ schemaVersion: "2.0" }))).response.envelope.error.code === protocol.ERROR_CODES.SCHEMA_VERSION_UNSUPPORTED, "Unknown major versions must be rejected.");
-    check(parser.parseProviderResponse(JSON.stringify(makeResponse({ envelope: { type: "plan", summary: "x", proposals: [makeAction({ payload: { toolId: "x", actionId: "x", params: { hostFunction: "bad" } } })] } }))).response.envelope.error.code === protocol.ERROR_CODES.UNSAFE_JSON_VALUE, "Dangerous nested action fields must be rejected.");
+    check(parser.parseProviderResponse(JSON.stringify(makeResponse({ envelope: { type: "plan", summary: "x", proposals: [makeAction({ payload: { toolId: "x", actionId: "x", params: { hostFunction: "bad" } } })] } }))).ok === false, "Plans remain rejected before executable fields can be considered.");
     check(parser.parseProviderResponse(JSON.stringify(makeResponse({ envelope: { type: "error", error: { code: protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, stage: "parse", retryable: false, message: "x", details: { source: "bad" } } } }))).response.envelope.error.code === protocol.ERROR_CODES.UNSAFE_JSON_VALUE, "Error details must reject source/code payloads.");
 
     expectCode(() => protocolModule.createProtocol({}), protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Missing runtime capabilities must fail closed.");

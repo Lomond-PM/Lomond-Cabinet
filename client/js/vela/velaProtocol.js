@@ -74,9 +74,10 @@
 }(typeof self !== "undefined" ? self : this, function () {
     "use strict";
 
-    var SCHEMA_VERSION = "1.0";
+    var LEGACY_SCHEMA_VERSION = "1.0";
+    var SCHEMA_VERSION = "1.1";
     var trustedProtocols = new WeakSet();
-    var SUPPORTED_SCHEMA_VERSIONS = Object.freeze([SCHEMA_VERSION]);
+    var SUPPORTED_SCHEMA_VERSIONS = Object.freeze([LEGACY_SCHEMA_VERSION, SCHEMA_VERSION]);
     var PROTOCOLS = Object.freeze({
         REQUEST: "vela.model-request.v1",
         RESPONSE: "vela.model-response.v1"
@@ -85,6 +86,7 @@
         TEXT: "text",
         PLAN: "plan",
         ACTION_CANDIDATE: "actionCandidate",
+        LOCAL_PROPOSAL: "localProposal",
         ERROR: "error"
     });
     var ACTION_KINDS = Object.freeze(["tool", "expression", "script"]);
@@ -886,21 +888,40 @@
             return errorValue;
         }
 
-        function validateEnvelope(envelope) {
+        function validateLocalProposal(proposal) {
+            if (!isPlainObject(proposal)) { fail(ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Local proposal is invalid."); }
+            assertNoUnknownKeys(proposal, ["capabilityId", "params"], "response.envelope.proposal");
+            if (proposal.capabilityId !== "set-opacity-v1") { fail(ERROR_CODES.UNKNOWN_TOOL_ACTION, "Local proposal capability is unavailable."); }
+            if (!isPlainObject(proposal.params)) { fail(ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Local proposal parameters are invalid."); }
+            assertNoUnknownKeys(proposal.params, ["opacity"], "response.envelope.proposal.params");
+            assertFiniteNumber(proposal.params.opacity, "response.envelope.proposal.params.opacity");
+            if (Object.is(proposal.params.opacity, -0) || proposal.params.opacity < 0 || proposal.params.opacity > 100) {
+                fail(ERROR_CODES.PARAM_OUT_OF_RANGE, "Local proposal opacity is out of range.");
+            }
+            return proposal;
+        }
+
+        function validateEnvelope(envelope, schemaVersion) {
             if (!isPlainObject(envelope)) { fail(ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Response envelope is invalid."); }
             if (typeof envelope.type !== "string") { fail(ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Response envelope type is required."); }
             if (envelope.type === ENVELOPE_TYPES.TEXT) {
                 assertNoUnknownKeys(envelope, ["type", "text"], "response.envelope");
                 assertString(envelope.text, "response.envelope.text", HARD_LIMITS.maxMessageBytes);
             } else if (envelope.type === ENVELOPE_TYPES.PLAN) {
+                fail(ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Provider plans are not accepted by this protocol version.");
                 assertNoUnknownKeys(envelope, ["type", "summary", "proposals"], "response.envelope");
                 assertString(envelope.summary, "response.envelope.summary", HARD_LIMITS.maxMessageBytes);
                 if (!Array.isArray(envelope.proposals) || envelope.proposals.length > HARD_LIMITS.maxPlanSteps) { fail(ERROR_CODES.CAPABILITY_BUDGET_EXCEEDED, "Plan steps exceed the limit."); }
                 envelope.proposals.forEach(validateRawAction);
                 assertJsonBudget(envelope.proposals.map(function (proposal) { return proposal.payload; }), { maxBytes: HARD_LIMITS.maxPlanPayloadBytes });
             } else if (envelope.type === ENVELOPE_TYPES.ACTION_CANDIDATE) {
+                fail(ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Provider action candidates are not accepted by this protocol version.");
                 assertNoUnknownKeys(envelope, ["type", "proposal"], "response.envelope");
                 validateRawAction(envelope.proposal);
+            } else if (envelope.type === ENVELOPE_TYPES.LOCAL_PROPOSAL) {
+                if (schemaVersion !== SCHEMA_VERSION) { fail(ERROR_CODES.SCHEMA_VERSION_UNSUPPORTED, SAFE_ERROR_MESSAGES.SCHEMA_VERSION_UNSUPPORTED); }
+                assertNoUnknownKeys(envelope, ["type", "proposal"], "response.envelope");
+                validateLocalProposal(envelope.proposal);
             } else if (envelope.type === ENVELOPE_TYPES.ERROR) {
                 assertNoUnknownKeys(envelope, ["type", "error"], "response.envelope");
                 validateStructuredError(envelope.error);
@@ -926,7 +947,7 @@
             assertNonEmptyString(response.requestId, "response.requestId");
             assertNonEmptyString(response.provider, "response.provider");
             assertNonEmptyString(response.model, "response.model");
-            validateEnvelope(response.envelope);
+            validateEnvelope(response.envelope, response.schemaVersion);
             assertJsonBudget(response, {
                 maxBytes: HARD_LIMITS.maxResponseJsonBytes,
                 maxStringBytes: HARD_LIMITS.maxMessageBytes,
@@ -956,7 +977,7 @@
                         }
                     }
                 };
-                validateEnvelope(safeResponse.envelope);
+                validateEnvelope(safeResponse.envelope, safeResponse.schemaVersion);
                 return deepFreeze(cloneJson(safeResponse, {
                     maxBytes: HARD_LIMITS.maxResponseJsonBytes,
                     allowDangerousPaths: ["envelope.error.code", "envelope.error.stage", "envelope.error.message", "envelope.error.details.candidateId"]
