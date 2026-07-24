@@ -80,6 +80,8 @@
                 "vela.providerMessage": "Message",
                 "vela.providerSend": "Send",
                 "vela.providerCancel": "Cancel request",
+                "vela.providerSuggestedAction": "Suggested local action",
+                "vela.providerSuggestedOpacity": "Opacity",
 
                 "section.geometry": "Geometry",
                 "section.bounds": "Bounds",
@@ -463,6 +465,8 @@
                 "vela.providerMessage": "\u6d88\u606f",
                 "vela.providerSend": "\u53d1\u9001",
                 "vela.providerCancel": "\u53d6\u6d88\u8bf7\u6c42",
+                "vela.providerSuggestedAction": "\u5efa\u8bae\u7684\u672c\u5730\u64cd\u4f5c",
+                "vela.providerSuggestedOpacity": "\u4e0d\u900f\u660e\u5ea6",
 
                 "section.geometry": "\u51e0\u4f55",
                 "section.bounds": "\u8fb9\u754c",

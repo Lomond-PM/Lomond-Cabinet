@@ -9,11 +9,13 @@
         var root = options && options.root;
         var t = options && typeof options.t === "function" ? options.t : function (key) { return key; };
         var onIntent = options && typeof options.onIntent === "function" ? options.onIntent : function () {};
+        var getModel = options && typeof options.getModel === "function" ? options.getModel : function () { return "qwen3.5-4b"; };
+        var saveModel = options && typeof options.saveModel === "function" ? options.saveModel : function (value) { return value; };
         var documentRef = root && root.ownerDocument;
         var host = documentRef ? documentRef.createElement("div") : null;
         var listeners = [];
         var endpoint = "http://127.0.0.1:1234/v1/chat/completions";
-        var model = "";
+        var model = getModel();
         var state = null;
         function listen(node, type, fn) { node.addEventListener(type, fn); listeners.push({ node: node, type: type, fn: fn }); }
         function teardown() { while (listeners.length) { var item = listeners.pop(); item.node.removeEventListener(item.type, item.fn); } }
@@ -39,12 +41,19 @@
             card.appendChild(element("label", "control-label", t("vela.providerMessage"))); card.appendChild(message);
             send = element("button", "panel-button primary-action", t("vela.providerSend")); send.type = "button"; send.disabled = state.state === "pending";
             cancel = element("button", "panel-button secondary-action", t("vela.providerCancel")); cancel.type = "button"; cancel.disabled = state.state !== "pending";
-            listen(send, "click", function () { endpoint = endpointInput.value; model = modelInput.value; onIntent({ type: "provider-send", endpoint: endpoint, model: model, message: message.value }); });
+            function persistModel() { model = saveModel(modelInput.value); modelInput.value = model; }
+            listen(modelInput, "change", persistModel);
+            listen(modelInput, "blur", persistModel);
+            listen(send, "click", function () { endpoint = endpointInput.value; persistModel(); onIntent({ type: "provider-send", endpoint: endpoint, model: model, message: message.value }); });
             listen(cancel, "click", function () { onIntent({ type: "provider-cancel", requestId: state.requestId }); });
             card.appendChild(send); card.appendChild(cancel);
             card.appendChild(element("p", "registry-text-muted", t("vela.stateLabel") + ": " + (state.state || "idle")));
             if (state.errorCode) { card.appendChild(element("p", "registry-text-muted", t("vela.errorCode") + ": " + state.errorCode)); }
             if (state.text) { card.appendChild(element("pre", "vela-provider-text", state.text)); }
+            if (state.state === "proposal-ready" && state.proposalCapabilityId === "set-opacity-v1" && typeof state.suggestedOpacity === "number") {
+                card.appendChild(element("p", "registry-text-muted", t("vela.providerSuggestedAction")));
+                card.appendChild(element("p", "registry-text-muted", t("vela.providerSuggestedOpacity") + ": " + state.suggestedOpacity + "%"));
+            }
             host.appendChild(card);
         }
         return Object.freeze({ render: render, teardown: teardown });

@@ -302,7 +302,7 @@
         }
         function sendProviderMessage(input) { try { if (disposed || state !== "ready" || !providerController) { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); } return providerController.send(input); } catch (error) { return Promise.reject(error); } }
         function cancelProviderRequest(input) { try { return !!(providerController && providerController.cancel(input)); } catch (error) { return false; } }
-        function getProviderUiState() { return providerController ? providerController.getUiState() : Object.freeze({ state: disposed ? "disposed" : state, requestId: null, text: null, errorCode: lastErrorCode, providerId: "lmstudio", modelId: null, moduleRevision: "vela-provider-controller-v1" }); }
+        function getProviderUiState() { return providerController ? providerController.getUiState() : Object.freeze({ state: disposed ? "disposed" : state, requestId: null, text: null, errorCode: lastErrorCode, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: "vela-provider-controller-v1" }); }
         return Object.freeze({ initialize: initialize, getStatus: safeStatus, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, refreshContext: refreshContext, createOpacityCandidate: createOpacityCandidate, approveCandidate: approveCandidate, rejectCandidate: rejectCandidate, getUiState: getUiState, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState });
     }
     return Object.freeze({ createRuntime: createRuntime });

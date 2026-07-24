@@ -160,9 +160,29 @@
         toolIconDarkPaletteId: "",
         homeIconRadius: 25.5,
         homeDragShadowIntensity: 1,
+        velaProviderModel: "qwen3.5-4b",
         autoStatus: true,
         registryDebugTools: false
     };
+    var VelaProviderModel = DefaultSettings.velaProviderModel;
+
+    function normalizeVelaProviderModel(value) {
+        var normalized;
+        var bytes;
+        if (typeof value !== "string") {
+            return DefaultSettings.velaProviderModel;
+        }
+        normalized = value.replace(/^\s+|\s+$/g, "");
+        if (!normalized) {
+            return DefaultSettings.velaProviderModel;
+        }
+        try {
+            bytes = unescape(encodeURIComponent(normalized)).length;
+        } catch (error) {
+            return DefaultSettings.velaProviderModel;
+        }
+        return bytes > 256 ? DefaultSettings.velaProviderModel : normalized;
+    }
     var BackgroundEngine = {
         defaults: {
             preset: "blackGold",
@@ -6813,7 +6833,7 @@
         }
         velaUiController = window.VelaUi.createVelaUi({ root: panel, actionsRoot: actions, t: tr, onIntent: handleIntent });
         if (window.VelaProviderUi && typeof window.VelaProviderUi.createProviderUi === "function") {
-            velaProviderUiController = window.VelaProviderUi.createProviderUi({ root: panel, t: tr, onIntent: handleIntent });
+            velaProviderUiController = window.VelaProviderUi.createProviderUi({ root: panel, t: tr, onIntent: handleIntent, getModel: function () { return VelaProviderModel; }, saveModel: function (value) { VelaProviderModel = normalizeVelaProviderModel(value); saveSettings(); return VelaProviderModel; } });
         }
         renderState(velaRuntimeController && velaRuntimeController.getUiState ? velaRuntimeController.getUiState() : { state: "idle" });
         renderProviderState();
@@ -8313,6 +8333,7 @@
             proceduralIconMode: normalizeProceduralIconMode(byId("proceduralIconMode") ? byId("proceduralIconMode").value : DefaultSettings.proceduralIconMode),
             toolIconDarkSourceMode: normalizeToolIconDarkSourceMode(byId("toolIconDarkSourceMode") ? byId("toolIconDarkSourceMode").value : DefaultSettings.toolIconDarkSourceMode),
             toolIconDarkPaletteId: byId("toolIconDarkPaletteId") ? String(byId("toolIconDarkPaletteId").value || "") : DefaultSettings.toolIconDarkPaletteId,
+            velaProviderModel: VelaProviderModel,
             proceduralParams: collectProceduralAppearanceParamsFromControls(),
             homeIconRadius: byId("homeIconRadiusNumber") ? clampNumber(byId("homeIconRadiusNumber").value, DefaultSettings.homeIconRadius, 18, 40) : DefaultSettings.homeIconRadius,
             homeDragShadowIntensity: byId("homeDragShadowIntensityNumber") ? clampNumber(byId("homeDragShadowIntensityNumber").value, DefaultSettings.homeDragShadowIntensity, 0, 1.5) : DefaultSettings.homeDragShadowIntensity,
@@ -8328,6 +8349,7 @@
     function applySettings(settings) {
         var data = settings || DefaultSettings;
         var speed = clampNumber(data.motionSpeed, DefaultSettings.motionSpeed, 0.75, 1.35);
+        VelaProviderModel = normalizeVelaProviderModel(data.velaProviderModel);
         byId("motionSpeed").value = speed;
         byId("motionSpeedNumber").value = speed;
         motionScale = speed;

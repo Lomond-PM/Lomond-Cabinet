@@ -256,9 +256,10 @@ async function run() {
     equal(responseSchema.schema.properties.provider.enum[0], "lmstudio", "Schema provider metadata must be local.");
     equal(responseSchema.schema.properties.model.enum[0], "Qwen3.5-4B Q6_K", "Schema model metadata must bind the configured model.");
     const envelopeVariants = responseSchema.schema.properties.envelope.oneOf;
-    check(envelopeVariants.length === 2 && envelopeVariants.every((variant) => variant.additionalProperties === false), "The schema must permit only closed text and error envelope variants.");
+    check(envelopeVariants.length === 3 && envelopeVariants.every((variant) => variant.additionalProperties === false), "The schema must permit only closed text, error and localProposal envelope variants.");
     check(envelopeVariants.some((variant) => variant.properties.type.enum[0] === "text" && variant.properties.text.minLength === 1), "The text envelope must require non-empty envelope.text.");
     check(envelopeVariants.some((variant) => variant.properties.type.enum[0] === "error" && variant.properties.error), "The error envelope must use the canonical structured error form.");
+    check(envelopeVariants.some((variant) => variant.properties.type.enum[0] === "localProposal" && variant.properties.proposal.properties.capabilityId.enum[0] === "set-opacity-v1" && variant.properties.proposal.properties.params.properties.opacity.minimum === 0 && variant.properties.proposal.properties.params.properties.opacity.maximum === 100), "The localProposal envelope must be limited to bounded set-opacity-v1 input.");
     const textVariant = envelopeVariants.find((variant) => variant.properties.type.enum[0] === "text");
     const errorVariant = envelopeVariants.find((variant) => variant.properties.type.enum[0] === "error");
     equal(textVariant.properties.text.maxLength, 1024, "LM Studio text generation must use the bounded generation cap.");
@@ -284,8 +285,7 @@ async function run() {
 
     const envelopes = [
         { type: "text", text: "ok" },
-        { type: "plan", summary: "ok", proposals: [] },
-        { type: "actionCandidate", proposal: { providerActionId: "p", kind: "tool", title: "t", rationale: "r", risk: "read", target: { contextFingerprint: FP, layerId: "l" }, payload: { toolId: "t", actionId: "a", params: {} }, undoGroupLabel: "u", requiresConfirmation: false } },
+        { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } },
         { type: "error", error: { code: base.protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, stage: "provider", retryable: false, message: "ignored", details: {} } }
     ];
     for (const envelope of envelopes) {
