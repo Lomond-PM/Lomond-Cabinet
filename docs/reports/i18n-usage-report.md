@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 183 |
+| A | Core / Global; keep | 184 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -393,6 +393,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.providerEndpoint | vela | LM Studio endpoint | LM Studio 端点 | client/js/vela/velaProviderUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.providerMessage | vela | Message | 消息 | client/js/vela/velaProviderUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.providerModel | vela | Model | 模型 | client/js/vela/velaProviderUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.providerReview | vela | Review | 查看 | client/js/vela/velaProviderUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.providerSend | vela | Send | 发送 | client/js/vela/velaProviderUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.providerSuggestedAction | vela | Suggested local action | 建议的本地操作 | client/js/vela/velaProviderUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.providerSuggestedOpacity | vela | Opacity | 不透明度 | client/js/vela/velaProviderUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |

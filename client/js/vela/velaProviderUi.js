@@ -27,6 +27,7 @@
             var message;
             var send;
             var cancel;
+            var review;
             teardown();
             if (host && host.parentNode !== root) { root.appendChild(host); }
             if (host) { host.textContent = ""; }
@@ -53,6 +54,9 @@
             if (state.state === "proposal-ready" && state.proposalCapabilityId === "set-opacity-v1" && typeof state.suggestedOpacity === "number") {
                 card.appendChild(element("p", "registry-text-muted", t("vela.providerSuggestedAction")));
                 card.appendChild(element("p", "registry-text-muted", t("vela.providerSuggestedOpacity") + ": " + state.suggestedOpacity + "%"));
+                review = element("button", "panel-button primary-action", t("vela.providerReview")); review.type = "button"; review.disabled = false;
+                listen(review, "click", function () { review.disabled = true; onIntent({ type: "provider-review" }); });
+                card.appendChild(review);
             }
             host.appendChild(card);
         }

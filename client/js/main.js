@@ -6803,6 +6803,7 @@
             else if (intent.type === "reject") { operation = velaRuntimeController.rejectCandidate({ candidateId: intent.candidateId }); }
             else if (intent.type === "provider-send") { providerIntent = true; operation = velaRuntimeController.sendProviderMessage({ message: intent.message, endpoint: intent.endpoint, model: intent.model }); renderProviderState(); }
             else if (intent.type === "provider-cancel") { velaRuntimeController.cancelProviderRequest({ requestId: intent.requestId }); renderProviderState(); return; }
+            else if (intent.type === "provider-review") { operation = velaRuntimeController.reviewProviderProposal(); }
             else { return; }
             setStatus(tr("vela.statusWorking"), "busy", true);
             operation.then(function (state) {

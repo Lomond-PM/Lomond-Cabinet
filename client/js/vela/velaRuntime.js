@@ -5,16 +5,16 @@
     var BOOTSTRAP_NAME = "__velaProtocolCoreBootstrapV1";
 
     function bootstrapError(code) { var error = new Error(code); error.code = code; return error; }
-    function assertDependencies(protocol, parser, providerAdapter, localTransport, context, validator, plan, guard, bridge, preflight, executionAdapter, controller, providerController) {
-        if (!protocol || !parser || !providerAdapter || !localTransport || !context || !validator || !plan || !guard || !bridge || !preflight || !executionAdapter || !providerController ||
+    function assertDependencies(protocol, parser, providerAdapter, localTransport, context, validator, plan, guard, bridge, preflight, executionAdapter, controller, providerController, proposalRouter) {
+        if (!protocol || !parser || !providerAdapter || !localTransport || !context || !validator || !plan || !guard || !bridge || !preflight || !executionAdapter || !providerController || !proposalRouter ||
             typeof protocol.createProtocol !== "function" || typeof context.createContextApi !== "function" ||
             typeof validator.createActionValidator !== "function" || typeof plan.createPlanStore !== "function" ||
             typeof bridge.createContextBridge !== "function" || typeof bridge.createExecutionPort !== "function" || typeof bridge.createReviewPort !== "function" || typeof preflight.createExecutionPreflight !== "function" || typeof executionAdapter.createExecutionAdapter !== "function" ||
-            !controller || typeof controller.createController !== "function" || typeof controller.isTrustedControllerForProtocol !== "function" ||
+            !controller || typeof controller.createController !== "function" || typeof controller.isTrustedControllerForProtocol !== "function" || typeof proposalRouter.createProposalRouter !== "function" ||
             typeof parser.createResponseParser !== "function" || typeof providerAdapter.createLocalOpenAICompatibleProvider !== "function" || typeof localTransport.createLocalTransport !== "function" || typeof providerController.createProviderController !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE");
         }
-        return { protocol: protocol, parser: parser, providerAdapter: providerAdapter, localTransport: localTransport, context: context, validator: validator, plan: plan, guard: guard, bridge: bridge, preflight: preflight, executionAdapter: executionAdapter, controller: controller, providerController: providerController };
+        return { protocol: protocol, parser: parser, providerAdapter: providerAdapter, localTransport: localTransport, context: context, validator: validator, plan: plan, guard: guard, bridge: bridge, preflight: preflight, executionAdapter: executionAdapter, controller: controller, providerController: providerController, proposalRouter: proposalRouter };
     }
     function registerBrowserModule(target, name, create) {
         var hasOwn = Object.prototype.hasOwnProperty;
@@ -25,18 +25,18 @@
         bootstrap = target[BOOTSTRAP_NAME];
         if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.getModule !== "function" || typeof bootstrap.hasModule !== "function" || typeof bootstrap.registerModule !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
         if (bootstrap.hasModule(name)) { throw bootstrapError("MODULE_ALREADY_REGISTERED"); }
-        dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaResponseParser"), bootstrap.getModule("VelaProviderAdapter"), bootstrap.getModule("VelaLocalTransport"), bootstrap.getModule("VelaContext"), bootstrap.getModule("VelaValidator"), bootstrap.getModule("VelaPlan"), bootstrap.getModule("VelaExecutionGuard"), bootstrap.getModule("VelaContextBridge"), bootstrap.getModule("VelaExecutionPreflight"), bootstrap.getModule("VelaExecutionAdapter"), bootstrap.getModule("VelaController"), bootstrap.getModule("VelaProviderController"));
-        exported = Object.freeze(create(dependencies.protocol, dependencies.parser, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController));
+        dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaResponseParser"), bootstrap.getModule("VelaProviderAdapter"), bootstrap.getModule("VelaLocalTransport"), bootstrap.getModule("VelaContext"), bootstrap.getModule("VelaValidator"), bootstrap.getModule("VelaPlan"), bootstrap.getModule("VelaExecutionGuard"), bootstrap.getModule("VelaContextBridge"), bootstrap.getModule("VelaExecutionPreflight"), bootstrap.getModule("VelaExecutionAdapter"), bootstrap.getModule("VelaController"), bootstrap.getModule("VelaProviderController"), bootstrap.getModule("VelaProviderProposalRouter"));
+        exported = Object.freeze(create(dependencies.protocol, dependencies.parser, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter));
         bootstrap.registerModule(name, exported);
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        var dependencies = assertDependencies(require("./velaProtocol"), require("./velaResponseParser"), require("./velaProviderAdapter"), require("./velaLocalTransport"), require("./velaContext"), require("./velaValidator"), require("./velaPlan"), require("./velaExecutionGuard"), require("./velaContextBridge"), require("./velaExecutionPreflight"), require("./velaExecutionAdapter"), require("./velaController"), require("./velaProviderController"));
-        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.parser, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController));
+        var dependencies = assertDependencies(require("./velaProtocol"), require("./velaResponseParser"), require("./velaProviderAdapter"), require("./velaLocalTransport"), require("./velaContext"), require("./velaValidator"), require("./velaPlan"), require("./velaExecutionGuard"), require("./velaContextBridge"), require("./velaExecutionPreflight"), require("./velaExecutionAdapter"), require("./velaController"), require("./velaProviderController"), require("./velaProviderProposalRouter"));
+        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.parser, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter));
     }
-}(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule, providerAdapterModule, localTransportModule, contextModule, validatorModule, planModule, guardModule, bridgeModule, preflightModule, executionAdapterModule, controllerModule, providerControllerModule) {
+}(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule, providerAdapterModule, localTransportModule, contextModule, validatorModule, planModule, guardModule, bridgeModule, preflightModule, executionAdapterModule, controllerModule, providerControllerModule, proposalRouterModule) {
     "use strict";
 
     var MODULE_REVISION = "vela-runtime-v1";
@@ -162,6 +162,7 @@
         var executionAdapter = null;
         var controller = null;
         var providerController = null;
+        var providerProposalRouter = null;
         var protocolClock = null;
         var runtime = environment || {};
         function safeStatus() {
@@ -215,6 +216,7 @@
             if (typeof fetchFn !== "function" || typeof TextDecoderCtor !== "function" || typeof root.AbortController !== "function") { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
             var localTransport = localTransportModule.createLocalTransport({ protocol: protocol, fetch: fetchFn, TextDecoder: TextDecoderCtor });
             providerController = providerControllerModule.createProviderController({ protocol: protocol, contextBridge: bridge, transport: localTransport, runtime: { setTimeout: setTimer, clearTimeout: clearTimer, createAbortController: function () { var nativeController = new root.AbortController(); return { signal: nativeController.signal, abort: function () { nativeController.abort(); } }; }, parseUrl: function (value) { var parsed = new root.URL(value); return { protocol: parsed.protocol, hostname: parsed.hostname, port: parsed.port, pathname: parsed.pathname, username: parsed.username, password: parsed.password, search: parsed.search, hash: parsed.hash, href: parsed.href }; }, nowMs: wallClock } });
+            providerProposalRouter = proposalRouterModule.createProposalRouter({ protocol: protocol, providerController: providerController, controller: controller });
         }
         function initialize() {
             var capturedEpoch;
@@ -269,7 +271,7 @@
             if (bridge) { try { bridge.suspend(); } catch (ignored) {} }
             if (controller) { try { controller.invalidate("idle"); } catch (ignoredController) {} }
             if (providerController) { try { providerController.invalidate("idle"); } catch (ignoredProvider) {} }
-            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; preflight = null; executionAdapter = null; controller = null; providerController = null; protocolClock = null;
+            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; protocolClock = null;
             initialized = false; suspended = false; disposed = true; state = "disposed";
             return true;
         }
@@ -293,6 +295,12 @@
             try { return Promise.resolve(ensureReadyController().rejectCandidate(input)); }
             catch (error) { return Promise.reject(error); }
         }
+        function reviewProviderProposal() {
+            try {
+                if (disposed || state !== "ready" || !providerProposalRouter) { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
+                return providerProposalRouter.review();
+            } catch (error) { return Promise.reject(error); }
+        }
         function getUiState() {
             try {
                 return controller ? controller.getUiState() : Object.freeze({ state: state === "ready" ? "input-ready" : state, candidateId: null, capabilityId: null, risk: null, targetSummary: null, beforeValue: null, proposedValue: null, undoGroupLabel: null, errorCode: lastErrorCode, moduleRevision: "vela-controller-v1" });
@@ -303,7 +311,7 @@
         function sendProviderMessage(input) { try { if (disposed || state !== "ready" || !providerController) { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); } return providerController.send(input); } catch (error) { return Promise.reject(error); } }
         function cancelProviderRequest(input) { try { return !!(providerController && providerController.cancel(input)); } catch (error) { return false; } }
         function getProviderUiState() { return providerController ? providerController.getUiState() : Object.freeze({ state: disposed ? "disposed" : state, requestId: null, text: null, errorCode: lastErrorCode, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: "vela-provider-controller-v1" }); }
-        return Object.freeze({ initialize: initialize, getStatus: safeStatus, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, refreshContext: refreshContext, createOpacityCandidate: createOpacityCandidate, approveCandidate: approveCandidate, rejectCandidate: rejectCandidate, getUiState: getUiState, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState });
+        return Object.freeze({ initialize: initialize, getStatus: safeStatus, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, refreshContext: refreshContext, createOpacityCandidate: createOpacityCandidate, approveCandidate: approveCandidate, rejectCandidate: rejectCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState });
     }
     return Object.freeze({ createRuntime: createRuntime });
 }));
