@@ -9,6 +9,7 @@
     var velaRuntimeController = null;
     var velaUiController = null;
     var velaProviderUiController = null;
+    var velaSurfaceController = null;
     var velaRuntimeStatusRevision = 0;
     var velaRuntimeLastErrorCode = null;
     var hostLoaded = false;
@@ -477,6 +478,9 @@
                 if (button) {
                     grid.insertBefore(button, more);
                 }
+            }
+            if (velaSurfaceController) {
+                velaSurfaceController.refreshLayout();
             }
         },
 
@@ -3432,6 +3436,29 @@
         }).catch(reportVelaRuntimeError);
     }
 
+    function getVelaSurfaceUiScale() {
+        var value = Number(window.getComputedStyle(document.documentElement).getPropertyValue("--ui-scale"));
+        return clampNumber(value, DefaultSettings.uiScale, 0.62, 1.18);
+    }
+
+    function initializeVelaSurface() {
+        if (panelShuttingDown || velaSurfaceController || !window.VelaSurface || !window.VelaResizeController || typeof window.VelaSurface.create !== "function") {
+            return;
+        }
+        velaSurfaceController = window.VelaSurface.create({
+            mountElement: byId("velaSurfaceMount"),
+            homeContainer: byId("homeView"),
+            headerElement: document.querySelector("#homeView .home-header"),
+            toolPoolElement: byId("toolGrid"),
+            openSettings: openSettingsPanel,
+            t: tr,
+            getUiScale: getVelaSurfaceUiScale,
+            ResizeController: window.VelaResizeController,
+            eventTarget: window
+        });
+        velaSurfaceController.mount();
+    }
+
     function playAnimation(element, keyframes, options, done) {
         var animation;
         var last;
@@ -3803,6 +3830,9 @@
                 home.classList.remove("no-transition");
                 detail.classList.remove("no-transition");
                 endAnimation();
+                if (velaSurfaceController) {
+                    velaSurfaceController.resume();
+                }
             });
         });
     }
@@ -3812,6 +3842,9 @@
         var detail = byId("detailView");
 
         configureToolDetail(toolId);
+        if (velaSurfaceController) {
+            velaSurfaceController.suspend();
+        }
         resetDetailMorphStyles();
         clearDetailContentClasses();
         home.classList.remove("is-active", "is-opening", "is-returning");
@@ -3840,6 +3873,9 @@
             home.classList.remove("is-returning");
         }, duration("normal"));
         updateProceduralHomeBackground();
+        if (velaSurfaceController) {
+            velaSurfaceController.resume();
+        }
     }
 
     function getActiveToolButton() {
@@ -6905,6 +6941,10 @@
         syncAllCustomSelects();
         refreshPaletteWorkspaceI18n();
         refreshSettingsThemePresentation();
+        if (velaSurfaceController) {
+            velaSurfaceController.refreshLocale();
+            velaSurfaceController.refreshLayout();
+        }
     }
 
     function setupLanguageSelector() {
@@ -6942,6 +6982,10 @@
         }
         if (byId("appShell").classList.contains("is-animating")) {
             return;
+        }
+
+        if (velaSurfaceController) {
+            velaSurfaceController.suspend();
         }
 
         // Keep this at least as long as the CSS press transition (--dur-instant).
@@ -7811,6 +7855,9 @@
 
     function suspendPanelRuntime() {
         panelSuspended = true;
+        if (velaSurfaceController) {
+            velaSurfaceController.suspend();
+        }
         if (velaRuntimeController) {
             velaRuntimeController.suspend();
             velaRuntimeStatusRevision += 1;
@@ -7826,6 +7873,9 @@
             return;
         }
         panelSuspended = false;
+        if (velaSurfaceController && byId("homeView") && byId("homeView").classList.contains("is-active")) {
+            velaSurfaceController.resume();
+        }
         if (velaRuntimeController) {
             velaRuntimeController.resume();
             velaRuntimeStatusRevision += 1;
@@ -7843,6 +7893,10 @@
         }
         lifecycleDebug("panel close start");
         panelShuttingDown = true;
+        if (velaSurfaceController) {
+            velaSurfaceController.dispose();
+            velaSurfaceController = null;
+        }
         if (velaRuntimeController) {
             velaRuntimeController.dispose();
             velaRuntimeController = null;
@@ -8243,6 +8297,9 @@
         if (number) {
             number.value = scale;
         }
+        if (velaSurfaceController) {
+            velaSurfaceController.refreshLayout();
+        }
     }
 
     function setupUiScale() {
@@ -8627,6 +8684,7 @@
         }
         setupCustomSelectInputs();
         HomeLayoutManager.init();
+        initializeVelaSurface();
         if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.initialize === "function") {
             window.ProceduralHomeIcons.initialize({
                 root: byId("toolGrid"),

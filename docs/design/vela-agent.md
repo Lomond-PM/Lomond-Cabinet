@@ -327,6 +327,30 @@ candidate, Approve invokes the existing confirmation and freshness path, and
 only that approved path may reach the Host. These three boundaries must not be
 merged. The sole supported model-promotable capability remains `set-opacity-v1`.
 
+### Formal Vela Surface UI-A
+
+UI-A establishes the formal Vela presentation surface as a Home-level region,
+not a Registry Tool or Tool Detail. `#velaSurfaceMount` is placed after the
+Home header and before the tool pool. `velaSurface.js` creates one stable DOM
+tree for the transcript, read-only composer, status, Settings slot, dynamic
+action slot and resize handle; `main.js` only bootstraps that tree and forwards
+Home, locale, scale and panel lifecycle events.
+
+UI-A is intentionally presentation-only. The legacy Vela Tool remains the
+only business entry point. The new surface does not send provider requests,
+review a proposal, confirm a candidate, approve execution, access Runtime
+state, or call the Host. Its dynamic action slot is empty. The Settings button
+only forwards the existing global Settings intent.
+
+The Surface uses CSS Grid areas for wide and narrow layouts without moving or
+recreating DOM nodes. Its height is session-only, held in
+`--vela-surface-height`; it is clamped from current Home/header/tool-pool
+measurements and is never written to Settings, storage or a transcript store.
+UI-B may connect bounded provider presentation, UI-C may connect the existing
+local confirmation presentation, and UI-D may consolidate the legacy Vela Tool
+only after their own review. None of those later phases may merge the Review,
+Approve and Host boundaries defined above.
+
 ### Protocol hard limits
 
 JSON Schema describes shape, but the protocol also has hard resource limits.

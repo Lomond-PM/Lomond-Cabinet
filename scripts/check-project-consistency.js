@@ -116,6 +116,9 @@ function checkRequiredEntrypoints() {
         "client/js/proceduralPreviewContract.js",
         "client/js/proceduralHomeIcons.js",
         "client/js/proceduralHomeBackground.js",
+        "client/css/velaSurface.css",
+        "client/js/vela/velaResizeController.js",
+        "client/js/vela/velaSurface.js",
         "client/js/vela/velaUi.js",
         "client/js/vela/velaCepModuleLoader.js",
         "client/js/vela/velaRuntime.js",
@@ -214,6 +217,7 @@ function checkIndexHtml() {
 
     const expected = [
         "css/style.css",
+        "css/velaSurface.css",
         "js/i18n.js",
         "js/settingsSchema.js",
         "js/proceduralCache.js",
@@ -227,6 +231,8 @@ function checkIndexHtml() {
         "js/proceduralHomeIcons.js",
         "js/proceduralHomeBackground.js",
         "js/vela/velaUi.js",
+        "js/vela/velaResizeController.js",
+        "js/vela/velaSurface.js",
         "js/vela/velaCepModuleLoader.js",
         "js/main.js"
     ];
@@ -242,6 +248,8 @@ function checkIndexHtml() {
     const editorIndex = frontendPaths.indexOf("js/proceduralPaletteEditor.js");
     const workspaceIndex = frontendPaths.indexOf("js/proceduralPaletteWorkspace.js");
     const backgroundIndex = frontendPaths.indexOf("js/proceduralHomeBackground.js");
+    const resizeControllerIndex = frontendPaths.indexOf("js/vela/velaResizeController.js");
+    const surfaceIndex = frontendPaths.indexOf("js/vela/velaSurface.js");
     const velaLoaderIndex = frontendPaths.indexOf("js/vela/velaCepModuleLoader.js");
     const mainIndex = frontendPaths.indexOf("js/main.js");
     check(
@@ -258,6 +266,16 @@ function checkIndexHtml() {
         "Vela CEP loader loads before main",
         velaLoaderIndex !== -1 && mainIndex !== -1 && velaLoaderIndex < mainIndex,
         "client/index.html must load the Vela CEP loader before js/main.js."
+    );
+    check(
+        "Vela Surface modules load before the CEP loader and main",
+        resizeControllerIndex !== -1 && surfaceIndex !== -1 && velaLoaderIndex !== -1 && mainIndex !== -1 && resizeControllerIndex < surfaceIndex && surfaceIndex < velaLoaderIndex && velaLoaderIndex < mainIndex,
+        "client/index.html must load VelaResizeController and VelaSurface before the CEP loader and main.js."
+    );
+    check(
+        "Vela Surface mount is between Home header and tool pool",
+        /<header\b[\s\S]*?<\/header>\s*<main\b[\s\S]*?id="velaSurfaceMount"[\s\S]*?id="toolGrid"/.test(html),
+        "client/index.html must place #velaSurfaceMount after the Home header and before #toolGrid."
     );
     [
         "js/vela/velaProtocol.js",
@@ -288,6 +306,7 @@ function checkVelaRuntimeBootstrap() {
     const loader = exists("client/js/vela/velaCepModuleLoader.js") ? readText("client/js/vela/velaCepModuleLoader.js") : "";
     const runtime = exists("client/js/vela/velaRuntime.js") ? readText("client/js/vela/velaRuntime.js") : "";
     const main = exists("client/js/main.js") ? readText("client/js/main.js") : "";
+    const surface = exists("client/js/vela/velaSurface.js") ? readText("client/js/vela/velaSurface.js") : "";
     const host = exists("host/vela/velaContext.jsx") ? readText("host/vela/velaContext.jsx") : "";
     const orderedNames = ["VelaProtocol", "VelaResponseParser", "VelaProviderAdapter", "VelaLocalTransport", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaProviderController", "VelaProviderProposalRouter", "VelaRuntime"];
     let previous = -1;
@@ -301,6 +320,8 @@ function checkVelaRuntimeBootstrap() {
     check("Vela CEP loader captures its own URL synchronously", /captureScriptLocation/.test(loader) && /scriptLocation = captureScriptLocation/.test(loader) && !/initializeScriptLocation/.test(loader), "velaCepModuleLoader.js must capture its own script URL before asynchronous loading begins.");
     check("Vela Host adapter remains v4", host.indexOf("vela-context-host-v4") !== -1, "PR A must retain the v4 Host adapter.");
     check("main keeps Vela runtime controller private", main.indexOf("window.velaRuntimeController") === -1 && main.indexOf("window.VelaRuntimeController") === -1, "main.js must not publish a Vela trusted runtime controller.");
+    check("main keeps Vela Surface controller private", main.indexOf("window.velaSurfaceController") === -1 && main.indexOf("window.VelaSurfaceController") === -1, "main.js must not publish the Vela Surface controller.");
+    check("Vela Surface has no execution dependency", !/VelaRuntime|VelaProvider|VelaExecution|VelaController|PlanStore|localStorage/.test(surface), "velaSurface.js must remain presentation-only and session-only.");
     check("Vela runtime has no Registry passthrough", runtime.indexOf("runRegisteredToolAction") === -1 && runtime.indexOf("AEToolbox.tools") === -1, "velaRuntime.js must not route execution through the Registry.");
 }
 
