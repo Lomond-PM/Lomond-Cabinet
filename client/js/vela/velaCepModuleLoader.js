@@ -17,6 +17,7 @@
         { name: "VelaExecutionAdapter", file: "velaExecutionAdapter.js" },
         { name: "VelaController", file: "velaController.js" },
         { name: "VelaProviderController", file: "velaProviderController.js" },
+        { name: "VelaProviderProposalRouter", file: "velaProviderProposalRouter.js" },
         { name: "VelaRuntime", file: "velaRuntime.js" }
     ]);
     var state = "idle";
@@ -115,6 +116,7 @@
         if (name === "VelaExecutionAdapter") { return typeof value.createExecutionAdapter === "function" && typeof value.isTrustedExecutionAdapterForProtocol === "function"; }
         if (name === "VelaController") { return typeof value.createController === "function" && typeof value.isTrustedControllerForProtocol === "function"; }
         if (name === "VelaProviderController") { return typeof value.createProviderController === "function" && typeof value.isTrustedProviderControllerForProtocol === "function"; }
+        if (name === "VelaProviderProposalRouter") { return typeof value.createProposalRouter === "function" && typeof value.isTrustedProposalRouterForProtocol === "function"; }
         if (name === "VelaRuntime") { return typeof value.createRuntime === "function"; }
         return false;
     }

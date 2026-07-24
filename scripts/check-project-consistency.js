@@ -273,6 +273,7 @@ function checkIndexHtml() {
         "js/vela/velaExecutionAdapter.js",
         "js/vela/velaController.js",
         "js/vela/velaProviderController.js",
+        "js/vela/velaProviderProposalRouter.js",
         "js/vela/velaRuntime.js"
     ].forEach((item) => {
         check(
@@ -288,7 +289,7 @@ function checkVelaRuntimeBootstrap() {
     const runtime = exists("client/js/vela/velaRuntime.js") ? readText("client/js/vela/velaRuntime.js") : "";
     const main = exists("client/js/main.js") ? readText("client/js/main.js") : "";
     const host = exists("host/vela/velaContext.jsx") ? readText("host/vela/velaContext.jsx") : "";
-    const orderedNames = ["VelaProtocol", "VelaResponseParser", "VelaProviderAdapter", "VelaLocalTransport", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaProviderController", "VelaRuntime"];
+    const orderedNames = ["VelaProtocol", "VelaResponseParser", "VelaProviderAdapter", "VelaLocalTransport", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaProviderController", "VelaProviderProposalRouter", "VelaRuntime"];
     let previous = -1;
     orderedNames.forEach((name) => {
         const index = loader.indexOf('name: "' + name + '"');

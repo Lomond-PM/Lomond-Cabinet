@@ -22,6 +22,7 @@ const MODULES = [
     "velaExecutionAdapter.js",
     "velaController.js",
     "velaProviderController.js",
+    "velaProviderProposalRouter.js",
     "velaRuntime.js"
 ];
 let assertions = 0;
@@ -95,7 +96,7 @@ function run() {
     MODULES.forEach((filename) => runBrowserModule(browser, filename));
     const bootstrap = browser.context.__velaProtocolCoreBootstrapV1;
     check(bootstrap && Object.isFrozen(bootstrap), "A self-referential browser global creates the exact Vela bootstrap even when CommonJS globals exist.");
-    ["VelaProtocol", "VelaResponseParser", "VelaProviderAdapter", "VelaLocalTransport", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaProviderController", "VelaRuntime"].forEach((name) => {
+    ["VelaProtocol", "VelaResponseParser", "VelaProviderAdapter", "VelaLocalTransport", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaProviderController", "VelaProviderProposalRouter", "VelaRuntime"].forEach((name) => {
         check(bootstrap.getModule(name) === browser.context[name] && Object.isFrozen(browser.context[name]), name + " registers through the browser bootstrap.");
     });
     check(browser.requireCalls() === 0, "Browser-first registration never calls require.");
@@ -128,8 +129,9 @@ function run() {
     const executionAdapter = require(path.join(VELA, "velaExecutionAdapter.js"));
     const controller = require(path.join(VELA, "velaController.js"));
     const providerController = require(path.join(VELA, "velaProviderController.js"));
+    const proposalRouter = require(path.join(VELA, "velaProviderProposalRouter.js"));
     const runtime = require(path.join(VELA, "velaRuntime.js"));
-    check(typeof protocol.createProtocol === "function" && typeof parser.createResponseParser === "function" && typeof providerAdapter.createLocalOpenAICompatibleProvider === "function" && typeof localTransport.createLocalTransport === "function" && typeof context.createContextApi === "function" && typeof validator.createActionValidator === "function" && typeof plan.createPlanStore === "function" && typeof guard.createExecutionGuard === "function" && typeof bridge.createContextBridge === "function" && typeof preflight.createExecutionPreflight === "function" && typeof executionAdapter.createExecutionAdapter === "function" && typeof controller.createController === "function" && typeof providerController.createProviderController === "function" && typeof runtime.createRuntime === "function", "Modules continue to export their fixed CommonJS APIs without a browser window.");
+    check(typeof protocol.createProtocol === "function" && typeof parser.createResponseParser === "function" && typeof providerAdapter.createLocalOpenAICompatibleProvider === "function" && typeof localTransport.createLocalTransport === "function" && typeof context.createContextApi === "function" && typeof validator.createActionValidator === "function" && typeof plan.createPlanStore === "function" && typeof guard.createExecutionGuard === "function" && typeof bridge.createContextBridge === "function" && typeof preflight.createExecutionPreflight === "function" && typeof executionAdapter.createExecutionAdapter === "function" && typeof controller.createController === "function" && typeof providerController.createProviderController === "function" && typeof proposalRouter.createProposalRouter === "function" && typeof runtime.createRuntime === "function", "Modules continue to export their fixed CommonJS APIs without a browser window.");
 
     console.log("test-vela-browser-bootstrap: " + assertions + " assertions passed.");
 }

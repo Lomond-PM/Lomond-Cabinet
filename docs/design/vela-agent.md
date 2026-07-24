@@ -310,9 +310,12 @@ read-only `localProposal` envelope:
 
 All objects are closed. The proposal contains no target, risk, title,
 property path, digest, candidate id, plan id, nonce, reservation, authority,
-or executable source. D2-A only displays this bounded suggestion; it does not
-create a candidate or invoke validation, planning, confirmation, or Host
-execution.
+or executable source. D2-A only displays this bounded suggestion. D2-B permits
+one explicit `Review` intent with no parameters: a Runtime-private router
+one-shot consumes the exact normalized proposal and calls the existing local
+controller with `{ opacity }`. The normal local candidate, validation, plan,
+confirmation and execution path then applies; the provider never receives or
+creates a trusted identifier, target binding, capture, digest or approval.
 
 ### Protocol hard limits
 

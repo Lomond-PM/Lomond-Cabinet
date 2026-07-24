@@ -82,6 +82,7 @@
                 "vela.providerCancel": "Cancel request",
                 "vela.providerSuggestedAction": "Suggested local action",
                 "vela.providerSuggestedOpacity": "Opacity",
+                "vela.providerReview": "Review",
 
                 "section.geometry": "Geometry",
                 "section.bounds": "Bounds",
@@ -467,6 +468,7 @@
                 "vela.providerCancel": "\u53d6\u6d88\u8bf7\u6c42",
                 "vela.providerSuggestedAction": "\u5efa\u8bae\u7684\u672c\u5730\u64cd\u4f5c",
                 "vela.providerSuggestedOpacity": "\u4e0d\u900f\u660e\u5ea6",
+                "vela.providerReview": "\u67e5\u770b",
 
                 "section.geometry": "\u51e0\u4f55",
                 "section.bounds": "\u8fb9\u754c",

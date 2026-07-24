@@ -27,6 +27,7 @@
     var MODULE_REVISION = "vela-provider-controller-v1";
     var trustedControllers = new WeakSet();
     var controllerProtocols = new WeakMap();
+    var controllerProposalPorts = new WeakMap();
     var hasOwn = Object.prototype.hasOwnProperty;
     function ownData(value, key) {
         var descriptor;
@@ -53,10 +54,12 @@
         }
         var state = "idle";
         var active = null;
+        var activeProposal = null;
         var generation = 1;
         var publicState = protocol.deepFreeze({ state: state, requestId: null, text: null, errorCode: null, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: MODULE_REVISION });
         function publish(nextState, requestId, text, errorCode, model, proposal) {
             state = nextState;
+            if (nextState !== "proposal-ready") { activeProposal = null; }
             publicState = protocol.deepFreeze({ state: nextState, requestId: requestId || null, text: text || null, errorCode: errorCode || null,
                 proposalCapabilityId: proposal ? proposal.capabilityId : null, suggestedOpacity: proposal ? proposal.opacity : null,
                 providerId: "lmstudio", modelId: model || null, moduleRevision: MODULE_REVISION });
@@ -110,6 +113,7 @@
                 if (envelope.type === "error") { return publish("failed", publicState.requestId, null, safeCode(protocol, ownData(envelope, "error")), values.model); }
                 if (envelope.type === "localProposal") {
                     var proposal = ownData(envelope, "proposal");
+                    activeProposal = protocol.deepFreeze({ capabilityId: ownData(proposal, "capabilityId"), opacity: ownData(ownData(proposal, "params"), "opacity") });
                     return publish("proposal-ready", publicState.requestId, null, null, values.model, { capabilityId: ownData(proposal, "capabilityId"), opacity: ownData(ownData(proposal, "params"), "opacity") });
                 }
                 return publish("completed", publicState.requestId, protocol.assertString(ownData(envelope, "text"), "provider text", protocol.HARD_LIMITS.maxMessageBytes), null, values.model);
@@ -137,11 +141,29 @@
             active = null;
             return publish(nextState || "idle", null, null, nextState === "failed" ? protocol.ERROR_CODES.LIFECYCLE_BLOCKED : null, null);
         }
+        var proposalPort = Object.freeze({
+            consume: function () {
+                var proposal;
+                if (state !== "proposal-ready" || !activeProposal) { protocol.fail(protocol.ERROR_CODES.CANDIDATE_NOT_FOUND, "No local proposal is available."); }
+                proposal = activeProposal;
+                activeProposal = null;
+                publish("idle", null, null, null, publicState.modelId);
+                return proposal;
+            }
+        });
         var controller = Object.freeze({ send: send, cancel: cancel, invalidate: invalidate, getUiState: function () { return publicState; } });
         trustedControllers.add(controller);
         controllerProtocols.set(controller, protocol);
+        controllerProposalPorts.set(controller, proposalPort);
         return controller;
     }
     function isTrustedProviderControllerForProtocol(value, protocol) { return trustedControllers.has(value) && controllerProtocols.get(value) === protocol && protocolModule.isTrustedProtocol(protocol); }
-    return Object.freeze({ createProviderController: createProviderController, isTrustedProviderControllerForProtocol: isTrustedProviderControllerForProtocol });
+    function createProposalPort(controller, protocol) {
+        var port;
+        if (!isTrustedProviderControllerForProtocol(controller, protocol)) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
+        port = controllerProposalPorts.get(controller);
+        if (!port) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
+        return port;
+    }
+    return Object.freeze({ createProviderController: createProviderController, isTrustedProviderControllerForProtocol: isTrustedProviderControllerForProtocol, createProposalPort: createProposalPort });
 }));
