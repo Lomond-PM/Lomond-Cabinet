@@ -115,6 +115,22 @@
                 ]
             },
             {
+                id: "vela",
+                titleKey: "settings.sections.vela",
+                descriptionKey: "settings.vela.fixedEndpoint",
+                fields: [
+                    {
+                        key: "velaProviderModel",
+                        type: "text",
+                        labelKey: "settings.vela.model",
+                        descriptionKey: "settings.vela.modelDescription",
+                        defaultValue: "qwen3.5-4b",
+                        maxLength: 256,
+                        spellcheck: false
+                    }
+                ]
+            },
+            {
                 id: "proceduralAppearance",
                 titleKey: "settings.sections.proceduralAppearance",
                 descriptionKey: "helper.proceduralAppearanceParams",

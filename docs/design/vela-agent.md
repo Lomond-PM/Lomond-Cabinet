@@ -138,11 +138,16 @@ core path. The formal storage contract is `AEToolbox.settings.v1` in
 `localStorage`. Registry tool values use their own declared storage keys, and
 Palette Store data uses `lomond.proceduralPaletteStore.v1`.
 
-Vela provider and permission preferences should be added to the existing
-Settings schema only in a later implementation task. Credentials must not be
-stored as plain localStorage values by default. A local LM Studio endpoint can
-work without a secret; cloud credentials require a deliberate credential
-storage decision or a user-supplied session token.
+The formal Vela Settings section owns the existing `velaProviderModel` value
+inside that same Settings object. It uses the established default and
+normalization contract, and only accepts a manual LM Studio model identifier.
+Vela connects only to the fixed local endpoint
+`http://127.0.0.1:1234/v1/chat/completions`; endpoint, credentials, network
+permission and provider runtime state are not Settings values. The Surface
+Settings button opens the existing global Settings flow and focuses this section
+only after that flow has revealed its content. Credentials must not be stored
+as plain localStorage values by default; cloud credentials require a deliberate
+credential storage decision or a user-supplied session token.
 
 ### Lifecycle and shutdown
 
@@ -879,10 +884,21 @@ not a second navigation system.
 
 ### Settings integration
 
-Provider endpoint, model id, timeout, permission mode, and developer diagnostics
-should be added through the app-level Settings schema in a later branch. The
-first UI implementation should use generic schema fields and existing i18n;
-Vela controller state must not be persisted as an executable plan.
+UI-D1 has completed the formal Vela Settings integration through the existing
+app-level Settings schema and renderer. Its only persisted Vela field is
+`velaProviderModel`, with the default `qwen3.5-4b`; it continues to use
+`AEToolbox.settings.v1` and `normalizeVelaProviderModel()` for reads, saves and
+validation. Vela connects only to the fixed local endpoint
+`http://127.0.0.1:1234/v1/chat/completions`, which is displayed as read-only
+information and cannot be configured. UI-D1 adds no model discovery, connection
+test, API key, remote endpoint, or additional network request. Vela controller
+state must not be persisted as an executable plan.
+
+UI-D2, the old Vela Tool retirement, has not started and remains BLOCKED. The
+old Tool must remain available; UI-D1 completion is not authorization to remove
+its entry points. Before UI-D2 can be approved, manual opacity proposal and the
+`refreshContext` recovery entry point require a replacement or a formal product
+decision, with corresponding regression proof for the retained complete path.
 
 ## 11. Module And File Plan
 

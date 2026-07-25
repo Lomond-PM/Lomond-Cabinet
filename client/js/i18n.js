@@ -119,6 +119,10 @@
                 "vela.surfaceConfirmationRejected": "The local action suggestion was rejected. No change was made.",
                 "vela.surfaceExecutionCompleted": "The local opacity change was completed.",
                 "vela.surfaceConfirmationValue": "Opacity {before}% → {proposed}%",
+                "settings.sections.vela": "Vela",
+                "settings.vela.model": "Model name",
+                "settings.vela.modelDescription": "Use the exact model identifier currently loaded or exposed by LM Studio.",
+                "settings.vela.fixedEndpoint": "Vela connects only to local LM Studio at http://127.0.0.1:1234/v1/chat/completions. This endpoint is fixed and cannot be changed here.",
 
                 "section.geometry": "Geometry",
                 "section.bounds": "Bounds",
@@ -541,6 +545,10 @@
                 "vela.surfaceConfirmationRejected": "\u5df2\u62d2\u7edd\u672c\u5730\u64cd\u4f5c\u5efa\u8bae\u3002\u672a\u53d1\u751f\u66f4\u6539\u3002",
                 "vela.surfaceExecutionCompleted": "\u672c\u5730\u4e0d\u900f\u660e\u5ea6\u66f4\u6539\u5df2\u5b8c\u6210\u3002",
                 "vela.surfaceConfirmationValue": "\u4e0d\u900f\u660e\u5ea6 {before}% \u2192 {proposed}%",
+                "settings.sections.vela": "Vela",
+                "settings.vela.model": "\u6a21\u578b\u540d\u79f0",
+                "settings.vela.modelDescription": "\u8bf7\u4f7f\u7528\u4e0e LM Studio \u5f53\u524d\u5df2\u52a0\u8f7d\u6216\u5df2\u66b4\u9732\u7684\u6a21\u578b\u6807\u8bc6\u5b8c\u5168\u4e00\u81f4\u7684\u540d\u79f0\u3002",
+                "settings.vela.fixedEndpoint": "Vela \u4ec5\u8fde\u63a5\u672c\u5730 LM Studio\uff1ahttp://127.0.0.1:1234/v1/chat/completions\u3002\u6b64\u7aef\u70b9\u56fa\u5b9a\uff0c\u65e0\u6cd5\u5728\u6b64\u4fee\u6539\u3002",
 
                 "section.geometry": "\u51e0\u4f55",
                 "section.bounds": "\u8fb9\u754c",
