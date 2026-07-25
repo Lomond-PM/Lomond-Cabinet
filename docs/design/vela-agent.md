@@ -399,6 +399,17 @@ through localized PresentationModel text; raw diagnostic codes stay in frozen
 Runtime state and diagnostics. The legacy Vela Tool remains the full D2
 regression entry point throughout UI-C.
 
+### Surface bootstrap diagnostic boundary
+
+Runtime bootstrap ends after the CEP module loader, Runtime creation and
+Runtime initialization. Only failures in that sequence are reported as Runtime
+initialization failures. Once Runtime is ready, Surface Controller dependency,
+construction and mount failures use a separate main.js-local Surface bootstrap
+diagnostic. Such a failure does not mutate Runtime state or its frozen status
+view, does not create interactive actions, and never exposes exception text,
+stack data, trusted state or Host payload in the DOM. A panel reload starts a
+new bootstrap lifecycle and may retry with restored dependencies.
+
 ### Protocol hard limits
 
 JSON Schema describes shape, but the protocol also has hard resource limits.
