@@ -3464,7 +3464,7 @@
     }
 
     function initializeVelaSurfaceController() {
-        if (panelShuttingDown || velaSurfaceController || !velaSurfaceShell || !velaRuntimeController || !window.VelaSurfaceController || !window.VelaPresentationModel || !window.VelaTranscriptView || !window.VelaComposerView || typeof window.VelaSurfaceController.create !== "function") {
+        if (panelShuttingDown || velaSurfaceController || !velaSurfaceShell || !velaRuntimeController || !window.VelaSurfaceController || !window.VelaPresentationModel || !window.VelaTranscriptView || !window.VelaComposerView || !window.VelaConfirmationView || typeof window.VelaSurfaceController.create !== "function" || typeof window.VelaConfirmationView.create !== "function") {
             return;
         }
         velaSurfaceController = window.VelaSurfaceController.create({
@@ -3473,12 +3473,19 @@
             PresentationModel: window.VelaPresentationModel,
             TranscriptView: window.VelaTranscriptView,
             ComposerView: window.VelaComposerView,
+            ConfirmationView: window.VelaConfirmationView,
             provider: {
                 send: function (message) {
                     return velaRuntimeController.sendProviderMessage({ message: message, endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: VelaProviderModel });
                 },
                 cancel: function () { return velaRuntimeController.cancelProviderRequest(); },
                 getState: function () { return velaRuntimeController.getProviderSurfaceState(); }
+            },
+            confirmation: {
+                review: function () { return velaRuntimeController.reviewProviderProposal(); },
+                approve: function () { return velaRuntimeController.approveActiveCandidate(); },
+                reject: function () { return velaRuntimeController.rejectActiveCandidate(); },
+                getState: function () { return velaRuntimeController.getConfirmationSurfaceState(); }
             }
         });
         velaSurfaceController.mount();
@@ -7916,15 +7923,15 @@
             return;
         }
         panelSuspended = false;
+        if (velaRuntimeController) {
+            velaRuntimeController.resume();
+            velaRuntimeStatusRevision += 1;
+        }
         if (velaSurfaceController && byId("homeView") && byId("homeView").classList.contains("is-active")) {
             velaSurfaceController.resume();
         }
         if (velaSurfaceShell && byId("homeView") && byId("homeView").classList.contains("is-active")) {
             velaSurfaceShell.resume();
-        }
-        if (velaRuntimeController) {
-            velaRuntimeController.resume();
-            velaRuntimeStatusRevision += 1;
         }
         startSelectionPolling();
         if (isDynamicTool(activeToolId)) {

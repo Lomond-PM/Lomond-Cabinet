@@ -8,6 +8,11 @@ const path = require("path");
 const ROOT = path.resolve(__dirname, "..");
 const ResizeController = require(path.join(ROOT, "client/js/vela/velaResizeController.js")).VelaResizeController;
 const Surface = require(path.join(ROOT, "client/js/vela/velaSurface.js")).VelaSurface;
+const PresentationModel = require(path.join(ROOT, "client/js/vela/velaPresentationModel.js")).VelaPresentationModel;
+const TranscriptView = require(path.join(ROOT, "client/js/vela/velaTranscriptView.js")).VelaTranscriptView;
+const ComposerView = require(path.join(ROOT, "client/js/vela/velaComposerView.js")).VelaComposerView;
+const ConfirmationView = require(path.join(ROOT, "client/js/vela/velaConfirmationView.js")).VelaConfirmationView;
+const SurfaceController = require(path.join(ROOT, "client/js/vela/velaSurfaceController.js")).VelaSurfaceController;
 let assertions = 0;
 
 function ok(value, message) {
@@ -286,6 +291,19 @@ function testSurface() {
     equal(nodes.settingsButton, initialSettings, "resume preserves Settings button identity");
     equal(nodes.handle, initialHandle, "resume preserves resize handle identity");
     equal(nodes.grip, initialGrip, "resume preserves resize grip identity");
+    const provider = { send: function () {}, cancel: function () {}, getState: function () { return { state: "idle", text: null, errorCode: null }; } };
+    const confirmation = { review: function () {}, approve: function () {}, reject: function () {}, getState: function () { return { state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }; } };
+    const controller = SurfaceController.create({ surface: surface, provider: provider, confirmation: confirmation, t: function (key) { return "t:" + key; }, PresentationModel: PresentationModel, TranscriptView: TranscriptView, ComposerView: ComposerView, ConfirmationView: ConfirmationView });
+    controller.mount();
+    const actionNodes = nodes.actionSlot.children.slice(-6);
+    const idleSend = actionNodes[0];
+    fixture.home._rect.height = 420;
+    FakeResizeObserver.instances.forEach(function (observer) { observer.trigger(); });
+    fixture.windowRef.flush();
+    controller.refreshLocale();
+    ok(!nodes.actionSlot.hidden && !idleSend.hidden, "container resize and locale refresh retain the idle Send action");
+    equal(actionNodes[0], nodes.actionSlot.children[nodes.actionSlot.children.length - 6], "container resize preserves Send DOM identity");
+    controller.dispose();
     ok(surface.dispose(), "dispose cleans Surface resources");
     equal(fixture.mount.children.length, 0, "dispose removes the Surface root");
     equal(surface.dispose(), false, "dispose is idempotent");

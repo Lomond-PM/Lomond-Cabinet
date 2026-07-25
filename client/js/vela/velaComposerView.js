@@ -27,11 +27,13 @@
             cancel.setAttribute("aria-label", t("vela.surfaceCancel"));
         }
         function render(nextState) {
-            state = typeof nextState === "string" ? nextState : "idle";
-            send.hidden = state === "pending";
-            cancel.hidden = state !== "pending";
-            send.disabled = state === "pending";
-            cancel.disabled = state !== "pending";
+            state = nextState === "cancel" || nextState === "pending" ? "cancel" : nextState === "send" || nextState === "idle" || nextState === "completed" || nextState === "failed" || nextState === "cancelled" ? "send" : typeof nextState === "string" ? nextState : "send";
+            send.hidden = state !== "send";
+            cancel.hidden = state !== "cancel";
+            send.disabled = state !== "send";
+            cancel.disabled = state !== "cancel";
+            composer.readOnly = state === "review" || state === "confirm" || state === "none";
+            composer.setAttribute("aria-readonly", composer.readOnly ? "true" : "false");
         }
         function clearSubmittedMessage(message) {
             if (typeof message === "string" && composer.value === message) { composer.value = ""; }
@@ -42,12 +44,12 @@
         cancel = documentRef.createElement("button");
         cancel.type = "button";
         cancel.className = "panel-button vela-surface-action vela-compact-action";
-        send.addEventListener("click", function () { if (!disposed && state !== "pending") { onSend(composer.value); } });
-        cancel.addEventListener("click", function () { if (!disposed && state === "pending") { onCancel(); } });
+        send.addEventListener("click", function () { if (!disposed && state === "send") { onSend(composer.value); } });
+        cancel.addEventListener("click", function () { if (!disposed && state === "cancel") { onCancel(); } });
         actionSlot.appendChild(send);
         actionSlot.appendChild(cancel);
         refreshLocale();
-        render("idle");
+        render("send");
         return Object.freeze({ render: render, clearSubmittedMessage: clearSubmittedMessage, refreshLocale: refreshLocale, getElementsForTest: function () { return { send: send, cancel: cancel }; }, dispose: function () { disposed = true; } });
     }
     return Object.freeze({ create: create });

@@ -8,6 +8,7 @@ const vm = require("vm");
 
 const ROOT = path.resolve(__dirname, "..");
 const VELA = path.join(ROOT, "client", "js", "vela");
+const mainSource = fs.readFileSync(path.join(ROOT, "client", "js", "main.js"), "utf8");
 const MODULES = [
     "velaProtocol.js",
     "velaResponseParser.js",
@@ -132,6 +133,7 @@ function run() {
     const proposalRouter = require(path.join(VELA, "velaProviderProposalRouter.js"));
     const runtime = require(path.join(VELA, "velaRuntime.js"));
     check(typeof protocol.createProtocol === "function" && typeof parser.createResponseParser === "function" && typeof providerAdapter.createLocalOpenAICompatibleProvider === "function" && typeof localTransport.createLocalTransport === "function" && typeof context.createContextApi === "function" && typeof validator.createActionValidator === "function" && typeof plan.createPlanStore === "function" && typeof guard.createExecutionGuard === "function" && typeof bridge.createContextBridge === "function" && typeof preflight.createExecutionPreflight === "function" && typeof executionAdapter.createExecutionAdapter === "function" && typeof controller.createController === "function" && typeof providerController.createProviderController === "function" && typeof proposalRouter.createProposalRouter === "function" && typeof runtime.createRuntime === "function", "Modules continue to export their fixed CommonJS APIs without a browser window.");
+    check(/ConfirmationView:\s*window\.VelaConfirmationView/.test(mainSource) && /typeof window\.VelaConfirmationView\.create !== "function"/.test(mainSource), "Production Surface bootstrap injects and validates the UI-C ConfirmationView factory before Controller creation.");
 
     console.log("test-vela-browser-bootstrap: " + assertions + " assertions passed.");
 }

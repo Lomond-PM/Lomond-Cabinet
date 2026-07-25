@@ -101,17 +101,20 @@ async function run() {
     const pending = await harness.runtime.createOpacityCandidate({ opacity: 57.5 });
     check(pending.state === "pending-confirmation" && pending.beforeValue === 25 && pending.proposedValue === 57.5, "Local proposal returns trusted beforeValue and proposedValue.");
     check(!JSON.stringify(pending).includes("nativeLayerId") && !JSON.stringify(pending).includes("Digest") && !JSON.stringify(pending).includes("planId"), "UI state does not leak native identity, digest or plan id.");
-    const consumed = await harness.runtime.approveCandidate({ candidateId: pending.candidateId });
+    const surfacePending = harness.runtime.getConfirmationSurfaceState();
+    check(surfacePending.state === "confirmation-ready" && surfacePending.beforeValue === 25 && surfacePending.proposedValue === 57.5 && Object.isFrozen(surfacePending), "Confirmation Surface projection exposes only bounded values and state.");
+    check(!/candidate|target|context|plan|nonce|digest|authority|payload/i.test(Object.keys(surfacePending).join(",")), "Confirmation Surface projection excludes trusted execution data.");
+    const consumed = await harness.runtime.approveActiveCandidate();
     check(consumed.state === "consumed" && harness.state.value === 57.5, "Approve runs through the full production runtime chain and consumes once.");
     check(harness.calls.filter((call) => call.kind === "execution").length === 1, "Successful approval invokes the Host execution facade once.");
-    await expectCode(harness.runtime.approveCandidate({ candidateId: pending.candidateId }), "CANDIDATE_STATE_INVALID", "Terminal candidate cannot be approved again.");
+    await expectCode(harness.runtime.approveActiveCandidate(), "CANDIDATE_STATE_INVALID", "Terminal candidate cannot be approved again.");
 
     const rejectHarness = makeRuntime();
     await rejectHarness.runtime.initialize();
     const rejectPending = await rejectHarness.runtime.createOpacityCandidate({ opacity: 10 });
-    const discarded = await rejectHarness.runtime.rejectCandidate({ candidateId: rejectPending.candidateId });
+    const discarded = await rejectHarness.runtime.rejectActiveCandidate();
     check(discarded.state === "discarded" && rejectHarness.calls.filter((call) => call.kind === "execution").length === 0, "Reject discards without Host execution.");
-    await expectCode(rejectHarness.runtime.approveCandidate({ candidateId: rejectPending.candidateId }), "CANDIDATE_STATE_INVALID", "Rejected candidate cannot execute.");
+    await expectCode(rejectHarness.runtime.approveActiveCandidate(), "CANDIDATE_STATE_INVALID", "Rejected candidate cannot execute.");
 
     const drift = makeRuntime();
     await drift.runtime.initialize();
