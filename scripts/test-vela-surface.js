@@ -186,7 +186,15 @@ function testSurface() {
     equal(fixture.home.children.indexOf(fixture.header) < fixture.home.children.indexOf(fixture.mount), true, "mount follows Home header");
     equal(fixture.home.children.indexOf(fixture.mount) < fixture.home.children.indexOf(fixture.pool), true, "mount precedes tool pool");
     equal(root.getAttribute("data-tool"), null, "Surface is not a registry tool");
-    equal(nodes.composer.getAttribute("readonly"), "readonly", "composer is readonly in UI-A");
+    equal(nodes.composer.readOnly, true, "Surface preserves its safe readonly default until a controller enables composition");
+    const interactiveSurface = Surface.create({
+        mountElement: fixture.documentRef.createElement("section"), homeContainer: fixture.home, headerElement: fixture.header, toolPoolElement: fixture.pool,
+        openSettings: function () {}, t: function (key) { return key; }, getUiScale: function () { return 1; }, composerReadOnly: false,
+        ResizeController: ResizeController, ResizeObserver: FakeResizeObserver, eventTarget: fixture.windowRef
+    });
+    interactiveSurface.mount();
+    equal(interactiveSurface.getElementsForTest().composer.readOnly, false, "UI-B can enable the stable Composer without changing Surface business ownership");
+    interactiveSurface.dispose();
     equal(nodes.composer.getAttribute("aria-readonly"), "true", "composer has readonly accessibility state");
     equal(nodes.actionSlot.children.length, 0, "dynamic action slot starts empty");
     equal(nodes.transcriptMessage.textContent, "t:vela.surfaceTranscriptIntro", "transcript uses i18n text");
@@ -285,9 +293,11 @@ function testSurface() {
 
 function testStaticContracts() {
     const surfaceSource = fs.readFileSync(path.join(ROOT, "client/js/vela/velaSurface.js"), "utf8");
+    const composerSource = fs.readFileSync(path.join(ROOT, "client/js/vela/velaComposerView.js"), "utf8");
     const resizeSource = fs.readFileSync(path.join(ROOT, "client/js/vela/velaResizeController.js"), "utf8");
     const cssSource = fs.readFileSync(path.join(ROOT, "client/css/velaSurface.css"), "utf8");
     const indexSource = fs.readFileSync(path.join(ROOT, "client/index.html"), "utf8");
+    const i18nSource = fs.readFileSync(path.join(ROOT, "client/js/i18n.js"), "utf8");
     ok(surfaceSource.indexOf("innerHTML") === -1, "Surface never rebuilds DOM with innerHTML");
     ok(surfaceSource.indexOf("localStorage") === -1 && resizeSource.indexOf("localStorage") === -1, "Surface height is not persisted");
     ok(!/provider-send|provider-review|approveCandidate|AEToolbox\.VelaExecution|VelaExecutionPreflight/.test(surfaceSource), "Surface has no provider or execution entry point");
@@ -296,6 +306,10 @@ function testStaticContracts() {
     ok(/\.vela-surface\.is-narrow/.test(cssSource) && /grid-template-areas/.test(cssSource), "CSS owns wide and narrow grid layouts");
     ok(/\.vela-transcript-scroll[\s\S]*border: 1px solid var\(--separator\)[\s\S]*border-radius: var\(--radius-sm\)/.test(cssSource), "transcript uses the same restrained plate language as the composer");
     ok(/\.vela-settings-button[\s\S]*min-height: calc\(26px \* var\(--ui-scale\)\)/.test(cssSource), "Settings uses the compact Surface button treatment");
+    ok(/\.vela-surface-action\s*\{[\s\S]*min-height: calc\(26px \* var\(--ui-scale\)\)/.test(cssSource), "Send and Cancel use the compact Surface action height contract");
+    ok(/vela-compact-action/.test(composerSource) && !/primary-action|secondary-action/.test(composerSource), "Send and Cancel do not reuse Tool Detail primary or secondary action classes");
+    ok(/\.vela-transcript-scroll::-webkit-scrollbar\s*\{[\s\S]*width: calc\(7px \* var\(--ui-scale\)\)/.test(cssSource) && /\.vela-transcript-scroll::-webkit-scrollbar-thumb:hover/.test(cssSource), "Transcript has visible CEP/WebKit scrollbar and hover selectors");
+    ok(/"vela\.surfaceSettings": "Settings"/.test(i18nSource) && /"vela\.surfaceSettings": "\\u8bbe\\u7f6e"/.test(i18nSource), "Surface Settings label is temporarily localized as Settings / 设置");
     ok(/\.vela-surface-mount[\s\S]*margin-bottom: var\(--tool-gap\)/.test(cssSource), "Surface-to-tool-pool rhythm uses the established tool gap");
     const handleRule = (cssSource.match(/\.vela-resize-handle\s*\{([^}]*)\}/) || [])[1] || "";
     const gripRule = (cssSource.match(/\.vela-resize-grip\s*\{([^}]*)\}/) || [])[1] || "";

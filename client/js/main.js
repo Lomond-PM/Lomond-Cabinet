@@ -9,6 +9,7 @@
     var velaRuntimeController = null;
     var velaUiController = null;
     var velaProviderUiController = null;
+    var velaSurfaceShell = null;
     var velaSurfaceController = null;
     var velaRuntimeStatusRevision = 0;
     var velaRuntimeLastErrorCode = null;
@@ -479,8 +480,8 @@
                     grid.insertBefore(button, more);
                 }
             }
-            if (velaSurfaceController) {
-                velaSurfaceController.refreshLayout();
+            if (velaSurfaceShell) {
+                velaSurfaceShell.refreshLayout();
             }
         },
 
@@ -3428,6 +3429,7 @@
             velaRuntimeStatusRevision += 1;
             return velaRuntimeController.initialize().then(function (result) {
                 velaRuntimeStatusRevision += 1;
+                initializeVelaSurfaceController();
                 if (activeToolId === "vela") {
                     renderVelaDetail();
                 }
@@ -3442,10 +3444,10 @@
     }
 
     function initializeVelaSurface() {
-        if (panelShuttingDown || velaSurfaceController || !window.VelaSurface || !window.VelaResizeController || typeof window.VelaSurface.create !== "function") {
+        if (panelShuttingDown || velaSurfaceShell || !window.VelaSurface || !window.VelaResizeController || typeof window.VelaSurface.create !== "function") {
             return;
         }
-        velaSurfaceController = window.VelaSurface.create({
+        velaSurfaceShell = window.VelaSurface.create({
             mountElement: byId("velaSurfaceMount"),
             homeContainer: byId("homeView"),
             headerElement: document.querySelector("#homeView .home-header"),
@@ -3453,8 +3455,31 @@
             openSettings: openSettingsPanel,
             t: tr,
             getUiScale: getVelaSurfaceUiScale,
+            composerReadOnly: false,
             ResizeController: window.VelaResizeController,
             eventTarget: window
+        });
+        velaSurfaceShell.mount();
+        initializeVelaSurfaceController();
+    }
+
+    function initializeVelaSurfaceController() {
+        if (panelShuttingDown || velaSurfaceController || !velaSurfaceShell || !velaRuntimeController || !window.VelaSurfaceController || !window.VelaPresentationModel || !window.VelaTranscriptView || !window.VelaComposerView || typeof window.VelaSurfaceController.create !== "function") {
+            return;
+        }
+        velaSurfaceController = window.VelaSurfaceController.create({
+            surface: velaSurfaceShell,
+            t: tr,
+            PresentationModel: window.VelaPresentationModel,
+            TranscriptView: window.VelaTranscriptView,
+            ComposerView: window.VelaComposerView,
+            provider: {
+                send: function (message) {
+                    return velaRuntimeController.sendProviderMessage({ message: message, endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: VelaProviderModel });
+                },
+                cancel: function () { return velaRuntimeController.cancelProviderRequest(); },
+                getState: function () { return velaRuntimeController.getProviderSurfaceState(); }
+            }
         });
         velaSurfaceController.mount();
     }
@@ -3833,6 +3858,9 @@
                 if (velaSurfaceController) {
                     velaSurfaceController.resume();
                 }
+                if (velaSurfaceShell) {
+                    velaSurfaceShell.resume();
+                }
             });
         });
     }
@@ -3844,6 +3872,9 @@
         configureToolDetail(toolId);
         if (velaSurfaceController) {
             velaSurfaceController.suspend();
+        }
+        if (velaSurfaceShell) {
+            velaSurfaceShell.suspend();
         }
         resetDetailMorphStyles();
         clearDetailContentClasses();
@@ -3875,6 +3906,9 @@
         updateProceduralHomeBackground();
         if (velaSurfaceController) {
             velaSurfaceController.resume();
+        }
+        if (velaSurfaceShell) {
+            velaSurfaceShell.resume();
         }
     }
 
@@ -6943,7 +6977,10 @@
         refreshSettingsThemePresentation();
         if (velaSurfaceController) {
             velaSurfaceController.refreshLocale();
-            velaSurfaceController.refreshLayout();
+        }
+        if (velaSurfaceShell) {
+            velaSurfaceShell.refreshLocale();
+            velaSurfaceShell.refreshLayout();
         }
     }
 
@@ -6986,6 +7023,9 @@
 
         if (velaSurfaceController) {
             velaSurfaceController.suspend();
+        }
+        if (velaSurfaceShell) {
+            velaSurfaceShell.suspend();
         }
 
         // Keep this at least as long as the CSS press transition (--dur-instant).
@@ -7858,6 +7898,9 @@
         if (velaSurfaceController) {
             velaSurfaceController.suspend();
         }
+        if (velaSurfaceShell) {
+            velaSurfaceShell.suspend();
+        }
         if (velaRuntimeController) {
             velaRuntimeController.suspend();
             velaRuntimeStatusRevision += 1;
@@ -7875,6 +7918,9 @@
         panelSuspended = false;
         if (velaSurfaceController && byId("homeView") && byId("homeView").classList.contains("is-active")) {
             velaSurfaceController.resume();
+        }
+        if (velaSurfaceShell && byId("homeView") && byId("homeView").classList.contains("is-active")) {
+            velaSurfaceShell.resume();
         }
         if (velaRuntimeController) {
             velaRuntimeController.resume();
@@ -7896,6 +7942,10 @@
         if (velaSurfaceController) {
             velaSurfaceController.dispose();
             velaSurfaceController = null;
+        }
+        if (velaSurfaceShell) {
+            velaSurfaceShell.dispose();
+            velaSurfaceShell = null;
         }
         if (velaRuntimeController) {
             velaRuntimeController.dispose();
@@ -8297,8 +8347,8 @@
         if (number) {
             number.value = scale;
         }
-        if (velaSurfaceController) {
-            velaSurfaceController.refreshLayout();
+        if (velaSurfaceShell) {
+            velaSurfaceShell.refreshLayout();
         }
     }
 

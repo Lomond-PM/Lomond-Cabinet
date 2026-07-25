@@ -119,6 +119,10 @@ function checkRequiredEntrypoints() {
         "client/css/velaSurface.css",
         "client/js/vela/velaResizeController.js",
         "client/js/vela/velaSurface.js",
+        "client/js/vela/velaPresentationModel.js",
+        "client/js/vela/velaTranscriptView.js",
+        "client/js/vela/velaComposerView.js",
+        "client/js/vela/velaSurfaceController.js",
         "client/js/vela/velaUi.js",
         "client/js/vela/velaCepModuleLoader.js",
         "client/js/vela/velaRuntime.js",
@@ -320,7 +324,7 @@ function checkVelaRuntimeBootstrap() {
     check("Vela CEP loader captures its own URL synchronously", /captureScriptLocation/.test(loader) && /scriptLocation = captureScriptLocation/.test(loader) && !/initializeScriptLocation/.test(loader), "velaCepModuleLoader.js must capture its own script URL before asynchronous loading begins.");
     check("Vela Host adapter remains v4", host.indexOf("vela-context-host-v4") !== -1, "PR A must retain the v4 Host adapter.");
     check("main keeps Vela runtime controller private", main.indexOf("window.velaRuntimeController") === -1 && main.indexOf("window.VelaRuntimeController") === -1, "main.js must not publish a Vela trusted runtime controller.");
-    check("main keeps Vela Surface controller private", main.indexOf("window.velaSurfaceController") === -1 && main.indexOf("window.VelaSurfaceController") === -1, "main.js must not publish the Vela Surface controller.");
+    check("main keeps Vela Surface controller private", main.indexOf("window.velaSurfaceController") === -1 && main.indexOf("window.VelaSurfaceController =") === -1, "main.js must not publish the Vela Surface controller.");
     check("Vela Surface has no execution dependency", !/VelaRuntime|VelaProvider|VelaExecution|VelaController|PlanStore|localStorage/.test(surface), "velaSurface.js must remain presentation-only and session-only.");
     check("Vela runtime has no Registry passthrough", runtime.indexOf("runRegisteredToolAction") === -1 && runtime.indexOf("AEToolbox.tools") === -1, "velaRuntime.js must not route execution through the Registry.");
 }
