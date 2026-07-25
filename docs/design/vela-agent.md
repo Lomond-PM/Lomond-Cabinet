@@ -370,6 +370,35 @@ states expose Send only. A `localProposal` remains non-displayable in this
 surface: it adds no Review, Approve, Reject or execution control. The legacy
 Vela Tool remains available for its existing D2 regression path.
 
+### Formal Vela Surface UI-C
+
+UI-C extends the existing UI-B action slot with a fixed, session-only
+confirmation presentation. It receives only three zero-argument Runtime
+facades—Review, Approve, and Reject—plus a frozen confirmation projection. The
+projection is limited to a state, optional numeric opacity values in the
+inclusive `0..100` range, a diagnostic error code, and its module revision.
+It never exposes a provider request id, candidate id, target, context,
+capture, plan, nonce, digest, authority, or Host payload.
+
+Review remains an explicit, parameterless promotion from `proposal-ready`; it
+does not approve or execute. Approve and Reject operate only on the Runtime's
+private active confirmation. Reject never enters Preflight, ExecutionAdapter,
+or Host. Approve continues through the unchanged candidate freshness,
+Preflight, ExecutionAdapter, and Host boundaries. The Surface action matrix is
+fixed: Send for idle/provider terminals and confirmation terminals, Cancel for
+provider pending, Review for proposal-ready, Approve plus Reject for
+confirmation-ready, and no action while executing. It never renders Execute.
+
+`velaConfirmationView.js` owns stable Review/Approve/Reject controls and an
+opacity-only summary. `velaSurfaceController.js` gives confirmation states
+priority over provider states, ignores late callbacks after suspend/dispose,
+and clears prior execution-terminal presentation when a new send is accepted.
+The textarea, transcript, and controls are never reconstructed. Transcript
+content remains session-only and all user-facing notices and errors are mapped
+through localized PresentationModel text; raw diagnostic codes stay in frozen
+Runtime state and diagnostics. The legacy Vela Tool remains the full D2
+regression entry point throughout UI-C.
+
 ### Protocol hard limits
 
 JSON Schema describes shape, but the protocol also has hard resource limits.

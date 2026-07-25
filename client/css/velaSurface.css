@@ -193,6 +193,16 @@
     min-width: 0;
     min-height: var(--vela-controls-min-height);
     padding: 0 var(--vela-surface-inset) var(--vela-surface-inset) 0;
+    gap: var(--vela-inline-gap);
+}
+
+.vela-confirmation-summary {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-secondary);
+    font-size: var(--font-small);
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .vela-surface-action[hidden] {

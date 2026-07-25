@@ -295,6 +295,19 @@
             try { return Promise.resolve(ensureReadyController().rejectCandidate(input)); }
             catch (error) { return Promise.reject(error); }
         }
+        function activeCandidateInput() {
+            var source = ensureReadyController().getUiState();
+            if (!source || source.state !== "pending-confirmation" || typeof source.candidateId !== "string") { throw safeError("CANDIDATE_STATE_INVALID"); }
+            return { candidateId: source.candidateId };
+        }
+        function approveActiveCandidate() {
+            try { return ensureReadyController().approveCandidate(activeCandidateInput()); }
+            catch (error) { return Promise.reject(error); }
+        }
+        function rejectActiveCandidate() {
+            try { return Promise.resolve(ensureReadyController().rejectCandidate(activeCandidateInput())); }
+            catch (error) { return Promise.reject(error); }
+        }
         function reviewProviderProposal() {
             try {
                 if (disposed || state !== "ready" || !providerProposalRouter) { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
@@ -323,7 +336,15 @@
             var nextState = source && typeof source.state === "string" ? source.state : "failed";
             return Object.freeze({ state: nextState, text: source && typeof source.text === "string" ? source.text : null, errorCode: source && typeof source.errorCode === "string" ? source.errorCode : null, moduleRevision: "vela-provider-surface-v1" });
         }
-        return Object.freeze({ initialize: initialize, getStatus: safeStatus, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, refreshContext: refreshContext, createOpacityCandidate: createOpacityCandidate, approveCandidate: approveCandidate, rejectCandidate: rejectCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderSurfaceState: getProviderSurfaceState });
+        function getConfirmationSurfaceState() {
+            var source = getUiState();
+            var sourceState = source && typeof source.state === "string" ? source.state : "idle";
+            var state = sourceState === "pending-confirmation" ? "confirmation-ready" : sourceState === "executing" ? "executing" : sourceState === "consumed" ? "execution-completed" : sourceState === "discarded" ? "rejected" : sourceState === "failed" || sourceState === "stale" ? "execution-failed" : "idle";
+            var beforeValue = source && typeof source.beforeValue === "number" && isFinite(source.beforeValue) && source.beforeValue >= 0 && source.beforeValue <= 100 ? source.beforeValue : null;
+            var proposedValue = source && typeof source.proposedValue === "number" && isFinite(source.proposedValue) && source.proposedValue >= 0 && source.proposedValue <= 100 ? source.proposedValue : null;
+            return Object.freeze({ state: state, beforeValue: beforeValue, proposedValue: proposedValue, errorCode: source && typeof source.errorCode === "string" ? source.errorCode : null, moduleRevision: "vela-confirmation-surface-v1" });
+        }
+        return Object.freeze({ initialize: initialize, getStatus: safeStatus, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, refreshContext: refreshContext, createOpacityCandidate: createOpacityCandidate, approveCandidate: approveCandidate, rejectCandidate: rejectCandidate, approveActiveCandidate: approveActiveCandidate, rejectActiveCandidate: rejectActiveCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderSurfaceState: getProviderSurfaceState, getConfirmationSurfaceState: getConfirmationSurfaceState });
     }
     return Object.freeze({ createRuntime: createRuntime });
 }));

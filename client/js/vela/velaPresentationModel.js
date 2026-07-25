@@ -38,6 +38,7 @@
         var items = [];
         var pending = false;
         var terminalGeneration = 0;
+        var confirmationState = "idle";
         function snapshot() {
             return Object.freeze({
                 pending: pending,
@@ -70,8 +71,19 @@
             else { append("error", "", errorDisplayKey(code || "PROVIDER_RESPONSE_INVALID")); }
             return snapshot();
         }
-        function reset() { items = []; pending = false; terminalGeneration += 1; return snapshot(); }
-        return Object.freeze({ begin: begin, apply: apply, reset: reset, getSnapshot: snapshot });
+        function applyConfirmation(state, currentSnapshot) {
+            var next = state && typeof state.state === "string" ? state.state : "idle";
+            if (next === confirmationState) { return currentSnapshot || snapshot(); }
+            confirmationState = next;
+            if (next === "confirmation-ready") { append("notice", "", "vela.surfaceConfirmationReady"); }
+            else if (next === "rejected") { append("notice", "", "vela.surfaceConfirmationRejected"); }
+            else if (next === "execution-completed") { append("notice", "", "vela.surfaceExecutionCompleted"); }
+            else if (next === "execution-failed") { append("error", "", errorDisplayKey(state && state.errorCode)); }
+            return snapshot();
+        }
+        function clearConfirmationTerminal() { if (confirmationState === "execution-completed" || confirmationState === "rejected" || confirmationState === "execution-failed") { confirmationState = "idle"; } return snapshot(); }
+        function reset() { items = []; pending = false; confirmationState = "idle"; terminalGeneration += 1; return snapshot(); }
+        return Object.freeze({ begin: begin, apply: apply, applyConfirmation: applyConfirmation, clearConfirmationTerminal: clearConfirmationTerminal, reset: reset, getSnapshot: snapshot });
     }
     return Object.freeze({ create: create, errorDisplayKey: errorDisplayKey });
 }));

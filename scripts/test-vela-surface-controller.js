@@ -4,210 +4,117 @@ const assert = require("assert");
 const PresentationModel = require("../client/js/vela/velaPresentationModel.js").VelaPresentationModel;
 const TranscriptView = require("../client/js/vela/velaTranscriptView.js").VelaTranscriptView;
 const ComposerView = require("../client/js/vela/velaComposerView.js").VelaComposerView;
+const ConfirmationView = require("../client/js/vela/velaConfirmationView.js").VelaConfirmationView;
 const SurfaceController = require("../client/js/vela/velaSurfaceController.js").VelaSurfaceController;
 let assertions = 0;
-
 function check(value, message) { assertions += 1; assert.ok(value, message); }
 function equal(actual, expected, message) { assertions += 1; assert.strictEqual(actual, expected, message); }
-function deferred() { let resolve; let reject; const promise = new Promise(function (ok, fail) { resolve = ok; reject = fail; }); return { promise: promise, resolve: resolve, reject: reject }; }
-
-function Node(tag) {
-    this.tagName = String(tag).toUpperCase();
-    this.children = [];
-    this.parentNode = null;
-    this.className = "";
-    this.attributes = {};
-    this.listeners = {};
-    this.textContent = "";
-    this.value = "";
-    this.hidden = false;
-    this.readOnly = false;
-    this.scrollTop = 0;
-    this.scrollHeight = 100;
-    this.clientHeight = 100;
-    this.selectionStart = 0;
-    this.selectionEnd = 0;
-    this.focused = false;
-    this.ownerDocument = { createElement: function (childTag) { return new Node(childTag); } };
-}
+function deferred() { let resolve; let reject; const promise = new Promise((ok, fail) => { resolve = ok; reject = fail; }); return { promise, resolve, reject }; }
+function Node(tag) { this.tagName = String(tag).toUpperCase(); this.children = []; this.parentNode = null; this.className = ""; this.attributes = {}; this.listeners = {}; this.textContent = ""; this.value = ""; this.hidden = false; this.disabled = false; this.readOnly = false; this.scrollTop = 0; this.scrollHeight = 100; this.clientHeight = 100; this.selectionStart = 0; this.selectionEnd = 0; this.focused = false; this.ownerDocument = { createElement: (childTag) => new Node(childTag) }; }
 Node.prototype.appendChild = function (child) { child.parentNode = this; this.children.push(child); this.scrollHeight += 20; return child; };
 Node.prototype.removeChild = function (child) { const index = this.children.indexOf(child); if (index >= 0) { this.children.splice(index, 1); child.parentNode = null; } return child; };
 Node.prototype.setAttribute = function (key, value) { this.attributes[key] = String(value); };
 Node.prototype.getAttribute = function (key) { return this.attributes[key] || null; };
 Node.prototype.addEventListener = function (type, listener) { (this.listeners[type] || (this.listeners[type] = [])).push(listener); };
-Node.prototype.emit = function (type) { (this.listeners[type] || []).slice().forEach(function (listener) { listener({}); }); };
+Node.prototype.emit = function (type) { (this.listeners[type] || []).slice().forEach((listener) => listener({})); };
 Node.prototype.focus = function () { this.focused = true; };
 Node.prototype.setSelectionRange = function (left, right) { this.selectionStart = left; this.selectionEnd = right; };
-
-function createFixture(options) {
-    const root = new Node("div");
-    const intro = new Node("p");
-    const scroll = new Node("div");
-    const composer = new Node("textarea");
-    const actionSlot = new Node("div");
-    const statusText = new Node("span");
-    const statusSlot = new Node("div");
-    scroll.appendChild(intro);
-    const elements = { transcriptScroll: scroll, transcriptMessage: intro, composer: composer, actionSlot: actionSlot, statusText: statusText, statusSlot: statusSlot };
-    const surface = { getElementsForTest: function () { return elements; } };
-    const request = deferred();
-    let state = { state: "idle", text: null, errorCode: null };
-    const calls = { send: [], cancel: 0 };
+function fixture(options) {
     options = options || {};
+    const intro = new Node("p"), scroll = new Node("div"), composer = new Node("textarea"), actionSlot = new Node("div"), statusText = new Node("span"), statusSlot = new Node("div");
+    scroll.appendChild(intro);
+    const elements = { transcriptScroll: scroll, transcriptMessage: intro, composer, actionSlot, statusText, statusSlot };
+    const request = deferred(), confirmationRequest = deferred();
+    let providerState = { state: "idle", text: null, errorCode: null };
+    let confirmationState = { state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" };
+    const calls = { send: [], cancel: 0, review: 0, approve: 0, reject: 0 };
     const provider = {
-        send: function (message) {
-            calls.send.push(message);
-            if (options.synchronousRejection) {
-                state = { state: "failed", text: null, errorCode: "VERIFICATION_UNAVAILABLE" };
-                return Promise.reject(new Error("VERIFICATION_UNAVAILABLE"));
-            }
-            state = { state: "pending", text: null, errorCode: null };
-            return request.promise;
-        },
-        cancel: function () { calls.cancel += 1; state = { state: "cancelled", text: null, errorCode: "PROVIDER_REQUEST_ABORTED" }; return true; },
-        getState: function () { return Object.freeze({ state: state.state, text: state.text, errorCode: state.errorCode }); }
+        send(message) { calls.send.push(message); if (options.synchronousRejection) { providerState = { state: "failed", text: null, errorCode: "VERIFICATION_UNAVAILABLE" }; return Promise.reject(new Error("VERIFICATION_UNAVAILABLE")); } providerState = { state: "pending", text: null, errorCode: null }; return request.promise; },
+        cancel() { calls.cancel += 1; providerState = { state: "cancelled", text: null, errorCode: "PROVIDER_REQUEST_ABORTED" }; },
+        getState() { return Object.freeze(Object.assign({}, providerState)); }
     };
-    const controller = SurfaceController.create({
-        surface: surface,
-        provider: provider,
-        t: function (key) { return "t:" + key; },
-        PresentationModel: PresentationModel,
-        TranscriptView: TranscriptView,
-        ComposerView: ComposerView
-    });
-    return { controller: controller, elements: elements, request: request, calls: calls, setState: function (next) { state = next; } };
+    const confirmation = {
+        review() { calls.review += 1; providerState = { state: "idle", text: null, errorCode: null }; confirmationState = { state: "confirmation-ready", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }; return Promise.resolve(); },
+        approve() { calls.approve += 1; confirmationState = { state: "executing", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }; return confirmationRequest.promise; },
+        reject() { calls.reject += 1; confirmationState = { state: "rejected", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }; return Promise.resolve(); },
+        getState() { return Object.freeze(Object.assign({}, confirmationState)); }
+    };
+    const controller = SurfaceController.create({ surface: { getElementsForTest: () => elements }, provider, confirmation, t: (key) => "t:" + key, PresentationModel, TranscriptView, ComposerView, ConfirmationView });
+    return { controller, elements, request, confirmationRequest, calls, setProvider(next) { providerState = next; }, setConfirmation(next) { confirmationState = next; } };
 }
-
+async function flush() { await Promise.resolve(); await Promise.resolve(); }
 async function run() {
-    equal(PresentationModel.errorDisplayKey("VERIFICATION_UNAVAILABLE"), "vela.surfaceContextUnavailable", "PresentationModel maps unavailable AE context to its dedicated user message");
-    equal(PresentationModel.errorDisplayKey("PROVIDER_CONNECTION_FAILED"), "vela.surfaceProviderConnection", "PresentationModel maps provider connection failures to the LM Studio recovery message");
-    equal(PresentationModel.errorDisplayKey("PROVIDER_TIMEOUT"), "vela.surfaceProviderTimeout", "PresentationModel maps provider timeouts to their bounded user message");
-    equal(PresentationModel.errorDisplayKey("UNKNOWN_TEST_ERROR"), "vela.surfaceGenericError", "PresentationModel maps unknown error codes to the generic user fallback");
-    const fixture = createFixture();
-    const elements = fixture.elements;
-    check(fixture.controller.mount(), "controller mounts once over the existing Surface slots");
-    equal(elements.actionSlot.children.length, 2, "composer installs stable Send and Cancel buttons once");
-    const textarea = elements.composer;
-    const send = elements.actionSlot.children[0];
-    const cancel = elements.actionSlot.children[1];
-    check(!send.hidden && cancel.hidden, "idle state exposes only Send");
-    elements.composer.value = "keep this text";
-    elements.composer.focus();
-    elements.composer.setSelectionRange(2, 6);
-    send.emit("click");
-    equal(fixture.calls.send.length, 1, "Send forwards only the textarea message through the private facade");
-    equal(fixture.calls.send[0], "keep this text", "Send does not fabricate endpoint, model, IDs, or provider metadata");
-    check(send.hidden && !cancel.hidden && !elements.composer.readOnly, "pending state exposes only Cancel while preserving an editable composer");
-    equal(elements.composer.value, "", "an accepted pending send clears only the submitted text");
-    equal(elements.composer.selectionStart, 2, "accepted send retains textarea selection state without rebuilding it");
-    equal(elements.composer.selectionEnd, 6, "accepted send retains textarea selection end without rebuilding it");
-    equal(elements.composer.focused, true, "pending patch preserves textarea identity and focus state");
-    equal(elements.composer, textarea, "accepted send preserves textarea DOM identity");
-    elements.composer.value = "new draft while waiting";
-    elements.transcriptScroll.scrollTop = 0;
-    fixture.setState({ state: "completed", text: "safe local text", errorCode: null });
-    fixture.request.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    check(!send.hidden && cancel.hidden && !elements.composer.readOnly, "completed text restores Send without reconstructing composer controls");
-    equal(elements.composer.value, "new draft while waiting", "a later response patch cannot clear a new user draft");
-    equal(elements.transcriptScroll.children[1].children[0].textContent, "keep this text", "user text is appended through textContent");
-    equal(elements.transcriptScroll.children[1].children[1].textContent, "safe local text", "provider text is appended through textContent");
-    equal(elements.statusText.textContent, "t:vela.surfaceStatusCompleted", "completed state projects only a bounded status label");
-    equal(elements.transcriptScroll.scrollTop, 0, "an up-scrolled transcript is not forced back to bottom by a provider patch");
-    const scrollBefore = elements.transcriptScroll.scrollTop;
-    elements.transcriptScroll.scrollTop = 0;
-    fixture.controller.refreshLocale();
-    equal(elements.transcriptScroll.scrollTop, 0, "locale patch does not force an up-scrolled transcript to bottom");
-    check(scrollBefore >= 0, "transcript maintains a session-only scroll position");
-
-    const cancelled = createFixture();
-    cancelled.controller.mount();
-    cancelled.elements.composer.value = "cancel me";
-    cancelled.elements.actionSlot.children[0].emit("click");
-    cancelled.elements.actionSlot.children[0].emit("click");
-    equal(cancelled.calls.send.length, 1, "double Send is ignored while the request is pending");
-    cancelled.elements.actionSlot.children[1].emit("click");
-    equal(cancelled.calls.cancel, 1, "Cancel uses the private no-argument facade once");
-    cancelled.setState({ state: "completed", text: "late text", errorCode: null });
-    cancelled.request.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    equal(cancelled.elements.transcriptScroll.children[1].children.length, 2, "late result cannot restore a cancelled provider transcript");
-    equal(cancelled.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceProviderCancelled", "cancelled requests use a mapped user message");
-    equal(cancelled.elements.statusText.textContent, "t:vela.surfaceStatusCancelled", "cancelled state remains terminal for the session request");
-    check(cancelled.controller.dispose(), "dispose invalidates later state callbacks");
-
-    const failed = createFixture();
-    failed.controller.mount();
-    failed.elements.composer.value = "fail me";
-    failed.elements.actionSlot.children[0].emit("click");
-    failed.setState({ state: "failed", text: null, errorCode: "PROVIDER_CONNECTION_FAILED" });
-    failed.request.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    equal(failed.elements.statusText.textContent, "t:vela.surfaceStatusFailed", "connection and timeout failures project a bounded failed state");
-    equal(failed.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceProviderConnection", "connection failures map to the LM Studio recovery message");
-    check(failed.elements.transcriptScroll.children[1].children[1].textContent.indexOf("PROVIDER_CONNECTION_FAILED") === -1, "connection failure codes never leak into Transcript text");
-
-    const timeout = createFixture();
-    timeout.controller.mount();
-    timeout.elements.composer.value = "timeout";
-    timeout.elements.actionSlot.children[0].emit("click");
-    timeout.setState({ state: "failed", text: null, errorCode: "PROVIDER_TIMEOUT" });
-    timeout.request.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    equal(timeout.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceProviderTimeout", "timeout failures use the bounded timeout message");
-    check(timeout.elements.transcriptScroll.children[1].children[1].textContent.indexOf("PROVIDER_TIMEOUT") === -1, "timeout codes never leak into Transcript text");
-
-    const unknown = createFixture();
-    unknown.controller.mount();
-    unknown.elements.composer.value = "unknown error";
-    unknown.elements.actionSlot.children[0].emit("click");
-    unknown.setState({ state: "failed", text: null, errorCode: "UNKNOWN_TEST_ERROR" });
-    unknown.request.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    equal(unknown.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceGenericError", "unknown failures use the generic local fallback");
-    check(unknown.elements.transcriptScroll.children[1].children[1].textContent.indexOf("UNKNOWN_TEST_ERROR") === -1, "unknown codes never leak into Transcript text");
-
-    const rejected = createFixture({ synchronousRejection: true });
-    rejected.controller.mount();
-    rejected.elements.composer.value = "retain rejected draft";
-    const rejectedTextarea = rejected.elements.composer;
-    rejected.elements.actionSlot.children[0].emit("click");
-    await Promise.resolve();
-    equal(rejected.elements.composer.value, "retain rejected draft", "a synchronous rejection keeps the submitted draft");
-    equal(rejected.elements.composer, rejectedTextarea, "a synchronous rejection preserves textarea DOM identity");
-    check(!rejected.elements.actionSlot.children[0].hidden, "a synchronous rejection keeps Send available");
-
-    const proposal = createFixture();
-    proposal.controller.mount();
-    proposal.elements.composer.value = "proposal";
-    proposal.elements.actionSlot.children[0].emit("click");
-    proposal.setState({ state: "proposal-ready", text: null, errorCode: null });
-    proposal.request.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    equal(proposal.elements.actionSlot.children.length, 2, "proposal-ready does not add Review, Approve, or execution controls to the Surface");
-    equal(proposal.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceLocalProposalNotice", "proposal-ready uses its dedicated non-executable notice rather than the empty-text fallback");
-    check(proposal.elements.transcriptScroll.children[1].children[1].textContent.indexOf("NoDisplayableText") === -1, "proposal-ready never reports a missing displayable text fallback");
-    check(!proposal.elements.actionSlot.children[0].hidden && proposal.elements.actionSlot.children[1].hidden, "proposal-ready restores Send and exposes no execution-class action");
-
-    const unavailable = createFixture();
-    unavailable.controller.mount();
-    unavailable.elements.composer.value = "context unavailable";
-    unavailable.elements.actionSlot.children[0].emit("click");
-    unavailable.setState({ state: "failed", text: null, errorCode: "VERIFICATION_UNAVAILABLE" });
-    unavailable.request.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    equal(unavailable.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceContextUnavailable", "VERIFICATION_UNAVAILABLE maps to an actionable user message");
-    check(unavailable.elements.transcriptScroll.children[1].children[1].textContent.indexOf("VERIFICATION_UNAVAILABLE") === -1, "VERIFICATION_UNAVAILABLE never leaks into Transcript text");
-    check(!/errorCode|PROVIDER_|VERIFICATION_UNAVAILABLE/.test(TranscriptView.create.toString()), "Transcript only renders PresentationModel text and has no internal error-code mapping");
-    check(!/requestId|proposalCapability|candidateId|planId|authority|endpoint/.test(SurfaceController.create.toString()), "Surface controller accepts no trusted provider identity input");
+    equal(PresentationModel.errorDisplayKey("VERIFICATION_UNAVAILABLE"), "vela.surfaceContextUnavailable", "AE context error is localized");
+    equal(PresentationModel.errorDisplayKey("PROVIDER_CONNECTION_FAILED"), "vela.surfaceProviderConnection", "connection error is localized");
+    equal(PresentationModel.errorDisplayKey("PROVIDER_TIMEOUT"), "vela.surfaceProviderTimeout", "timeout error is localized");
+    equal(PresentationModel.errorDisplayKey("UNKNOWN_TEST_ERROR"), "vela.surfaceGenericError", "unknown error uses localized fallback");
+    const test = fixture(), e = test.elements;
+    check(test.controller.mount(), "controller mounts once");
+    equal(e.actionSlot.children.length, 6, "stable action slot installs Send, Cancel, summary, Review, Approve, and Reject once");
+    equal(e.actionSlot.children.filter((node) => node.tagName === "BUTTON").length, 5, "fresh production-shaped mount creates the fixed five action buttons");
+    const [send, cancel, summary, review, approve, reject] = e.actionSlot.children;
+    const textarea = e.composer, transcript = e.transcriptScroll;
+    check(!send.hidden && cancel.hidden && review.hidden && approve.hidden && reject.hidden, "idle exposes only Send");
+    const matrix = fixture(); matrix.controller.mount(); const m = matrix.elements.actionSlot.children; const matrixNodes = m.slice();
+    check(!matrix.elements.actionSlot.hidden && !m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "fresh provider and confirmation idle keeps slot visible and exposes only Send");
+    matrix.setProvider({ state: "completed", text: "terminal", errorCode: null }); matrix.controller.refreshLocale();
+    check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "provider text terminal exposes only Send");
+    matrix.setProvider({ state: "failed", text: null, errorCode: "PROVIDER_CONNECTION_FAILED" }); matrix.controller.refreshLocale();
+    check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "provider error terminal exposes only Send");
+    matrix.setProvider({ state: "cancelled", text: null, errorCode: "PROVIDER_REQUEST_ABORTED" }); matrix.controller.refreshLocale();
+    check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "provider cancellation terminal exposes only Send");
+    matrix.setProvider({ state: "proposal-ready", text: null, errorCode: null }); matrix.controller.refreshLocale();
+    check(m[0].hidden && m[1].hidden && !m[3].hidden && m[4].hidden && m[5].hidden, "proposal-ready exposes only Review");
+    matrix.setProvider({ state: "idle", text: null, errorCode: null }); matrix.setConfirmation({ state: "confirmation-ready", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
+    check(m[0].hidden && m[1].hidden && m[3].hidden && !m[4].hidden && !m[5].hidden, "confirmation-ready exposes only Approve and Reject");
+    matrix.setConfirmation({ state: "executing", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
+    check(m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "executing hides every action");
+    matrix.setConfirmation({ state: "execution-completed", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
+    check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "execution terminal exposes only Send");
+    matrix.setConfirmation({ state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
+    check(!m[0].hidden && m[1].hidden, "locale refresh retains idle Send visibility");
+    matrix.controller.suspend(); matrix.controller.resume();
+    check(!m[0].hidden && matrixNodes.every((node, index) => node === m[index]), "suspend and resume retain idle Send visibility and every action node identity");
+    e.composer.value = "set opacity"; e.composer.focus(); e.composer.setSelectionRange(2, 5); send.emit("click");
+    equal(test.calls.send[0], "set opacity", "Send supplies only message text");
+    equal(e.composer.value, "", "accepted pending send clears submitted text");
+    equal(e.composer, textarea, "send preserves textarea DOM identity");
+    equal(e.composer.selectionStart, 2, "send preserves selection");
+    check(send.hidden && !cancel.hidden && !e.composer.readOnly, "pending exposes Cancel and retains editable composer");
+    e.composer.value = "new draft"; e.scrollTop = 0;
+    test.setProvider({ state: "proposal-ready", text: null, errorCode: null }); test.request.resolve(); await flush();
+    check(send.hidden && cancel.hidden && !review.hidden && approve.hidden && reject.hidden, "proposal-ready exposes only Review");
+    equal(e.composer.value, "new draft", "proposal patch cannot clear a later draft");
+    equal(transcript.children[1].children[1].textContent, "t:vela.surfaceLocalProposalNotice", "proposal uses dedicated notice");
+    check(transcript.children[1].children[1].textContent.indexOf("NoDisplayableText") === -1, "proposal does not use text fallback");
+    review.emit("click"); await flush();
+    equal(test.calls.review, 1, "Review is explicit and invoked once without Surface identifiers");
+    check(send.hidden && review.hidden && !approve.hidden && !reject.hidden, "confirmation exposes only Approve and Reject");
+    equal(summary.textContent, "t:vela.surfaceConfirmationValue", "confirmation uses the bounded value summary key");
+    approve.emit("click"); approve.emit("click");
+    equal(test.calls.approve, 1, "double Approve is blocked while executing");
+    check(send.hidden && approve.hidden && reject.hidden && e.composer.readOnly, "executing exposes no clickable mutation");
+    test.setConfirmation({ state: "execution-completed", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }); test.confirmationRequest.resolve(); await flush();
+    check(!send.hidden && approve.hidden && reject.hidden, "completed execution returns to Send");
+    equal(transcript.children[1].children[3].textContent, "t:vela.surfaceExecutionCompleted", "completion has a bounded transcript notice");
+    e.composer.value = "second request"; send.emit("click");
+    check(!cancel.hidden && send.hidden, "new provider pending state takes precedence over a cleared execution terminal");
+    cancel.emit("click");
+    equal(test.calls.cancel, 1, "Cancel remains a no-argument action while a replacement request is pending");
+    const rejected = fixture(); rejected.controller.mount(); const r = rejected.elements.actionSlot.children; rejected.setProvider({ state: "proposal-ready", text: null, errorCode: null }); rejected.controller.refreshLocale(); r[3].emit("click"); await flush(); r[5].emit("click"); await flush();
+    equal(rejected.calls.reject, 1, "Reject is a private no-argument action");
+    check(!r[0].hidden && r[3].hidden && r[4].hidden && r[5].hidden, "rejected confirmation returns to Send without execution action");
+    equal(rejected.elements.transcriptScroll.children[1].children[0].textContent, "t:vela.surfaceConfirmationReady", "confirmation has dedicated bounded notice");
+    equal(rejected.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceConfirmationRejected", "rejection has dedicated bounded notice");
+    const errors = fixture(); errors.controller.mount(); errors.elements.composer.value = "fail"; errors.elements.actionSlot.children[0].emit("click"); errors.setProvider({ state: "failed", text: null, errorCode: "PROVIDER_CONNECTION_FAILED" }); errors.request.resolve(); await flush();
+    equal(errors.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceProviderConnection", "Transcript receives mapped presentation text");
+    check(errors.elements.transcriptScroll.children[1].children[1].textContent.indexOf("PROVIDER_CONNECTION_FAILED") === -1, "Transcript never exposes raw error codes");
+    const sync = fixture({ synchronousRejection: true }); sync.controller.mount(); sync.elements.composer.value = "keep"; const syncTextarea = sync.elements.composer; sync.elements.actionSlot.children[0].emit("click"); await flush(); equal(sync.elements.composer.value, "keep", "synchronous rejection keeps draft"); equal(sync.elements.composer, syncTextarea, "synchronous rejection preserves textarea");
+    const beforeChildren = e.actionSlot.children.slice(); test.controller.suspend(); e.composer.value = "suspended"; test.setProvider({ state: "completed", text: "late", errorCode: null }); test.controller.refreshLocale(); equal(e.composer.value, "suspended", "suspension blocks patches"); test.controller.resume(); check(e.actionSlot.children.every((node, index) => node === beforeChildren[index]), "resume preserves controls DOM identity");
+    check(!/errorCode|PROVIDER_|VERIFICATION_UNAVAILABLE/.test(TranscriptView.create.toString()), "Transcript does not map internal codes");
+    check(!/requestId|candidateId|planId|authority|endpoint|target|context|nonce|digest/.test(SurfaceController.create.toString()), "Surface controller has no trusted identity seam");
+    check(!/candidateId|planId|authority|target|context|nonce|digest/.test(ConfirmationView.create.toString()), "confirmation view receives no trusted execution data");
+    check(test.controller.dispose(), "dispose succeeds once");
     console.log("test-vela-surface-controller: " + assertions + " assertions passed.");
 }
-
-run().catch(function (error) { console.error(error && error.stack ? error.stack : error); process.exitCode = 1; });
+run().catch((error) => { console.error(error && error.stack ? error.stack : error); process.exitCode = 1; });

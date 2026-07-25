@@ -122,6 +122,7 @@ function checkRequiredEntrypoints() {
         "client/js/vela/velaPresentationModel.js",
         "client/js/vela/velaTranscriptView.js",
         "client/js/vela/velaComposerView.js",
+        "client/js/vela/velaConfirmationView.js",
         "client/js/vela/velaSurfaceController.js",
         "client/js/vela/velaUi.js",
         "client/js/vela/velaCepModuleLoader.js",

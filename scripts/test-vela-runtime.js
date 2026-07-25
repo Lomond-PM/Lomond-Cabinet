@@ -37,8 +37,9 @@ function createController(options) {
 async function run() {
     const controller = createController();
     check(Object.isFrozen(controller), "Controller is frozen.");
-    check(Object.keys(controller).sort().join(",") === "approveCandidate,cancelProviderRequest,createOpacityCandidate,dispose,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,initialize,refreshContext,rejectCandidate,resetSession,resume,reviewProviderProposal,sendProviderMessage,suspend", "Controller exposes only lifecycle and bounded Vela UI methods.");
+    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,approveCandidate,cancelProviderRequest,createOpacityCandidate,dispose,getConfirmationSurfaceState,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,initialize,refreshContext,rejectActiveCandidate,rejectCandidate,resetSession,resume,reviewProviderProposal,sendProviderMessage,suspend", "Controller exposes only lifecycle and bounded Vela UI methods.");
     check(controller.cancelProviderRequest.length === 0, "Provider cancellation has no caller-supplied request identifier seam.");
+    check(controller.approveActiveCandidate.length === 0 && controller.rejectActiveCandidate.length === 0, "Surface confirmation facades accept no caller-supplied candidate identifier.");
     check(!Object.prototype.hasOwnProperty.call(controller, "getPreflight") && !Object.prototype.hasOwnProperty.call(controller, "getBridge") && !Object.prototype.hasOwnProperty.call(controller, "executeHostRequest"), "Controller does not expose private execution objects.");
     const first = controller.initialize();
     const second = controller.initialize();
@@ -50,6 +51,9 @@ async function run() {
     check(!Object.prototype.hasOwnProperty.call(status, "sessionId") && !Object.prototype.hasOwnProperty.call(status, "planStore"), "Status does not leak trusted runtime state.");
     check(Object.isFrozen(controller.getUiState()) && !Object.prototype.hasOwnProperty.call(controller.getUiState(), "planId") && !Object.prototype.hasOwnProperty.call(controller.getUiState(), "propertyValueDigest"), "UI state is frozen and does not leak private plan or digest data.");
     check(Object.isFrozen(controller.getProviderSurfaceState()) && !Object.prototype.hasOwnProperty.call(controller.getProviderSurfaceState(), "requestId") && !Object.prototype.hasOwnProperty.call(controller.getProviderSurfaceState(), "proposalCapabilityId"), "Provider Surface projection is frozen and excludes request and proposal authority.");
+    check(Object.isFrozen(controller.getConfirmationSurfaceState()) && Object.keys(controller.getConfirmationSurfaceState()).sort().join(",") === "beforeValue,errorCode,moduleRevision,proposedValue,state" && !/candidate|target|context|plan|nonce|digest|authority|payload/i.test(Object.keys(controller.getConfirmationSurfaceState()).join(",")), "Confirmation Surface projection is frozen and excludes trusted execution data.");
+    await expectCode(controller.approveActiveCandidate(), "CANDIDATE_STATE_INVALID", "Approve facade fails closed without a pending confirmation.");
+    await expectCode(controller.rejectActiveCandidate(), "CANDIDATE_STATE_INVALID", "Reject facade fails closed without a pending confirmation.");
     check((await controller.initialize()).state === "ready" && controller.getStatus().state === "ready", "Repeated initialization is idempotent.");
     check(controller.suspend() === true && controller.getStatus().state === "suspended", "Suspend forwards to the private bridge.");
     check(controller.suspend() === false, "Duplicate suspend is inert.");
