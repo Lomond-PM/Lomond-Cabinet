@@ -13,6 +13,7 @@
     var velaSurfaceController = null;
     var velaSurfaceBootstrapState = "idle";
     var velaSurfaceBootstrapRevision = 0;
+    var pendingSettingsFocusSectionId = null;
     var velaRuntimeStatusRevision = 0;
     var velaRuntimeLastErrorCode = null;
     var hostLoaded = false;
@@ -1416,6 +1417,7 @@
         renderer = document.createElement("div");
         renderer.className = "settings-renderer";
         renderer.appendChild(createSettingsSectionMount("settingsLanguageMount", "settings-section"));
+        renderer.appendChild(createSettingsSectionMount("settingsVelaMount", "settings-section"));
         renderer.appendChild(createSettingsSectionMount("settingsDeveloperModeMount", "settings-section"));
         renderer.appendChild(createSettingsSectionMount("settingsMotionMount", "settings-section"));
         renderer.appendChild(createSettingsSectionMount("settingsThemeMount", "settings-section"));
@@ -1577,6 +1579,19 @@
         switchWrap.appendChild(input);
         switchWrap.appendChild(track);
         return switchWrap;
+    }
+
+    function createSharedSettingsTextInput(id, field, value) {
+        var input = document.createElement("input");
+        input.id = id;
+        input.type = "text";
+        input.className = "registry-text-input settings-text-input";
+        input.value = value === null || value === undefined ? "" : String(value);
+        if (field && typeof field.maxLength === "number") {
+            input.maxLength = field.maxLength;
+        }
+        input.setAttribute("spellcheck", field && field.spellcheck === true ? "true" : "false");
+        return input;
     }
 
     function dispatchSettingsControlEvent(element, type) {
@@ -2072,6 +2087,37 @@
         fieldRow = createSharedSettingsFieldRow("select", field, null, "English / \u7b80\u4f53\u4e2d\u6587");
         select = createSharedSettingsSelect("languageSelect", field, window.I18n && window.I18n.getLanguage ? window.I18n.getLanguage() : null);
         fieldRow.controls.appendChild(select);
+        mount.appendChild(heading);
+        mount.appendChild(fieldRow.row);
+    }
+
+    function renderSettingsVela() {
+        var mount = byId("settingsVelaMount");
+        var section = findSettingsSchemaSection("vela");
+        var field;
+        var heading;
+        var fieldRow;
+        var input;
+        function saveModel() {
+            VelaProviderModel = normalizeVelaProviderModel(input.value);
+            input.value = VelaProviderModel;
+            saveSettings();
+        }
+        if (!mount || !section) {
+            return;
+        }
+        field = findSettingsSectionField(section, "velaProviderModel");
+        if (!field) {
+            return;
+        }
+        mount.innerHTML = "";
+        mount.className = "settings-section";
+        heading = createSettingsSectionHeader("vela.surfaceLabel", section.titleKey, section.descriptionKey);
+        fieldRow = createSharedSettingsFieldRow("text", field, field.descriptionKey, "");
+        input = createSharedSettingsTextInput(field.key, field, VelaProviderModel);
+        input.addEventListener("change", saveModel);
+        input.addEventListener("blur", saveModel);
+        fieldRow.controls.appendChild(input);
         mount.appendChild(heading);
         mount.appendChild(fieldRow.row);
     }
@@ -3079,13 +3125,7 @@
 
     function renderSettingsBackgroundText(field, inputId) {
         var fieldRow = createSharedSettingsFieldRow("text", field, field.descriptionKey, "");
-        var input = document.createElement("input");
-
-        input.id = inputId;
-        input.type = "text";
-        input.className = "registry-text-input settings-text-input";
-        input.value = field.defaultValue || "";
-        input.setAttribute("spellcheck", "false");
+        var input = createSharedSettingsTextInput(inputId, field, field.defaultValue || "");
         fieldRow.row.className += " bg-control-row";
         fieldRow.row.removeChild(fieldRow.controls);
         fieldRow.controls.appendChild(input);
@@ -3479,7 +3519,7 @@
             homeContainer: byId("homeView"),
             headerElement: document.querySelector("#homeView .home-header"),
             toolPoolElement: byId("toolGrid"),
-            openSettings: openSettingsPanel,
+            openSettings: openVelaSettingsPanel,
             t: tr,
             getUiScale: getVelaSurfaceUiScale,
             composerReadOnly: false,
@@ -8512,6 +8552,9 @@
         var data = settings || DefaultSettings;
         var speed = clampNumber(data.motionSpeed, DefaultSettings.motionSpeed, 0.75, 1.35);
         VelaProviderModel = normalizeVelaProviderModel(data.velaProviderModel);
+        if (byId("velaProviderModel")) {
+            byId("velaProviderModel").value = VelaProviderModel;
+        }
         byId("motionSpeed").value = speed;
         byId("motionSpeedNumber").value = speed;
         motionScale = speed;
@@ -8582,6 +8625,7 @@
                 endAnimation();
                 nextFrame(function () {
                     revealSettingsContent();
+                    focusPendingSettingsSection();
                 });
             });
         });
@@ -8591,6 +8635,7 @@
         var view = byId("settingsView");
 
         view.classList.add("no-transition");
+        pendingSettingsFocusSectionId = null;
         view.classList.remove("is-open", "is-morphing");
         view.setAttribute("aria-hidden", "true");
         view.offsetWidth;
@@ -8606,7 +8651,36 @@
         });
     }
 
-    function openSettingsPanel() {
+    function focusSettingsSection(sectionId) {
+        var mount = byId(sectionId === "vela" ? "settingsVelaMount" : "");
+        var input = sectionId === "vela" ? byId("velaProviderModel") : null;
+        if (!mount) {
+            return false;
+        }
+        try {
+            mount.scrollIntoView({ block: "nearest" });
+        } catch (error) {
+            try { mount.scrollIntoView(true); } catch (ignored) {}
+        }
+        if (input && typeof input.focus === "function") {
+            input.focus();
+        }
+        return true;
+    }
+
+    function focusPendingSettingsSection() {
+        var sectionId = pendingSettingsFocusSectionId;
+        pendingSettingsFocusSectionId = null;
+        if (sectionId) {
+            focusSettingsSection(sectionId);
+        }
+    }
+
+    function openVelaSettingsPanel() {
+        openSettingsPanel("vela");
+    }
+
+    function openSettingsPanel(focusSectionId) {
         var view = byId("settingsView");
         var panel;
         var backdrop;
@@ -8615,7 +8689,14 @@
         var sourceRect;
         var finishGate;
 
-        if (!view || byId("appShell").classList.contains("is-animating") || view.classList.contains("is-open")) {
+        if (focusSectionId) {
+            pendingSettingsFocusSectionId = focusSectionId;
+        }
+        if (!view || byId("appShell").classList.contains("is-animating")) {
+            return;
+        }
+        if (view.classList.contains("is-open")) {
+            focusPendingSettingsSection();
             return;
         }
         ensurePaletteWorkspaceClosed();
@@ -8767,6 +8848,7 @@
         setupMotionSpeed();
         setupUiScale();
         renderSettingsLanguage();
+        renderSettingsVela();
         renderSettingsDeveloperMode();
         setupHomeIconRadius();
         setupHomeDragShadowIntensity();
