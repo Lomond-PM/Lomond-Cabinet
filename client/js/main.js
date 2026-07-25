@@ -11,6 +11,8 @@
     var velaProviderUiController = null;
     var velaSurfaceShell = null;
     var velaSurfaceController = null;
+    var velaSurfaceBootstrapState = "idle";
+    var velaSurfaceBootstrapRevision = 0;
     var velaRuntimeStatusRevision = 0;
     var velaRuntimeLastErrorCode = null;
     var hostLoaded = false;
@@ -3417,6 +3419,31 @@
         }
     }
 
+    function reportVelaSurfaceInitializationError() {
+        if (velaSurfaceBootstrapState === "unavailable") {
+            return;
+        }
+        velaSurfaceBootstrapState = "unavailable";
+        velaSurfaceBootstrapRevision += 1;
+        if (window.console && console.warn) {
+            console.warn("[Vela Surface] initialization unavailable: SURFACE_BOOTSTRAP_UNAVAILABLE");
+        }
+    }
+
+    function clearVelaSurfaceActionSlot() {
+        var elements;
+        var actionSlot;
+        try {
+            elements = velaSurfaceShell && velaSurfaceShell.getElementsForTest ? velaSurfaceShell.getElementsForTest() : null;
+            actionSlot = elements && elements.actionSlot;
+            while (actionSlot && actionSlot.firstChild) {
+                actionSlot.removeChild(actionSlot.firstChild);
+            }
+        } catch (ignored) {
+            /* Surface cleanup remains best-effort and must not affect Runtime state. */
+        }
+    }
+
     function initializeVelaRuntime() {
         if (panelShuttingDown || velaRuntimeController || !window.VelaCepModuleLoader || typeof window.VelaCepModuleLoader.load !== "function") {
             return;
@@ -3427,15 +3454,15 @@
             }
             velaRuntimeController = window.VelaRuntime.createRuntime({ invokeHost: invokeVelaHost });
             velaRuntimeStatusRevision += 1;
-            return velaRuntimeController.initialize().then(function (result) {
-                velaRuntimeStatusRevision += 1;
-                initializeVelaSurfaceController();
-                if (activeToolId === "vela") {
-                    renderVelaDetail();
-                }
-                return result;
-            });
-        }).catch(reportVelaRuntimeError);
+            return velaRuntimeController.initialize();
+        }).then(function (result) {
+            velaRuntimeStatusRevision += 1;
+            initializeVelaSurfaceController();
+            if (activeToolId === "vela") {
+                renderVelaDetail();
+            }
+            return result;
+        }, reportVelaRuntimeError);
     }
 
     function getVelaSurfaceUiScale() {
@@ -3464,31 +3491,51 @@
     }
 
     function initializeVelaSurfaceController() {
-        if (panelShuttingDown || velaSurfaceController || !velaSurfaceShell || !velaRuntimeController || !window.VelaSurfaceController || !window.VelaPresentationModel || !window.VelaTranscriptView || !window.VelaComposerView || !window.VelaConfirmationView || typeof window.VelaSurfaceController.create !== "function" || typeof window.VelaConfirmationView.create !== "function") {
+        var controller;
+        var mounted;
+        if (panelShuttingDown || velaSurfaceController || velaSurfaceBootstrapState === "unavailable" || !velaSurfaceShell || !velaRuntimeController) {
             return;
         }
-        velaSurfaceController = window.VelaSurfaceController.create({
-            surface: velaSurfaceShell,
-            t: tr,
-            PresentationModel: window.VelaPresentationModel,
-            TranscriptView: window.VelaTranscriptView,
-            ComposerView: window.VelaComposerView,
-            ConfirmationView: window.VelaConfirmationView,
-            provider: {
-                send: function (message) {
-                    return velaRuntimeController.sendProviderMessage({ message: message, endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: VelaProviderModel });
+        if (!window.VelaSurfaceController || typeof window.VelaSurfaceController.create !== "function" || !window.VelaPresentationModel || typeof window.VelaPresentationModel.create !== "function" || !window.VelaTranscriptView || typeof window.VelaTranscriptView.create !== "function" || !window.VelaComposerView || typeof window.VelaComposerView.create !== "function" || !window.VelaConfirmationView || typeof window.VelaConfirmationView.create !== "function") {
+            reportVelaSurfaceInitializationError();
+            return;
+        }
+        try {
+            controller = window.VelaSurfaceController.create({
+                surface: velaSurfaceShell,
+                t: tr,
+                PresentationModel: window.VelaPresentationModel,
+                TranscriptView: window.VelaTranscriptView,
+                ComposerView: window.VelaComposerView,
+                ConfirmationView: window.VelaConfirmationView,
+                provider: {
+                    send: function (message) {
+                        return velaRuntimeController.sendProviderMessage({ message: message, endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: VelaProviderModel });
+                    },
+                    cancel: function () { return velaRuntimeController.cancelProviderRequest(); },
+                    getState: function () { return velaRuntimeController.getProviderSurfaceState(); }
                 },
-                cancel: function () { return velaRuntimeController.cancelProviderRequest(); },
-                getState: function () { return velaRuntimeController.getProviderSurfaceState(); }
-            },
-            confirmation: {
-                review: function () { return velaRuntimeController.reviewProviderProposal(); },
-                approve: function () { return velaRuntimeController.approveActiveCandidate(); },
-                reject: function () { return velaRuntimeController.rejectActiveCandidate(); },
-                getState: function () { return velaRuntimeController.getConfirmationSurfaceState(); }
+                confirmation: {
+                    review: function () { return velaRuntimeController.reviewProviderProposal(); },
+                    approve: function () { return velaRuntimeController.approveActiveCandidate(); },
+                    reject: function () { return velaRuntimeController.rejectActiveCandidate(); },
+                    getState: function () { return velaRuntimeController.getConfirmationSurfaceState(); }
+                }
+            });
+            mounted = controller && controller.mount && controller.mount();
+            if (mounted !== true) {
+                throw new Error("VELA_SURFACE_MOUNT_UNAVAILABLE");
             }
-        });
-        velaSurfaceController.mount();
+            velaSurfaceController = controller;
+            velaSurfaceBootstrapState = "ready";
+            velaSurfaceBootstrapRevision += 1;
+        } catch (error) {
+            if (controller && typeof controller.dispose === "function") {
+                try { controller.dispose(); } catch (ignored) {}
+            }
+            clearVelaSurfaceActionSlot();
+            reportVelaSurfaceInitializationError();
+        }
     }
 
     function playAnimation(element, keyframes, options, done) {
