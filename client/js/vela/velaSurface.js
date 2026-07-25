@@ -19,6 +19,7 @@
         var openSettings = typeof options.openSettings === "function" ? options.openSettings : function () {};
         var t = typeof options.t === "function" ? options.t : function (key) { return key; };
         var getUiScale = typeof options.getUiScale === "function" ? options.getUiScale : function () { return 1; };
+        var composerReadOnly = options.composerReadOnly !== false;
         var ResizeController = options.ResizeController;
         var ResizeObserverCtor = options.ResizeObserver || (typeof ResizeObserver !== "undefined" ? ResizeObserver : null);
         var eventTarget = options.eventTarget || null;
@@ -117,8 +118,8 @@
             transcriptSlot.appendChild(transcriptScroll);
             composerSlot = node("div", "vela-composer-slot");
             composer = node("textarea", "vela-composer-input");
-            composer.setAttribute("readonly", "readonly");
-            composer.setAttribute("aria-readonly", "true");
+            composer.readOnly = composerReadOnly;
+            composer.setAttribute("aria-readonly", composerReadOnly ? "true" : "false");
             composer.setAttribute("rows", "2");
             composerSlot.appendChild(composer);
             statusSlot = node("div", "vela-status-slot");

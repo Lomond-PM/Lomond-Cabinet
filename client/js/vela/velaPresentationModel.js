@@ -1,0 +1,77 @@
+(function (root, factory) {
+    "use strict";
+    var exported = Object.freeze(factory());
+    if (root && !Object.prototype.hasOwnProperty.call(root, "VelaPresentationModel")) {
+        Object.defineProperty(root, "VelaPresentationModel", { configurable: false, enumerable: true, value: exported, writable: false });
+    }
+}(typeof self !== "undefined" ? self : this, function () {
+    "use strict";
+
+    var MAX_TRANSCRIPT_ITEMS = 16;
+    var ERROR_DISPLAY_KEYS = Object.freeze({
+        "VERIFICATION_UNAVAILABLE": "vela.surfaceContextUnavailable",
+        "PROVIDER_CONNECTION_FAILED": "vela.surfaceProviderConnection",
+        "PROVIDER_TIMEOUT": "vela.surfaceProviderTimeout",
+        "PROVIDER_REQUEST_ABORTED": "vela.surfaceProviderCancelled",
+        "PROVIDER_HTTP_ERROR": "vela.surfaceProviderResponse",
+        "PROVIDER_RESPONSE_INVALID": "vela.surfaceProviderResponse",
+        "PROVIDER_RESPONSE_TOO_LARGE": "vela.surfaceProviderResponse",
+        "PROVIDER_CONFIG_INVALID": "vela.surfaceProviderConfiguration",
+        "RUNTIME_CAPABILITY_UNAVAILABLE": "vela.surfaceRuntimeUnavailable",
+        "LIFECYCLE_BLOCKED": "vela.surfaceRuntimeUnavailable",
+        "SCHEMA_VALIDATION_FAILED": "vela.surfaceGenericError",
+        "PAYLOAD_BUDGET_EXCEEDED": "vela.surfaceGenericError",
+        "UNKNOWN_TARGET": "vela.surfaceGenericError",
+        "CONTEXT_STALE": "vela.surfaceGenericError",
+        "CONTEXT_VALUE_EVALUATION_DISALLOWED": "vela.surfaceGenericError",
+        "CONTEXT_VALUE_UNSUPPORTED": "vela.surfaceGenericError",
+        "CONTEXT_VALUE_INVALID": "vela.surfaceGenericError"
+    });
+
+    function safeText(value) {
+        return typeof value === "string" ? value : "";
+    }
+    function errorDisplayKey(code) {
+        return typeof code === "string" && Object.prototype.hasOwnProperty.call(ERROR_DISPLAY_KEYS, code) ? ERROR_DISPLAY_KEYS[code] : "vela.surfaceGenericError";
+    }
+    function create() {
+        var items = [];
+        var pending = false;
+        var terminalGeneration = 0;
+        function snapshot() {
+            return Object.freeze({
+                pending: pending,
+                items: Object.freeze(items.slice()),
+                terminalGeneration: terminalGeneration
+            });
+        }
+        function append(kind, text, displayTextKey) {
+            var item = Object.freeze({ kind: kind, text: safeText(text), displayTextKey: typeof displayTextKey === "string" ? displayTextKey : null });
+            items.push(item);
+            while (items.length > MAX_TRANSCRIPT_ITEMS) { items.shift(); }
+            return item;
+        }
+        function begin(message) {
+            pending = true;
+            append("user", message, null);
+            return snapshot();
+        }
+        function apply(providerState) {
+            var state = providerState && typeof providerState.state === "string" ? providerState.state : "failed";
+            var text = providerState && typeof providerState.text === "string" ? providerState.text : "";
+            var code = providerState && typeof providerState.errorCode === "string" ? providerState.errorCode : null;
+            if (state === "pending") { pending = true; return snapshot(); }
+            if (!pending) { return snapshot(); }
+            pending = false;
+            terminalGeneration += 1;
+            if (state === "completed" && text) { append("assistant", text, null); }
+            else if (state === "proposal-ready") { append("notice", "", "vela.surfaceLocalProposalNotice"); }
+            else if (state === "cancelled") { append("error", "", errorDisplayKey(code || "PROVIDER_REQUEST_ABORTED")); }
+            else { append("error", "", errorDisplayKey(code || "PROVIDER_RESPONSE_INVALID")); }
+            return snapshot();
+        }
+        function reset() { items = []; pending = false; terminalGeneration += 1; return snapshot(); }
+        return Object.freeze({ begin: begin, apply: apply, reset: reset, getSnapshot: snapshot });
+    }
+    return Object.freeze({ create: create, errorDisplayKey: errorDisplayKey });
+}));

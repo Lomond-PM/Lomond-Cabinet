@@ -351,6 +351,25 @@ local confirmation presentation, and UI-D may consolidate the legacy Vela Tool
 only after their own review. None of those later phases may merge the Review,
 Approve and Host boundaries defined above.
 
+### Formal Vela Surface UI-B
+
+UI-B keeps the UI-A DOM tree and resize/lifecycle contract, but enables its
+existing Composer and action slot for one local provider request at a time.
+`velaSurfaceController.js` is private to `main.js`: it receives only a
+message send closure, a no-argument cancel closure, and a bounded provider
+surface projection. It cannot receive a request id, proposal, candidate,
+capture, target, digest, plan, nonce, authority, Host request, or trusted
+Runtime object.
+
+The session-only presentation model appends user text and completed provider
+text through `textContent`. The Surface renders only mapped, localized user
+messages; internal error codes remain in frozen Runtime state, tests and
+diagnostics, and never enter the user interface. Raw provider JSON, endpoint
+data and request metadata are never added to the transcript. `pending` exposes Cancel only; terminal text/error/cancelled
+states expose Send only. A `localProposal` remains non-displayable in this
+surface: it adds no Review, Approve, Reject or execution control. The legacy
+Vela Tool remains available for its existing D2 regression path.
+
 ### Protocol hard limits
 
 JSON Schema describes shape, but the protocol also has hard resource limits.

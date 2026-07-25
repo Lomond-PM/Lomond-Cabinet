@@ -309,9 +309,21 @@
             }
         }
         function sendProviderMessage(input) { try { if (disposed || state !== "ready" || !providerController) { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); } return providerController.send(input); } catch (error) { return Promise.reject(error); } }
-        function cancelProviderRequest(input) { try { return !!(providerController && providerController.cancel(input)); } catch (error) { return false; } }
+        function cancelProviderRequest() {
+            var providerState;
+            try {
+                if (!providerController) { return false; }
+                providerState = providerController.getUiState();
+                return !!providerController.cancel({ requestId: providerState.requestId });
+            } catch (error) { return false; }
+        }
         function getProviderUiState() { return providerController ? providerController.getUiState() : Object.freeze({ state: disposed ? "disposed" : state, requestId: null, text: null, errorCode: lastErrorCode, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: "vela-provider-controller-v1" }); }
-        return Object.freeze({ initialize: initialize, getStatus: safeStatus, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, refreshContext: refreshContext, createOpacityCandidate: createOpacityCandidate, approveCandidate: approveCandidate, rejectCandidate: rejectCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState });
+        function getProviderSurfaceState() {
+            var source = getProviderUiState();
+            var nextState = source && typeof source.state === "string" ? source.state : "failed";
+            return Object.freeze({ state: nextState, text: source && typeof source.text === "string" ? source.text : null, errorCode: source && typeof source.errorCode === "string" ? source.errorCode : null, moduleRevision: "vela-provider-surface-v1" });
+        }
+        return Object.freeze({ initialize: initialize, getStatus: safeStatus, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, refreshContext: refreshContext, createOpacityCandidate: createOpacityCandidate, approveCandidate: approveCandidate, rejectCandidate: rejectCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderSurfaceState: getProviderSurfaceState });
     }
     return Object.freeze({ createRuntime: createRuntime });
 }));
