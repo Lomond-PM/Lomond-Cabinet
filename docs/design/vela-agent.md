@@ -322,6 +322,42 @@ controller with `{ opacity }`. The normal local candidate, validation, plan,
 confirmation and execution path then applies; the provider never receives or
 creates a trusted identifier, target binding, capture, digest or approval.
 
+### Local proposal intent gate
+
+The Provider system prompt distinguishes ordinary text from a local proposal,
+but prompt guidance is not an authorization boundary. After the Adapter and
+Parser have validated a `localProposal`, and before Provider Controller writes
+its private proposal state, the local `velaProviderIntentGate.js` applies a
+deterministic capability policy. The first registered policy is
+`set-opacity-v1`: it requires an explicit edit verb, explicit opacity /
+`不透明度`, exactly one finite `0..100` target value, and exact equality between
+that user value and the model-proposed opacity. Greetings, explanations,
+queries, ambiguous or relative requests, negative/hypothetical/question forms,
+protocol instructions, multiple values, and unregistered capabilities fail
+closed. The gate never creates or returns a target, candidate, plan, context,
+nonce, digest, authority, or Host payload.
+
+An allowed result alone may populate the private proposal and enter
+`proposal-ready`. A rejected result clears any private proposal and enters the
+terminal `intent-rejected` state. Presentation maps that state to fixed
+localized guidance without exposing a gate reason, model guess, proposal JSON,
+request id, or capability id; Send becomes available and Review cannot consume
+anything. This adds no Protocol field, no second model request, and no Parser,
+Router, Review, Validator, Plan, Preflight, ExecutionAdapter, or Host behavior.
+
+### Model output error authority
+
+Protocol 1.1 and the Parser retain structural compatibility with `error`
+envelopes so locally observed Provider failures can keep their existing error
+path. The schema sent to the model, however, authorizes only `text` and
+`localProposal`. After a successful parse of LM Studio `message.content`, the
+Adapter rejects a model-authored `error` envelope as the local diagnostic
+`MODEL_ERROR_NOT_AUTHORIZED` and returns only the generic local invalid-response
+result. The model's code, stage, message, details, and retryability never enter
+the canonical response or user DOM. Transport, HTTP, timeout, cancellation, and
+invalid-content failures remain locally observed and continue through their
+existing error mapping.
+
 ### D2 production closure
 
 D2-C verifies the production composition with only the LM Studio HTTP boundary
@@ -370,7 +406,7 @@ The session-only presentation model appends user text and completed provider
 text through `textContent`. The Surface renders only mapped, localized user
 messages; internal error codes remain in frozen Runtime state, tests and
 diagnostics, and never enter the user interface. Raw provider JSON, endpoint
-data and request metadata are never added to the transcript. `pending` exposes Cancel only; terminal text/error/cancelled
+data and request metadata are never added to the transcript. `pending` exposes Cancel only; terminal text/error/cancelled/intent-rejected
 states expose Send only. A `localProposal` remains non-displayable in this
 surface: it adds no Review, Approve, Reject or execution control. The legacy
 Vela Tool remains available for its existing D2 regression path.

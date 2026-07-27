@@ -26,13 +26,18 @@ function createHarness(options) {
     const router = routerModule.createProposalRouter({ protocol: p, providerController: provider, controller });
     return { p, provider, controller, router, getCreates: () => creates };
 }
-async function sendProposal(h) { return h.provider.send({ message: "suggest", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" }); }
+async function sendProposal(h) { return h.provider.send({ message: "Set the selected layer opacity to 57.5%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" }); }
 async function run() {
     const h = createHarness();
     check(Object.isFrozen(h.router) && Object.keys(h.router).join(",") === "review", "Router exposes only the parameterless review operation.");
     check(routerModule.isTrustedProposalRouterForProtocol(h.router, h.p), "Router is bound to the exact Protocol instance.");
     check(!routerModule.isTrustedProposalRouterForProtocol(Object.create(h.router), h.p), "Prototype clones cannot forge router identity.");
     await expectCode(h.router.review(), h.p.ERROR_CODES.CANDIDATE_NOT_FOUND, "Review without a private proposal fails closed.");
+    const greeting = createHarness();
+    const greetingState = await greeting.provider.send({ message: "你好", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+    check(greetingState.state === "intent-rejected" && greetingState.proposalCapabilityId === null && greetingState.suggestedOpacity === null, "A greeting with a structurally valid model proposal becomes a terminal intent rejection without proposal data.");
+    check(greeting.getCreates() === 0 && greeting.controller.getUiState().candidateId === null, "Intent rejection creates neither a plan nor a candidate.");
+    await expectCode(greeting.router.review(), greeting.p.ERROR_CODES.CANDIDATE_NOT_FOUND, "Intent rejection leaves no proposal that Review can revive.");
     const proposal = await sendProposal(h);
     check(proposal.state === "proposal-ready" && proposal.suggestedOpacity === 57.5, "Provider emits only the read-only proposal summary before review.");
     check(h.controller.getUiState().candidateId === null && h.getCreates() === 0, "Proposal-ready creates neither a candidate nor a local plan.");

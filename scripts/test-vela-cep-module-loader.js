@@ -102,7 +102,7 @@ async function run() {
     check(result.ok === true && result.state === "ready", "Loader reaches ready state.");
     check(Object.isFrozen(browser.context.VelaCepModuleLoader.getStatus()) && browser.context.VelaCepModuleLoader.getStatus().state === "ready" && browser.context.VelaCepModuleLoader.getStatus().lastErrorCode === null, "Loader exposes only a frozen ready diagnostic snapshot.");
     check(Object.isFrozen(result) && Object.isFrozen(result.modules), "Loader result is frozen.");
-    check(result.modules.length === 15 && result.modules[result.modules.length - 1] === "VelaRuntime" && result.modules[result.modules.length - 2] === "VelaProviderProposalRouter" && result.modules[result.modules.length - 3] === "VelaProviderController", "Loader returns bounded dependency order.");
+    check(result.modules.length === 16 && result.modules[3] === "VelaProviderIntentGate" && result.modules[result.modules.length - 1] === "VelaRuntime" && result.modules[result.modules.length - 2] === "VelaProviderProposalRouter" && result.modules[result.modules.length - 3] === "VelaProviderController", "Loader returns bounded dependency order.");
     check(browser.context.__velaProtocolCoreBootstrapV1.getModule("VelaProtocol") === browser.context.VelaProtocol, "Protocol uses the browser bootstrap identity.");
     check(browser.context.__velaProtocolCoreBootstrapV1.getModule("VelaRuntime") === browser.context.VelaRuntime, "Runtime uses the browser bootstrap identity.");
     check(Object.isFrozen(browser.context.VelaRuntime), "Runtime browser module is frozen.");
@@ -115,12 +115,13 @@ async function run() {
     check(await browser.context.VelaCepModuleLoader.load() === result, "Ready loader calls return the same result.");
     check(Object.getOwnPropertyDescriptor(browser.context, "CSInterface") === undefined, "Loader does not create CSInterface state.");
     check(Object.getOwnPropertyDescriptor(browser.context, "__adobe_cep__") === undefined, "Loader does not create Adobe CEP state.");
-    check(browser.getAppendCount() === 15, "Loader injects each protected module exactly once.");
+    check(browser.getAppendCount() === 16, "Loader injects each protected module exactly once.");
     check(browser.requestedUrls[0] === "file:///C:/extension/client/js/vela/velaProtocol.js?v=test", "The captured loader base and cache query produce VelaProtocol as the first request after currentScript is cleared.");
     check(JSON.stringify(browser.requestedUrls) === JSON.stringify([
         "file:///C:/extension/client/js/vela/velaProtocol.js?v=test",
         "file:///C:/extension/client/js/vela/velaResponseParser.js?v=test",
         "file:///C:/extension/client/js/vela/velaProviderAdapter.js?v=test",
+        "file:///C:/extension/client/js/vela/velaProviderIntentGate.js?v=test",
         "file:///C:/extension/client/js/vela/velaLocalTransport.js?v=test",
         "file:///C:/extension/client/js/vela/velaContext.js?v=test",
         "file:///C:/extension/client/js/vela/velaValidator.js?v=test",

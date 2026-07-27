@@ -111,10 +111,9 @@
     var PROVIDER_ID = "lmstudio";
     var PROVIDER_KIND = "openai-compatible";
     var RESPONSE_SCHEMA_ID = "vela-response.v1";
+    var MODEL_ERROR_NOT_AUTHORIZED = "MODEL_ERROR_NOT_AUTHORIZED";
     var RESPONSE_FORMAT_MODE = "json-schema";
     var LMSTUDIO_TEXT_GENERATION_MAX_CHARS = 1024;
-    var LMSTUDIO_ERROR_STAGE_GENERATION_MAX_CHARS = 128;
-    var LMSTUDIO_ERROR_MESSAGE_GENERATION_MAX_CHARS = 512;
     var MIN_TIMEOUT_MS = 1000;
     var MAX_TIMEOUT_MS = 120000;
     var DEFAULT_TIMEOUT_MS = 30000;
@@ -419,21 +418,9 @@
 
         function buildResponseJsonSchema(requestId) {
             var metadata = responseMetadata(requestId);
-            var errorCodes = Object.keys(protocol.ERROR_CODES).map(function (key) { return protocol.ERROR_CODES[key]; });
-            var errorSchema = {
-                type: "object",
-                additionalProperties: false,
-                required: ["code", "stage", "retryable", "message", "details"],
-                properties: {
-                    code: { type: "string", enum: errorCodes },
-                    stage: { type: "string", minLength: 1, maxLength: LMSTUDIO_ERROR_STAGE_GENERATION_MAX_CHARS },
-                    retryable: { type: "boolean" },
-                    message: { type: "string", maxLength: LMSTUDIO_ERROR_MESSAGE_GENERATION_MAX_CHARS },
-                    details: { type: "object", additionalProperties: false, maxProperties: 0 }
-                }
-            };
             var textEnvelope = {
                 type: "object",
+                description: "Normal conversation, questions, current-value queries, explanations, suggestions, and ambiguity; never invent a value or use an explicit direct one-target opacity command. The root envelope remains required.",
                 additionalProperties: false,
                 required: ["type", "text"],
                 properties: {
@@ -441,17 +428,9 @@
                     text: { type: "string", minLength: 1, maxLength: LMSTUDIO_TEXT_GENERATION_MAX_CHARS }
                 }
             };
-            var errorEnvelope = {
-                type: "object",
-                additionalProperties: false,
-                required: ["type", "error"],
-                properties: {
-                    type: enumString(protocol.ENVELOPE_TYPES.ERROR),
-                    error: errorSchema
-                }
-            };
             var localProposalEnvelope = {
                 type: "object",
+                description: "Only a direct explicit current or selected layer opacity command with one 0–100 target; never questions, suggestions, hypotheticals, negations, or ambiguity. It does not execute.",
                 additionalProperties: false,
                 required: ["type", "proposal"],
                 properties: {
@@ -485,7 +464,7 @@
                         requestId: enumString(metadata.requestId),
                         provider: enumString(metadata.provider),
                         model: enumString(metadata.model),
-                        envelope: { type: "object", oneOf: [textEnvelope, errorEnvelope, localProposalEnvelope] }
+                        envelope: { type: "object", oneOf: [textEnvelope, localProposalEnvelope] }
                     }
                 }
             });
@@ -493,15 +472,26 @@
 
         function systemMessage(requestId) {
             var metadata = responseMetadata(requestId);
+            var proposal57Example = JSON.stringify({
+                protocol: metadata.protocol,
+                schemaVersion: metadata.schemaVersion,
+                requestId: metadata.requestId,
+                provider: metadata.provider,
+                model: metadata.model,
+                envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } }
+            });
             return [
                 "Return exactly one complete JSON object and nothing else.",
                 "Follow the attached json_schema exactly; it is format guidance and the local Parser will validate again.",
                 "Use protocol " + metadata.protocol + " and schemaVersion " + metadata.schemaVersion + ".",
                 "Use requestId " + metadata.requestId + ", provider " + metadata.provider + ", and model " + metadata.model + ".",
-                "This version permits only text, error, or localProposal envelopes; never return plan or actionCandidate.",
-                "A localProposal may contain only capabilityId set-opacity-v1 and params.opacity from 0 through 100.",
-                "Do not use Markdown, fences, explanations, prefixes, suffixes, envelopeType, top-level placeholder fields, tool_calls, function_call, source, code, target, propertyPath, risk, candidateId, planId, confirmationNonce, reservation, digest, authority, or multiple JSON roots.",
-                "Do not create or claim a trusted candidateId."
+                "DECISION: text by default. Return localProposal only for a direct command to set the current or selected layer opacity to one explicit 0–100 target. Return text for greetings, questions, current-value queries, explanations, suggestions, uncertainty, hypotheticals, negations, relative adjustments, ambiguity, or no one target.",
+                "Opacity plus a number is not enough: questions, explanations, and suggestions use text. Never guess 50 or another value. A current-value query may state a value only when that exact value is supplied in trusted request context; otherwise say you cannot reliably verify the current opacity and will not guess. For an ambiguous edit, ask for one explicit target from 0 to 100%. A text response never claims an edit was performed, scheduled, or proposed. For an explicit supported opacity command, text is invalid: return the localProposal envelope itself.",
+                "默认返回 text。当前值只有在可信请求上下文明确提供时才能回答；否则说明无法可靠确认且不猜测。模糊修改请求只要求提供唯一 0–100% 目标值，text 不得声称已完成、将执行或已提出修改建议。",
+                "All responses must be one complete schema envelope: no bare text, Markdown, extra explanation, multiple objects, or fields beyond the schema.",
+                "A localProposal uses only capabilityId set-opacity-v1 and params.opacity equal to the requested target. A localProposal is only a suggestion. It does not execute anything.",
+                "For 将当前图层不透明度设为 57.5%, return: " + proposal57Example + ". For Set the selected layer opacity to 0% and Change opacity to 100, return localProposal with opacity 0 and 100 respectively.",
+                "Text examples: 你好; Hello; What is opacity?; Should I set opacity to 50%?; 透明一些; Maybe reduce opacity. For ambiguous edits, say: Specify a target opacity from 0 to 100%, for example 50%. / 请提供明确的不透明度目标值，例如 50%。"
             ].join(" ");
         }
 
@@ -621,6 +611,9 @@
             if (parsed.response.protocol !== protocol.PROTOCOLS.RESPONSE || parsed.response.schemaVersion !== protocol.SCHEMA_VERSION ||
                 parsed.response.requestId !== requestId || parsed.response.provider !== PROVIDER_ID || parsed.response.model !== model) {
                 protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The Vela response metadata is invalid.");
+            }
+            if (parsed.response.envelope.type === protocol.ENVELOPE_TYPES.ERROR) {
+                return { response: canonicalError(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, requestId), parserErrorCode: MODEL_ERROR_NOT_AUTHORIZED };
             }
             var canonical = {
                 protocol: protocol.PROTOCOLS.RESPONSE,

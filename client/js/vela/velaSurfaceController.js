@@ -46,6 +46,7 @@
             if (providerState && providerState.state === "completed") { return t("vela.surfaceStatusCompleted"); }
             if (providerState && providerState.state === "cancelled") { return t("vela.surfaceStatusCancelled"); }
             if (providerState && providerState.state === "failed") { return t("vela.surfaceStatusFailed"); }
+            if (providerState && providerState.state === "intent-rejected") { return t("vela.surfaceStatusIntentRejected"); }
             if (providerState && providerState.state === "proposal-ready") { return t("vela.surfaceStatusProposalReady"); }
             return t("vela.surfaceStatusSetup");
         }

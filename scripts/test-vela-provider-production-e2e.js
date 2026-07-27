@@ -39,7 +39,7 @@ function makeHarness() {
             const requestId = /Use requestId (req_[a-z0-9]+)/.exec(body.messages[0].content)[1];
             let envelope;
             if (state.providerMode === "text") envelope = { type: "text", text: "safe text" };
-            else if (state.providerMode === "error") envelope = { type: "error", error: { code: "PROVIDER_RESPONSE_INVALID", stage: "provider", message: "bounded" } };
+            else if (state.providerMode === "error") envelope = { type: "error", error: { code: "EXPRESSION_NOT_ALLOWLISTED", stage: "provider", retryable: false, message: "untrusted", details: {} } };
             else if (state.providerMode === "malformed") envelope = { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 101 } } };
             else envelope = { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: state.proposalOpacity } } };
             const response = JSON.stringify({ id: "local", object: "chat.completion", created: 1, model: "m", choices: [{ index: 0, message: { role: "assistant", content: JSON.stringify({ protocol: "vela.model-response.v1", schemaVersion: "1.1", requestId, provider: "lmstudio", model: "m", envelope }), tool_calls: [] }, finish_reason: "stop" }], usage: {} });
@@ -59,10 +59,14 @@ function makeHarness() {
     } });
     return { runtime, state, calls };
 }
-async function sendProposal(harness, opacity) { harness.state.providerMode = "proposal"; harness.state.proposalOpacity = opacity; return harness.runtime.sendProviderMessage({ message: "suggest", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" }); }
+async function sendProposal(harness, opacity) { harness.state.providerMode = "proposal"; harness.state.proposalOpacity = opacity; return harness.runtime.sendProviderMessage({ message: "Set the selected layer opacity to " + opacity + "%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" }); }
 async function run() {
     check(typeof protocolModule.createProtocol === "function" && typeof parserModule.createResponseParser === "function" && typeof providerAdapterModule.createLocalOpenAICompatibleProvider === "function" && typeof providerControllerModule.createProviderController === "function" && typeof routerModule.createProposalRouter === "function" && typeof controllerModule.createController === "function" && typeof validatorModule.createActionValidator === "function" && typeof planModule.createPlanStore === "function" && typeof preflightModule.createExecutionPreflight === "function" && typeof adapterModule.createExecutionAdapter === "function", "D2-C loads the real production Protocol, parser, provider, router, controller, validator, plan, preflight and execution adapter modules.");
     const h = makeHarness(); await h.runtime.initialize();
+    const greeting = makeHarness(); await greeting.runtime.initialize();
+    const rejectedGreeting = await greeting.runtime.sendProviderMessage({ message: "你好", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+    check(rejectedGreeting.state === "intent-rejected" && greeting.runtime.getProviderUiState().proposalCapabilityId === null && greeting.runtime.getUiState().candidateId === null, "A production Runtime greeting cannot promote a valid model proposal to proposal-ready.");
+    await expectCode(greeting.runtime.reviewProviderProposal(), "CANDIDATE_NOT_FOUND", "A rejected production proposal cannot be reviewed into a candidate.");
     const ready = await sendProposal(h, 57.5);
     check(ready.state === "proposal-ready" && ready.suggestedOpacity === 57.5 && h.runtime.getUiState().candidateId === null, "A schema 1.1 localProposal reaches proposal-ready without a candidate.");
     check(h.calls.filter((call) => call.kind === "execution").length === 0, "Provider result and Review preconditions make zero Host mutation calls.");
@@ -81,6 +85,7 @@ async function run() {
     const expression = makeHarness(); await expression.runtime.initialize(); await sendProposal(expression, 57.5); const expressionPending = await expression.runtime.reviewProviderProposal(); expression.state.error = "HOST_CONTEXT_VALUE_EVALUATION_DISALLOWED"; await expectCode(expression.runtime.approveCandidate({ candidateId: expressionPending.candidateId }), "CONTEXT_VALUE_EVALUATION_DISALLOWED", "Expression evaluation blocking remains in the production preflight chain.");
     const lifecycle = makeHarness(); await lifecycle.runtime.initialize(); await sendProposal(lifecycle, 57.5); check(lifecycle.runtime.resetSession() === true, "Session reset is accepted before Review."); await expectCode(lifecycle.runtime.reviewProviderProposal(), "CANDIDATE_NOT_FOUND", "ResetSession clears the old provider proposal.");
     const text = makeHarness(); await text.runtime.initialize(); text.state.providerMode = "text"; await text.runtime.sendProviderMessage({ message: "text", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" }); check(text.runtime.getProviderUiState().state === "completed", "Text results do not enter proposal-ready.");
+    const modelError = makeHarness(); await modelError.runtime.initialize(); modelError.state.providerMode = "error"; const modelErrorResult = await modelError.runtime.sendProviderMessage({ message: "current value", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" }); check(modelErrorResult.state === "failed" && modelErrorResult.errorCode === "PROVIDER_RESPONSE_INVALID" && modelError.runtime.getProviderUiState().proposalCapabilityId === null && !JSON.stringify(modelErrorResult).includes("EXPRESSION_NOT_ALLOWLISTED"), "A model-authored error is rejected as a generic local invalid response without proposal state or model error leakage.");
     const bad = makeHarness(); await bad.runtime.initialize(); bad.state.providerMode = "malformed"; const badResult = await bad.runtime.sendProviderMessage({ message: "bad", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" }); check(badResult.state === "failed" && badResult.errorCode === "PARAM_OUT_OF_RANGE" && bad.runtime.getProviderUiState().proposalCapabilityId === null, "Malformed localProposal fails closed before proposal-ready state.");
     check(!JSON.stringify(h.runtime.getStatus()).match(/proposal|router|capture|digest|nativeLayerId|planId|candidateId/i), "Runtime status remains diagnostic-only and leaks no proposal or trusted data.");
     console.log("test-vela-provider-production-e2e: " + assertions + " assertions passed.");
