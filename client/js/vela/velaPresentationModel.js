@@ -67,6 +67,7 @@
             terminalGeneration += 1;
             if (state === "completed" && text) { append("assistant", text, null); }
             else if (state === "proposal-ready") { append("notice", "", "vela.surfaceLocalProposalNotice"); }
+            else if (state === "intent-rejected") { append("notice", "", "vela.surfaceIntentRejected"); }
             else if (state === "cancelled") { append("error", "", errorDisplayKey(code || "PROVIDER_REQUEST_ABORTED")); }
             else { append("error", "", errorDisplayKey(code || "PROVIDER_RESPONSE_INVALID")); }
             return snapshot();

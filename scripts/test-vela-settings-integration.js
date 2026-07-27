@@ -30,7 +30,7 @@ function normalizeModel(value) {
 }
 
 function run() {
-    const velaSection = schemaSource.match(/\{\s*id: "vela",[\s\S]*?\n\s*\},\n\s*\{/);
+    const velaSection = schemaSource.match(/\{\s*id: "vela",[\s\S]*?(?=\n\s*\{\s*id: "proceduralAppearance")/);
     const collectSettings = sliceFunction("collectSettings", "saveSettings");
     const openSettings = sliceFunction("openSettingsPanel", "closeSettingsPanel");
     const renderVela = sliceFunction("renderSettingsVela", "renderSettingsDeveloperMode");

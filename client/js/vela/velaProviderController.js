@@ -11,18 +11,18 @@
         if (!hasOwn.call(target, BOOTSTRAP_NAME) || hasOwn.call(target, name) || !Object.isExtensible(target)) { throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT"); }
         bootstrap = target[BOOTSTRAP_NAME];
         if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.getModule !== "function" || typeof bootstrap.hasModule !== "function" || typeof bootstrap.registerModule !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
-        dependencies = { protocol: bootstrap.getModule("VelaProtocol"), bridge: bootstrap.getModule("VelaContextBridge"), adapter: bootstrap.getModule("VelaProviderAdapter"), transport: bootstrap.getModule("VelaLocalTransport") };
-        if (!dependencies.protocol || !dependencies.bridge || !dependencies.adapter || !dependencies.transport) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
-        exported = Object.freeze(create(dependencies.protocol, dependencies.bridge, dependencies.adapter, dependencies.transport));
+        dependencies = { protocol: bootstrap.getModule("VelaProtocol"), bridge: bootstrap.getModule("VelaContextBridge"), adapter: bootstrap.getModule("VelaProviderAdapter"), transport: bootstrap.getModule("VelaLocalTransport"), intentGate: bootstrap.getModule("VelaProviderIntentGate") };
+        if (!dependencies.protocol || !dependencies.bridge || !dependencies.adapter || !dependencies.transport || !dependencies.intentGate) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
+        exported = Object.freeze(create(dependencies.protocol, dependencies.bridge, dependencies.adapter, dependencies.transport, dependencies.intentGate));
         bootstrap.registerModule(name, exported);
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        module.exports = Object.freeze(factory(require("./velaProtocol"), require("./velaContextBridge"), require("./velaProviderAdapter"), require("./velaLocalTransport")));
+        module.exports = Object.freeze(factory(require("./velaProtocol"), require("./velaContextBridge"), require("./velaProviderAdapter"), require("./velaLocalTransport"), require("./velaProviderIntentGate")));
     }
-}(typeof self !== "undefined" ? self : this, function (protocolModule, bridgeModule, adapterModule, transportModule) {
+}(typeof self !== "undefined" ? self : this, function (protocolModule, bridgeModule, adapterModule, transportModule, intentGateModule) {
     "use strict";
     var MODULE_REVISION = "vela-provider-controller-v1";
     var trustedControllers = new WeakSet();
@@ -45,7 +45,7 @@
         var bridge = ownData(options, "contextBridge");
         var transport = ownData(options, "transport");
         var providerRuntime = ownData(options, "runtime");
-        if (!protocolModule.isTrustedProtocol(protocol) || !bridgeModule.isTrustedContextBridgeForProtocol(bridge, protocol) || !transportModule.isTrustedLocalTransportForProtocol(transport, protocol) || !protocol.isPlainObject(options)) {
+        if (!protocolModule.isTrustedProtocol(protocol) || !bridgeModule.isTrustedContextBridgeForProtocol(bridge, protocol) || !transportModule.isTrustedLocalTransportForProtocol(transport, protocol) || !intentGateModule || typeof intentGateModule.evaluate !== "function" || !protocol.isPlainObject(options)) {
             throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
         }
         protocol.assertNoUnknownKeys(options, ["protocol", "contextBridge", "transport", "runtime"], "providerController.options");
@@ -113,8 +113,15 @@
                 if (envelope.type === "error") { return publish("failed", publicState.requestId, null, safeCode(protocol, ownData(envelope, "error")), values.model); }
                 if (envelope.type === "localProposal") {
                     var proposal = ownData(envelope, "proposal");
-                    activeProposal = protocol.deepFreeze({ capabilityId: ownData(proposal, "capabilityId"), opacity: ownData(ownData(proposal, "params"), "opacity") });
-                    return publish("proposal-ready", publicState.requestId, null, null, values.model, { capabilityId: ownData(proposal, "capabilityId"), opacity: ownData(ownData(proposal, "params"), "opacity") });
+                    var capabilityId = ownData(proposal, "capabilityId");
+                    var opacity = ownData(ownData(proposal, "params"), "opacity");
+                    var intent = intentGateModule.evaluate({ message: values.message, capabilityId: capabilityId, proposedOpacity: opacity });
+                    if (!intent || intent.allowed !== true) {
+                        activeProposal = null;
+                        return publish("intent-rejected", publicState.requestId, null, null, values.model);
+                    }
+                    activeProposal = protocol.deepFreeze({ capabilityId: capabilityId, opacity: opacity });
+                    return publish("proposal-ready", publicState.requestId, null, null, values.model, { capabilityId: capabilityId, opacity: opacity });
                 }
                 return publish("completed", publicState.requestId, protocol.assertString(ownData(envelope, "text"), "provider text", protocol.HARD_LIMITS.maxMessageBytes), null, values.model);
             }, function (error) {

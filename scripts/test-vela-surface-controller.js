@@ -63,6 +63,11 @@ async function run() {
     check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "provider error terminal exposes only Send");
     matrix.setProvider({ state: "cancelled", text: null, errorCode: "PROVIDER_REQUEST_ABORTED" }); matrix.controller.refreshLocale();
     check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "provider cancellation terminal exposes only Send");
+    matrix.setProvider({ state: "intent-rejected", text: null, errorCode: null }); matrix.controller.refreshLocale();
+    check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "intent-rejected is a provider terminal that exposes only Send");
+    const intentNotice = fixture(); intentNotice.controller.mount(); intentNotice.elements.composer.value = "你好"; intentNotice.elements.actionSlot.children[0].emit("click"); intentNotice.setProvider({ state: "intent-rejected", text: null, errorCode: null }); intentNotice.request.resolve(); await flush();
+    equal(intentNotice.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceIntentRejected", "intent-rejected uses the fixed localized notice rather than model or internal data");
+    check(!intentNotice.elements.actionSlot.children[0].hidden && intentNotice.elements.actionSlot.children[3].hidden && intentNotice.elements.actionSlot.children[4].hidden && intentNotice.elements.actionSlot.children[5].hidden, "intent-rejected restores Send with no Review, Approve, or Reject action");
     matrix.setProvider({ state: "proposal-ready", text: null, errorCode: null }); matrix.controller.refreshLocale();
     check(m[0].hidden && m[1].hidden && !m[3].hidden && m[4].hidden && m[5].hidden, "proposal-ready exposes only Review");
     matrix.setProvider({ state: "idle", text: null, errorCode: null }); matrix.setConfirmation({ state: "confirmation-ready", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();

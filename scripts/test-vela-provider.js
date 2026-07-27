@@ -256,20 +256,56 @@ async function run() {
     equal(responseSchema.schema.properties.provider.enum[0], "lmstudio", "Schema provider metadata must be local.");
     equal(responseSchema.schema.properties.model.enum[0], "Qwen3.5-4B Q6_K", "Schema model metadata must bind the configured model.");
     const envelopeVariants = responseSchema.schema.properties.envelope.oneOf;
-    check(envelopeVariants.length === 3 && envelopeVariants.every((variant) => variant.additionalProperties === false), "The schema must permit only closed text, error and localProposal envelope variants.");
+    check(envelopeVariants.length === 2 && envelopeVariants.every((variant) => variant.additionalProperties === false), "The model schema must permit only closed text and localProposal envelope variants.");
     check(envelopeVariants.some((variant) => variant.properties.type.enum[0] === "text" && variant.properties.text.minLength === 1), "The text envelope must require non-empty envelope.text.");
-    check(envelopeVariants.some((variant) => variant.properties.type.enum[0] === "error" && variant.properties.error), "The error envelope must use the canonical structured error form.");
     check(envelopeVariants.some((variant) => variant.properties.type.enum[0] === "localProposal" && variant.properties.proposal.properties.capabilityId.enum[0] === "set-opacity-v1" && variant.properties.proposal.properties.params.properties.opacity.minimum === 0 && variant.properties.proposal.properties.params.properties.opacity.maximum === 100), "The localProposal envelope must be limited to bounded set-opacity-v1 input.");
     const textVariant = envelopeVariants.find((variant) => variant.properties.type.enum[0] === "text");
-    const errorVariant = envelopeVariants.find((variant) => variant.properties.type.enum[0] === "error");
+    const proposalVariant = envelopeVariants.find((variant) => variant.properties.type.enum[0] === "localProposal");
+    check(
+        textVariant.description === "Normal conversation, questions, current-value queries, explanations, suggestions, and ambiguity; never invent a value or use an explicit direct one-target opacity command. The root envelope remains required." &&
+        proposalVariant.description === "Only a direct explicit current or selected layer opacity command with one 0–100 target; never questions, suggestions, hypotheticals, negations, or ambiguity. It does not execute.",
+        "The concise response schema descriptions must make normal text and direct one-target localProposal responses mutually exclusive."
+    );
     equal(textVariant.properties.text.maxLength, 1024, "LM Studio text generation must use the bounded generation cap.");
-    equal(errorVariant.properties.error.properties.stage.maxLength, 128, "LM Studio error stage generation must use the bounded generation cap.");
-    equal(errorVariant.properties.error.properties.message.maxLength, 512, "LM Studio error message generation must use the bounded generation cap.");
     const schemaMaxLengths = collectSchemaValues(responseSchema.schema, "maxLength", []);
     check(schemaMaxLengths.length > 0 && schemaMaxLengths.every((value) => Number.isInteger(value) && value <= 1024), "No LM Studio schema repetition bound may exceed the conservative generation limit.");
     check(!JSON.stringify(sent.body.response_format).includes("json_object") && !JSON.stringify(sent.body.response_format).includes("actionCandidate") && !JSON.stringify(sent.body.response_format).includes("\"plan\""), "Outbound JSON schema must not express deprecated JSON mode or executable envelopes.");
     equal(sent.body.messages[0].role, "system", "The system message must be local and first.");
     check(sent.body.messages[0].content.includes(handle.requestId) && sent.body.messages[0].content.includes("vela.model-response.v1"), "The system message must bind response metadata.");
+    const prompt = sent.body.messages[0].content;
+    const proposal57Example = JSON.stringify({ protocol: normal.protocol.PROTOCOLS.RESPONSE, schemaVersion: normal.protocol.SCHEMA_VERSION, requestId: handle.requestId, provider: "lmstudio", model: "Qwen3.5-4B Q6_K", envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } } });
+    const decisionTable = "DECISION: text by default. Return localProposal only for a direct command to set the current or selected layer opacity to one explicit 0–100 target. Return text for greetings, questions, current-value queries, explanations, suggestions, uncertainty, hypotheticals, negations, relative adjustments, ambiguity, or no one target.";
+    const directRule = "Opacity plus a number is not enough: questions, explanations, and suggestions use text. Never guess 50 or another value. A current-value query may state a value only when that exact value is supplied in trusted request context; otherwise say you cannot reliably verify the current opacity and will not guess. For an ambiguous edit, ask for one explicit target from 0 to 100%. A text response never claims an edit was performed, scheduled, or proposed. For an explicit supported opacity command, text is invalid: return the localProposal envelope itself.";
+    const chineseRule = "默认返回 text。当前值只有在可信请求上下文明确提供时才能回答；否则说明无法可靠确认且不猜测。模糊修改请求只要求提供唯一 0–100% 目标值，text 不得声称已完成、将执行或已提出修改建议。";
+    const envelopeRule = "All responses must be one complete schema envelope: no bare text, Markdown, extra explanation, multiple objects, or fields beyond the schema.";
+    const proposalRule = "A localProposal uses only capabilityId set-opacity-v1 and params.opacity equal to the requested target. A localProposal is only a suggestion. It does not execute anything.";
+    check(
+        prompt.indexOf(decisionTable) >= 0 &&
+        prompt.indexOf(decisionTable) < prompt.indexOf(directRule) &&
+        prompt.indexOf(directRule) < prompt.indexOf(chineseRule) &&
+        prompt.indexOf(chineseRule) < prompt.indexOf(envelopeRule) &&
+        prompt.indexOf(envelopeRule) < prompt.indexOf(proposalRule),
+        "The assembled prompt must put the concise mutually exclusive decision rules before envelope and proposal responsibilities."
+    );
+    check(
+        prompt.includes(proposal57Example) &&
+        prompt.includes("For Set the selected layer opacity to 0% and Change opacity to 100, return localProposal with opacity 0 and 100 respectively.") &&
+        prompt.includes("Text examples: 你好; Hello; What is opacity?; Should I set opacity to 50%?; 透明一些; Maybe reduce opacity. For ambiguous edits, say: Specify a target opacity from 0 to 100%, for example 50%. / 请提供明确的不透明度目标值，例如 50%。") &&
+        prompt.includes("All responses must be one complete schema envelope: no bare text, Markdown, extra explanation, multiple objects, or fields beyond the schema.") &&
+        prompt.includes("A current-value query may state a value only when that exact value is supplied in trusted request context; otherwise say you cannot reliably verify the current opacity and will not guess.") &&
+        prompt.includes("A text response never claims an edit was performed, scheduled, or proposed.") &&
+        !prompt.includes("Return error") &&
+        !prompt.includes("EXPRESSION_NOT_ALLOWLISTED") &&
+        !prompt.includes("You cannot directly modify After Effects.") &&
+        !prompt.includes("Review and Approve") &&
+        !prompt.includes("candidateId") &&
+        !prompt.includes("planId") &&
+        !prompt.includes("confirmationNonce") &&
+        !prompt.includes("digest") &&
+        !prompt.includes("authority") &&
+        Buffer.byteLength(prompt, "utf8") < 2600,
+        "The assembled prompt must retain one complete localProposal example and compact corpus while excluding repeated execution architecture and prior conflicting rules."
+    );
 
     const rebound = createHarness({ model: "another-local-model" });
     const reboundHandle = rebound.provider.start(input());
@@ -285,14 +321,19 @@ async function run() {
 
     const envelopes = [
         { type: "text", text: "ok" },
-        { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } },
-        { type: "error", error: { code: base.protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, stage: "provider", retryable: false, message: "ignored", details: {} } }
+        { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } }
     ];
     for (const envelope of envelopes) {
         const harness = createHarness({ responder: (request) => Promise.resolve(transportResult(wrapper(canonicalContent(base.protocol, request, envelope)))) });
         const response = await harness.provider.start(input()).promise;
         equal(response.envelope.type, envelope.type, envelope.type + " envelopes must pass through the parser.");
     }
+    const unauthorizedModelError = { type: "error", error: { code: base.protocol.ERROR_CODES.EXPRESSION_NOT_ALLOWLISTED, stage: "provider", retryable: false, message: "untrusted", details: {} } };
+    const unauthorizedHarness = createHarness({ responder: (request) => Promise.resolve(transportResult(wrapper(canonicalContent(base.protocol, request, unauthorizedModelError)))) });
+    const unauthorizedResponse = await unauthorizedHarness.provider.start(input()).promise;
+    equal(unauthorizedResponse.envelope.error.code, base.protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "A structurally valid model-authored error must become the generic local invalid-response result.");
+    equal(unauthorizedHarness.provider.getDiagnostics().errorCode, "MODEL_ERROR_NOT_AUTHORIZED", "Only adapter diagnostics may classify a model-authored error as unauthorized.");
+    check(!JSON.stringify(unauthorizedResponse).includes("EXPRESSION_NOT_ALLOWLISTED") && !JSON.stringify(unauthorizedResponse).includes("untrusted"), "Model-authored error fields must not enter the canonical response.");
     for (const fenced of [false, true]) {
         const harness = createHarness({ responder: (request) => { let content = canonicalContent(base.protocol, request); if (fenced) content = "```json\n" + content + "\n```"; return Promise.resolve(transportResult(wrapper(content))); } });
         equal((await harness.provider.start(input()).promise).envelope.type, "text", "Plain and recognized fenced canonical JSON must parse.");
