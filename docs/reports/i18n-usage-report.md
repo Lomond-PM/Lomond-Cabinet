@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 226 |
+| A | Core / Global; keep | 232 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -388,10 +388,16 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | tools.quickStack.title | tools.quickStack | Quick Stack | 快速堆叠 | none | no | E | Reserved or unused Home label. Confirm no planned implementation before deleting. |
 | vela.approve | vela | Approve | 批准 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.confirmation | vela | Confirmation | 确认 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.contextSelectedLayerOpacity | vela | Selected layer {index} Opacity | 已选中图层 {index} 的不透明度 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.contextSummary | vela | Context | 上下文 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.currentOpacity | vela | Current Opacity | 当前不透明度 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.description | vela | Create and approve one local opacity action for the selected layer. | 为当前选中图层创建并确认一个本地不透明度操作。 | client/js/main.js, client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.errorCode | vela | Error code | 错误码 | client/js/vela/velaProviderUi.js, client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| vela.opacityLabel | vela | Opacity | 不透明度 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.manualOpacityInvalid | vela | Enter a valid value from 0 to 100. | 请输入 0-100 之间的有效数值。 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.manualOpacityPlaceholder | vela | Enter 0–100 | 输入 0–100 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.manualOpacityRequired | vela | Enter a target opacity. | 请输入目标不透明度。 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.manualOpacityTarget | vela | Manual opacity target | 手工不透明度目标 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.opacityLabel | vela | Opacity | 不透明度 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.overline | vela | Local confirmation | 本地确认 | client/js/vela/velaUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.providerCancel | vela | Cancel request | 取消请求 | client/js/vela/velaProviderUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.providerEndpoint | vela | LM Studio endpoint | LM Studio 端点 | client/js/vela/velaProviderUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |

@@ -28,6 +28,7 @@
     var trustedControllers = new WeakSet();
     var controllerProtocols = new WeakMap();
     var controllerProposalPorts = new WeakMap();
+    var controllerContextRefreshPorts = new WeakMap();
     var hasOwn = Object.prototype.hasOwnProperty;
     function ownData(value, key) {
         var descriptor;
@@ -158,10 +159,19 @@
                 return proposal;
             }
         });
+        var contextRefreshPort = Object.freeze({
+            discardActiveProposalForContextRefresh: function () {
+                if (state !== "proposal-ready" || !activeProposal) { return false; }
+                activeProposal = null;
+                publish("idle", null, null, null, publicState.modelId);
+                return true;
+            }
+        });
         var controller = Object.freeze({ send: send, cancel: cancel, invalidate: invalidate, getUiState: function () { return publicState; } });
         trustedControllers.add(controller);
         controllerProtocols.set(controller, protocol);
         controllerProposalPorts.set(controller, proposalPort);
+        controllerContextRefreshPorts.set(controller, contextRefreshPort);
         return controller;
     }
     function isTrustedProviderControllerForProtocol(value, protocol) { return trustedControllers.has(value) && controllerProtocols.get(value) === protocol && protocolModule.isTrustedProtocol(protocol); }
@@ -172,5 +182,12 @@
         if (!port) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
         return port;
     }
-    return Object.freeze({ createProviderController: createProviderController, isTrustedProviderControllerForProtocol: isTrustedProviderControllerForProtocol, createProposalPort: createProposalPort });
+    function createContextRefreshPort(controller, protocol) {
+        var port;
+        if (!isTrustedProviderControllerForProtocol(controller, protocol)) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
+        port = controllerContextRefreshPorts.get(controller);
+        if (!port) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
+        return port;
+    }
+    return Object.freeze({ createProviderController: createProviderController, isTrustedProviderControllerForProtocol: isTrustedProviderControllerForProtocol, createProposalPort: createProposalPort, createContextRefreshPort: createContextRefreshPort });
 }));

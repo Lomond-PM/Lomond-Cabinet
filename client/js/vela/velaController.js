@@ -5,12 +5,13 @@
     var BOOTSTRAP_NAME = "__velaProtocolCoreBootstrapV1";
 
     function bootstrapError(code) { var error = new Error(code); error.code = code; return error; }
-    function assertDependencies(protocol, preflight) {
+    function assertDependencies(protocol, preflight, bridge) {
         if (!protocol || typeof protocol.createProtocol !== "function" || typeof protocol.isTrustedProtocol !== "function" || !protocol.ERROR_CODES ||
-                !preflight || typeof preflight.createExecutionPreflight !== "function") {
+                !preflight || typeof preflight.createExecutionPreflight !== "function" ||
+                !bridge || typeof bridge.isTrustedContextBridgeForProtocol !== "function" || typeof bridge.isTrustedReviewPortForProtocol !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE");
         }
-        return { protocol: protocol, preflight: preflight };
+        return { protocol: protocol, preflight: preflight, bridge: bridge };
     }
     function registerBrowserModule(target, name, create) {
         var hasOwn = Object.prototype.hasOwnProperty;
@@ -21,21 +22,22 @@
         bootstrap = target[BOOTSTRAP_NAME];
         if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.getModule !== "function" || typeof bootstrap.hasModule !== "function" || typeof bootstrap.registerModule !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
         if (bootstrap.hasModule(name)) { throw bootstrapError("MODULE_ALREADY_REGISTERED"); }
-        dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaExecutionPreflight"));
-        exported = Object.freeze(create(dependencies.protocol, dependencies.preflight));
+        dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaExecutionPreflight"), bootstrap.getModule("VelaContextBridge"));
+        exported = Object.freeze(create(dependencies.protocol, dependencies.preflight, dependencies.bridge));
         bootstrap.registerModule(name, exported);
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        var dependencies = assertDependencies(require("./velaProtocol"), require("./velaExecutionPreflight"));
-        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.preflight));
+        var dependencies = assertDependencies(require("./velaProtocol"), require("./velaExecutionPreflight"), require("./velaContextBridge"));
+        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.preflight, dependencies.bridge));
     }
-}(typeof self !== "undefined" ? self : this, function (protocolModule) {
+}(typeof self !== "undefined" ? self : this, function (protocolModule, preflightModule, bridgeModule) {
     "use strict";
 
     var MODULE_REVISION = "vela-controller-v1";
+    var OPACITY_PROPERTY_PATH = Object.freeze(["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0]);
     var trustedControllers = new WeakSet();
     var controllerProtocols = new WeakMap();
 
@@ -71,17 +73,27 @@
     function createController(options) {
         var protocol = options && ownData(options, "protocol");
         var preflight = options && ownData(options, "preflight");
+        var contextBridge = options && ownData(options, "contextBridge");
+        var reviewPort = options && ownData(options, "reviewPort");
         if (!protocolModule.isTrustedProtocol(protocol) || !protocol || !protocol.isPlainObject(options)) {
             throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
         }
-        protocol.assertNoUnknownKeys(options, ["protocol", "preflight"], "velaController.options");
+        protocol.assertNoUnknownKeys(options, ["protocol", "preflight", "contextBridge", "reviewPort"], "velaController.options");
         if (!preflight || typeof ownData(preflight, "createBoundPlan") !== "function" || typeof ownData(preflight, "confirmBoundPlan") !== "function" ||
                 typeof ownData(preflight, "executeStep") !== "function" || typeof ownData(preflight, "discardBoundPlan") !== "function") {
             protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Controller requires execution preflight.");
         }
+        if (!bridgeModule.isTrustedContextBridgeForProtocol(contextBridge, protocol) || !bridgeModule.isTrustedReviewPortForProtocol(reviewPort, protocol) ||
+                typeof ownData(contextBridge, "beginOwnedCapture") !== "function" || typeof ownData(contextBridge, "beginOwnedPropertyValueCapture") !== "function" ||
+                typeof ownData(contextBridge, "cancelOwnedCapture") !== "function" || typeof ownData(reviewPort, "summarize") !== "function") {
+            protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Controller requires trusted context capture.");
+        }
         var state = "idle";
         var activeRecord = null;
+        var contextRecord = null;
         var generation = 1;
+        var contextRevision = 0;
+        var refreshCapture = null;
         var stableErrorCodes = Object.keys(protocol.ERROR_CODES).map(function (key) { return protocol.ERROR_CODES[key]; });
 
         function safeState() {
@@ -90,11 +102,13 @@
                 candidateId: activeRecord ? activeRecord.candidateId : null,
                 capabilityId: activeRecord ? "set-opacity-v1" : null,
                 risk: activeRecord ? "write" : null,
-                targetSummary: activeRecord ? activeRecord.targetSummary : null,
-                beforeValue: activeRecord ? activeRecord.beforeValue : null,
+                targetSummary: activeRecord ? activeRecord.targetSummary : (contextRecord ? contextRecord.targetSummary : null),
+                contextLayerIndex: contextRecord ? contextRecord.layerIndex : null,
+                contextRevision: contextRevision,
+                beforeValue: activeRecord ? activeRecord.beforeValue : (contextRecord ? contextRecord.beforeValue : null),
                 proposedValue: activeRecord ? activeRecord.proposedValue : null,
                 undoGroupLabel: activeRecord ? "Vela: Set Opacity" : null,
-                errorCode: activeRecord ? activeRecord.errorCode : null,
+                errorCode: activeRecord ? activeRecord.errorCode : (contextRecord ? contextRecord.errorCode : null),
                 moduleRevision: MODULE_REVISION
             });
         }
@@ -115,11 +129,76 @@
             }
         }
 
+        function rememberRefreshCapture(capturedGeneration, handle) {
+            if (handle) { refreshCapture = { generation: capturedGeneration, handle: handle }; }
+        }
+
+        function clearRefreshCapture(capturedGeneration) {
+            if (refreshCapture && refreshCapture.generation === capturedGeneration) { refreshCapture = null; }
+        }
+
+        function cancelRefreshCapture() {
+            if (!refreshCapture) { return; }
+            contextBridge.cancelOwnedCapture(refreshCapture.handle);
+            refreshCapture = null;
+        }
+
         function refreshContext() {
+            var capturedGeneration;
+            var bindingPromise;
+            var bindingStart;
             if (state === "executing") { return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.EXECUTION_BUSY)); }
             clearPending("refresh");
-            state = "input-ready";
-            return Promise.resolve(safeState());
+            activeRecord = null;
+            contextRecord = null;
+            generation += 1;
+            contextRevision += 1;
+            capturedGeneration = generation;
+            cancelRefreshCapture();
+            state = "context-loading";
+            bindingStart = contextBridge.beginOwnedCapture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
+            bindingPromise = bindingStart.promise;
+            rememberRefreshCapture(capturedGeneration, bindingStart.handle);
+            return bindingPromise.then(function (bindingCapture) {
+                var selection = bindingCapture && bindingCapture.snapshot && bindingCapture.snapshot.selection;
+                var target;
+                var valuePromise;
+                var valueStart;
+                clearRefreshCapture(capturedGeneration);
+                if (capturedGeneration !== generation) { throw protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
+                if (!Array.isArray(selection) || selection.length !== 1 || !selection[0] || typeof selection[0].layerId !== "string") {
+                    throw protocolError(protocol, protocol.ERROR_CODES.UNKNOWN_TARGET);
+                }
+                target = { layerId: selection[0].layerId, propertyPath: OPACITY_PROPERTY_PATH };
+                valueStart = contextBridge.beginOwnedPropertyValueCapture(bindingCapture, [target]);
+                valuePromise = valueStart.promise;
+                rememberRefreshCapture(capturedGeneration, valueStart.handle);
+                return valuePromise.then(function (valueCapture) {
+                    var review;
+                    clearRefreshCapture(capturedGeneration);
+                    if (capturedGeneration !== generation) { throw protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
+                    review = reviewPort.summarize(bindingCapture, valueCapture);
+                    if (!review || review.valueKind !== "number" || typeof review.beforeValue !== "number" || !Number.isFinite(review.beforeValue) || Object.is(review.beforeValue, -0) || review.beforeValue < 0 || review.beforeValue > 100) {
+                        protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Context opacity review is invalid.");
+                    }
+                    contextRecord = {
+                        targetSummary: null,
+                        layerIndex: selection[0].layerIndex,
+                        beforeValue: review.beforeValue,
+                        errorCode: null
+                    };
+                    state = "ready";
+                    return safeState();
+                });
+            }).catch(function (error) {
+                var code;
+                clearRefreshCapture(capturedGeneration);
+                if (capturedGeneration !== generation) { throw protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
+                code = safeCode(protocol, stableErrorCodes, error);
+                contextRecord = { targetSummary: null, layerIndex: null, beforeValue: null, errorCode: code };
+                state = code === protocol.ERROR_CODES.UNKNOWN_TARGET ? "no-target" : "failed";
+                throw error;
+            });
         }
 
         function createOpacityCandidate(input) {
@@ -201,8 +280,11 @@
 
         function invalidate(nextState) {
             generation += 1;
+            contextRevision += 1;
+            cancelRefreshCapture();
             clearPending("lifecycle");
             activeRecord = null;
+            contextRecord = null;
             state = nextState || "idle";
             return safeState();
         }

@@ -203,6 +203,17 @@ async function runBasicTests() {
 }
 
 async function runStateMachineTests() {
+    const ownedHarness = makeHarness();
+    const owned = ownedHarness.bridge.beginOwnedCapture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
+    check(Object.isFrozen(owned) && owned.handle && Object.isFrozen(owned.handle) && Object.keys(owned.handle).length === 0, "Owned captures return an opaque frozen handle without request identity.");
+    const providerBusy = ownedHarness.bridge.beginOwnedCapture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
+    check(providerBusy.handle === null, "A busy Bridge does not issue an ownership handle to a rejected capture.");
+    await expectCode(providerBusy.promise, protocol.ERROR_CODES.EXECUTION_BUSY, "A rejected owned capture retains the existing busy error.");
+    check(ownedHarness.bridge.cancelOwnedCapture(Object.freeze({})) === false, "A forged ownership handle cannot cancel an active capture.");
+    check(ownedHarness.bridge.cancelOwnedCapture(owned.handle) === true, "The exact private ownership handle cancels its own active capture.");
+    await expectCode(owned.promise, protocol.ERROR_CODES.LIFECYCLE_BLOCKED, "Cancelling an owned capture rejects only that capture.");
+    check(ownedHarness.bridge.cancelOwnedCapture(owned.handle) === false, "A settled ownership handle cannot be replayed.");
+
     const malformed = makeHarness((source, callback) => callback("not-json"));
     await expectCode(malformed.bridge.capture({ tier: 0 }), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Malformed Host JSON must fail closed.");
 
