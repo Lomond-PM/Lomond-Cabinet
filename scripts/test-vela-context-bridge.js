@@ -825,12 +825,18 @@ async function runPropertyValueReviewPortTests() {
     const value = await harness.bridge.capturePropertyValues(binding, [target]);
     const reviewPort = bridgeModule.createReviewPort(harness.bridge, protocol);
     const review = reviewPort.summarize(binding, value);
+    const providerPort = bridgeModule.createProviderContextPort(harness.bridge, protocol);
+    const providerContext = providerPort.project(binding, value);
     check(bridgeModule.isTrustedReviewPortForProtocol(reviewPort, protocol), "Review port must carry exact Bridge and Protocol identity.");
     check(Object.isFrozen(review) && Object.keys(review).sort().join(",") === "beforeValue,valueKind" && review.beforeValue === 25 && review.valueKind === "number", "Review port must return only a frozen bounded Opacity beforeValue summary.");
+    check(bridgeModule.isTrustedProviderContextPortForProtocol(providerPort, protocol) && Object.isFrozen(providerContext) && providerContext.selectedLayerOpacity.available === true && providerContext.selectedLayerOpacity.value === 25, "Provider context port must release only the verified finite Opacity fact from the exact binding ancestry.");
+    check(Object.keys(providerContext).sort().join(",") === "activeCompositionType,firstSelectedLayerType,selectedLayerCount,selectedLayerOpacity" && !/layerId|host_|fingerprint|propertyPath|requestId|candidate|plan|nonce|digest|schemaRevision/.test(JSON.stringify(providerContext)), "Provider context projection must be a strict identity-free, version-free whitelist.");
+    check(providerPort.project(binding, null).selectedLayerOpacity.available === false && !Object.prototype.hasOwnProperty.call(providerPort.project(binding, null).selectedLayerOpacity, "value"), "Provider context without a Tier 3 value must be explicitly unavailable without a fallback value.");
     check(!JSON.stringify(value).includes("beforeValue") && !JSON.stringify(value).includes("\"data\"") && !JSON.stringify(value).includes("\"value\""), "Public property-value capture must not expose beforeValue or raw value.");
     check(!Object.prototype.hasOwnProperty.call(harness.bridge, "createReviewPort") && !Object.prototype.hasOwnProperty.call(harness.bridge, "reviewPort"), "Review port must not appear on the public Bridge object.");
     expectThrowCode(() => reviewPort.summarize(protocol.deepFreeze(protocol.cloneJson(binding)), value), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Review port must reject cloned binding captures.");
     expectThrowCode(() => reviewPort.summarize(binding, protocol.deepFreeze(JSON.parse(JSON.stringify(value)))), protocol.ERROR_CODES.CONTEXT_STALE, "Review port must reject JSON-cloned value captures.");
+    expectThrowCode(() => providerPort.project(protocol.deepFreeze(protocol.cloneJson(binding)), value), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Provider context port must reject cloned binding captures.");
 
     const nonOpacity = makeHarness((source, callback) => {
         const req = decodeSource(source);

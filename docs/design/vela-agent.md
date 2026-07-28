@@ -967,10 +967,43 @@ invalidate the generation; a resumed or new Runtime lifecycle may perform a
 new refresh through the same normal bootstrap path.
 
 The legacy Context summary is localized in the Tool view from a bounded layer
-index and never carries a layer name. Provider requests still have only Tier 1
-selection-summary grounding and do not receive a trusted current Opacity value;
-natural-language current-value answers remain follow-up work in the independent
-Provider context-grounding stage, not a Refresh or Provider-isolation behavior.
+index and never carries a layer name. Provider Send is a separate read-only
+request-level transaction: it takes a fresh Tier 1 binding capture and, for
+exactly one bound layer, a Tier 3 Opacity value capture against that same opaque
+binding. A private Provider Context Port verifies the ancestry and releases
+only a frozen request projection: composition type, selected-layer count, first
+selected-layer type, and `selectedLayerOpacity` as either `{ available: false }`
+or a finite 0..100 value. It never releases layer identity, comp identity,
+capture identifiers, fingerprints, property paths, raw Host payloads, prior
+Provider requests, Transcript, candidate, plan, confirmation, or execution
+state. No selection or a multi-selection remains a usable Provider request with
+`available: false`; Tier 3 validation or lifecycle failure follows the existing
+fail-closed Provider error path. This read-only fact can answer a current-value
+question but never becomes a proposal target, candidate, plan, or Host input.
+Each Provider send owns its Tier 1/Tier 3 handles; cancel, suspend, dispose,
+resend, drift, and late callbacks discard the generation before any request is
+sent or UI state is patched.
+
+Provider Controller production-chain tests use deferred Tier 1 and Tier 3 Host
+callbacks, rather than synchronous mocks, to cover pending-Tier-3 cancel,
+rapid resend, suspend/resume, disposal/new lifecycle, stale or mismatched
+results, no-selection and multi-selection `available: false`, and Provider /
+legacy Refresh owned-handle contention. They assert Host-capture, request
+assembly, transport, messages, and terminal state, so a Bridge-only test cannot
+hide an orchestration regression.
+
+This grounding is a request-time read-only snapshot, not continuous monitoring,
+candidate binding, Preflight truth, or Host execution authority. Review and
+Preflight continue to establish their own local trusted chains. The current
+qwen3.5-4b may classify a query as `localProposal`; the Intent Gate rejects it
+fail-closed, which is a model-qualification issue rather than a grounding
+permission failure. LM Studio Thinking/Profile stability is also a separate
+configuration-qualification issue: production does not guess unsupported
+reasoning parameters, and non-empty `reasoning_content` never enters the
+Parser or becomes a formal answer. A Thinking timeout therefore changes neither
+the grounding nor execution contract. Follow-up work belongs to
+`test/vela-provider-model-qualification` and
+`refactor/vela-capability-contracts`.
 
 Legacy Refresh separates its read-only `currentOpacity` display from the manual
 proposal draft. Tier 3 supplies only `beforeValue`; it never prepopulates or
