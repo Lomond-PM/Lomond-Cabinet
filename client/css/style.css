@@ -931,6 +931,16 @@ body:not(.i18n-ready) .app-shell {
     color: var(--danger);
 }
 
+.vela-manual-opacity-validation {
+    min-height: calc(14px * var(--ui-scale));
+    color: var(--text-secondary);
+    font-size: var(--font-small);
+}
+
+.vela-manual-opacity-validation.is-error {
+    color: var(--danger);
+}
+
 .palette-json-replace-confirm {
     display: none;
     flex-wrap: wrap;
@@ -3440,6 +3450,10 @@ p {
     display: flex;
     flex-direction: column;
     gap: calc(6px * var(--ui-scale));
+}
+
+.vela-review-card[hidden] {
+    display: none;
 }
 
 .vela-opacity-input {

@@ -6992,6 +6992,8 @@
             velaUiController = null;
         }
         if (velaProviderUiController) { velaProviderUiController.teardown(); velaProviderUiController = null; }
+        while (panel.firstChild) { panel.removeChild(panel.firstChild); }
+        while (actions.firstChild) { actions.removeChild(actions.firstChild); }
         if (!window.VelaUi || typeof window.VelaUi.createVelaUi !== "function") {
             panel.textContent = tr("vela.runtimeUnavailable");
             return;
@@ -7016,6 +7018,16 @@
         activeToolId = toolId || "shapeAdd";
         if (previousToolId && previousToolId !== activeToolId) {
             clearRegistryProceduralPreviewTimer(previousToolId);
+        }
+        if (previousToolId === "vela" && !vela) {
+            if (velaUiController) {
+                velaUiController.teardown();
+                velaUiController = null;
+            }
+            if (velaProviderUiController) {
+                velaProviderUiController.teardown();
+                velaProviderUiController = null;
+            }
         }
         byId("detailHeading").textContent = toolText(meta, "titleKey", "title", tr("app.title"));
 
@@ -7989,6 +8001,9 @@
 
     function suspendPanelRuntime() {
         panelSuspended = true;
+        if (velaUiController && typeof velaUiController.resetTransientState === "function") {
+            velaUiController.resetTransientState();
+        }
         if (velaSurfaceController) {
             velaSurfaceController.suspend();
         }

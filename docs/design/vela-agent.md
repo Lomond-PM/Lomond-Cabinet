@@ -932,9 +932,87 @@ state must not be persisted as an executable plan.
 
 UI-D2, the old Vela Tool retirement, has not started and remains BLOCKED. The
 old Tool must remain available; UI-D1 completion is not authorization to remove
-its entry points. Before UI-D2 can be approved, manual opacity proposal and the
-`refreshContext` recovery entry point require a replacement or a formal product
-decision, with corresponding regression proof for the retained complete path.
+its entry points. Before UI-D2 can be approved, manual opacity proposal and its
+corresponding regression proof for the retained complete path require a
+replacement or a formal product decision.
+
+### Legacy Tool context refresh
+
+The retained legacy Tool's `refreshContext()` is a read-only two-stage Context
+transaction. It uses the Runtime's existing trusted ContextBridge instance,
+first requesting a Tier 1 `binding` capture and then passing that exact opaque
+capture through the owned `capturePropertyValues()` path for the fixed Opacity
+path. The private
+Review Port reduces the Tier 3 result to the bounded current opacity used by the
+legacy display; captures, target identity, request identifiers, and raw Host
+payloads do not enter the Tool UI state.
+
+Both Host reads belong to one controller generation. The Tool publishes `ready`
+only after both captures and the Review Port ancestry checks succeed. No
+selection, a target mismatch, a finite capture failure, lifecycle invalidation,
+or a late callback clears the in-progress result and publishes only the bounded
+`no-target`, `failed`, or lifecycle state; a prior opacity is never reused.
+The ContextBridge gives this transaction an opaque, module-private ownership
+handle only after its own capture is accepted; cancellation validates that exact
+handle rather than reading the shared Bridge request id. A busy Provider capture
+therefore gives Refresh no handle and cannot be cancelled, invalidated, or
+reassigned by Refresh. Rapid refresh cancels only its own prior Tier 1 or Tier 3
+capture. At Refresh linearization, a pre-existing private Provider
+`proposal-ready` is discarded through a Runtime-private port, so later Review
+fails closed and cannot create a candidate; a Provider that is still `pending`
+is not altered. Refresh clears a legacy pending confirmation through the
+existing preflight discard path, but does not create a Provider proposal,
+candidate, plan, or Host execution. Suspend, dispose, and panel reload
+invalidate the generation; a resumed or new Runtime lifecycle may perform a
+new refresh through the same normal bootstrap path.
+
+The legacy Context summary is localized in the Tool view from a bounded layer
+index and never carries a layer name. Provider requests still have only Tier 1
+selection-summary grounding and do not receive a trusted current Opacity value;
+natural-language current-value answers remain follow-up work in the independent
+Provider context-grounding stage, not a Refresh or Provider-isolation behavior.
+
+Legacy Refresh separates its read-only `currentOpacity` display from the manual
+proposal draft. Tier 3 supplies only `beforeValue`; it never prepopulates or
+acts as the editable manual target. Refresh begins by invalidating any prior
+manual draft because it may belong to an earlier target binding. The legacy
+Review control stays disabled until the user explicitly enters one finite
+0–100 value after the latest Refresh, and validates the value again before it
+can create a candidate. Consequently a legacy candidate's `beforeValue` comes
+from the trusted current-value capture while `proposedValue` comes only from
+the explicit manual draft. This remains separate from Provider local proposals
+and their parameterless Surface Review path.
+
+The retained legacy Tool keeps its manual draft as session-only UI state with a
+stable validation node. First mount, Refresh, a context revision change,
+suspend, and a new lifecycle produce a pristine empty input with no message and
+`aria-invalid="false"`. A touched empty input shows a localized required
+message; a touched non-finite, non-numeric, or out-of-range input shows a
+localized invalid message; and a touched finite 0–100 input has no message and
+enables Review. The input permanently references the stable polite `aria-live`
+validation node with `aria-describedby`; no validation error enters the
+Transcript. Refresh and suspend explicitly clear draft and touched state, while
+disposal removes the old UI lifecycle before a new bootstrap creates fresh
+nodes. The legacy manual proposal continues through the `main.js` intent adapter
+to `createOpacityCandidate`; current opacity never becomes a proposed value or
+a fallback.
+
+The legacy confirmation summary root may remain mounted for DOM stability, but
+it is visible only for a complete legacy `pending-confirmation` record with
+finite `beforeValue` and `proposedValue`. A ready Context current-opacity value
+is not a confirmation. Idle, Refresh, Reject, Approve terminal states, suspend,
+dispose, and an incomplete record set `hidden` and `aria-hidden="true"` and
+clear the summary text; the Tool never presents an `n/a` confirmation placeholder.
+
+The persistent Vela Surface, the legacy Vela Tool, and a Registry Renderer Tool
+are distinct view owners. The Surface remains mounted in Home and is never part
+of the shared detail container. The detail container has exactly one active
+owner: entering legacy Vela tears down any prior Vela instance and clears the
+shared Registry content and action roots before mounting Vela; leaving Vela for
+a Registry Tool tears down Vela listeners and nodes before the Registry renderer
+claims those roots. This navigation cleanup changes no Context, Provider, or
+Host authority and preserves Registry state through its existing model and
+persistence contract rather than retaining visible DOM.
 
 ## 11. Module And File Plan
 

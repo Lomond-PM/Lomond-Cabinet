@@ -14,10 +14,27 @@ async function expectCode(value, code, message) {
 }
 function decode(source) { return JSON.parse(JSON.parse(source.slice("AEToolbox.VelaContext.handle(".length, -1))); }
 function hostResult(request, unavailable) {
+    let snapshot;
+    if (unavailable !== true) {
+        if (request.operation === "captureContext") {
+            snapshot = {
+                hostInstanceId: HOST, hostReloadEpoch: 1, tier: 1, projectGeneration: 3,
+                activeComp: { itemId: 12, projectGeneration: 3, type: "CompItem", width: 1920, height: 1080, duration: 10, frameRate: 30 },
+                selection: { count: 1, identityQuality: "native-layer-id", items: [{ nativeLayerId: 45, layerIndex: 3, selectedOrder: 0, matchName: "ADBE Text Layer", type: "text" }] }
+            };
+        } else if (request.operation === "capturePropertyValues") {
+            snapshot = {
+                hostInstanceId: HOST, hostReloadEpoch: 1, tier: 3, projectGeneration: 3, sampleTime: 1,
+                targets: request.scope.targets.map((target, index) => ({ targetOrdinal: index, nativeLayerId: target.nativeLayerId, layerIndex: target.layerIndex, propertyPath: target.propertyPath, propertyMatchName: target.propertyPath[target.propertyPath.length - 2], value: { kind: "number", data: 57.5 } }))
+            };
+        } else {
+            snapshot = { hostInstanceId: HOST, hostReloadEpoch: 1, tier: 0, capabilities: { maxTier: 3, nativeLayerIdAvailable: false, bindingContextAvailable: false, hostAdapterRevision: "vela-context-host-v4" } };
+        }
+    }
     return JSON.stringify({
         protocol: "vela.host-context-result.v1", schemaVersion: "1.0", requestId: request.requestId, sessionId: request.sessionId,
         operation: request.operation, ok: unavailable !== true, hostAdapterRevision: "vela-context-host-v4",
-        snapshot: unavailable === true ? undefined : { hostInstanceId: HOST, hostReloadEpoch: 1, tier: 0, capabilities: { maxTier: 3, nativeLayerIdAvailable: false, bindingContextAvailable: false, hostAdapterRevision: "vela-context-host-v4" } },
+        snapshot,
         error: unavailable === true ? { code: "HOST_CONTEXT_UNAVAILABLE", message: "ignored" } : undefined
     });
 }
@@ -52,6 +69,9 @@ async function run() {
     check(Object.isFrozen(controller.getUiState()) && !Object.prototype.hasOwnProperty.call(controller.getUiState(), "planId") && !Object.prototype.hasOwnProperty.call(controller.getUiState(), "propertyValueDigest"), "UI state is frozen and does not leak private plan or digest data.");
     check(Object.isFrozen(controller.getProviderSurfaceState()) && !Object.prototype.hasOwnProperty.call(controller.getProviderSurfaceState(), "requestId") && !Object.prototype.hasOwnProperty.call(controller.getProviderSurfaceState(), "proposalCapabilityId"), "Provider Surface projection is frozen and excludes request and proposal authority.");
     check(Object.isFrozen(controller.getConfirmationSurfaceState()) && Object.keys(controller.getConfirmationSurfaceState()).sort().join(",") === "beforeValue,errorCode,moduleRevision,proposedValue,state" && !/candidate|target|context|plan|nonce|digest|authority|payload/i.test(Object.keys(controller.getConfirmationSurfaceState()).join(",")), "Confirmation Surface projection is frozen and excludes trusted execution data.");
+    const refreshed = await controller.refreshContext();
+    check(refreshed.state === "ready" && refreshed.beforeValue === 57.5 && refreshed.candidateId === null && !/requestId|layerId|propertyPath/.test(JSON.stringify(refreshed)), "Runtime refresh publishes a bounded two-capture legacy context view without creating execution authority.");
+    check(controller.getConfirmationSurfaceState().state === "idle" && controller.getConfirmationSurfaceState().beforeValue === null && controller.getConfirmationSurfaceState().proposedValue === null, "Legacy refresh context values do not become Surface confirmation data.");
     await expectCode(controller.approveActiveCandidate(), "CANDIDATE_STATE_INVALID", "Approve facade fails closed without a pending confirmation.");
     await expectCode(controller.rejectActiveCandidate(), "CANDIDATE_STATE_INVALID", "Reject facade fails closed without a pending confirmation.");
     check((await controller.initialize()).state === "ready" && controller.getStatus().state === "ready", "Repeated initialization is idempotent.");

@@ -223,6 +223,7 @@
         var bridgeLifecycleEpoch = 1;
         var state = "idle";
         var active = null;
+        var ownedCaptureHandles = new WeakMap();
 
         function issueUniqueSessionId(currentSessionId) {
             var attempts = 1 + protocol.HARD_LIMITS.maxIdCollisionRetries;
@@ -266,6 +267,7 @@
             if (!recordMatches(record, capturedGeneration)) { return false; }
             record.settled = true;
             clearRecordTimer(record);
+            if (record.ownedHandle) { ownedCaptureHandles.delete(record.ownedHandle); }
             active = null;
             state = "idle";
             if (error) { record.reject(error); }
@@ -716,24 +718,24 @@
             });
         }
 
-        function capture(captureOptions) {
+        function beginOwnedCapture(captureOptions) {
             captureOptions = captureOptions || {};
             if (!protocol.isPlainObject(captureOptions)) {
-                return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED));
+                return Object.freeze({ promise: Promise.reject(protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED)), handle: null });
             }
             try { protocol.assertNoUnknownKeys(captureOptions, ["tier", "purpose", "selectionOrderMeaningful"], "contextBridge.capture"); }
-            catch (error) { return Promise.reject(error); }
-            if (state === "suspended") { return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED)); }
-            if (state === "pending") { return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.EXECUTION_BUSY)); }
+            catch (error) { return Object.freeze({ promise: Promise.reject(error), handle: null }); }
+            if (state === "suspended") { return Object.freeze({ promise: Promise.reject(protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED)), handle: null }); }
+            if (state === "pending") { return Object.freeze({ promise: Promise.reject(protocolError(protocol, protocol.ERROR_CODES.EXECUTION_BUSY)), handle: null }); }
             var tier = captureOptions.tier === undefined ? 1 : captureOptions.tier;
             var purpose = captureOptions.purpose === undefined ? "display" : captureOptions.purpose;
             var selectionOrderMeaningful = captureOptions.selectionOrderMeaningful === undefined ? true : captureOptions.selectionOrderMeaningful;
             if ((tier !== 0 && tier !== 1) || (purpose !== "display" && purpose !== "binding") || typeof selectionOrderMeaningful !== "boolean") {
-                return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED));
+                return Object.freeze({ promise: Promise.reject(protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED)), handle: null });
             }
             var requestId;
             try { requestId = nextRequestId(); }
-            catch (error) { return Promise.reject(error); }
+            catch (error) { return Object.freeze({ promise: Promise.reject(error), handle: null }); }
             var operation = tier === 0 ? "getCapabilities" : "captureContext";
             var request = {
                 protocol: REQUEST_PROTOCOL,
@@ -744,18 +746,26 @@
                 tier: tier,
                 scope: { purpose: purpose, selectionOrderMeaningful: selectionOrderMeaningful }
             };
-            return startRequest(request, tier === 0 ? normalizeTierZero : normalizeTierOne);
+            return startRequest(request, tier === 0 ? normalizeTierZero : normalizeTierOne, true);
         }
 
-        function startRequest(request, normalizer) {
+        function capture(captureOptions) {
+            return beginOwnedCapture(captureOptions).promise;
+        }
+
+        function startRequest(request, normalizer, exposeOwnership) {
             var requestJson;
             try {
                 protocol.assertJsonBudget(request, { maxBytes: 32 * 1024 });
                 requestJson = JSON.stringify(request);
-            } catch (error) { return Promise.reject(error); }
+            } catch (error) {
+                if (exposeOwnership) { return Object.freeze({ promise: Promise.reject(error), handle: null }); }
+                return Promise.reject(error);
+            }
             requestGeneration++;
             var capturedGeneration = requestGeneration;
-            return new Promise(function (resolve, reject) {
+            var ownedHandle = exposeOwnership ? Object.freeze({}) : null;
+            var promise = new Promise(function (resolve, reject) {
                 var record = {
                     requestId: request.requestId,
                     sessionId: sessionId,
@@ -764,9 +774,11 @@
                     resolve: resolve,
                     reject: reject,
                     timer: null,
-                    settled: false
+                    settled: false,
+                    ownedHandle: ownedHandle
                 };
                 active = record;
+                if (ownedHandle) { ownedCaptureHandles.set(ownedHandle, record); }
                 state = "pending";
                 try {
                     record.timer = setTimer(function () {
@@ -792,6 +804,7 @@
                     settle(record, capturedGeneration, protocolError(protocol, protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE), null);
                 }
             });
+            return exposeOwnership ? Object.freeze({ promise: promise, handle: ownedHandle }) : promise;
         }
 
         function captureLayerDetails(detailOptions) {
@@ -1125,10 +1138,10 @@
             });
         }
 
-        function capturePropertyValues(bindingCapture, targets) {
+        function beginOwnedPropertyValueCapture(bindingCapture, targets) {
             try {
-                if (state === "suspended") { return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED)); }
-                if (state === "pending") { return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.EXECUTION_BUSY)); }
+                if (state === "suspended") { return Object.freeze({ promise: Promise.reject(protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED)), handle: null }); }
+                if (state === "pending") { return Object.freeze({ promise: Promise.reject(protocolError(protocol, protocol.ERROR_CODES.EXECUTION_BUSY)), handle: null }); }
                 var bindingRecord = trustedBindingRecord(bindingCapture);
                 var normalizedTargets = normalizePropertyValueTargets(bindingRecord, targets);
                 var requestId = nextRequestId();
@@ -1150,10 +1163,14 @@
                     }
                 };
                 protocol.assertJsonBudget(request, { maxBytes: 8 * 1024 });
-                return startRequest(request, function (result, hostRequest) { return normalizePropertyValueTierThree(result, hostRequest, bindingRecord, normalizedTargets); });
+                return startRequest(request, function (result, hostRequest) { return normalizePropertyValueTierThree(result, hostRequest, bindingRecord, normalizedTargets); }, true);
             } catch (error) {
-                return Promise.reject(error);
+                return Object.freeze({ promise: Promise.reject(error), handle: null });
             }
+        }
+
+        function capturePropertyValues(bindingCapture, targets) {
+            return beginOwnedPropertyValueCapture(bindingCapture, targets).promise;
         }
 
         function createPrivateExecutionRequest(action, trustedExecutionContext) {
@@ -1253,6 +1270,12 @@
         function cancel(requestId) {
             if (!active || active.requestId !== requestId || state !== "pending") { return false; }
             return settle(active, active.generation, protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED), null);
+        }
+
+        function cancelOwnedCapture(handle) {
+            var record = ownedCaptureHandles.get(handle);
+            if (!record || active !== record || state !== "pending") { return false; }
+            return settle(record, record.generation, protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED), null);
         }
 
         function suspend() {
@@ -1386,10 +1409,13 @@
 
         var bridge = Object.freeze({
             capture: capture,
+            beginOwnedCapture: beginOwnedCapture,
             captureLayerDetails: captureLayerDetails,
             capturePropertyValues: capturePropertyValues,
+            beginOwnedPropertyValueCapture: beginOwnedPropertyValueCapture,
             resolvePropertyTargets: resolvePropertyTargets,
             cancel: cancel,
+            cancelOwnedCapture: cancelOwnedCapture,
             suspend: suspend,
             resume: resume,
             resetSession: resetSession,
