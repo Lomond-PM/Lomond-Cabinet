@@ -107,6 +107,8 @@
     var executionPortProtocols = new WeakMap();
     var reviewPorts = new WeakMap();
     var reviewPortProtocols = new WeakMap();
+    var providerContextPorts = new WeakMap();
+    var providerContextPortProtocols = new WeakMap();
     var OPACITY_PROPERTY_PATH = Object.freeze(["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0]);
 
     function isTrustedContextBridge(bridge) {
@@ -143,6 +145,20 @@
 
     function isTrustedReviewPortForProtocol(port, protocol) {
         return Boolean(port && protocolModule.isTrustedProtocol(protocol) && reviewPortProtocols.get(port) === protocol);
+    }
+
+    function createProviderContextPort(bridge, protocol) {
+        var port;
+        if (!isTrustedContextBridgeForProtocol(bridge, protocol)) {
+            throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
+        }
+        port = providerContextPorts.get(bridge);
+        if (!port) { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
+        return port;
+    }
+
+    function isTrustedProviderContextPortForProtocol(port, protocol) {
+        return Boolean(port && protocolModule.isTrustedProtocol(protocol) && providerContextPortProtocols.get(port) === protocol);
     }
 
     function protocolError(protocol, code, stage) {
@@ -1267,6 +1283,42 @@
             });
         }
 
+        function createPrivateProviderRequestContext(bindingCapture, valueCapture) {
+            var bindingRecord = trustedBindingRecord(bindingCapture);
+            var snapshot = bindingCapture.snapshot;
+            var selection = snapshot && snapshot.selection;
+            var activeComp = snapshot && snapshot.activeComp;
+            var first = Array.isArray(selection) && selection.length ? selection[0] : null;
+            var projection = {
+                activeCompositionType: activeComp && typeof activeComp.type === "string" ? activeComp.type : "none",
+                selectedLayerCount: Array.isArray(selection) ? selection.length : 0,
+                firstSelectedLayerType: first && typeof first.type === "string" ? first.type : "none",
+                selectedLayerOpacity: { available: false }
+            };
+            var valueRecord;
+            var valueTarget;
+            if (valueCapture === null || valueCapture === undefined) { return protocol.deepFreeze(projection); }
+            valueRecord = captureRecords.get(valueCapture);
+            if (!valueRecord || valueRecord.bridgeToken !== bridgeToken || valueRecord.protocol !== protocol || valueRecord.purpose !== "property-value-binding" ||
+                    valueRecord.bindingFingerprint !== bindingRecord.fingerprint || valueRecord.sessionId !== sessionId ||
+                    valueRecord.bridgeLifecycleEpoch !== bridgeLifecycleEpoch || !Object.isFrozen(valueCapture) ||
+                    protocol.canonicalStringify(valueCapture) !== valueRecord.publicCanonical || !currentHostAuthority ||
+                    bindingRecord.hostInstanceId !== currentHostAuthority.hostInstanceId || bindingRecord.hostReloadEpoch !== currentHostAuthority.hostReloadEpoch ||
+                    valueRecord.valueTargets.length !== 1) {
+                throw protocolError(protocol, protocol.ERROR_CODES.CONTEXT_STALE);
+            }
+            valueTarget = valueRecord.valueTargets[0];
+            if (projection.selectedLayerCount !== 1 || !first || valueTarget.layerId !== first.layerId ||
+                    valueTarget.propertyMatchName !== "ADBE Opacity" || valueTarget.valueKind !== "number" ||
+                    protocol.canonicalStringify(valueTarget.propertyPath) !== protocol.canonicalStringify(OPACITY_PROPERTY_PATH) ||
+                    typeof valueTarget.reviewValue !== "number" || !Number.isFinite(valueTarget.reviewValue) || isNegativeZero(valueTarget.reviewValue) ||
+                    valueTarget.reviewValue < 0 || valueTarget.reviewValue > 100) {
+                throw protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+            }
+            projection.selectedLayerOpacity = { available: true, value: valueTarget.reviewValue };
+            return protocol.deepFreeze(projection);
+        }
+
         function cancel(requestId) {
             if (!active || active.requestId !== requestId || state !== "pending") { return false; }
             return settle(active, active.generation, protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED), null);
@@ -1431,6 +1483,9 @@
         var reviewPort = Object.freeze({ summarize: createPrivateReviewSummary });
         reviewPorts.set(bridge, reviewPort);
         reviewPortProtocols.set(reviewPort, protocol);
+        var providerContextPort = Object.freeze({ project: createPrivateProviderRequestContext });
+        providerContextPorts.set(bridge, providerContextPort);
+        providerContextPortProtocols.set(providerContextPort, protocol);
         return bridge;
     }
 
@@ -1442,6 +1497,8 @@
         isTrustedExecutionPortForProtocol: isTrustedExecutionPortForProtocol,
         createReviewPort: createReviewPort,
         isTrustedReviewPortForProtocol: isTrustedReviewPortForProtocol,
+        createProviderContextPort: createProviderContextPort,
+        isTrustedProviderContextPortForProtocol: isTrustedProviderContextPortForProtocol,
         quoteForExtendScript: quoteForExtendScript
     });
 }));

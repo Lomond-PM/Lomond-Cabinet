@@ -29,6 +29,7 @@
     var controllerProtocols = new WeakMap();
     var controllerProposalPorts = new WeakMap();
     var controllerContextRefreshPorts = new WeakMap();
+    var OPACITY_PROPERTY_PATH = Object.freeze(["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0]);
     var hasOwn = Object.prototype.hasOwnProperty;
     function ownData(value, key) {
         var descriptor;
@@ -46,12 +47,18 @@
         var bridge = ownData(options, "contextBridge");
         var transport = ownData(options, "transport");
         var providerRuntime = ownData(options, "runtime");
+        var providerContextPort;
         if (!protocolModule.isTrustedProtocol(protocol) || !bridgeModule.isTrustedContextBridgeForProtocol(bridge, protocol) || !transportModule.isTrustedLocalTransportForProtocol(transport, protocol) || !intentGateModule || typeof intentGateModule.evaluate !== "function" || !protocol.isPlainObject(options)) {
             throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
         }
         protocol.assertNoUnknownKeys(options, ["protocol", "contextBridge", "transport", "runtime"], "providerController.options");
         if (!providerRuntime || typeof ownData(providerRuntime, "setTimeout") !== "function" || typeof ownData(providerRuntime, "clearTimeout") !== "function" || typeof ownData(providerRuntime, "createAbortController") !== "function" || typeof ownData(providerRuntime, "parseUrl") !== "function" || typeof ownData(providerRuntime, "nowMs") !== "function") {
             protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Provider runtime dependencies are unavailable.");
+        }
+        try { providerContextPort = bridgeModule.createProviderContextPort(bridge, protocol); }
+        catch (error) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
+        if (!bridgeModule.isTrustedProviderContextPortForProtocol(providerContextPort, protocol) || typeof ownData(providerContextPort, "project") !== "function") {
+            throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
         }
         var state = "idle";
         var active = null;
@@ -66,14 +73,21 @@
                 providerId: "lmstudio", modelId: model || null, moduleRevision: MODULE_REVISION });
             return publicState;
         }
-        function summaryFromCapture(capture) {
+        function summaryFromProjection(projection) {
+            return "Trusted request context: active composition type " + projection.activeCompositionType + "; selected layers " + projection.selectedLayerCount + "; first selected layer type " + projection.firstSelectedLayerType + "; selected layer opacity " + (projection.selectedLayerOpacity.available ? String(projection.selectedLayerOpacity.value) : "unavailable") + ".";
+        }
+        function selectionTarget(capture) {
             var snapshot = capture && ownData(capture, "snapshot");
-            var activeComp = snapshot && ownData(snapshot, "activeComp");
             var selection = snapshot && ownData(snapshot, "selection");
-            var count = Array.isArray(selection) ? selection.length : 0;
-            var type = count && selection[0] && typeof ownData(selection[0], "type") === "string" ? ownData(selection[0], "type") : "none";
-            var compType = activeComp && typeof ownData(activeComp, "type") === "string" ? ownData(activeComp, "type") : "none";
-            return "Tier 1 display context: active composition type " + compType + "; selected layers " + count + "; first selected layer type " + type + ".";
+            var first = Array.isArray(selection) && selection.length === 1 ? selection[0] : null;
+            var layerId = first && ownData(first, "layerId");
+            return typeof layerId === "string" ? { layerId: layerId, propertyPath: OPACITY_PROPERTY_PATH } : null;
+        }
+        function clearActiveCapture(capturedGeneration) {
+            if (active && active.generation === capturedGeneration && active.captureHandle) { active.captureHandle = null; }
+        }
+        function cancelActiveCapture() {
+            if (active && active.captureHandle) { bridge.cancelOwnedCapture(active.captureHandle); active.captureHandle = null; }
         }
         function validateInput(input) {
             protocol.assertSafeJson(input);
@@ -96,13 +110,32 @@
             capturedGeneration = generation + 1;
             generation = capturedGeneration;
             publish("pending", null, null, null, values.model);
-            return bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true }).then(function (capture) {
+            var bindingStart = bridge.beginOwnedCapture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
+            active = { generation: capturedGeneration, requestId: null, provider: null, captureHandle: bindingStart.handle };
+            return bindingStart.promise.then(function (capture) {
                 var provider;
                 var started;
+                var target;
+                var valueStart;
                 if (capturedGeneration !== generation || state !== "pending") { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
+                clearActiveCapture(capturedGeneration);
+                target = selectionTarget(capture);
+                if (!target) { return { capture: capture, projection: providerContextPort.project(capture, null) }; }
+                valueStart = bridge.beginOwnedPropertyValueCapture(capture, [target]);
+                if (!active || active.generation !== capturedGeneration) { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
+                active.captureHandle = valueStart.handle;
+                return valueStart.promise.then(function (valueCapture) {
+                    if (capturedGeneration !== generation || state !== "pending") { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
+                    clearActiveCapture(capturedGeneration);
+                    return { capture: capture, projection: providerContextPort.project(capture, valueCapture) };
+                });
+            }).then(function (grounded) {
+                var provider;
+                var started;
+                if (!active || active.generation !== capturedGeneration || capturedGeneration !== generation || state !== "pending") { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
                 provider = adapterModule.createLocalOpenAICompatibleProvider({ protocol: protocol, transport: transport, runtime: providerRuntime, endpoint: values.endpoint, model: values.model, responseFormatMode: "json-schema" });
-                started = provider.start({ messages: [{ role: "assistant", content: summaryFromCapture(capture) }, { role: "user", content: values.message }], context: { contextId: capture.contextId, fingerprint: capture.fingerprint, tier: 1 } });
-                active = { generation: capturedGeneration, requestId: started.requestId, provider: provider };
+                started = provider.start({ messages: [{ role: "assistant", content: summaryFromProjection(grounded.projection) }, { role: "user", content: values.message }], context: { contextId: grounded.capture.contextId, fingerprint: grounded.capture.fingerprint, tier: 1 } });
+                active = { generation: capturedGeneration, requestId: started.requestId, provider: provider, captureHandle: null };
                 publish("pending", started.requestId, null, null, values.model);
                 return started.promise;
             }).then(function (response) {
@@ -134,18 +167,24 @@
         function cancel(input) {
             var requestId;
             if (!protocol.isPlainObject(input)) { return false; }
-            try { protocol.assertNoUnknownKeys(input, ["requestId"], "providerController.cancel"); requestId = protocol.assertNonEmptyString(input.requestId, "provider requestId", 256); }
+            try {
+                protocol.assertNoUnknownKeys(input, ["requestId"], "providerController.cancel");
+                requestId = ownData(input, "requestId");
+                if (requestId !== null) { requestId = protocol.assertNonEmptyString(requestId, "provider requestId", 256); }
+            }
             catch (error) { return false; }
             if (!active || state !== "pending" || active.requestId !== requestId) { return false; }
             generation += 1;
-            active.provider.cancel(requestId);
+            cancelActiveCapture();
+            if (active.provider) { active.provider.cancel(requestId); }
             active = null;
             publish("cancelled", requestId, null, protocol.ERROR_CODES.PROVIDER_REQUEST_ABORTED, publicState.modelId);
             return true;
         }
         function invalidate(nextState) {
             generation += 1;
-            if (active) { try { active.provider.cancel(active.requestId); } catch (ignored) {} }
+            cancelActiveCapture();
+            if (active && active.provider) { try { active.provider.cancel(active.requestId); } catch (ignored) {} }
             active = null;
             return publish(nextState || "idle", null, null, nextState === "failed" ? protocol.ERROR_CODES.LIFECYCLE_BLOCKED : null, null);
         }
