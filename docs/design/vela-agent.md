@@ -1005,6 +1005,27 @@ the grounding nor execution contract. Follow-up work belongs to
 `test/vela-provider-model-qualification` and
 `refactor/vela-capability-contracts`.
 
+### Provider model qualification
+
+Model qualification is independent from the Provider grounding safety implementation.
+The explicit `scripts/diagnostics/run-vela-provider-model-qualification.js` tool sends
+only fixed, identity-free context fixtures to the fixed localhost endpoint and writes
+run data only below the ignored `.tmp/vela-model-qualification/` directory. Its model
+and profile label are operator input: a label does not verify LM Studio UI Thinking or
+Profile state, and production currently has no reliable request-level Thinking switch.
+`reasoning_content` is never a formal answer or Parser input. The diagnostic reports
+model UX classification separately from deterministic Intent Gate safety; a Gate-rejected
+mistaken proposal is not a safety authorization. Model/default changes require a separate
+production branch after qualification; Capability Contract / Prompt Builder work follows
+qualification rather than changing its measurements.
+The operator CLI accepts only a repository-relative direct JSON child of its ignored
+output directory, validates each existing path component with `lstat`/`realpath`, and
+reserves a new output file with exclusive creation before any request. Its `intentGate`
+evidence field records the Gate's
+actual allow/reject decision, independently of the qualification classification. Committed
+derived fixtures are sanitized, non-authoritative offline test inputs only; local `.tmp`
+evidence remains the source for a human qualification assessment and is never committed.
+
 Legacy Refresh separates its read-only `currentOpacity` display from the manual
 proposal draft. Tier 3 supplies only `beforeValue`; it never prepopulates or
 acts as the editable manual target. Refresh begins by invalidating any prior

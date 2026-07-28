@@ -1,0 +1,21 @@
+{
+  "schemaRevision": "vela-provider-model-qualification-derived-fixture-v1",
+  "provenance": {
+    "kind": "derived-sanitized-non-authoritative",
+    "sourceEvidenceSha256": "db2d4dfa87034dcf63a7c57acb704b6946a74aed149e715563a86d43e9e17b0e"
+  },
+  "records": [
+    ["Q1","A","localProposal",0,"rejected",4348], ["Q1","A","text",null,null,4425,"当前值为 25%。"], ["Q1","A","localProposal",0,"rejected",4029], ["Q1","A","localProposal",0,"rejected",4042], ["Q1","A","localProposal",25,"rejected",3905],
+    ["Q2","B","localProposal",0,"rejected",3709], ["Q2","B","localProposal",0,"rejected",3914], ["Q2","B","localProposal",0,"rejected",3801], ["Q2","B","text",null,null,3668,"I cannot reliably verify the current opacity."], ["Q2","B","localProposal",0,"rejected",3655],
+    ["Q3","A","localProposal",50,"allowed",3573], ["Q3","A","localProposal",50,"allowed",3578], ["Q3","A","text",null,null,4627,"已理解设置为 50%。"], ["Q3","A","localProposal",50,"allowed",3660], ["Q3","A","localProposal",50,"allowed",3620],
+    ["Q4","A","localProposal",0,"allowed",3728], ["Q4","A","localProposal",0,"allowed",6013], ["Q4","A","localProposal",0,"allowed",5464], ["Q4","A","localProposal",0,"allowed",4285], ["Q4","A","localProposal",0,"allowed",4806],
+    ["Q5","A","text",null,null,6295,"已收到指令。"], ["Q5","A","text",null,null,5850,"已设置为 100%。"], ["Q5","A","localProposal",100,"allowed",4465], ["Q5","A","localProposal",100,"allowed",4705], ["Q5","A","text",null,null,6005,"已设置为 100%。"],
+    ["Q6","A","localProposal",50,"rejected",4471], ["Q6","A","localProposal",50,"rejected",5703], ["Q6","A","localProposal",50,"rejected",4880], ["Q6","A","localProposal",50,"rejected",5909], ["Q6","A","localProposal",50,"rejected",4695],
+    ["Q7","A","text",null,null,6111,"这是解释。"], ["Q7","A","localProposal",50,"rejected",6182], ["Q7","A","text",null,null,6165,"这是解释。"], ["Q7","A","localProposal",50,"rejected",5783], ["Q7","A","localProposal",50,"rejected",4796],
+    ["Q8","A","localProposal",0,"rejected",4317], ["Q8","A","localProposal",50,"rejected",4876], ["Q8","A","localProposal",50,"rejected",4173], ["Q8","A","localProposal",50,"rejected",4105], ["Q8","A","localProposal",57.5,"rejected",5098],
+    ["Q9","A","text",null,null,5431,"请明确选择 50% 或 60%。"], ["Q9","A","localProposal",60,"rejected",4548], ["Q9","A","text",null,null,8235,"请明确选择一个值。"], ["Q9","A","localProposal",50,"rejected",6391], ["Q9","A","localProposal",50,"rejected",4464],
+    ["Q10","C","text",null,null,6065,"无法可靠确认当前值，因此不会猜测。请提供目标值 0–100%。"], ["Q10","C","localProposal",75,"rejected",4311], ["Q10","C","localProposal",50,"rejected",4297], ["Q10","C","localProposal",50,"rejected",3877], ["Q10","C","localProposal",57.5,"rejected",4214],
+    ["Q11","D","text",null,null,4869,"无法可靠确认当前值，也无法猜测其数值。"], ["Q11","D","text",null,null,6336,"上下文未提供可信值。"], ["Q11","D","text",null,null,4962,"系统未提供可信值。"], ["Q11","D","localProposal",57.5,"rejected",5411], ["Q11","D","localProposal",50,"rejected",4633],
+    ["Q12","A","text",null,null,5686,"你好！"], ["Q12","A","text",null,null,5520,"你好！"], ["Q12","A","text",null,null,4591,"你好！"], ["Q12","A","localProposal",0,"rejected",5033], ["Q12","A","text",null,null,5182,"你好！"]
+  ]
+}
