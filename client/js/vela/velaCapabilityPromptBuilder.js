@@ -23,7 +23,7 @@
     }
 }(typeof self !== "undefined" ? self : this, function (capabilityContracts) {
     "use strict";
-    var MODULE_REVISION = "vela-capability-prompt-builder-v1";
+    var MODULE_REVISION = "vela-capability-prompt-builder-v2";
     var CAPABILITY_ID = "set-opacity-v1";
     var RESPONSE_PROTOCOL = "vela.model-response.v1";
     var RESPONSE_SCHEMA_VERSION = "1.1";
@@ -82,13 +82,14 @@
             "Follow the attached json_schema exactly; it is format guidance and the local Parser will validate again.",
             "Use protocol " + RESPONSE_PROTOCOL + " and schemaVersion " + RESPONSE_SCHEMA_VERSION + ".",
             "Use requestId " + requestId + ", provider " + PROVIDER_ID + ", and model " + model + ".",
-            "DECISION: text by default. Return localProposal only for a direct command to set the current or selected layer opacity to one explicit 0–100 target. Return text for greetings, questions, current-value queries, explanations, suggestions, uncertainty, hypotheticals, negations, relative adjustments, ambiguity, or no one target.",
-            "Opacity plus a number is not enough: questions, explanations, and suggestions use text. Never guess 50 or another value. A current-value query may state a value only when that exact value is supplied in trusted request context; otherwise say you cannot reliably verify the current opacity and will not guess. For an ambiguous edit, ask for one explicit target from 0 to 100%. A text response never claims an edit was performed, scheduled, or proposed. For an explicit supported opacity command, text is invalid: return the localProposal envelope itself.",
-            "默认返回 text。当前值只有在可信请求上下文明确提供时才能回答；否则说明无法可靠确认且不猜测。模糊修改请求只要求提供唯一 0–100% 目标值，text 不得声称已完成、将执行或已提出修改建议。",
+            "FIRST choose exactly one response branch before writing JSON. Default to text. When uncertain whether to use text or localProposal, use text. A schema-valid localProposal can still be semantically wrong.",
+            "Use localProposal only when ALL conditions hold: the user directly commands one edit supported by the current capability; one property is explicit; exactly one in-range target value appears in the current user message; no target choice is required; and the request is not a question, advice, explanation, comparison, prediction, hypothetical, conditional, negation, ambiguity, relative adjustment, or current-state query. Otherwise use text.",
+            "Use text for greetings, capabilities, current-value/status queries, unavailable grounding, questions, suggestions, whether-to-edit requests, explanations, comparisons, predicted outcomes, hypotheticals, conditions, negations, vague changes, multiple values, multiple possible edits, or any uncertainty. Do not guess a current value or a target. A text response never claims an edit was performed, scheduled, or proposed.",
+            "Trusted context may answer a current-value query only as text. A proposal target must come from the current user message, never from trusted context. If the current value is unavailable, say it cannot be reliably confirmed and do not guess; an explicit user target may still be proposed.",
             "All responses must be one complete schema envelope: no bare text, Markdown, extra explanation, multiple objects, or fields beyond the schema.",
             "A localProposal uses only capabilityId " + projection.capabilityId + " and params.opacity equal to the requested target. A localProposal is only a suggestion. It does not execute anything.",
-            "For 将当前图层不透明度设为 57.5%, return: " + proposal57Example + ". For Set the selected layer opacity to 0% and Change opacity to 100, return localProposal with opacity 0 and 100 respectively.",
-            "Text examples: 你好; Hello; What is opacity?; Should I set opacity to 50%?; 透明一些; Maybe reduce opacity. For ambiguous edits, say: Specify a target opacity from 0 to 100%, for example 50%. / 请提供明确的不透明度目标值，例如 50%。"
+            "Example direct edit: set the current layer opacity to 57.5% -> " + proposal57Example + ".",
+            "Text examples: What is the current opacity?; Should I set opacity to 50%?; If opacity were 50%, what would happen?; Do not change opacity; Make it more transparent; Set it to 25% or 50%; Hello."
         ].join(" ");
     }
     return Object.freeze({ MODULE_REVISION: MODULE_REVISION, buildSystemPrompt: buildSystemPrompt });
