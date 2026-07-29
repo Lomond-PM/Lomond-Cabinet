@@ -7,6 +7,7 @@
         { name: "VelaProtocol", file: "velaProtocol.js" },
         { name: "VelaResponseParser", file: "velaResponseParser.js" },
         { name: "VelaCapabilityContracts", file: "velaCapabilityContracts.js" },
+        { name: "VelaCapabilityPromptBuilder", file: "velaCapabilityPromptBuilder.js" },
         { name: "VelaProviderAdapter", file: "velaProviderAdapter.js" },
         { name: "VelaProviderIntentGate", file: "velaProviderIntentGate.js" },
         { name: "VelaLocalTransport", file: "velaLocalTransport.js" },
@@ -108,6 +109,7 @@
         if (name === "VelaProtocol") { return typeof value.createProtocol === "function" && typeof value.isTrustedProtocol === "function" && value.ERROR_CODES; }
         if (name === "VelaResponseParser") { return typeof value.createResponseParser === "function"; }
         if (name === "VelaCapabilityContracts") { return typeof value.getModelProjection === "function" && typeof value.getLocalProjection === "function" && typeof value.createRegistry === "function"; }
+        if (name === "VelaCapabilityPromptBuilder") { return typeof value.buildSystemPrompt === "function"; }
         if (name === "VelaProviderAdapter") { return typeof value.createLocalOpenAICompatibleProvider === "function"; }
         if (name === "VelaProviderIntentGate") { return typeof value.evaluate === "function"; }
         if (name === "VelaLocalTransport") { return typeof value.createLocalTransport === "function" && typeof value.isTrustedLocalTransportForProtocol === "function"; }

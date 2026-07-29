@@ -126,6 +126,7 @@ function checkRequiredEntrypoints() {
         "client/js/vela/velaSurfaceController.js",
         "client/js/vela/velaUi.js",
         "client/js/vela/velaCapabilityContracts.js",
+        "client/js/vela/velaCapabilityPromptBuilder.js",
         "client/js/vela/velaProviderIntentGate.js",
         "client/js/vela/velaCepModuleLoader.js",
         "client/js/vela/velaRuntime.js",
@@ -288,6 +289,7 @@ function checkIndexHtml() {
         "js/vela/velaProtocol.js",
         "js/vela/velaResponseParser.js",
         "js/vela/velaCapabilityContracts.js",
+        "js/vela/velaCapabilityPromptBuilder.js",
         "js/vela/velaProviderAdapter.js",
         "js/vela/velaProviderIntentGate.js",
         "js/vela/velaLocalTransport.js",
@@ -317,7 +319,7 @@ function checkVelaRuntimeBootstrap() {
     const main = exists("client/js/main.js") ? readText("client/js/main.js") : "";
     const surface = exists("client/js/vela/velaSurface.js") ? readText("client/js/vela/velaSurface.js") : "";
     const host = exists("host/vela/velaContext.jsx") ? readText("host/vela/velaContext.jsx") : "";
-    const orderedNames = ["VelaProtocol", "VelaResponseParser", "VelaCapabilityContracts", "VelaProviderAdapter", "VelaProviderIntentGate", "VelaLocalTransport", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaProviderController", "VelaProviderProposalRouter", "VelaRuntime"];
+    const orderedNames = ["VelaProtocol", "VelaResponseParser", "VelaCapabilityContracts", "VelaCapabilityPromptBuilder", "VelaProviderAdapter", "VelaProviderIntentGate", "VelaLocalTransport", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaProviderController", "VelaProviderProposalRouter", "VelaRuntime"];
     let previous = -1;
     orderedNames.forEach((name) => {
         const index = loader.indexOf('name: "' + name + '"');

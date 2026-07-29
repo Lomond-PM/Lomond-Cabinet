@@ -30,6 +30,13 @@
         return dependency;
     }
 
+    function assertCapabilityPromptBuilder(dependency) {
+        if (!dependency || typeof dependency.buildSystemPrompt !== "function") {
+            throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaProviderAdapter requires VelaCapabilityPromptBuilder.");
+        }
+        return dependency;
+    }
+
     function ownDataDescriptor(value, key) {
         var descriptor;
         try { descriptor = Object.getOwnPropertyDescriptor(value, key); }
@@ -75,23 +82,28 @@
         var protocolGlobal = requireInstalledGlobal(target, "VelaProtocol", "RUNTIME_CAPABILITY_UNAVAILABLE");
         var parserGlobal = requireInstalledGlobal(target, "VelaResponseParser", "RUNTIME_CAPABILITY_UNAVAILABLE");
         var capabilityGlobal = requireInstalledGlobal(target, "VelaCapabilityContracts", "RUNTIME_CAPABILITY_UNAVAILABLE");
+        var promptBuilderGlobal = requireInstalledGlobal(target, "VelaCapabilityPromptBuilder", "RUNTIME_CAPABILITY_UNAVAILABLE");
         var hasProtocol;
         var hasParser;
         var hasCapability;
+        var hasPromptBuilder;
         var protocolDependency;
         var parserDependency;
         var capabilityDependency;
+        var promptBuilderDependency;
         try {
             hasProtocol = hasModule.call(bootstrap, "VelaProtocol");
             hasParser = hasModule.call(bootstrap, "VelaResponseParser");
             hasCapability = hasModule.call(bootstrap, "VelaCapabilityContracts");
+            hasPromptBuilder = hasModule.call(bootstrap, "VelaCapabilityPromptBuilder");
             protocolDependency = getModule.call(bootstrap, "VelaProtocol");
             parserDependency = getModule.call(bootstrap, "VelaResponseParser");
             capabilityDependency = getModule.call(bootstrap, "VelaCapabilityContracts");
+            promptBuilderDependency = getModule.call(bootstrap, "VelaCapabilityPromptBuilder");
         } catch (error) {
             throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT", "The Vela protocol bootstrap dependencies are unavailable.");
         }
-        if (hasProtocol !== true || hasParser !== true || hasCapability !== true || protocolDependency !== protocolGlobal || parserDependency !== parserGlobal || capabilityDependency !== capabilityGlobal) {
+        if (hasProtocol !== true || hasParser !== true || hasCapability !== true || hasPromptBuilder !== true || protocolDependency !== protocolGlobal || parserDependency !== parserGlobal || capabilityDependency !== capabilityGlobal || promptBuilderDependency !== promptBuilderGlobal) {
             throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT", "The Vela protocol bootstrap dependency identity is invalid.");
         }
         var existingModule;
@@ -103,7 +115,7 @@
             throw bootstrapError("MODULE_ALREADY_REGISTERED", name + " is already registered.");
         }
         if (hasOwn.call(target, name) || !Object.isExtensible(target)) { throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT", name + " global registration conflicts with the loaded module."); }
-        var exported = Object.freeze(create(assertProtocolModule(protocolDependency), assertParserModule(parserDependency), assertCapabilityContracts(capabilityDependency)));
+        var exported = Object.freeze(create(assertProtocolModule(protocolDependency), assertParserModule(parserDependency), assertCapabilityContracts(capabilityDependency), assertCapabilityPromptBuilder(promptBuilderDependency)));
         try { registerModule.call(bootstrap, name, exported); }
         catch (error) { throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT", name + " could not be registered."); }
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
@@ -112,9 +124,9 @@
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        module.exports = Object.freeze(factory(assertProtocolModule(require("./velaProtocol")), assertParserModule(require("./velaResponseParser")), assertCapabilityContracts(require("./velaCapabilityContracts"))));
+        module.exports = Object.freeze(factory(assertProtocolModule(require("./velaProtocol")), assertParserModule(require("./velaResponseParser")), assertCapabilityContracts(require("./velaCapabilityContracts")), assertCapabilityPromptBuilder(require("./velaCapabilityPromptBuilder"))));
     }
-}(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule, capabilityContracts) {
+}(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule, capabilityContracts, capabilityPromptBuilder) {
     "use strict";
 
     var trustedOutboundBodies = new WeakMap();
@@ -530,30 +542,7 @@
         function systemMessage(requestId) {
             var metadata = responseMetadata(requestId);
             var modelSpec = getCapabilityModelSpec();
-            var capability = modelSpec.capability;
-            var exampleParams = {};
-            exampleParams[modelSpec.parameterName] = 57.5;
-            var proposal57Example = JSON.stringify({
-                protocol: metadata.protocol,
-                schemaVersion: metadata.schemaVersion,
-                requestId: metadata.requestId,
-                provider: metadata.provider,
-                model: metadata.model,
-                envelope: { type: "localProposal", proposal: { capabilityId: capability.capabilityId, params: exampleParams } }
-            });
-            return [
-                "Return exactly one complete JSON object and nothing else.",
-                "Follow the attached json_schema exactly; it is format guidance and the local Parser will validate again.",
-                "Use protocol " + metadata.protocol + " and schemaVersion " + metadata.schemaVersion + ".",
-                "Use requestId " + metadata.requestId + ", provider " + metadata.provider + ", and model " + metadata.model + ".",
-                "DECISION: text by default. Return localProposal only for a direct command to set the current or selected layer opacity to one explicit 0–100 target. Return text for greetings, questions, current-value queries, explanations, suggestions, uncertainty, hypotheticals, negations, relative adjustments, ambiguity, or no one target.",
-                "Opacity plus a number is not enough: questions, explanations, and suggestions use text. Never guess 50 or another value. A current-value query may state a value only when that exact value is supplied in trusted request context; otherwise say you cannot reliably verify the current opacity and will not guess. For an ambiguous edit, ask for one explicit target from 0 to 100%. A text response never claims an edit was performed, scheduled, or proposed. For an explicit supported opacity command, text is invalid: return the localProposal envelope itself.",
-                "默认返回 text。当前值只有在可信请求上下文明确提供时才能回答；否则说明无法可靠确认且不猜测。模糊修改请求只要求提供唯一 0–100% 目标值，text 不得声称已完成、将执行或已提出修改建议。",
-                "All responses must be one complete schema envelope: no bare text, Markdown, extra explanation, multiple objects, or fields beyond the schema.",
-                "A localProposal uses only capabilityId " + capability.capabilityId + " and params.opacity equal to the requested target. A localProposal is only a suggestion. It does not execute anything.",
-                "For 将当前图层不透明度设为 57.5%, return: " + proposal57Example + ". For Set the selected layer opacity to 0% and Change opacity to 100, return localProposal with opacity 0 and 100 respectively.",
-                "Text examples: 你好; Hello; What is opacity?; Should I set opacity to 50%?; 透明一些; Maybe reduce opacity. For ambiguous edits, say: Specify a target opacity from 0 to 100%, for example 50%. / 请提供明确的不透明度目标值，例如 50%。"
-            ].join(" ");
+            return capabilityPromptBuilder.buildSystemPrompt(modelSpec.capability, metadata.requestId, metadata.model);
         }
 
         function buildRequest(input, requestId) {
