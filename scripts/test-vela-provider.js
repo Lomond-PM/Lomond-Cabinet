@@ -168,7 +168,7 @@ function createHarness(options) {
         protocol: clock.protocol,
         transport,
         endpoint: options.endpoint,
-        model: options.model || "Qwen3.5-4B Q6_K",
+        model: options.model || "Qwen3.5-4B-Q6_K",
         timeoutMs: options.timeoutMs === undefined ? 30000 : options.timeoutMs,
         responseFormatMode: options.responseFormatMode === undefined ? "json-schema" : options.responseFormatMode,
         runtime: runtimeBundle.runtime
@@ -232,7 +232,7 @@ async function run() {
     const normalResponse = await handle.promise;
     equal(normalResponse.requestId, handle.requestId, "Canonical response request ids must be local.");
     equal(normalResponse.provider, "lmstudio", "Provider metadata must be local.");
-    equal(normalResponse.model, "Qwen3.5-4B Q6_K", "Model metadata must be local.");
+    equal(normalResponse.model, "Qwen3.5-4B-Q6_K", "Model metadata must be local.");
     equal(normal.provider.getState().state, "completed", "Successful requests must complete.");
     check(Object.isFrozen(normal.provider) && Object.isFrozen(normal.provider.capabilities) && Object.isFrozen(normal.provider.getState()), "Provider public objects and state views must be frozen.");
     check(Object.isFrozen(normalResponse) && Object.isFrozen(normal.provider.getDiagnostics()), "Responses and diagnostics must be frozen.");
@@ -254,7 +254,7 @@ async function run() {
     equal(responseSchema.schema.properties.schemaVersion.enum[0], normal.protocol.SCHEMA_VERSION, "Schema version metadata must match the trusted protocol.");
     equal(responseSchema.schema.properties.requestId.enum[0], handle.requestId, "Schema request ids must bind the current local request.");
     equal(responseSchema.schema.properties.provider.enum[0], "lmstudio", "Schema provider metadata must be local.");
-    equal(responseSchema.schema.properties.model.enum[0], "Qwen3.5-4B Q6_K", "Schema model metadata must bind the configured model.");
+    equal(responseSchema.schema.properties.model.enum[0], "Qwen3.5-4B-Q6_K", "Schema model metadata must bind the configured model.");
     const envelopeVariants = responseSchema.schema.properties.envelope.oneOf;
     check(envelopeVariants.length === 2 && envelopeVariants.every((variant) => variant.additionalProperties === false), "The model schema must permit only closed text and localProposal envelope variants.");
     check(envelopeVariants.some((variant) => variant.properties.type.enum[0] === "text" && variant.properties.text.minLength === 1), "The text envelope must require non-empty envelope.text.");
@@ -273,7 +273,7 @@ async function run() {
     equal(sent.body.messages[0].role, "system", "The system message must be local and first.");
     check(sent.body.messages[0].content.includes(handle.requestId) && sent.body.messages[0].content.includes("vela.model-response.v1"), "The system message must bind response metadata.");
     const prompt = sent.body.messages[0].content;
-    const proposal57Example = JSON.stringify({ protocol: normal.protocol.PROTOCOLS.RESPONSE, schemaVersion: normal.protocol.SCHEMA_VERSION, requestId: handle.requestId, provider: "lmstudio", model: "Qwen3.5-4B Q6_K", envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } } });
+    const proposal57Example = JSON.stringify({ protocol: normal.protocol.PROTOCOLS.RESPONSE, schemaVersion: normal.protocol.SCHEMA_VERSION, requestId: handle.requestId, provider: "lmstudio", model: "Qwen3.5-4B-Q6_K", envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } } });
     const decisionTable = "DECISION: text by default. Return localProposal only for a direct command to set the current or selected layer opacity to one explicit 0–100 target. Return text for greetings, questions, current-value queries, explanations, suggestions, uncertainty, hypotheticals, negations, relative adjustments, ambiguity, or no one target.";
     const directRule = "Opacity plus a number is not enough: questions, explanations, and suggestions use text. Never guess 50 or another value. A current-value query may state a value only when that exact value is supplied in trusted request context; otherwise say you cannot reliably verify the current opacity and will not guess. For an ambiguous edit, ask for one explicit target from 0 to 100%. A text response never claims an edit was performed, scheduled, or proposed. For an explicit supported opacity command, text is invalid: return the localProposal envelope itself.";
     const chineseRule = "默认返回 text。当前值只有在可信请求上下文明确提供时才能回答；否则说明无法可靠确认且不猜测。模糊修改请求只要求提供唯一 0–100% 目标值，text 不得声称已完成、将执行或已提出修改建议。";
@@ -438,7 +438,7 @@ async function run() {
     }
     const wrapperMetadata = createHarness({ responder: (request) => Promise.resolve(transportResult(wrapper(canonicalContent(base.protocol, request), { id: "evil", model: "evil" }))) });
     const wrapperMetadataResponse = await wrapperMetadata.provider.start(input()).promise;
-    equal(wrapperMetadataResponse.model, "Qwen3.5-4B Q6_K", "OpenAI wrapper metadata must remain untrusted.");
+    equal(wrapperMetadataResponse.model, "Qwen3.5-4B-Q6_K", "OpenAI wrapper metadata must remain untrusted.");
 
     const parserCases = [
         ["not-json", base.protocol.ERROR_CODES.JSON_PARSE_FAILED],
@@ -643,18 +643,19 @@ async function run() {
     snapshot.transport.sendJson = () => Promise.reject(new Error("changed"));
     snapshot.config.runtime.parseUrl = () => { throw new Error("changed"); };
     const snapshotResponse = await snapshot.provider.start(input()).promise;
-    equal(snapshotResponse.model, "Qwen3.5-4B Q6_K", "Configuration mutations must not change the model snapshot.");
+    equal(snapshotResponse.model, "Qwen3.5-4B-Q6_K", "Configuration mutations must not change the model snapshot.");
     equal(snapshot.calls[0].url, DEFAULT_ENDPOINT, "Configuration mutations must not change the endpoint snapshot.");
 
     const sourceRoot = path.join(__dirname, "..", "client", "js", "vela");
     const providerSource = fs.readFileSync(path.join(sourceRoot, "velaProviderAdapter.js"), "utf8");
     check(!/(?:CSInterface|evalScript|\$\.evalFile|AEToolbox|\bapp\b|\bwindow\b|\bdocument\b|localStorage|fetch\(|XMLHttpRequest|WebSocket|require\([^)]+(?:crypto|http|https|net)|\beval\(|\bFunction\s*\()/.test(providerSource), "Provider core must contain no AE, DOM, network or dynamic runtime dependency.");
-    equal((providerSource.match(/require\(/g) || []).length, 3, "CommonJS must use exactly three fixed local requires.");
+    equal((providerSource.match(/require\(/g) || []).length, 4, "CommonJS must use exactly four fixed local requires.");
+    check(!providerSource.includes("Return exactly one complete JSON object and nothing else."), "Adapter delegates the complete system prompt instead of retaining a second prompt source.");
 
     function browserContext() { const context = { console }; context.self = context; vm.createContext(context); return context; }
     function loadUmd(context, name) { return vm.runInContext(fs.readFileSync(path.join(sourceRoot, name), "utf8"), context, { filename: name }); }
     const browser = browserContext();
-    loadUmd(browser, "velaProtocol.js"); loadUmd(browser, "velaResponseParser.js"); loadUmd(browser, "velaCapabilityContracts.js"); loadUmd(browser, "velaProviderAdapter.js");
+    loadUmd(browser, "velaProtocol.js"); loadUmd(browser, "velaResponseParser.js"); loadUmd(browser, "velaCapabilityContracts.js"); loadUmd(browser, "velaCapabilityPromptBuilder.js"); loadUmd(browser, "velaProviderAdapter.js");
     equal(typeof browser.VelaProviderAdapter.createLocalOpenAICompatibleProvider, "function", "Provider UMD must load after its fixed dependencies.");
     const browserProviderId = vm.runInContext(`(function () {
         var protocol = VelaProtocol.createProtocol({
@@ -683,7 +684,9 @@ async function run() {
     equal(missingProtocolCode, "RUNTIME_CAPABILITY_UNAVAILABLE", "Provider UMD requires Protocol bootstrap.");
     const missingParser = browserContext(); loadUmd(missingParser, "velaProtocol.js"); let missingParserCode = null; try { loadUmd(missingParser, "velaProviderAdapter.js"); } catch (error) { missingParserCode = error.code; }
     equal(missingParserCode, "RUNTIME_CAPABILITY_UNAVAILABLE", "Provider UMD requires ResponseParser.");
-    const conflict = browserContext(); loadUmd(conflict, "velaProtocol.js"); loadUmd(conflict, "velaResponseParser.js"); loadUmd(conflict, "velaCapabilityContracts.js"); const existing = { fake: true }; conflict.VelaProviderAdapter = existing; let conflictCode = null; try { loadUmd(conflict, "velaProviderAdapter.js"); } catch (error) { conflictCode = error.code; }
+    const missingPromptBuilder = browserContext(); loadUmd(missingPromptBuilder, "velaProtocol.js"); loadUmd(missingPromptBuilder, "velaResponseParser.js"); loadUmd(missingPromptBuilder, "velaCapabilityContracts.js"); let missingPromptBuilderCode = null; try { loadUmd(missingPromptBuilder, "velaProviderAdapter.js"); } catch (error) { missingPromptBuilderCode = error.code; }
+    equal(missingPromptBuilderCode, "RUNTIME_CAPABILITY_UNAVAILABLE", "Provider UMD requires Capability Prompt Builder.");
+    const conflict = browserContext(); loadUmd(conflict, "velaProtocol.js"); loadUmd(conflict, "velaResponseParser.js"); loadUmd(conflict, "velaCapabilityContracts.js"); loadUmd(conflict, "velaCapabilityPromptBuilder.js"); const existing = { fake: true }; conflict.VelaProviderAdapter = existing; let conflictCode = null; try { loadUmd(conflict, "velaProviderAdapter.js"); } catch (error) { conflictCode = error.code; }
     check(conflictCode === "MODULE_BOOTSTRAP_CONFLICT" && conflict.VelaProviderAdapter === existing && conflict.__velaProtocolCoreBootstrapV1.hasModule("VelaProviderAdapter") === false, "Preloaded Provider globals must not be overwritten or partially registered.");
 
     function fakeBootstrapContext(options) {
@@ -693,7 +696,8 @@ async function run() {
         const protocolValue = Object.freeze({ createProtocol() {}, isTrustedProtocol() { return true; }, ERROR_CODES: {} });
         const parserValue = Object.freeze({ createResponseParser() {} });
         const capabilityValue = Object.freeze({ getModelProjection() { return Object.freeze({ capabilityId: "set-opacity-v1", parameters: Object.freeze({ properties: Object.freeze({ opacity: Object.freeze({ minimum: 0, maximum: 100 }) }) }) }); } });
-        const modules = Object.assign({ VelaProtocol: protocolValue, VelaResponseParser: parserValue, VelaCapabilityContracts: capabilityValue }, options.modules || {});
+        const promptBuilderValue = Object.freeze({ buildSystemPrompt() { return "prompt"; } });
+        const modules = Object.assign({ VelaProtocol: protocolValue, VelaResponseParser: parserValue, VelaCapabilityContracts: capabilityValue, VelaCapabilityPromptBuilder: promptBuilderValue }, options.modules || {});
         const bootstrap = Object.freeze({
             getModule(name) { return modules[name]; },
             hasModule(name) { return Object.prototype.hasOwnProperty.call(modules, name); },
@@ -704,8 +708,9 @@ async function run() {
             Object.defineProperty(context, "VelaProtocol", { configurable: options.globalConfigurable === true, enumerable: true, value: options.protocolGlobal || protocolValue, writable: options.globalWritable === true });
             Object.defineProperty(context, "VelaResponseParser", { configurable: false, enumerable: true, value: options.parserGlobal || parserValue, writable: false });
             Object.defineProperty(context, "VelaCapabilityContracts", { configurable: false, enumerable: true, value: options.capabilityGlobal || capabilityValue, writable: false });
+            Object.defineProperty(context, "VelaCapabilityPromptBuilder", { configurable: false, enumerable: true, value: options.promptBuilderGlobal || promptBuilderValue, writable: false });
         }
-        return { context, registerCalls: () => registerCalls, protocolValue, parserValue, capabilityValue };
+        return { context, registerCalls: () => registerCalls, protocolValue, parserValue, capabilityValue, promptBuilderValue };
     }
     const writableBootstrap = fakeBootstrapContext({ bootstrapWritable: true }); let writableBootstrapCode = null; try { loadUmd(writableBootstrap.context, "velaProviderAdapter.js"); } catch (error) { writableBootstrapCode = error.code; }
     check(writableBootstrapCode === "MODULE_BOOTSTRAP_CONFLICT" && writableBootstrap.registerCalls() === 0 && !writableBootstrap.context.VelaProviderAdapter, "Writable fake bootstraps must be rejected before registration.");

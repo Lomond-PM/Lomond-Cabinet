@@ -1319,6 +1319,29 @@ opacity-specific. C2 is the earliest phase permitted to add a Prompt Builder;
 C3 is the earliest phase permitted to alter branch policy and requalify
 models. UI-D2 remains blocked.
 
+## Capability Prompt Builder (C2)
+
+C2 moves the existing production system-prompt assembly into the deterministic,
+pure `VelaCapabilityPromptBuilder`. The Provider Adapter supplies only the
+frozen canonical `set-opacity-v1` model projection plus validated dynamic
+request ID and strictly structured model identifiers (ASCII model segments may
+use letters, digits, `.`, `_`, `-`, and `/`, but never whitespace, control text,
+or path traversal); protocol, schema version, and provider are Builder
+constants. The Builder returns one string. It accepts no DOM, Host,
+ContextBridge, Settings, storage, transport, clock, random, or file input.
+The Builder recursively verifies exact own-data descriptors, key sets, values,
+array order, and deep freezing against the C1 production projection, and
+rejects unknown, synthetic, malformed, or policy-divergent Contracts
+fail-closed.
+
+C2 preserves the Prompt bytes, response-format bytes, request-body shape,
+Protocol, Parser, Intent Gate, transport, timeout, endpoint, model default,
+and all Review/confirmation/execution boundaries. It changes neither Prompt
+language nor model qualification results. The CEP loader installs Contracts,
+then Prompt Builder, then Provider Adapter; a missing Builder prevents Adapter
+bootstrap rather than allowing a fallback prompt. C3 remains the first phase
+allowed to change capability branch policy or Prompt semantics.
+
 Vela 0.3.0 is an approval-driven assistant over explicit AE capabilities. The
 model proposes; local schemas, target fingerprints, permissions, and the
 Execution Guard decide whether an action can be shown or run. The user remains
