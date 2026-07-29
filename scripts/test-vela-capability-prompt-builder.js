@@ -21,9 +21,13 @@ function build(modelProjection, requestId, model) { return builder.buildSystemPr
 
 const modelProjection = contracts.getModelProjection("set-opacity-v1");
 const prompt = build(modelProjection);
-check(Object.isFrozen(builder) && builder.MODULE_REVISION === "vela-capability-prompt-builder-v1", "Prompt Builder exports one frozen bounded module.");
+check(Object.isFrozen(builder) && builder.MODULE_REVISION === "vela-capability-prompt-builder-v2", "Prompt Builder exports one frozen bounded module.");
 check(typeof prompt === "string" && prompt.length > 0, "Production projection produces one prompt string.");
-check(hash(prompt) === "2109193792f682367499f7594a6644e758ea55b46522c0bc526c092a35de5c92", "Production prompt stays byte-for-byte equal to the C1 baseline.");
+check(hash(prompt) === "340c06c86fa01b7f0382d6bf3d365dc6e007af4e6b371c7728eb41ac8f08ebee", "C3-A branch-policy prompt stays byte-for-byte deterministic.");
+check(prompt.indexOf("FIRST choose exactly one response branch") < prompt.indexOf("Example direct edit:"), "Branch decision policy precedes the complete proposal example.");
+check(prompt.includes("When uncertain whether to use text or localProposal, use text.") && prompt.includes("Use localProposal only when ALL conditions hold:"), "Text fallback and all-conditions proposal policy are explicit.");
+check(prompt.includes("current user message, never from trusted context") && prompt.includes("cannot be reliably confirmed and do not guess"), "Grounding value and proposal target rules remain distinct.");
+check(!/(?:prefer taking action|help by executing|generate a proposal whenever possible|attempt localProposal first)/i.test(prompt), "Prompt has no action-priority wording.");
 for (let index = 0; index < 100; index += 1) { check(build(modelProjection) === prompt, "Repeated builder calls are deterministic (" + index + ")."); }
 assert.throws(() => { modelProjection.modelPolicy.modelMaySupply[0] = "params.other"; }, TypeError, "Frozen model projections reject caller mutation."); assertions += 1;
 check(build(contracts.getModelProjection("set-opacity-v1")) === prompt, "A rejected caller mutation cannot contaminate a subsequent prompt.");

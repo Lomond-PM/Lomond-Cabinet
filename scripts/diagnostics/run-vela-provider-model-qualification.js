@@ -48,7 +48,7 @@ function reserveOutput(fsModule, output, pathOptions) {
     return fsModule.openSync(output, "wx");
 }
 async function executeQualification(args, dependencies) {
-    const deps = dependencies || {}; const fsModule = deps.fs || fs; const runOne = deps.runOne || oneRun; const output = qualification.assertOutputPath(args.output, deps.pathOptions); const handle = reserveOutput(fsModule, output, deps.pathOptions); const protocol = qualification.createProtocol(); const records = []; const caseDefs = deps.caseDefs || qualification.CASES;
+    const deps = dependencies || {}; const fsModule = deps.fs || fs; const runOne = deps.runOne || oneRun; const metadata = await qualification.qualificationMetadata(args, { fixture: deps.contractFixture }); const output = qualification.assertOutputPath(args.output, deps.pathOptions); const handle = reserveOutput(fsModule, output, deps.pathOptions); const protocol = qualification.createProtocol(); const records = []; const caseDefs = deps.caseDefs || qualification.CASES;
     let executionStatus = qualification.EXECUTION_STATUSES.COMPLETED; let failure = null;
     try {
         for (const caseDef of caseDefs) {
@@ -59,7 +59,7 @@ async function executeQualification(args, dependencies) {
             if (executionStatus === qualification.EXECUTION_STATUSES.ABORTED_UNSAFE) break;
         }
     } catch (error) { executionStatus = qualification.EXECUTION_STATUSES.FAILED; failure = error && error.code ? String(error.code) : "DIAGNOSTIC_RUN_FAILED"; }
-    const summary = qualification.summarize(records); const statuses = qualification.createRunStatus(executionStatus); const run = Object.freeze({ schemaRevision: "vela-provider-model-qualification-v2", endpoint: qualification.ENDPOINT, model: args.model, profileLabel: args.profileLabel, profileVerification: "operator-declared", suite: args.suite, runs: args.runs, timeoutMs: args.timeout, fixtureIds: Object.keys(qualification.FIXTURES), records, summary, executionStatus: statuses.executionStatus, assessmentStatus: statuses.assessmentStatus, failure });
+    const summary = qualification.summarize(records); const statuses = qualification.createRunStatus(executionStatus); const run = Object.freeze({ schemaRevision: "vela-provider-model-qualification-v2", endpoint: qualification.ENDPOINT, model: args.model, profileLabel: args.profileLabel, profileVerification: "operator-declared", suite: args.suite, runs: args.runs, timeoutMs: args.timeout, fixtureIds: Object.keys(qualification.FIXTURES), metadata, records, summary, executionStatus: statuses.executionStatus, assessmentStatus: statuses.assessmentStatus, failure });
     try { fsModule.writeFileSync(handle, JSON.stringify(run, null, 2) + "\n", "utf8"); } finally { fsModule.closeSync(handle); }
     return Object.freeze({ output, run, exitCode: executionStatus === qualification.EXECUTION_STATUSES.ABORTED_UNSAFE ? 2 : executionStatus === qualification.EXECUTION_STATUSES.FAILED ? 1 : 0 });
 }

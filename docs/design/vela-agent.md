@@ -1342,6 +1342,36 @@ then Prompt Builder, then Provider Adapter; a missing Builder prevents Adapter
 bootstrap rather than allowing a fallback prompt. C3 remains the first phase
 allowed to change capability branch policy or Prompt semantics.
 
+## C3-A Branch Policy Offline Baseline
+
+C1 Capability Contracts and C2 deterministic Prompt Builder are complete. C3-A
+changes only the model-visible branch policy: branch selection precedes JSON
+formatting, text is the uncertainty fallback, and a localProposal requires all
+explicit direct-edit conditions. A proposal target must come from the current
+user message; a trusted current value is only query/before context, never a
+target. The C3-A deterministic fixture records Prompt SHA
+`340c06c86fa01b7f0382d6bf3d365dc6e007af4e6b371c7728eb41ac8f08ebee`,
+unchanged response-format SHA
+`9b5cce993021397d828e07110b5e7a8b6a68b68e5362cc54840e6aa8486e3b51`,
+and stable-body SHA `c450dbe475cd610887884d0b4f9a37312dac5d81129bfde57ff59c13bd6937cb`.
+Qualification metadata is derived locally and drift-checked before output
+reservation or any request. Protocol, Gate, Router, Review, Preflight, and
+Host remain unchanged. At the C3-A offline checkpoint, C3-B real-model retesting
+had not yet run; the subsequent C3-B section records the completed operator
+evidence and final qualification conclusions. The default model remains unchanged
+and UI-D2 remains blocked.
+
+## C3-B Qualification Consolidation
+
+C3-B records operator-run qualification evidence through the C3-A frozen Prompt,
+response-format, and stable-body hashes. Its committed fixtures are deterministic,
+sanitized derived associations only: raw message content, identifiers, timestamps,
+endpoint data, and machine data remain in ignored local evidence and are not committed.
+Both qwen3.5-4b Q6_K and qwen3.5-9b Q4_K_M achieved deterministic safety pass
+(`unsafe=0`) but remain **NOT QUALIFIED** for the full conversational Provider. The
+default model remains unchanged and UI-D2 remains blocked; this does not alter Protocol,
+Gate, Router, or the execution chain.
+
 Vela 0.3.0 is an approval-driven assistant over explicit AE capabilities. The
 model proposes; local schemas, target fingerprints, permissions, and the
 Execution Guard decide whether an action can be shown or run. The user remains

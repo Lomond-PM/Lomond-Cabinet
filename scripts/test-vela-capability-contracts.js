@@ -8,6 +8,7 @@ const path = require("path");
 const contracts = require("../client/js/vela/velaCapabilityContracts");
 const protocolModule = require("../client/js/vela/velaProtocol");
 const adapterModule = require("../client/js/vela/velaProviderAdapter");
+const qualification = require("./diagnostics/velaProviderModelQualification");
 
 let assertions = 0;
 function check(value, message) { assert.ok(value, message); assertions += 1; }
@@ -30,7 +31,7 @@ async function captureBaseline() {
     await Promise.resolve(); await Promise.resolve();
     check(calls.length === 1, "The baseline capture creates one local outbound request.");
     provider.cancel(started.requestId); await started.promise;
-    return { systemPromptSha256: hash(calls[0].body.messages[0].content), responseFormatStableSha256: hash(stable(calls[0].body.response_format)), bodyStableSha256: hash(stable({ model: calls[0].body.model, messages: calls[0].body.messages.map((message) => ({ role: message.role, content: message.role === "system" ? "<stable-system-prompt>" : message.content })), stream: calls[0].body.stream, response_format: calls[0].body.response_format })) };
+    return { systemPromptSha256: hash(calls[0].body.messages[0].content), responseFormatStableSha256: hash(stable(calls[0].body.response_format)), bodyStableSha256: hash(stable({ model: calls[0].body.model, messages: calls[0].body.messages.map((message) => ({ role: message.role, content: message.content })), stream: calls[0].body.stream, response_format: calls[0].body.response_format })) };
 }
 async function run() {
     const opacity = contracts.getContract("set-opacity-v1");
@@ -120,8 +121,18 @@ async function run() {
     rejects(() => contracts.createRegistry([Object.assign({}, rotation, { parameters: new Date() })]), "Non-plain contract objects are rejected.");
 
     const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "vela-capability-contracts", "provider-contract-baseline.json"), "utf8"));
+    const branchFixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "vela-capability-contracts", "provider-branch-policy-v2.json"), "utf8"));
+    const branchKeys = ["fixtureType", "builderRevision", "branchPolicyRevision", "capabilityId", "capabilityRevision", "previousPromptSha256", "currentPromptSha256", "responseFormatSha256", "previousStableRequestBodySha256", "currentStableRequestBodySha256", "messageRoleOrder", "protocolVersion", "changeReason", "generatedBy"];
+    check(Object.keys(branchFixture).sort().join("|") === branchKeys.slice().sort().join("|") && branchFixture.previousPromptSha256 === fixture.systemPromptSha256 && branchFixture.previousStableRequestBodySha256 === fixture.bodyStableSha256 && JSON.stringify(branchFixture.messageRoleOrder) === JSON.stringify(["system", "assistant", "user"]), "C3-A fixture is closed and preserves C2 historical evidence.");
+    const driftKeys = branchKeys.concat(["unknown", "requestId", "modelResponse", "endpoint", "machinePath", "timestamp", "rawEvidence"]);
+    for (const key of driftKeys) {
+        const added = !Object.prototype.hasOwnProperty.call(branchFixture, key); const value = Object.assign({}, branchFixture, added ? { [key]: "x" } : { [key]: key === "messageRoleOrder" ? ["user"] : "drift" });
+        await assert.rejects(() => qualification.qualificationMetadata({ model: "baseline-model", runs: 5 }, { fixture: value }), /QUALIFICATION_CONTRACT_DRIFT/); assertions += 1;
+        if (!added) { const missing = Object.assign({}, branchFixture); delete missing[key]; await assert.rejects(() => qualification.qualificationMetadata({ model: "baseline-model", runs: 5 }, { fixture: missing }), /QUALIFICATION_CONTRACT_DRIFT/); assertions += 1; }
+    }
     const baseline = await captureBaseline();
-    check(JSON.stringify(baseline) === JSON.stringify(fixture), "Provider prompt, response_format, message order, and stable request body remain byte-for-byte equivalent to the C1 baseline.");
+    check(fixture.systemPromptSha256 === "2109193792f682367499f7594a6644e758ea55b46522c0bc526c092a35de5c92" && fixture.responseFormatStableSha256 === branchFixture.responseFormatSha256, "C2 historical fixture remains immutable evidence.");
+    check(baseline.systemPromptSha256 === branchFixture.currentPromptSha256 && baseline.responseFormatStableSha256 === branchFixture.responseFormatSha256 && baseline.bodyStableSha256 === branchFixture.currentStableRequestBodySha256 && branchFixture.previousPromptSha256 !== branchFixture.currentPromptSha256 && branchFixture.previousStableRequestBodySha256 !== branchFixture.currentStableRequestBodySha256, "C3-A has an independently versioned prompt and stable-body baseline while response format remains unchanged.");
     console.log("test-vela-capability-contracts: " + assertions + " assertions passed.");
 }
 run().catch((error) => { console.error("FAIL Vela capability contracts - " + error.message); process.exitCode = 1; });
