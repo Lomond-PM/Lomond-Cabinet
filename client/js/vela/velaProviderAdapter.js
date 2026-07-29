@@ -23,6 +23,12 @@
         }
         return dependency;
     }
+    function assertCapabilityContracts(dependency) {
+        if (!dependency || typeof dependency.getModelProjection !== "function") {
+            throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaProviderAdapter requires VelaCapabilityContracts.");
+        }
+        return dependency;
+    }
 
     function ownDataDescriptor(value, key) {
         var descriptor;
@@ -68,19 +74,24 @@
         }
         var protocolGlobal = requireInstalledGlobal(target, "VelaProtocol", "RUNTIME_CAPABILITY_UNAVAILABLE");
         var parserGlobal = requireInstalledGlobal(target, "VelaResponseParser", "RUNTIME_CAPABILITY_UNAVAILABLE");
+        var capabilityGlobal = requireInstalledGlobal(target, "VelaCapabilityContracts", "RUNTIME_CAPABILITY_UNAVAILABLE");
         var hasProtocol;
         var hasParser;
+        var hasCapability;
         var protocolDependency;
         var parserDependency;
+        var capabilityDependency;
         try {
             hasProtocol = hasModule.call(bootstrap, "VelaProtocol");
             hasParser = hasModule.call(bootstrap, "VelaResponseParser");
+            hasCapability = hasModule.call(bootstrap, "VelaCapabilityContracts");
             protocolDependency = getModule.call(bootstrap, "VelaProtocol");
             parserDependency = getModule.call(bootstrap, "VelaResponseParser");
+            capabilityDependency = getModule.call(bootstrap, "VelaCapabilityContracts");
         } catch (error) {
             throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT", "The Vela protocol bootstrap dependencies are unavailable.");
         }
-        if (hasProtocol !== true || hasParser !== true || protocolDependency !== protocolGlobal || parserDependency !== parserGlobal) {
+        if (hasProtocol !== true || hasParser !== true || hasCapability !== true || protocolDependency !== protocolGlobal || parserDependency !== parserGlobal || capabilityDependency !== capabilityGlobal) {
             throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT", "The Vela protocol bootstrap dependency identity is invalid.");
         }
         var existingModule;
@@ -92,7 +103,7 @@
             throw bootstrapError("MODULE_ALREADY_REGISTERED", name + " is already registered.");
         }
         if (hasOwn.call(target, name) || !Object.isExtensible(target)) { throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT", name + " global registration conflicts with the loaded module."); }
-        var exported = Object.freeze(create(assertProtocolModule(protocolDependency), assertParserModule(parserDependency)));
+        var exported = Object.freeze(create(assertProtocolModule(protocolDependency), assertParserModule(parserDependency), assertCapabilityContracts(capabilityDependency)));
         try { registerModule.call(bootstrap, name, exported); }
         catch (error) { throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT", name + " could not be registered."); }
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
@@ -101,9 +112,9 @@
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        module.exports = Object.freeze(factory(assertProtocolModule(require("./velaProtocol")), assertParserModule(require("./velaResponseParser"))));
+        module.exports = Object.freeze(factory(assertProtocolModule(require("./velaProtocol")), assertParserModule(require("./velaResponseParser")), assertCapabilityContracts(require("./velaCapabilityContracts"))));
     }
-}(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule) {
+}(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule, capabilityContracts) {
     "use strict";
 
     var trustedOutboundBodies = new WeakMap();
@@ -231,6 +242,25 @@
         return { signal: signalDescriptor.value, abort: abortDescriptor.value, receiver: value };
     }
 
+    function buildCapabilityParametersForResponse(capability) {
+        function copySchema(schema) {
+            var result;
+            if (!schema || typeof schema !== "object") { throw new Error("CAPABILITY_RESPONSE_SCHEMA_INVALID"); }
+            if (schema.type === "object") {
+                if (schema.additionalProperties !== false || !Array.isArray(schema.required) || !schema.properties || typeof schema.properties !== "object") { throw new Error("CAPABILITY_RESPONSE_SCHEMA_INVALID"); }
+                result = { type: "object", additionalProperties: false, required: schema.required.slice(), properties: {} };
+                Object.keys(schema.properties).forEach(function (key) { result.properties[key] = copySchema(schema.properties[key]); });
+                return result;
+            }
+            result = { type: schema.type };
+            if (schema.type === "number") { result.minimum = schema.minimum; result.maximum = schema.maximum; }
+            if (schema.enum) { result.enum = schema.enum.slice(); }
+            return result;
+        }
+        if (!capability || !capability.parameters) { throw new Error("CAPABILITY_RESPONSE_SCHEMA_INVALID"); }
+        return copySchema(capability.parameters);
+    }
+
     function createLocalOpenAICompatibleProvider(options) {
         options = options || {};
         var protocol = requireProtocol(options.protocol);
@@ -288,6 +318,36 @@
         var generation = 0;
         var usedRequestIds = new Set();
         var diagnostics = Object.freeze({ providerId: PROVIDER_ID, modelId: model, requestId: null, state: state, elapsedMs: 0, httpStatus: null, errorCode: null });
+
+        function getCapabilityModelSpec() {
+            var capability = capabilityContracts.getModelProjection("set-opacity-v1");
+            var parameters;
+            var paths;
+            var parameterName;
+            var parameterSchema;
+            if (!capability || !capability.parameters || capability.parameters.type !== "object" || capability.parameters.additionalProperties !== false ||
+                !Array.isArray(capability.parameters.required) || !capability.parameters.properties || !capability.modelPolicy ||
+                capability.modelPolicy.responseType !== protocol.ENVELOPE_TYPES.LOCAL_PROPOSAL || !Array.isArray(capability.modelPolicy.modelMaySupply) ||
+                capability.modelPolicy.modelMaySupply.length !== 1) {
+                protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Capability contract is unavailable.");
+            }
+            parameters = capability.parameters;
+            paths = capability.modelPolicy.modelMaySupply;
+            if (typeof paths[0] !== "string" || paths[0].indexOf("params.") !== 0 || paths[0].split(".").length !== 2) {
+                protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Capability contract model projection is invalid.");
+            }
+            parameterName = paths[0].slice("params.".length);
+            if (!Object.prototype.hasOwnProperty.call(parameters.properties, parameterName) || parameters.required.indexOf(parameterName) === -1) {
+                protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Capability contract model parameter is invalid.");
+            }
+            parameterSchema = parameters.properties[parameterName];
+            if (!parameterSchema || parameterSchema.type !== "number" || parameterSchema.minimum !== 0 || parameterSchema.maximum !== 100) {
+                protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Capability contract model range is invalid.");
+            }
+            return { capability: capability, parameters: parameters, parameterName: parameterName };
+        }
+
+        getCapabilityModelSpec();
 
         function issueUniqueRequestId() {
             var attempts = 1 + protocol.HARD_LIMITS.maxIdCollisionRetries;
@@ -418,6 +478,8 @@
 
         function buildResponseJsonSchema(requestId) {
             var metadata = responseMetadata(requestId);
+            var modelSpec = getCapabilityModelSpec();
+            var capability = modelSpec.capability;
             var textEnvelope = {
                 type: "object",
                 description: "Normal conversation, questions, current-value queries, explanations, suggestions, and ambiguity; never invent a value or use an explicit direct one-target opacity command. The root envelope remains required.",
@@ -440,13 +502,8 @@
                         additionalProperties: false,
                         required: ["capabilityId", "params"],
                         properties: {
-                            capabilityId: enumString("set-opacity-v1"),
-                            params: {
-                                type: "object",
-                                additionalProperties: false,
-                                required: ["opacity"],
-                                properties: { opacity: { type: "number", minimum: 0, maximum: 100 } }
-                            }
+                            capabilityId: enumString(capability.capabilityId),
+                            params: buildCapabilityParametersForResponse(capability)
                         }
                     }
                 }
@@ -472,13 +529,17 @@
 
         function systemMessage(requestId) {
             var metadata = responseMetadata(requestId);
+            var modelSpec = getCapabilityModelSpec();
+            var capability = modelSpec.capability;
+            var exampleParams = {};
+            exampleParams[modelSpec.parameterName] = 57.5;
             var proposal57Example = JSON.stringify({
                 protocol: metadata.protocol,
                 schemaVersion: metadata.schemaVersion,
                 requestId: metadata.requestId,
                 provider: metadata.provider,
                 model: metadata.model,
-                envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } }
+                envelope: { type: "localProposal", proposal: { capabilityId: capability.capabilityId, params: exampleParams } }
             });
             return [
                 "Return exactly one complete JSON object and nothing else.",
@@ -489,7 +550,7 @@
                 "Opacity plus a number is not enough: questions, explanations, and suggestions use text. Never guess 50 or another value. A current-value query may state a value only when that exact value is supplied in trusted request context; otherwise say you cannot reliably verify the current opacity and will not guess. For an ambiguous edit, ask for one explicit target from 0 to 100%. A text response never claims an edit was performed, scheduled, or proposed. For an explicit supported opacity command, text is invalid: return the localProposal envelope itself.",
                 "默认返回 text。当前值只有在可信请求上下文明确提供时才能回答；否则说明无法可靠确认且不猜测。模糊修改请求只要求提供唯一 0–100% 目标值，text 不得声称已完成、将执行或已提出修改建议。",
                 "All responses must be one complete schema envelope: no bare text, Markdown, extra explanation, multiple objects, or fields beyond the schema.",
-                "A localProposal uses only capabilityId set-opacity-v1 and params.opacity equal to the requested target. A localProposal is only a suggestion. It does not execute anything.",
+                "A localProposal uses only capabilityId " + capability.capabilityId + " and params.opacity equal to the requested target. A localProposal is only a suggestion. It does not execute anything.",
                 "For 将当前图层不透明度设为 57.5%, return: " + proposal57Example + ". For Set the selected layer opacity to 0% and Change opacity to 100, return localProposal with opacity 0 and 100 respectively.",
                 "Text examples: 你好; Hello; What is opacity?; Should I set opacity to 50%?; 透明一些; Maybe reduce opacity. For ambiguous edits, say: Specify a target opacity from 0 to 100%, for example 50%. / 请提供明确的不透明度目标值，例如 50%。"
             ].join(" ");
@@ -768,6 +829,7 @@
     }
     return Object.freeze({
         createLocalOpenAICompatibleProvider: createLocalOpenAICompatibleProvider,
+        buildCapabilityParametersForResponse: buildCapabilityParametersForResponse,
         isTrustedOutboundBodyForTransport: isTrustedOutboundBodyForTransport
     });
 }));

@@ -1292,6 +1292,33 @@ Settings, and navigation, then add dedicated tests before any extraction.
 
 ## Final boundary
 
+## Capability Contract Foundation (C1)
+
+C1 introduces a static, frozen Vela Capability Contract Registry. Production
+currently registers only `set-opacity-v1`; there is no runtime registration,
+remote loading, plugin injection, execution callback, or authority in a
+contract. A contract describes only the bounded parameter schema, model-facing
+proposal policy, and local validator/router identities.
+
+The model-facing projection contains only `capabilityId`, `revision`,
+`parameters`, and `modelPolicy`. The local-only projection replaces
+`modelPolicy` with `localPolicy`. Neither projection can contain targets,
+bindings, candidates, plans, confirmations, nonces, digests, request IDs, Host
+payloads, or runtime Context. Both are recursively frozen copies.
+
+C1 does not change the production Prompt, response schema, Protocol, Parser,
+Intent Gate language rules, Review, Preflight, or Host. C1 adds Contract-backed
+parameter validation at the Router boundary, while candidate construction
+semantics remain unchanged: Router still consumes only the private active
+proposal and has no execution authority. Confirmation, Preflight,
+ExecutionAdapter, and Host behavior remain independent. The Intent Gate remains
+an independent deterministic authority check; Router, Preflight, and Host remain
+independent local execution boundaries. Synthetic
+rotation and color contracts exist only in tests to prove the Registry is not
+opacity-specific. C2 is the earliest phase permitted to add a Prompt Builder;
+C3 is the earliest phase permitted to alter branch policy and requalify
+models. UI-D2 remains blocked.
+
 Vela 0.3.0 is an approval-driven assistant over explicit AE capabilities. The
 model proposes; local schemas, target fingerprints, permissions, and the
 Execution Guard decide whether an action can be shown or run. The user remains
