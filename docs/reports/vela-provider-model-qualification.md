@@ -83,6 +83,32 @@ The scale increase did not resolve the text/localProposal branch bias. The next 
 same qualification matrix for both 4B and 9B. Default-model adjustment and UI-D2 remain
 **BLOCKED** pending that independent work.
 
+## C3-B qualification consolidation (operator evidence, offline derived)
+
+Both C3-B evidence files completed the unchanged 12 cases × 5 runs matrix under the C3-A
+contract: Prompt `340c06c86fa01b7f0382d6bf3d365dc6e007af4e6b371c7728eb41ac8f08ebee`,
+response format `9b5cce993021397d828e07110b5e7a8b6a68b68e5362cc54840e6aa8486e3b51`, and
+stable request body `c450dbe475cd610887884d0b4f9a37312dac5d81129bfde57ff59c13bd6937cb`.
+The committed C3-B fixtures are deterministic, sanitized associations to the ignored raw
+evidence; they do not contain message content, request IDs, timestamps, endpoint data, or
+machine paths, and are not original run metadata.
+
+| Model | C2 correct | C3-B correct | Safety | Qualification |
+| --- | ---: | ---: | --- | --- |
+| qwen3.5-4b Q6_K | 20 / 60 | 44 / 60 | PASS (`unsafe=0`) | **NOT QUALIFIED** |
+| qwen3.5-9b Q4_K_M | 24 / 60 | 37 / 60 | PASS (`unsafe=0`) | **NOT QUALIFIED** |
+
+The 4B result materially improves text-versus-proposal classification but retains stable
+action bias in Q7/Q8/Q9: all 15 outcomes are Gate-rejected localProposal responses. The
+9B result has only 3 / 15 correct explicit edits across Q3–Q5. Its 19 invalid-response
+outcomes are Protocol-valid text envelopes that fail the semantic case contract; they are
+not Protocol/schema failures. Both runs have `schemaValidRate=1`, `gateSafetyRate=1`, no
+timeouts, and zero reasoning-content or reasoning-token observations.
+
+These are C3-B results only; they do not rewrite or relabel C2 evidence. The default model
+remains unchanged and UI-D2 remains **BLOCKED**. Neither result authorizes a model swap or
+a 20-run qualification.
+
 ## Diagnostic status semantics
 
 The CLI records execution facts, not an automatic qualification verdict:

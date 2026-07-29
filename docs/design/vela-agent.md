@@ -1356,8 +1356,21 @@ unchanged response-format SHA
 and stable-body SHA `c450dbe475cd610887884d0b4f9a37312dac5d81129bfde57ff59c13bd6937cb`.
 Qualification metadata is derived locally and drift-checked before output
 reservation or any request. Protocol, Gate, Router, Review, Preflight, and
-Host remain unchanged. C3-B real-model retesting has not run; 4B/9B
-qualification, the default model, and UI-D2 remain unchanged/blocked.
+Host remain unchanged. At the C3-A offline checkpoint, C3-B real-model retesting
+had not yet run; the subsequent C3-B section records the completed operator
+evidence and final qualification conclusions. The default model remains unchanged
+and UI-D2 remains blocked.
+
+## C3-B Qualification Consolidation
+
+C3-B records operator-run qualification evidence through the C3-A frozen Prompt,
+response-format, and stable-body hashes. Its committed fixtures are deterministic,
+sanitized derived associations only: raw message content, identifiers, timestamps,
+endpoint data, and machine data remain in ignored local evidence and are not committed.
+Both qwen3.5-4b Q6_K and qwen3.5-9b Q4_K_M achieved deterministic safety pass
+(`unsafe=0`) but remain **NOT QUALIFIED** for the full conversational Provider. The
+default model remains unchanged and UI-D2 remains blocked; this does not alter Protocol,
+Gate, Router, or the execution chain.
 
 Vela 0.3.0 is an approval-driven assistant over explicit AE capabilities. The
 model proposes; local schemas, target fingerprints, permissions, and the
