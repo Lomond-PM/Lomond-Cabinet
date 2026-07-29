@@ -649,12 +649,12 @@ async function run() {
     const sourceRoot = path.join(__dirname, "..", "client", "js", "vela");
     const providerSource = fs.readFileSync(path.join(sourceRoot, "velaProviderAdapter.js"), "utf8");
     check(!/(?:CSInterface|evalScript|\$\.evalFile|AEToolbox|\bapp\b|\bwindow\b|\bdocument\b|localStorage|fetch\(|XMLHttpRequest|WebSocket|require\([^)]+(?:crypto|http|https|net)|\beval\(|\bFunction\s*\()/.test(providerSource), "Provider core must contain no AE, DOM, network or dynamic runtime dependency.");
-    equal((providerSource.match(/require\(/g) || []).length, 2, "CommonJS must use exactly two fixed local requires.");
+    equal((providerSource.match(/require\(/g) || []).length, 3, "CommonJS must use exactly three fixed local requires.");
 
     function browserContext() { const context = { console }; context.self = context; vm.createContext(context); return context; }
     function loadUmd(context, name) { return vm.runInContext(fs.readFileSync(path.join(sourceRoot, name), "utf8"), context, { filename: name }); }
     const browser = browserContext();
-    loadUmd(browser, "velaProtocol.js"); loadUmd(browser, "velaResponseParser.js"); loadUmd(browser, "velaProviderAdapter.js");
+    loadUmd(browser, "velaProtocol.js"); loadUmd(browser, "velaResponseParser.js"); loadUmd(browser, "velaCapabilityContracts.js"); loadUmd(browser, "velaProviderAdapter.js");
     equal(typeof browser.VelaProviderAdapter.createLocalOpenAICompatibleProvider, "function", "Provider UMD must load after its fixed dependencies.");
     const browserProviderId = vm.runInContext(`(function () {
         var protocol = VelaProtocol.createProtocol({
@@ -683,7 +683,7 @@ async function run() {
     equal(missingProtocolCode, "RUNTIME_CAPABILITY_UNAVAILABLE", "Provider UMD requires Protocol bootstrap.");
     const missingParser = browserContext(); loadUmd(missingParser, "velaProtocol.js"); let missingParserCode = null; try { loadUmd(missingParser, "velaProviderAdapter.js"); } catch (error) { missingParserCode = error.code; }
     equal(missingParserCode, "RUNTIME_CAPABILITY_UNAVAILABLE", "Provider UMD requires ResponseParser.");
-    const conflict = browserContext(); loadUmd(conflict, "velaProtocol.js"); loadUmd(conflict, "velaResponseParser.js"); const existing = { fake: true }; conflict.VelaProviderAdapter = existing; let conflictCode = null; try { loadUmd(conflict, "velaProviderAdapter.js"); } catch (error) { conflictCode = error.code; }
+    const conflict = browserContext(); loadUmd(conflict, "velaProtocol.js"); loadUmd(conflict, "velaResponseParser.js"); loadUmd(conflict, "velaCapabilityContracts.js"); const existing = { fake: true }; conflict.VelaProviderAdapter = existing; let conflictCode = null; try { loadUmd(conflict, "velaProviderAdapter.js"); } catch (error) { conflictCode = error.code; }
     check(conflictCode === "MODULE_BOOTSTRAP_CONFLICT" && conflict.VelaProviderAdapter === existing && conflict.__velaProtocolCoreBootstrapV1.hasModule("VelaProviderAdapter") === false, "Preloaded Provider globals must not be overwritten or partially registered.");
 
     function fakeBootstrapContext(options) {
@@ -692,7 +692,8 @@ async function run() {
         let registerCalls = 0;
         const protocolValue = Object.freeze({ createProtocol() {}, isTrustedProtocol() { return true; }, ERROR_CODES: {} });
         const parserValue = Object.freeze({ createResponseParser() {} });
-        const modules = Object.assign({ VelaProtocol: protocolValue, VelaResponseParser: parserValue }, options.modules || {});
+        const capabilityValue = Object.freeze({ getModelProjection() { return Object.freeze({ capabilityId: "set-opacity-v1", parameters: Object.freeze({ properties: Object.freeze({ opacity: Object.freeze({ minimum: 0, maximum: 100 }) }) }) }); } });
+        const modules = Object.assign({ VelaProtocol: protocolValue, VelaResponseParser: parserValue, VelaCapabilityContracts: capabilityValue }, options.modules || {});
         const bootstrap = Object.freeze({
             getModule(name) { return modules[name]; },
             hasModule(name) { return Object.prototype.hasOwnProperty.call(modules, name); },
@@ -702,8 +703,9 @@ async function run() {
         if (options.installGlobals !== false) {
             Object.defineProperty(context, "VelaProtocol", { configurable: options.globalConfigurable === true, enumerable: true, value: options.protocolGlobal || protocolValue, writable: options.globalWritable === true });
             Object.defineProperty(context, "VelaResponseParser", { configurable: false, enumerable: true, value: options.parserGlobal || parserValue, writable: false });
+            Object.defineProperty(context, "VelaCapabilityContracts", { configurable: false, enumerable: true, value: options.capabilityGlobal || capabilityValue, writable: false });
         }
-        return { context, registerCalls: () => registerCalls, protocolValue, parserValue };
+        return { context, registerCalls: () => registerCalls, protocolValue, parserValue, capabilityValue };
     }
     const writableBootstrap = fakeBootstrapContext({ bootstrapWritable: true }); let writableBootstrapCode = null; try { loadUmd(writableBootstrap.context, "velaProviderAdapter.js"); } catch (error) { writableBootstrapCode = error.code; }
     check(writableBootstrapCode === "MODULE_BOOTSTRAP_CONFLICT" && writableBootstrap.registerCalls() === 0 && !writableBootstrap.context.VelaProviderAdapter, "Writable fake bootstraps must be rejected before registration.");

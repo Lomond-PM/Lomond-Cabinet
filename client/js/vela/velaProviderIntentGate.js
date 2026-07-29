@@ -10,16 +10,18 @@
         if (!hasOwn.call(target, BOOTSTRAP_NAME) || hasOwn.call(target, name) || !Object.isExtensible(target)) { throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT"); }
         bootstrap = target[BOOTSTRAP_NAME];
         if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.registerModule !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
-        exported = Object.freeze(create());
+        var capabilities = bootstrap.getModule("VelaCapabilityContracts");
+        if (!capabilities || typeof capabilities.getLocalProjection !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
+        exported = Object.freeze(create(capabilities));
         bootstrap.registerModule(name, exported);
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        module.exports = Object.freeze(factory());
+        module.exports = Object.freeze(factory(require("./velaCapabilityContracts")));
     }
-}(typeof self !== "undefined" ? self : this, function () {
+}(typeof self !== "undefined" ? self : this, function (capabilityContracts) {
     "use strict";
 
     var MODULE_REVISION = "vela-provider-intent-gate-v1";
@@ -40,7 +42,8 @@
         return Object.freeze({ allowed: allowed === true, reason: reason, moduleRevision: MODULE_REVISION });
     }
     function isNegativeZero(value) { return value === 0 && 1 / value === -Infinity; }
-    function isFiniteOpacity(value) { return typeof value === "number" && isFinite(value) && !isNegativeZero(value) && value >= 0 && value <= 100; }
+    function opacityContract() { return capabilityContracts.getLocalProjection("set-opacity-v1"); }
+    function isFiniteOpacity(value) { var contract = opacityContract(); var schema = contract && contract.parameters && contract.parameters.properties && contract.parameters.properties.opacity; return !!schema && typeof value === "number" && isFinite(value) && !isNegativeZero(value) && value >= schema.minimum && value <= schema.maximum; }
     function hasDisallowedLanguage(message) {
         var normalized = message.toLowerCase();
         return /(?:localproposal|set-opacity-v1|tool[_ -]?calls?|function[_ -]?call|json|system message|系统消息|协议|忽略规则|无论|不管|输出.*(?:json|localproposal)|return\s+localproposal)/i.test(message) ||
@@ -68,7 +71,8 @@
         capabilityId = input.capabilityId;
         proposedOpacity = input.proposedOpacity;
         if (typeof message !== "string" || !message.trim() || typeof capabilityId !== "string") { return result(false, REASONS.INVALID_INPUT); }
-        if (capabilityId !== "set-opacity-v1") { return result(false, REASONS.UNSUPPORTED_CAPABILITY); }
+        var contract = opacityContract();
+        if (!contract || contract.localPolicy.intentValidatorId !== "set-opacity-direct-edit-v1" || capabilityId !== contract.capabilityId) { return result(false, REASONS.UNSUPPORTED_CAPABILITY); }
         if (!isFiniteOpacity(proposedOpacity)) { return result(false, REASONS.INVALID_PROPOSAL); }
         if (hasDisallowedLanguage(message)) { return result(false, REASONS.DISALLOWED_LANGUAGE); }
         if (!/(?:设置|设为|改为|调整为|调到|改成)/.test(message) && !/\b(?:set|change|adjust)\b/i.test(message)) { return result(false, REASONS.MISSING_ACTION); }

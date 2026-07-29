@@ -12,6 +12,7 @@ const mainSource = fs.readFileSync(path.join(ROOT, "client", "js", "main.js"), "
 const MODULES = [
     "velaProtocol.js",
     "velaResponseParser.js",
+    "velaCapabilityContracts.js",
     "velaProviderAdapter.js",
     "velaProviderIntentGate.js",
     "velaLocalTransport.js",
@@ -98,7 +99,7 @@ function run() {
     MODULES.forEach((filename) => runBrowserModule(browser, filename));
     const bootstrap = browser.context.__velaProtocolCoreBootstrapV1;
     check(bootstrap && Object.isFrozen(bootstrap), "A self-referential browser global creates the exact Vela bootstrap even when CommonJS globals exist.");
-    ["VelaProtocol", "VelaResponseParser", "VelaProviderAdapter", "VelaProviderIntentGate", "VelaLocalTransport", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaProviderController", "VelaProviderProposalRouter", "VelaRuntime"].forEach((name) => {
+    ["VelaProtocol", "VelaResponseParser", "VelaCapabilityContracts", "VelaProviderAdapter", "VelaProviderIntentGate", "VelaLocalTransport", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaProviderController", "VelaProviderProposalRouter", "VelaRuntime"].forEach((name) => {
         check(bootstrap.getModule(name) === browser.context[name] && Object.isFrozen(browser.context[name]), name + " registers through the browser bootstrap.");
     });
     check(browser.requireCalls() === 0, "Browser-first registration never calls require.");

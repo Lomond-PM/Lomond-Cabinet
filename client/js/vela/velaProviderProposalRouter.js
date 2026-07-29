@@ -3,9 +3,9 @@
     var MODULE_NAME = "VelaProviderProposalRouter";
     var BOOTSTRAP_NAME = "__velaProtocolCoreBootstrapV1";
     function bootstrapError(code) { var error = new Error(code); error.code = code; return error; }
-    function assertDependencies(protocol, providerController, controller) {
-        if (!protocol || typeof protocol.isTrustedProtocol !== "function" || !providerController || typeof providerController.isTrustedProviderControllerForProtocol !== "function" || typeof providerController.createProposalPort !== "function" || !controller || typeof controller.isTrustedControllerForProtocol !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
-        return { protocol: protocol, providerController: providerController, controller: controller };
+    function assertDependencies(protocol, providerController, controller, capabilities) {
+        if (!protocol || typeof protocol.isTrustedProtocol !== "function" || !providerController || typeof providerController.isTrustedProviderControllerForProtocol !== "function" || typeof providerController.createProposalPort !== "function" || !controller || typeof controller.isTrustedControllerForProtocol !== "function" || !capabilities || typeof capabilities.getLocalProjection !== "function" || typeof capabilities.validateCapabilityParams !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
+        return { protocol: protocol, providerController: providerController, controller: controller, capabilities: capabilities };
     }
     function registerBrowserModule(target, name, create) {
         var hasOwn = Object.prototype.hasOwnProperty;
@@ -15,18 +15,18 @@
         if (!hasOwn.call(target, BOOTSTRAP_NAME) || hasOwn.call(target, name) || !Object.isExtensible(target)) { throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT"); }
         bootstrap = target[BOOTSTRAP_NAME];
         if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.getModule !== "function" || typeof bootstrap.hasModule !== "function" || typeof bootstrap.registerModule !== "function" || bootstrap.hasModule(name)) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
-        dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaProviderController"), bootstrap.getModule("VelaController"));
-        exported = Object.freeze(create(dependencies.protocol, dependencies.providerController, dependencies.controller));
+        dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaProviderController"), bootstrap.getModule("VelaController"), bootstrap.getModule("VelaCapabilityContracts"));
+        exported = Object.freeze(create(dependencies.protocol, dependencies.providerController, dependencies.controller, dependencies.capabilities));
         bootstrap.registerModule(name, exported);
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        var dependencies = assertDependencies(require("./velaProtocol"), require("./velaProviderController"), require("./velaController"));
-        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.providerController, dependencies.controller));
+        var dependencies = assertDependencies(require("./velaProtocol"), require("./velaProviderController"), require("./velaController"), require("./velaCapabilityContracts"));
+        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.providerController, dependencies.controller, dependencies.capabilities));
     }
-}(typeof self !== "undefined" ? self : this, function (protocolModule, providerControllerModule, controllerModule) {
+}(typeof self !== "undefined" ? self : this, function (protocolModule, providerControllerModule, controllerModule, capabilityContracts) {
     "use strict";
     var trustedRouters = new WeakSet();
     var routerProtocols = new WeakMap();
@@ -49,12 +49,25 @@
         if (!proposalPort || typeof ownData(proposalPort, "consume") !== "function") { protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Provider proposal port is unavailable."); }
         function review() {
             var proposal;
+            var capability;
+            var parameterName;
+            var params;
+            var validated;
             if (reviewing) { return Promise.reject(new protocol.VelaProtocolError(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID)); }
             reviewing = true;
             try {
                 proposal = proposalPort.consume();
-                if (!proposal || ownData(proposal, "capabilityId") !== "set-opacity-v1" || typeof ownData(proposal, "opacity") !== "number") { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "Local proposal is invalid."); }
-                return Promise.resolve(controller.createOpacityCandidate({ opacity: ownData(proposal, "opacity") })).then(function (result) { reviewing = false; return result; }, function (error) { reviewing = false; throw error; });
+                capability = capabilityContracts.getLocalProjection("set-opacity-v1");
+                if (!capability || !capability.localPolicy || capability.localPolicy.routerId !== capability.capabilityId || capability.localPolicy.parameterValidatorId !== "opacity-percent-v1" ||
+                    !capability.parameters || !Array.isArray(capability.parameters.required) || capability.parameters.required.length !== 1 ||
+                    !proposal || ownData(proposal, "capabilityId") !== capability.capabilityId) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "Local proposal is invalid."); }
+                parameterName = capability.parameters.required[0];
+                if (parameterName !== "opacity" || !capability.parameters.properties || !Object.prototype.hasOwnProperty.call(capability.parameters.properties, parameterName)) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "Local proposal contract is invalid."); }
+                params = {};
+                params[parameterName] = ownData(proposal, parameterName);
+                try { validated = capabilityContracts.validateCapabilityParams(capability, params); }
+                catch (error) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "Local proposal parameters are invalid."); }
+                return Promise.resolve(controller.createOpacityCandidate({ opacity: validated[parameterName] })).then(function (result) { reviewing = false; return result; }, function (error) { reviewing = false; throw error; });
             } catch (error) {
                 reviewing = false;
                 return Promise.reject(error);

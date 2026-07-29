@@ -6,6 +6,7 @@ const protocolModule = require("../../client/js/vela/velaProtocol");
 const transportModule = require("../../client/js/vela/velaLocalTransport");
 const providerAdapterModule = require("../../client/js/vela/velaProviderAdapter");
 const intentGate = require("../../client/js/vela/velaProviderIntentGate");
+const capabilityContracts = require("../../client/js/vela/velaCapabilityContracts");
 
 const ENDPOINT = "http://127.0.0.1:1234/v1/chat/completions";
 const DEFAULT_TIMEOUT_MS = 30000;
@@ -100,7 +101,7 @@ function classify(caseDef, result, gateResult) {
 }
 function recordedResult(record) {
     if (!record || record.outputKind === "timeout") return { kind: "timeout" };
-    if (!record || record.outputKind === "localProposal") return { kind: "localProposal", capabilityId: "set-opacity-v1", opacity: record.proposalOpacity };
+    if (!record || record.outputKind === "localProposal") return { kind: "localProposal", capabilityId: capabilityContracts.getModelProjection("set-opacity-v1").capabilityId, opacity: record.proposalOpacity };
     if (record.outputKind !== "text") return { kind: "invalid" };
     if (typeof record.text === "string") return { kind: "text", text: record.text };
     if (typeof record.messageContent !== "string") return { kind: "invalid" };
@@ -132,4 +133,4 @@ function createRunStatus(executionStatus) {
     return Object.freeze({ executionStatus, assessmentStatus: ASSESSMENT_STATUSES.PENDING_REVIEW });
 }
 function reportMarkdown(run) { const s = run.summary; return ["# Vela Provider Model Qualification", "", "- Execution status: `" + run.executionStatus + "`", "- Assessment status: `" + run.assessmentStatus + "`", "", "- Model: `" + run.model + "`", "- Operator profile label: `" + run.profileLabel + "`", "- Suite: `" + run.suite + "`", "- Runs per case: " + run.runs, "- Unsafe: " + s.counts.unsafe, "- Schema-valid rate: " + s.schemaValidRate, "- Correct-branch rate: " + s.correctBranchRate, "- Gate-safety rate: " + s.gateSafetyRate, "", "The profile label is an operator declaration, not automated verification of LM Studio UI Thinking/Profile state. `reasoning_content` is never a formal answer. Model UX classification and deterministic Vela safety are reported separately. The CLI does not declare a model qualified or not qualified."].join("\n") + "\n"; }
-module.exports = Object.freeze({ ENDPOINT, DEFAULT_TIMEOUT_MS, REPOSITORY_ROOT, OUTPUT_ROOT, EXECUTION_STATUSES, ASSESSMENT_STATUSES, FIXTURES, CASES, createProtocol, contextText, parseArgs, hasAbsolutePathForm, outputPolicy, assertOutputPath, isUnavailableExplanation, containsCurrentOpacityGuess, isCorrectUnavailableText, evaluateIntentGate, classify, recordedResult, reclassifyEvidence, summarize, createRunStatus, reportMarkdown, byteLength, transportModule, providerAdapterModule });
+module.exports = Object.freeze({ ENDPOINT, DEFAULT_TIMEOUT_MS, REPOSITORY_ROOT, OUTPUT_ROOT, EXECUTION_STATUSES, ASSESSMENT_STATUSES, FIXTURES, CASES, createProtocol, contextText, parseArgs, hasAbsolutePathForm, outputPolicy, assertOutputPath, isUnavailableExplanation, containsCurrentOpacityGuess, isCorrectUnavailableText, evaluateIntentGate, classify, recordedResult, reclassifyEvidence, summarize, createRunStatus, reportMarkdown, byteLength, transportModule, providerAdapterModule, capabilityContracts });
