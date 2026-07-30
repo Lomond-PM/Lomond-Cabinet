@@ -61,7 +61,7 @@ function makeBrowser(options) {
             if (options.failFile === filename) { script.onerror(); return script; }
             if (options.timeoutFile === filename) { return script; }
             try {
-                vm.runInContext(fs.readFileSync(path.join(VELA, filename), "utf8"), sandbox, { filename });
+                vm.runInContext(options.moduleSources && Object.prototype.hasOwnProperty.call(options.moduleSources, filename) ? options.moduleSources[filename] : fs.readFileSync(path.join(VELA, filename), "utf8"), sandbox, { filename });
                 script.onload();
             } catch (error) {
                 script.onerror();
@@ -78,6 +78,17 @@ function makeBrowser(options) {
     const sandbox = vm.createContext(context);
     vm.runInContext(loaderSource, sandbox, { filename: "velaCepModuleLoader.js" });
     return { context, sandbox, timers, document, getAppendCount() { return appendCount; }, requestedUrls };
+}
+
+function policyModuleSource(expression) {
+    return "(function () { var value = " + expression + "; window.__velaProtocolCoreBootstrapV1.registerModule('VelaProviderRequestBranchPolicy', value); Object.defineProperty(window, 'VelaProviderRequestBranchPolicy', { configurable: false, enumerable: true, value: value, writable: false }); }());";
+}
+
+async function expectPolicyShapeFailure(expression, message) {
+    const browser = makeBrowser({ moduleSources: { "velaProviderRequestBranchPolicy.js": policyModuleSource(expression) } });
+    await expectCode(browser.context.VelaCepModuleLoader.load(), "MODULE_BOOTSTRAP_CONFLICT", message);
+    check(browser.getAppendCount() === 4 && browser.context.VelaCapabilityPromptBuilder === undefined && browser.context.VelaProviderAdapter === undefined, message + " stops before dependent modules.");
+    return browser;
 }
 
 async function run() {
@@ -102,10 +113,14 @@ async function run() {
     check(result.ok === true && result.state === "ready", "Loader reaches ready state.");
     check(Object.isFrozen(browser.context.VelaCepModuleLoader.getStatus()) && browser.context.VelaCepModuleLoader.getStatus().state === "ready" && browser.context.VelaCepModuleLoader.getStatus().lastErrorCode === null, "Loader exposes only a frozen ready diagnostic snapshot.");
     check(Object.isFrozen(result) && Object.isFrozen(result.modules), "Loader result is frozen.");
-    check(result.modules.length === 18 && result.modules[2] === "VelaCapabilityContracts" && result.modules[3] === "VelaCapabilityPromptBuilder" && result.modules[5] === "VelaProviderIntentGate" && result.modules[result.modules.length - 1] === "VelaRuntime" && result.modules[result.modules.length - 2] === "VelaProviderProposalRouter" && result.modules[result.modules.length - 3] === "VelaProviderController", "Loader returns bounded dependency order.");
+    check(result.modules.length === 19 && result.modules[2] === "VelaCapabilityContracts" && result.modules[3] === "VelaProviderRequestBranchPolicy" && result.modules[4] === "VelaCapabilityPromptBuilder" && result.modules[6] === "VelaProviderIntentGate" && result.modules[result.modules.length - 1] === "VelaRuntime" && result.modules[result.modules.length - 2] === "VelaProviderProposalRouter" && result.modules[result.modules.length - 3] === "VelaProviderController", "Loader returns bounded dependency order.");
     check(browser.context.__velaProtocolCoreBootstrapV1.getModule("VelaProtocol") === browser.context.VelaProtocol, "Protocol uses the browser bootstrap identity.");
     check(browser.context.__velaProtocolCoreBootstrapV1.getModule("VelaRuntime") === browser.context.VelaRuntime, "Runtime uses the browser bootstrap identity.");
     check(Object.isFrozen(browser.context.VelaRuntime), "Runtime browser module is frozen.");
+    const policyExport = browser.context.VelaProviderRequestBranchPolicy;
+    const policyProfiles = Object.getOwnPropertyDescriptor(policyExport, "PROFILES").value;
+    check(Object.isFrozen(policyExport) && Object.isFrozen(policyProfiles) && Object.getOwnPropertyDescriptor(policyExport, "PROFILES").writable === false && Object.getOwnPropertyDescriptor(policyExport, "PROFILES").configurable === false && typeof Object.getOwnPropertyDescriptor(policyExport, "createRequestBranchPolicy").value === "function" && Object.getOwnPropertyDescriptor(policyExport, "createRequestBranchPolicy").writable === false && Object.getOwnPropertyDescriptor(policyExport, "createRequestBranchPolicy").configurable === false, "The production Request Branch Policy export has frozen own data descriptors.");
+    check(JSON.stringify(Object.getOwnPropertyNames(policyProfiles).sort()) === JSON.stringify(["EXPLICIT_EDIT_ELIGIBLE", "TEXT_ONLY"]) && Object.getOwnPropertySymbols(policyProfiles).length === 0 && Object.getOwnPropertyDescriptor(policyProfiles, "TEXT_ONLY").value === "text-only" && Object.getOwnPropertyDescriptor(policyProfiles, "EXPLICIT_EDIT_ELIGIBLE").value === "explicit-edit-eligible", "The production Request Branch Policy profiles have exactly the frozen supported constants.");
     check(browser.context.module === moduleSentinel && browser.context.module.exports === exportsSentinel, "module identity is restored.");
     check(browser.context.exports === exportsSentinel, "exports identity is restored.");
     check(browser.context.require === beforeRequire.value, "require identity is restored.");
@@ -115,12 +130,13 @@ async function run() {
     check(await browser.context.VelaCepModuleLoader.load() === result, "Ready loader calls return the same result.");
     check(Object.getOwnPropertyDescriptor(browser.context, "CSInterface") === undefined, "Loader does not create CSInterface state.");
     check(Object.getOwnPropertyDescriptor(browser.context, "__adobe_cep__") === undefined, "Loader does not create Adobe CEP state.");
-    check(browser.getAppendCount() === 18, "Loader injects each protected module exactly once.");
+    check(browser.getAppendCount() === 19, "Loader injects each protected module exactly once.");
     check(browser.requestedUrls[0] === "file:///C:/extension/client/js/vela/velaProtocol.js?v=test", "The captured loader base and cache query produce VelaProtocol as the first request after currentScript is cleared.");
     check(JSON.stringify(browser.requestedUrls) === JSON.stringify([
         "file:///C:/extension/client/js/vela/velaProtocol.js?v=test",
         "file:///C:/extension/client/js/vela/velaResponseParser.js?v=test",
         "file:///C:/extension/client/js/vela/velaCapabilityContracts.js?v=test",
+        "file:///C:/extension/client/js/vela/velaProviderRequestBranchPolicy.js?v=test",
         "file:///C:/extension/client/js/vela/velaCapabilityPromptBuilder.js?v=test",
         "file:///C:/extension/client/js/vela/velaProviderAdapter.js?v=test",
         "file:///C:/extension/client/js/vela/velaProviderIntentGate.js?v=test",
@@ -151,6 +167,37 @@ async function run() {
     await expectCode(failed.context.VelaCepModuleLoader.load(), "RUNTIME_CAPABILITY_UNAVAILABLE", "Failed loader remains failed until reload.");
     check(failed.context.VelaCepModuleLoader.getStatus().state === "failed" && failed.context.VelaCepModuleLoader.getStatus().lastErrorCode === "RUNTIME_CAPABILITY_UNAVAILABLE", "Failed loader caches a bounded diagnostic error code.");
     check(!failed.context.VelaRuntime, "Failed loader does not create the runtime module.");
+
+    const missingPolicy = makeBrowser({ failFile: "velaProviderRequestBranchPolicy.js" });
+    await expectCode(missingPolicy.context.VelaCepModuleLoader.load(), "RUNTIME_CAPABILITY_UNAVAILABLE", "A missing Request Branch Policy fails closed before Prompt Builder loading.");
+    check(missingPolicy.getAppendCount() === 4 && missingPolicy.context.VelaCapabilityPromptBuilder === undefined, "A missing Request Branch Policy never proceeds to dependent modules.");
+    const inertFactory = makeBrowser({ moduleSources: { "velaProviderRequestBranchPolicy.js": policyModuleSource("Object.freeze({ PROFILES: Object.freeze({ TEXT_ONLY: 'text-only', EXPLICIT_EDIT_ELIGIBLE: 'explicit-edit-eligible' }), createRequestBranchPolicy: function () { window.__policyFactoryCalls = (window.__policyFactoryCalls || 0) + 1; } })") } });
+    await inertFactory.context.VelaCepModuleLoader.load();
+    check((inertFactory.context.__policyFactoryCalls || 0) === 0, "Loader validates a legal Policy export without creating a Policy instance.");
+    await expectPolicyShapeFailure("Object.freeze({})", "A Request Branch Policy missing PROFILES and factory fails closed.");
+    await expectPolicyShapeFailure("Object.freeze({ PROFILES: null, createRequestBranchPolicy: function () {} })", "A null PROFILES value fails closed.");
+    await expectPolicyShapeFailure("Object.freeze({ PROFILES: { TEXT_ONLY: 'text-only', EXPLICIT_EDIT_ELIGIBLE: 'explicit-edit-eligible' }, createRequestBranchPolicy: function () {} })", "An unfrozen PROFILES value fails closed.");
+    await expectPolicyShapeFailure("Object.freeze({ PROFILES: Object.freeze({ EXPLICIT_EDIT_ELIGIBLE: 'explicit-edit-eligible' }), createRequestBranchPolicy: function () {} })", "Missing TEXT_ONLY fails closed.");
+    await expectPolicyShapeFailure("Object.freeze({ PROFILES: Object.freeze({ TEXT_ONLY: 'text-only' }), createRequestBranchPolicy: function () {} })", "Missing EXPLICIT_EDIT_ELIGIBLE fails closed.");
+    await expectPolicyShapeFailure("Object.freeze({ PROFILES: Object.freeze({ TEXT_ONLY: 'wrong', EXPLICIT_EDIT_ELIGIBLE: 'explicit-edit-eligible' }), createRequestBranchPolicy: function () {} })", "A wrong TEXT_ONLY value fails closed.");
+    await expectPolicyShapeFailure("Object.freeze({ PROFILES: Object.freeze({ TEXT_ONLY: 'text-only', EXPLICIT_EDIT_ELIGIBLE: 'wrong' }), createRequestBranchPolicy: function () {} })", "A wrong EXPLICIT_EDIT_ELIGIBLE value fails closed.");
+    await expectPolicyShapeFailure("Object.freeze({ PROFILES: Object.freeze({ TEXT_ONLY: 'text-only', EXPLICIT_EDIT_ELIGIBLE: 'explicit-edit-eligible', EXTRA: 'x' }), createRequestBranchPolicy: function () {} })", "An extra enumerable profile key fails closed.");
+    await expectPolicyShapeFailure("(function(){ var p = { TEXT_ONLY: 'text-only', EXPLICIT_EDIT_ELIGIBLE: 'explicit-edit-eligible' }; Object.defineProperty(p, 'hidden', { value: 'x', enumerable: false }); Object.freeze(p); return Object.freeze({ PROFILES: p, createRequestBranchPolicy: function () {} }); }())", "A hidden profile key fails closed.");
+    await expectPolicyShapeFailure("(function(){ var p = { TEXT_ONLY: 'text-only', EXPLICIT_EDIT_ELIGIBLE: 'explicit-edit-eligible' }; p[Symbol('hidden')] = 'x'; Object.freeze(p); return Object.freeze({ PROFILES: p, createRequestBranchPolicy: function () {} }); }())", "A symbol profile key fails closed.");
+    await expectPolicyShapeFailure("(function(){ var p = Object.create({ TEXT_ONLY: 'text-only' }); Object.defineProperty(p, 'EXPLICIT_EDIT_ELIGIBLE', { value: 'explicit-edit-eligible', enumerable: true }); Object.freeze(p); return Object.freeze({ PROFILES: p, createRequestBranchPolicy: function () {} }); }())", "An inherited profile key fails closed.");
+    const profilesGetter = await expectPolicyShapeFailure("(function(){ var e = { createRequestBranchPolicy: function () {} }; Object.defineProperty(e, 'PROFILES', { enumerable: true, get: function () { window.__policyGetterCalls = (window.__policyGetterCalls || 0) + 1; return null; }, set: function () { window.__policySetterCalls = (window.__policySetterCalls || 0) + 1; } }); Object.freeze(e); return e; }())", "A getter/setter-backed PROFILES value fails closed.");
+    check((profilesGetter.context.__policyGetterCalls || 0) === 0, "PROFILES getter is never invoked.");
+    check((profilesGetter.context.__policySetterCalls || 0) === 0, "PROFILES setter is never invoked.");
+    const profileGetter = await expectPolicyShapeFailure("(function(){ var p = {}; Object.defineProperty(p, 'TEXT_ONLY', { enumerable: true, get: function () { window.__policyGetterCalls = (window.__policyGetterCalls || 0) + 1; return 'text-only'; }, set: function () { window.__policySetterCalls = (window.__policySetterCalls || 0) + 1; } }); Object.defineProperty(p, 'EXPLICIT_EDIT_ELIGIBLE', { value: 'explicit-edit-eligible', enumerable: true }); Object.freeze(p); return Object.freeze({ PROFILES: p, createRequestBranchPolicy: function () {} }); }())", "A getter/setter-backed profile value fails closed.");
+    check((profileGetter.context.__policyGetterCalls || 0) === 0, "Profile getter is never invoked.");
+    check((profileGetter.context.__policySetterCalls || 0) === 0, "Profile setter is never invoked.");
+    await expectPolicyShapeFailure("Object.freeze({ PROFILES: Object.freeze({ TEXT_ONLY: 'text-only', EXPLICIT_EDIT_ELIGIBLE: 'explicit-edit-eligible' }) })", "A missing factory fails closed.");
+    await expectPolicyShapeFailure("Object.freeze({ PROFILES: Object.freeze({ TEXT_ONLY: 'text-only', EXPLICIT_EDIT_ELIGIBLE: 'explicit-edit-eligible' }), createRequestBranchPolicy: 'not-a-function' })", "A non-function factory fails closed.");
+    await expectPolicyShapeFailure("(function(){ var e = Object.create({ createRequestBranchPolicy: function () {} }); Object.defineProperty(e, 'PROFILES', { value: Object.freeze({ TEXT_ONLY: 'text-only', EXPLICIT_EDIT_ELIGIBLE: 'explicit-edit-eligible' }), enumerable: true }); Object.freeze(e); return e; }())", "An inherited factory fails closed.");
+    const factoryGetter = await expectPolicyShapeFailure("(function(){ var e = {}; Object.defineProperty(e, 'PROFILES', { value: Object.freeze({ TEXT_ONLY: 'text-only', EXPLICIT_EDIT_ELIGIBLE: 'explicit-edit-eligible' }), enumerable: true }); Object.defineProperty(e, 'createRequestBranchPolicy', { enumerable: true, get: function () { window.__policyGetterCalls = (window.__policyGetterCalls || 0) + 1; return function () {}; }, set: function () { window.__policySetterCalls = (window.__policySetterCalls || 0) + 1; } }); Object.freeze(e); return e; }())", "A getter/setter-backed factory fails closed.");
+    check((factoryGetter.context.__policyGetterCalls || 0) === 0, "Factory getter is never invoked.");
+    check((factoryGetter.context.__policySetterCalls || 0) === 0, "Factory setter is never invoked.");
+    await expectPolicyShapeFailure("({ PROFILES: Object.freeze({ TEXT_ONLY: 'text-only', EXPLICIT_EDIT_ELIGIBLE: 'explicit-edit-eligible' }), createRequestBranchPolicy: function () {} })", "An unfrozen Request Branch Policy export fails closed.");
 
     const timeout = makeBrowser({ timeoutFile: "velaProtocol.js" });
     const timeoutPromise = timeout.context.VelaCepModuleLoader.load();
