@@ -13,6 +13,7 @@ const MODULES = [
     "velaProtocol.js",
     "velaResponseParser.js",
     "velaCapabilityContracts.js",
+    "velaProviderRequestBranchPolicy.js",
     "velaCapabilityPromptBuilder.js",
     "velaProviderAdapter.js",
     "velaProviderIntentGate.js",
@@ -100,7 +101,7 @@ function run() {
     MODULES.forEach((filename) => runBrowserModule(browser, filename));
     const bootstrap = browser.context.__velaProtocolCoreBootstrapV1;
     check(bootstrap && Object.isFrozen(bootstrap), "A self-referential browser global creates the exact Vela bootstrap even when CommonJS globals exist.");
-    ["VelaProtocol", "VelaResponseParser", "VelaCapabilityContracts", "VelaCapabilityPromptBuilder", "VelaProviderAdapter", "VelaProviderIntentGate", "VelaLocalTransport", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaProviderController", "VelaProviderProposalRouter", "VelaRuntime"].forEach((name) => {
+    ["VelaProtocol", "VelaResponseParser", "VelaCapabilityContracts", "VelaProviderRequestBranchPolicy", "VelaCapabilityPromptBuilder", "VelaProviderAdapter", "VelaProviderIntentGate", "VelaLocalTransport", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaProviderController", "VelaProviderProposalRouter", "VelaRuntime"].forEach((name) => {
         check(bootstrap.getModule(name) === browser.context[name] && Object.isFrozen(browser.context[name]), name + " registers through the browser bootstrap.");
     });
     check(browser.requireCalls() === 0, "Browser-first registration never calls require.");
@@ -124,6 +125,7 @@ function run() {
     const parser = require(path.join(VELA, "velaResponseParser.js"));
     const providerAdapter = require(path.join(VELA, "velaProviderAdapter.js"));
     const providerIntentGate = require(path.join(VELA, "velaProviderIntentGate.js"));
+    const requestBranchPolicy = require(path.join(VELA, "velaProviderRequestBranchPolicy.js"));
     const localTransport = require(path.join(VELA, "velaLocalTransport.js"));
     const context = require(path.join(VELA, "velaContext.js"));
     const validator = require(path.join(VELA, "velaValidator.js"));
@@ -136,7 +138,7 @@ function run() {
     const providerController = require(path.join(VELA, "velaProviderController.js"));
     const proposalRouter = require(path.join(VELA, "velaProviderProposalRouter.js"));
     const runtime = require(path.join(VELA, "velaRuntime.js"));
-    check(typeof protocol.createProtocol === "function" && typeof parser.createResponseParser === "function" && typeof providerAdapter.createLocalOpenAICompatibleProvider === "function" && typeof providerIntentGate.evaluate === "function" && typeof localTransport.createLocalTransport === "function" && typeof context.createContextApi === "function" && typeof validator.createActionValidator === "function" && typeof plan.createPlanStore === "function" && typeof guard.createExecutionGuard === "function" && typeof bridge.createContextBridge === "function" && typeof preflight.createExecutionPreflight === "function" && typeof executionAdapter.createExecutionAdapter === "function" && typeof controller.createController === "function" && typeof providerController.createProviderController === "function" && typeof proposalRouter.createProposalRouter === "function" && typeof runtime.createRuntime === "function", "Modules continue to export their fixed CommonJS APIs without a browser window.");
+    check(typeof protocol.createProtocol === "function" && typeof parser.createResponseParser === "function" && typeof requestBranchPolicy.createRequestBranchPolicy === "function" && typeof providerAdapter.createLocalOpenAICompatibleProvider === "function" && typeof providerIntentGate.evaluate === "function" && typeof localTransport.createLocalTransport === "function" && typeof context.createContextApi === "function" && typeof validator.createActionValidator === "function" && typeof plan.createPlanStore === "function" && typeof guard.createExecutionGuard === "function" && typeof bridge.createContextBridge === "function" && typeof preflight.createExecutionPreflight === "function" && typeof executionAdapter.createExecutionAdapter === "function" && typeof controller.createController === "function" && typeof providerController.createProviderController === "function" && typeof proposalRouter.createProposalRouter === "function" && typeof runtime.createRuntime === "function", "Modules continue to export their fixed CommonJS APIs without a browser window.");
     check(/ConfirmationView:\s*window\.VelaConfirmationView/.test(mainSource) && /typeof window\.VelaConfirmationView\.create !== "function"/.test(mainSource), "Production Surface bootstrap injects and validates the UI-C ConfirmationView factory before Controller creation.");
     check(/function reportVelaSurfaceInitializationError\(\)[\s\S]*SURFACE_BOOTSTRAP_UNAVAILABLE/.test(mainSource) && /return velaRuntimeController\.initialize\(\);[\s\S]*\.then\(function \(result\) \{[\s\S]*initializeVelaSurfaceController\(\);[\s\S]*\}, reportVelaRuntimeError\);/.test(mainSource), "Runtime bootstrap failures and Surface Controller bootstrap failures use distinct error boundaries.");
 

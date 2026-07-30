@@ -7,6 +7,7 @@
         { name: "VelaProtocol", file: "velaProtocol.js" },
         { name: "VelaResponseParser", file: "velaResponseParser.js" },
         { name: "VelaCapabilityContracts", file: "velaCapabilityContracts.js" },
+        { name: "VelaProviderRequestBranchPolicy", file: "velaProviderRequestBranchPolicy.js" },
         { name: "VelaCapabilityPromptBuilder", file: "velaCapabilityPromptBuilder.js" },
         { name: "VelaProviderAdapter", file: "velaProviderAdapter.js" },
         { name: "VelaProviderIntentGate", file: "velaProviderIntentGate.js" },
@@ -104,11 +105,46 @@
         }
     }
 
+    function isFrozenOwnDataProperty(value, key) {
+        var descriptor = ownDescriptor(value, key);
+        return !!descriptor && !descriptor.get && !descriptor.set && hasOwn.call(descriptor, "value") && descriptor.writable === false && descriptor.configurable === false;
+    }
+
+    function isRequestBranchPolicyShape(value) {
+        var profilesDescriptor;
+        var factoryDescriptor;
+        var profiles;
+        var names;
+        var symbols;
+        var textOnlyDescriptor;
+        var explicitDescriptor;
+        try {
+            if (!value || typeof value !== "object" || !Object.isFrozen(value)) { return false; }
+            profilesDescriptor = ownDescriptor(value, "PROFILES");
+            factoryDescriptor = ownDescriptor(value, "createRequestBranchPolicy");
+            if (!profilesDescriptor || profilesDescriptor.get || profilesDescriptor.set || !hasOwn.call(profilesDescriptor, "value") || profilesDescriptor.writable !== false || profilesDescriptor.configurable !== false ||
+                    !factoryDescriptor || factoryDescriptor.get || factoryDescriptor.set || !hasOwn.call(factoryDescriptor, "value") || factoryDescriptor.writable !== false || factoryDescriptor.configurable !== false || typeof factoryDescriptor.value !== "function") { return false; }
+            profiles = profilesDescriptor.value;
+            if (!profiles || typeof profiles !== "object" || !Object.isFrozen(profiles)) { return false; }
+            names = Object.getOwnPropertyNames(profiles).sort();
+            symbols = typeof Object.getOwnPropertySymbols === "function" ? Object.getOwnPropertySymbols(profiles) : [];
+            if (symbols.length !== 0 || names.join("\u0000") !== "EXPLICIT_EDIT_ELIGIBLE\u0000TEXT_ONLY") { return false; }
+            textOnlyDescriptor = ownDescriptor(profiles, "TEXT_ONLY");
+            explicitDescriptor = ownDescriptor(profiles, "EXPLICIT_EDIT_ELIGIBLE");
+            return isFrozenOwnDataProperty(profiles, "TEXT_ONLY") && isFrozenOwnDataProperty(profiles, "EXPLICIT_EDIT_ELIGIBLE") &&
+                textOnlyDescriptor.enumerable === true && explicitDescriptor.enumerable === true &&
+                textOnlyDescriptor.value === "text-only" && explicitDescriptor.value === "explicit-edit-eligible";
+        } catch (error) {
+            return false;
+        }
+    }
+
     function expectedModuleShape(name, value) {
         if (!value || !Object.isFrozen(value)) { return false; }
         if (name === "VelaProtocol") { return typeof value.createProtocol === "function" && typeof value.isTrustedProtocol === "function" && value.ERROR_CODES; }
         if (name === "VelaResponseParser") { return typeof value.createResponseParser === "function"; }
         if (name === "VelaCapabilityContracts") { return typeof value.getModelProjection === "function" && typeof value.getLocalProjection === "function" && typeof value.createRegistry === "function"; }
+        if (name === "VelaProviderRequestBranchPolicy") { return isRequestBranchPolicyShape(value); }
         if (name === "VelaCapabilityPromptBuilder") { return typeof value.buildSystemPrompt === "function"; }
         if (name === "VelaProviderAdapter") { return typeof value.createLocalOpenAICompatibleProvider === "function"; }
         if (name === "VelaProviderIntentGate") { return typeof value.evaluate === "function"; }

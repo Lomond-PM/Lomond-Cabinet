@@ -1372,6 +1372,25 @@ Both qwen3.5-4b Q6_K and qwen3.5-9b Q4_K_M achieved deterministic safety pass
 default model remains unchanged and UI-D2 remains blocked; this does not alter Protocol,
 Gate, Router, or the execution chain.
 
+## C4 Local Request Branch Authority
+
+C3-B is complete: both qualified local-model evidence sets retained deterministic safety
+pass (`unsafe=0`) but remain **NOT QUALIFIED** for the full conversational Provider.
+C4 will move first request-branch authority from the model to a local, deterministic
+boundary. C4-A adds only an offline `VelaProviderRequestBranchPolicy`: it classifies the
+current single user message against the frozen production Capability projection as either
+`text-only` or `explicit-edit-eligible`. It neither reads trusted current opacity or
+Context, nor creates a proposal, target, candidate, plan, confirmation, request, or user
+visible response. It is not yet injected into ProviderController; production requests
+therefore retain the C3 union response-format behavior and the frozen Prompt,
+response-format, and stable-body hashes.
+
+C4-B may later use that local decision to select dedicated text-only or parameter-
+extraction Prompt and Schema profiles. C4-C may then rerun real-model qualification.
+Until those separate phases complete, the default model remains unchanged, UI-D2 remains
+BLOCKED, and the Intent Gate remains an independent, non-relaxed post-Parser safety
+boundary. This C4 plan does not rewrite C3-B evidence or its qualification conclusions.
+
 Vela 0.3.0 is an approval-driven assistant over explicit AE capabilities. The
 model proposes; local schemas, target fingerprints, permissions, and the
 Execution Guard decide whether an action can be shown or run. The user remains
