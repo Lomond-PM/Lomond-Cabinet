@@ -138,6 +138,7 @@ function checkRequiredEntrypoints() {
         "scripts/test-vela-context-target.js",
         "scripts/test-vela-context-property-value.js",
         "scripts/test-vela-cep-module-loader.js",
+        "scripts/test-vela-provider-branch-profiles.js",
         "scripts/test-vela-runtime.js",
         "scripts/test-vela-browser-bootstrap.js",
         "scripts/test-vela-runtime-status-view.js",
@@ -337,6 +338,37 @@ function checkVelaRuntimeBootstrap() {
     check("Vela runtime has no Registry passthrough", runtime.indexOf("runRegisteredToolAction") === -1 && runtime.indexOf("AEToolbox.tools") === -1, "velaRuntime.js must not route execution through the Registry.");
 }
 
+function checkVelaProviderBranchProfiles() {
+    const fixturePath = "scripts/fixtures/vela-capability-contracts/provider-branch-profiles-v1.json";
+    const promptBuilder = exists("client/js/vela/velaCapabilityPromptBuilder.js") ? readText("client/js/vela/velaCapabilityPromptBuilder.js") : "";
+    const adapter = exists("client/js/vela/velaProviderAdapter.js") ? readText("client/js/vela/velaProviderAdapter.js") : "";
+    const controller = exists("client/js/vela/velaProviderController.js") ? readText("client/js/vela/velaProviderController.js") : "";
+    const loader = exists("client/js/vela/velaCepModuleLoader.js") ? readText("client/js/vela/velaCepModuleLoader.js") : "";
+    const diagnostics = exists("scripts/diagnostics/velaProviderModelQualification.js") ? readText("scripts/diagnostics/velaProviderModelQualification.js") : "";
+    check("C4 Provider Branch Profiles fixture exists", exists(fixturePath), fixturePath + " is required.");
+    check("C4 Provider Branch Profiles direct test exists", exists("scripts/test-vela-provider-branch-profiles.js"), "The C4 Profile fixture direct test is required.");
+    if (!exists(fixturePath)) return;
+    let fixture;
+    try { fixture = JSON.parse(readText(fixturePath)); } catch (error) { fail("C4 Provider Branch Profiles fixture parses", error.message); return; }
+    const hashes = [
+        "cc9aa49f440748db2fc08d900b5c5ad1fdd6fd75f6d79aab9139e26d16450476",
+        "85813dd8950079ab9c9542612aa0ad14b82c98e3f3e71f3a370561669e64cdf8",
+        "208e84b1898f38b98f9a16785ab0a10e6c200551d0193b5b0037f968385a3d54",
+        "32d55e4db60f7273c00c51004338e59dca14565643561b20420484b9ccd1bb69",
+        "509230d09996e81eb3d4baddd332f3730707badd37d6b4d28b4499b6e6ca6b2f",
+        "953962fb5b390831287a05b2d72811c6f2d474016766dba40209b8aceb5f4a83"
+    ];
+    check("Capability Prompt Builder v3 is registered", /MODULE_REVISION\s*=\s*"vela-capability-prompt-builder-v3"/.test(promptBuilder), "VelaCapabilityPromptBuilder must remain v3.");
+    check("Capability Prompt Builder requires requestProfile", /buildSystemPrompt\s*\(\s*modelProjection\s*,\s*requestId\s*,\s*model\s*,\s*requestProfile\s*\)/.test(promptBuilder) && /assertRequestProfile\s*\(\s*requestProfile\s*\)/.test(promptBuilder), "buildSystemPrompt must validate requestProfile.");
+    check("Provider Adapter requires requestProfile", /ownDataOption\s*\(\s*options\s*,\s*"requestProfile"\s*\)/.test(adapter), "VelaProviderAdapter must require requestProfile.");
+    check("Provider Controller depends on Contracts and Request Branch Policy", /require\("\.\/velaCapabilityContracts"\)/.test(controller) && /require\("\.\/velaProviderRequestBranchPolicy"\)/.test(controller), "VelaProviderController must load both C4 dependencies.");
+    const order = ["VelaCapabilityContracts", "VelaProviderRequestBranchPolicy", "VelaCapabilityPromptBuilder", "VelaProviderAdapter"].map((name) => loader.indexOf('name: "' + name + '"'));
+    check("C4 loader dependency order is fixed", order.every((value, index) => value !== -1 && (index === 0 || value > order[index - 1])), "Loader order must be Contracts → Request Branch Policy → Prompt Builder → Provider Adapter.");
+    check("C4 fixture records all six frozen SHA values", hashes.every((hash) => JSON.stringify(fixture).indexOf(hash) !== -1), "Profile fixture must retain all six C4 SHA values.");
+    check("Qualification diagnostics remain on C3 metadata", diagnostics.indexOf("vela-capability-prompt-builder-v2") !== -1 && diagnostics.indexOf("C3A_PROMPT_SHA256") !== -1 && diagnostics.indexOf("requestProfile") === -1 && diagnostics.indexOf("provider-branch-profiles-v1") === -1, "Qualification diagnostics must remain C3-only until C4-C.");
+    check("C4-C remains unimplemented", diagnostics.indexOf("explicit-edit-eligible") === -1 && diagnostics.indexOf("text-only") === -1, "C4-C Profile qualification routing must not be present yet.");
+}
+
 function listToolFiles() {
     const dir = path.join(ROOT, "host", "tools");
     if (!fs.existsSync(dir)) {
@@ -370,6 +402,7 @@ function main() {
     checkRequiredEntrypoints();
     checkIndexHtml();
     checkVelaRuntimeBootstrap();
+    checkVelaProviderBranchProfiles();
     checkVelaContextHostIncludes();
     checkRegistryTools();
 

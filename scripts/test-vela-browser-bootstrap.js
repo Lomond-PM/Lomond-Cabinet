@@ -62,7 +62,6 @@ function browserContext() {
         Number,
         String,
         Array,
-        Object,
         RegExp,
         Error,
         Date,
@@ -95,6 +94,41 @@ function runBrowserModule(browser, filename) {
     return vm.runInContext(fs.readFileSync(path.join(VELA, filename), "utf8"), browser.sandbox, { filename });
 }
 
+function providerControllerDependencyBrowser(fault) {
+    const browser = browserContext();
+    const registry = Object.create(null);
+    const exportsByName = {
+        VelaProtocol: Object.freeze({ isTrustedProtocol() {} }),
+        VelaContextBridge: Object.freeze({ createProviderContextPort() {}, isTrustedContextBridgeForProtocol() {} }),
+        VelaCapabilityContracts: Object.freeze({ getModelProjection() {} }),
+        VelaProviderRequestBranchPolicy: Object.freeze({ createRequestBranchPolicy() {} }),
+        VelaProviderAdapter: Object.freeze({ createLocalOpenAICompatibleProvider() {} }),
+        VelaLocalTransport: Object.freeze({ isTrustedLocalTransportForProtocol() {} }),
+        VelaProviderIntentGate: Object.freeze({ evaluate() {} })
+    };
+    Object.keys(exportsByName).forEach((name) => {
+        registry[name] = exportsByName[name];
+        if (fault && fault.name === name && fault.kind === "accessor") {
+            Object.defineProperty(browser.context, name, { configurable: false, enumerable: true, get() { throw new Error("must not invoke dependency global getter"); } });
+        } else if (!(fault && fault.name === name && fault.kind === "inherited")) {
+            Object.defineProperty(browser.context, name, { configurable: false, enumerable: true, value: exportsByName[name], writable: false });
+        }
+    });
+    if (fault && fault.kind === "inherited") {
+        Object.setPrototypeOf(browser.context, { [fault.name]: exportsByName[fault.name] });
+    }
+    if (fault && fault.kind === "identity") {
+        registry[fault.name] = Object.freeze({ createRequestBranchPolicy() {} });
+    }
+    const bootstrap = Object.freeze({
+        getModule(name) { return registry[name]; },
+        hasModule(name) { return Object.prototype.hasOwnProperty.call(registry, name); },
+        registerModule(name, value) { registry[name] = value; }
+    });
+    Object.defineProperty(browser.context, "__velaProtocolCoreBootstrapV1", { configurable: false, enumerable: false, value: bootstrap, writable: false });
+    return browser;
+}
+
 function run() {
     const browser = browserContext();
     const before = browser.descriptors();
@@ -120,6 +154,18 @@ function run() {
     let bootstrapCode = null;
     try { runBrowserModule(fakeBootstrap, "velaProtocol.js"); } catch (error) { bootstrapCode = error && error.code; }
     check(bootstrapCode === "MODULE_BOOTSTRAP_CONFLICT" && fakeBootstrap.context.VelaProtocol === undefined, "A preempted bootstrap is never adopted.");
+
+    const dependencyCases = [
+        { kind: "identity", name: "VelaProviderRequestBranchPolicy" },
+        { kind: "accessor", name: "VelaCapabilityContracts" },
+        { kind: "inherited", name: "VelaProviderIntentGate" }
+    ];
+    dependencyCases.forEach((fault) => {
+        const dependencyBrowser = providerControllerDependencyBrowser(fault);
+        let dependencyCode = null;
+        try { runBrowserModule(dependencyBrowser, "velaProviderController.js"); } catch (error) { dependencyCode = error && error.code; }
+        check(dependencyCode === "RUNTIME_CAPABILITY_UNAVAILABLE" && dependencyBrowser.context.VelaProviderController === undefined, "ProviderController fails closed for " + fault.kind + " " + fault.name + " dependency globals.");
+    });
 
     const protocol = require(path.join(VELA, "velaProtocol.js"));
     const parser = require(path.join(VELA, "velaResponseParser.js"));

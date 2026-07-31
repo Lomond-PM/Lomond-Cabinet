@@ -36,9 +36,9 @@ async function run() {
     await expectCode(h.router.review(), h.p.ERROR_CODES.CANDIDATE_NOT_FOUND, "Review without a private proposal fails closed.");
     const greeting = createHarness();
     const greetingState = await greeting.provider.send({ message: "你好", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
-    check(greetingState.state === "intent-rejected" && greetingState.proposalCapabilityId === null && greetingState.suggestedOpacity === null, "A greeting with a structurally valid model proposal becomes a terminal intent rejection without proposal data.");
-    check(greeting.getCreates() === 0 && greeting.controller.getUiState().candidateId === null, "Intent rejection creates neither a plan nor a candidate.");
-    await expectCode(greeting.router.review(), greeting.p.ERROR_CODES.CANDIDATE_NOT_FOUND, "Intent rejection leaves no proposal that Review can revive.");
+    check(greetingState.state === "failed" && greetingState.errorCode === greeting.p.ERROR_CODES.PROVIDER_RESPONSE_INVALID && greetingState.proposalCapabilityId === null && greetingState.suggestedOpacity === null && greeting.provider.getUiState().state !== "proposal-ready", "A text-only greeting receiving localProposal is rejected by the Adapter before Intent Gate and leaves no proposal for the Router to review.");
+    check(greeting.getCreates() === 0 && greeting.controller.getUiState().candidateId === null, "Adapter Profile mismatch creates neither a local plan nor a candidate.");
+    await expectCode(greeting.router.review(), greeting.p.ERROR_CODES.CANDIDATE_NOT_FOUND, "Adapter Profile mismatch leaves no active proposal that Router Review can revive.");
     const proposal = await sendProposal(h);
     check(proposal.state === "proposal-ready" && proposal.suggestedOpacity === 57.5, "Provider emits only the read-only proposal summary before review.");
     check(h.controller.getUiState().candidateId === null && h.getCreates() === 0, "Proposal-ready creates neither a candidate nor a local plan.");

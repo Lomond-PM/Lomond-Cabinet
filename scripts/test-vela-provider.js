@@ -8,6 +8,7 @@ const path = require("path");
 const vm = require("vm");
 const protocolModule = require("../client/js/vela/velaProtocol");
 const providerModule = require("../client/js/vela/velaProviderAdapter");
+const requestBranchPolicy = require("../client/js/vela/velaProviderRequestBranchPolicy");
 
 let assertions = 0;
 let protocolSeed = 0;
@@ -169,6 +170,7 @@ function createHarness(options) {
         transport,
         endpoint: options.endpoint,
         model: options.model || "Qwen3.5-4B-Q6_K",
+        requestProfile: options.requestProfile === undefined ? requestBranchPolicy.PROFILES.TEXT_ONLY : options.requestProfile,
         timeoutMs: options.timeoutMs === undefined ? 30000 : options.timeoutMs,
         responseFormatMode: options.responseFormatMode === undefined ? "json-schema" : options.responseFormatMode,
         runtime: runtimeBundle.runtime
@@ -199,19 +201,20 @@ async function run() {
     const scheduler = makeScheduler();
     const runtimeBundle = makeRuntime(scheduler);
     const validTransport = { sendJson() { return Promise.resolve({}); } };
-    expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: Object.assign({}, base.protocol), transport: validTransport, model: "m", runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Fake protocols must be rejected.");
-    expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, model: "m", runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Missing transports must be rejected.");
+    expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: Object.assign({}, base.protocol), transport: validTransport, model: "m", requestProfile: requestBranchPolicy.PROFILES.TEXT_ONLY, runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Fake protocols must be rejected.");
+    expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, model: "m", requestProfile: requestBranchPolicy.PROFILES.TEXT_ONLY, runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Missing transports must be rejected.");
     const getterTransport = {}; Object.defineProperty(getterTransport, "sendJson", { get() { return () => {}; } });
-    expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: getterTransport, model: "m", runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Transport getters must be rejected.");
-    expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: Object.create(validTransport), model: "m", runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Inherited transport methods must be rejected.");
+    expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: getterTransport, model: "m", requestProfile: requestBranchPolicy.PROFILES.TEXT_ONLY, runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Transport getters must be rejected.");
+    expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: Object.create(validTransport), model: "m", requestProfile: requestBranchPolicy.PROFILES.TEXT_ONLY, runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Inherited transport methods must be rejected.");
     const getterRuntime = Object.assign({}, runtimeBundle.runtime); Object.defineProperty(getterRuntime, "parseUrl", { get() { return parseUrl; } });
-    expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "m", runtime: getterRuntime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Runtime getters must be rejected.");
-    [999, 120001, Infinity, "30000"].forEach((timeoutMs) => expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "m", timeoutMs, runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Invalid timeout values must be rejected."));
+    expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "m", requestProfile: requestBranchPolicy.PROFILES.TEXT_ONLY, runtime: getterRuntime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Runtime getters must be rejected.");
+    [999, 120001, Infinity, "30000"].forEach((timeoutMs) => expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "m", requestProfile: requestBranchPolicy.PROFILES.TEXT_ONLY, timeoutMs, runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Invalid timeout values must be rejected."));
     check(createHarness({ timeoutMs: 1000 }).provider.id === "lmstudio" && createHarness({ timeoutMs: 120000 }).provider.kind === "openai-compatible", "Timeout boundary values must be accepted.");
-    expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "", runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Empty model ids must be rejected.");
+    expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "", requestProfile: requestBranchPolicy.PROFILES.TEXT_ONLY, runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Empty model ids must be rejected.");
     check(createHarness({ model: "\ud83d\ude00".repeat(64) }).provider.id === "lmstudio", "Model ids at the 256-byte UTF-8 limit must be accepted.");
-    expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "\ud83d\ude00".repeat(65), runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Model ids must use UTF-8 byte limits.");
-    ["text", "json_object", true, null].forEach((responseFormatMode) => expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "m", responseFormatMode, runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Only the explicit json-schema response format mode is accepted."));
+    expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "\ud83d\ude00".repeat(65), requestProfile: requestBranchPolicy.PROFILES.TEXT_ONLY, runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Model ids must use UTF-8 byte limits.");
+    ["text", "json_object", true, null].forEach((responseFormatMode) => expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "m", requestProfile: requestBranchPolicy.PROFILES.TEXT_ONLY, responseFormatMode, runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Only the explicit json-schema response format mode is accepted."));
+    expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "m", runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Missing request profiles must fail closed.");
 
     ["http://127.0.0.1:1234/v1/chat/completions", "http://localhost:4321/v1/chat/completions", "http://[::1]:65535/v1/chat/completions"].forEach((endpoint) => {
         const value = createHarness({ endpoint }).provider;
@@ -248,24 +251,15 @@ async function run() {
     check(Object.isFrozen(sent) && Object.isFrozen(sent.headers) && Object.isFrozen(sent.body), "The complete transport request must be frozen.");
     equal(sent.body.response_format.type, "json_schema", "Production requests must use the LM Studio json_schema response format.");
     const responseSchema = sent.body.response_format.json_schema;
-    check(responseSchema && responseSchema.name === "vela_response" && responseSchema.strict === true, "The response schema must have the trusted LM Studio wrapper.");
+    check(responseSchema && responseSchema.name === "vela_text_response" && responseSchema.strict === true, "The text profile must have the trusted LM Studio wrapper.");
     check(responseSchema.schema.type === "object" && responseSchema.schema.additionalProperties === false, "The canonical response root must be closed.");
     equal(responseSchema.schema.properties.protocol.enum[0], normal.protocol.PROTOCOLS.RESPONSE, "Schema protocol metadata must match the trusted protocol.");
     equal(responseSchema.schema.properties.schemaVersion.enum[0], normal.protocol.SCHEMA_VERSION, "Schema version metadata must match the trusted protocol.");
     equal(responseSchema.schema.properties.requestId.enum[0], handle.requestId, "Schema request ids must bind the current local request.");
     equal(responseSchema.schema.properties.provider.enum[0], "lmstudio", "Schema provider metadata must be local.");
     equal(responseSchema.schema.properties.model.enum[0], "Qwen3.5-4B-Q6_K", "Schema model metadata must bind the configured model.");
-    const envelopeVariants = responseSchema.schema.properties.envelope.oneOf;
-    check(envelopeVariants.length === 2 && envelopeVariants.every((variant) => variant.additionalProperties === false), "The model schema must permit only closed text and localProposal envelope variants.");
-    check(envelopeVariants.some((variant) => variant.properties.type.enum[0] === "text" && variant.properties.text.minLength === 1), "The text envelope must require non-empty envelope.text.");
-    check(envelopeVariants.some((variant) => variant.properties.type.enum[0] === "localProposal" && variant.properties.proposal.properties.capabilityId.enum[0] === "set-opacity-v1" && variant.properties.proposal.properties.params.properties.opacity.minimum === 0 && variant.properties.proposal.properties.params.properties.opacity.maximum === 100), "The localProposal envelope must be limited to bounded set-opacity-v1 input.");
-    const textVariant = envelopeVariants.find((variant) => variant.properties.type.enum[0] === "text");
-    const proposalVariant = envelopeVariants.find((variant) => variant.properties.type.enum[0] === "localProposal");
-    check(
-        textVariant.description === "Normal conversation, questions, current-value queries, explanations, suggestions, and ambiguity; never invent a value or use an explicit direct one-target opacity command. The root envelope remains required." &&
-        proposalVariant.description === "Only a direct explicit current or selected layer opacity command with one 0–100 target; never questions, suggestions, hypotheticals, negations, or ambiguity. It does not execute.",
-        "The concise response schema descriptions must make normal text and direct one-target localProposal responses mutually exclusive."
-    );
+    const textVariant = responseSchema.schema.properties.envelope;
+    check(!Object.prototype.hasOwnProperty.call(textVariant, "oneOf") && textVariant.properties.type.enum[0] === "text" && textVariant.properties.text.minLength === 1, "The text profile schema permits only a closed text envelope.");
     equal(textVariant.properties.text.maxLength, 1024, "LM Studio text generation must use the bounded generation cap.");
     const schemaMaxLengths = collectSchemaValues(responseSchema.schema, "maxLength", []);
     check(schemaMaxLengths.length > 0 && schemaMaxLengths.every((value) => Number.isInteger(value) && value <= 1024), "No LM Studio schema repetition bound may exceed the conservative generation limit.");
@@ -275,41 +269,7 @@ async function run() {
     const prompt = sent.body.messages[0].content;
     const proposal57Example = JSON.stringify({ protocol: normal.protocol.PROTOCOLS.RESPONSE, schemaVersion: normal.protocol.SCHEMA_VERSION, requestId: handle.requestId, provider: "lmstudio", model: "Qwen3.5-4B-Q6_K", envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } } });
     const decisionTable = "DECISION: text by default. Return localProposal only for a direct command to set the current or selected layer opacity to one explicit 0–100 target. Return text for greetings, questions, current-value queries, explanations, suggestions, uncertainty, hypotheticals, negations, relative adjustments, ambiguity, or no one target.";
-    const directRule = "Opacity plus a number is not enough: questions, explanations, and suggestions use text. Never guess 50 or another value. A current-value query may state a value only when that exact value is supplied in trusted request context; otherwise say you cannot reliably verify the current opacity and will not guess. For an ambiguous edit, ask for one explicit target from 0 to 100%. A text response never claims an edit was performed, scheduled, or proposed. For an explicit supported opacity command, text is invalid: return the localProposal envelope itself.";
-    const chineseRule = "默认返回 text。当前值只有在可信请求上下文明确提供时才能回答；否则说明无法可靠确认且不猜测。模糊修改请求只要求提供唯一 0–100% 目标值，text 不得声称已完成、将执行或已提出修改建议。";
-    const envelopeRule = "All responses must be one complete schema envelope: no bare text, Markdown, extra explanation, multiple objects, or fields beyond the schema.";
-    const proposalRule = "A localProposal uses only capabilityId set-opacity-v1 and params.opacity equal to the requested target. A localProposal is only a suggestion. It does not execute anything.";
-    const branchRule = "FIRST choose exactly one response branch before writing JSON. Default to text. When uncertain whether to use text or localProposal, use text. A schema-valid localProposal can still be semantically wrong.";
-    const currentProposalRule = "Use localProposal only when ALL conditions hold: the user directly commands one edit supported by the current capability; one property is explicit; exactly one in-range target value appears in the current user message; no target choice is required; and the request is not a question, advice, explanation, comparison, prediction, hypothetical, conditional, negation, ambiguity, relative adjustment, or current-state query. Otherwise use text.";
-    const currentTextRule = "Use text for greetings, capabilities, current-value/status queries, unavailable grounding, questions, suggestions, whether-to-edit requests, explanations, comparisons, predicted outcomes, hypotheticals, conditions, negations, vague changes, multiple values, multiple possible edits, or any uncertainty. Do not guess a current value or a target. A text response never claims an edit was performed, scheduled, or proposed.";
-    const currentGroundingRule = "Trusted context may answer a current-value query only as text. A proposal target must come from the current user message, never from trusted context. If the current value is unavailable, say it cannot be reliably confirmed and do not guess; an explicit user target may still be proposed.";
-    check(
-        prompt.indexOf(branchRule) >= 0 &&
-        prompt.indexOf(branchRule) < prompt.indexOf(currentProposalRule) &&
-        prompt.indexOf(currentProposalRule) < prompt.indexOf(currentTextRule) &&
-        prompt.indexOf(currentTextRule) < prompt.indexOf(currentGroundingRule) &&
-        prompt.indexOf(currentGroundingRule) < prompt.indexOf(envelopeRule) &&
-        prompt.indexOf(envelopeRule) < prompt.indexOf(proposalRule),
-        "The assembled prompt must make the branch-before-format decision before envelope and proposal responsibilities."
-    );
-    check(
-        prompt.includes(proposal57Example) &&
-        prompt.includes("Text examples: What is the current opacity?; Should I set opacity to 50%?; If opacity were 50%, what would happen?; Do not change opacity; Make it more transparent; Set it to 25% or 50%; Hello.") &&
-        prompt.includes("All responses must be one complete schema envelope: no bare text, Markdown, extra explanation, multiple objects, or fields beyond the schema.") &&
-        prompt.includes("A proposal target must come from the current user message, never from trusted context.") &&
-        prompt.includes("A text response never claims an edit was performed, scheduled, or proposed.") &&
-        !prompt.includes("Return error") &&
-        !prompt.includes("EXPRESSION_NOT_ALLOWLISTED") &&
-        !prompt.includes("You cannot directly modify After Effects.") &&
-        !prompt.includes("Review and Approve") &&
-        !prompt.includes("candidateId") &&
-        !prompt.includes("planId") &&
-        !prompt.includes("confirmationNonce") &&
-        !prompt.includes("digest") &&
-        !prompt.includes("authority") &&
-        Buffer.byteLength(prompt, "utf8") < 2600,
-        "The assembled prompt must retain one complete localProposal example and compact corpus while excluding repeated execution architecture and prior conflicting rules."
-    );
+    check(prompt.includes("text-only") && prompt.includes("localProposal is invalid") && !prompt.includes("candidateId") && !prompt.includes("planId"), "Text prompt has only its local response authority and no execution architecture.");
 
     const rebound = createHarness({ model: "another-local-model" });
     const reboundHandle = rebound.provider.start(input());
@@ -324,11 +284,12 @@ async function run() {
     expectCode(() => createHarness().provider.start(input({ messages: Array.from({ length: 5 }, () => ({ role: "user", content: "x".repeat(15000) })) })), base.protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED, "Canonical requests must enforce the 64 KiB budget.");
 
     const envelopes = [
-        { type: "text", text: "ok" },
-        { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } }
+        { envelope: { type: "text", text: "ok" }, profile: requestBranchPolicy.PROFILES.TEXT_ONLY },
+        { envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } }, profile: requestBranchPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE }
     ];
-    for (const envelope of envelopes) {
-        const harness = createHarness({ responder: (request) => Promise.resolve(transportResult(wrapper(canonicalContent(base.protocol, request, envelope)))) });
+    for (const item of envelopes) {
+        const envelope = item.envelope;
+        const harness = createHarness({ requestProfile: item.profile, responder: (request) => Promise.resolve(transportResult(wrapper(canonicalContent(base.protocol, request, envelope)))) });
         const response = await harness.provider.start(input()).promise;
         equal(response.envelope.type, envelope.type, envelope.type + " envelopes must pass through the parser.");
     }
@@ -653,13 +614,13 @@ async function run() {
     const sourceRoot = path.join(__dirname, "..", "client", "js", "vela");
     const providerSource = fs.readFileSync(path.join(sourceRoot, "velaProviderAdapter.js"), "utf8");
     check(!/(?:CSInterface|evalScript|\$\.evalFile|AEToolbox|\bapp\b|\bwindow\b|\bdocument\b|localStorage|fetch\(|XMLHttpRequest|WebSocket|require\([^)]+(?:crypto|http|https|net)|\beval\(|\bFunction\s*\()/.test(providerSource), "Provider core must contain no AE, DOM, network or dynamic runtime dependency.");
-    equal((providerSource.match(/require\(/g) || []).length, 4, "CommonJS must use exactly four fixed local requires.");
+    equal((providerSource.match(/require\(/g) || []).length, 5, "CommonJS must use exactly five fixed local requires.");
     check(!providerSource.includes("Return exactly one complete JSON object and nothing else."), "Adapter delegates the complete system prompt instead of retaining a second prompt source.");
 
     function browserContext() { const context = { console }; context.self = context; vm.createContext(context); return context; }
     function loadUmd(context, name) { return vm.runInContext(fs.readFileSync(path.join(sourceRoot, name), "utf8"), context, { filename: name }); }
     const browser = browserContext();
-    loadUmd(browser, "velaProtocol.js"); loadUmd(browser, "velaResponseParser.js"); loadUmd(browser, "velaCapabilityContracts.js"); loadUmd(browser, "velaCapabilityPromptBuilder.js"); loadUmd(browser, "velaProviderAdapter.js");
+    loadUmd(browser, "velaProtocol.js"); loadUmd(browser, "velaResponseParser.js"); loadUmd(browser, "velaCapabilityContracts.js"); loadUmd(browser, "velaProviderRequestBranchPolicy.js"); loadUmd(browser, "velaCapabilityPromptBuilder.js"); loadUmd(browser, "velaProviderAdapter.js");
     equal(typeof browser.VelaProviderAdapter.createLocalOpenAICompatibleProvider, "function", "Provider UMD must load after its fixed dependencies.");
     const browserProviderId = vm.runInContext(`(function () {
         var protocol = VelaProtocol.createProtocol({
@@ -672,6 +633,7 @@ async function run() {
             protocol: protocol,
             transport: { sendJson: function () { return Promise.resolve({}); } },
             model: "browser-model",
+            requestProfile: VelaProviderRequestBranchPolicy.PROFILES.TEXT_ONLY,
             runtime: {
                 setTimeout: function () { return 1; },
                 clearTimeout: function () {},
@@ -690,7 +652,7 @@ async function run() {
     equal(missingParserCode, "RUNTIME_CAPABILITY_UNAVAILABLE", "Provider UMD requires ResponseParser.");
     const missingPromptBuilder = browserContext(); loadUmd(missingPromptBuilder, "velaProtocol.js"); loadUmd(missingPromptBuilder, "velaResponseParser.js"); loadUmd(missingPromptBuilder, "velaCapabilityContracts.js"); let missingPromptBuilderCode = null; try { loadUmd(missingPromptBuilder, "velaProviderAdapter.js"); } catch (error) { missingPromptBuilderCode = error.code; }
     equal(missingPromptBuilderCode, "RUNTIME_CAPABILITY_UNAVAILABLE", "Provider UMD requires Capability Prompt Builder.");
-    const conflict = browserContext(); loadUmd(conflict, "velaProtocol.js"); loadUmd(conflict, "velaResponseParser.js"); loadUmd(conflict, "velaCapabilityContracts.js"); loadUmd(conflict, "velaCapabilityPromptBuilder.js"); const existing = { fake: true }; conflict.VelaProviderAdapter = existing; let conflictCode = null; try { loadUmd(conflict, "velaProviderAdapter.js"); } catch (error) { conflictCode = error.code; }
+    const conflict = browserContext(); loadUmd(conflict, "velaProtocol.js"); loadUmd(conflict, "velaResponseParser.js"); loadUmd(conflict, "velaCapabilityContracts.js"); loadUmd(conflict, "velaProviderRequestBranchPolicy.js"); loadUmd(conflict, "velaCapabilityPromptBuilder.js"); const existing = { fake: true }; conflict.VelaProviderAdapter = existing; let conflictCode = null; try { loadUmd(conflict, "velaProviderAdapter.js"); } catch (error) { conflictCode = error.code; }
     check(conflictCode === "MODULE_BOOTSTRAP_CONFLICT" && conflict.VelaProviderAdapter === existing && conflict.__velaProtocolCoreBootstrapV1.hasModule("VelaProviderAdapter") === false, "Preloaded Provider globals must not be overwritten or partially registered.");
 
     function fakeBootstrapContext(options) {
@@ -700,8 +662,9 @@ async function run() {
         const protocolValue = Object.freeze({ createProtocol() {}, isTrustedProtocol() { return true; }, ERROR_CODES: {} });
         const parserValue = Object.freeze({ createResponseParser() {} });
         const capabilityValue = Object.freeze({ getModelProjection() { return Object.freeze({ capabilityId: "set-opacity-v1", parameters: Object.freeze({ properties: Object.freeze({ opacity: Object.freeze({ minimum: 0, maximum: 100 }) }) }) }); } });
+        const policyValue = Object.freeze({ PROFILES: Object.freeze({ TEXT_ONLY: "text-only", EXPLICIT_EDIT_ELIGIBLE: "explicit-edit-eligible" }), createRequestBranchPolicy() {} });
         const promptBuilderValue = Object.freeze({ buildSystemPrompt() { return "prompt"; } });
-        const modules = Object.assign({ VelaProtocol: protocolValue, VelaResponseParser: parserValue, VelaCapabilityContracts: capabilityValue, VelaCapabilityPromptBuilder: promptBuilderValue }, options.modules || {});
+        const modules = Object.assign({ VelaProtocol: protocolValue, VelaResponseParser: parserValue, VelaCapabilityContracts: capabilityValue, VelaProviderRequestBranchPolicy: policyValue, VelaCapabilityPromptBuilder: promptBuilderValue }, options.modules || {});
         const bootstrap = Object.freeze({
             getModule(name) { return modules[name]; },
             hasModule(name) { return Object.prototype.hasOwnProperty.call(modules, name); },
@@ -712,9 +675,10 @@ async function run() {
             Object.defineProperty(context, "VelaProtocol", { configurable: options.globalConfigurable === true, enumerable: true, value: options.protocolGlobal || protocolValue, writable: options.globalWritable === true });
             Object.defineProperty(context, "VelaResponseParser", { configurable: false, enumerable: true, value: options.parserGlobal || parserValue, writable: false });
             Object.defineProperty(context, "VelaCapabilityContracts", { configurable: false, enumerable: true, value: options.capabilityGlobal || capabilityValue, writable: false });
+            Object.defineProperty(context, "VelaProviderRequestBranchPolicy", { configurable: false, enumerable: true, value: options.policyGlobal || policyValue, writable: false });
             Object.defineProperty(context, "VelaCapabilityPromptBuilder", { configurable: false, enumerable: true, value: options.promptBuilderGlobal || promptBuilderValue, writable: false });
         }
-        return { context, registerCalls: () => registerCalls, protocolValue, parserValue, capabilityValue, promptBuilderValue };
+        return { context, registerCalls: () => registerCalls, protocolValue, parserValue, capabilityValue, policyValue, promptBuilderValue };
     }
     const writableBootstrap = fakeBootstrapContext({ bootstrapWritable: true }); let writableBootstrapCode = null; try { loadUmd(writableBootstrap.context, "velaProviderAdapter.js"); } catch (error) { writableBootstrapCode = error.code; }
     check(writableBootstrapCode === "MODULE_BOOTSTRAP_CONFLICT" && writableBootstrap.registerCalls() === 0 && !writableBootstrap.context.VelaProviderAdapter, "Writable fake bootstraps must be rejected before registration.");
