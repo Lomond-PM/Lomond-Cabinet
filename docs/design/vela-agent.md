@@ -1401,11 +1401,19 @@ The deterministic C4 Profile contract records these production hashes:
 
 Protocol 1.1 and the existing envelope types are unchanged. Review, Confirmation,
 Preflight, ExecutionAdapter, and Host remain independent boundaries. The C3 fixtures,
-evidence, reports, and **NOT QUALIFIED** conclusions remain historical and unchanged.
-Qualification diagnostics refactoring and real-model testing belong to C4-C; C4-C has not
-run. Both 4B and 9B therefore remain **NOT QUALIFIED**, the default model is unchanged,
-and UI-D2 remains **BLOCKED**. This records the current C4-B production branch authority
-without claiming that the whole C4-B lifecycle is complete.
+evidence, reports, and **NOT QUALIFIED** conclusions remain historical, read-only, and
+unchanged. C4-C1A now provides the frozen Profile-aware case matrix, production contract
+capture, case fingerprint, fixture-byte binding, and C4 metadata foundation. C4-C1B now
+provides the Profile-aware Runner, bounded diagnostic observation, v3 evidence schema,
+isolated `.tmp/vela-provider-profile-qualification/` output root, and exclusive
+partial-to-final evidence transaction. The Runner takes each `requestProfile` only from
+the frozen C4 case and retains human `PENDING_REVIEW` assessment authority.
+
+C4-C1A and C4-C1B have passed offline mock validation only. No C4 4B or 9B real-model
+qualification has run, and no C4 real-model evidence has been generated. C4-C2 remains
+pending. The historical C3 4B and 9B conclusions therefore remain **NOT QUALIFIED**, the
+default model is unchanged, and UI-D2 remains **BLOCKED**. No 20-run extension is
+authorized or claimed, and the offline Runner implementation does not qualify a model.
 
 Vela 0.3.0 is an approval-driven assistant over explicit AE capabilities. The
 model proposes; local schemas, target fingerprints, permissions, and the
