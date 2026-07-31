@@ -4,26 +4,29 @@
     var BOOTSTRAP_NAME = "__velaProtocolCoreBootstrapV1";
     function bootstrapError(code) { var error = new Error(code); error.code = code; return error; }
     function assertContracts(value) { if (!value || typeof value.getModelProjection !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); } return value; }
+    function assertPolicy(value) { if (!value || typeof value !== "object" || !Object.isFrozen(value)) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); } return value; }
     function registerBrowserModule(target, name, create) {
         var bootstrap;
         var contracts;
+        var policy;
         var exported;
         if (!Object.prototype.hasOwnProperty.call(target, BOOTSTRAP_NAME) || Object.prototype.hasOwnProperty.call(target, name) || !Object.isExtensible(target)) { throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT"); }
         bootstrap = target[BOOTSTRAP_NAME];
         if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.getModule !== "function" || typeof bootstrap.registerModule !== "function" || typeof bootstrap.hasModule !== "function" || bootstrap.hasModule(name)) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
         contracts = assertContracts(bootstrap.getModule("VelaCapabilityContracts"));
-        exported = Object.freeze(create(contracts));
+        policy = assertPolicy(bootstrap.getModule("VelaProviderRequestBranchPolicy"));
+        exported = Object.freeze(create(contracts, policy));
         bootstrap.registerModule(name, exported);
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        module.exports = Object.freeze(factory(assertContracts(require("./velaCapabilityContracts"))));
+        module.exports = Object.freeze(factory(assertContracts(require("./velaCapabilityContracts")), assertPolicy(require("./velaProviderRequestBranchPolicy"))));
     }
-}(typeof self !== "undefined" ? self : this, function (capabilityContracts) {
+}(typeof self !== "undefined" ? self : this, function (capabilityContracts, requestBranchPolicy) {
     "use strict";
-    var MODULE_REVISION = "vela-capability-prompt-builder-v2";
+    var MODULE_REVISION = "vela-capability-prompt-builder-v3";
     var CAPABILITY_ID = "set-opacity-v1";
     var RESPONSE_PROTOCOL = "vela.model-response.v1";
     var RESPONSE_SCHEMA_VERSION = "1.1";
@@ -67,29 +70,56 @@
         for (index = 0; index < segments.length; index += 1) { if (segments[index] === "." || segments[index] === ".." || !/[A-Za-z0-9]/.test(segments[index])) { fail("model is invalid."); } }
         return value;
     }
-    function buildSystemPrompt(modelProjection, requestId, model) {
+    function assertProfileExport() {
+        var profiles = ownData(requestBranchPolicy, "PROFILES");
+        var textOnly;
+        var explicitEdit;
+        if (!Object.isFrozen(profiles) || Object.getPrototypeOf(profiles) !== Object.prototype ||
+            Object.getOwnPropertyNames(profiles).sort().join("\u0000") !== "EXPLICIT_EDIT_ELIGIBLE\u0000TEXT_ONLY" ||
+            (typeof Object.getOwnPropertySymbols === "function" && Object.getOwnPropertySymbols(profiles).length !== 0)) { fail("request profile export is invalid."); }
+        textOnly = Object.getOwnPropertyDescriptor(profiles, "TEXT_ONLY");
+        explicitEdit = Object.getOwnPropertyDescriptor(profiles, "EXPLICIT_EDIT_ELIGIBLE");
+        if (!textOnly || !explicitEdit || textOnly.get || textOnly.set || explicitEdit.get || explicitEdit.set ||
+            textOnly.writable !== false || textOnly.configurable !== false || explicitEdit.writable !== false || explicitEdit.configurable !== false ||
+            textOnly.value !== "text-only" || explicitEdit.value !== "explicit-edit-eligible") { fail("request profile export is invalid."); }
+        return profiles;
+    }
+    var PROFILES = assertProfileExport();
+    function assertRequestProfile(value) {
+        if (value !== PROFILES.TEXT_ONLY && value !== PROFILES.EXPLICIT_EDIT_ELIGIBLE) { fail("requestProfile is invalid."); }
+        return value;
+    }
+    function rootEnvelope(requestId, model, envelope) {
+        return JSON.stringify({ protocol: RESPONSE_PROTOCOL, schemaVersion: RESPONSE_SCHEMA_VERSION, requestId: requestId, provider: PROVIDER_ID, model: model, envelope: envelope });
+    }
+    function buildSystemPrompt(modelProjection, requestId, model, requestProfile) {
         var projection;
         var exampleParams;
         var proposal57Example;
         projection = assertProjection(modelProjection);
         requestId = assertRequestId(requestId);
         model = assertModel(model);
+        requestProfile = assertRequestProfile(requestProfile);
         exampleParams = {};
         exampleParams[ownData(projection, "modelPolicy").modelMaySupply[0].slice("params.".length)] = 57.5;
-        proposal57Example = JSON.stringify({ protocol: RESPONSE_PROTOCOL, schemaVersion: RESPONSE_SCHEMA_VERSION, requestId: requestId, provider: PROVIDER_ID, model: model, envelope: { type: "localProposal", proposal: { capabilityId: projection.capabilityId, params: exampleParams } } });
-        return [
+        proposal57Example = rootEnvelope(requestId, model, { type: "localProposal", proposal: { capabilityId: projection.capabilityId, params: exampleParams } });
+        if (requestProfile === PROFILES.TEXT_ONLY) { return [
             "Return exactly one complete JSON object and nothing else.",
-            "Follow the attached json_schema exactly; it is format guidance and the local Parser will validate again.",
+            "This request is text-only. Return only a text envelope; a localProposal is invalid for this request.",
             "Use protocol " + RESPONSE_PROTOCOL + " and schemaVersion " + RESPONSE_SCHEMA_VERSION + ".",
             "Use requestId " + requestId + ", provider " + PROVIDER_ID + ", and model " + model + ".",
-            "FIRST choose exactly one response branch before writing JSON. Default to text. When uncertain whether to use text or localProposal, use text. A schema-valid localProposal can still be semantically wrong.",
-            "Use localProposal only when ALL conditions hold: the user directly commands one edit supported by the current capability; one property is explicit; exactly one in-range target value appears in the current user message; no target choice is required; and the request is not a question, advice, explanation, comparison, prediction, hypothetical, conditional, negation, ambiguity, relative adjustment, or current-state query. Otherwise use text.",
-            "Use text for greetings, capabilities, current-value/status queries, unavailable grounding, questions, suggestions, whether-to-edit requests, explanations, comparisons, predicted outcomes, hypotheticals, conditions, negations, vague changes, multiple values, multiple possible edits, or any uncertainty. Do not guess a current value or a target. A text response never claims an edit was performed, scheduled, or proposed.",
-            "Trusted context may answer a current-value query only as text. A proposal target must come from the current user message, never from trusted context. If the current value is unavailable, say it cannot be reliably confirmed and do not guess; an explicit user target may still be proposed.",
-            "All responses must be one complete schema envelope: no bare text, Markdown, extra explanation, multiple objects, or fields beyond the schema.",
-            "A localProposal uses only capabilityId " + projection.capabilityId + " and params.opacity equal to the requested target. A localProposal is only a suggestion. It does not execute anything.",
-            "Example direct edit: set the current layer opacity to 57.5% -> " + proposal57Example + ".",
-            "Text examples: What is the current opacity?; Should I set opacity to 50%?; If opacity were 50%, what would happen?; Do not change opacity; Make it more transparent; Set it to 25% or 50%; Hello."
+            "Answer normal conversation, current-value queries, advice, explanations, ambiguity, and unavailable grounding as text. Trusted context is a fact only; never guess a missing current value.",
+            "Do not claim an edit was performed, will be performed, or that a proposal was created. Do not describe a proposal.",
+            "Use exactly this envelope shape: " + rootEnvelope(requestId, model, { type: "text", text: "A concise answer." })
+        ].join(" "); }
+        return [
+            "Return exactly one complete JSON object and nothing else.",
+            "This request is explicit-edit-eligible. Return only a localProposal envelope; text is invalid for this request.",
+            "Use protocol " + RESPONSE_PROTOCOL + " and schemaVersion " + RESPONSE_SCHEMA_VERSION + ".",
+            "Use requestId " + requestId + ", provider " + PROVIDER_ID + ", and model " + model + ".",
+            "Extract the single opacity target from the current user message. Use capabilityId " + projection.capabilityId + " and only params.opacity. The target must come from the current user message, never trusted context, history, or a fallback.",
+            "Your role is to propose this supported edit. Trusted local review and approval happen later; do not add text, explanations, or extra fields.",
+            "Use exactly this envelope shape: " + proposal57Example
         ].join(" ");
     }
     return Object.freeze({ MODULE_REVISION: MODULE_REVISION, buildSystemPrompt: buildSystemPrompt });

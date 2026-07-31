@@ -33,7 +33,6 @@ function makeBrowser(options) {
         Number,
         String,
         Array,
-        Object,
         RegExp,
         Error,
         Date,

@@ -7,6 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const contracts = require("../client/js/vela/velaCapabilityContracts");
 const builder = require("../client/js/vela/velaCapabilityPromptBuilder");
+const requestPolicy = require("../client/js/vela/velaProviderRequestBranchPolicy");
 
 let assertions = 0;
 function check(value, message) { assert.ok(value, message); assertions += 1; }
@@ -17,25 +18,25 @@ function freeze(value, seen) { const values = seen || []; if (value && typeof va
 function freezeByDescriptor(value, seen) { const values = seen || []; if (!value || typeof value !== "object" || Object.isFrozen(value)) return value; if (values.includes(value)) return value; values.push(value); Reflect.ownKeys(value).forEach((key) => { const descriptor = Object.getOwnPropertyDescriptor(value, key); if (descriptor && Object.prototype.hasOwnProperty.call(descriptor, "value")) freezeByDescriptor(descriptor.value, values); }); values.pop(); return Object.freeze(value); }
 const REQUEST_ID = "req_" + "0".repeat(32);
 const MODEL = "baseline-model";
-function build(modelProjection, requestId, model) { return builder.buildSystemPrompt(modelProjection, requestId === undefined ? REQUEST_ID : requestId, model === undefined ? MODEL : model); }
+function build(modelProjection, requestId, model, profile) { return builder.buildSystemPrompt(modelProjection, requestId === undefined ? REQUEST_ID : requestId, model === undefined ? MODEL : model, profile === undefined ? requestPolicy.PROFILES.TEXT_ONLY : profile); }
 
 const modelProjection = contracts.getModelProjection("set-opacity-v1");
 const prompt = build(modelProjection);
-check(Object.isFrozen(builder) && builder.MODULE_REVISION === "vela-capability-prompt-builder-v2", "Prompt Builder exports one frozen bounded module.");
-check(typeof prompt === "string" && prompt.length > 0, "Production projection produces one prompt string.");
-check(hash(prompt) === "340c06c86fa01b7f0382d6bf3d365dc6e007af4e6b371c7728eb41ac8f08ebee", "C3-A branch-policy prompt stays byte-for-byte deterministic.");
-check(prompt.indexOf("FIRST choose exactly one response branch") < prompt.indexOf("Example direct edit:"), "Branch decision policy precedes the complete proposal example.");
-check(prompt.includes("When uncertain whether to use text or localProposal, use text.") && prompt.includes("Use localProposal only when ALL conditions hold:"), "Text fallback and all-conditions proposal policy are explicit.");
-check(prompt.includes("current user message, never from trusted context") && prompt.includes("cannot be reliably confirmed and do not guess"), "Grounding value and proposal target rules remain distinct.");
-check(!/(?:prefer taking action|help by executing|generate a proposal whenever possible|attempt localProposal first)/i.test(prompt), "Prompt has no action-priority wording.");
-for (let index = 0; index < 100; index += 1) { check(build(modelProjection) === prompt, "Repeated builder calls are deterministic (" + index + ")."); }
+const extractionPrompt = build(modelProjection, undefined, undefined, requestPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE);
+check(Object.isFrozen(builder) && builder.MODULE_REVISION === "vela-capability-prompt-builder-v3", "Prompt Builder exports one frozen bounded module.");
+check(typeof prompt === "string" && typeof extractionPrompt === "string" && prompt !== extractionPrompt, "Production projection produces distinct deterministic branch prompts.");
+check(prompt.includes("text-only") && !prompt.includes("localProposal envelope; text is invalid"), "Text profile permits only text.");
+check(extractionPrompt.includes("explicit-edit-eligible") && extractionPrompt.includes("localProposal envelope; text is invalid"), "Extraction profile permits only localProposal.");
+check(!prompt.includes("localProposal uses") && !extractionPrompt.includes("current-value queries"), "Neither branch prompt carries the other branch policy.");
+for (let index = 0; index < 100; index += 1) { check(build(modelProjection) === prompt && build(modelProjection, undefined, undefined, requestPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE) === extractionPrompt, "Repeated builder calls are deterministic (" + index + ")."); }
 assert.throws(() => { modelProjection.modelPolicy.modelMaySupply[0] = "params.other"; }, TypeError, "Frozen model projections reject caller mutation."); assertions += 1;
 check(build(contracts.getModelProjection("set-opacity-v1")) === prompt, "A rejected caller mutation cannot contaminate a subsequent prompt.");
-check(prompt.includes('"capabilityId":"set-opacity-v1"') && prompt.includes('"opacity":57.5'), "The positive example derives the current Contract capability and model-supplied field.");
+check(extractionPrompt.includes('"capabilityId":"set-opacity-v1"') && extractionPrompt.includes('"opacity":57.5'), "The positive example derives the current Contract capability and model-supplied field.");
 check(!/(?:document|window|localStorage|CSInterface|evalScript|fetch\(|XMLHttpRequest|WebSocket|Date\.|Math\.random|require\([^)]*(?:fs|http|https|net))/i.test(fs.readFileSync(path.join(__dirname, "..", "client", "js", "vela", "velaCapabilityPromptBuilder.js"), "utf8")), "Prompt Builder has no DOM, Host, storage, network, clock, random, or file dependency.");
 
 rejected(() => build(null), "Missing model projection fails closed.");
 rejected(() => builder.buildSystemPrompt(modelProjection, REQUEST_ID), "Missing dynamic model fails closed.");
+rejected(() => builder.buildSystemPrompt(modelProjection, REQUEST_ID, MODEL), "Missing request profile fails closed.");
 rejected(() => builder.buildSystemPrompt(modelProjection, { requestId: REQUEST_ID }, MODEL), "Metadata objects cannot enter Builder input.");
 const badRevision = JSON.parse(JSON.stringify(modelProjection)); badRevision.revision = "different";
 rejected(() => build(freeze(badRevision)), "A changed capability revision fails closed.");

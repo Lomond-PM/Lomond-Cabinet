@@ -36,6 +36,12 @@
         }
         return dependency;
     }
+    function assertRequestBranchPolicy(dependency) {
+        if (!dependency || typeof dependency !== "object" || !Object.isFrozen(dependency)) {
+            throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaProviderAdapter requires VelaProviderRequestBranchPolicy.");
+        }
+        return dependency;
+    }
 
     function ownDataDescriptor(value, key) {
         var descriptor;
@@ -82,28 +88,33 @@
         var protocolGlobal = requireInstalledGlobal(target, "VelaProtocol", "RUNTIME_CAPABILITY_UNAVAILABLE");
         var parserGlobal = requireInstalledGlobal(target, "VelaResponseParser", "RUNTIME_CAPABILITY_UNAVAILABLE");
         var capabilityGlobal = requireInstalledGlobal(target, "VelaCapabilityContracts", "RUNTIME_CAPABILITY_UNAVAILABLE");
+        var policyGlobal = requireInstalledGlobal(target, "VelaProviderRequestBranchPolicy", "RUNTIME_CAPABILITY_UNAVAILABLE");
         var promptBuilderGlobal = requireInstalledGlobal(target, "VelaCapabilityPromptBuilder", "RUNTIME_CAPABILITY_UNAVAILABLE");
         var hasProtocol;
         var hasParser;
         var hasCapability;
+        var hasPolicy;
         var hasPromptBuilder;
         var protocolDependency;
         var parserDependency;
         var capabilityDependency;
+        var policyDependency;
         var promptBuilderDependency;
         try {
             hasProtocol = hasModule.call(bootstrap, "VelaProtocol");
             hasParser = hasModule.call(bootstrap, "VelaResponseParser");
             hasCapability = hasModule.call(bootstrap, "VelaCapabilityContracts");
+            hasPolicy = hasModule.call(bootstrap, "VelaProviderRequestBranchPolicy");
             hasPromptBuilder = hasModule.call(bootstrap, "VelaCapabilityPromptBuilder");
             protocolDependency = getModule.call(bootstrap, "VelaProtocol");
             parserDependency = getModule.call(bootstrap, "VelaResponseParser");
             capabilityDependency = getModule.call(bootstrap, "VelaCapabilityContracts");
+            policyDependency = getModule.call(bootstrap, "VelaProviderRequestBranchPolicy");
             promptBuilderDependency = getModule.call(bootstrap, "VelaCapabilityPromptBuilder");
         } catch (error) {
             throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT", "The Vela protocol bootstrap dependencies are unavailable.");
         }
-        if (hasProtocol !== true || hasParser !== true || hasCapability !== true || hasPromptBuilder !== true || protocolDependency !== protocolGlobal || parserDependency !== parserGlobal || capabilityDependency !== capabilityGlobal || promptBuilderDependency !== promptBuilderGlobal) {
+        if (hasProtocol !== true || hasParser !== true || hasCapability !== true || hasPolicy !== true || hasPromptBuilder !== true || protocolDependency !== protocolGlobal || parserDependency !== parserGlobal || capabilityDependency !== capabilityGlobal || policyDependency !== policyGlobal || promptBuilderDependency !== promptBuilderGlobal) {
             throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT", "The Vela protocol bootstrap dependency identity is invalid.");
         }
         var existingModule;
@@ -115,7 +126,7 @@
             throw bootstrapError("MODULE_ALREADY_REGISTERED", name + " is already registered.");
         }
         if (hasOwn.call(target, name) || !Object.isExtensible(target)) { throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT", name + " global registration conflicts with the loaded module."); }
-        var exported = Object.freeze(create(assertProtocolModule(protocolDependency), assertParserModule(parserDependency), assertCapabilityContracts(capabilityDependency), assertCapabilityPromptBuilder(promptBuilderDependency)));
+        var exported = Object.freeze(create(assertProtocolModule(protocolDependency), assertParserModule(parserDependency), assertCapabilityContracts(capabilityDependency), assertRequestBranchPolicy(policyDependency), assertCapabilityPromptBuilder(promptBuilderDependency)));
         try { registerModule.call(bootstrap, name, exported); }
         catch (error) { throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT", name + " could not be registered."); }
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
@@ -124,16 +135,16 @@
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        module.exports = Object.freeze(factory(assertProtocolModule(require("./velaProtocol")), assertParserModule(require("./velaResponseParser")), assertCapabilityContracts(require("./velaCapabilityContracts")), assertCapabilityPromptBuilder(require("./velaCapabilityPromptBuilder"))));
+        module.exports = Object.freeze(factory(assertProtocolModule(require("./velaProtocol")), assertParserModule(require("./velaResponseParser")), assertCapabilityContracts(require("./velaCapabilityContracts")), assertRequestBranchPolicy(require("./velaProviderRequestBranchPolicy")), assertCapabilityPromptBuilder(require("./velaCapabilityPromptBuilder"))));
     }
-}(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule, capabilityContracts, capabilityPromptBuilder) {
+}(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule, capabilityContracts, requestBranchPolicy, capabilityPromptBuilder) {
     "use strict";
 
     var trustedOutboundBodies = new WeakMap();
     var DEFAULT_ENDPOINT = "http://127.0.0.1:1234/v1/chat/completions";
     var PROVIDER_ID = "lmstudio";
     var PROVIDER_KIND = "openai-compatible";
-    var RESPONSE_SCHEMA_ID = "vela-response.v1";
+    var RESPONSE_SCHEMA_IDS = Object.freeze({ TEXT_ONLY: "vela-text-response.v1", EXPLICIT_EDIT_ELIGIBLE: "vela-local-proposal-response.v1" });
     var MODEL_ERROR_NOT_AUTHORIZED = "MODEL_ERROR_NOT_AUTHORIZED";
     var RESPONSE_FORMAT_MODE = "json-schema";
     var LMSTUDIO_TEXT_GENERATION_MAX_CHARS = 1024;
@@ -150,6 +161,25 @@
     var OPENAI_USAGE_KEYS = ["prompt_tokens", "completion_tokens", "total_tokens", "completion_tokens_details"];
     var OPENAI_COMPLETION_DETAILS_KEYS = ["reasoning_tokens"];
     var MAX_SYSTEM_FINGERPRINT_CODE_UNITS = 256;
+
+    function getRequestProfiles() {
+        var profiles;
+        var text;
+        var explicit;
+        try {
+            profiles = Object.getOwnPropertyDescriptor(requestBranchPolicy, "PROFILES");
+            if (!profiles || profiles.get || profiles.set || !Object.prototype.hasOwnProperty.call(profiles, "value") || !Object.isFrozen(profiles.value)) { throw new Error(); }
+            text = Object.getOwnPropertyDescriptor(profiles.value, "TEXT_ONLY");
+            explicit = Object.getOwnPropertyDescriptor(profiles.value, "EXPLICIT_EDIT_ELIGIBLE");
+            if (!text || !explicit || text.get || text.set || explicit.get || explicit.set || text.writable !== false || text.configurable !== false || explicit.writable !== false || explicit.configurable !== false || text.value !== "text-only" || explicit.value !== "explicit-edit-eligible") { throw new Error(); }
+            return profiles.value;
+        } catch (error) { throw configFailure(); }
+    }
+    var REQUEST_PROFILES = getRequestProfiles();
+    function assertRequestProfile(value) {
+        if (value !== REQUEST_PROFILES.TEXT_ONLY && value !== REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE) { throw configFailure(); }
+        return value;
+    }
 
     function configFailure(message, stage) {
         return new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.PROVIDER_CONFIG_INVALID, message || "The local provider configuration is invalid.", { stage: stage || "provider-config" });
@@ -230,6 +260,14 @@
         return descriptor.value;
     }
 
+    function ownDataOption(value, key) {
+        var descriptor;
+        try { descriptor = Object.getOwnPropertyDescriptor(value, key); }
+        catch (error) { throw configFailure(); }
+        if (!descriptor || descriptor.get || descriptor.set || !Object.prototype.hasOwnProperty.call(descriptor, "value")) { throw configFailure(); }
+        return descriptor.value;
+    }
+
     function requireProtocol(protocol) {
         if (!protocolModule.isTrustedProtocol(protocol) || typeof protocol.validateCanonicalRequest !== "function" || typeof protocol.randomId !== "function") {
             throw configFailure();
@@ -292,6 +330,7 @@
 
         var endpoint = options.endpoint === undefined ? DEFAULT_ENDPOINT : options.endpoint;
         var model = options.model;
+        var requestProfile = assertRequestProfile(ownDataOption(options, "requestProfile"));
         var timeoutMs = options.timeoutMs === undefined ? DEFAULT_TIMEOUT_MS : options.timeoutMs;
         var responseFormatMode = options.responseFormatMode === undefined ? RESPONSE_FORMAT_MODE : options.responseFormatMode;
         if (typeof endpoint !== "string" || typeof model !== "string" || responseFormatMode !== RESPONSE_FORMAT_MODE ||
@@ -520,8 +559,9 @@
                     }
                 }
             };
+            var envelope = requestProfile === REQUEST_PROFILES.TEXT_ONLY ? textEnvelope : localProposalEnvelope;
             return protocol.deepFreeze({
-                name: "vela_response",
+                name: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? "vela_text_response" : "vela_local_proposal_response",
                 strict: true,
                 schema: {
                     type: "object",
@@ -533,7 +573,7 @@
                         requestId: enumString(metadata.requestId),
                         provider: enumString(metadata.provider),
                         model: enumString(metadata.model),
-                        envelope: { type: "object", oneOf: [textEnvelope, localProposalEnvelope] }
+                        envelope: envelope
                     }
                 }
             });
@@ -542,7 +582,7 @@
         function systemMessage(requestId) {
             var metadata = responseMetadata(requestId);
             var modelSpec = getCapabilityModelSpec();
-            return capabilityPromptBuilder.buildSystemPrompt(modelSpec.capability, metadata.requestId, metadata.model);
+            return capabilityPromptBuilder.buildSystemPrompt(modelSpec.capability, metadata.requestId, metadata.model, requestProfile);
         }
 
         function buildRequest(input, requestId) {
@@ -570,7 +610,7 @@
                 requestId: requestId,
                 model: model,
                 messages: [{ role: "system", content: systemMessage(requestId) }].concat(messages),
-                responseFormat: { type: "json_object", schemaId: RESPONSE_SCHEMA_ID },
+                responseFormat: { type: "json_object", schemaId: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? RESPONSE_SCHEMA_IDS.TEXT_ONLY : RESPONSE_SCHEMA_IDS.EXPLICIT_EDIT_ELIGIBLE },
                 context: context
             };
             protocol.validateCanonicalRequest(request);
@@ -664,6 +704,10 @@
             }
             if (parsed.response.envelope.type === protocol.ENVELOPE_TYPES.ERROR) {
                 return { response: canonicalError(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, requestId), parserErrorCode: MODEL_ERROR_NOT_AUTHORIZED };
+            }
+            if ((requestProfile === REQUEST_PROFILES.TEXT_ONLY && parsed.response.envelope.type !== protocol.ENVELOPE_TYPES.TEXT) ||
+                (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE && parsed.response.envelope.type !== protocol.ENVELOPE_TYPES.LOCAL_PROPOSAL)) {
+                return { response: canonicalError(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, requestId), parserErrorCode: protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID };
             }
             var canonical = {
                 protocol: protocol.PROTOCOLS.RESPONSE,

@@ -6,7 +6,6 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const contracts = require("../client/js/vela/velaCapabilityContracts");
-const protocolModule = require("../client/js/vela/velaProtocol");
 const adapterModule = require("../client/js/vela/velaProviderAdapter");
 const qualification = require("./diagnostics/velaProviderModelQualification");
 
@@ -14,24 +13,12 @@ let assertions = 0;
 function check(value, message) { assert.ok(value, message); assertions += 1; }
 function rejects(callback, message) { assert.throws(callback, /CAPABILITY_CONTRACT_INVALID/, message); assertions += 1; }
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
-function stable(value) { if (Array.isArray(value)) return "[" + value.map(stable).join(",") + "]"; if (value && typeof value === "object") return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + stable(value[key])).join(",") + "}"; return JSON.stringify(value); }
 function hash(value) { return crypto.createHash("sha256").update(value, "utf8").digest("hex"); }
 function contract(id, parameters, paths) {
     return { capabilityId: id, revision: "vela-capability-contract-v1", parameters, modelPolicy: { responseType: "localProposal", branchPolicy: "direct-single-target-edit-only", modelMaySupply: paths || ["params." + parameters.required[0]], groundingField: "selection.selectedLayerOpacity", unavailableBehavior: "respond-with-text-without-guessing" }, localPolicy: { parameterValidatorId: "test-validator-v1", intentValidatorId: "test-intent-v1", routerId: id } };
 }
 function identifierContract(identifier) {
     return contract("set-identifier-test-v1", { type: "object", additionalProperties: false, required: [identifier], properties: { [identifier]: { type: "number", minimum: 0, maximum: 1 } } });
-}
-function protocol() { return protocolModule.createProtocol({ utf8ByteLength: (text) => Buffer.byteLength(text, "utf8"), sha256Hex: (text) => hash(text), randomId: (kind) => kind + "_" + "0".repeat(32), now: () => 1 }); }
-async function captureBaseline() {
-    const calls = [];
-    const localProtocol = protocol();
-    const provider = adapterModule.createLocalOpenAICompatibleProvider({ protocol: localProtocol, transport: { sendJson(request) { calls.push(request); return new Promise(() => {}); } }, model: "baseline-model", runtime: { setTimeout() { return 1; }, clearTimeout() {}, createAbortController() { return { signal: {}, abort() {} }; }, parseUrl(url) { return { protocol: "http:", hostname: "127.0.0.1", port: "1234", pathname: "/v1/chat/completions", username: "", password: "", search: "", hash: "", href: url }; }, nowMs() { return 1; } } });
-    const started = provider.start({ messages: [{ role: "user", content: "hello" }], context: { contextId: "ctx", fingerprint: "sha256:" + "a".repeat(64), tier: 1 } });
-    await Promise.resolve(); await Promise.resolve();
-    check(calls.length === 1, "The baseline capture creates one local outbound request.");
-    provider.cancel(started.requestId); await started.promise;
-    return { systemPromptSha256: hash(calls[0].body.messages[0].content), responseFormatStableSha256: hash(stable(calls[0].body.response_format)), bodyStableSha256: hash(stable({ model: calls[0].body.model, messages: calls[0].body.messages.map((message) => ({ role: message.role, content: message.content })), stream: calls[0].body.stream, response_format: calls[0].body.response_format })) };
 }
 async function run() {
     const opacity = contracts.getContract("set-opacity-v1");
@@ -124,15 +111,16 @@ async function run() {
     const branchFixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "vela-capability-contracts", "provider-branch-policy-v2.json"), "utf8"));
     const branchKeys = ["fixtureType", "builderRevision", "branchPolicyRevision", "capabilityId", "capabilityRevision", "previousPromptSha256", "currentPromptSha256", "responseFormatSha256", "previousStableRequestBodySha256", "currentStableRequestBodySha256", "messageRoleOrder", "protocolVersion", "changeReason", "generatedBy"];
     check(Object.keys(branchFixture).sort().join("|") === branchKeys.slice().sort().join("|") && branchFixture.previousPromptSha256 === fixture.systemPromptSha256 && branchFixture.previousStableRequestBodySha256 === fixture.bodyStableSha256 && JSON.stringify(branchFixture.messageRoleOrder) === JSON.stringify(["system", "assistant", "user"]), "C3-A fixture is closed and preserves C2 historical evidence.");
+    let productionCaptureCalls = 0;
+    await assert.rejects(() => qualification.qualificationMetadata({ model: "baseline-model", runs: 5 }, { fixture: branchFixture, captureProductionContract() { productionCaptureCalls += 1; } }), (error) => error && error.code === "QUALIFICATION_CONTRACT_DRIFT" && error.code !== "PROVIDER_CONFIG_INVALID"); assertions += 1;
     const driftKeys = branchKeys.concat(["unknown", "requestId", "modelResponse", "endpoint", "machinePath", "timestamp", "rawEvidence"]);
     for (const key of driftKeys) {
         const added = !Object.prototype.hasOwnProperty.call(branchFixture, key); const value = Object.assign({}, branchFixture, added ? { [key]: "x" } : { [key]: key === "messageRoleOrder" ? ["user"] : "drift" });
-        await assert.rejects(() => qualification.qualificationMetadata({ model: "baseline-model", runs: 5 }, { fixture: value }), /QUALIFICATION_CONTRACT_DRIFT/); assertions += 1;
-        if (!added) { const missing = Object.assign({}, branchFixture); delete missing[key]; await assert.rejects(() => qualification.qualificationMetadata({ model: "baseline-model", runs: 5 }, { fixture: missing }), /QUALIFICATION_CONTRACT_DRIFT/); assertions += 1; }
+        await assert.rejects(() => qualification.qualificationMetadata({ model: "baseline-model", runs: 5 }, { fixture: value, captureProductionContract() { productionCaptureCalls += 1; } }), (error) => error && error.code === "QUALIFICATION_CONTRACT_DRIFT"); assertions += 1;
+        if (!added) { const missing = Object.assign({}, branchFixture); delete missing[key]; await assert.rejects(() => qualification.qualificationMetadata({ model: "baseline-model", runs: 5 }, { fixture: missing, captureProductionContract() { productionCaptureCalls += 1; } }), (error) => error && error.code === "QUALIFICATION_CONTRACT_DRIFT"); assertions += 1; }
     }
-    const baseline = await captureBaseline();
-    check(fixture.systemPromptSha256 === "2109193792f682367499f7594a6644e758ea55b46522c0bc526c092a35de5c92" && fixture.responseFormatStableSha256 === branchFixture.responseFormatSha256, "C2 historical fixture remains immutable evidence.");
-    check(baseline.systemPromptSha256 === branchFixture.currentPromptSha256 && baseline.responseFormatStableSha256 === branchFixture.responseFormatSha256 && baseline.bodyStableSha256 === branchFixture.currentStableRequestBodySha256 && branchFixture.previousPromptSha256 !== branchFixture.currentPromptSha256 && branchFixture.previousStableRequestBodySha256 !== branchFixture.currentStableRequestBodySha256, "C3-A has an independently versioned prompt and stable-body baseline while response format remains unchanged.");
+    check(productionCaptureCalls === 0, "C3 compatibility drift is detected before Provider creation or transport capture.");
+    check(fixture.systemPromptSha256 === "2109193792f682367499f7594a6644e758ea55b46522c0bc526c092a35de5c92" && fixture.responseFormatStableSha256 === branchFixture.responseFormatSha256 && branchFixture.currentPromptSha256 === "340c06c86fa01b7f0382d6bf3d365dc6e007af4e6b371c7728eb41ac8f08ebee" && branchFixture.currentStableRequestBodySha256 === "c450dbe475cd610887884d0b4f9a37312dac5d81129bfde57ff59c13bd6937cb" && branchFixture.previousPromptSha256 !== branchFixture.currentPromptSha256 && branchFixture.previousStableRequestBodySha256 !== branchFixture.currentStableRequestBodySha256, "C2/C3 historical fixture SHA associations remain immutable without requiring current C4 production reproduction.");
     console.log("test-vela-capability-contracts: " + assertions + " assertions passed.");
 }
 run().catch((error) => { console.error("FAIL Vela capability contracts - " + error.message); process.exitCode = 1; });

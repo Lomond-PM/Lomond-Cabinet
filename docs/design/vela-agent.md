@@ -1376,20 +1376,36 @@ Gate, Router, or the execution chain.
 
 C3-B is complete: both qualified local-model evidence sets retained deterministic safety
 pass (`unsafe=0`) but remain **NOT QUALIFIED** for the full conversational Provider.
-C4 will move first request-branch authority from the model to a local, deterministic
-boundary. C4-A adds only an offline `VelaProviderRequestBranchPolicy`: it classifies the
-current single user message against the frozen production Capability projection as either
-`text-only` or `explicit-edit-eligible`. It neither reads trusted current opacity or
-Context, nor creates a proposal, target, candidate, plan, confirmation, request, or user
-visible response. It is not yet injected into ProviderController; production requests
-therefore retain the C3 union response-format behavior and the frozen Prompt,
-response-format, and stable-body hashes.
+C4-A is complete and merged. The production request path now uses the local
+`VelaProviderRequestBranchPolicy` as its first branch authority. For the current single
+user message, ProviderController creates its own frozen Policy from the production
+`set-opacity-v1` projection and classifies the request as either `text-only` or
+`explicit-edit-eligible`; Policy, Profile, and projection are not caller-injected.
 
-C4-B may later use that local decision to select dedicated text-only or parameter-
-extraction Prompt and Schema profiles. C4-C may then rerun real-model qualification.
-Until those separate phases complete, the default model remains unchanged, UI-D2 remains
-BLOCKED, and the Intent Gate remains an independent, non-relaxed post-Parser safety
-boundary. This C4 plan does not rewrite C3-B evidence or its qualification conclusions.
+A `text-only` request receives only the text Prompt and text-only JSON Schema. An
+`explicit-edit-eligible` request receives only the parameter-extraction Prompt and
+`localProposal` JSON Schema. Neither Schema contains a union fallback. The Adapter
+validates the selected Profile again after Parser output, and a Profile mismatch fails
+closed before the Intent Gate. A legal extraction proposal must still pass the independent
+Intent Gate. Extraction eligibility grants neither proposal authority nor execution
+authority.
+
+The deterministic C4 Profile contract records these production hashes:
+
+- text Prompt: `cc9aa49f440748db2fc08d900b5c5ad1fdd6fd75f6d79aab9139e26d16450476`
+- text response format: `85813dd8950079ab9c9542612aa0ad14b82c98e3f3e71f3a370561669e64cdf8`
+- text stable request body: `208e84b1898f38b98f9a16785ab0a10e6c200551d0193b5b0037f968385a3d54`
+- extraction Prompt: `32d55e4db60f7273c00c51004338e59dca14565643561b20420484b9ccd1bb69`
+- extraction response format: `509230d09996e81eb3d4baddd332f3730707badd37d6b4d28b4499b6e6ca6b2f`
+- extraction stable request body: `953962fb5b390831287a05b2d72811c6f2d474016766dba40209b8aceb5f4a83`
+
+Protocol 1.1 and the existing envelope types are unchanged. Review, Confirmation,
+Preflight, ExecutionAdapter, and Host remain independent boundaries. The C3 fixtures,
+evidence, reports, and **NOT QUALIFIED** conclusions remain historical and unchanged.
+Qualification diagnostics refactoring and real-model testing belong to C4-C; C4-C has not
+run. Both 4B and 9B therefore remain **NOT QUALIFIED**, the default model is unchanged,
+and UI-D2 remains **BLOCKED**. This records the current C4-B production branch authority
+without claiming that the whole C4-B lifecycle is complete.
 
 Vela 0.3.0 is an approval-driven assistant over explicit AE capabilities. The
 model proposes; local schemas, target fingerprints, permissions, and the

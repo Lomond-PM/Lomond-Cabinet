@@ -3,6 +3,35 @@
     var MODULE_NAME = "VelaProviderController";
     var BOOTSTRAP_NAME = "__velaProtocolCoreBootstrapV1";
     function bootstrapError(code) { var error = new Error(code); error.code = code; return error; }
+    function ownData(value, key) {
+        var descriptor;
+        try { descriptor = Object.getOwnPropertyDescriptor(value, key); }
+        catch (error) { return undefined; }
+        return descriptor && !descriptor.get && !descriptor.set && Object.prototype.hasOwnProperty.call(descriptor, "value") ? descriptor.value : undefined;
+    }
+    function browserDependency(target, bootstrap, name) {
+        var descriptor;
+        var value;
+        try {
+            descriptor = Object.getOwnPropertyDescriptor(target, name);
+            value = descriptor && !descriptor.get && !descriptor.set && Object.prototype.hasOwnProperty.call(descriptor, "value") ? descriptor.value : undefined;
+            if (!descriptor || descriptor.configurable !== false || descriptor.writable !== false || !Object.isFrozen(value) ||
+                    bootstrap.hasModule(name) !== true || bootstrap.getModule(name) !== value) { throw new Error(); }
+            return value;
+        } catch (error) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
+    }
+    function assertDependencies(protocol, bridge, contracts, policy, adapter, transport, intentGate) {
+        if (!protocol || !Object.isFrozen(protocol) || typeof ownData(protocol, "isTrustedProtocol") !== "function" ||
+                !bridge || !Object.isFrozen(bridge) || typeof ownData(bridge, "createProviderContextPort") !== "function" || typeof ownData(bridge, "isTrustedContextBridgeForProtocol") !== "function" ||
+                !contracts || !Object.isFrozen(contracts) || typeof ownData(contracts, "getModelProjection") !== "function" ||
+                !policy || !Object.isFrozen(policy) || typeof ownData(policy, "createRequestBranchPolicy") !== "function" ||
+                !adapter || !Object.isFrozen(adapter) || typeof ownData(adapter, "createLocalOpenAICompatibleProvider") !== "function" ||
+                !transport || !Object.isFrozen(transport) || typeof ownData(transport, "isTrustedLocalTransportForProtocol") !== "function" ||
+                !intentGate || !Object.isFrozen(intentGate) || typeof ownData(intentGate, "evaluate") !== "function") {
+            throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE");
+        }
+        return Object.freeze([protocol, bridge, contracts, policy, adapter, transport, intentGate]);
+    }
     function registerBrowserModule(target, name, create) {
         var hasOwn = Object.prototype.hasOwnProperty;
         var bootstrap;
@@ -11,18 +40,25 @@
         if (!hasOwn.call(target, BOOTSTRAP_NAME) || hasOwn.call(target, name) || !Object.isExtensible(target)) { throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT"); }
         bootstrap = target[BOOTSTRAP_NAME];
         if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.getModule !== "function" || typeof bootstrap.hasModule !== "function" || typeof bootstrap.registerModule !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
-        dependencies = { protocol: bootstrap.getModule("VelaProtocol"), bridge: bootstrap.getModule("VelaContextBridge"), adapter: bootstrap.getModule("VelaProviderAdapter"), transport: bootstrap.getModule("VelaLocalTransport"), intentGate: bootstrap.getModule("VelaProviderIntentGate") };
-        if (!dependencies.protocol || !dependencies.bridge || !dependencies.adapter || !dependencies.transport || !dependencies.intentGate) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
-        exported = Object.freeze(create(dependencies.protocol, dependencies.bridge, dependencies.adapter, dependencies.transport, dependencies.intentGate));
+        dependencies = assertDependencies(
+            browserDependency(target, bootstrap, "VelaProtocol"),
+            browserDependency(target, bootstrap, "VelaContextBridge"),
+            browserDependency(target, bootstrap, "VelaCapabilityContracts"),
+            browserDependency(target, bootstrap, "VelaProviderRequestBranchPolicy"),
+            browserDependency(target, bootstrap, "VelaProviderAdapter"),
+            browserDependency(target, bootstrap, "VelaLocalTransport"),
+            browserDependency(target, bootstrap, "VelaProviderIntentGate")
+        );
+        exported = Object.freeze(create(dependencies[0], dependencies[1], dependencies[2], dependencies[3], dependencies[4], dependencies[5], dependencies[6]));
         bootstrap.registerModule(name, exported);
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        module.exports = Object.freeze(factory(require("./velaProtocol"), require("./velaContextBridge"), require("./velaProviderAdapter"), require("./velaLocalTransport"), require("./velaProviderIntentGate")));
+        module.exports = Object.freeze(factory.apply(null, assertDependencies(require("./velaProtocol"), require("./velaContextBridge"), require("./velaCapabilityContracts"), require("./velaProviderRequestBranchPolicy"), require("./velaProviderAdapter"), require("./velaLocalTransport"), require("./velaProviderIntentGate"))));
     }
-}(typeof self !== "undefined" ? self : this, function (protocolModule, bridgeModule, adapterModule, transportModule, intentGateModule) {
+}(typeof self !== "undefined" ? self : this, function (protocolModule, bridgeModule, capabilityContracts, requestBranchPolicy, adapterModule, transportModule, intentGateModule) {
     "use strict";
     var MODULE_REVISION = "vela-provider-controller-v1";
     var trustedControllers = new WeakSet();
@@ -60,6 +96,13 @@
         if (!bridgeModule.isTrustedProviderContextPortForProtocol(providerContextPort, protocol) || typeof ownData(providerContextPort, "project") !== "function") {
             throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
         }
+        var modelProjection;
+        var requestPolicy;
+        try {
+            modelProjection = capabilityContracts.getModelProjection("set-opacity-v1");
+            requestPolicy = requestBranchPolicy.createRequestBranchPolicy(modelProjection);
+            if (!Object.isFrozen(modelProjection) || !Object.isFrozen(requestPolicy) || typeof ownData(requestPolicy, "classify") !== "function") { throw new Error(); }
+        } catch (error) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
         var state = "idle";
         var active = null;
         var activeProposal = null;
@@ -104,14 +147,17 @@
         function send(input) {
             var values;
             var capturedGeneration;
+            var requestProfile;
             if (state === "pending") { return Promise.reject(new protocol.VelaProtocolError(protocol.ERROR_CODES.PROVIDER_REQUEST_IN_FLIGHT)); }
             try { values = validateInput(input); }
             catch (error) { publish("failed", null, null, safeCode(protocol, error), null); return Promise.reject(error); }
+            try { requestProfile = requestPolicy.classify(values.message); }
+            catch (error) { publish("failed", null, null, safeCode(protocol, error), values.model); return Promise.reject(error); }
             capturedGeneration = generation + 1;
             generation = capturedGeneration;
             publish("pending", null, null, null, values.model);
             var bindingStart = bridge.beginOwnedCapture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
-            active = { generation: capturedGeneration, requestId: null, provider: null, captureHandle: bindingStart.handle };
+            active = { generation: capturedGeneration, requestId: null, provider: null, captureHandle: bindingStart.handle, requestProfile: requestProfile };
             return bindingStart.promise.then(function (capture) {
                 var provider;
                 var started;
@@ -133,9 +179,9 @@
                 var provider;
                 var started;
                 if (!active || active.generation !== capturedGeneration || capturedGeneration !== generation || state !== "pending") { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
-                provider = adapterModule.createLocalOpenAICompatibleProvider({ protocol: protocol, transport: transport, runtime: providerRuntime, endpoint: values.endpoint, model: values.model, responseFormatMode: "json-schema" });
+                provider = adapterModule.createLocalOpenAICompatibleProvider({ protocol: protocol, transport: transport, runtime: providerRuntime, endpoint: values.endpoint, model: values.model, requestProfile: requestProfile, responseFormatMode: "json-schema" });
                 started = provider.start({ messages: [{ role: "assistant", content: summaryFromProjection(grounded.projection) }, { role: "user", content: values.message }], context: { contextId: grounded.capture.contextId, fingerprint: grounded.capture.fingerprint, tier: 1 } });
-                active = { generation: capturedGeneration, requestId: started.requestId, provider: provider, captureHandle: null };
+                active = { generation: capturedGeneration, requestId: started.requestId, provider: provider, captureHandle: null, requestProfile: requestProfile };
                 publish("pending", started.requestId, null, null, values.model);
                 return started.promise;
             }).then(function (response) {
