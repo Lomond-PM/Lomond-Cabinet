@@ -80,6 +80,7 @@
             elements.transcriptMessage.textContent = t("vela.surfaceTranscriptIntro");
             elements.composer.setAttribute("placeholder", t("vela.surfaceComposerPlaceholder"));
             elements.statusText.textContent = t("vela.surfaceStatusSetup");
+            elements.experimentalText.textContent = t("vela.surfaceExperimentalStatus");
             elements.settingsButton.setAttribute("title", t("vela.surfaceSettings"));
             elements.settingsButton.setAttribute("aria-label", t("vela.surfaceSettings"));
             elements.settingsButton.textContent = t("vela.surfaceSettings");
@@ -123,11 +124,16 @@
             composer.setAttribute("rows", "2");
             composerSlot.appendChild(composer);
             statusSlot = node("div", "vela-status-slot");
+            statusSlot.setAttribute("role", "status");
+            statusSlot.setAttribute("aria-live", "polite");
+            statusSlot.setAttribute("aria-atomic", "true");
             statusDot = node("span", "vela-status-dot");
             statusDot.setAttribute("aria-hidden", "true");
             statusText = node("span", "vela-status-text");
+            var experimentalText = node("span", "vela-experimental-status");
             statusSlot.appendChild(statusDot);
             statusSlot.appendChild(statusText);
+            statusSlot.appendChild(experimentalText);
             controls = node("div", "vela-bottom-controls");
             settingsSlot = node("div", "vela-settings-slot");
             settingsButton = node("button", "panel-button vela-settings-button");
@@ -149,7 +155,7 @@
             rootElement.appendChild(controls);
             rootElement.appendChild(handle);
             mountElement.appendChild(rootElement);
-            elements = { root: rootElement, transcriptSlot: transcriptSlot, transcriptScroll: transcriptScroll, transcriptMessage: transcriptMessage, composerSlot: composerSlot, composer: composer, statusSlot: statusSlot, statusDot: statusDot, statusText: statusText, controls: controls, settingsSlot: settingsSlot, settingsButton: settingsButton, actionSlot: actionSlot, handle: handle, grip: grip };
+            elements = { root: rootElement, transcriptSlot: transcriptSlot, transcriptScroll: transcriptScroll, transcriptMessage: transcriptMessage, composerSlot: composerSlot, composer: composer, statusSlot: statusSlot, statusDot: statusDot, statusText: statusText, experimentalText: experimentalText, controls: controls, settingsSlot: settingsSlot, settingsButton: settingsButton, actionSlot: actionSlot, handle: handle, grip: grip };
             settingsHandler = function () { openSettings(); };
             settingsButton.addEventListener("click", settingsHandler);
             resizeController = ResizeController.create({ root: rootElement, handle: handle, transcript: transcriptScroll, composer: composerSlot, status: statusSlot, controls: controls, settings: settingsSlot, homeContainer: homeContainer, headerElement: headerElement, toolPoolElement: toolPoolElement, getUiScale: getUiScale, eventTarget: eventTarget });

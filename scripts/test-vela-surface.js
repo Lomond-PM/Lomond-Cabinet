@@ -186,7 +186,7 @@ function testSurface() {
     equal(surface.mount(), false, "mount is idempotent");
     equal(fixture.mount.children.length, 1, "mount contains exactly one Surface root");
     equal(root.id, "velaSurface", "Surface has its stable root id");
-    ok(nodes.transcriptSlot && nodes.transcriptScroll && nodes.composerSlot && nodes.composer && nodes.statusSlot && nodes.controls && nodes.settingsSlot && nodes.settingsButton && nodes.actionSlot && nodes.handle && nodes.grip, "all fixed slots exist");
+    ok(nodes.transcriptSlot && nodes.transcriptScroll && nodes.composerSlot && nodes.composer && nodes.statusSlot && nodes.experimentalText && nodes.controls && nodes.settingsSlot && nodes.settingsButton && nodes.actionSlot && nodes.handle && nodes.grip, "all fixed slots exist");
     equal(root.parentNode, fixture.mount, "Surface is mounted outside the tool pool");
     equal(fixture.home.children.indexOf(fixture.header) < fixture.home.children.indexOf(fixture.mount), true, "mount follows Home header");
     equal(fixture.home.children.indexOf(fixture.mount) < fixture.home.children.indexOf(fixture.pool), true, "mount precedes tool pool");
@@ -204,6 +204,10 @@ function testSurface() {
     equal(nodes.actionSlot.children.length, 0, "dynamic action slot starts empty");
     equal(nodes.transcriptMessage.textContent, "t:vela.surfaceTranscriptIntro", "transcript uses i18n text");
     equal(nodes.statusText.textContent, "t:vela.surfaceStatusSetup", "status uses i18n text");
+    equal(nodes.statusSlot.getAttribute("role"), "status", "status has an explicit accessibility role");
+    equal(nodes.statusSlot.getAttribute("aria-live"), "polite", "state changes use a polite live region");
+    equal(nodes.statusSlot.getAttribute("aria-atomic"), "true", "status and experimental qualification text are announced atomically");
+    equal(nodes.experimentalText.textContent, "t:vela.surfaceExperimentalStatus", "experimental and not-qualified status is fixed local i18n text");
     equal(nodes.handle.getAttribute("role"), "separator", "resize handle has separator role");
     equal(nodes.handle.getAttribute("aria-orientation"), "horizontal", "resize handle has horizontal orientation");
     equal(nodes.handle.getBoundingClientRect().height, 20, "resize handle retains its overlay hit area");
@@ -227,6 +231,8 @@ function testSurface() {
     equal(nodes.composer.selectionStart, 2, "layout changes preserve selection start");
     equal(nodes.composer.selectionEnd, 7, "layout changes preserve selection end");
     equal(nodes.transcriptScroll.scrollTop, 19, "layout changes preserve transcript scroll position");
+    const narrowRule = (fs.readFileSync(path.join(ROOT, "client/css/velaSurface.css"), "utf8").match(/\.vela-surface\.is-narrow\s*\{([^}]*)\}/) || [])[1] || "";
+    ok(/"composer composer"[\s\S]*"status status"[\s\S]*"settings actions"/.test(narrowRule), "narrow CSS retains stable named status, Settings, and action slots without reordering the DOM; real CEP status-row reflow remains deferred to 0.3.1");
     nodes.settingsButton.emit("click", event());
     equal(fixture.settingsCalls(), 1, "settings button only forwards the Settings callback");
 
@@ -293,7 +299,7 @@ function testSurface() {
     equal(nodes.grip, initialGrip, "resume preserves resize grip identity");
     const provider = { send: function () {}, cancel: function () {}, getState: function () { return { state: "idle", text: null, errorCode: null }; } };
     const confirmation = { review: function () {}, approve: function () {}, reject: function () {}, getState: function () { return { state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }; } };
-    const controller = SurfaceController.create({ surface: surface, provider: provider, confirmation: confirmation, t: function (key) { return "t:" + key; }, PresentationModel: PresentationModel, TranscriptView: TranscriptView, ComposerView: ComposerView, ConfirmationView: ConfirmationView });
+    const controller = SurfaceController.create({ surface: surface, provider: provider, confirmation: confirmation, t: function (key) { return "t:" + key; }, PresentationModel: PresentationModel, TranscriptView: TranscriptView, ComposerView: ComposerView, ConfirmationView: ConfirmationView, experimentalEnabled: true });
     controller.mount();
     const actionNodes = nodes.actionSlot.children.slice(-6);
     const idleSend = actionNodes[0];
@@ -316,12 +322,14 @@ function testStaticContracts() {
     const cssSource = fs.readFileSync(path.join(ROOT, "client/css/velaSurface.css"), "utf8");
     const indexSource = fs.readFileSync(path.join(ROOT, "client/index.html"), "utf8");
     const i18nSource = fs.readFileSync(path.join(ROOT, "client/js/i18n.js"), "utf8");
+    const mainSource = fs.readFileSync(path.join(ROOT, "client/js/main.js"), "utf8");
     ok(surfaceSource.indexOf("innerHTML") === -1, "Surface never rebuilds DOM with innerHTML");
     ok(surfaceSource.indexOf("localStorage") === -1 && resizeSource.indexOf("localStorage") === -1, "Surface height is not persisted");
     ok(!/provider-send|provider-review|approveCandidate|AEToolbox\.VelaExecution|VelaExecutionPreflight/.test(surfaceSource), "Surface has no provider or execution entry point");
     ok(!/VelaRuntime|ProviderController|PlanStore|ExecutionAdapter/.test(surfaceSource), "Surface has no trusted runtime dependency");
     ok(/\.vela-transcript-scroll[\s\S]*overflow-y: auto/.test(cssSource), "only transcript slot is vertically scrollable");
     ok(/\.vela-surface\.is-narrow/.test(cssSource) && /grid-template-areas/.test(cssSource), "CSS owns wide and narrow grid layouts");
+    ok(/@media \(prefers-reduced-motion: reduce\)/.test(cssSource) && /transition:\s*none/.test(cssSource) && /scroll-behavior:\s*auto/.test(cssSource), "reduced-motion disables non-essential Surface transitions and smooth scrolling");
     ok(/\.vela-transcript-scroll[\s\S]*border: 1px solid var\(--separator\)[\s\S]*border-radius: var\(--radius-sm\)/.test(cssSource), "transcript uses the same restrained plate language as the composer");
     ok(/\.vela-settings-button[\s\S]*min-height: calc\(26px \* var\(--ui-scale\)\)/.test(cssSource), "Settings uses the compact Surface button treatment");
     ok(/\.vela-surface-action\s*\{[\s\S]*min-height: calc\(26px \* var\(--ui-scale\)\)/.test(cssSource), "Send and Cancel use the compact Surface action height contract");
@@ -343,6 +351,8 @@ function testStaticContracts() {
     ok(/width: var\(--vela-resize-grip-width\)/.test(gripRule) && /height: var\(--vela-resize-grip-height\)/.test(gripRule) && /background: var\(--separator\)/.test(gripRule) && /pointer-events: none/.test(gripRule), "short low-contrast grip is decorative and cannot intercept resize input");
     ok(/\.vela-surface\s*\{[\s\S]*?border: 1px solid var\(--panel-border\)/.test(cssSource), "Surface outer border remains the only complete visual boundary");
     ok(indexSource.indexOf("id=\"velaSurfaceMount\"") < indexSource.indexOf("id=\"toolGrid\""), "static mount precedes tool pool in index.html");
+    ok(/experimentalEnabled:\s*false/.test(mainSource), "production bootstrap keeps the formal Provider Surface disabled pending manual opt-in design");
+    ok(!/Qualified|Recommended model|Production ready/.test(i18nSource), "Surface i18n does not claim qualification, recommendation, or production readiness");
 }
 
 testSurface();

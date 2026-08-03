@@ -3548,6 +3548,7 @@
                 TranscriptView: window.VelaTranscriptView,
                 ComposerView: window.VelaComposerView,
                 ConfirmationView: window.VelaConfirmationView,
+                experimentalEnabled: false,
                 provider: {
                     send: function (message) {
                         return velaRuntimeController.sendProviderMessage({ message: message, endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: VelaProviderModel });
