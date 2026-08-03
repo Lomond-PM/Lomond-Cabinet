@@ -59,7 +59,15 @@ The default model is unchanged and formal UI-D2 enablement remains blocked. The
 model-quality revision because it has the stronger pilot result; that preference
 does not qualify it or authorize runtime selection. C4-C2 qualification is closed.
 
-## D2 handoff audit
+## Historical D2 handoff audit
+
+Historical status note (2026-08-03): this section records the handoff before
+D2 implementation. D2-A, D2-B, and D2-C subsequently completed for the 0.3.0
+Experimental Preview. That completion does not change the pilot result: no model
+is qualified, recommended, or selected as a default; production activation stays
+locked, formal UI-D2 default enablement remains false, and the legacy Vela
+fallback remains available. Current status is maintained in `docs/PROJECT_STATE.md`
+and the design document's D2 Activation Closeout.
 
 The formal D2 scope is the bounded `localProposal` path for `set-opacity-v1`:
 strict read-only parsing, explicit parameterless Review promotion into the existing
