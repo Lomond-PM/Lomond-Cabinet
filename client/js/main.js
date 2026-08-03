@@ -165,11 +165,14 @@
         toolIconDarkPaletteId: "",
         homeIconRadius: 25.5,
         homeDragShadowIntensity: 1,
+        velaProviderEndpoint: "http://127.0.0.1:1234",
         velaProviderModel: "qwen3.5-4b",
         autoStatus: true,
         registryDebugTools: false
     };
     var VelaProviderModel = DefaultSettings.velaProviderModel;
+    var VelaProviderEndpoint = DefaultSettings.velaProviderEndpoint;
+    var VelaExperimentalAcknowledged = false;
 
     function normalizeVelaProviderModel(value) {
         var normalized;
@@ -188,6 +191,9 @@
         }
         return bytes > 256 ? DefaultSettings.velaProviderModel : normalized;
     }
+    function normalizeVelaExperimentalModel(value) { var normalized = typeof value === "string" ? value.replace(/^\s+|\s+$/g, "") : ""; return normalized.length <= 256 ? normalized : ""; }
+    function normalizeVelaProviderEndpoint(value) { var normalized = typeof value === "string" ? value.replace(/^\s+|\s+$/g, "") : ""; var match; if (normalized.length > 512) { return ""; } match = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):([1-9][0-9]{0,4})(?:\/|\/v1\/chat\/completions)?$/.exec(normalized); return match && Number(match[2]) <= 65535 ? "http://" + match[1] + ":" + match[2] : normalized; }
+    function velaExperimentalStatusKey(state) { var keys = { "experimental-ready": "settings.vela.ready", "checking": "settings.vela.checking", "endpoint-invalid": "settings.vela.endpointInvalid", "readiness-network-failed": "settings.vela.networkFailed", "readiness-http-failed": "settings.vela.httpFailed", "readiness-response-invalid": "settings.vela.responseInvalid", "configured-model-not-found": "settings.vela.modelNotFound", "configured-model-not-loaded": "settings.vela.modelNotLoaded" }; return keys[state] || "settings.vela.disabled"; }
     var BackgroundEngine = {
         defaults: {
             preset: "blackGold",
@@ -2095,31 +2101,72 @@
         var mount = byId("settingsVelaMount");
         var section = findSettingsSchemaSection("vela");
         var field;
+        var endpointField;
         var heading;
         var fieldRow;
         var input;
+        var endpointInput;
+        var acknowledgement;
+        var acknowledgementLabel;
+        var enableButton;
+        var disableButton;
+        var status;
+        function configureSession() {
+            if (velaSurfaceController && typeof velaSurfaceController.configureExperimental === "function") { velaSurfaceController.configureExperimental({ endpoint: VelaProviderEndpoint, model: VelaProviderModel, acknowledged: VelaExperimentalAcknowledged }); }
+        }
+        function refreshSession(snapshot) {
+            var current = snapshot || (velaSurfaceController && typeof velaSurfaceController.getExperimentalState === "function" ? velaSurfaceController.getExperimentalState() : null);
+            if (status) { status.textContent = tr(velaExperimentalStatusKey(current && current.state)); }
+            if (enableButton) { enableButton.disabled = !velaSurfaceController || !VelaExperimentalAcknowledged || !VelaProviderEndpoint || !VelaProviderModel || !!(current && (current.enabled || current.state === "checking")); }
+            if (disableButton) { disableButton.disabled = !(current && (current.enabled || current.state === "checking" || current.state === "unavailable")); }
+            if (acknowledgement && current && current.acknowledged === false && VelaExperimentalAcknowledged) { VelaExperimentalAcknowledged = false; acknowledgement.checked = false; }
+        }
         function saveModel() {
-            VelaProviderModel = normalizeVelaProviderModel(input.value);
+            VelaProviderModel = normalizeVelaExperimentalModel(input.value);
             input.value = VelaProviderModel;
             saveSettings();
+            configureSession(); refreshSession();
+        }
+        function saveEndpoint() {
+            VelaProviderEndpoint = normalizeVelaProviderEndpoint(endpointInput.value);
+            endpointInput.value = VelaProviderEndpoint;
+            saveSettings();
+            configureSession(); refreshSession();
         }
         if (!mount || !section) {
             return;
         }
+        endpointField = findSettingsSectionField(section, "velaProviderEndpoint");
         field = findSettingsSectionField(section, "velaProviderModel");
-        if (!field) {
+        if (!field || !endpointField) {
             return;
         }
         mount.innerHTML = "";
         mount.className = "settings-section";
         heading = createSettingsSectionHeader("vela.surfaceLabel", section.titleKey, section.descriptionKey);
+        fieldRow = createSharedSettingsFieldRow("text", endpointField, endpointField.descriptionKey, "");
+        endpointInput = createSharedSettingsTextInput(endpointField.key, endpointField, VelaProviderEndpoint);
+        endpointInput.addEventListener("change", saveEndpoint);
+        endpointInput.addEventListener("blur", saveEndpoint);
+        fieldRow.controls.appendChild(endpointInput);
+        mount.appendChild(heading);
+        mount.appendChild(fieldRow.row);
         fieldRow = createSharedSettingsFieldRow("text", field, field.descriptionKey, "");
         input = createSharedSettingsTextInput(field.key, field, VelaProviderModel);
         input.addEventListener("change", saveModel);
         input.addEventListener("blur", saveModel);
         fieldRow.controls.appendChild(input);
-        mount.appendChild(heading);
         mount.appendChild(fieldRow.row);
+        acknowledgement = document.createElement("input"); acknowledgement.type = "checkbox"; acknowledgement.id = "velaExperimentalAcknowledgement"; acknowledgement.checked = false;
+        acknowledgementLabel = document.createElement("label"); acknowledgementLabel.setAttribute("for", acknowledgement.id); acknowledgementLabel.textContent = tr("settings.vela.acknowledgement"); acknowledgementLabel.appendChild(acknowledgement);
+        enableButton = document.createElement("button"); enableButton.type = "button"; enableButton.id = "velaExperimentalEnable"; enableButton.className = "panel-button"; enableButton.textContent = tr("settings.vela.enableSession");
+        disableButton = document.createElement("button"); disableButton.type = "button"; disableButton.id = "velaExperimentalDisable"; disableButton.className = "panel-button"; disableButton.textContent = tr("settings.vela.disableSession");
+        status = document.createElement("p"); status.id = "velaExperimentalStatus"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
+        acknowledgement.addEventListener("change", function () { VelaExperimentalAcknowledged = acknowledgement.checked === true; configureSession(); refreshSession(); });
+        enableButton.addEventListener("click", function () { saveEndpoint(); saveModel(); if (velaSurfaceController && typeof velaSurfaceController.enableExperimental === "function") { velaSurfaceController.enableExperimental().then(refreshSession, refreshSession); } });
+        disableButton.addEventListener("click", function () { if (velaSurfaceController && typeof velaSurfaceController.disableExperimental === "function") { velaSurfaceController.disableExperimental(); } VelaExperimentalAcknowledged = false; acknowledgement.checked = false; refreshSession(); });
+        mount.appendChild(acknowledgementLabel); mount.appendChild(enableButton); mount.appendChild(disableButton); mount.appendChild(status);
+        configureSession(); refreshSession();
     }
 
     function renderSettingsDeveloperMode() {
@@ -3549,9 +3596,11 @@
                 ComposerView: window.VelaComposerView,
                 ConfirmationView: window.VelaConfirmationView,
                 experimentalEnabled: false,
+                onExperimentalStateChange: function (snapshot) { var node = byId("velaExperimentalStatus"); if (node) { node.textContent = tr(velaExperimentalStatusKey(snapshot && snapshot.state)); } },
                 provider: {
+                    check: function (config) { return velaRuntimeController.checkProviderReadiness(config); },
                     send: function (message) {
-                        return velaRuntimeController.sendProviderMessage({ message: message, endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: VelaProviderModel });
+                        return velaRuntimeController.sendProviderMessage({ message: message, endpoint: VelaProviderEndpoint, model: VelaProviderModel });
                     },
                     cancel: function () { return velaRuntimeController.cancelProviderRequest(); },
                     getState: function () { return velaRuntimeController.getProviderSurfaceState(); }
@@ -8552,6 +8601,7 @@
             toolIconDarkSourceMode: normalizeToolIconDarkSourceMode(byId("toolIconDarkSourceMode") ? byId("toolIconDarkSourceMode").value : DefaultSettings.toolIconDarkSourceMode),
             toolIconDarkPaletteId: byId("toolIconDarkPaletteId") ? String(byId("toolIconDarkPaletteId").value || "") : DefaultSettings.toolIconDarkPaletteId,
             velaProviderModel: VelaProviderModel,
+            velaProviderEndpoint: VelaProviderEndpoint,
             proceduralParams: collectProceduralAppearanceParamsFromControls(),
             homeIconRadius: byId("homeIconRadiusNumber") ? clampNumber(byId("homeIconRadiusNumber").value, DefaultSettings.homeIconRadius, 18, 40) : DefaultSettings.homeIconRadius,
             homeDragShadowIntensity: byId("homeDragShadowIntensityNumber") ? clampNumber(byId("homeDragShadowIntensityNumber").value, DefaultSettings.homeDragShadowIntensity, 0, 1.5) : DefaultSettings.homeDragShadowIntensity,
@@ -8567,10 +8617,12 @@
     function applySettings(settings) {
         var data = settings || DefaultSettings;
         var speed = clampNumber(data.motionSpeed, DefaultSettings.motionSpeed, 0.75, 1.35);
-        VelaProviderModel = normalizeVelaProviderModel(data.velaProviderModel);
+        VelaProviderModel = typeof data.velaProviderModel === "string" ? normalizeVelaExperimentalModel(data.velaProviderModel) : DefaultSettings.velaProviderModel;
+        VelaProviderEndpoint = typeof data.velaProviderEndpoint === "string" ? normalizeVelaProviderEndpoint(data.velaProviderEndpoint) : DefaultSettings.velaProviderEndpoint;
         if (byId("velaProviderModel")) {
             byId("velaProviderModel").value = VelaProviderModel;
         }
+        if (byId("velaProviderEndpoint")) { byId("velaProviderEndpoint").value = VelaProviderEndpoint; }
         byId("motionSpeed").value = speed;
         byId("motionSpeedNumber").value = speed;
         motionScale = speed;

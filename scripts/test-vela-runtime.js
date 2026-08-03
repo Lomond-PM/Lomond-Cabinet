@@ -54,7 +54,7 @@ function createController(options) {
 async function run() {
     const controller = createController();
     check(Object.isFrozen(controller), "Controller is frozen.");
-    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,approveCandidate,cancelProviderRequest,createOpacityCandidate,dispose,getConfirmationSurfaceState,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,initialize,refreshContext,rejectActiveCandidate,rejectCandidate,resetSession,resume,reviewProviderProposal,sendProviderMessage,suspend", "Controller exposes only lifecycle and bounded Vela UI methods.");
+    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,approveCandidate,cancelProviderRequest,checkProviderReadiness,createOpacityCandidate,dispose,getConfirmationSurfaceState,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,initialize,refreshContext,rejectActiveCandidate,rejectCandidate,resetSession,resume,reviewProviderProposal,sendProviderMessage,suspend", "Controller exposes only lifecycle and bounded Vela UI methods, including read-only Provider readiness.");
     check(controller.cancelProviderRequest.length === 0, "Provider cancellation has no caller-supplied request identifier seam.");
     check(controller.approveActiveCandidate.length === 0 && controller.rejectActiveCandidate.length === 0, "Surface confirmation facades accept no caller-supplied candidate identifier.");
     check(!Object.prototype.hasOwnProperty.call(controller, "getPreflight") && !Object.prototype.hasOwnProperty.call(controller, "getBridge") && !Object.prototype.hasOwnProperty.call(controller, "executeHostRequest"), "Controller does not expose private execution objects.");

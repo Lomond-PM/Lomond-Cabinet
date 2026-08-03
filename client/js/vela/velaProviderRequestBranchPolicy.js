@@ -89,7 +89,7 @@
     function explicitTarget(message) {
         var match;
         var target;
-        var chinese = /^(?:\s*(?:\u8bf7|\u9ebb\u70e6)?\s*)?(?:(?:\u5c06|\u628a)\s*)?(?:(?:\u5f53\u524d|\u9009\u4e2d|\u6240\u9009)\s*)?(?:\u56fe\u5c42|\u5c42)?\s*(?:\u7684)?\s*(?:\u4e0d\u900f\u660e\u5ea6|opacity)\s*(?:\u8bbe\u4e3a|\u8bbe\u7f6e\u4e3a|\u8bbe\u7f6e\u6210|\u6539\u4e3a|\u8c03\u6574\u4e3a|\u8c03\u5230|\u6539\u6210)\s*((?:0|[1-9]\d*)(?:\.\d+)?%?)\s*[\u3002.!\uff01]?\s*$/i;
+        var chinese = /^(?:\s*(?:\u8bf7|\u9ebb\u70e6)?\s*)?(?:(?:\u5c06|\u628a)\s*)?(?:(?:\u5f53\u524d\u9009\u4e2d|\u5f53\u524d|\u9009\u4e2d|\u6240\u9009)\s*)?(?:\u56fe\u5c42|\u5c42)?\s*(?:\u7684)?\s*(?:\u4e0d\u900f\u660e\u5ea6|\u900f\u660e\u5ea6|opacity)\s*(?:\u8bbe\u4e3a|\u8bbe\u7f6e\u4e3a|\u8bbe\u7f6e\u6210|\u6539\u4e3a|\u8c03\u6574\u4e3a|\u8c03\u5230|\u6539\u6210)\s*((?:0|[1-9]\d*)(?:\.\d+)?%?)\s*[\u3002.!\uff01]?\s*$/i;
         var english = /^\s*(?:please\s+)?(?:set|change|adjust)\s+(?:(?:the\s+)?(?:(?:current(?:ly)?|selected)\s+)?layer\s+)?opacity\s+(?:to|at)\s*((?:0|[1-9]\d*)(?:\.\d+)?%?)\s*[.!\uff01]?\s*$/i;
         match = chinese.exec(message) || english.exec(message);
         if (!match) { return null; }

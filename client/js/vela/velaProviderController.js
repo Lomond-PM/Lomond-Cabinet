@@ -107,11 +107,11 @@
         var active = null;
         var activeProposal = null;
         var generation = 1;
-        var publicState = protocol.deepFreeze({ state: state, requestId: null, text: null, errorCode: null, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: MODULE_REVISION });
-        function publish(nextState, requestId, text, errorCode, model, proposal) {
+        var publicState = protocol.deepFreeze({ state: state, requestId: null, text: null, errorCode: null, intentReason: null, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: MODULE_REVISION });
+        function publish(nextState, requestId, text, errorCode, model, proposal, intentReason) {
             state = nextState;
             if (nextState !== "proposal-ready") { activeProposal = null; }
-            publicState = protocol.deepFreeze({ state: nextState, requestId: requestId || null, text: text || null, errorCode: errorCode || null,
+            publicState = protocol.deepFreeze({ state: nextState, requestId: requestId || null, text: text || null, errorCode: errorCode || null, intentReason: typeof intentReason === "string" ? intentReason : null,
                 proposalCapabilityId: proposal ? proposal.capabilityId : null, suggestedOpacity: proposal ? proposal.opacity : null,
                 providerId: "lmstudio", modelId: model || null, moduleRevision: MODULE_REVISION });
             return publicState;
@@ -133,16 +133,84 @@
             if (active && active.captureHandle) { bridge.cancelOwnedCapture(active.captureHandle); active.captureHandle = null; }
         }
         function validateInput(input) {
+            var endpoint;
             protocol.assertSafeJson(input);
             if (!protocol.isPlainObject(input)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Provider request input is invalid."); }
             protocol.assertNoUnknownKeys(input, ["message", "endpoint", "model"], "providerController.send");
             var message = protocol.assertNonEmptyString(input.message, "provider message", protocol.HARD_LIMITS.maxMessageBytes);
             if (!/\S/.test(message)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Provider messages must contain non-whitespace text."); }
+            endpoint = normalizeEndpoint(input.endpoint);
+            if (!endpoint) { protocol.fail(protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID); }
             return {
                 message: message,
-                endpoint: protocol.assertNonEmptyString(input.endpoint, "provider endpoint", protocol.HARD_LIMITS.maxStringBytes),
+                endpoint: endpoint.chatUrl,
                 model: protocol.assertNonEmptyString(input.model, "provider model", 256)
             };
+        }
+        function normalizeEndpoint(value) {
+            var endpoint;
+            var match;
+            try { endpoint = protocol.assertNonEmptyString(value, "provider endpoint", protocol.HARD_LIMITS.maxStringBytes).replace(/^\s+|\s+$/g, ""); }
+            catch (error) { return null; }
+            match = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):([1-9][0-9]{0,4})(?:\/|\/v1\/chat\/completions)?$/.exec(endpoint);
+            if (!match || Number(match[2]) > 65535) { return null; }
+            endpoint = "http://" + match[1] + ":" + match[2];
+            return { baseUrl: endpoint, chatUrl: endpoint + "/v1/chat/completions", modelsUrl: endpoint + "/api/v1/models" };
+        }
+        function checkReadiness(input) {
+            var endpoint;
+            var model;
+            var urls;
+            var modelsUrl;
+            var controller;
+            var timer;
+            try {
+                protocol.assertSafeJson(input);
+                if (!protocol.isPlainObject(input)) { throw new Error(); }
+                protocol.assertNoUnknownKeys(input, ["endpoint", "model"], "providerController.readiness");
+                endpoint = protocol.assertNonEmptyString(input.endpoint, "provider endpoint", protocol.HARD_LIMITS.maxStringBytes);
+                model = protocol.assertNonEmptyString(input.model, "provider model", 256);
+                urls = normalizeEndpoint(endpoint);
+                if (!urls || typeof ownData(transport, "readJson") !== "function") { throw new Error(); }
+                modelsUrl = urls.modelsUrl;
+                controller = providerRuntime.createAbortController();
+                if (!controller || !controller.signal || typeof controller.abort !== "function") { throw new Error(); }
+            } catch (error) { error = new protocol.VelaProtocolError(protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID); error.localReadinessCode = "endpoint-invalid"; return Promise.reject(error); }
+            timer = providerRuntime.setTimeout(function () { controller.abort(); }, 5000);
+            return transport.readJson({ url: modelsUrl, signal: controller.signal, maxResponseBytes: protocol.HARD_LIMITS.maxResponseJsonBytes }).then(function (response) {
+                var parsed;
+                var models;
+                var selected = null;
+                var loaded;
+                var quantization;
+                var config;
+                var contextLength;
+                var index;
+                var loadedIndex;
+                var error;
+                if (response.status !== 200 || response.redirected || response.finalUrl !== modelsUrl) { error = new protocol.VelaProtocolError(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID); error.localReadinessCode = "readiness-http-failed"; throw error; }
+                if (!/^application\/json(?:\s*;|$)/i.test(response.contentType)) { error = new protocol.VelaProtocolError(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID); error.localReadinessCode = "readiness-response-invalid"; throw error; }
+                try { parsed = JSON.parse(response.bodyText); }
+                catch (ignored) { error = new protocol.VelaProtocolError(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID); error.localReadinessCode = "readiness-response-invalid"; throw error; }
+                models = ownData(parsed, "models");
+                if (!protocol.isPlainObject(parsed) || !Array.isArray(models)) { error = new protocol.VelaProtocolError(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID); error.localReadinessCode = "readiness-response-invalid"; throw error; }
+                for (index = 0; index < models.length; index += 1) {
+                    if (!protocol.isPlainObject(models[index]) || typeof ownData(models[index], "type") !== "string" || typeof ownData(models[index], "key") !== "string" || !Array.isArray(ownData(models[index], "loaded_instances"))) { error = new protocol.VelaProtocolError(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID); error.localReadinessCode = "readiness-response-invalid"; throw error; }
+                    if (ownData(models[index], "type") !== "llm") { continue; }
+                    loaded = ownData(models[index], "loaded_instances");
+                    for (loadedIndex = 0; loadedIndex < loaded.length; loadedIndex += 1) { if (!protocol.isPlainObject(loaded[loadedIndex]) || typeof ownData(loaded[loadedIndex], "id") !== "string") { error = new protocol.VelaProtocolError(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID); error.localReadinessCode = "readiness-response-invalid"; throw error; } }
+                    if (ownData(models[index], "key") === model) { selected = models[index]; break; }
+                    for (loadedIndex = 0; loadedIndex < loaded.length; loadedIndex += 1) { if (ownData(loaded[loadedIndex], "id") === model) { selected = models[index]; break; } }
+                    if (selected) { break; }
+                }
+                loaded = selected && ownData(selected, "loaded_instances");
+                if (!selected) { return protocol.deepFreeze({ ready: false, code: "configured-model-not-found", modelId: model, loadedInstances: 0, quantization: null, contextLength: null, baseUrl: urls.baseUrl, chatUrl: urls.chatUrl, moduleRevision: MODULE_REVISION }); }
+                if (loaded.length < 1) { return protocol.deepFreeze({ ready: false, code: "configured-model-not-loaded", modelId: model, loadedInstances: 0, quantization: null, contextLength: null, baseUrl: urls.baseUrl, chatUrl: urls.chatUrl, moduleRevision: MODULE_REVISION }); }
+                quantization = ownData(ownData(selected, "quantization"), "name");
+                config = ownData(loaded[0], "config");
+                contextLength = ownData(config, "context_length");
+                return protocol.deepFreeze({ ready: true, code: "experimental-ready", modelId: model, loadedInstances: loaded.length, quantization: typeof quantization === "string" ? quantization : null, contextLength: Number.isInteger(contextLength) && contextLength > 0 ? contextLength : null, baseUrl: urls.baseUrl, chatUrl: urls.chatUrl, moduleRevision: MODULE_REVISION });
+            }).then(function (result) { providerRuntime.clearTimeout(timer); return result; }, function (error) { providerRuntime.clearTimeout(timer); if (!error.localReadinessCode) { error.localReadinessCode = error.code === protocol.ERROR_CODES.PROVIDER_CONNECTION_FAILED ? "readiness-network-failed" : "readiness-response-invalid"; } throw error; });
         }
         function send(input) {
             var values;
@@ -198,7 +266,7 @@
                     var intent = intentGateModule.evaluate({ message: values.message, capabilityId: capabilityId, proposedOpacity: opacity });
                     if (!intent || intent.allowed !== true) {
                         activeProposal = null;
-                        return publish("intent-rejected", publicState.requestId, null, null, values.model);
+                        return publish("intent-rejected", publicState.requestId, null, null, values.model, null, intent.reason);
                     }
                     activeProposal = protocol.deepFreeze({ capabilityId: capabilityId, opacity: opacity });
                     return publish("proposal-ready", publicState.requestId, null, null, values.model, { capabilityId: capabilityId, opacity: opacity });
@@ -252,7 +320,7 @@
                 return true;
             }
         });
-        var controller = Object.freeze({ send: send, cancel: cancel, invalidate: invalidate, getUiState: function () { return publicState; } });
+        var controller = Object.freeze({ send: send, cancel: cancel, invalidate: invalidate, checkReadiness: checkReadiness, getUiState: function () { return publicState; } });
         trustedControllers.add(controller);
         controllerProtocols.set(controller, protocol);
         controllerProposalPorts.set(controller, proposalPort);

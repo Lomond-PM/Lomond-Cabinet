@@ -216,3 +216,7 @@ At narrow panel widths, the Vela status row does not reflow above the action row
 appear cramped or truncated in the bottom controls. This has no safety or execution-path
 impact. Do not temporarily change the breakpoint, DOM order, or grid structure as part of
 D2-A closeout; address the reflow in the dedicated 0.3.1 layout pass.
+
+The Vela experimental Settings helper text, acknowledgement, actions, and readiness
+feedback are also cramped at narrow panel widths. This is deferred to 0.3.1 and has no
+safety or execution-path impact.
