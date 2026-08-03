@@ -75,6 +75,7 @@ function makeBrowser(options) {
     if (options.exportsDescriptor) Object.defineProperty(context, "exports", options.exportsDescriptor);
     if (options.requireDescriptor) Object.defineProperty(context, "require", options.requireDescriptor);
     const sandbox = vm.createContext(context);
+    vm.runInContext(fs.readFileSync(path.join(VELA, "velaActivationPolicy.js"), "utf8"), sandbox, { filename: "velaActivationPolicy.js" });
     vm.runInContext(loaderSource, sandbox, { filename: "velaCepModuleLoader.js" });
     return { context, sandbox, timers, document, getAppendCount() { return appendCount; }, requestedUrls };
 }

@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 const runtimeModule = require("../client/js/vela/velaRuntime");
+const activationPolicy = require("../client/js/vela/velaActivationPolicy").VelaActivationPolicy;
 const nodeRuntime = require("./velaNodeRuntime");
 
 const ROOT = path.resolve(__dirname, "..");
@@ -27,7 +28,7 @@ function hostResult(request) {
 }
 
 function createRuntime() {
-    return runtimeModule.createRuntime({ environment: Object.assign({ setTimeout, clearTimeout }, nodeRuntime), invokeHost(source, callback) { callback(hostResult(decode(source))); } });
+    return runtimeModule.createRuntime({ activationPolicy, environment: Object.assign({ setTimeout, clearTimeout }, nodeRuntime), invokeHost(source, callback) { callback(hostResult(decode(source))); } });
 }
 
 function makeDocument() {
@@ -75,6 +76,7 @@ async function run() {
     windowRef.self = windowRef;
     const sandbox = vm.createContext(windowRef);
     vm.runInContext(fs.readFileSync(path.join(ROOT, "client", uiRef), "utf8"), sandbox, { filename: uiRef });
+    vm.runInContext(fs.readFileSync(path.join(ROOT, "client", "js", "vela", "velaActivationPolicy.js"), "utf8"), sandbox, { filename: "velaActivationPolicy.js" });
     ["velaProtocol.js", "velaResponseParser.js", "velaCapabilityContracts.js", "velaProviderRequestBranchPolicy.js", "velaCapabilityPromptBuilder.js", "velaProviderAdapter.js", "velaProviderIntentGate.js", "velaLocalTransport.js", "velaContext.js", "velaValidator.js", "velaPlan.js", "velaExecutionGuard.js", "velaContextBridge.js", "velaExecutionPreflight.js", "velaExecutionAdapter.js", "velaController.js", "velaProviderController.js", "velaProviderProposalRouter.js", "velaRuntime.js"].forEach((file) => vm.runInContext(fs.readFileSync(path.join(ROOT, "client", "js", "vela", file), "utf8"), sandbox, { filename: file }));
     const policyDescriptor = Object.getOwnPropertyDescriptor(windowRef, "VelaProviderRequestBranchPolicy");
     check(policyDescriptor && Object.prototype.hasOwnProperty.call(policyDescriptor, "value") && !Object.prototype.hasOwnProperty.call(policyDescriptor, "get") && !Object.prototype.hasOwnProperty.call(policyDescriptor, "set") && policyDescriptor.writable === false && policyDescriptor.configurable === false, "Legacy integration VM loads Request Branch Policy as an immutable own data global before Prompt Builder.");

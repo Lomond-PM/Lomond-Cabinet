@@ -174,6 +174,12 @@
     var VelaProviderEndpoint = DefaultSettings.velaProviderEndpoint;
     var VelaExperimentalAcknowledged = false;
 
+    function getVelaActivationPolicy() {
+        var module = window.VelaActivationPolicy;
+        var policy = module && typeof module.getPolicy === "function" ? module.getPolicy() : null;
+        return module && typeof module.isTrustedPolicy === "function" && module.isTrustedPolicy(policy) ? policy : null;
+    }
+
     function normalizeVelaProviderModel(value) {
         var normalized;
         var bytes;
@@ -3539,6 +3545,7 @@
             if (panelShuttingDown || velaRuntimeController || !window.VelaRuntime || typeof window.VelaRuntime.createRuntime !== "function") {
                 return;
             }
+            if (!getVelaActivationPolicy()) { throw new Error("VELA_ACTIVATION_POLICY_UNAVAILABLE"); }
             velaRuntimeController = window.VelaRuntime.createRuntime({ invokeHost: invokeVelaHost });
             velaRuntimeStatusRevision += 1;
             return velaRuntimeController.initialize();
@@ -3583,7 +3590,7 @@
         if (panelShuttingDown || velaSurfaceController || velaSurfaceBootstrapState === "unavailable" || !velaSurfaceShell || !velaRuntimeController) {
             return;
         }
-        if (!window.VelaSurfaceController || typeof window.VelaSurfaceController.create !== "function" || !window.VelaPresentationModel || typeof window.VelaPresentationModel.create !== "function" || !window.VelaTranscriptView || typeof window.VelaTranscriptView.create !== "function" || !window.VelaComposerView || typeof window.VelaComposerView.create !== "function" || !window.VelaConfirmationView || typeof window.VelaConfirmationView.create !== "function") {
+        if (!window.VelaSurfaceController || typeof window.VelaSurfaceController.create !== "function" || !window.VelaPresentationModel || typeof window.VelaPresentationModel.create !== "function" || !window.VelaTranscriptView || typeof window.VelaTranscriptView.create !== "function" || !window.VelaComposerView || typeof window.VelaComposerView.create !== "function" || !window.VelaConfirmationView || typeof window.VelaConfirmationView.create !== "function" || !getVelaActivationPolicy()) {
             reportVelaSurfaceInitializationError();
             return;
         }
@@ -3595,7 +3602,7 @@
                 TranscriptView: window.VelaTranscriptView,
                 ComposerView: window.VelaComposerView,
                 ConfirmationView: window.VelaConfirmationView,
-                experimentalEnabled: false,
+                ActivationPolicy: window.VelaActivationPolicy,
                 onExperimentalStateChange: function (snapshot) { var node = byId("velaExperimentalStatus"); if (node) { node.textContent = tr(velaExperimentalStatusKey(snapshot && snapshot.state)); } },
                 provider: {
                     check: function (config) { return velaRuntimeController.checkProviderReadiness(config); },

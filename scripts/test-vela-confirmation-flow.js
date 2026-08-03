@@ -3,6 +3,7 @@
 
 const assert = require("assert");
 const runtimeModule = require("../client/js/vela/velaRuntime");
+const activationPolicy = require("../client/js/vela/velaActivationPolicy").VelaActivationPolicy;
 const contextModule = require("../client/js/vela/velaContext");
 const protocolModule = require("../client/js/vela/velaProtocol");
 const nodeRuntime = require("./velaNodeRuntime");
@@ -92,6 +93,7 @@ function makeRuntime(options) {
     if (options.fetch) environment.fetch = options.fetch;
     if (options.omitNow === true) delete environment.now;
     const runtime = runtimeModule.createRuntime({
+        activationPolicy,
         environment,
         invokeHost(source, callback) {
             const call = decodeCall(source);

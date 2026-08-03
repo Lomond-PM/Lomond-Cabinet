@@ -15,7 +15,9 @@
         var TranscriptView = options && options.TranscriptView;
         var ComposerView = options && options.ComposerView;
         var ConfirmationView = options && options.ConfirmationView;
-        var experimentalEnabled = options && options.experimentalEnabled === true;
+        var ActivationPolicy = options && options.ActivationPolicy;
+        var activationPolicy = ActivationPolicy && typeof ActivationPolicy.getPolicy === "function" ? ActivationPolicy.getPolicy() : null;
+        var experimentalEnabled = false;
         var onExperimentalStateChange = options && typeof options.onExperimentalStateChange === "function" ? options.onExperimentalStateChange : function () {};
         var experimentalState = experimentalEnabled ? "ready" : "disabled";
         var experimentalConfig = { endpoint: "", model: "", acknowledged: false };
@@ -30,7 +32,7 @@
         var suspended = false;
         var disposed = false;
         var suppressConfirmationTerminal = false;
-        if (!surface || typeof surface.getElementsForTest !== "function" || !provider || typeof provider.send !== "function" || typeof provider.cancel !== "function" || typeof provider.getState !== "function" || !confirmation || typeof confirmation.review !== "function" || typeof confirmation.approve !== "function" || typeof confirmation.reject !== "function" || typeof confirmation.getState !== "function" || !PresentationModel || typeof PresentationModel.create !== "function" || !TranscriptView || typeof TranscriptView.create !== "function" || !ComposerView || typeof ComposerView.create !== "function" || !ConfirmationView || typeof ConfirmationView.create !== "function") { throw new Error("VelaSurfaceController requires trusted presentation dependencies."); }
+        if (!surface || typeof surface.getElementsForTest !== "function" || !provider || typeof provider.send !== "function" || typeof provider.cancel !== "function" || typeof provider.getState !== "function" || !confirmation || typeof confirmation.review !== "function" || typeof confirmation.approve !== "function" || typeof confirmation.reject !== "function" || typeof confirmation.getState !== "function" || !PresentationModel || typeof PresentationModel.create !== "function" || !TranscriptView || typeof TranscriptView.create !== "function" || !ComposerView || typeof ComposerView.create !== "function" || !ConfirmationView || typeof ConfirmationView.create !== "function" || !ActivationPolicy || typeof ActivationPolicy.isTrustedPolicy !== "function" || !ActivationPolicy.isTrustedPolicy(activationPolicy) || activationPolicy.experimentalOptInAllowed !== true || activationPolicy.productionEnabled !== false) { throw new Error("VelaSurfaceController requires trusted presentation dependencies."); }
         function actionState(providerState, confirmationState) {
             var current = confirmationState && confirmationState.state;
             if (current === "executing") { return "none"; }
@@ -85,7 +87,7 @@
             snapshot = presentation.applyConfirmation(confirmationState, snapshot);
             transcript.render(snapshot);
             action = actionState(providerState, confirmationState);
-            projection = PresentationModel.projectSurfaceState(providerState, confirmationState, elements.composer.value, experimentalEnabled, experimentalState);
+            projection = PresentationModel.projectSurfaceState(providerState, confirmationState, elements.composer.value, experimentalEnabled, experimentalState, activationPolicy);
             if (!experimentalEnabled) { action = "send"; }
             composer.render(action, experimentalEnabled);
             confirmationView.render(action, confirmationState);
@@ -136,7 +138,7 @@
         }
         function enableExperimental() {
             var capturedGeneration;
-            if (disposed || suspended || !mounted || experimentalEnabled || experimentalState === "checking") { return Promise.resolve(experimentalSnapshot()); }
+            if (disposed || suspended || !mounted || activationPolicy.experimentalOptInAllowed !== true || activationPolicy.productionEnabled === true || experimentalEnabled || experimentalState === "checking") { return Promise.resolve(experimentalSnapshot()); }
             if (!normalizeEndpoint(experimentalConfig.endpoint)) { experimentalState = "endpoint-invalid"; synchronize(); notifyExperimental(); return Promise.resolve(experimentalSnapshot()); }
             if (!experimentalConfig.acknowledged || !experimentalConfig.model || typeof provider.check !== "function") { experimentalState = "experimental-unavailable"; synchronize(); notifyExperimental(); return Promise.resolve(experimentalSnapshot()); }
             generation += 1;

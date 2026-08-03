@@ -24,6 +24,25 @@ Current release track:
 
 `VERSION` and `CSXS/manifest.xml` identify the current stable release as `0.2.5`. Do not assume or introduce a next version without a dedicated release task.
 
+## Vela 0.3.0 D-Phase Closeout
+
+Vela D2-A, D2-B, and D2-C are complete. The D phase is complete for the planned
+0.3.0 product scope, whose release status is **Experimental Preview**; this is
+development status and does not change the current `0.2.5` release metadata.
+
+`client/js/vela/velaActivationPolicy.js` is the single trusted local owner of
+Vela product activation state. It permits explicit, session-only experimental
+Provider opt-in while locking production activation with
+`no-qualified-default-model`: no model is qualified or selected as the default,
+and formal UI-D2 default enablement remains false. Readiness, acknowledgement,
+configured endpoint/model, transcript content, and Provider/model output cannot
+change that policy. The legacy Vela fallback remains available in 0.3.0.
+
+Future model qualification, default-model selection, and a production flip are
+separate product decisions rather than unfinished D-phase tasks. The registered
+narrow-panel Surface and experimental Settings layout issues remain deferred to
+0.3.1 and have no safety or execution-path impact.
+
 Historical 0.2.4 stable baseline:
 
 - No `package.json` version file is present in the current workspace.
