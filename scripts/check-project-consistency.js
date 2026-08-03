@@ -393,6 +393,7 @@ function checkVelaProviderQualificationRubric() {
     if (!exists(fixturePath) || !exists(evaluatorPath)) return;
     const rubric = JSON.parse(readText(fixturePath));
     const evaluator = readText(evaluatorPath);
+    const rubricTest = readText(testPath);
     const docs = readText("docs/design/vela-agent.md");
     const rootKeys = ["fixtureType", "revision", "appliesTo", "pilot5Run", "progression", "final20Run", "decisionBoundaries", "generatedBy"];
     const hashes = ["cc9aa49f440748db2fc08d900b5c5ad1fdd6fd75f6d79aab9139e26d16450476", "85813dd8950079ab9c9542612aa0ad14b82c98e3f3e71f3a370561669e64cdf8", "208e84b1898f38b98f9a16785ab0a10e6c200551d0193b5b0037f968385a3d54", "32d55e4db60f7273c00c51004338e59dca14565643561b20420484b9ccd1bb69", "509230d09996e81eb3d4baddd332f3730707badd37d6b4d28b4499b6e6ca6b2f", "953962fb5b390831287a05b2d72811c6f2d474016766dba40209b8aceb5f4a83"];
@@ -409,7 +410,10 @@ function checkVelaProviderQualificationRubric() {
     check("C4 rubric evaluator remains pure and offline", !/run-vela-provider-model-qualification|LocalTransport|\bfetch\b|https?:\/\/|writeFile|appendFile|mkdir|rename|unlink|rmSync|evalScript/.test(evaluator), "Rubric evaluator must not invoke Runner, network, transport, Host, or filesystem writes.");
     check("C4 rubric evaluator never writes assessmentStatus", !/\.assessmentStatus\s*=(?!=)/.test(evaluator), "Raw evidence assessmentStatus must remain PENDING_REVIEW and immutable.");
     check("C4 rubric documentation matches fixture", docs.indexOf("vela-provider-profile-qualification-rubric-c4-v1") !== -1 && docs.indexOf("54 / 60") !== -1 && docs.indexOf("228 / 240") !== -1 && docs.indexOf("qualityPassRequired=false") !== -1, "Design documentation must record the same frozen progression and thresholds.");
-    check("C4 real evidence is absent during rubric freeze", !exists(".tmp/vela-provider-profile-qualification"), "The rubric must be committed before the first C4 real-model evidence is created.");
+    check("C4 rubric fixture contains no real-model result", !/qwen3\.5-4b|qwen\/qwen3\.5-9b|qualificationPass|rawEvidenceSha256/.test(JSON.stringify(rubric)), "The committed rubric must contain thresholds only, never actual candidate results.");
+    check("C4 rubric evaluator is independent from evidence output", !/\.tmp[\\/]vela-provider-profile-qualification|run-vela-provider-model-qualification|writeFile|appendFile|mkdir|rename|unlink|rmSync/.test(evaluator), "The evaluator must neither reference the output root nor create, modify, move, or delete evidence.");
+    check("C4 rubric test preserves existing evidence", /evidenceArtifactSnapshot/.test(rubricTest) && /JSON\.stringify\(evidenceAfter\)\s*===\s*JSON\.stringify\(evidenceBefore\)/.test(rubricTest) && !/fs\.(?:writeFileSync|appendFileSync|mkdirSync|renameSync|unlinkSync|rmSync)\s*\(/.test(rubricTest), "Rubric tests must snapshot and preserve any existing ignored evidence without filesystem writes.");
+    check("C4 source does not treat real evidence as a fixture", !/c4-4b-q6_k-nonthinking-5run|c2b30f0e27fed491f35617958ca988f6000df64db65d3204a9812c6b35a89d5b/.test(evaluator + rubricTest + JSON.stringify(rubric)), "Real C4 evidence identities must not enter committed rubric source or tests.");
 }
 
 function listToolFiles() {

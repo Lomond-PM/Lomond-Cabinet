@@ -11,6 +11,24 @@ let assertions = 0;
 function check(value, message) { assert.ok(value, message); assertions += 1; }
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 function deeplyFrozen(value) { return Object.isFrozen(value) && (!value || typeof value !== "object" || Object.keys(value).every((key) => deeplyFrozen(value[key]))); }
+function evidenceArtifactSnapshot() {
+    const root = path.join(__dirname, "..", ".tmp", "vela-provider-profile-qualification");
+    if (!fs.existsSync(root)) return { rootExists: false, artifacts: [] };
+    const artifacts = [];
+    function visit(directory) {
+        fs.readdirSync(directory, { withFileTypes: true }).forEach((entry) => {
+            const fullPath = path.join(directory, entry.name);
+            if (entry.isDirectory()) visit(fullPath);
+            else {
+                const stat = fs.statSync(fullPath);
+                artifacts.push({ relativePath: path.relative(root, fullPath).replace(/\\/g, "/"), size: stat.size, lastWriteMs: stat.mtimeMs });
+            }
+        });
+    }
+    visit(root);
+    artifacts.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
+    return { rootExists: true, artifacts };
+}
 
 const caseIds = ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10", "Q11", "Q12"];
 const profiles = { Q1: "text-only", Q2: "text-only", Q3: "explicit-edit-eligible", Q4: "explicit-edit-eligible", Q5: "explicit-edit-eligible", Q6: "text-only", Q7: "text-only", Q8: "text-only", Q9: "text-only", Q10: "text-only", Q11: "text-only", Q12: "text-only" };
@@ -75,6 +93,7 @@ function pilotPassEvidence() { const evidence = makeEvidence(5); ["Q1", "Q2", "Q
 function finalPassEvidence() { const evidence = makeEvidence(20); ["Q1", "Q2", "Q6", "Q7", "Q8", "Q9"].forEach((caseId) => { makeSafe(findRecord(evidence, caseId, 1)); makeSafe(findRecord(evidence, caseId, 2)); }); return evidence; }
 
 function run() {
+    const evidenceBefore = evidenceArtifactSnapshot();
     const rubricBytes = fs.readFileSync(rubricModule.RUBRIC_PATH); const rubric = rubricModule.loadRubric();
     check(Object.getOwnPropertyNames(rubric).join(",") === rubricModule.ROOT_KEYS.join(","), "Rubric root has exact keys.");
     check(rubric.revision === "vela-provider-profile-qualification-rubric-c4-v1", "Rubric revision is frozen.");
@@ -174,7 +193,8 @@ function run() {
     check(!/\.assessmentStatus\s*=(?!=)/.test(source) && !/defaultModel\s*=/.test(source) && !/uiD2\s*=/.test(source), "Evaluator cannot write assessment authority, select a default model, or unlock UI-D2.");
     check(rubric.decisionBoundaries.runnerMaySetQualified === false && rubric.decisionBoundaries.rubricEvaluatorMayModifyEvidence === false && rubric.decisionBoundaries.defaultModelChangeRequiresSeparateReview && rubric.decisionBoundaries.uiD2UnlockRequiresSeparateReview, "Decision authority remains outside Runner and evaluator.");
     check(rubric.decisionBoundaries.historicalC3EvidenceIsNonAuthoritativeForC4 && !source.includes("c3b-qwen"), "C3 artifacts cannot participate in a C4 pass.");
-    check(!fs.existsSync(path.join(__dirname, "..", ".tmp", "vela-provider-profile-qualification")), "Rubric tests do not create the C4 evidence root.");
+    const evidenceAfter = evidenceArtifactSnapshot();
+    check(JSON.stringify(evidenceAfter) === JSON.stringify(evidenceBefore), "Rubric tests preserve the existing C4 evidence artifact set, sizes, and last-write timestamps without creating partial evidence.");
 
     console.log("test-vela-provider-qualification-rubric: " + assertions + " assertions passed.");
 }
