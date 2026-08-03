@@ -23,6 +23,7 @@ Before zipping or copying the project folder:
 - Include all of:
   - `client/`
   - `host/`
+  - `helpers/`
   - `CSXS/`
   - `docs/`
   - `AGENTS.md`
@@ -93,10 +94,10 @@ Historical 0.2.4 stable baseline note:
 - Treat 0.2.4 as the stable main baseline.
 - Do not create or move tags during documentation-only handoff work.
 
-Current 0.2.5 stable-release note:
+0.2.5 shipped-baseline note:
 
 - Procedural Appearance Phase 1 Lab and the production procedural appearance MVP shipped in 0.2.5.
-- The current release metadata is `0.2.5` in `VERSION`, both manifest version fields, and `AEToolbox.projectVersion`; `AEToolbox.hostApiVersion` remains `1.0.0`.
+- The shipped release metadata was `0.2.5` in `VERSION`, both manifest version fields, and `AEToolbox.projectVersion`; `AEToolbox.hostApiVersion` remained `1.0.0`.
 - 0.2.5 is published and the `v0.2.5` tag has been created.
 - Main plan: `docs/design/procedural-appearance.md`.
 - Phase 1 adds a Developer Mode-only Lab and shared procedural engine skeleton.
@@ -116,11 +117,21 @@ Current 0.2.5 stable-release note:
 - Developer Mode now exposes a collapsible `Procedural Appearance Parameters` group using the existing Settings range/number interaction. Shared engine fields plus the seven Theme Map presentation fields (`paletteDarkness`, `paletteMidLift`, `paletteLightLift`, `paletteDarkChroma`, `paletteLightChroma`, `paletteMapMidpoint`, and `paletteMapContrast`) are persisted in the existing `AEToolbox.settings.v1` object. Engine fields go to both source renderers; mapping fields go to Home/background Theme-mapped presentation only. Reset uses shared defaults; disabling Developer Mode only hides the controls.
 - Shared defaults currently prioritize a cleaner, smaller highlight structure: `brightness: 0.88`, `highlightConcentration: 0.52`, `highlightArea: 0.06`, `contrast: 0.92`, `depth: 0.80`. Theme Map defaults are `paletteDarkness: 0.035`, `paletteMidLift: 0.045`, `paletteLightLift: 0.035`, `paletteDarkChroma: 0.94`, `paletteLightChroma: 0.96`, `paletteMapMidpoint: 0.5`, and `paletteMapContrast: 1`. Do not add a second background defaults table. Engine parameter changes are source invalidations; mapping and theme endpoint changes remain presentation invalidations.
 - Procedural background settings use the existing `AEToolbox.settings.v1` object. Do not add a new storage key or change `AEToolbox.background.v1`; classic BackgroundEngine controls and presets remain compatible.
-- `AEToolbox.settings.v1` is the formal Settings schema/runtime storage contract for the 0.2.5 release line. Do not introduce a pre-release v2 migration.
+- `AEToolbox.settings.v1` is the formal Settings schema/runtime storage contract for the 0.3.0 release line. Do not introduce a release-preparation v2 migration.
 - `followIconTheme + paletteScale` must keep a palette-independent source luminance field. Palette id/signature and derived endpoints belong only to presentation signature/LUT; only manual `procedural` source palette changes invalidate source.
 - Do not change `VERSION`, `CSXS/manifest.xml`, helper scripts, color picker, Ad Component Kit, Shape Add, or production Settings semantics in this workstream.
 - 0.2.5 continues from the 0.2.4 stable feature line with deterministic procedural icons and an optional procedural Home background MVP. Keep background source identity separate from icon identity.
 - Do not continue Windows eyedropper overlay lifecycle fixes in this workstream; those limitations remain documented known issues.
+
+Current 0.3.0 release-preparation note:
+
+- `VERSION`, both manifest version fields, and `AEToolbox.projectVersion` are `0.3.0`; `AEToolbox.hostApiVersion` remains `1.0.0`.
+- Vela ships as an **Experimental Preview**. D2-A, D2-B, and D2-C are complete, but no model is qualified, recommended, or selected as the default.
+- The Provider remains disabled by default and requires explicit session-only acknowledgement and opt-in. Readiness does not grant qualification or production authority, and reload clears acknowledgement, enablement, and readiness while retaining endpoint/model configuration.
+- Production activation and formal UI-D2 default enablement remain locked by the source-owned Activation Policy. The legacy Vela fallback remains available.
+- Release publication still requires AE smoke on this release branch, merge through `dev` and `main`, and creation of a new `v0.3.0` tag from `main`.
+
+0.3.0 AE release smoke should cover startup and reload, Home and representative registry tools, both languages/themes, Vela Experimental/Not qualified presentation, Provider default-off and explicit session opt-in, text-only and explicit proposal flows, Review/Confirmation/Host authority boundaries, disable/cancel/late-response behavior, reload state clearing, legacy Vela fallback, and absence of bootstrap/controller console errors.
 
 On a new machine:
 
@@ -399,14 +410,14 @@ Risk areas:
 
 ## Historical 0.2.4 Release Baseline
 
-0.2.4 has been merged to `main` and tagged `v0.2.4`. Treat it as the previous stable baseline for current 0.2.5.
+0.2.4 was merged to `main` and tagged `v0.2.4`; 0.2.5 subsequently shipped and is the previous stable baseline for the current 0.3.0 release preparation.
 
 Baseline facts:
 
 1. `CHANGELOG.md` contains the final 0.2.4 section.
 2. No `package.json` version file exists in the current workspace.
 3. `v0.2.4` exists and is contained by `main`.
-4. Current release metadata is `0.2.5`, and the `v0.2.5` tag is published.
+4. The historical release metadata was `0.2.5`, and the `v0.2.5` tag is published.
 
 For future releases, create a dedicated release branch, run AE regression, update release metadata only when requested, merge through `dev` and `main`, then create a new version tag from `main`.
 

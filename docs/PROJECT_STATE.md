@@ -7,28 +7,27 @@ This is an After Effects CEP Extension panel. The visible UI title is **Lomond C
 Current project version:
 
 ```text
-0.2.5
+0.3.0
 ```
 
 Current stable baseline:
 
 ```text
-0.2.4 on main, tagged v0.2.4
+0.2.5 on main, tagged v0.2.5
 ```
 
 Current release track:
 
 ```text
-0.2.5 is the current stable release on `main`. The `v0.2.5` tag has been created and published. The next development version has not been designated.
+0.3.0 is in release preparation as the Vela **Experimental Preview**. Publication still requires AE release smoke, merge through `dev` and `main`, and a new `v0.3.0` tag.
 ```
 
-`VERSION` and `CSXS/manifest.xml` identify the current stable release as `0.2.5`. Do not assume or introduce a next version without a dedicated release task.
+`VERSION`, both `CSXS/manifest.xml` version fields, and `AEToolbox.projectVersion` identify the release candidate as `0.3.0`; `AEToolbox.hostApiVersion` remains `1.0.0`.
 
 ## Vela 0.3.0 D-Phase Closeout
 
 Vela D2-A, D2-B, and D2-C are complete. The D phase is complete for the planned
-0.3.0 product scope, whose release status is **Experimental Preview**; this is
-development status and does not change the current `0.2.5` release metadata.
+0.3.0 product scope, whose release status is **Experimental Preview**.
 
 `client/js/vela/velaActivationPolicy.js` is the single trusted local owner of
 Vela product activation state. It permits explicit, session-only experimental
@@ -50,9 +49,9 @@ Historical 0.2.4 stable baseline:
 - Git state confirms tag `v0.2.4` exists and `main` contains it.
 - 0.2.4 is the stable release baseline; do not describe it as still awaiting main/tag publication.
 
-The current release metadata is separate from that historical baseline: `VERSION`, both manifest version fields, and `AEToolbox.projectVersion` are `0.2.5`; `AEToolbox.hostApiVersion` remains `1.0.0`.
+The current release metadata is separate from that historical baseline: `VERSION`, both manifest version fields, and `AEToolbox.projectVersion` are `0.3.0`; `AEToolbox.hostApiVersion` remains `1.0.0`.
 
-Current 0.2.5 stable release status:
+0.2.5 shipped baseline retained in 0.3.0:
 
 - Main design document: `docs/design/procedural-appearance.md`.
 - Phase 1 Lab is implemented as a Developer Mode-only registry tool: `host/tools/proceduralAppearanceLab.tool.jsx`.
@@ -478,7 +477,7 @@ Current Settings storage:
 - `AEToolbox.backgroundSettingsCollapsed.v1`
 - `aeToolbox.language`
 
-Settings schema contract for the 0.2.5 release line:
+Settings schema contract for the 0.3.0 release line:
 
 - `AEToolbox.settings.v1` is both the schema-declared and runtime production Settings key.
 - No `AEToolbox.settings.v2` migration is planned as part of release hardening.
@@ -645,14 +644,14 @@ Non-goals:
 
 ## Historical 0.2.4 Release Baseline
 
-0.2.4 has been merged to `main` and tagged `v0.2.4`. Treat it as the previous stable baseline for current 0.2.5.
+0.2.4 was merged to `main` and tagged `v0.2.4`; 0.2.5 subsequently shipped and is the previous stable baseline for the current 0.3.0 release preparation.
 
 Baseline checks:
 
 1. No `package.json` version file exists in the current workspace.
 2. `CHANGELOG.md` has the final 0.2.4 section.
 3. Git tag `v0.2.4` exists and is contained by `main`.
-4. Current release metadata is `0.2.5`; the `v0.2.5` tag is published.
+4. Historical 0.2.5 release metadata was published and the `v0.2.5` tag remains fixed.
 
 For future releases, create a dedicated release branch and update `VERSION`, `CSXS/manifest.xml`, and release notes only when explicitly requested.
 

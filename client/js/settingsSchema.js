@@ -3,7 +3,7 @@
  *
  * This file documents the app-level Settings data model.
  * The production panel uses this schema for the migrated Settings
- * sections. Production storage remains v1 for the 0.2.5 release line;
+ * sections. Production storage remains v1 for the 0.3.0 release line;
  * behavior adapters still preserve the BackgroundEngine runtime where required.
  */
 (function (global) {
@@ -21,8 +21,8 @@
         notes: [
             "Settings is an app-level core panel, not a registry tool.",
             "Migrated Settings fields are rendered from this app-level schema.",
-            "AEToolbox.settings.v1 remains the formal production Settings storage key for 0.2.5.",
-            "No v2 Settings migration is included in the 0.2.5 release hardening pass.",
+            "AEToolbox.settings.v1 remains the formal production Settings storage key for 0.3.0.",
+            "No v2 Settings migration is included in the 0.3.0 release preparation.",
             "Developer Mode is a core setting for debug/probe/lab registry tool visibility.",
             "Background Engine UI is schema-rendered; BackgroundEngine behavior remains the runtime authority."
         ],

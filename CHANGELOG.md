@@ -12,6 +12,41 @@ This project follows simple semantic versioning for development handoff:
 
 _No unreleased changes._
 
+## [0.3.0] - 2026-08-03
+
+### Added
+
+- Added the persistent Vela conversation Surface with accessible composer, transcript, status, resize, and lifecycle behavior.
+- Added explicit, session-only opt-in for the experimental local LM Studio Provider. Provider access remains disabled by default.
+- Added loopback-only endpoint validation and local loaded-model readiness checks for `127.0.0.1`, `localhost`, and `[::1]`.
+- Added a text conversation path and a guarded `set-opacity-v1` proposal path for explicit opacity edits.
+- Added independent Review, Confirmation, Preflight, ExecutionAdapter, and Host boundaries so model proposals cannot execute directly.
+- Added a frozen local Activation Policy that identifies Vela as an Experimental Preview and locks production activation while no qualified default model exists.
+- Added profile-aware Provider qualification diagnostics, a frozen evaluation rubric, and extensive offline regression infrastructure without selecting a default model.
+- Added Surface accessibility, cancellation, late-response protection, reload, suspend/resume, and duplicate-bootstrap regression coverage.
+
+### Changed
+
+- Consolidated Vela Protocol, Context, Provider, Router, execution, Surface, and bootstrap ownership behind bounded local module contracts.
+- Changed Provider requests to deterministic profile-specific routing: ordinary conversation accepts text, while explicit opacity extraction accepts only a guarded local proposal.
+- Tightened deterministic English and Chinese opacity-command recognition without delegating intent classification to the model.
+- Integrated Vela Settings and Surface entry points with the existing app-level Settings and Registry Renderer composition while retaining the legacy Vela fallback.
+- Expanded test, diagnostic, generated-report, documentation, browser VM, and production-composition coverage for the complete Vela path.
+
+### Safety
+
+- The experimental Provider is disabled by default, and production activation is locked with `no-qualified-default-model`.
+- No local model is qualified, recommended, or selected as the production default in this release.
+- A `localProposal` never executes automatically; Review is not Confirmation, and Confirmation does not itself grant Host authority.
+- Readiness means only that the configured local model instance is loaded; it is not qualification.
+- Reload clears session acknowledgement, enablement, and readiness while retaining only endpoint and Model ID configuration.
+- Host execution receives only locally validated trusted payloads after the complete approval and preflight chain.
+
+### Known Issues
+
+- At narrow panel widths, the Vela status/action row and experimental Settings controls can appear cramped or truncated.
+- These layout issues are deferred to 0.3.1 and have no safety or execution-path impact.
+
 ## [0.2.5] - 2026-07-14
 
 ### Added

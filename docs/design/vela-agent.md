@@ -138,16 +138,17 @@ core path. The formal storage contract is `AEToolbox.settings.v1` in
 `localStorage`. Registry tool values use their own declared storage keys, and
 Palette Store data uses `lomond.proceduralPaletteStore.v1`.
 
-The formal Vela Settings section owns the existing `velaProviderModel` value
-inside that same Settings object. It uses the established default and
-normalization contract, and only accepts a manual LM Studio model identifier.
-Vela connects only to the fixed local endpoint
-`http://127.0.0.1:1234/v1/chat/completions`; endpoint, credentials, network
-permission and provider runtime state are not Settings values. The Surface
-Settings button opens the existing global Settings flow and focuses this section
-only after that flow has revealed its content. Credentials must not be stored
-as plain localStorage values by default; cloud credentials require a deliberate
-credential storage decision or a user-supplied session token.
+The formal Vela Settings section owns the endpoint and model identifier inside
+that same Settings object. It accepts only a manual LM Studio model identifier
+and a loopback endpoint (`127.0.0.1`, `localhost`, or `[::1]`). The normalized
+base URL derives `/api/v1/models` readiness and `/v1/chat/completions` request
+URLs. Acknowledgement, Provider enablement, readiness, authority state, and
+transcript content are session-only and must not be restored after reload.
+Readiness is not qualification. The Surface Settings button opens the existing
+global Settings flow and focuses this section only after that flow has revealed
+its content. Credentials must not be stored as plain localStorage values by
+default; cloud credentials require a deliberate credential storage decision or
+a user-supplied session token.
 
 ### Lifecycle and shutdown
 
@@ -920,21 +921,21 @@ not a second navigation system.
 
 ### Settings integration
 
-UI-D1 has completed the formal Vela Settings integration through the existing
-app-level Settings schema and renderer. Its only persisted Vela field is
-`velaProviderModel`, with the default `qwen3.5-4b`; it continues to use
-`AEToolbox.settings.v1` and `normalizeVelaProviderModel()` for reads, saves and
-validation. Vela connects only to the fixed local endpoint
-`http://127.0.0.1:1234/v1/chat/completions`, which is displayed as read-only
-information and cannot be configured. UI-D1 adds no model discovery, connection
-test, API key, remote endpoint, or additional network request. Vela controller
-state must not be persisted as an executable plan.
+Vela Settings integration uses the existing app-level Settings schema and
+renderer. Endpoint and model identifier are persisted in `AEToolbox.settings.v1`;
+acknowledgement, Provider enablement, readiness, request/candidate authority, and
+transcript state are session-only. The endpoint accepts only loopback hosts
+(`127.0.0.1`, `localhost`, or `[::1]`), and its normalized base URL derives the
+LM Studio `/api/v1/models` readiness URL and `/v1/chat/completions` request URL.
+Readiness confirms only the configured local service/model state; it does not
+grant qualification, select a default, or unlock production activation.
 
-UI-D2, the old Vela Tool retirement, has not started and remains BLOCKED. The
-old Tool must remain available; UI-D1 completion is not authorization to remove
-its entry points. Before UI-D2 can be approved, manual opacity proposal and its
-corresponding regression proof for the retained complete path require a
-replacement or a formal product decision.
+The 0.3.0 Surface requires explicit opt-in after every reload and otherwise
+keeps the Provider disabled. Formal UI-D2 default enablement remains false, no
+model is qualified or selected as a default, and the retained legacy Vela Tool
+remains available. Any future default-on activation or legacy retirement is a
+separate product decision and must preserve Intent Gate, Review, Confirmation,
+Preflight, ExecutionAdapter, and Host authority boundaries.
 
 ### Legacy Tool context refresh
 
