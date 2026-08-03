@@ -34,6 +34,24 @@
     function errorDisplayKey(code) {
         return typeof code === "string" && Object.prototype.hasOwnProperty.call(ERROR_DISPLAY_KEYS, code) ? ERROR_DISPLAY_KEYS[code] : "vela.surfaceGenericError";
     }
+    function projectSurfaceState(providerState, confirmationState, composerValue, experimentalEnabled) {
+        var provider = providerState && typeof providerState.state === "string" ? providerState.state : "idle";
+        var confirmation = confirmationState && typeof confirmationState.state === "string" ? confirmationState.state : "idle";
+        var state = "idle";
+        if (experimentalEnabled !== true) { state = "experimental-unavailable"; }
+        else if (confirmation === "executing") { state = "executing"; }
+        else if (confirmation === "confirmation-ready") { state = "awaiting-confirmation"; }
+        else if (confirmation === "execution-failed") { state = "error"; }
+        else if (confirmation === "execution-completed") { state = "completed"; }
+        else if (confirmation === "rejected") { state = "cancelled"; }
+        else if (provider === "pending") { state = "requesting"; }
+        else if (provider === "proposal-ready") { state = "reviewing"; }
+        else if (provider === "failed" || provider === "intent-rejected") { state = "error"; }
+        else if (provider === "cancelled") { state = "cancelled"; }
+        else if (provider === "completed") { state = "completed"; }
+        else if (typeof composerValue === "string" && /\S/.test(composerValue)) { state = "composing"; }
+        return Object.freeze({ state: state, experimental: true, qualified: false, manualOptInRequired: true });
+    }
     function create() {
         var items = [];
         var pending = false;
@@ -86,5 +104,5 @@
         function reset() { items = []; pending = false; confirmationState = "idle"; terminalGeneration += 1; return snapshot(); }
         return Object.freeze({ begin: begin, apply: apply, applyConfirmation: applyConfirmation, clearConfirmationTerminal: clearConfirmationTerminal, reset: reset, getSnapshot: snapshot });
     }
-    return Object.freeze({ create: create, errorDisplayKey: errorDisplayKey });
+    return Object.freeze({ create: create, errorDisplayKey: errorDisplayKey, projectSurfaceState: projectSurfaceState });
 }));

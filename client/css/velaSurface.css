@@ -183,6 +183,12 @@
     white-space: nowrap;
 }
 
+.vela-experimental-status {
+    color: var(--text-muted);
+    font-size: calc(10px * var(--ui-scale));
+    white-space: nowrap;
+}
+
 .vela-action-slot {
     grid-area: actions;
     position: relative;

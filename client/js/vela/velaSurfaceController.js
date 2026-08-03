@@ -15,6 +15,7 @@
         var TranscriptView = options && options.TranscriptView;
         var ComposerView = options && options.ComposerView;
         var ConfirmationView = options && options.ConfirmationView;
+        var experimentalEnabled = options && options.experimentalEnabled === true;
         var elements;
         var presentation;
         var transcript;
@@ -35,20 +36,20 @@
             if (providerState && providerState.state === "proposal-ready") { return "review"; }
             return "send";
         }
-        function statusText(providerState, confirmationState) {
-            var current = confirmationState && confirmationState.state;
-            if (current === "executing") { return t("vela.surfaceStatusExecuting"); }
-            if (current === "confirmation-ready") { return t("vela.surfaceStatusConfirmation"); }
-            if (current === "execution-completed") { return t("vela.surfaceStatusExecutionCompleted"); }
-            if (current === "rejected") { return t("vela.surfaceStatusRejected"); }
-            if (current === "execution-failed") { return t("vela.surfaceStatusExecutionFailed"); }
-            if (providerState && providerState.state === "pending") { return t("vela.surfaceStatusPending"); }
-            if (providerState && providerState.state === "completed") { return t("vela.surfaceStatusCompleted"); }
-            if (providerState && providerState.state === "cancelled") { return t("vela.surfaceStatusCancelled"); }
-            if (providerState && providerState.state === "failed") { return t("vela.surfaceStatusFailed"); }
-            if (providerState && providerState.state === "intent-rejected") { return t("vela.surfaceStatusIntentRejected"); }
-            if (providerState && providerState.state === "proposal-ready") { return t("vela.surfaceStatusProposalReady"); }
-            return t("vela.surfaceStatusSetup");
+        function projectedStatusText(state) {
+            var keys = {
+                "experimental-unavailable": "vela.surfaceStatusExperimentalUnavailable",
+                "idle": "vela.surfaceStatusSetup",
+                "composing": "vela.surfaceStatusComposing",
+                "requesting": "vela.surfaceStatusPending",
+                "reviewing": "vela.surfaceStatusProposalReady",
+                "awaiting-confirmation": "vela.surfaceStatusConfirmation",
+                "executing": "vela.surfaceStatusExecuting",
+                "completed": "vela.surfaceStatusCompleted",
+                "cancelled": "vela.surfaceStatusCancelled",
+                "error": "vela.surfaceStatusFailed"
+            };
+            return t(keys[state] || "vela.surfaceStatusFailed");
         }
         function effectiveConfirmationState(state) {
             var current = state && state.state;
@@ -63,6 +64,7 @@
             var confirmationState;
             var snapshot;
             var action;
+            var projection;
             if (disposed || suspended || !elements) { return; }
             providerState = provider.getState();
             confirmationState = effectiveConfirmationState(confirmation.getState());
@@ -70,9 +72,12 @@
             snapshot = presentation.applyConfirmation(confirmationState, snapshot);
             transcript.render(snapshot);
             action = actionState(providerState, confirmationState);
-            composer.render(action);
+            projection = PresentationModel.projectSurfaceState(providerState, confirmationState, elements.composer.value, experimentalEnabled);
+            if (!experimentalEnabled) { action = "send"; }
+            composer.render(action, experimentalEnabled);
             confirmationView.render(action, confirmationState);
-            elements.statusText.textContent = statusText(providerState, confirmationState);
+            elements.statusText.textContent = projectedStatusText(projection.state);
+            elements.root.setAttribute("data-vela-surface-state", projection.state);
             elements.statusSlot.setAttribute("data-vela-provider-state", providerState && providerState.state || "idle");
             elements.statusSlot.setAttribute("data-vela-confirmation-state", confirmationState && confirmationState.state || "idle");
         }
@@ -80,7 +85,7 @@
         function send(message) {
             var operation;
             var providerState;
-            if (disposed || suspended || !mounted || !message || !/\S/.test(message)) { return; }
+            if (disposed || suspended || !mounted || !experimentalEnabled || !message || !/\S/.test(message)) { return; }
             try { operation = provider.send(message); } catch (ignored) { return; }
             providerState = provider.getState();
             if (!providerState || providerState.state !== "pending") { Promise.resolve(operation).then(function () {}, function () {}); return; }
@@ -101,7 +106,7 @@
             elements = surface.getElementsForTest();
             presentation = PresentationModel.create();
             transcript = TranscriptView.create({ root: elements.transcriptScroll, intro: elements.transcriptMessage, t: t });
-            composer = ComposerView.create({ composer: elements.composer, actionSlot: elements.actionSlot, t: t, onSend: send, onCancel: cancel });
+            composer = ComposerView.create({ composer: elements.composer, actionSlot: elements.actionSlot, t: t, onSend: send, onCancel: cancel, onDraftChange: synchronize });
             confirmationView = ConfirmationView.create({ actionSlot: elements.actionSlot, t: t, onReview: review, onApprove: approve, onReject: reject });
             mounted = true; synchronize(); return true;
         }
