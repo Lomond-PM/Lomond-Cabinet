@@ -1,0 +1,43 @@
+{
+  "models": [
+    {
+      "type": "llm",
+      "key": "qwen/qwen3.5-9b",
+      "quantization": { "name": "Q4_K_M" },
+      "loaded_instances": [
+        {
+          "id": "qwen/qwen3.5-9b",
+          "config": { "context_length": 8192 }
+        }
+      ],
+      "capabilities": {
+        "reasoning": {
+          "metadata": {
+            "catalog": {
+              "provider": {
+                "runtime": {
+                  "details": {
+                    "source": {
+                      "kind": "lm-studio-native"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "llm",
+      "key": "qwen3.5-4b",
+      "quantization": { "name": "Q6_K" },
+      "loaded_instances": []
+    },
+    {
+      "type": "embedding",
+      "key": "text-embedding-nomic-embed-text-v1.5",
+      "loaded_instances": []
+    }
+  ]
+}

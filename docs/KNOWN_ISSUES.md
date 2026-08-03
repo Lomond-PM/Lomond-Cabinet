@@ -205,3 +205,18 @@ Status:
 Accepted 0.2.5 limitation.
 
 The first source/geometry parameter change after plugin startup may incur a one-time render warm-up delay. Subsequent source changes are noticeably faster. This is currently acceptable for the Developer Mode procedural controls. Palette/theme presentation changes should remain presentation-only and must not trigger the complete source rebuild.
+
+## Vela narrow status row reflow
+
+Status:
+
+Deferred to 0.3.1. The D2-A AE CEP Surface smoke test passed with this known layout issue.
+
+At narrow panel widths, the Vela status row does not reflow above the action row and can
+appear cramped or truncated in the bottom controls. This has no safety or execution-path
+impact. Do not temporarily change the breakpoint, DOM order, or grid structure as part of
+D2-A closeout; address the reflow in the dedicated 0.3.1 layout pass.
+
+The Vela experimental Settings helper text, acknowledgement, actions, and readiness
+feedback are also cramped at narrow panel widths. This is deferred to 0.3.1 and has no
+safety or execution-path impact.

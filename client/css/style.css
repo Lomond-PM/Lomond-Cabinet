@@ -931,6 +931,16 @@ body:not(.i18n-ready) .app-shell {
     color: var(--danger);
 }
 
+.vela-manual-opacity-validation {
+    min-height: calc(14px * var(--ui-scale));
+    color: var(--text-secondary);
+    font-size: var(--font-small);
+}
+
+.vela-manual-opacity-validation.is-error {
+    color: var(--danger);
+}
+
 .palette-json-replace-confirm {
     display: none;
     flex-wrap: wrap;
@@ -3422,6 +3432,32 @@ p {
 
 .registry-schema-field.is-registry-hidden {
     display: none;
+}
+
+.vela-tool-icon {
+    border-color: var(--gold-soft);
+    background: rgba(214, 178, 94, 0.18);
+}
+
+.vela-panel {
+    display: flex;
+    flex-direction: column;
+    gap: calc(10px * var(--ui-scale));
+}
+
+.vela-context-summary,
+.vela-review-card {
+    display: flex;
+    flex-direction: column;
+    gap: calc(6px * var(--ui-scale));
+}
+
+.vela-review-card[hidden] {
+    display: none;
+}
+
+.vela-opacity-input {
+    max-width: calc(130px * var(--ui-scale));
 }
 
 .registry-button-row {

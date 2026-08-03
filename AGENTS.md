@@ -467,11 +467,11 @@ Known 0.2.4 limitations remain: taskbar may briefly flash, first-run Esc cancell
 
 Future helper work should prefer a dedicated native helper / C# helper or a separately scoped helper replacement. Do not change the ColorSampler provider contract, color model, H/S/V/R/G/B sliders, popup positioning, Settings behavior, or registry field behavior unless explicitly requested.
 
-### 0.2.4 previous baseline and 0.2.5 stable release
+### 0.2.5 previous baseline and 0.3.0 release preparation
 
-0.2.4 is the previous stable main baseline and is tagged `v0.2.4`. 0.2.5 is the current stable release and is tagged `v0.2.5`; `VERSION` and `CSXS/manifest.xml` are `0.2.5`. The next development version has not been designated.
+0.2.5 is the previous stable main baseline and is tagged `v0.2.5`. 0.3.0 is the current release-preparation line; `VERSION` and both `CSXS/manifest.xml` version fields are `0.3.0`. Do not describe 0.3.0 as published until it has merged to `main` and a new tag has been created there.
 
-0.2.5 shipped Procedural Appearance Phase 1 and its production Home icon/background paths. Do not claim a next version is released or alter release metadata without a dedicated release task.
+0.3.0 adds the Vela Experimental Preview. D2 is complete, but Provider activation remains default-off and session-only, no model is qualified/recommended/default, production activation remains locked, and the legacy Vela fallback remains available. Do not weaken these boundaries during release preparation.
 
 ## Release Workflow
 

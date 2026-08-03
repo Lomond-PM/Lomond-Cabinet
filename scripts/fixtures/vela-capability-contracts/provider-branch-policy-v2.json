@@ -1,0 +1,16 @@
+{
+  "fixtureType": "derived-deterministic-baseline",
+  "builderRevision": "vela-capability-prompt-builder-v2",
+  "branchPolicyRevision": "vela-branch-policy-v2",
+  "capabilityId": "set-opacity-v1",
+  "capabilityRevision": "vela-capability-contract-v1",
+  "previousPromptSha256": "2109193792f682367499f7594a6644e758ea55b46522c0bc526c092a35de5c92",
+  "currentPromptSha256": "340c06c86fa01b7f0382d6bf3d365dc6e007af4e6b371c7728eb41ac8f08ebee",
+  "responseFormatSha256": "9b5cce993021397d828e07110b5e7a8b6a68b68e5362cc54840e6aa8486e3b51",
+  "previousStableRequestBodySha256": "b7e325028432a7572b89ac38105127c30f35b3b411b8b9f5433ad6a528d9fa76",
+  "currentStableRequestBodySha256": "c450dbe475cd610887884d0b4f9a37312dac5d81129bfde57ff59c13bd6937cb",
+  "messageRoleOrder": ["system", "assistant", "user"],
+  "protocolVersion": "vela.model-response.v1",
+  "changeReason": "model-visible branch-before-format policy with text uncertainty fallback",
+  "generatedBy": "C3-A deterministic offline fixture"
+}

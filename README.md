@@ -15,16 +15,16 @@ AE Toolbox
 Current project version:
 
 ```text
-0.2.5
+0.3.0
 ```
 
 Current release track:
 
 ```text
-0.2.5 is the current stable release. 0.2.4 is the previous stable release, and both `v0.2.4` and `v0.2.5` are published tags. The next development version has not been designated.
+0.3.0 is the current release-preparation line. It ships Vela as an Experimental Preview; `v0.2.5` remains the latest published tag until the 0.3.0 release commit is merged and tagged.
 ```
 
-`VERSION` and `CSXS/manifest.xml` identify the current stable release as 0.2.5. Do not assume a next version until a separate release task defines it.
+`VERSION` and `CSXS/manifest.xml` identify this release as 0.3.0.
 
 ## Project Type
 
@@ -82,6 +82,26 @@ Confirmed active frontend tools:
 - Shape Add / Shape Builder
 
 The Home view also contains a disabled More Tools card.
+
+### Vela Experimental Preview
+
+Vela provides a persistent conversation Surface for local, approval-driven After
+Effects assistance. Its optional LM Studio Provider is experimental, not qualified,
+and disabled by default. The endpoint is restricted to loopback addresses
+(`127.0.0.1`, `localhost`, or `[::1]`). Endpoint and Model ID configuration may be
+saved, but acknowledgement, readiness, and session enablement are never persisted;
+every panel reload requires a new explicit opt-in.
+
+Readiness means only that the configured local model instance is currently loaded.
+It is not model qualification. No model is qualified, recommended, or selected as
+the production default in 0.3.0, and production activation remains locked. A model
+opacity proposal cannot execute directly: it must pass the local safety checks and
+then proceed through explicit Review and Confirmation before any trusted Host action.
+The legacy Vela Tool remains available as a fallback.
+
+See [`docs/design/vela-agent.md`](docs/design/vela-agent.md) for the detailed safety
+architecture and [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) for accepted preview
+limitations.
 
 Developer Mode tools are hidden from the normal Home view and appear only when the Developer Mode setting is enabled:
 
@@ -257,7 +277,7 @@ Current 0.2.4 release highlights:
 - Ad Component Kit removable artifacts for newly created Feature Stack / Icon Grid output using Lomond metadata and signed tool expressions.
 - Shape Add Add Native Components / 添加原生组件 section collapse.
 
-0.2.4 has been published to `main` and tagged `v0.2.4`. 0.2.5 is now the stable release and includes the Procedural Appearance Lab, production Colorful and Theme-mapped Home icons, and optional procedural Home background support while preserving the classic BackgroundEngine fallback.
+0.2.5 is the previous published release and includes the Procedural Appearance Lab, production Colorful and Theme-mapped Home icons, and optional procedural Home background support while preserving the classic BackgroundEngine fallback. These paths remain part of 0.3.0.
 
 ## Continue Development On Another Machine
 

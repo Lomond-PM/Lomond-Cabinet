@@ -38,6 +38,7 @@ _backups/
 scratch/
 tmp/
 temp/
+/.tmp/vela-model-qualification/
 
 # Build / package outputs
 build/

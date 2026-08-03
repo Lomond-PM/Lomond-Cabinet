@@ -8,7 +8,7 @@ AEToolbox.ping = function () {
 
 (function () {
     AEToolbox.hostApiVersion = "1.0.0";
-    AEToolbox.projectVersion = "0.2.5";
+    AEToolbox.projectVersion = "0.3.0";
     AEToolbox.version = AEToolbox.hostApiVersion;
     AEToolbox.tools = AEToolbox.tools || {};
 
@@ -287,6 +287,160 @@ AEToolbox.ping = function () {
 #include "aeUtils.jsx"
 #include "effectUtils.jsx"
 #include "shapeUtils.jsx"
+(function (velaHostNamespace) {
+    var RUNTIME_REVISION = "vela-host-runtime-v5";
+    var runtimeDescriptor;
+    var jsonDescriptor;
+    var contextDescriptor;
+    var executionDescriptor;
+    var existingRuntime;
+    var staging;
+    var stagedJson;
+    var stagedContext;
+    var stagedExecution;
+    var stagedDigest;
+    var stagedAuthorityVerifier;
+    var runtime;
+    var existingJson;
+    var existingContext;
+    var existingExecution;
+    var existingReload;
+
+    function runtimeError() {
+        var error = new Error("The Vela Host runtime conflicts with existing state.");
+        error.code = "VELA_HOST_RUNTIME_CONFLICT";
+        return error;
+    }
+
+    function ownDataDescriptor(value, key) {
+        var descriptor;
+        try {
+            descriptor = Object.getOwnPropertyDescriptor(value, key);
+        } catch (ignoredDescriptor) {
+            throw runtimeError();
+        }
+        if (!descriptor || descriptor.get || descriptor.set || !Object.prototype.hasOwnProperty.call(descriptor, "value")) {
+            throw runtimeError();
+        }
+        return descriptor;
+    }
+
+    function optionalOwnDataDescriptor(value, key) {
+        if (!Object.prototype.hasOwnProperty.call(value, key)) {
+            return null;
+        }
+        return ownDataDescriptor(value, key);
+    }
+
+    function validateJson(json) {
+        return json && ownDataDescriptor(json, "revision").value === "vela-json-host-v1" &&
+            typeof ownDataDescriptor(json, "parseBounded").value === "function" &&
+            typeof ownDataDescriptor(json, "stringifyBounded").value === "function" &&
+            typeof ownDataDescriptor(json, "utf8ByteLength").value === "function";
+    }
+
+    function validateContext(context) {
+        return context && ownDataDescriptor(context, "hostAdapterRevision").value === "vela-context-host-v4" &&
+            typeof ownDataDescriptor(context, "handle").value === "function" &&
+            typeof ownDataDescriptor(context, "reload").value === "function";
+    }
+
+    function validateExecution(execution) {
+        return execution && ownDataDescriptor(execution, "hostExecutionRevision").value === "vela-execution-host-v1" &&
+            typeof ownDataDescriptor(execution, "handle").value === "function";
+    }
+
+    function publish(name, value, enumerable) {
+        try {
+            Object.defineProperty(velaHostNamespace, name, {
+                configurable: false,
+                enumerable: enumerable,
+                value: value,
+                writable: false
+            });
+        } catch (ignoredPublish) {
+            throw runtimeError();
+        }
+        if (velaHostNamespace[name] !== value) {
+            throw runtimeError();
+        }
+    }
+
+    runtimeDescriptor = optionalOwnDataDescriptor(velaHostNamespace, "__velaHostRuntimeV1");
+    jsonDescriptor = optionalOwnDataDescriptor(velaHostNamespace, "VelaJson");
+    contextDescriptor = optionalOwnDataDescriptor(velaHostNamespace, "VelaContext");
+    executionDescriptor = optionalOwnDataDescriptor(velaHostNamespace, "VelaExecution");
+
+    if (runtimeDescriptor) {
+        existingRuntime = runtimeDescriptor.value;
+        existingJson = existingRuntime && ownDataDescriptor(existingRuntime, "json").value;
+        existingContext = existingRuntime && ownDataDescriptor(existingRuntime, "context").value;
+        existingExecution = existingRuntime && ownDataDescriptor(existingRuntime, "execution").value;
+        existingReload = existingRuntime && ownDataDescriptor(existingRuntime, "reload").value;
+        if (!existingRuntime || ownDataDescriptor(existingRuntime, "revision").value !== RUNTIME_REVISION ||
+                !validateJson(existingJson) || !validateContext(existingContext) || !validateExecution(existingExecution) ||
+                typeof existingReload !== "function" ||
+                !jsonDescriptor || jsonDescriptor.value !== existingJson ||
+                !contextDescriptor || contextDescriptor.value !== existingContext || !executionDescriptor || executionDescriptor.value !== existingExecution) {
+            throw runtimeError();
+        }
+        existingReload();
+        return;
+    }
+
+    if (jsonDescriptor || contextDescriptor || executionDescriptor ||
+            Object.prototype.hasOwnProperty.call(velaHostNamespace, "__velaHostBootstrapV1")) {
+        throw runtimeError();
+    }
+    if (typeof Object.defineProperty !== "function" ||
+            (typeof Object.isExtensible === "function" && !Object.isExtensible(velaHostNamespace))) {
+        throw runtimeError();
+    }
+
+    staging = {};
+    (function (AEToolbox) {
+#include "vela/velaJson.jsx"
+#include "vela/velaContext.jsx"
+    }(staging));
+
+    stagedJson = staging.VelaJson;
+    stagedContext = staging.VelaContext;
+    stagedDigest = ownDataDescriptor(staging, "__velaPropertyValueDigestV1").value;
+    stagedAuthorityVerifier = ownDataDescriptor(staging, "__velaVerifyExecutionAuthorityV1").value;
+    if (typeof stagedDigest !== "function" || typeof stagedAuthorityVerifier !== "function") {
+        throw runtimeError();
+    }
+    delete staging.__velaPropertyValueDigestV1;
+    delete staging.__velaVerifyExecutionAuthorityV1;
+    if (Object.prototype.hasOwnProperty.call(staging, "__velaPropertyValueDigestV1") || Object.prototype.hasOwnProperty.call(staging, "__velaVerifyExecutionAuthorityV1")) {
+        throw runtimeError();
+    }
+    (function (AEToolbox, VelaPropertyValueDigest, VelaVerifyExecutionAuthority) {
+#include "vela/velaExecution.jsx"
+    }(staging, stagedDigest, stagedAuthorityVerifier));
+    stagedExecution = staging.VelaExecution;
+    if (!validateJson(stagedJson) || !validateContext(stagedContext) || !validateExecution(stagedExecution)) {
+        throw runtimeError();
+    }
+
+    runtime = {
+        revision: RUNTIME_REVISION,
+        json: stagedJson,
+        context: stagedContext,
+        execution: stagedExecution,
+        reload: function () {
+            return stagedContext.reload();
+        }
+    };
+    if (typeof Object.freeze === "function") {
+        Object.freeze(runtime);
+    }
+
+    publish("VelaJson", stagedJson, true);
+    publish("VelaContext", stagedContext, true);
+    publish("VelaExecution", stagedExecution, true);
+    publish("__velaHostRuntimeV1", runtime, false);
+}(AEToolbox));
 #include "tools/textBackgroundBox.jsx"
 #include "tools/adComponentKit.jsx"
 #include "tools/shapeAdd.jsx"
