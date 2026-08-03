@@ -19,6 +19,15 @@ function run() {
     const c3 = qualification.CASES.map((item) => [item.id, item.message, item.id === "Q3" || item.id === "Q4" || item.id === "Q5" ? profiles.EXPLICIT_EDIT_ELIGIBLE : profiles.TEXT_ONLY]);
     const corpus = [
         ["\u8bf7\u5c06\u5f53\u524d\u56fe\u5c42\u4e0d\u900f\u660e\u5ea6\u8bbe\u4e3a 57.5%", profiles.EXPLICIT_EDIT_ELIGIBLE],
+        ["\u5c06\u5f53\u524d\u9009\u4e2d\u56fe\u5c42\u7684\u4e0d\u900f\u660e\u5ea6\u8bbe\u7f6e\u4e3a 50%\u3002", profiles.EXPLICIT_EDIT_ELIGIBLE],
+        ["\u628a\u6240\u9009\u56fe\u5c42\u4e0d\u900f\u660e\u5ea6\u6539\u6210 50%", profiles.EXPLICIT_EDIT_ELIGIBLE],
+        ["\u5c06\u5f53\u524d\u56fe\u5c42\u900f\u660e\u5ea6\u8bbe\u4e3a 0%", profiles.EXPLICIT_EDIT_ELIGIBLE],
+        ["\u628a\u9009\u4e2d\u56fe\u5c42\u7684\u4e0d\u900f\u660e\u5ea6\u8c03\u5230 100%", profiles.EXPLICIT_EDIT_ELIGIBLE],
+        ["\u4ec0\u4e48\u662f\u4e0d\u900f\u660e\u5ea6\uff1f", profiles.TEXT_ONLY],
+        ["\u5f53\u524d\u56fe\u5c42\u7684\u4e0d\u900f\u660e\u5ea6\u662f\u591a\u5c11\uff1f", profiles.TEXT_ONLY],
+        ["\u89e3\u91ca\u5982\u4f55\u628a\u4e0d\u900f\u660e\u5ea6\u8bbe\u7f6e\u4e3a 50%", profiles.TEXT_ONLY],
+        ["\u6211\u662f\u5426\u5e94\u8be5\u8c03\u6574\u4e0d\u900f\u660e\u5ea6\uff1f", profiles.TEXT_ONLY],
+        ["\u4e0d\u900f\u660e\u5ea6 50% \u770b\u8d77\u6765\u4f1a\u600e\u6837\uff1f", profiles.TEXT_ONLY],
         ["Please set the selected layer opacity to 50%.", profiles.EXPLICIT_EDIT_ELIGIBLE],
         ["Set opacity to 0", profiles.EXPLICIT_EDIT_ELIGIBLE],
         ["\u628a opacity \u8bbe\u4e3a 100%", profiles.EXPLICIT_EDIT_ELIGIBLE],

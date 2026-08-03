@@ -2,6 +2,8 @@
 "use strict";
 const assert = require("assert");
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
 const protocolModule = require("../client/js/vela/velaProtocol");
 const contextModule = require("../client/js/vela/velaContext");
 const bridgeModule = require("../client/js/vela/velaContextBridge");
@@ -101,7 +103,7 @@ function observedHarness(options) {
             const requestId = schema.properties.requestId.enum[0];
             const userMessage = body.messages[2].content;
             const requestedKind = options.responseKind ? options.responseKind(userMessage, body) : (schema.properties.envelope.properties.type.enum[0] === "text" ? "text" : "localProposal");
-            const envelope = requestedKind === "text" ? { type: "text", text: "safe" } : { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 50 } } };
+            const envelope = requestedKind === "text" ? { type: "text", text: options.responseText || "safe" } : { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: typeof options.responseOpacity === "number" ? options.responseOpacity : 50 } } };
             const response = JSON.stringify({ id: "x", object: "chat.completion", created: 1, model: "m", choices: [{ index: 0, message: { role: "assistant", content: JSON.stringify({ protocol: p.PROTOCOLS.RESPONSE, schemaVersion: p.SCHEMA_VERSION, requestId, provider: "lmstudio", model: "m", envelope }), reasoning_content: "", tool_calls: [] }, finish_reason: "stop" }], usage: {} });
             let sent = false;
             return Promise.resolve({ status: 200, redirected: false, url, headers: { get: () => "application/json" }, body: { getReader() { return { read() { if (sent) return Promise.resolve({ done: true }); sent = true; return Promise.resolve({ done: false, value: new TextEncoder().encode(response) }); }, cancel() {} }; } } });
@@ -162,6 +164,33 @@ async function runRequestProfileLifecycleTests() {
     const extractionMismatchState = await extractionMismatch.controller.send({ message: "Set opacity to 50%", endpoint, model: "m" });
     check(extractionMismatchState.state === "failed" && extractionMismatchState.errorCode === extractionMismatch.p.ERROR_CODES.PROVIDER_RESPONSE_INVALID && extractionMismatch.observed.intentInputs.length === 0 && extractionMismatchState.proposalCapabilityId === null, "A protocol-valid text response on explicit-edit-eligible fails locally before Intent Gate and cannot reach proposal-ready.");
 
+    const chineseMessage = "将当前选中图层的不透明度设置为 50%。";
+    const chineseProposal = observedHarness();
+    const chineseProposalState = await chineseProposal.controller.send({ message: chineseMessage, endpoint, model: "m" });
+    check(chineseProposal.observed.classifyInputs[0] === chineseMessage && chineseProposal.observed.providerProfiles[0] === "explicit-edit-eligible", "The exact AE regression message binds the deterministic explicit-edit-eligible Profile.");
+    check(chineseProposal.observed.transportBodies[0].response_format.json_schema.name === "vela_local_proposal_response" && chineseProposal.observed.transportBodies[0].messages[2].content === chineseMessage, "The exact original Chinese message reaches the extraction response format without rewriting.");
+    check(chineseProposalState.state === "proposal-ready" && chineseProposalState.proposalCapabilityId === "set-opacity-v1" && chineseProposalState.suggestedOpacity === 50 && chineseProposalState.text === null && chineseProposal.observed.intentInputs.length === 1, "A valid exact-opacity localProposal reaches Intent Gate and proposal-ready with no assistant text.");
+
+    const executionClaim = observedHarness({ responseKind: () => "text", responseText: "已经修改，已执行，调整完成" });
+    const executionClaimState = await executionClaim.controller.send({ message: chineseMessage, endpoint, model: "m" });
+    check(executionClaim.observed.providerProfiles[0] === "explicit-edit-eligible" && executionClaim.observed.transportBodies[0].response_format.json_schema.name === "vela_local_proposal_response", "The execution-claim fixture remains bound to the extraction Profile and schema.");
+    check(executionClaimState.state === "failed" && executionClaimState.errorCode === executionClaim.p.ERROR_CODES.PROVIDER_RESPONSE_INVALID && executionClaimState.text === null && executionClaimState.proposalCapabilityId === null && executionClaim.observed.intentInputs.length === 0, "Model execution claims fail at Profile mismatch before Intent Gate and expose no text or proposal authority.");
+
+    const repeated = observedHarness();
+    const repeatedFirst = await repeated.controller.send({ message: chineseMessage, endpoint, model: "m" });
+    const repeatedFirstRequestId = repeatedFirst.requestId;
+    const repeatedPort = repeated.observedModule.createProposalPort(repeated.controller, repeated.p);
+    const repeatedFirstProposal = repeatedPort.consume();
+    const repeatedSecond = await repeated.controller.send({ message: chineseMessage, endpoint, model: "m" });
+    check(repeated.observed.classifyInputs.join("|") === chineseMessage + "|" + chineseMessage && repeated.observed.providerProfiles.join("|") === "explicit-edit-eligible|explicit-edit-eligible", "Two identical Chinese turns are independently classified and Profile-bound.");
+    check(repeatedFirstRequestId !== repeatedSecond.requestId && repeated.observed.transportBodies[0].response_format.json_schema.schema.properties.requestId.enum[0] === repeatedFirstRequestId && repeated.observed.transportBodies[1].response_format.json_schema.schema.properties.requestId.enum[0] === repeatedSecond.requestId, "Repeated turns receive distinct requestIds bound to their own response schemas.");
+    check(repeated.observed.transportBodies.every((body) => body.messages[2].content === chineseMessage) && repeated.observed.intentInputs.length === 2 && repeated.observed.intentInputs.every((input) => input.message === chineseMessage && input.proposedOpacity === 50), "Prompt Builder and Intent Gate receive each turn's exact immutable user message and proposal.");
+    check(repeatedFirstProposal.opacity === 50 && repeatedSecond.state === "proposal-ready" && repeatedSecond.suggestedOpacity === 50 && repeatedSecond.requestId !== repeatedFirstRequestId, "Consuming the first proposal leaves no authority reuse and the second legal proposal owns a new Review turn.");
+
+    const opacityMismatch = observedHarness({ responseOpacity: 40 });
+    const opacityMismatchState = await opacityMismatch.controller.send({ message: chineseMessage, endpoint, model: "m" });
+    check(opacityMismatchState.state === "intent-rejected" && opacityMismatchState.intentReason === "target-mismatch" && opacityMismatchState.suggestedOpacity === null && opacityMismatch.observed.intentInputs[0].message === chineseMessage && opacityMismatch.observed.intentInputs[0].proposedOpacity === 40, "Only a mismatched current-turn opacity receives the bounded target-mismatch Gate classification.");
+
     const classificationFailure = observedHarness({ classifyFailure: true });
     await assert.rejects(classificationFailure.controller.send({ message: "classify failure", endpoint, model: "m" })); assertions += 1;
     const failureState = classificationFailure.controller.getUiState();
@@ -181,11 +210,11 @@ async function runRequestProfileLifecycleTests() {
     check(rapid.controller.cancel({ requestId: null }) === true, "Cancel during Tier 1 terminates the first classified generation.");
     rapid.resolveNext(); await first; await flush();
     check(rapid.observed.transportBodies.length === 0 && rapid.observed.intentInputs.length === 0 && rapid.controller.getUiState().state === "cancelled", "Late Tier 1 after cancel cannot transport, enter Intent Gate, or revive public state.");
-    const restarted = rapid.controller.send({ message: "hello after restart", endpoint, model: "m" }); await flush();
+    const restarted = rapid.controller.send({ message: chineseMessage, endpoint, model: "m" }); await flush();
     rapid.resolveNext(); await flush();
     rapid.resolveNext(); await restarted; await flush();
-    check(rapid.observed.classifyInputs.length === 2 && rapid.observed.classifyInputs[1] === "hello after restart" && rapid.observed.providerProfiles.join("|") === "text-only", "Lifecycle restart reclassifies its first request and does not reuse the cancelled generation Profile.");
-    check(rapid.observed.transportBodies.length === 1 && rapid.observed.intentInputs.length === 0 && rapid.controller.getUiState().state === "completed", "Restart completion is isolated from the cancelled generation and stale extraction authority.");
+    check(rapid.observed.classifyInputs.length === 2 && rapid.observed.classifyInputs[1] === chineseMessage && rapid.observed.providerProfiles.join("|") === "explicit-edit-eligible", "Lifecycle restart independently reclassifies the identical explicit request and does not reuse the cancelled generation Profile.");
+    check(rapid.observed.transportBodies.length === 1 && rapid.observed.intentInputs.length === 1 && rapid.observed.intentInputs[0].message === chineseMessage && rapid.controller.getUiState().state === "proposal-ready", "After Cancel, the identical explicit retry is isolated from the stale generation and reaches fresh Review.");
 }
 async function runDeferredGroundingTests() {
     const endpoint = "http://127.0.0.1:1234/v1/chat/completions";
@@ -239,15 +268,33 @@ async function runDeferredGroundingTests() {
 async function run() {
     const p = protocol(); const context = contextModule.createContextApi(p);
     const requestBodies = [];
+    const requestUrls = [];
+    const nativeModelsFixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "vela-provider-readiness", "lm-studio-models-native-v1.json"), "utf8"));
     const bridge = bridgeModule.createContextBridge({ protocol: p, contextApi: context, invokeHost(source, cb) { cb(hostResult(decode(source))); }, runtime: { setTimeout, clearTimeout, timeoutMs: 1000 } });
-    const transport = transportModule.createLocalTransport({ protocol: p, fetch(url, options) { const requestBody = JSON.parse(options.body); requestBodies.push(requestBody); const requestId = /Use requestId (req_[a-z0-9]+)/.exec(requestBody.messages[0].content)[1]; const isProposal = requestBody.messages[2].content === "将当前图层不透明度设为 57.5%"; const body = JSON.stringify({ id: "chatcmpl-local", object: "chat.completion", created: 1784797754, model: "m", choices: [{ index: 0, message: { role: "assistant", content: JSON.stringify({ envelope: isProposal ? { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } } : { text: "safe text", type: "text" }, model: "m", protocol: p.PROTOCOLS.RESPONSE, provider: "lmstudio", requestId, schemaVersion: p.SCHEMA_VERSION }), reasoning_content: "", tool_calls: [] }, logprobs: null, finish_reason: "stop" }], usage: { prompt_tokens: 239, completion_tokens: 144, total_tokens: 383, completion_tokens_details: { reasoning_tokens: 0 } }, stats: {}, system_fingerprint: "qwen3.5-4b" }); let done = false; return Promise.resolve({ status: 200, redirected: false, url, headers: { get: () => "application/json" }, body: { getReader() { return { read() { if (done) return Promise.resolve({ done: true }); done = true; return Promise.resolve({ done: false, value: new TextEncoder().encode(body) }); }, cancel() {} }; } } }); }, TextDecoder });
+    const transport = transportModule.createLocalTransport({ protocol: p, fetch(url, options) { const requestBody = JSON.parse(options.body); requestUrls.push(url); requestBodies.push(requestBody); const requestId = /Use requestId (req_[a-z0-9]+)/.exec(requestBody.messages[0].content)[1]; const isProposal = requestBody.messages[2].content === "将当前图层不透明度设为 57.5%"; const body = JSON.stringify({ id: "chatcmpl-local", object: "chat.completion", created: 1784797754, model: "m", choices: [{ index: 0, message: { role: "assistant", content: JSON.stringify({ envelope: isProposal ? { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } } : { text: "safe text", type: "text" }, model: "m", protocol: p.PROTOCOLS.RESPONSE, provider: "lmstudio", requestId, schemaVersion: p.SCHEMA_VERSION }), reasoning_content: "", tool_calls: [] }, logprobs: null, finish_reason: "stop" }], usage: { prompt_tokens: 239, completion_tokens: 144, total_tokens: 383, completion_tokens_details: { reasoning_tokens: 0 } }, stats: {}, system_fingerprint: "qwen3.5-4b" }); let done = false; return Promise.resolve({ status: 200, redirected: false, url, headers: { get: () => "application/json" }, body: { getReader() { return { read() { if (done) return Promise.resolve({ done: true }); done = true; return Promise.resolve({ done: false, value: new TextEncoder().encode(body) }); }, cancel() {} }; } } }); }, TextDecoder });
     const controller = controllerModule.createProviderController({ protocol: p, contextBridge: bridge, transport, runtime: { setTimeout, clearTimeout, createAbortController() { return { signal: {}, abort() {} }; }, parseUrl(value) { const u = new URL(value); return { protocol: u.protocol, hostname: u.hostname, port: u.port, pathname: u.pathname, username: u.username, password: u.password, search: u.search, hash: u.hash, href: u.href }; }, nowMs: () => 100 } });
-    const state = await controller.send({ message: "hello", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+    let readinessFetches = 0;
+    const readinessTransport = transportModule.createLocalTransport({ protocol: p, fetch(url, options) { readinessFetches += 1; const fixture = JSON.parse(JSON.stringify(nativeModelsFixture)); if (readinessFetches === 2) { fixture.models[0].key = "library-alias"; } if (readinessFetches === 5) { fixture.models = {}; } const body = JSON.stringify(fixture); let done = false; return Promise.resolve({ status: 200, redirected: false, url, headers: { get: () => "application/json" }, body: { getReader() { return { read() { if (done) return Promise.resolve({ done: true }); done = true; return Promise.resolve({ done: false, value: new TextEncoder().encode(body) }); }, cancel() {} }; } } }); }, TextDecoder });
+    const readinessController = controllerModule.createProviderController({ protocol: p, contextBridge: bridge, transport: readinessTransport, runtime: { setTimeout, clearTimeout, createAbortController() { return { signal: {}, abort() {} }; }, parseUrl(value) { const u = new URL(value); return { protocol: u.protocol, hostname: u.hostname, port: u.port, pathname: u.pathname, username: u.username, password: u.password, search: u.search, hash: u.hash, href: u.href }; }, nowMs: () => 100 } });
+    const ready = await readinessController.checkReadiness({ endpoint: "http://127.0.0.1:1234", model: "qwen/qwen3.5-9b" });
+    check(Object.isFrozen(ready) && ready.ready === true && ready.code === "experimental-ready" && ready.modelId === "qwen/qwen3.5-9b" && ready.loadedInstances === 1 && ready.quantization === "Q4_K_M" && ready.contextLength === 8192, "The captured LM Studio native models fixture reports the exact loaded 9B model ready despite inert deep catalog metadata.");
+    check(ready.baseUrl === "http://127.0.0.1:1234" && ready.chatUrl === "http://127.0.0.1:1234/v1/chat/completions", "Base endpoint derives fixed readiness and chat routes in trusted Provider code.");
+    const idReady = await readinessController.checkReadiness({ endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "qwen/qwen3.5-9b" });
+    check(idReady.ready === true && idReady.baseUrl === "http://127.0.0.1:1234", "A complete chat URL normalizes to base and an exact loaded instance id match is accepted when the library key differs.");
+    const cold = await readinessController.checkReadiness({ endpoint: "http://localhost:1234/", model: "qwen3.5-4b" });
+    check(cold.ready === false && cold.code === "configured-model-not-loaded" && cold.loadedInstances === 0 && cold.baseUrl === "http://localhost:1234", "localhost with a trailing slash normalizes to base and an unloaded requested model is classified not-loaded.");
+    const missing = await readinessController.checkReadiness({ endpoint: "http://[::1]:1234", model: "text-embedding-nomic-embed-text-v1.5" });
+    check(missing.ready === false && missing.code === "configured-model-not-found" && missing.modelId === "text-embedding-nomic-embed-text-v1.5" && missing.loadedInstances === 0 && missing.baseUrl === "http://[::1]:1234", "IPv6 loopback remains canonical and an embedding key is not accepted as an LLM readiness candidate.");
+    await assert.rejects(readinessController.checkReadiness({ endpoint: "http://127.0.0.1:1234", model: "qwen/qwen3.5-9b" }), (error) => error.localReadinessCode === "readiness-response-invalid"); assertions += 1;
+    await assert.rejects(readinessController.checkReadiness({ endpoint: "http://192.168.1.2:1234/v1/chat/completions", model: "m" }), (error) => error.code === p.ERROR_CODES.PROVIDER_CONFIG_INVALID); assertions += 1;
+    check(readinessFetches === 5 && requestBodies.length === 0, "Readiness rejects non-loopback endpoints and never starts Provider send or Context capture.");
+    const state = await controller.send({ message: "hello", endpoint: "http://127.0.0.1:1234", model: "m" });
     const requestBody = requestBodies[0];
     check(state.state === "completed" && state.text === "safe text", "Trusted Tier 1 capture reaches the adapter and exposes bounded text only.");
     check(!/stats|logprobs|completion_tokens_details|system_fingerprint|reasoning_content|tool_calls/.test(JSON.stringify(state)), "The complete LM Studio wrapper fixture reaches completed UI state without inert metadata leakage.");
     check(Array.isArray(requestBody.messages) && requestBody.messages.length === 3 && requestBody.messages[0].role === "system" && requestBody.messages[1].role === "assistant" && requestBody.messages[2].role === "user", "The final Controller to Adapter to Transport payload must preserve system, bounded context and user message order.");
     check(requestBody.messages[2].content === "hello", "The final payload user message must exactly match the current send input.");
+    check(requestUrls[0] === "http://127.0.0.1:1234/v1/chat/completions", "A base endpoint derives the fixed chat completion URL before transport.");
     check(requestBody.messages[1].content.indexOf("Trusted request context:") === 0 && requestBody.messages[1].content.includes("selected layer opacity 57.5") && !JSON.stringify(requestBody.messages[1]).includes("host_") && !JSON.stringify(requestBody.messages[1]).includes("sha256:"), "The bounded trusted request context contains only the verified opacity fact and excludes authority data.");
     check(requestBody.response_format && requestBody.response_format.type === "json_schema", "The production local provider explicitly enables LM Studio json_schema mode.");
     check(requestBody.response_format.json_schema && requestBody.response_format.json_schema.strict === true && requestBody.response_format.json_schema.name === "vela_text_response", "The text request must use its trusted structured response schema.");

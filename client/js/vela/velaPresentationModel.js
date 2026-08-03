@@ -34,11 +34,11 @@
     function errorDisplayKey(code) {
         return typeof code === "string" && Object.prototype.hasOwnProperty.call(ERROR_DISPLAY_KEYS, code) ? ERROR_DISPLAY_KEYS[code] : "vela.surfaceGenericError";
     }
-    function projectSurfaceState(providerState, confirmationState, composerValue, experimentalEnabled) {
+    function projectSurfaceState(providerState, confirmationState, composerValue, experimentalEnabled, experimentalState) {
         var provider = providerState && typeof providerState.state === "string" ? providerState.state : "idle";
         var confirmation = confirmationState && typeof confirmationState.state === "string" ? confirmationState.state : "idle";
         var state = "idle";
-        if (experimentalEnabled !== true) { state = "experimental-unavailable"; }
+        if (experimentalEnabled !== true) { state = experimentalState === "configuring" || experimentalState === "checking" || experimentalState === "unavailable" ? "experimental-" + experimentalState : experimentalState === "disabled" || experimentalState === "ready" ? "experimental-disabled" : experimentalState || "experimental-disabled"; }
         else if (confirmation === "executing") { state = "executing"; }
         else if (confirmation === "confirmation-ready") { state = "awaiting-confirmation"; }
         else if (confirmation === "execution-failed") { state = "error"; }
@@ -79,13 +79,14 @@
             var state = providerState && typeof providerState.state === "string" ? providerState.state : "failed";
             var text = providerState && typeof providerState.text === "string" ? providerState.text : "";
             var code = providerState && typeof providerState.errorCode === "string" ? providerState.errorCode : null;
+            var intentReason = providerState && typeof providerState.intentReason === "string" ? providerState.intentReason : null;
             if (state === "pending") { pending = true; return snapshot(); }
             if (!pending) { return snapshot(); }
             pending = false;
             terminalGeneration += 1;
             if (state === "completed" && text) { append("assistant", text, null); }
             else if (state === "proposal-ready") { append("notice", "", "vela.surfaceLocalProposalNotice"); }
-            else if (state === "intent-rejected") { append("notice", "", "vela.surfaceIntentRejected"); }
+            else if (state === "intent-rejected") { append("notice", "", intentReason === "target-mismatch" ? "vela.surfaceIntentTargetMismatch" : "vela.surfaceIntentRejected"); }
             else if (state === "cancelled") { append("error", "", errorDisplayKey(code || "PROVIDER_REQUEST_ABORTED")); }
             else { append("error", "", errorDisplayKey(code || "PROVIDER_RESPONSE_INVALID")); }
             return snapshot();

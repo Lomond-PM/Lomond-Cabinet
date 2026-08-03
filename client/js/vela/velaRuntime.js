@@ -331,6 +331,7 @@
             }
         }
         function sendProviderMessage(input) { try { if (disposed || state !== "ready" || !providerController) { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); } return providerController.send(input); } catch (error) { return Promise.reject(error); } }
+        function checkProviderReadiness(input) { try { if (disposed || state !== "ready" || !providerController || typeof providerController.checkReadiness !== "function") { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); } return providerController.checkReadiness(input); } catch (error) { return Promise.reject(error); } }
         function cancelProviderRequest() {
             var providerState;
             try {
@@ -339,11 +340,11 @@
                 return !!providerController.cancel({ requestId: providerState.requestId });
             } catch (error) { return false; }
         }
-        function getProviderUiState() { return providerController ? providerController.getUiState() : Object.freeze({ state: disposed ? "disposed" : state, requestId: null, text: null, errorCode: lastErrorCode, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: "vela-provider-controller-v1" }); }
+        function getProviderUiState() { return providerController ? providerController.getUiState() : Object.freeze({ state: disposed ? "disposed" : state, requestId: null, text: null, errorCode: lastErrorCode, intentReason: null, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: "vela-provider-controller-v1" }); }
         function getProviderSurfaceState() {
             var source = getProviderUiState();
             var nextState = source && typeof source.state === "string" ? source.state : "failed";
-            return Object.freeze({ state: nextState, text: source && typeof source.text === "string" ? source.text : null, errorCode: source && typeof source.errorCode === "string" ? source.errorCode : null, moduleRevision: "vela-provider-surface-v1" });
+            return Object.freeze({ state: nextState, text: source && typeof source.text === "string" ? source.text : null, errorCode: source && typeof source.errorCode === "string" ? source.errorCode : null, intentReason: source && typeof source.intentReason === "string" ? source.intentReason : null, moduleRevision: "vela-provider-surface-v1" });
         }
         function getConfirmationSurfaceState() {
             var source = getUiState();
@@ -354,7 +355,7 @@
             var proposedValue = hasConfirmation && source && typeof source.proposedValue === "number" && isFinite(source.proposedValue) && source.proposedValue >= 0 && source.proposedValue <= 100 ? source.proposedValue : null;
             return Object.freeze({ state: state, beforeValue: beforeValue, proposedValue: proposedValue, errorCode: source && typeof source.errorCode === "string" ? source.errorCode : null, moduleRevision: "vela-confirmation-surface-v1" });
         }
-        return Object.freeze({ initialize: initialize, getStatus: safeStatus, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, refreshContext: refreshContext, createOpacityCandidate: createOpacityCandidate, approveCandidate: approveCandidate, rejectCandidate: rejectCandidate, approveActiveCandidate: approveActiveCandidate, rejectActiveCandidate: rejectActiveCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderSurfaceState: getProviderSurfaceState, getConfirmationSurfaceState: getConfirmationSurfaceState });
+        return Object.freeze({ initialize: initialize, getStatus: safeStatus, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, refreshContext: refreshContext, createOpacityCandidate: createOpacityCandidate, approveCandidate: approveCandidate, rejectCandidate: rejectCandidate, approveActiveCandidate: approveActiveCandidate, rejectActiveCandidate: rejectActiveCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, checkProviderReadiness: checkProviderReadiness, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderSurfaceState: getProviderSurfaceState, getConfirmationSurfaceState: getConfirmationSurfaceState });
     }
     return Object.freeze({ createRuntime: createRuntime });
 }));

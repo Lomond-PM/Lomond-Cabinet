@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 236 |
+| A | Core / Global; keep | 262 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -347,9 +347,25 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.theme.lightEndpoint | settings | Light | 亮端 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.midEndpoint | settings | Mid | 中间调 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.toolIconAppearance | settings | Tool Icon Appearance | 工具图标外观 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.vela.fixedEndpoint | settings | Vela connects only to local LM Studio at http://127.0.0.1:1234/v1/cha... | Vela 仅连接本地 LM Studio：http://127.0.0.1:1234/v1/chat/completions。此端点固定，... | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.vela.model | settings | Model name | 模型名称 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.acknowledgement | settings | I understand this Provider is experimental and not qualified | 我理解此 Provider 为实验性且未通过资格认证 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.checking | settings | Checking loaded local model… | 正在检查已加载的本地模型… | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.disableSession | settings | Disable | 禁用 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.disabled | settings | Experimental Provider disabled | 实验 Provider 已禁用 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.enableSession | settings | Enable for this session | 本会话启用 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.endpoint | settings | Local endpoint | 本地 endpoint | client/js/main.js, client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.endpointDescription | settings | Loopback LM Studio endpoint only (127.0.0.1, localhost, or ::1). | 仅允许 loopback LM Studio endpoint（127.0.0.1、localhost 或 ::1）。 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.endpointInvalid | settings | The endpoint must be a loopback LM Studio base URL | endpoint 必须是 loopback LM Studio base URL | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.experimentalDescription | settings | Experimental · Not qualified · Manual opt-in required. Session enable... | 实验性 · 未通过资格认证 · 需手动选择加入。会话启用状态不会保存。 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.fixedEndpoint | settings | Vela connects only to local LM Studio at http://127.0.0.1:1234/v1/cha... | Vela 仅连接本地 LM Studio：http://127.0.0.1:1234/v1/chat/completions。此端点固定，... | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.httpFailed | settings | LM Studio readiness returned an unsuccessful response | LM Studio readiness 返回了不成功的响应 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.model | settings | Model name | 模型名称 | client/js/main.js, client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.vela.modelDescription | settings | Use the exact model identifier currently loaded or exposed by LM Studio. | 请使用与 LM Studio 当前已加载或已暴露的模型标识完全一致的名称。 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.modelNotFound | settings | The configured model was not found | 未找到配置的模型 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.modelNotLoaded | settings | The configured model is installed but not loaded | 配置的模型已安装但未加载 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.networkFailed | settings | Cannot reach the local LM Studio server | 无法连接本地 LM Studio 服务器 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.ready | settings | Experimental Provider ready for this session | 实验 Provider 已在本会话就绪 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.responseInvalid | settings | LM Studio returned an invalid readiness response | LM Studio 返回了无效 readiness 响应 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.unavailable | settings | Configured local model is unavailable or not loaded | 配置的本地模型不可用或未加载 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.addedShape | status | Added: {label} | 已添加：{label} | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.addingShape | status | Adding {label}... | 正在添加 {label}... | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.backgroundDefaultsRestored | status | Background defaults restored. | 背景已恢复默认。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -427,6 +443,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.surfaceExperimentalStatus | vela | Experimental · Not qualified · Manual opt-in required | 实验性 · 未通过资格认证 · 需手动选择加入 | client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceGenericError | vela | The local request could not be completed. Try again. | 本地请求未能完成。请重试。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceIntentRejected | vela | No explicit opacity edit was detected. Specify the target opacity for... | 未检测到明确的不透明度修改请求。请说明要将当前图层的不透明度设为多少（0–100%）。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceIntentTargetMismatch | vela | The local proposal did not match the opacity requested in this turn. ... | 本地 proposal 与本轮请求的不透明度不一致。未创建任何操作。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceLabel | vela | Vela | Vela | client/index.html, client/js/main.js, client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceLocalProposalNotice | vela | A local action suggestion was received. This conversation area does n... | 已收到一个本地操作建议。 当前对话区域暂不支持查看或执行该建议。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceProviderCancelled | vela | The local request was cancelled. | 已取消本地请求。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -446,14 +463,23 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.surfaceStatusCompleted | vela | Local response received | 已收到本地响应 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusComposing | vela | Drafting a local message | 正在编辑本地消息 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusConfirmation | vela | Confirm local opacity change | 请确认本地不透明度更改 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceStatusEndpointInvalid | vela | Local endpoint is invalid | 本地 endpoint 无效 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusExecuting | vela | Applying local opacity change | 正在应用本地不透明度更改 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusExecutionCompleted | vela | Local opacity change completed | 本地不透明度更改已完成 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusExecutionFailed | vela | Local opacity change failed | 本地不透明度更改失败 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceStatusExperimentalChecking | vela | Checking the loaded local model | 正在检查已加载的本地模型 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceStatusExperimentalConfiguring | vela | Configure and acknowledge the experimental Provider | 请配置并确认实验 Provider | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceStatusExperimentalDisabled | vela | Experimental Provider disabled | 实验 Provider 已禁用 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusExperimentalUnavailable | vela | Provider unavailable until manual opt-in | Provider 需手动选择加入后才可用 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusFailed | vela | Local request failed | 本地请求失败 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusIntentRejected | vela | An explicit opacity edit is needed | 需要明确的不透明度修改请求 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceStatusModelNotFound | vela | Configured model was not found | 未找到配置的模型 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceStatusModelNotLoaded | vela | Configured model is not loaded | 配置的模型未加载 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusPending | vela | Waiting for local model | 正在等待本地模型 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusProposalReady | vela | Local action suggestion ready for review | 本地操作建议已可查看 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceStatusReadinessHttpFailed | vela | Local LM Studio readiness request failed | 本地 LM Studio readiness 请求失败 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceStatusReadinessNetworkFailed | vela | Cannot reach the local LM Studio server | 无法连接本地 LM Studio 服务器 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceStatusReadinessResponseInvalid | vela | Local LM Studio returned an invalid readiness response | 本地 LM Studio 返回了无效 readiness 响应 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusRejected | vela | Local action suggestion rejected | 本地操作建议已拒绝 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusSetup | vela | Ready for a local message | 可以发送本地消息 | client/js/vela/velaSurface.js, client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceTranscriptIntro | vela | Start a local conversation with Vela. | 从本地模型开始与 Vela 对话。 | client/js/vela/velaSurface.js, client/js/vela/velaTranscriptView.js | no | A | Keep unless a future focused audit proves it is obsolete. |

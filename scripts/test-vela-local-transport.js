@@ -17,6 +17,15 @@ async function run() {
     check(Object.isFrozen(result) && result.bodyText === "{}", "Transport returns only a frozen safe response snapshot.");
     check(call.options.credentials === "omit" && call.options.redirect === "error" && call.options.method === "POST", "Transport enforces omit credentials, POST and redirect error.");
     check(call.options.headers.Authorization === undefined, "Transport never sends Authorization.");
+    const modelsUrl = "http://127.0.0.1:1234/api/v1/models";
+    const modelsResult = await transport.readJson({ url: modelsUrl, signal: {}, maxResponseBytes: 1024 });
+    check(modelsResult.bodyText === "{}" && Object.isFrozen(modelsResult), "Readiness transport returns a frozen bounded response snapshot.");
+    check(call.url === modelsUrl && call.options.method === "GET" && call.options.credentials === "omit" && call.options.redirect === "error" && call.options.body === undefined, "Readiness transport performs only an unauthenticated loopback GET with redirects disabled.");
+    check(call.options.headers.Accept === "application/json" && call.options.headers.Authorization === undefined, "Readiness transport requests JSON without Authorization.");
+    await assert.rejects(transport.readJson({ url: "http://192.168.1.2:1234/api/v1/models", signal: {}, maxResponseBytes: 1024 }), (error) => error.code === "PROVIDER_CONFIG_INVALID"); assertions += 1;
+    await assert.rejects(transport.readJson({ url: "http://127.0.0.1:1234/v1/models", signal: {}, maxResponseBytes: 1024 }), (error) => error.code === "PROVIDER_CONFIG_INVALID"); assertions += 1;
+    const oversizedModels = transportModule.createLocalTransport({ protocol, fetch() { return Promise.resolve(response("x".repeat(20), { url: modelsUrl })); }, TextDecoder });
+    await assert.rejects(oversizedModels.readJson({ url: modelsUrl, signal: {}, maxResponseBytes: 4 }), (error) => error.code === "PROVIDER_RESPONSE_TOO_LARGE"); assertions += 1;
     await assert.rejects(transport.sendJson({ url: "https://example.com/v1/chat/completions", method: "POST", headers: { "Content-Type": "application/json" }, body: {}, signal: {}, allowRedirects: false, maxRequestBytes: 10, maxResponseBytes: 10 }), (error) => error.code === "PROVIDER_CONFIG_INVALID"); assertions += 1;
     const badType = transportModule.createLocalTransport({ protocol, fetch() { return Promise.resolve(response("{}", { contentType: "text/html" })); }, TextDecoder });
     check((await badType.sendJson({ url: "http://localhost:1234/v1/chat/completions", method: "POST", headers: { "Content-Type": "application/json" }, body: {}, signal: {}, allowRedirects: false, maxRequestBytes: 1024, maxResponseBytes: 1024 })).contentType === "text/html", "Transport preserves only bounded normalized content type for adapter validation.");

@@ -16,6 +16,10 @@
         var ComposerView = options && options.ComposerView;
         var ConfirmationView = options && options.ConfirmationView;
         var experimentalEnabled = options && options.experimentalEnabled === true;
+        var onExperimentalStateChange = options && typeof options.onExperimentalStateChange === "function" ? options.onExperimentalStateChange : function () {};
+        var experimentalState = experimentalEnabled ? "ready" : "disabled";
+        var experimentalConfig = { endpoint: "", model: "", acknowledged: false };
+        var readiness = null;
         var elements;
         var presentation;
         var transcript;
@@ -39,6 +43,15 @@
         function projectedStatusText(state) {
             var keys = {
                 "experimental-unavailable": "vela.surfaceStatusExperimentalUnavailable",
+                "experimental-disabled": "vela.surfaceStatusExperimentalDisabled",
+                "experimental-configuring": "vela.surfaceStatusExperimentalConfiguring",
+                "experimental-checking": "vela.surfaceStatusExperimentalChecking",
+                "endpoint-invalid": "vela.surfaceStatusEndpointInvalid",
+                "readiness-network-failed": "vela.surfaceStatusReadinessNetworkFailed",
+                "readiness-http-failed": "vela.surfaceStatusReadinessHttpFailed",
+                "readiness-response-invalid": "vela.surfaceStatusReadinessResponseInvalid",
+                "configured-model-not-found": "vela.surfaceStatusModelNotFound",
+                "configured-model-not-loaded": "vela.surfaceStatusModelNotLoaded",
                 "idle": "vela.surfaceStatusSetup",
                 "composing": "vela.surfaceStatusComposing",
                 "requesting": "vela.surfaceStatusPending",
@@ -72,7 +85,7 @@
             snapshot = presentation.applyConfirmation(confirmationState, snapshot);
             transcript.render(snapshot);
             action = actionState(providerState, confirmationState);
-            projection = PresentationModel.projectSurfaceState(providerState, confirmationState, elements.composer.value, experimentalEnabled);
+            projection = PresentationModel.projectSurfaceState(providerState, confirmationState, elements.composer.value, experimentalEnabled, experimentalState);
             if (!experimentalEnabled) { action = "send"; }
             composer.render(action, experimentalEnabled);
             confirmationView.render(action, confirmationState);
@@ -98,6 +111,62 @@
             complete(operation, generation);
         }
         function cancel() { if (disposed || suspended || !mounted) { return; } generation += 1; provider.cancel(); synchronize(); }
+        function experimentalSnapshot() { return Object.freeze({ state: experimentalState, enabled: experimentalEnabled, acknowledged: experimentalConfig.acknowledged === true, endpoint: experimentalConfig.endpoint, model: experimentalConfig.model, readiness: readiness }); }
+        function supersededSnapshot() { var snapshot = experimentalSnapshot(); return Object.freeze({ state: snapshot.state, enabled: snapshot.enabled, acknowledged: snapshot.acknowledged, endpoint: snapshot.endpoint, model: snapshot.model, readiness: snapshot.readiness, code: "readiness-superseded" }); }
+        function notifyExperimental() { onExperimentalStateChange(experimentalSnapshot()); }
+        function normalizeEndpoint(value) { var match = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):([1-9][0-9]{0,4})(?:\/|\/v1\/chat\/completions)?$/.exec(value); return match && Number(match[2]) <= 65535 ? "http://" + match[1] + ":" + match[2] : ""; }
+        function configureExperimental(input) {
+            var endpoint = input && typeof input.endpoint === "string" ? input.endpoint.replace(/^\s+|\s+$/g, "") : "";
+            var model = input && typeof input.model === "string" ? input.model.replace(/^\s+|\s+$/g, "") : "";
+            var canonicalEndpoint = normalizeEndpoint(endpoint);
+            var changed = (canonicalEndpoint || endpoint) !== experimentalConfig.endpoint || model !== experimentalConfig.model;
+            var providerState;
+            if (changed && (experimentalEnabled || experimentalState === "checking")) {
+                generation += 1;
+                providerState = provider.getState();
+                if (providerState && providerState.state === "pending") { provider.cancel(); }
+                experimentalEnabled = false;
+                readiness = null;
+            }
+            experimentalConfig = { endpoint: canonicalEndpoint || endpoint, model: model, acknowledged: !!(input && input.acknowledged === true) };
+            if (!experimentalEnabled && (experimentalState !== "checking" || changed)) { experimentalState = endpoint && !canonicalEndpoint ? "endpoint-invalid" : canonicalEndpoint && model ? "configuring" : "disabled"; readiness = null; }
+            if (mounted) { synchronize(); }
+            notifyExperimental();
+            return experimentalSnapshot();
+        }
+        function enableExperimental() {
+            var capturedGeneration;
+            if (disposed || suspended || !mounted || experimentalEnabled || experimentalState === "checking") { return Promise.resolve(experimentalSnapshot()); }
+            if (!normalizeEndpoint(experimentalConfig.endpoint)) { experimentalState = "endpoint-invalid"; synchronize(); notifyExperimental(); return Promise.resolve(experimentalSnapshot()); }
+            if (!experimentalConfig.acknowledged || !experimentalConfig.model || typeof provider.check !== "function") { experimentalState = "experimental-unavailable"; synchronize(); notifyExperimental(); return Promise.resolve(experimentalSnapshot()); }
+            generation += 1;
+            capturedGeneration = generation;
+            experimentalState = "checking";
+            readiness = null;
+            synchronize();
+            notifyExperimental();
+            return Promise.resolve(provider.check({ endpoint: experimentalConfig.endpoint, model: experimentalConfig.model })).then(function (result) {
+                if (disposed || capturedGeneration !== generation || experimentalState !== "checking") { return supersededSnapshot(); }
+                if (!result || result.ready !== true || result.modelId !== experimentalConfig.model) { experimentalState = result && result.code || "readiness-response-invalid"; readiness = result || null; }
+                else { experimentalState = "experimental-ready"; experimentalEnabled = true; readiness = result; }
+                synchronize(); notifyExperimental(); return experimentalSnapshot();
+            }, function (error) {
+                if (!disposed && capturedGeneration === generation && experimentalState === "checking") { experimentalState = error && error.localReadinessCode || "readiness-network-failed"; experimentalEnabled = false; readiness = null; synchronize(); notifyExperimental(); }
+                return capturedGeneration !== generation ? supersededSnapshot() : experimentalSnapshot();
+            });
+        }
+        function disableExperimental() {
+            var providerState;
+            if (disposed || !mounted) { return false; }
+            generation += 1;
+            providerState = provider.getState();
+            if (providerState && providerState.state === "pending") { provider.cancel(); }
+            experimentalEnabled = false;
+            experimentalState = "disabled";
+            experimentalConfig = { endpoint: experimentalConfig.endpoint, model: experimentalConfig.model, acknowledged: false };
+            readiness = null;
+            synchronize(); notifyExperimental(); return true;
+        }
         function review() { var operation; if (disposed || suspended || !mounted) { return; } generation += 1; try { operation = confirmation.review(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
         function approve() { var operation; if (disposed || suspended || !mounted) { return; } generation += 1; try { operation = confirmation.approve(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
         function reject() { var operation; if (disposed || suspended || !mounted) { return; } generation += 1; try { operation = confirmation.reject(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
@@ -114,7 +183,7 @@
         function resume() { if (disposed || !mounted || !suspended) { return false; } suspended = false; synchronize(); return true; }
         function refreshLocale() { if (disposed || !mounted) { return; } transcript.refreshLocale(); composer.refreshLocale(); confirmationView.refreshLocale(); synchronize(); }
         function dispose() { if (disposed) { return false; } disposed = true; generation += 1; if (transcript) { transcript.dispose(); } if (composer) { composer.dispose(); } if (confirmationView) { confirmationView.dispose(); } return true; }
-        return Object.freeze({ mount: mount, suspend: suspend, resume: resume, refreshLocale: refreshLocale, getElementsForTest: function () { return elements; }, dispose: dispose });
+        return Object.freeze({ mount: mount, suspend: suspend, resume: resume, refreshLocale: refreshLocale, configureExperimental: configureExperimental, enableExperimental: enableExperimental, disableExperimental: disableExperimental, getExperimentalState: experimentalSnapshot, getElementsForTest: function () { return elements; }, dispose: dispose });
     }
     return Object.freeze({ create: create });
 }));

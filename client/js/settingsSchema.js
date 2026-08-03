@@ -117,8 +117,17 @@
             {
                 id: "vela",
                 titleKey: "settings.sections.vela",
-                descriptionKey: "settings.vela.fixedEndpoint",
+                descriptionKey: "settings.vela.experimentalDescription",
                 fields: [
+                    {
+                        key: "velaProviderEndpoint",
+                        type: "text",
+                        labelKey: "settings.vela.endpoint",
+                        descriptionKey: "settings.vela.endpointDescription",
+                        defaultValue: "http://127.0.0.1:1234",
+                        maxLength: 512,
+                        spellcheck: false
+                    },
                     {
                         key: "velaProviderModel",
                         type: "text",

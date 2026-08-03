@@ -33,6 +33,7 @@
     "use strict";
 
     var ENDPOINT_PATTERN = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):([1-9][0-9]{0,4})\/v1\/chat\/completions$/;
+    var MODELS_ENDPOINT_PATTERN = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):([1-9][0-9]{0,4})\/api\/v1\/models$/;
     var trustedTransports = new WeakSet();
     var transportProtocols = new WeakMap();
     var hasOwn = Object.prototype.hasOwnProperty;
@@ -47,6 +48,10 @@
     function protocolError(protocol, code) { return new protocol.VelaProtocolError(code, undefined, { stage: "local-transport" }); }
     function endpointIsLocal(url) {
         var match = typeof url === "string" ? ENDPOINT_PATTERN.exec(url) : null;
+        return !!match && Number(match[2]) >= 1 && Number(match[2]) <= 65535;
+    }
+    function modelsEndpointIsLocal(url) {
+        var match = typeof url === "string" ? MODELS_ENDPOINT_PATTERN.exec(url) : null;
         return !!match && Number(match[2]) >= 1 && Number(match[2]) <= 65535;
     }
     function validHeaders(headers) {
@@ -188,7 +193,46 @@
                 throw protocolError(protocol, responseStarted ? protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID : protocol.ERROR_CODES.PROVIDER_CONNECTION_FAILED);
             });
         }
-        var transport = Object.freeze({ sendJson: sendJson });
+        function readJson(input) {
+            var responseStarted = false;
+            if (!protocol.isPlainObject(input)) { return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID)); }
+            try {
+                protocol.assertNoUnknownKeys(input, ["url", "signal", "maxResponseBytes"], "localTransport.readRequest");
+                if (!modelsEndpointIsLocal(input.url) || !Number.isInteger(input.maxResponseBytes) || input.maxResponseBytes < 1) { throw protocolError(protocol, protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID); }
+            } catch (error) { return Promise.reject(error instanceof protocol.VelaProtocolError ? error : protocolError(protocol, protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID)); }
+            return Promise.resolve().then(function () {
+                return fetchFn(input.url, { method: "GET", headers: { "Accept": "application/json" }, signal: input.signal, credentials: "omit", redirect: "error" });
+            }).then(function (response) {
+                var reader;
+                var decoder;
+                var chunks = [];
+                var total = 0;
+                if (!response || typeof response.status !== "number" || !response.headers || typeof response.headers.get !== "function" || !response.body || typeof response.body.getReader !== "function") { throw protocolError(protocol, protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID); }
+                responseStarted = true;
+                reader = response.body.getReader();
+                decoder = new TextDecoderCtor("utf-8", { fatal: true });
+                function readNext() {
+                    return Promise.resolve(reader.read()).then(function (part) {
+                        if (!part || typeof part.done !== "boolean") { throw protocolError(protocol, protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID); }
+                        if (part.done) { return decoder.decode(); }
+                        if (!part.value || typeof part.value.byteLength !== "number") { throw protocolError(protocol, protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID); }
+                        total += part.value.byteLength;
+                        if (total > input.maxResponseBytes) { try { reader.cancel(); } catch (ignored) {} throw protocolError(protocol, protocol.ERROR_CODES.PROVIDER_RESPONSE_TOO_LARGE); }
+                        chunks.push(decoder.decode(part.value, { stream: true }));
+                        return readNext();
+                    });
+                }
+                return readNext().then(function (tail) {
+                    var bodyText = chunks.join("") + tail;
+                    if (protocol.utf8ByteLength(bodyText) > input.maxResponseBytes) { throw protocolError(protocol, protocol.ERROR_CODES.PROVIDER_RESPONSE_TOO_LARGE); }
+                    return protocol.deepFreeze({ status: response.status, contentType: String(response.headers.get("content-type") || ""), bodyText: bodyText, redirected: response.redirected === true, finalUrl: String(response.url || "") });
+                });
+            }).catch(function (error) {
+                if (error instanceof protocol.VelaProtocolError) { throw error; }
+                throw protocolError(protocol, responseStarted ? protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID : protocol.ERROR_CODES.PROVIDER_CONNECTION_FAILED);
+            });
+        }
+        var transport = Object.freeze({ sendJson: sendJson, readJson: readJson });
         trustedTransports.add(transport);
         transportProtocols.set(transport, protocol);
         return transport;
