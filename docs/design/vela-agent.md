@@ -1409,11 +1409,9 @@ isolated `.tmp/vela-provider-profile-qualification/` output root, and exclusive
 partial-to-final evidence transaction. The Runner takes each `requestProfile` only from
 the frozen C4 case and retains human `PENDING_REVIEW` assessment authority.
 
-C4-C1A and C4-C1B have passed offline mock validation only. No C4 4B or 9B real-model
-qualification has run, and no C4 real-model evidence has been generated. C4-C2 remains
-pending. The historical C3 4B and 9B conclusions therefore remain **NOT QUALIFIED**, the
-default model is unchanged, and UI-D2 remains **BLOCKED**. No 20-run extension is
-authorized or claimed, and the offline Runner implementation does not qualify a model.
+C4-C1A and C4-C1B established the offline Profile-aware foundation before the C4-C2
+real-model pilots. The completed pilot results and D2 handoff status are recorded in
+[`docs/reports/vela-c4-profile-pilot-results.md`](../reports/vela-c4-profile-pilot-results.md).
 
 ### C4 real-model qualification acceptance rubric
 
@@ -1453,10 +1451,10 @@ safe-misclassified, Q3/Q4/Q5 each 20 / 20 correct, and every other case at least
 correct. The thresholds are identical for every model.
 
 Neither a pilot nor a 20-run result automatically selects the default model. Default-model
-changes and UI-D2 unlock remain separate human reviews. At this freeze point no C4 4B or
-9B qualification has run and no C4 evidence exists; the historical C3 4B and 9B results
-remain **NOT QUALIFIED**. Local loaded-model state is operational context and is not part of
-the committed rubric.
+changes and UI-D2 unlock remain separate human reviews. C4-C2 is closed with no eligible
+20-run candidate; the concise results and D2 handoff are recorded in
+[`docs/reports/vela-c4-profile-pilot-results.md`](../reports/vela-c4-profile-pilot-results.md).
+Local loaded-model state is operational context and is not part of the committed rubric.
 
 Vela 0.3.0 is an approval-driven assistant over explicit AE capabilities. The
 model proposes; local schemas, target fingerprints, permissions, and the
