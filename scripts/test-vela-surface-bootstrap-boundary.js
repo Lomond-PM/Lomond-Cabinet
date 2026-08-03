@@ -27,15 +27,18 @@ function harness(options) {
     options = options || {};
     const warnings = [];
     const slot = actionSlot();
-    const calls = { runtimeInitialize: 0, surfaceCreate: 0, surfaceMount: 0, surfaceDispose: 0, renderLegacy: 0 };
+    const calls = { runtimeInitialize: 0, surfaceCreate: 0, surfaceMount: 0, surfaceDispose: 0, renderLegacy: 0, runtimeOptions: null, surfaceOptions: null };
+    const policy = Object.freeze({ releaseMode: "experimental-preview", experimentalOptInAllowed: true, productionEnabled: false, productionBlockReason: "no-qualified-default-model", qualifiedDefaultModelId: null, legacyFallbackRetained: true, formalUiD2Enabled: false });
+    const activationModule = Object.freeze({ getPolicy() { return policy; }, isTrustedPolicy(value) { return value === policy; } });
     const runtime = Object.freeze({
         initialize() { calls.runtimeInitialize += 1; return options.runtimeFailure ? Promise.reject({ code: "RUNTIME_CAPABILITY_UNAVAILABLE" }) : Promise.resolve({ ok: true }); },
-        getStatus() { return Object.freeze({ state: "ready", initialized: true }); },
+        getStatus() { return Object.freeze({ state: "ready", initialized: true, activationPolicy: policy }); },
         sendProviderMessage() {}, cancelProviderRequest() {}, getProviderSurfaceState() { return Object.freeze({ state: "idle" }); },
         reviewProviderProposal() {}, approveActiveCandidate() {}, rejectActiveCandidate() {}, getConfirmationSurfaceState() { return Object.freeze({ state: "idle" }); }
     });
     const controllerModule = {
-        create() {
+        create(createOptions) {
+            calls.surfaceOptions = createOptions;
             calls.surfaceCreate += 1;
             if (options.surfaceConstructorFailure) throw new Error("private constructor detail");
             return {
@@ -69,7 +72,9 @@ function harness(options) {
     };
     context.window = context;
     context.window.VelaCepModuleLoader = { load() { return options.loaderFailure ? Promise.reject({ code: "RUNTIME_CAPABILITY_UNAVAILABLE" }) : Promise.resolve(); } };
-    context.window.VelaRuntime = { createRuntime() { return runtime; } };
+    context.window.VelaActivationPolicy = activationModule;
+    context.getVelaActivationPolicy = function () { return activationModule.getPolicy(); };
+    context.window.VelaRuntime = { createRuntime(runtimeOptions) { calls.runtimeOptions = runtimeOptions; return runtime; } };
     context.window.VelaSurfaceController = controllerModule;
     context.window.VelaPresentationModel = { create() {} };
     context.window.VelaTranscriptView = { create() {} };
@@ -86,6 +91,7 @@ async function run() {
     check(test.context.__testHooks.runtime() === test.runtime && test.runtime.getStatus().state === "ready", "A successful Runtime bootstrap remains ready while Surface starts separately.");
     check(test.calls.surfaceCreate === 1 && test.calls.surfaceMount === 1 && test.slot.children.length === 5, "A complete Surface dependency graph creates the fixed five actions once.");
     check(test.context.__testHooks.surfaceState() === "ready" && test.context.__testHooks.runtimeError() === null, "Successful Surface bootstrap does not create a Runtime diagnostic.");
+    check(!Object.prototype.hasOwnProperty.call(test.calls.runtimeOptions, "activationPolicy") && test.runtime.getStatus().activationPolicy === test.context.window.VelaActivationPolicy.getPolicy() && test.calls.surfaceOptions.ActivationPolicy === test.context.window.VelaActivationPolicy, "Runtime closes over and Surface receives the same source-owned activation policy identity without a caller injection option.");
     test.context.__testHooks.initializeSurface();
     check(test.calls.surfaceCreate === 1 && test.calls.surfaceMount === 1 && test.slot.children.length === 5, "Repeated Surface bootstrap is idempotent and does not duplicate action nodes.");
 

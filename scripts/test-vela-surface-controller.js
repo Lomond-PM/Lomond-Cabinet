@@ -6,6 +6,7 @@ const TranscriptView = require("../client/js/vela/velaTranscriptView.js").VelaTr
 const ComposerView = require("../client/js/vela/velaComposerView.js").VelaComposerView;
 const ConfirmationView = require("../client/js/vela/velaConfirmationView.js").VelaConfirmationView;
 const SurfaceController = require("../client/js/vela/velaSurfaceController.js").VelaSurfaceController;
+const ActivationPolicy = require("../client/js/vela/velaActivationPolicy.js").VelaActivationPolicy;
 let assertions = 0;
 function check(value, message) { assertions += 1; assert.ok(value, message); }
 function equal(actual, expected, message) { assertions += 1; assert.strictEqual(actual, expected, message); }
@@ -41,16 +42,17 @@ function fixture(options) {
         reject() { calls.reject += 1; confirmationState = { state: "rejected", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }; return Promise.resolve(); },
         getState() { return Object.freeze(Object.assign({}, confirmationState)); }
     };
-    const controller = SurfaceController.create({ surface: { getElementsForTest: () => elements }, provider, confirmation, t: (key) => "t:" + key, PresentationModel, TranscriptView, ComposerView, ConfirmationView, experimentalEnabled: options.experimentalEnabled !== false });
+    const controller = SurfaceController.create({ surface: { getElementsForTest: () => elements }, provider, confirmation, t: (key) => "t:" + key, PresentationModel, TranscriptView, ComposerView, ConfirmationView, ActivationPolicy });
     return { controller, elements, request, confirmationRequest, calls, setProvider(next) { providerState = next; }, setConfirmation(next) { confirmationState = next; } };
 }
 async function flush() { await Promise.resolve(); await Promise.resolve(); }
+async function mountEnabled(test) { check(test.controller.mount(), "controller mounts before explicit experimental opt-in"); test.controller.configureExperimental({ endpoint: "http://127.0.0.1:1234", model: "configured-model", acknowledged: true }); await test.controller.enableExperimental(); equal(test.controller.getExperimentalState().enabled, true, "explicit readiness enables only the current experimental session"); return test; }
 async function run() {
     equal(PresentationModel.errorDisplayKey("VERIFICATION_UNAVAILABLE"), "vela.surfaceContextUnavailable", "AE context error is localized");
     equal(PresentationModel.errorDisplayKey("PROVIDER_CONNECTION_FAILED"), "vela.surfaceProviderConnection", "connection error is localized");
     equal(PresentationModel.errorDisplayKey("PROVIDER_TIMEOUT"), "vela.surfaceProviderTimeout", "timeout error is localized");
     equal(PresentationModel.errorDisplayKey("UNKNOWN_TEST_ERROR"), "vela.surfaceGenericError", "unknown error uses localized fallback");
-    equal(PresentationModel.projectSurfaceState({ state: "completed", text: "model cannot choose state" }, { state: "idle" }, "", true).state, "completed", "projection uses trusted provider state rather than model text");
+    equal(PresentationModel.projectSurfaceState({ state: "completed", text: "model cannot choose state" }, { state: "idle" }, "", true, ActivationPolicy.getPolicy()).state, "completed", "projection uses trusted provider state rather than model text");
     equal(PresentationModel.projectSurfaceState({ state: "idle" }, { state: "idle" }, "", true).state, "idle", "trusted idle state projects idle");
     equal(PresentationModel.projectSurfaceState({ state: "idle", text: "requesting" }, { state: "idle" }, "draft", true).state, "composing", "non-empty local draft projects composing without trusting provider text");
     equal(PresentationModel.projectSurfaceState({ state: "pending" }, { state: "idle" }, "", true).state, "requesting", "trusted pending state projects requesting");
@@ -77,7 +79,7 @@ async function run() {
     ready.controller.configureExperimental({ endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "changed-model", acknowledged: true }); equal(ready.controller.getExperimentalState().state, "configuring", "changing the ready model immediately revokes the old readiness"); equal(ready.elements.composer.disabled, true, "configuration drift disables Composer until another explicit readiness check"); await ready.controller.enableExperimental(); equal(ready.calls.check.length, 2, "changed configuration requires a new explicit readiness check");
     ready.elements.composer.value = "send configured"; ready.elements.composer.emit("input"); ready.elements.actionSlot.children[0].emit("click"); equal(ready.calls.send.length, 1, "ready session can use the existing send facade"); ready.controller.disableExperimental(); equal(ready.calls.cancel, 1, "Disable cancels the active request"); equal(ready.controller.getExperimentalState().state, "disabled", "Disable clears session readiness"); equal(ready.controller.getExperimentalState().acknowledged, false, "Disable clears session acknowledgement"); ready.setProvider({ state: "completed", text: "late qualified ready", errorCode: null }); ready.request.resolve(); await flush(); equal(ready.elements.root.getAttribute("data-vela-surface-state"), "experimental-disabled", "late model response cannot replace disabled state or forge readiness");
     const test = fixture(), e = test.elements;
-    check(test.controller.mount(), "controller mounts once");
+    await mountEnabled(test);
     equal(e.actionSlot.children.length, 6, "stable action slot installs Send, Cancel, summary, Review, Approve, and Reject once");
     equal(e.actionSlot.children.filter((node) => node.tagName === "BUTTON").length, 5, "fresh production-shaped mount creates the fixed five action buttons");
     const [send, cancel, summary, review, approve, reject] = e.actionSlot.children;
@@ -91,7 +93,7 @@ async function run() {
     check(!send.hidden && cancel.hidden && review.hidden && approve.hidden && reject.hidden, "idle exposes only Send");
     check(send.disabled, "empty composer keeps Send disabled");
     e.composer.value = "draft"; e.composer.emit("input"); check(!send.disabled, "non-empty composer enables Send only in an opted-in fixture"); e.composer.value = ""; e.composer.emit("input");
-    const matrix = fixture(); matrix.controller.mount(); const m = matrix.elements.actionSlot.children; const matrixNodes = m.slice();
+    const matrix = fixture(); await mountEnabled(matrix); const m = matrix.elements.actionSlot.children; const matrixNodes = m.slice();
     check(!matrix.elements.actionSlot.hidden && !m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "fresh provider and confirmation idle keeps slot visible and exposes only Send");
     matrix.setProvider({ state: "completed", text: "terminal", errorCode: null }); matrix.controller.refreshLocale();
     check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "provider text terminal exposes only Send");
@@ -101,10 +103,10 @@ async function run() {
     check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "provider cancellation terminal exposes only Send");
     matrix.setProvider({ state: "intent-rejected", text: null, errorCode: null }); matrix.controller.refreshLocale();
     check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "intent-rejected is a provider terminal that exposes only Send");
-    const intentNotice = fixture(); intentNotice.controller.mount(); intentNotice.elements.composer.value = "你好"; intentNotice.elements.actionSlot.children[0].emit("click"); intentNotice.setProvider({ state: "intent-rejected", text: null, errorCode: null }); intentNotice.request.resolve(); await flush();
+    const intentNotice = fixture(); await mountEnabled(intentNotice); intentNotice.elements.composer.value = "你好"; intentNotice.elements.actionSlot.children[0].emit("click"); intentNotice.setProvider({ state: "intent-rejected", text: null, errorCode: null }); intentNotice.request.resolve(); await flush();
     equal(intentNotice.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceIntentRejected", "intent-rejected uses the fixed localized notice rather than model or internal data");
     check(!intentNotice.elements.actionSlot.children[0].hidden && intentNotice.elements.actionSlot.children[3].hidden && intentNotice.elements.actionSlot.children[4].hidden && intentNotice.elements.actionSlot.children[5].hidden, "intent-rejected restores Send with no Review, Approve, or Reject action");
-    const mismatchNotice = fixture(); mismatchNotice.controller.mount(); mismatchNotice.elements.composer.value = "将当前选中图层的不透明度设置为 50%。"; mismatchNotice.elements.actionSlot.children[0].emit("click"); mismatchNotice.setProvider({ state: "intent-rejected", text: null, errorCode: null, intentReason: "target-mismatch" }); mismatchNotice.request.resolve(); await flush(); equal(mismatchNotice.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceIntentTargetMismatch", "Target mismatch uses an accurate fixed local notice instead of claiming the request was not explicit"); check(mismatchNotice.calls.review === 0 && mismatchNotice.calls.approve === 0, "A mismatched proposal creates no automatic Review or execution authority");
+    const mismatchNotice = fixture(); await mountEnabled(mismatchNotice); mismatchNotice.elements.composer.value = "将当前选中图层的不透明度设置为 50%。"; mismatchNotice.elements.actionSlot.children[0].emit("click"); mismatchNotice.setProvider({ state: "intent-rejected", text: null, errorCode: null, intentReason: "target-mismatch" }); mismatchNotice.request.resolve(); await flush(); equal(mismatchNotice.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceIntentTargetMismatch", "Target mismatch uses an accurate fixed local notice instead of claiming the request was not explicit"); check(mismatchNotice.calls.review === 0 && mismatchNotice.calls.approve === 0, "A mismatched proposal creates no automatic Review or execution authority");
     matrix.setProvider({ state: "proposal-ready", text: null, errorCode: null }); matrix.controller.refreshLocale();
     check(m[0].hidden && m[1].hidden && !m[3].hidden && m[4].hidden && m[5].hidden, "proposal-ready exposes only Review");
     matrix.setProvider({ state: "idle", text: null, errorCode: null }); matrix.setConfirmation({ state: "confirmation-ready", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
@@ -143,22 +145,22 @@ async function run() {
     check(!cancel.hidden && send.hidden, "new provider pending state takes precedence over a cleared execution terminal");
     cancel.emit("click");
     equal(test.calls.cancel, 1, "Cancel remains a no-argument action while a replacement request is pending");
-    const rejected = fixture(); rejected.controller.mount(); const r = rejected.elements.actionSlot.children; rejected.setProvider({ state: "proposal-ready", text: null, errorCode: null }); rejected.controller.refreshLocale(); r[3].emit("click"); await flush(); r[5].emit("click"); await flush();
+    const rejected = fixture(); await mountEnabled(rejected); const r = rejected.elements.actionSlot.children; rejected.setProvider({ state: "proposal-ready", text: null, errorCode: null }); rejected.controller.refreshLocale(); r[3].emit("click"); await flush(); r[5].emit("click"); await flush();
     equal(rejected.calls.reject, 1, "Reject is a private no-argument action");
     check(!r[0].hidden && r[3].hidden && r[4].hidden && r[5].hidden, "rejected confirmation returns to Send without execution action");
     equal(rejected.elements.transcriptScroll.children[1].children[0].textContent, "t:vela.surfaceConfirmationReady", "confirmation has dedicated bounded notice");
     equal(rejected.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceConfirmationRejected", "rejection has dedicated bounded notice");
-    const errors = fixture(); errors.controller.mount(); errors.elements.composer.value = "fail"; errors.elements.actionSlot.children[0].emit("click"); errors.setProvider({ state: "failed", text: null, errorCode: "PROVIDER_CONNECTION_FAILED" }); errors.request.resolve(); await flush();
+    const errors = fixture(); await mountEnabled(errors); errors.elements.composer.value = "fail"; errors.elements.actionSlot.children[0].emit("click"); errors.setProvider({ state: "failed", text: null, errorCode: "PROVIDER_CONNECTION_FAILED" }); errors.request.resolve(); await flush();
     equal(errors.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceProviderConnection", "Transcript receives mapped presentation text");
     check(errors.elements.transcriptScroll.children[1].children[1].textContent.indexOf("PROVIDER_CONNECTION_FAILED") === -1, "Transcript never exposes raw error codes");
-    const claim = fixture(); claim.controller.mount(); claim.elements.composer.value = "将当前选中图层的不透明度设置为 50%。"; claim.elements.actionSlot.children[0].emit("click"); claim.setProvider({ state: "failed", text: "已经修改，已执行，调整完成", errorCode: "PROVIDER_RESPONSE_INVALID" }); claim.request.resolve(); await flush(); const claimTranscript = claim.elements.transcriptScroll.children[1].children.map((node) => node.textContent).join("|"); check(!claimTranscript.includes("已经修改") && !claimTranscript.includes("已执行") && !claimTranscript.includes("调整完成"), "A failed explicit response cannot render model-authored execution claims into transcript"); equal(claim.elements.root.getAttribute("data-vela-surface-state"), "error", "Profile mismatch remains a local error and cannot project completed or proposal-ready");
+    const claim = fixture(); await mountEnabled(claim); claim.elements.composer.value = "将当前选中图层的不透明度设置为 50%。"; claim.elements.actionSlot.children[0].emit("click"); claim.setProvider({ state: "failed", text: "已经修改，已执行，调整完成", errorCode: "PROVIDER_RESPONSE_INVALID" }); claim.request.resolve(); await flush(); const claimTranscript = claim.elements.transcriptScroll.children[1].children.map((node) => node.textContent).join("|"); check(!claimTranscript.includes("已经修改") && !claimTranscript.includes("已执行") && !claimTranscript.includes("调整完成"), "A failed explicit response cannot render model-authored execution claims into transcript"); equal(claim.elements.root.getAttribute("data-vela-surface-state"), "error", "Profile mismatch remains a local error and cannot project completed or proposal-ready");
     errors.elements.composer.value = "recover"; errors.elements.composer.emit("input"); errors.elements.actionSlot.children[0].emit("click");
     check(!errors.elements.actionSlot.children[1].hidden, "a local draft can recover from an error into a new requesting state");
-    const late = fixture(); late.controller.mount(); late.elements.composer.value = "cancel me"; late.elements.actionSlot.children[0].emit("click"); late.elements.actionSlot.children[1].emit("click");
+    const late = fixture(); await mountEnabled(late); late.elements.composer.value = "cancel me"; late.elements.actionSlot.children[0].emit("click"); late.elements.actionSlot.children[1].emit("click");
     const lateTranscriptCount = late.elements.transcriptScroll.children[1].children.length; late.setProvider({ state: "completed", text: "late model text", errorCode: null }); late.request.resolve(); await flush();
     equal(late.elements.transcriptScroll.children[1].children.length, lateTranscriptCount, "late response after cancel cannot append transcript state");
     equal(late.elements.root.getAttribute("data-vela-surface-state"), "cancelled", "late response after cancel cannot replace the cancelled presentation projection");
-    const sync = fixture({ synchronousRejection: true }); sync.controller.mount(); sync.elements.composer.value = "keep"; const syncTextarea = sync.elements.composer; sync.elements.actionSlot.children[0].emit("click"); await flush(); equal(sync.elements.composer.value, "keep", "synchronous rejection keeps draft"); equal(sync.elements.composer, syncTextarea, "synchronous rejection preserves textarea");
+    const sync = fixture({ synchronousRejection: true }); await mountEnabled(sync); sync.elements.composer.value = "keep"; const syncTextarea = sync.elements.composer; sync.elements.actionSlot.children[0].emit("click"); await flush(); equal(sync.elements.composer.value, "keep", "synchronous rejection keeps draft"); equal(sync.elements.composer, syncTextarea, "synchronous rejection preserves textarea");
     const beforeChildren = e.actionSlot.children.slice(); test.controller.suspend(); e.composer.value = "suspended"; test.setProvider({ state: "completed", text: "late", errorCode: null }); test.controller.refreshLocale(); equal(e.composer.value, "suspended", "suspension blocks patches"); test.controller.resume(); check(e.actionSlot.children.every((node, index) => node === beforeChildren[index]), "resume preserves controls DOM identity");
     check(!/errorCode|PROVIDER_|VERIFICATION_UNAVAILABLE/.test(TranscriptView.create.toString()), "Transcript does not map internal codes");
     check(!/requestId|candidateId|planId|authority|target|context|nonce|digest/.test(SurfaceController.create.toString()), "Surface controller exposes experimental endpoint configuration without any trusted identity or execution-authority seam");

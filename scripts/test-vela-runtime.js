@@ -3,6 +3,7 @@
 
 const assert = require("assert");
 const runtimeModule = require("../client/js/vela/velaRuntime");
+const activationPolicy = require("../client/js/vela/velaActivationPolicy").VelaActivationPolicy;
 const nodeRuntime = require("./velaNodeRuntime");
 let assertions = 0;
 const HOST = "host_0123456789abcdef0123456789abcdef0123456789abcdef";
@@ -42,6 +43,7 @@ function createController(options) {
     options = options || {};
     const environment = Object.assign({ setTimeout, clearTimeout }, nodeRuntime, options.environment || {});
     return runtimeModule.createRuntime({
+        activationPolicy,
         environment,
         invokeHost(source, callback) {
             const request = decode(source);
@@ -65,6 +67,8 @@ async function run() {
     check(status.state === "ready" && status.initialized === true, "Tier 0 Host v4 readiness succeeds.");
     check(status.hostAdapterRevision === "vela-context-host-v4", "Status reports only the Host revision.");
     check(Object.isFrozen(status) && Object.isFrozen(status.bridgeState), "Status is frozen.");
+    check(status.activationPolicy === activationPolicy.getPolicy() && Object.isFrozen(status.activationPolicy), "Runtime reads and retains the exact trusted activation policy identity.");
+    check(status.activationPolicy.productionEnabled === false && status.activationPolicy.qualifiedDefaultModelId === null && status.activationPolicy.productionBlockReason === "no-qualified-default-model", "Runtime production activation remains fail-closed with no qualified default model.");
     check(!Object.prototype.hasOwnProperty.call(status, "sessionId") && !Object.prototype.hasOwnProperty.call(status, "planStore"), "Status does not leak trusted runtime state.");
     check(Object.isFrozen(controller.getUiState()) && !Object.prototype.hasOwnProperty.call(controller.getUiState(), "planId") && !Object.prototype.hasOwnProperty.call(controller.getUiState(), "propertyValueDigest"), "UI state is frozen and does not leak private plan or digest data.");
     check(Object.isFrozen(controller.getProviderSurfaceState()) && !Object.prototype.hasOwnProperty.call(controller.getProviderSurfaceState(), "requestId") && !Object.prototype.hasOwnProperty.call(controller.getProviderSurfaceState(), "proposalCapabilityId"), "Provider Surface projection is frozen and excludes request and proposal authority.");
@@ -75,6 +79,7 @@ async function run() {
     await expectCode(controller.approveActiveCandidate(), "CANDIDATE_STATE_INVALID", "Approve facade fails closed without a pending confirmation.");
     await expectCode(controller.rejectActiveCandidate(), "CANDIDATE_STATE_INVALID", "Reject facade fails closed without a pending confirmation.");
     check((await controller.initialize()).state === "ready" && controller.getStatus().state === "ready", "Repeated initialization is idempotent.");
+    check(controller.getStatus().activationPolicy === status.activationPolicy, "Repeated initialization and bootstrap retain one activation policy identity.");
     check(controller.suspend() === true && controller.getStatus().state === "suspended", "Suspend forwards to the private bridge.");
     check(controller.suspend() === false, "Duplicate suspend is inert.");
     check(controller.resume() === true && controller.getStatus().state === "ready", "Resume restores the runtime state.");
@@ -97,8 +102,9 @@ async function run() {
     await expectCode(initializing, "LIFECYCLE_BLOCKED", "Late Host callback cannot reactivate a disposed runtime.");
     check(pending.getStatus().state === "disposed", "Late callback preserves disposed state.");
 
-    const invalid = runtimeModule.createRuntime({ invokeHost: null });
+    const invalid = runtimeModule.createRuntime({ invokeHost: null, activationPolicy });
     await expectCode(invalid.initialize(), "RUNTIME_CAPABILITY_UNAVAILABLE", "Missing browser capabilities fail closed.");
+    check(!/ownData\(options,\s*["']activationPolicy["']\)/.test(require("fs").readFileSync(require.resolve("../client/js/vela/velaRuntime"), "utf8")), "Runtime exposes no caller option for replacing the source-owned activation policy.");
     console.log("test-vela-runtime: " + assertions + " assertions passed.");
 }
 

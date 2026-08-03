@@ -1456,6 +1456,25 @@ changes and UI-D2 unlock remain separate human reviews. C4-C2 is closed with no 
 [`docs/reports/vela-c4-profile-pilot-results.md`](../reports/vela-c4-profile-pilot-results.md).
 Local loaded-model state is operational context and is not part of the committed rubric.
 
+## D2 Activation Closeout
+
+D2-A, D2-B, and D2-C are complete, so the Vela D phase is complete for 0.3.0.
+The product state is **Experimental Preview**, not production activation.
+The frozen local `VelaActivationPolicy` permits explicit session-only experimental
+opt-in, keeps that opt-in disabled after every reload, retains the legacy Vela
+fallback, and permanently reports production blocked by
+`no-qualified-default-model` until a later product decision changes the source-owned
+policy. No 4B or 9B pilot model is qualified, recommended, or selected as a default,
+and formal UI-D2 default enablement remains false.
+
+Endpoint/model persistence and successful local readiness remain operational inputs
+only: they cannot change qualification or activation. Acknowledgement, session
+enablement, model responses, transcript content, proposals, candidates, confirmation,
+or Host results likewise cannot mutate the policy. Future qualification,
+default-model selection, and production activation are independent reviews rather
+than additional D-phase tasks. The known narrow Surface/experimental Settings layout
+issues remain deferred to 0.3.1 without safety or execution-path impact.
+
 Vela 0.3.0 is an approval-driven assistant over explicit AE capabilities. The
 model proposes; local schemas, target fingerprints, permissions, and the
 Execution Guard decide whether an action can be shown or run. The user remains

@@ -16,6 +16,17 @@
         }
         return { protocol: protocol, parser: parser, providerAdapter: providerAdapter, localTransport: localTransport, context: context, validator: validator, plan: plan, guard: guard, bridge: bridge, preflight: preflight, executionAdapter: executionAdapter, controller: controller, providerController: providerController, proposalRouter: proposalRouter };
     }
+    function trustedBrowserActivationPolicy(target) {
+        var descriptor;
+        var module;
+        var policy;
+        try { descriptor = Object.getOwnPropertyDescriptor(target, "VelaActivationPolicy"); }
+        catch (error) { return null; }
+        if (!descriptor || descriptor.get || descriptor.set || !Object.prototype.hasOwnProperty.call(descriptor, "value") || descriptor.writable || descriptor.configurable) { return null; }
+        module = descriptor.value;
+        policy = module && typeof module.getPolicy === "function" ? module.getPolicy() : null;
+        return module && typeof module.isTrustedPolicy === "function" && module.isTrustedPolicy(policy) ? module : null;
+    }
     function registerBrowserModule(target, name, create) {
         var hasOwn = Object.prototype.hasOwnProperty;
         var bootstrap;
@@ -26,7 +37,9 @@
         if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.getModule !== "function" || typeof bootstrap.hasModule !== "function" || typeof bootstrap.registerModule !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
         if (bootstrap.hasModule(name)) { throw bootstrapError("MODULE_ALREADY_REGISTERED"); }
         dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaResponseParser"), bootstrap.getModule("VelaProviderAdapter"), bootstrap.getModule("VelaLocalTransport"), bootstrap.getModule("VelaContext"), bootstrap.getModule("VelaValidator"), bootstrap.getModule("VelaPlan"), bootstrap.getModule("VelaExecutionGuard"), bootstrap.getModule("VelaContextBridge"), bootstrap.getModule("VelaExecutionPreflight"), bootstrap.getModule("VelaExecutionAdapter"), bootstrap.getModule("VelaController"), bootstrap.getModule("VelaProviderController"), bootstrap.getModule("VelaProviderProposalRouter"));
-        exported = Object.freeze(create(dependencies.protocol, dependencies.parser, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter));
+        var activationPolicy = trustedBrowserActivationPolicy(target);
+        if (!activationPolicy) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
+        exported = Object.freeze(create(dependencies.protocol, dependencies.parser, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter, activationPolicy));
         bootstrap.registerModule(name, exported);
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
@@ -34,9 +47,9 @@
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
         var dependencies = assertDependencies(require("./velaProtocol"), require("./velaResponseParser"), require("./velaProviderAdapter"), require("./velaLocalTransport"), require("./velaContext"), require("./velaValidator"), require("./velaPlan"), require("./velaExecutionGuard"), require("./velaContextBridge"), require("./velaExecutionPreflight"), require("./velaExecutionAdapter"), require("./velaController"), require("./velaProviderController"), require("./velaProviderProposalRouter"));
-        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.parser, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter));
+        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.parser, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter, require("./velaActivationPolicy").VelaActivationPolicy));
     }
-}(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule, providerAdapterModule, localTransportModule, contextModule, validatorModule, planModule, guardModule, bridgeModule, preflightModule, executionAdapterModule, controllerModule, providerControllerModule, proposalRouterModule) {
+}(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule, providerAdapterModule, localTransportModule, contextModule, validatorModule, planModule, guardModule, bridgeModule, preflightModule, executionAdapterModule, controllerModule, providerControllerModule, proposalRouterModule, activationPolicyModule) {
     "use strict";
 
     var MODULE_REVISION = "vela-runtime-v1";
@@ -145,6 +158,7 @@
     function createRuntime(options) {
         var invokeHost = options && ownData(options, "invokeHost");
         var environment = options && ownData(options, "environment");
+        var activationPolicy = activationPolicyModule && typeof activationPolicyModule.getPolicy === "function" ? activationPolicyModule.getPolicy() : null;
         var root = typeof self !== "undefined" ? self : (typeof globalThis !== "undefined" ? globalThis : null);
         var state = "new";
         var initPromise = null;
@@ -169,7 +183,7 @@
         var runtime = environment || {};
         function safeStatus() {
             var bridgeState = bridge ? bridge.getState() : null;
-            return Object.freeze({ state: state, initialized: initialized, disposed: disposed, suspended: suspended, moduleRevision: MODULE_REVISION, hostAdapterRevision: initialized ? HOST_ADAPTER_REVISION : null, bridgeState: Object.freeze({ state: bridgeState ? bridgeState.state : null }), lastErrorCode: lastErrorCode });
+            return Object.freeze({ state: state, initialized: initialized, disposed: disposed, suspended: suspended, moduleRevision: MODULE_REVISION, hostAdapterRevision: initialized ? HOST_ADAPTER_REVISION : null, bridgeState: Object.freeze({ state: bridgeState ? bridgeState.state : null }), lastErrorCode: lastErrorCode, activationPolicy: activationPolicy });
         }
         function safeError(code) { return Object.freeze({ code: code || "RUNTIME_CAPABILITY_UNAVAILABLE" }); }
         function browserRandomId(kind) {
@@ -196,7 +210,7 @@
             var fetchFn = typeof ownData(runtime, "fetch") === "function" ? ownData(runtime, "fetch") : root && root.fetch;
             var TextDecoderCtor = ownData(runtime, "TextDecoder") || (root && root.TextDecoder);
             var timeoutMs = ownData(runtime, "timeoutMs");
-            if (typeof invokeHost !== "function" || typeof setTimer !== "function" || typeof clearTimer !== "function") { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
+            if (typeof invokeHost !== "function" || typeof setTimer !== "function" || typeof clearTimer !== "function" || !activationPolicyModule || typeof activationPolicyModule.isTrustedPolicy !== "function" || !activationPolicyModule.isTrustedPolicy(activationPolicy) || activationPolicy.productionEnabled !== false || activationPolicy.productionBlockReason !== "no-qualified-default-model" || activationPolicy.qualifiedDefaultModelId !== null) { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
             if (timeoutMs === undefined) { timeoutMs = 10000; }
             protocol = protocolModule.createProtocol(runtimeOptions);
             contextApi = contextModule.createContextApi(protocol);

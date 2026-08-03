@@ -13,6 +13,7 @@ const TranscriptView = require(path.join(ROOT, "client/js/vela/velaTranscriptVie
 const ComposerView = require(path.join(ROOT, "client/js/vela/velaComposerView.js")).VelaComposerView;
 const ConfirmationView = require(path.join(ROOT, "client/js/vela/velaConfirmationView.js")).VelaConfirmationView;
 const SurfaceController = require(path.join(ROOT, "client/js/vela/velaSurfaceController.js")).VelaSurfaceController;
+const ActivationPolicy = require(path.join(ROOT, "client/js/vela/velaActivationPolicy.js")).VelaActivationPolicy;
 let assertions = 0;
 
 function ok(value, message) {
@@ -299,7 +300,7 @@ function testSurface() {
     equal(nodes.grip, initialGrip, "resume preserves resize grip identity");
     const provider = { send: function () {}, cancel: function () {}, getState: function () { return { state: "idle", text: null, errorCode: null }; } };
     const confirmation = { review: function () {}, approve: function () {}, reject: function () {}, getState: function () { return { state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }; } };
-    const controller = SurfaceController.create({ surface: surface, provider: provider, confirmation: confirmation, t: function (key) { return "t:" + key; }, PresentationModel: PresentationModel, TranscriptView: TranscriptView, ComposerView: ComposerView, ConfirmationView: ConfirmationView, experimentalEnabled: true });
+    const controller = SurfaceController.create({ surface: surface, provider: provider, confirmation: confirmation, t: function (key) { return "t:" + key; }, PresentationModel: PresentationModel, TranscriptView: TranscriptView, ComposerView: ComposerView, ConfirmationView: ConfirmationView, ActivationPolicy: ActivationPolicy });
     controller.mount();
     const actionNodes = nodes.actionSlot.children.slice(-6);
     const idleSend = actionNodes[0];
@@ -351,7 +352,7 @@ function testStaticContracts() {
     ok(/width: var\(--vela-resize-grip-width\)/.test(gripRule) && /height: var\(--vela-resize-grip-height\)/.test(gripRule) && /background: var\(--separator\)/.test(gripRule) && /pointer-events: none/.test(gripRule), "short low-contrast grip is decorative and cannot intercept resize input");
     ok(/\.vela-surface\s*\{[\s\S]*?border: 1px solid var\(--panel-border\)/.test(cssSource), "Surface outer border remains the only complete visual boundary");
     ok(indexSource.indexOf("id=\"velaSurfaceMount\"") < indexSource.indexOf("id=\"toolGrid\""), "static mount precedes tool pool in index.html");
-    ok(/experimentalEnabled:\s*false/.test(mainSource), "production bootstrap keeps the formal Provider Surface disabled pending manual opt-in design");
+    ok(/ActivationPolicy:\s*window\.VelaActivationPolicy/.test(mainSource) && !/experimentalEnabled:\s*true/.test(mainSource), "production bootstrap delegates activation to the trusted policy and never starts an opted-in session");
     ok(!/Qualified|Recommended model|Production ready/.test(i18nSource), "Surface i18n does not claim qualification, recommendation, or production readiness");
 }
 

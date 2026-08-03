@@ -34,7 +34,7 @@
     function errorDisplayKey(code) {
         return typeof code === "string" && Object.prototype.hasOwnProperty.call(ERROR_DISPLAY_KEYS, code) ? ERROR_DISPLAY_KEYS[code] : "vela.surfaceGenericError";
     }
-    function projectSurfaceState(providerState, confirmationState, composerValue, experimentalEnabled, experimentalState) {
+    function projectSurfaceState(providerState, confirmationState, composerValue, experimentalEnabled, experimentalState, activationPolicy) {
         var provider = providerState && typeof providerState.state === "string" ? providerState.state : "idle";
         var confirmation = confirmationState && typeof confirmationState.state === "string" ? confirmationState.state : "idle";
         var state = "idle";
@@ -50,7 +50,14 @@
         else if (provider === "cancelled") { state = "cancelled"; }
         else if (provider === "completed") { state = "completed"; }
         else if (typeof composerValue === "string" && /\S/.test(composerValue)) { state = "composing"; }
-        return Object.freeze({ state: state, experimental: true, qualified: false, manualOptInRequired: true });
+        return Object.freeze({
+            state: state,
+            experimental: activationPolicy && activationPolicy.releaseMode === "experimental-preview",
+            qualified: !!(activationPolicy && activationPolicy.qualifiedDefaultModelId),
+            manualOptInRequired: !!(activationPolicy && activationPolicy.experimentalOptInAllowed && !activationPolicy.productionEnabled),
+            productionEnabled: !!(activationPolicy && activationPolicy.productionEnabled),
+            productionBlockReason: activationPolicy && activationPolicy.productionBlockReason || null
+        });
     }
     function create() {
         var items = [];

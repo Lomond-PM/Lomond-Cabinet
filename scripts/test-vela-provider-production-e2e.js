@@ -2,6 +2,7 @@
 "use strict";
 const assert = require("assert");
 const runtimeModule = require("../client/js/vela/velaRuntime");
+const activationPolicy = require("../client/js/vela/velaActivationPolicy").VelaActivationPolicy;
 const protocolModule = require("../client/js/vela/velaProtocol");
 const parserModule = require("../client/js/vela/velaResponseParser");
 const providerAdapterModule = require("../client/js/vela/velaProviderAdapter");
@@ -51,7 +52,7 @@ function makeHarness() {
     });
     const digestProtocol = protocolModule.createProtocol(environment);
     const digestContext = contextModule.createContextApi(digestProtocol);
-    const runtime = runtimeModule.createRuntime({ environment, invokeHost(source, callback) {
+    const runtime = runtimeModule.createRuntime({ activationPolicy, environment, invokeHost(source, callback) {
         const call = decode(source); calls.push(call);
         if (call.kind === "execution") { state.value = call.request.scope.params.opacity; callback(hostExecution(call.request, digestContext.digestPropertyValue("number", state.value))); return; }
         if (call.request.operation === "getCapabilities") { callback(hostContext(call.request, { hostInstanceId: HOST, hostReloadEpoch: state.epoch, tier: 0, capabilities: { maxTier: 3, nativeLayerIdAvailable: true, bindingContextAvailable: true, hostAdapterRevision: "vela-context-host-v4" } })); return; }

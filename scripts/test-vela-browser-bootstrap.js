@@ -132,6 +132,7 @@ function providerControllerDependencyBrowser(fault) {
 function run() {
     const browser = browserContext();
     const before = browser.descriptors();
+    runBrowserModule(browser, "velaActivationPolicy.js");
     MODULES.forEach((filename) => runBrowserModule(browser, filename));
     const bootstrap = browser.context.__velaProtocolCoreBootstrapV1;
     check(bootstrap && Object.isFrozen(bootstrap), "A self-referential browser global creates the exact Vela bootstrap even when CommonJS globals exist.");
@@ -139,6 +140,7 @@ function run() {
         check(bootstrap.getModule(name) === browser.context[name] && Object.isFrozen(browser.context[name]), name + " registers through the browser bootstrap.");
     });
     check(browser.requireCalls() === 0, "Browser-first registration never calls require.");
+    check(browser.context.VelaRuntime && browser.context.VelaActivationPolicy.isTrustedPolicy(browser.context.VelaRuntime.createRuntime({}).getStatus().activationPolicy), "Browser Runtime closes over the exact source-owned activation policy rather than a caller option.");
     check(browser.context.module === browser.moduleSentinel && browser.context.module.exports === browser.exportsSentinel && browser.context.exports === browser.exportsSentinel, "Browser registration never changes CommonJS object identities.");
     const after = browser.descriptors();
     check(sameDescriptor(before.module, after.module) && sameDescriptor(before.exports, after.exports) && sameDescriptor(before.require, after.require), "Browser registration preserves CommonJS descriptors exactly.");
