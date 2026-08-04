@@ -28,6 +28,9 @@
         var resizeController = null;
         var observer = null;
         var observerFrame = null;
+        var resizeFallback = null;
+        var sizeSignalsBound = false;
+        var lastNarrowMode = null;
         var mounted = false;
         var suspended = false;
         var disposed = false;
@@ -53,26 +56,63 @@
         function scheduleLayout() {
             if (disposed || suspended || observerFrame !== null) { return; }
             if (eventTarget && typeof eventTarget.requestAnimationFrame === "function") {
-                observerFrame = eventTarget.requestAnimationFrame(function () { observerFrame = null; refreshLayout(); });
+                observerFrame = eventTarget.requestAnimationFrame(function () { observerFrame = null; performLayoutRefresh(); });
             } else if (eventTarget && typeof eventTarget.setTimeout === "function") {
-                observerFrame = eventTarget.setTimeout(function () { observerFrame = null; refreshLayout(); }, 0);
-            } else { refreshLayout(); }
+                observerFrame = eventTarget.setTimeout(function () { observerFrame = null; performLayoutRefresh(); }, 0);
+            } else { performLayoutRefresh(); }
         }
         function contentWidth(nodeRef) {
             var rect = nodeRef && typeof nodeRef.getBoundingClientRect === "function" ? nodeRef.getBoundingClientRect() : null;
             return Math.max(nodeRef && nodeRef.scrollWidth || 0, rect && rect.width || 0, nodeRef && nodeRef.offsetWidth || 0, 0);
         }
-        function updateLayoutMode() {
+        function measureLayoutMode() {
             var controlsWidth;
             var settingsWidth;
             var statusWidth;
             var requiredWidth;
-            if (!elements) { return; }
+            if (!elements) { return false; }
             controlsWidth = contentWidth(elements.controls);
             settingsWidth = contentWidth(elements.settingsButton);
             statusWidth = Math.max(contentWidth(elements.statusDot) + Math.min(contentWidth(elements.statusText), STATUS_MIN_VISIBLE_CHARS * 8 * scale()), 1);
             requiredWidth = settingsWidth + statusWidth + (LAYOUT_SAFETY_GAP_PX * scale());
-            rootElement.classList.toggle("is-narrow", controlsWidth > 0 && controlsWidth < requiredWidth);
+            return controlsWidth > 0 && controlsWidth < requiredWidth;
+        }
+        function applyLayoutMode(isNarrow) {
+            if (lastNarrowMode === isNarrow) { return; }
+            rootElement.classList.toggle("is-narrow", isNarrow);
+            lastNarrowMode = isNarrow;
+        }
+        function performLayoutRefresh() {
+            var isNarrow;
+            var boundsMeasurement;
+            if (disposed || suspended || !elements) { return; }
+            isNarrow = measureLayoutMode();
+            boundsMeasurement = resizeController && resizeController.measureBounds ? resizeController.measureBounds() : null;
+            applyLayoutMode(isNarrow);
+            if (resizeController && boundsMeasurement) { resizeController.applyMeasurement(boundsMeasurement); }
+        }
+        function bindSizeSignals() {
+            if (sizeSignalsBound || disposed || suspended) { return; }
+            if (ResizeObserverCtor) {
+                observer = new ResizeObserverCtor(scheduleLayout);
+                observer.observe(homeContainer);
+                observer.observe(headerElement);
+                observer.observe(toolPoolElement);
+                observer.observe(elements.controls);
+            } else if (eventTarget && typeof eventTarget.addEventListener === "function") {
+                resizeFallback = scheduleLayout;
+                eventTarget.addEventListener("resize", resizeFallback);
+            }
+            sizeSignalsBound = true;
+        }
+        function unbindSizeSignals() {
+            if (!sizeSignalsBound) { return; }
+            if (observer) { observer.disconnect(); observer = null; }
+            if (resizeFallback && eventTarget && typeof eventTarget.removeEventListener === "function") {
+                eventTarget.removeEventListener("resize", resizeFallback);
+            }
+            resizeFallback = null;
+            sizeSignalsBound = false;
         }
         function refreshLocale() {
             if (!elements) { return; }
@@ -85,12 +125,10 @@
             elements.settingsButton.setAttribute("aria-label", t("vela.surfaceSettings"));
             elements.settingsButton.textContent = t("vela.surfaceSettings");
             elements.handle.setAttribute("aria-label", t("vela.surfaceResize"));
-            updateLayoutMode();
+            scheduleLayout();
         }
         function refreshLayout() {
-            if (disposed || !elements) { return; }
-            updateLayoutMode();
-            if (resizeController) { resizeController.refreshBounds(); }
+            scheduleLayout();
         }
         function mount() {
             var transcriptSlot;
@@ -160,14 +198,9 @@
             settingsButton.addEventListener("click", settingsHandler);
             resizeController = ResizeController.create({ root: rootElement, handle: handle, transcript: transcriptScroll, composer: composerSlot, status: statusSlot, controls: controls, settings: settingsSlot, homeContainer: homeContainer, headerElement: headerElement, toolPoolElement: toolPoolElement, getUiScale: getUiScale, eventTarget: eventTarget });
             resizeController.start();
-            if (ResizeObserverCtor) {
-                observer = new ResizeObserverCtor(scheduleLayout);
-                observer.observe(rootElement);
-                observer.observe(controls);
-            }
             mounted = true;
+            bindSizeSignals();
             refreshLocale();
-            refreshLayout();
             return true;
         }
         function suspend() {
@@ -176,6 +209,7 @@
             rootElement.classList.add("is-suspended");
             if (resizeController) { resizeController.suspend(); }
             cancelObserverFrame();
+            unbindSizeSignals();
             return true;
         }
         function resume() {
@@ -183,7 +217,8 @@
             suspended = false;
             rootElement.classList.remove("is-suspended");
             if (resizeController) { resizeController.resume(); }
-            refreshLayout();
+            bindSizeSignals();
+            scheduleLayout();
             return true;
         }
         function getElementsForTest() { return elements; }
@@ -191,7 +226,7 @@
             if (disposed) { return false; }
             disposed = true;
             cancelObserverFrame();
-            if (observer) { observer.disconnect(); observer = null; }
+            unbindSizeSignals();
             if (resizeController) { resizeController.dispose(); resizeController = null; }
             if (elements && settingsHandler) { elements.settingsButton.removeEventListener("click", settingsHandler); }
             if (rootElement && rootElement.parentNode) { rootElement.parentNode.removeChild(rootElement); }
