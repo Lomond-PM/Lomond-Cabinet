@@ -7,7 +7,6 @@
 }(typeof self !== "undefined" ? self : this, function () {
     "use strict";
 
-    var MAX_TRANSCRIPT_ITEMS = 16;
     var ERROR_DISPLAY_KEYS = Object.freeze({
         "VERIFICATION_UNAVAILABLE": "vela.surfaceContextUnavailable",
         "PROVIDER_CONNECTION_FAILED": "vela.surfaceProviderConnection",
@@ -80,7 +79,6 @@
         function append(kind, text, displayTextKey) {
             var item = Object.freeze({ kind: kind, text: safeText(text), displayTextKey: typeof displayTextKey === "string" ? displayTextKey : null });
             items.push(item);
-            while (items.length > MAX_TRANSCRIPT_ITEMS) { items.shift(); }
             return item;
         }
         function begin(message) {

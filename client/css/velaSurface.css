@@ -33,14 +33,20 @@
 .vela-transcript-slot {
     grid-area: transcript;
     min-height: 0;
+    min-width: 0;
+    overflow: hidden;
     padding: var(--vela-surface-inset);
     padding-bottom: 0;
 }
 
 .vela-transcript-scroll {
+    box-sizing: border-box;
+    width: 100%;
     height: 100%;
     min-height: 0;
+    min-width: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: var(--vela-surface-inset);
     border: 1px solid var(--separator);
     border-radius: var(--radius-sm);
@@ -58,15 +64,27 @@
 
 .vela-transcript-list {
     display: grid;
+    min-width: 0;
     gap: var(--vela-inline-gap);
     margin-top: var(--vela-inline-gap);
 }
 
 .vela-transcript-message {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
     margin: 0;
     color: var(--text-primary);
     font-size: var(--font-small);
     line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.vela-transcript-message pre,
+.vela-transcript-message code {
+    max-width: 100%;
+    overflow-wrap: anywhere;
     white-space: pre-wrap;
     word-break: break-word;
 }
