@@ -20,6 +20,7 @@
         var experimentalEnabled = false;
         var onExperimentalStateChange = options && typeof options.onExperimentalStateChange === "function" ? options.onExperimentalStateChange : function () {};
         var experimentalState = experimentalEnabled ? "ready" : "disabled";
+        var experimentalDisabledReason = "qualification-required";
         var experimentalConfig = { endpoint: "", model: "", acknowledged: false };
         var readiness = null;
         var elements;
@@ -66,6 +67,15 @@
             };
             return t(keys[state] || "vela.surfaceStatusFailed");
         }
+        function synchronizeStatusAccessibility() {
+            var primary = elements.statusText.textContent || "";
+            var experimental = elements.experimentalText && elements.experimentalText.textContent || "";
+            var complete = primary && experimental && primary !== experimental ? primary + " · " + experimental : primary || experimental;
+            elements.statusSlot.setAttribute("aria-label", complete);
+            elements.statusDot.setAttribute("title", primary || experimental);
+            elements.experimentalText.setAttribute("title", experimental);
+            elements.statusSlot.setAttribute("data-detail-empty", experimental ? "false" : "true");
+        }
         function effectiveConfirmationState(state) {
             var current = state && state.state;
             if (current === "confirmation-ready" || current === "executing") { suppressConfirmationTerminal = false; }
@@ -87,14 +97,16 @@
             snapshot = presentation.applyConfirmation(confirmationState, snapshot);
             transcript.render(snapshot);
             action = actionState(providerState, confirmationState);
-            projection = PresentationModel.projectSurfaceState(providerState, confirmationState, elements.composer.value, experimentalEnabled, experimentalState, activationPolicy);
+            projection = PresentationModel.projectSurfaceState(providerState, confirmationState, elements.composer.value, experimentalEnabled, experimentalState, activationPolicy, experimentalDisabledReason);
             if (!experimentalEnabled) { action = "send"; }
             composer.render(action, experimentalEnabled);
             confirmationView.render(action, confirmationState);
             elements.statusText.textContent = projectedStatusText(projection.state);
             elements.root.setAttribute("data-vela-surface-state", projection.state);
+            elements.statusSlot.setAttribute("data-tone", projection.tone);
             elements.statusSlot.setAttribute("data-vela-provider-state", providerState && providerState.state || "idle");
             elements.statusSlot.setAttribute("data-vela-confirmation-state", confirmationState && confirmationState.state || "idle");
+            synchronizeStatusAccessibility();
         }
         function complete(operation, capturedGeneration) { Promise.resolve(operation).then(function () { if (!disposed && !suspended && mounted && capturedGeneration === generation) { synchronize(); } }, function () { if (!disposed && !suspended && mounted && capturedGeneration === generation) { synchronize(); } }); }
         function send(message) {
@@ -131,6 +143,7 @@
                 readiness = null;
             }
             experimentalConfig = { endpoint: canonicalEndpoint || endpoint, model: model, acknowledged: !!(input && input.acknowledged === true) };
+            experimentalDisabledReason = "qualification-required";
             if (!experimentalEnabled && (experimentalState !== "checking" || changed)) { experimentalState = endpoint && !canonicalEndpoint ? "endpoint-invalid" : canonicalEndpoint && model ? "configuring" : "disabled"; readiness = null; }
             if (mounted) { synchronize(); }
             notifyExperimental();
@@ -165,6 +178,7 @@
             if (providerState && providerState.state === "pending") { provider.cancel(); }
             experimentalEnabled = false;
             experimentalState = "disabled";
+            experimentalDisabledReason = "user-disabled";
             experimentalConfig = { endpoint: experimentalConfig.endpoint, model: experimentalConfig.model, acknowledged: false };
             readiness = null;
             synchronize(); notifyExperimental(); return true;

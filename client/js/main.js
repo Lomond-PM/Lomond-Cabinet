@@ -1208,10 +1208,20 @@
         }
     }
 
-    function setStatus(message, type, sticky) {
+    function globalStatusStateForResult(result) {
+        var key = result && result.messageKey;
+        if (key === "status.noLayer" || key === "status.noTextLayer" || key === "status.selectShapeLayer") { return "selection-required"; }
+        if (key === "status.noActiveComp" || key === "status.openComp") { return "no-active-comp"; }
+        return result && result.ok ? "completed" : "failed";
+    }
+
+    function setStatus(message, type, sticky, businessState) {
         var pill = byId("statusPill");
+        var toneContract = window.StatusToneContract;
+        var tone = toneContract && toneContract.toneForLegacyType ? toneContract.toneForLegacyType(type, businessState) : (type === "busy" ? "processing" : type === "ok" ? "success" : type === "error" ? "error" : "idle");
         byId("statusText").textContent = message || tr("status.ready");
         pill.classList.remove("is-error", "is-busy");
+        pill.setAttribute("data-tone", tone);
 
         if (statusTimer) {
             window.clearTimeout(statusTimer);
@@ -6940,7 +6950,7 @@
             }
             var result = parseResult(raw);
             var fallback = result.ok ? (action.successMessageKey || "status.ready") : (action.errorMessageKey || "status.ready");
-            setStatus(dynamicActionMessage(result, fallback), result.ok ? "ok" : "error");
+            setStatus(dynamicActionMessage(result, fallback), result.ok ? "ok" : "error", false, globalStatusStateForResult(result));
             if (toolDef && toolDef.stateAction && (action.refreshStateAfterRun || toolDef.refreshStateAfterRun)) {
                 if (result.ok || action.refreshStateAfterError) {
                     refreshRegistryToolState(toolDef);

@@ -43,6 +43,13 @@
 
     --success: #c8e08a;
     --danger: #ff6b5f;
+    --status-tone-idle: var(--text-secondary);
+    --status-tone-processing: var(--gold-hot);
+    --status-tone-success: var(--success);
+    --status-tone-warning: var(--gold-hot);
+    --status-tone-error: var(--danger);
+    --status-tone-disabled: var(--text-tertiary);
+    --status-dot-size: calc(7px * var(--ui-scale));
 
     --radius-xl: calc(30px * var(--ui-scale));
     --radius-lg: calc(22px * var(--ui-scale));
@@ -1126,8 +1133,8 @@ body:not(.i18n-ready) .app-shell {
 .palette-library-list::-webkit-scrollbar,
 .palette-editor-scroll::-webkit-scrollbar,
 .palette-json-box::-webkit-scrollbar {
-    width: calc(7px * var(--ui-scale));
-    height: calc(7px * var(--ui-scale));
+    width: var(--status-dot-size);
+    height: var(--status-dot-size);
 }
 
 .palette-library-list::-webkit-scrollbar-track,
@@ -2920,18 +2927,28 @@ p {
 
 .status-light {
     flex: 0 0 auto;
-    width: calc(7px * var(--ui-scale));
-    height: calc(7px * var(--ui-scale));
+    width: var(--status-dot-size);
+    height: var(--status-dot-size);
     border-radius: 50%;
-    background: var(--success);
+    background: var(--status-tone-idle);
 }
 
-.status-pill.is-busy .status-light {
-    background: var(--gold-hot);
+.status-pill[data-tone="processing"] .status-light {
+    background: var(--status-tone-processing);
+    animation: statusTonePulse 1.2s ease-in-out infinite;
 }
 
-.status-pill.is-error .status-light {
-    background: var(--danger);
+.status-pill[data-tone="success"] .status-light { background: var(--status-tone-success); }
+.status-pill[data-tone="warning"] .status-light { background: var(--status-tone-warning); }
+.status-pill[data-tone="error"] .status-light { background: var(--status-tone-error); }
+.status-pill[data-tone="disabled"] .status-light {
+    background: var(--status-tone-disabled);
+    opacity: 0.62;
+}
+
+@keyframes statusTonePulse {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
 }
 
 #statusText {
