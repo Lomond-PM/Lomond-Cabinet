@@ -1,151 +1,167 @@
-# Lomond Cabinet / AE Toolbox
+# Lomond Cabinet
 
-Lomond Cabinet is an After Effects CEP Extension panel for building and maintaining AE utility tools. The extension bundle id remains:
+Lomond Cabinet is an After Effects CEP extension that combines a registry-driven tool system, procedural Home visuals, and the experimental Vela local-assistant surface.
 
-```text
-com.kevin.aetoolbox
-```
+- **Current version:** `0.3.0`
+- **Latest published tag:** `v0.3.0`
+- **Extension bundle id:** `com.kevin.aetoolbox`
+- **Manifest menu name:** `AE Toolbox`
+- **Visible panel name:** `Lomond Cabinet`
 
-The current manifest menu name is:
+Version 0.3.0 is published as the **Vela Experimental Preview**. The D phase is complete for this release scope, while production Provider activation remains locked because no model is qualified or selected as the default.
 
-```text
-AE Toolbox
-```
+## Runtime architecture
 
-Current project version:
+Lomond Cabinet is not a conventional web application. It has two runtimes:
 
-```text
-0.3.0
-```
+- **CEP frontend:** HTML, CSS, and browser JavaScript under `client/`.
+- **After Effects host:** ExtendScript / JSX under `host/`.
+- **Bridge:** `CSInterface.evalScript()`.
+- **CEP entry:** `CSXS/manifest.xml` loads `client/index.html`.
+- **Host entry:** frontend bootstrap loads `host/index.jsx`, which in turn loads shared host utilities and tool modules.
 
-Current release track:
+Host JSX must remain compatible with ExtendScript. Browser JavaScript and host JSX are intentionally kept separate.
 
-```text
-0.3.0 is the current release-preparation line. It ships Vela as an Experimental Preview; `v0.2.5` remains the latest published tag until the 0.3.0 release commit is merged and tagged.
-```
+## Repository structure
 
-`VERSION` and `CSXS/manifest.xml` identify this release as 0.3.0.
-
-## Project Type
-
-This is an **After Effects CEP Extension**.
-
-- Frontend: HTML, CSS, and browser JavaScript.
-- Host logic: ExtendScript / JSX.
-- Bridge: `CSInterface.evalScript()`.
-- Host JSX loading: `$.evalFile(...)` from `client/js/main.js`.
-
-`client/index.html` must not directly load `.jsx` files.
-
-## Directory Structure
+The tree below is intentionally abridged and lists the current ownership boundaries rather than every file:
 
 ```text
 com.kevin.aetoolbox/
-  CSXS/
-    manifest.xml
-  client/
-    index.html
-    css/
-      style.css
-    js/
-      main.js
-      i18n.js
-      lib/
-        CSInterface.js
-  host/
-    index.jsx
-    aeUtils.jsx
-    effectUtils.jsx
-    shapeUtils.jsx
-    tools/
-      textBackgroundBox.jsx
-      selectionInfo.jsx
-      adComponentKit.jsx
-      shapeAdd.jsx
-  docs/
-    PROJECT_STATE.md
-    DESIGN_SYSTEM.md
-    HANDOFF.md
-  AGENTS.md
-  CHANGELOG.md
-  VERSION
-  README.md
+├─ CSXS/
+│  └─ manifest.xml                 CEP manifest and extension metadata
+├─ client/
+│  ├─ index.html                   CEP document and frontend module loading
+│  ├─ css/
+│  │  ├─ style.css                 shared application and registry styling
+│  │  └─ vela.css                  Vela Surface styling
+│  └─ js/
+│     ├─ main.js                   app bootstrap, Home, Settings, registry renderer
+│     ├─ i18n.js                   core/global English and Simplified Chinese copy
+│     ├─ settingsSchema.js         app-level Settings schema
+│     ├─ lib/                      CEP/browser support libraries
+│     ├─ vela/                     Vela policy, Provider, runtime, Surface and safety modules
+│     ├─ proceduralAppearance.js   deterministic procedural rendering engine
+│     ├─ proceduralHomeIcons.js    Home icon controller
+│     ├─ proceduralHomeBackground.js
+│     ├─ proceduralPaletteStore.js
+│     └─ proceduralPaletteWorkspace.js
+├─ host/
+│  ├─ index.jsx                    host bootstrap and registry loading
+│  ├─ aeUtils.jsx                  shared AE helpers
+│  ├─ effectUtils.jsx              effect/property helpers
+│  ├─ shapeUtils.jsx               shape helpers
+│  └─ tools/
+│     ├─ *.tool.jsx                registry metadata, schemas, actions and tool i18n
+│     └─ *.jsx                     AE execution implementations retained by tools
+├─ helpers/
+│  └─ win/eyedropper/              Windows color-sampling helper
+├─ scripts/
+│  ├─ diagnostics/                 qualification and diagnostic utilities
+│  ├─ fixtures/                    deterministic test fixtures
+│  ├─ check-project-consistency.js
+│  ├─ report-i18n-usage.js
+│  └─ test-*.js                    offline regression tests
+├─ docs/
+│  ├─ design/                      Vela, procedural appearance and architecture docs
+│  ├─ reports/                     generated and historical diagnostic reports
+│  ├─ schema-drafts/               retained migration/design drafts
+│  ├─ PROJECT_STATE.md             detailed current implementation state
+│  ├─ DESIGN_SYSTEM.md             UI and interaction rules
+│  ├─ HANDOFF.md                   development handoff and installation notes
+│  └─ KNOWN_ISSUES.md              accepted and deferred issues
+├─ AGENTS.md                       repository working rules for coding agents
+├─ CHANGELOG.md                    published release history
+├─ VERSION                         product version
+└─ README.md
 ```
 
-## Current Tools
+`client/js/main.js` and `client/css/style.css` are large compatibility-sensitive files. New ordinary tools should use the registry system rather than adding dedicated DOM, CSS, event binding, or storage paths.
 
-Confirmed active frontend tools:
+## Current product areas
 
-- Background Rounded Rectangle / Text Background Box
-- Selection Info
-- Ad Component Kit
-- Shape Add / Shape Builder
+### Registry Renderer
 
-The Home view also contains a disabled More Tools card.
+The registry architecture follows:
+
+```text
+Tool owns data and actions.
+Core owns UI and behavior.
+```
+
+Registry tools live in `host/tools/*.tool.jsx` and register through `AEToolbox.registerTool(...)`. The core frontend renders shared fields, sections, actions, status, persistence, visibility rules, state cards, and host-action routing.
+
+Current production registry tools include:
+
+- **Text Background Box** — creates shape backgrounds behind selected text layers.
+- **Selection Info** — reports active composition and selected-layer information.
+- **Ad Component Kit** — creates and maintains Feature Stack and Icon Grid components. Its compatibility registry id remains `ecommerceLayout`.
+- **Shape Add / Shape Builder** — adds native shape contents and creates linked Stroke / Fill shape layers.
+
+Developer Mode retains renderer and procedural labs used for regression work. They are hidden in normal Home mode.
+
+### Procedural appearance
+
+The Home view supports deterministic procedural tool icons and an optional procedural background.
+
+- Tool identity is seeded from stable tool ids.
+- Language, Home order, UI scale, and theme changes do not regenerate icon structure.
+- Theme-mapped presentation recolors an existing source image rather than replacing its identity.
+- Palette editing and mappings persist through the Palette Store without rewriting the built-in palette source file.
+- The classic Background Engine remains available as an explicit fallback.
+
+Detailed decisions are maintained in [`docs/design/procedural-appearance.md`](docs/design/procedural-appearance.md).
 
 ### Vela Experimental Preview
 
-Vela provides a persistent conversation Surface for local, approval-driven After
-Effects assistance. Its optional LM Studio Provider is experimental, not qualified,
-and disabled by default. The endpoint is restricted to loopback addresses
-(`127.0.0.1`, `localhost`, or `[::1]`). Endpoint and Model ID configuration may be
-saved, but acknowledgement, readiness, and session enablement are never persisted;
-every panel reload requires a new explicit opt-in.
+Vela is a persistent conversation surface for local, approval-driven After Effects assistance.
 
-Readiness means only that the configured local model instance is currently loaded.
-It is not model qualification. No model is qualified, recommended, or selected as
-the production default in 0.3.0, and production activation remains locked. A model
-opacity proposal cannot execute directly: it must pass the local safety checks and
-then proceed through explicit Review and Confirmation before any trusted Host action.
-The legacy Vela Tool remains available as a fallback.
+The optional LM Studio Provider is:
 
-See [`docs/design/vela-agent.md`](docs/design/vela-agent.md) for the detailed safety
-architecture and [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) for accepted preview
-limitations.
+- experimental and disabled by default;
+- restricted to loopback addresses: `127.0.0.1`, `localhost`, or `[::1]`;
+- enabled only after explicit acknowledgement and readiness for the current panel session;
+- reset on reload for acknowledgement, readiness, and enablement;
+- allowed to persist only endpoint and Model ID configuration.
 
-Developer Mode tools are hidden from the normal Home view and appear only when the Developer Mode setting is enabled:
+Readiness means only that the configured local model instance is loaded. It is **not** qualification. No model is qualified, recommended, or selected as the production default in 0.3.0.
 
-- Registry Control Lab
-- Settings Renderer Lab
+The trusted activation policy keeps:
 
-Temporary probes retired before 0.2.3:
+- `releaseMode = experimental-preview`
+- `productionEnabled = false`
+- `productionBlockReason = no-qualified-default-model`
+- `qualifiedDefaultModelId = null`
+- `formalUiD2Enabled = false`
+- `legacyFallbackRetained = true`
 
-- Registry Probe
-- Shape Add Probe
-- Ad Component Kit Probe
+A model proposal cannot execute directly. Explicit opacity edits pass through local request classification, parsing, profile checks, Intent Gate, Review, Confirmation, Preflight, ExecutionAdapter, and Host boundaries. The legacy Vela Tool remains available as a fallback.
 
-Ad Component Kit uses registry id `ecommerceLayout` and storage key `AEToolbox.ecommerceLayout.v1` for HomeLayout and storage compatibility, but its active schema and host implementation are:
+See [`docs/design/vela-agent.md`](docs/design/vela-agent.md) for the complete safety architecture and [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) for accepted preview limitations.
 
-```text
-host/tools/adComponentKit.tool.jsx
-host/tools/adComponentKit.jsx
-```
+## Development installation
 
-The legacy `host/tools/ecommerceLayout.jsx` module has been removed. If the tool is ever renamed from `ecommerceLayout` to `adComponentKit`, that must be a dedicated HomeLayout and storage migration.
+During development, the repository workspace is the source of truth. The CEP Extensions path should point to the workspace through a junction or symlink rather than using a separately copied tree.
 
-## Installation
-
-CEP extensions do not go in After Effects `Scripts` or `ScriptUI Panels`.
-
-Windows development install path:
+Windows CEP path:
 
 ```text
-%APPDATA%\Adobe\CEP\extensions\com.kevin.aetoolbox\
+%APPDATA%\Adobe\CEP\extensions\com.kevin.aetoolbox
 ```
 
-macOS development install path:
+Typical junction target:
+
+```text
+C:\Users\Administrator\.openclaw\workspace\com.kevin.aetoolbox
+```
+
+macOS CEP path:
 
 ```text
 ~/Library/Application Support/Adobe/CEP/extensions/com.kevin.aetoolbox/
 ```
 
-The extension root must contain:
-
-```text
-CSXS/manifest.xml
-```
-
-Restart After Effects after copying the extension folder.
+The extension root must contain `CSXS/manifest.xml`.
 
 Open the panel from:
 
@@ -153,143 +169,31 @@ Open the panel from:
 Window > Extensions > AE Toolbox
 ```
 
-Depending on AE version, it may appear under:
+or, depending on the AE version:
 
 ```text
 Window > Extensions (Legacy) > AE Toolbox
 ```
 
-## Unsigned CEP Debug Mode
+Unsigned development installs generally require PlayerDebugMode for the matching CSXS version.
 
-During development, enable PlayerDebugMode for the relevant CSXS version.
+## Development workflow
 
-Windows PowerShell examples:
-
-```powershell
-reg add HKCU\Software\Adobe\CSXS.11 /v PlayerDebugMode /t REG_SZ /d 1 /f
-reg add HKCU\Software\Adobe\CSXS.12 /v PlayerDebugMode /t REG_SZ /d 1 /f
-reg add HKCU\Software\Adobe\CSXS.13 /v PlayerDebugMode /t REG_SZ /d 1 /f
-```
-
-macOS examples:
-
-```bash
-defaults write com.adobe.CSXS.11 PlayerDebugMode 1
-defaults write com.adobe.CSXS.12 PlayerDebugMode 1
-defaults write com.adobe.CSXS.13 PlayerDebugMode 1
-```
-
-Restart After Effects after changing this setting.
-
-## Development Workflow
-
-Recommended development loop:
-
-1. Read `AGENTS.md` and the docs under `docs/`.
-2. Check current git status.
-3. Make focused changes.
-4. If CSS or browser JS changes do not appear, update the query string version in `client/index.html`.
-5. If host JSX changes do not appear, reopen the panel or restart AE.
-6. Keep frontend and host responsibilities separate.
-7. Update `CHANGELOG.md` when adding or changing user-facing behavior.
-
-## Frontend / Host Boundary
-
-Frontend files:
-
-- `client/index.html`
-- `client/css/style.css`
-- `client/js/main.js`
-- `client/js/i18n.js`
-
-Frontend responsibilities:
-
-- UI rendering and interaction.
-- Motion and view state.
-- Settings and localStorage persistence.
-- i18n.
-- Parameter collection.
-- Calling host JSX through `CSInterface.evalScript()`.
-
-Host files:
-
-- `host/index.jsx`
-- `host/tools/*.jsx`
-- `host/aeUtils.jsx`
-- `host/effectUtils.jsx`
-- `host/shapeUtils.jsx`
-
-Host responsibilities:
-
-- After Effects comp, layer, effect, and property operations.
-- Shape Layer creation and manipulation.
-- ExtendScript-compatible JSON string responses.
-
-Host JSX must remain ExtendScript-compatible. Do not use modern JavaScript syntax in `host/`.
-
-## i18n
-
-Supported languages:
-
-- `en`
-- `zh-CN`
-
-Rules:
-
-- Core, Home, Settings, common, and fallback copy belongs in `client/js/i18n.js`.
-- Registry tool-specific copy belongs in the owning `host/tools/*.tool.jsx` `i18n` block.
-- Use `data-i18n` for static DOM text.
-- Use `tr(...)` / `I18n.t(...)` for dynamic text.
-- Registry tools should provide `titleKey` and `descriptionKey` in their tool definition.
-- Before deleting old global keys, run `node scripts/report-i18n-usage.js` and review `docs/reports/i18n-usage-report.md`.
-
-## Registry Architecture
-
-Current principle:
+The repository uses:
 
 ```text
-Tool owns data and actions.
-Core owns UI and behavior.
+task branch → dev → main → version tag
 ```
 
-Registry tools live in `host/tools/*.tool.jsx`. They declare metadata, sections, fields, actions, state actions, state cards, and tool-local i18n. They should not add dedicated DOM, dedicated CSS, or custom renderer behavior.
+- Create feature, fix, documentation, audit, or release branches from current `dev`.
+- Test task branches before merging to `dev`.
+- Merge only confirmed stable `dev` into `main`.
+- Create release tags from the corresponding release commit on `main`.
+- Do not move published tags.
 
-Settings is not a registry tool. It is an app-level core settings framework. The Settings shell and behavior remain app-owned, while migrated rows are rendered from the app-level Settings schema.
+The workspace and CEP extension are junctioned in the primary Windows development environment, so normal development does not require a copy/sync step. Reload the CEP panel after browser changes and restart After Effects when host JSX remains cached.
 
-Current migrated registry tools:
-
-- `shapeAdd`: Shape Add / Shape Builder, including 19 native shape items and Stroke / Fill layer creation.
-- `textBackgroundBox`: Text Background Box / Text Plate.
-- `selectionInfo`: Selection Info.
-- `ecommerceLayout`: Ad Component Kit, including Feature Stack, Icon Grid, and maintenance actions.
-
-Current Developer Mode labs:
-
-- `registryControlLab`: registry renderer/action/state validation.
-- `settingsRendererLab`: app-level Settings renderer validation.
-- `proceduralAppearanceLab`: deterministic procedural icon/background engine validation for 0.2.5.
-
-Current 0.2.4 release highlights:
-
-- Panel close freeze mitigation through shutdown guards, polling / timer cleanup, and Home close teardown.
-- Built-in color picker H / S / V / R / G / B axis modes, channel sliders, Hex input select-all, and popup flip / clamp positioning.
-- ColorSampler provider framework with Windows-only eyedropper helper MVP. Native `window.EyeDropper` exists in AE CEP but immediate-cancels in current testing, so the Windows helper is the working provider.
-- Ad Component Kit removable artifacts for newly created Feature Stack / Icon Grid output using Lomond metadata and signed tool expressions.
-- Shape Add Add Native Components / 添加原生组件 section collapse.
-
-0.2.5 is the previous published release and includes the Procedural Appearance Lab, production Colorful and Theme-mapped Home icons, and optional procedural Home background support while preserving the classic BackgroundEngine fallback. These paths remain part of 0.3.0.
-
-## Continue Development On Another Machine
-
-Copy the full folder:
-
-```text
-com.kevin.aetoolbox/
-```
-
-to the CEP extensions directory on the new machine.
-
-Then ask Codex to read:
+Before modifying the project, read:
 
 ```text
 AGENTS.md
@@ -298,36 +202,29 @@ docs/DESIGN_SYSTEM.md
 docs/HANDOFF.md
 ```
 
-before making code changes.
+## Version and release status
 
-Recommended first prompt:
+The current published release is `0.3.0`, tagged `v0.3.0` from `main`.
 
-```text
-请先阅读 AGENTS.md、docs/PROJECT_STATE.md、docs/DESIGN_SYSTEM.md、docs/HANDOFF.md，不要修改代码，先总结项目结构。
-```
+Keep these synchronized for future releases:
 
-## Version Management
+- `VERSION`
+- `CSXS/manifest.xml` bundle and extension versions
+- `AEToolbox.projectVersion` in `host/index.jsx`
+- `CHANGELOG.md`
+- current-version statements in maintained documentation
 
-Project version is stored in:
+`AEToolbox.hostApiVersion` is an independent host contract version and remains `1.0.0` in release 0.3.0.
 
-```text
-VERSION
-```
+## Known issues
 
-CEP manifest version fields should stay synchronized with `VERSION`:
+The accepted 0.3.1 layout work includes:
 
-- `ExtensionBundleVersion`
-- `<Extension ... Version="...">`
+- narrow Vela status/action row presentation;
+- narrow experimental Settings presentation.
 
-Document user-facing changes in:
+These issues do not change execution safety. Additional deferred issues are tracked in [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md).
 
-```text
-CHANGELOG.md
-```
+## License and release history
 
-Before packaging a handoff build:
-
-1. Confirm `VERSION`, `CHANGELOG.md`, and `CSXS/manifest.xml` agree.
-2. Confirm `git status` is clean or intentionally documented.
-3. Include `.gitignore`, `README.md`, `CHANGELOG.md`, `VERSION`, `AGENTS.md`, and `docs/`.
-
+See [`CHANGELOG.md`](CHANGELOG.md) for release history. Published release tags must remain immutable.
