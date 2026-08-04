@@ -390,7 +390,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | status.noResponse | status | No response from After Effects. | After Effects 没有响应。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.noSelectedLayers | status | No selected layers. | 没有选中图层。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.noTextLayer | status | Please select at least one text layer | 请至少选择一个文本层 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| status.openComp | status | Please open a composition | 请打开合成 | host/tools/shapeAdd.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| status.openComp | status | Please open a composition | 请打开合成 | client/js/main.js, host/tools/shapeAdd.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.paletteAccentSuggested | status | Palette secondary color applied to Interface Accent; it can be adjust... | 已将色卡辅色设为界面强调色，之后可独立调整。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.proceduralAppearanceDefaultsRestored | status | Procedural appearance defaults restored. | 程序化外观默认参数已恢复。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.proceduralBackgroundSeedRegenerated | status | Procedural background seed regenerated. | 程序化背景种子已重新生成。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |

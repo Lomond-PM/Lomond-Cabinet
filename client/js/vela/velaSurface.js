@@ -7,8 +7,9 @@
 }(typeof self !== "undefined" ? self : this, function () {
     "use strict";
 
-    var LAYOUT_SAFETY_GAP_PX = 16;
-    var STATUS_MIN_VISIBLE_CHARS = 8;
+    var COMPACT_BREAKPOINT_PX = 520;
+    var NARROW_BREAKPOINT_PX = 360;
+    var LAYOUT_HYSTERESIS_PX = 12;
 
     function create(options) {
         options = options || {};
@@ -30,7 +31,7 @@
         var observerFrame = null;
         var resizeFallback = null;
         var sizeSignalsBound = false;
-        var lastNarrowMode = null;
+        var lastLayoutMode = null;
         var mounted = false;
         var suspended = false;
         var disposed = false;
@@ -61,34 +62,48 @@
                 observerFrame = eventTarget.setTimeout(function () { observerFrame = null; performLayoutRefresh(); }, 0);
             } else { performLayoutRefresh(); }
         }
-        function contentWidth(nodeRef) {
+        function layoutWidth(nodeRef) {
             var rect = nodeRef && typeof nodeRef.getBoundingClientRect === "function" ? nodeRef.getBoundingClientRect() : null;
-            return Math.max(nodeRef && nodeRef.scrollWidth || 0, rect && rect.width || 0, nodeRef && nodeRef.offsetWidth || 0, 0);
+            return Math.max(rect && rect.width || 0, 0);
         }
         function measureLayoutMode() {
-            var controlsWidth;
-            var settingsWidth;
-            var statusWidth;
-            var requiredWidth;
-            if (!elements) { return false; }
-            controlsWidth = contentWidth(elements.controls);
-            settingsWidth = contentWidth(elements.settingsButton);
-            statusWidth = Math.max(contentWidth(elements.statusDot) + Math.min(contentWidth(elements.statusText), STATUS_MIN_VISIBLE_CHARS * 8 * scale()), 1);
-            requiredWidth = settingsWidth + statusWidth + (LAYOUT_SAFETY_GAP_PX * scale());
-            return controlsWidth > 0 && controlsWidth < requiredWidth;
+            var width;
+            var compactAt = COMPACT_BREAKPOINT_PX * scale();
+            var narrowAt = NARROW_BREAKPOINT_PX * scale();
+            var hysteresis = LAYOUT_HYSTERESIS_PX * scale();
+            if (!elements) { return "wide"; }
+            width = layoutWidth(rootElement);
+            if (lastLayoutMode === "wide") {
+                return width < compactAt - hysteresis ? "compact" : "wide";
+            }
+            if (lastLayoutMode === "compact") {
+                if (width >= compactAt + hysteresis) { return "wide"; }
+                if (width < narrowAt - hysteresis) { return "narrow"; }
+                return "compact";
+            }
+            if (lastLayoutMode === "narrow") {
+                return width >= narrowAt + hysteresis ? "compact" : "narrow";
+            }
+            if (width < narrowAt) { return "narrow"; }
+            if (width < compactAt) { return "compact"; }
+            return "wide";
         }
-        function applyLayoutMode(isNarrow) {
-            if (lastNarrowMode === isNarrow) { return; }
-            rootElement.classList.toggle("is-narrow", isNarrow);
-            lastNarrowMode = isNarrow;
+        function applyLayoutMode(mode) {
+            if (lastLayoutMode === mode) { return false; }
+            rootElement.setAttribute("data-layout", mode);
+            lastLayoutMode = mode;
+            return true;
         }
         function performLayoutRefresh() {
-            var isNarrow;
+            var mode;
             var boundsMeasurement;
             if (disposed || suspended || !elements) { return; }
-            isNarrow = measureLayoutMode();
+            mode = measureLayoutMode();
+            if (applyLayoutMode(mode)) {
+                scheduleLayout();
+                return;
+            }
             boundsMeasurement = resizeController && resizeController.measureBounds ? resizeController.measureBounds() : null;
-            applyLayoutMode(isNarrow);
             if (resizeController && boundsMeasurement) { resizeController.applyMeasurement(boundsMeasurement); }
         }
         function bindSizeSignals() {
@@ -115,12 +130,18 @@
             sizeSignalsBound = false;
         }
         function refreshLocale() {
+            var completeStatus;
             if (!elements) { return; }
             rootElement.setAttribute("aria-label", t("vela.surfaceLabel"));
             elements.transcriptMessage.textContent = t("vela.surfaceTranscriptIntro");
             elements.composer.setAttribute("placeholder", t("vela.surfaceComposerPlaceholder"));
             elements.statusText.textContent = t("vela.surfaceStatusSetup");
             elements.experimentalText.textContent = t("vela.surfaceExperimentalStatus");
+            completeStatus = elements.statusText.textContent === elements.experimentalText.textContent ? elements.statusText.textContent : elements.statusText.textContent + " · " + elements.experimentalText.textContent;
+            elements.statusSlot.setAttribute("aria-label", completeStatus);
+            elements.statusDot.setAttribute("title", elements.statusText.textContent);
+            elements.experimentalText.setAttribute("title", elements.experimentalText.textContent);
+            elements.statusSlot.setAttribute("data-detail-empty", elements.experimentalText.textContent ? "false" : "true");
             elements.settingsButton.setAttribute("title", t("vela.surfaceSettings"));
             elements.settingsButton.setAttribute("aria-label", t("vela.surfaceSettings"));
             elements.settingsButton.textContent = t("vela.surfaceSettings");
@@ -179,7 +200,6 @@
             settingsSlot.appendChild(settingsButton);
             actionSlot = node("div", "vela-action-slot");
             controls.appendChild(settingsSlot);
-            controls.appendChild(actionSlot);
             handle = node("div", "vela-resize-handle");
             handle.setAttribute("role", "separator");
             handle.setAttribute("aria-orientation", "horizontal");
@@ -189,7 +209,8 @@
             handle.appendChild(grip);
             rootElement.appendChild(transcriptSlot);
             rootElement.appendChild(composerSlot);
-            rootElement.appendChild(statusSlot);
+            controls.appendChild(statusSlot);
+            controls.appendChild(actionSlot);
             rootElement.appendChild(controls);
             rootElement.appendChild(handle);
             mountElement.appendChild(rootElement);
