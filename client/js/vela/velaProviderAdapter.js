@@ -149,8 +149,8 @@
     var RESPONSE_FORMAT_MODE = "json-schema";
     var LMSTUDIO_TEXT_GENERATION_MAX_CHARS = 1024;
     var MIN_TIMEOUT_MS = 1000;
-    var MAX_TIMEOUT_MS = 120000;
-    var DEFAULT_TIMEOUT_MS = 30000;
+    var MAX_TIMEOUT_MS = 300000;
+    var DEFAULT_TIMEOUT_MS = 120000;
     var MAX_MODEL_BYTES = 256;
     var ENDPOINT_PATTERN = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):([1-9][0-9]{0,4})\/v1\/chat\/completions$/;
     var PARSED_URL_KEYS = ["protocol", "hostname", "port", "pathname", "username", "password", "search", "hash", "href"];
