@@ -34,7 +34,7 @@ com.kevin.aetoolbox/
 │  ├─ index.html                   CEP document and frontend module loading
 │  ├─ css/
 │  │  ├─ style.css                 shared application and registry styling
-│  │  └─ vela.css                  Vela Surface styling
+│  │  └─ velaSurface.css           Vela Surface styling
 │  └─ js/
 │     ├─ main.js                   app bootstrap, Home, Settings, registry renderer
 │     ├─ i18n.js                   core/global English and Simplified Chinese copy
