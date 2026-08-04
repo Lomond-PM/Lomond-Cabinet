@@ -41,9 +41,7 @@
         var headerElement = options.headerElement;
         var toolPoolElement = options.toolPoolElement;
         var getUiScale = typeof options.getUiScale === "function" ? options.getUiScale : function () { return 1; };
-        var ResizeObserverCtor = options.ResizeObserver || (typeof ResizeObserver !== "undefined" ? ResizeObserver : null);
         var eventTarget = options.eventTarget || null;
-        var observer = null;
         var started = false;
         var suspended = false;
         var disposed = false;
@@ -54,6 +52,10 @@
         var pendingHeight = null;
         var rafId = null;
         var bounds = { min: 0, max: 0 };
+        var lastAppliedHeight = null;
+        var lastAriaMin = null;
+        var lastAriaMax = null;
+        var lastAriaNow = null;
         var listeners = [];
 
         if (!rootElement || !handle || !transcript || !composer || !status || !controls || !homeContainer || !headerElement || !toolPoolElement) {
@@ -82,37 +84,46 @@
         }
         function clamp(value) { return Math.max(bounds.min, Math.min(bounds.max, value)); }
         function updateAria(value) {
-            handle.setAttribute("aria-valuemin", String(Math.round(bounds.min)));
-            handle.setAttribute("aria-valuemax", String(Math.round(bounds.max)));
-            handle.setAttribute("aria-valuenow", String(Math.round(value)));
+            var min = Math.round(bounds.min);
+            var max = Math.round(bounds.max);
+            var now = Math.round(value);
+            if (lastAriaMin !== min) { handle.setAttribute("aria-valuemin", String(min)); lastAriaMin = min; }
+            if (lastAriaMax !== max) { handle.setAttribute("aria-valuemax", String(max)); lastAriaMax = max; }
+            if (lastAriaNow !== now) { handle.setAttribute("aria-valuenow", String(now)); lastAriaNow = now; }
         }
         function applyHeight(value) {
-            var next = clamp(value);
-            rootElement.style.setProperty("--vela-surface-height", Math.round(next) + "px");
+            var next = Math.round(clamp(value));
+            if (lastAppliedHeight !== next) {
+                rootElement.style.setProperty("--vela-surface-height", next + "px");
+                lastAppliedHeight = next;
+            }
             updateAria(next);
             return next;
         }
-        function computeBounds() {
+        function measureBounds() {
             var s = scale();
             var controlsHeight = Math.max(rectHeight(controls), rectHeight(settings));
             var minimumFixedHeight = rectHeight(composer) + rectHeight(status) + controlsHeight;
             var min = minimumFixedHeight + (TRANSCRIPT_MIN_READABLE_PX * s) + (HOME_VERTICAL_SAFETY_GAP_PX * s);
             var available = rectHeight(homeContainer) - rectHeight(headerElement) - toolPoolMinimumHeight() - (HOME_VERTICAL_SAFETY_GAP_PX * s);
-            bounds.min = Math.max(min, 1);
-            bounds.max = Math.max(bounds.min, available);
-            return bounds;
+            var measuredMin = Math.max(min, 1);
+            return {
+                current: getCurrentHeight(),
+                min: measuredMin,
+                max: Math.max(measuredMin, available)
+            };
+        }
+        function applyMeasurement(measurement) {
+            if (!measurement) { return 0; }
+            bounds.min = measurement.min;
+            bounds.max = measurement.max;
+            return applyHeight(measurement.current > 0 ? measurement.current : bounds.max * DEFAULT_HEIGHT_RATIO);
         }
         function initializeHeight() {
-            var current;
-            computeBounds();
-            current = getCurrentHeight();
-            if (!(current > 0)) { current = bounds.max * DEFAULT_HEIGHT_RATIO; }
-            return applyHeight(current);
+            return applyMeasurement(measureBounds());
         }
         function refreshBounds() {
-            var current = getCurrentHeight();
-            computeBounds();
-            return applyHeight(current > 0 ? current : bounds.max * DEFAULT_HEIGHT_RATIO);
+            return applyMeasurement(measureBounds());
         }
         function endDrag() {
             if (!dragging) { return; }
@@ -188,29 +199,20 @@
             add(handle, "pointercancel", endDrag);
             add(handle, "lostpointercapture", endDrag);
             add(handle, "keydown", onKeyDown);
-            if (eventTarget) { add(eventTarget, "blur", endDrag); add(eventTarget, "resize", refreshBounds); }
-            if (ResizeObserverCtor) {
-                observer = new ResizeObserverCtor(function () {
-                    if (!disposed && !suspended) { refreshBounds(); }
-                });
-                observer.observe(homeContainer);
-                observer.observe(headerElement);
-                observer.observe(toolPoolElement);
-            }
+            if (eventTarget) { add(eventTarget, "blur", endDrag); }
             initializeHeight();
             return true;
         }
         function suspend() { if (disposed || suspended) { return false; } suspended = true; endDrag(); return true; }
-        function resume() { if (disposed || !suspended) { return false; } suspended = false; refreshBounds(); return true; }
+        function resume() { if (disposed || !suspended) { return false; } suspended = false; return true; }
         function dispose() {
             if (disposed) { return false; }
             disposed = true;
             endDrag();
-            if (observer) { observer.disconnect(); observer = null; }
             removeAll();
             return true;
         }
-        return Object.freeze({ start: start, refreshBounds: refreshBounds, suspend: suspend, resume: resume, dispose: dispose });
+        return Object.freeze({ start: start, measureBounds: measureBounds, applyMeasurement: applyMeasurement, refreshBounds: refreshBounds, suspend: suspend, resume: resume, dispose: dispose });
     }
 
     return Object.freeze({ create: create });

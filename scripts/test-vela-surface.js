@@ -33,6 +33,7 @@ function classList(owner) {
         remove: function () { Array.prototype.forEach.call(arguments, function (value) { delete values[value]; }); },
         contains: function (value) { return values[value] === true; },
         toggle: function (value, force) {
+            owner.classToggleCount = (owner.classToggleCount || 0) + 1;
             const next = force === undefined ? !values[value] : !!force;
             if (next) { values[value] = true; } else { delete values[value]; }
             owner.className = Object.keys(values).join(" ");
@@ -67,6 +68,7 @@ function FakeNode(documentRef, tag) {
     this.style = {
         values: {},
         setProperty: (name, value) => {
+            this.styleWriteCount = (this.styleWriteCount || 0) + 1;
             this.style.values[name] = String(value);
             if (name === "--vela-surface-height") { this._rect.height = Number(String(value).replace("px", "")); }
         },
@@ -94,7 +96,7 @@ FakeNode.prototype.removeChild = function (child) {
     if (index !== -1) { this.children.splice(index, 1); child.parentNode = null; }
     return child;
 };
-FakeNode.prototype.setAttribute = function (name, value) { this.attributes[name] = String(value); };
+FakeNode.prototype.setAttribute = function (name, value) { this.attributeWriteCount = (this.attributeWriteCount || 0) + 1; this.attributes[name] = String(value); };
 FakeNode.prototype.getAttribute = function (name) { return this.attributes[name] || null; };
 FakeNode.prototype.addEventListener = function (type, handler) { (this.listeners[type] || (this.listeners[type] = [])).push(handler); };
 FakeNode.prototype.removeEventListener = function (type, handler) {
@@ -130,7 +132,7 @@ function FakeResizeObserver(callback) { this.callback = callback; this.nodes = [
 FakeResizeObserver.instances = [];
 FakeResizeObserver.prototype.observe = function (node) { this.nodes.push(node); };
 FakeResizeObserver.prototype.disconnect = function () { this.nodes = []; this.disconnected = true; };
-FakeResizeObserver.prototype.trigger = function () { this.callback([]); };
+FakeResizeObserver.prototype.trigger = function () { if (!this.disconnected) { this.callback([]); } };
 
 function event(properties) {
     const result = properties || {};
@@ -138,7 +140,7 @@ function event(properties) {
     return result;
 }
 
-function setup() {
+function setup(useResizeObserver) {
     const documentRef = new FakeDocument();
     const windowRef = new FakeWindow();
     const home = documentRef.createElement("section");
@@ -155,7 +157,7 @@ function setup() {
     home.appendChild(header);
     home.appendChild(mount);
     home.appendChild(pool);
-    const surface = Surface.create({
+    const options = {
         mountElement: mount,
         homeContainer: home,
         headerElement: header,
@@ -164,9 +166,10 @@ function setup() {
         t: function (key) { return "t:" + key; },
         getUiScale: function () { return 1; },
         ResizeController: ResizeController,
-        ResizeObserver: FakeResizeObserver,
         eventTarget: windowRef
-    });
+    };
+    if (useResizeObserver !== false) { options.ResizeObserver = FakeResizeObserver; }
+    const surface = Surface.create(options);
     return { documentRef: documentRef, windowRef: windowRef, home: home, header: header, mount: mount, pool: pool, surface: surface, settingsCalls: function () { return settingsCalls; } };
 }
 
@@ -222,9 +225,11 @@ function testSurface() {
     nodes.transcriptScroll.scrollTop = 19;
     nodes.controls._rect.width = 12;
     surface.refreshLayout();
+    fixture.windowRef.flush();
     ok(root.classList.contains("is-narrow"), "narrow class derives from actual available control width");
     nodes.controls._rect.width = 500;
     surface.refreshLayout();
+    fixture.windowRef.flush();
     ok(!root.classList.contains("is-narrow"), "wide class returns when space is restored");
     equal(nodes.composer, initialInput, "layout changes preserve textarea identity");
     equal(nodes.transcriptScroll, initialScroll, "layout changes preserve transcript identity");
@@ -316,6 +321,55 @@ function testSurface() {
     equal(surface.dispose(), false, "dispose is idempotent");
 }
 
+function testResizeScheduling() {
+    FakeResizeObserver.instances = [];
+    const fixture = setup(true);
+    fixture.surface.mount();
+    fixture.windowRef.flush();
+    const nodes = fixture.surface.getElementsForTest();
+    const observer = FakeResizeObserver.instances[0];
+    const initialStyleWrites = nodes.root.styleWriteCount || 0;
+    const initialAttributeWrites = nodes.handle.attributeWriteCount || 0;
+    const initialClassToggles = nodes.root.classToggleCount || 0;
+
+    equal(FakeResizeObserver.instances.length, 1, "Surface owns one ResizeObserver for external size signals");
+    equal((fixture.windowRef.listeners.resize || []).length, 0, "ResizeObserver support avoids an equivalent window resize listener");
+    observer.trigger();
+    observer.trigger();
+    observer.trigger();
+    equal(fixture.windowRef.frames.length, 1, "multiple observer signals coalesce into one animation frame");
+    fixture.windowRef.flush();
+    equal(nodes.root.styleWriteCount || 0, initialStyleWrites, "unchanged height does not rewrite the CSS variable");
+    equal(nodes.handle.attributeWriteCount || 0, initialAttributeWrites, "unchanged bounds and value do not rewrite ARIA attributes");
+    equal(nodes.root.classToggleCount || 0, initialClassToggles, "unchanged layout mode does not toggle its class");
+
+    observer.trigger();
+    equal(fixture.windowRef.frames.length, 1, "a pending external refresh can be cancelled");
+    fixture.surface.suspend();
+    equal(fixture.windowRef.frames.length, 0, "suspend cancels the pending refresh frame");
+    ok(observer.disconnected, "suspend disconnects the active observer");
+    fixture.surface.resume();
+    equal(FakeResizeObserver.instances.length, 2, "resume creates exactly one replacement observer");
+    fixture.surface.resume();
+    equal(FakeResizeObserver.instances.length, 2, "repeated resume does not duplicate observers");
+    fixture.surface.dispose();
+    ok(FakeResizeObserver.instances[1].disconnected, "dispose disconnects the resumed observer");
+    equal(fixture.windowRef.frames.length, 0, "dispose cancels the resumed refresh frame");
+
+    const fallback = setup(false);
+    fallback.surface.mount();
+    equal((fallback.windowRef.listeners.resize || []).length, 1, "window resize is bound only as the observer fallback");
+    fallback.windowRef.emit("resize", event());
+    fallback.windowRef.emit("resize", event());
+    equal(fallback.windowRef.frames.length, 1, "fallback resize signals share the same frame scheduler");
+    fallback.surface.suspend();
+    equal((fallback.windowRef.listeners.resize || []).length, 0, "suspend removes the fallback resize listener");
+    fallback.surface.resume();
+    equal((fallback.windowRef.listeners.resize || []).length, 1, "resume restores one fallback resize listener");
+    fallback.surface.dispose();
+    equal((fallback.windowRef.listeners.resize || []).length, 0, "dispose removes the fallback resize listener");
+}
+
 function testStaticContracts() {
     const surfaceSource = fs.readFileSync(path.join(ROOT, "client/js/vela/velaSurface.js"), "utf8");
     const composerSource = fs.readFileSync(path.join(ROOT, "client/js/vela/velaComposerView.js"), "utf8");
@@ -357,5 +411,6 @@ function testStaticContracts() {
 }
 
 testSurface();
+testResizeScheduling();
 testStaticContracts();
 console.log("Vela Surface tests passed: " + assertions + " assertions.");
