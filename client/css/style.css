@@ -1902,6 +1902,29 @@ p {
     user-select: none;
 }
 
+.tool-bootstrap-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+    margin-bottom: 10px;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.tool-bootstrap-status[hidden] {
+    display: none;
+}
+
+.tool-bootstrap-status > span {
+    min-width: 0;
+}
+
+.tool-bootstrap-retry {
+    flex: 0 0 auto;
+}
+
 .tool-app {
     width: var(--tool-card-w);
     min-height: var(--tool-card-min-h);

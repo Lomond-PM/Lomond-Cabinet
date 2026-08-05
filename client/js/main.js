@@ -17,6 +17,8 @@
     var velaRuntimeStatusRevision = 0;
     var velaRuntimeLastErrorCode = null;
     var hostLoaded = false;
+    var coreBootstrapController = null;
+    var coreBootstrapSnapshot = null;
     var statusTimer = null;
     var motionScale = 1;
     var animationWarmupDone = false;
@@ -3414,89 +3416,109 @@
         }
     }
 
-    function loadRegisteredToolsFromHost() {
-        evalHost("AEToolbox.getRegisteredTools()", function (raw) {
-            if (panelShuttingDown) {
-                return;
-            }
-            var result = parseResult(raw);
-            var tools = result.tools || [];
-            var loadErrors = result.loadErrors || [];
-            var i;
-            var tool;
+    function renderCoreBootstrapState(snapshot) {
+        var root = byId("toolBootstrapStatus");
+        var text = byId("toolBootstrapStatusText");
+        var retry = byId("toolBootstrapRetry");
+        var key = "bootstrap.loadingTools";
+        if (!root || !text || !retry || !snapshot) {
+            return;
+        }
+        if (snapshot.state === "ready") {
+            root.hidden = true;
+            return;
+        }
+        if (snapshot.state === "degraded") {
+            key = "bootstrap.partialFailure";
+        } else if (snapshot.state === "failed") {
+            key = "bootstrap.loadFailed";
+        }
+        root.hidden = snapshot.state === "idle" || snapshot.state === "shutdown";
+        text.setAttribute("data-i18n", key);
+        text.textContent = tr(key);
+        retry.hidden = !snapshot.retryAvailable;
+        retry.textContent = tr("bootstrap.retry");
+        retry.setAttribute("aria-label", tr("bootstrap.retry"));
+        root.setAttribute("data-bootstrap-state", snapshot.state);
+    }
 
-            DynamicTools = {};
-            DynamicToolOrder = [];
+    function commitDynamicToolCatalog(candidate) {
+        var i;
+        DynamicTools = candidate.tools;
+        DynamicToolOrder = candidate.order.slice(0);
+        for (i = 0; i < DynamicToolOrder.length; i++) {
+            mergeDynamicToolI18n(DynamicTools[DynamicToolOrder[i]]);
+        }
+        renderDynamicToolHome();
+        if (panelShuttingDown) {
+            return;
+        }
+        HomeLayoutManager.loadOrder();
+        HomeLayoutManager.renderOrder();
+        HomeLayoutManager.bindIconEvents();
+        refreshLanguage();
+    }
 
-            if (!result.ok) {
-                setStatus("Tool registry failed: " + (result.message || raw), "error");
-            } else if (tools.length) {
-                for (i = 0; i < tools.length; i++) {
-                    tool = tools[i];
-                    if (!tool || !tool.id) {
-                        continue;
-                    }
-                    DynamicTools[tool.id] = tool;
-                    DynamicToolOrder[DynamicToolOrder.length] = tool.id;
-                    mergeDynamicToolI18n(tool);
-                }
-                setStatus("Tool registry loaded " + DynamicToolOrder.length + " dynamic tool(s).", "ok");
-            } else {
-                setStatus("Tool registry loaded 0 tools" + (loadErrors.length ? ": " + loadErrors.join("; ") : "."), loadErrors.length ? "error" : "ok");
-                if (window.console && console.warn) {
-                    console.warn("[AE Toolbox] No dynamic registry tools loaded.", result);
-                }
+    function updateCoreBootstrapState(snapshot) {
+        coreBootstrapSnapshot = snapshot;
+        hostLoaded = snapshot.hostReady;
+        if (snapshot.state === "failed" && window.console && console.warn) {
+            console.warn("[Core Bootstrap] failed", {
+                stage: snapshot.lastErrorStage,
+                code: snapshot.lastErrorCode,
+                generation: snapshot.generation,
+                attempt: snapshot.attempt
+            });
+        }
+        renderCoreBootstrapState(snapshot);
+        if (snapshot.state === "host-loading" || snapshot.state === "registry-loading") {
+            setStatus(tr("status.loadingHost"), "busy", true);
+        } else if (snapshot.state === "failed") {
+            setStatus(tr("bootstrap.loadFailed"), "error", true);
+        } else if (snapshot.state === "degraded") {
+            setStatus(tr("bootstrap.partialFailure"), "error", true);
+        } else if (snapshot.state === "ready") {
+            setStatus(tr("status.ready"), "ok");
+        }
+        if ((snapshot.state === "ready" || snapshot.state === "degraded") && !panelSuspended) {
+            startSelectionPolling();
+            if (isDynamicTool(activeToolId)) {
+                startRegistryStatePolling(DynamicTools[activeToolId]);
             }
-
-            renderDynamicToolHome();
-            if (panelShuttingDown) {
-                return;
-            }
-            HomeLayoutManager.loadOrder();
-            HomeLayoutManager.renderOrder();
-            HomeLayoutManager.bindIconEvents();
-            refreshLanguage();
-
-            if (window.console && console.log) {
-                console.log("[AE Toolbox] Dynamic tools:", DynamicToolOrder, result);
-            }
-        });
+        } else {
+            stopSelectionPolling();
+            stopRegistryStatePolling();
+        }
     }
 
     function loadHost() {
         var extensionRoot = cs.getSystemPath(SystemPath.EXTENSION);
         var jsxPath = extensionRoot + "/host/index.jsx";
         jsxPath = jsxPath.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
-        setStatus(tr("status.loadingHost"), "busy", true);
-        cs.evalScript('$.evalFile("' + jsxPath + '")', function (loadResult) {
-            if (panelShuttingDown) {
-                return;
-            }
-            hostLoaded = true;
-            cs.evalScript("AEToolbox.ping()", function (result) {
+        if (!window.CoreBootstrap || typeof window.CoreBootstrap.createController !== "function") {
+            updateCoreBootstrapState({ state: "failed", generation: 0, attempt: 0, hostReady: false, registryReady: false, toolCount: 0, loadErrorCount: 0, lastErrorStage: "eval-file", lastErrorCode: "BOOTSTRAP_MODULE_UNAVAILABLE", retryAvailable: false });
+            return;
+        }
+        coreBootstrapController = window.CoreBootstrap.createController({
+            evalScript: function (source, callback) {
+                cs.evalScript(source, callback);
+            },
+            hostLoadSource: '$.evalFile("' + jsxPath + '")',
+            onStateChange: updateCoreBootstrapState,
+            onHostReady: function () {
                 if (panelShuttingDown) {
                     return;
                 }
-                if (window.console && console.log) {
-                    console.log(result);
-                }
-                if (loadResult === "EvalScript error." || result === "EvalScript error.") {
-                    setStatus(tr("status.hostLoadError"), "error");
-                    return;
-                }
-                cs.evalScript("AEToolbox.getHostLoadInfo()", function (infoRaw) {
-                    if (panelShuttingDown) {
-                        return;
-                    }
-                    if (window.console && console.log) {
-                        console.log("[AE Toolbox] Host load info:", infoRaw);
-                    }
-                });
                 initializeVelaRuntime();
-                loadRegisteredToolsFromHost();
                 refreshSelection();
-            });
+            },
+            onCatalog: function (candidate) {
+                if (!panelShuttingDown) {
+                    commitDynamicToolCatalog(candidate);
+                }
+            }
         });
+        coreBootstrapController.start();
     }
 
     function invokeVelaHost(source, callback) {
@@ -4812,7 +4834,7 @@
         var runtime;
         var hostFunction;
 
-        if (!toolDef || !toolDef.id || !toolDef.stateAction || !toolDef.stateAction.hostFunction) {
+        if (panelShuttingDown || panelSuspended || !coreBootstrapSnapshot || (coreBootstrapSnapshot.state !== "ready" && coreBootstrapSnapshot.state !== "degraded") || !toolDef || !toolDef.id || !toolDef.stateAction || !toolDef.stateAction.hostFunction) {
             if (callback) {
                 callback(null);
             }
@@ -7155,6 +7177,7 @@
             velaSurfaceShell.refreshLocale();
             velaSurfaceShell.refreshLayout();
         }
+        renderCoreBootstrapState(coreBootstrapSnapshot);
     }
 
     function setupLanguageSelector() {
@@ -8102,7 +8125,9 @@
         if (velaSurfaceShell && byId("homeView") && byId("homeView").classList.contains("is-active")) {
             velaSurfaceShell.resume();
         }
-        startSelectionPolling();
+        if (coreBootstrapSnapshot && (coreBootstrapSnapshot.state === "ready" || coreBootstrapSnapshot.state === "degraded")) {
+            startSelectionPolling();
+        }
         if (isDynamicTool(activeToolId)) {
             startRegistryStatePolling(DynamicTools[activeToolId]);
         }
@@ -8115,6 +8140,9 @@
         }
         lifecycleDebug("panel close start");
         panelShuttingDown = true;
+        if (coreBootstrapController) {
+            coreBootstrapController.shutdown();
+        }
         if (velaSurfaceController) {
             velaSurfaceController.dispose();
             velaSurfaceController = null;
@@ -8994,6 +9022,13 @@
                 saveSettings();
             });
         }
+        if (byId("toolBootstrapRetry")) {
+            byId("toolBootstrapRetry").addEventListener("click", function () {
+                if (coreBootstrapController) {
+                    coreBootstrapController.retry();
+                }
+            });
+        }
         document.addEventListener("keydown", function (event) {
             if (event.keyCode === 27) {
                 closeRegistryColorPicker();
@@ -9007,7 +9042,6 @@
         });
 
         bindPanelLifecycle();
-        startSelectionPolling();
     }
 
     document.addEventListener("DOMContentLoaded", function () {
