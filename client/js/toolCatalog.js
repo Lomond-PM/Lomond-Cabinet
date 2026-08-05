@@ -37,7 +37,6 @@
         var legacyOrder = [];
         var systems = {};
         var systemOrder = [];
-        var compatibilityMetadata = {};
         var staticHome = {};
         var staticHomeOrder = [];
         var diagnostics = [];
@@ -141,7 +140,7 @@
 
         function getDisplayMetadata(id) {
             var entry = getTool(id);
-            return entry ? entry.definition : compatibilityMetadata[id] || null;
+            return entry ? entry.definition : null;
         }
 
         function getRoute(id) {
@@ -227,14 +226,6 @@
             setRegistryTools: setRegistryTools,
             registerLegacyFallback: function (definition) { return register(legacy, legacyOrder, "legacy", definition); },
             registerSystemSurface: function (definition) { return register(systems, systemOrder, "system", definition); },
-            registerRegistryCompatibilityMetadata: function (definition) {
-                if (!definition || !validId(definition.id) || compatibilityMetadata[definition.id]) {
-                    diagnose("COMPATIBILITY_METADATA_INVALID", definition && definition.id);
-                    return false;
-                }
-                compatibilityMetadata[definition.id] = definition;
-                return true;
-            },
             registerStaticHomeEntry: registerStaticHomeEntry,
             getTool: getTool,
             getRegistryTool: getRegistryTool,
