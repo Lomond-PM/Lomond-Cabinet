@@ -24,13 +24,16 @@ Node.prototype.setSelectionRange = function (left, right) { this.selectionStart 
 function fixture(options) {
     options = options || {};
     const root = new Node("section"), intro = new Node("p"), scroll = new Node("div"), composer = new Node("textarea"), actionSlot = new Node("div"), statusText = new Node("span"), experimentalText = new Node("span"), statusDot = new Node("span"), statusSlot = new Node("div");
+    const localToggle = new Node("button"), localUtility = new Node("section"), localTargetValue = new Node("span"), localTypeValue = new Node("span"), localCurrentValue = new Node("span"), localInput = new Node("input"), localValidation = new Node("p"), localNotice = new Node("p"), localRefresh = new Node("button"), localCreate = new Node("button"), localClose = new Node("button");
     experimentalText.textContent = Object.prototype.hasOwnProperty.call(options, "experimentalText") ? options.experimentalText : "t:vela.surfaceExperimentalStatus";
     scroll.appendChild(intro);
-    const elements = { root, transcriptScroll: scroll, transcriptMessage: intro, composer, actionSlot, statusText, experimentalText, statusDot, statusSlot };
+    const elements = { root, transcriptScroll: scroll, transcriptMessage: intro, composer, actionSlot, statusText, experimentalText, statusDot, statusSlot, localToggle, localUtility, localTargetValue, localTypeValue, localCurrentValue, localInput, localValidation, localNotice, localRefresh, localCreate, localClose };
     const request = deferred(), confirmationRequest = deferred();
     let providerState = { state: "idle", text: null, errorCode: null };
     let confirmationState = { state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" };
-    const calls = { check: [], send: [], cancel: 0, review: 0, approve: 0, reject: 0 };
+    let localState = { state: "idle", contextLayerIndex: null, beforeValue: null, source: null };
+    const localRefreshRequest = options.localRefreshRequest || null;
+    const calls = { check: [], send: [], cancel: 0, review: 0, approve: 0, reject: 0, localRefresh: 0, localCreate: [] };
     const provider = {
         check(config) { calls.check.push(config); if (options.readinessError) { return Promise.reject(options.readinessError); } return options.readinessPromise || Promise.resolve(options.readinessResult || { ready: true, code: "experimental-ready", modelId: config.model, loadedInstances: 1, quantization: "Q_TEST", contextLength: 8192 }); },
         send(message) { calls.send.push(message); if (options.synchronousRejection) { providerState = { state: "failed", text: null, errorCode: "VERIFICATION_UNAVAILABLE" }; return Promise.reject(new Error("VERIFICATION_UNAVAILABLE")); } providerState = { state: "pending", text: null, errorCode: null }; return request.promise; },
@@ -39,12 +42,17 @@ function fixture(options) {
     };
     const confirmation = {
         review() { calls.review += 1; providerState = { state: "idle", text: null, errorCode: null }; confirmationState = { state: "confirmation-ready", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }; return Promise.resolve(); },
-        approve() { calls.approve += 1; confirmationState = { state: "executing", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }; return confirmationRequest.promise; },
+        approve() { calls.approve += 1; confirmationState = { state: "executing", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }; if (options.approveError) { localState = Object.assign({}, localState, { state: options.approveError.code === "CONTEXT_STALE" ? "stale" : "failed", errorCode: options.approveError.code }); return Promise.reject(options.approveError); } return confirmationRequest.promise; },
         reject() { calls.reject += 1; confirmationState = { state: "rejected", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }; return Promise.resolve(); },
         getState() { return Object.freeze(Object.assign({}, confirmationState)); }
     };
-    const controller = SurfaceController.create({ surface: { getElementsForTest: () => elements }, provider, confirmation, t: options.t || ((key) => "t:" + key), PresentationModel, TranscriptView, ComposerView, ConfirmationView, ActivationPolicy });
-    return { controller, elements, request, confirmationRequest, calls, setProvider(next) { providerState = next; }, setConfirmation(next) { confirmationState = next; } };
+    const localOpacity = {
+        refresh() { calls.localRefresh += 1; const result = localRefreshRequest ? localRefreshRequest.promise : Promise.resolve(); return result.then(() => { localState = { state: "ready", contextLayerIndex: 2, beforeValue: 35, contextRevision: 2, source: null }; return localState; }); },
+        create(input) { calls.localCreate.push(input); if (options.localCreateError) return Promise.reject(options.localCreateError); localState = { state: "pending-confirmation", contextLayerIndex: 2, beforeValue: 35, proposedValue: input.opacity, contextRevision: 2, source: "local-manual-opacity" }; confirmationState = { state: "confirmation-ready", beforeValue: 35, proposedValue: input.opacity, errorCode: null, moduleRevision: "test" }; return Promise.resolve(localState); },
+        getState() { return Object.freeze(Object.assign({}, localState)); }
+    };
+    const controller = SurfaceController.create({ surface: { getElementsForTest: () => elements }, provider, confirmation, localOpacity, t: options.t || ((key) => "t:" + key), PresentationModel, TranscriptView, ComposerView, ConfirmationView, ActivationPolicy });
+    return { controller, elements, request, confirmationRequest, localRefreshRequest, calls, setProvider(next) { providerState = next; }, setConfirmation(next) { confirmationState = next; }, setLocal(next) { localState = next; }, getLocal() { return localState; } };
 }
 async function flush() { await Promise.resolve(); await Promise.resolve(); }
 async function mountEnabled(test) { check(test.controller.mount(), "controller mounts before explicit experimental opt-in"); test.controller.configureExperimental({ endpoint: "http://127.0.0.1:1234", model: "configured-model", acknowledged: true }); await test.controller.enableExperimental(); equal(test.controller.getExperimentalState().enabled, true, "explicit readiness enables only the current experimental session"); return test; }
@@ -181,8 +189,36 @@ async function run() {
     const sync = fixture({ synchronousRejection: true }); await mountEnabled(sync); sync.elements.composer.value = "keep"; const syncTextarea = sync.elements.composer; sync.elements.actionSlot.children[0].emit("click"); await flush(); equal(sync.elements.composer.value, "keep", "synchronous rejection keeps draft"); equal(sync.elements.composer, syncTextarea, "synchronous rejection preserves textarea");
     const beforeChildren = e.actionSlot.children.slice(); test.controller.suspend(); e.composer.value = "suspended"; test.setProvider({ state: "completed", text: "late", errorCode: null }); test.controller.refreshLocale(); equal(e.composer.value, "suspended", "suspension blocks patches"); test.controller.resume(); check(e.actionSlot.children.every((node, index) => node === beforeChildren[index]), "resume preserves controls DOM identity");
     check(!/errorCode|PROVIDER_|VERIFICATION_UNAVAILABLE/.test(TranscriptView.create.toString()), "Transcript does not map internal codes");
-    check(!/requestId|candidateId|planId|authority|target|context|nonce|digest/.test(SurfaceController.create.toString()), "Surface controller exposes experimental endpoint configuration without any trusted identity or execution-authority seam");
+    check(!/requestId|candidateId|planId|authority|nonce|digest/.test(SurfaceController.create.toString()), "Surface controller receives no trusted target identity or execution authority");
     check(!/candidateId|planId|authority|target|context|nonce|digest/.test(ConfirmationView.create.toString()), "confirmation view receives no trusted execution data");
+    equal(SurfaceController.validateOpacityInput("0").opacity, 0, "local opacity accepts zero");
+    equal(SurfaceController.validateOpacityInput("100").opacity, 100, "local opacity accepts one hundred");
+    equal(SurfaceController.validateOpacityInput("57.5").opacity, 57.5, "local opacity accepts a finite decimal");
+    for (const invalid of ["-0.1", "100.1", "", "NaN", "Infinity", "abc", "1e2"]) equal(SurfaceController.validateOpacityInput(invalid).opacity, null, "local opacity rejects " + (invalid || "empty input"));
+    const local = fixture(); local.controller.mount();
+    local.elements.localToggle.emit("click");
+    equal(local.elements.localUtility.hidden, false, "local opacity utility opens inline without replacing the composer");
+    equal(local.elements.composer.tagName, "TEXTAREA", "opening the local utility preserves the composer node");
+    local.elements.localRefresh.emit("click");
+    equal(local.calls.localRefresh, 1, "Surface can trigger the bounded local context refresh port");
+    equal(local.calls.check.length + local.calls.send.length, 0, "local context refresh does not call Provider readiness or send");
+    await flush();
+    equal(local.elements.localTargetValue.textContent, "t:vela.contextSelectedLayerOpacity", "refreshed context renders the safe target summary");
+    equal(local.elements.localCurrentValue.textContent, "35%", "refreshed context renders current opacity");
+    local.elements.localInput.value = "57.5"; local.elements.localInput.emit("input"); local.elements.localCreate.emit("click"); await flush();
+    equal(local.calls.localCreate.length, 1, "Provider-unavailable Surface creates a local proposal");
+    equal(local.calls.localCreate[0].opacity, 57.5, "local proposal receives only validated opacity");
+    equal(local.getLocal().source, "local-manual-opacity", "local proposal state carries a stable non-Provider source");
+    equal(local.calls.send.length, 0, "local proposal creation does not send a model request");
+    check(!local.elements.actionSlot.children[4].hidden && !local.elements.actionSlot.children[5].hidden, "local proposal enters the existing Approve and Reject confirmation UI");
+    equal(local.elements.localNotice.textContent, "t:vela.surfaceLocalProposalReady", "local proposal reports a bounded review-ready notice");
+    const localConflict = fixture(); localConflict.controller.mount(); localConflict.elements.localToggle.emit("click"); localConflict.setLocal({ state: "ready", contextLayerIndex: 1, beforeValue: 20 }); localConflict.setProvider({ state: "pending", text: null, errorCode: null }); localConflict.controller.refreshLocale(); localConflict.elements.localInput.value = "40"; localConflict.elements.localCreate.emit("click"); equal(localConflict.calls.localCreate.length, 0, "pending model request blocks a conflicting local proposal");
+    const existingProposal = fixture(); existingProposal.controller.mount(); existingProposal.elements.localToggle.emit("click"); existingProposal.setLocal({ state: "ready", contextLayerIndex: 1, beforeValue: 20 }); existingProposal.setConfirmation({ state: "confirmation-ready", beforeValue: 20, proposedValue: 30 }); existingProposal.controller.refreshLocale(); existingProposal.elements.localInput.value = "40"; existingProposal.elements.localCreate.emit("click"); equal(existingProposal.calls.localCreate.length, 0, "existing confirmation cannot be overwritten by a local proposal");
+    const lateLocalRefresh = deferred(); const localLifecycle = fixture({ localRefreshRequest: lateLocalRefresh }); localLifecycle.controller.mount(); localLifecycle.elements.localToggle.emit("click"); localLifecycle.elements.localRefresh.emit("click"); localLifecycle.controller.suspend(); lateLocalRefresh.resolve(); await flush(); check(localLifecycle.elements.localNotice.textContent !== "t:vela.surfaceLocalRefreshReady", "suspend ignores a late local context callback"); localLifecycle.controller.resume();
+    const rejectedLocal = fixture(); rejectedLocal.controller.mount(); rejectedLocal.elements.localToggle.emit("click"); rejectedLocal.elements.localRefresh.emit("click"); await flush(); rejectedLocal.elements.localInput.value = "60"; rejectedLocal.elements.localCreate.emit("click"); await flush(); rejectedLocal.elements.actionSlot.children[5].emit("click"); await flush(); equal(rejectedLocal.calls.reject, 1, "local proposal reuses the existing reject path"); equal(rejectedLocal.elements.localUtility.hidden, true, "reject closes the inline utility without changing the composer");
+    const approvedLocal = fixture(); approvedLocal.controller.mount(); approvedLocal.elements.localToggle.emit("click"); approvedLocal.elements.localRefresh.emit("click"); await flush(); approvedLocal.elements.localInput.value = "65"; approvedLocal.elements.localCreate.emit("click"); await flush(); approvedLocal.elements.actionSlot.children[4].emit("click"); equal(approvedLocal.calls.approve, 1, "local proposal reuses the existing approve execution path"); approvedLocal.setConfirmation({ state: "execution-completed", beforeValue: 35, proposedValue: 65, errorCode: null, moduleRevision: "test" }); approvedLocal.confirmationRequest.resolve(); await flush(); await flush(); equal(approvedLocal.calls.localRefresh, 2, "successful local execution refreshes current opacity through the same context port");
+    const staleError = new Error("CONTEXT_STALE"); staleError.code = "CONTEXT_STALE"; const staleLocal = fixture({ approveError: staleError }); staleLocal.controller.mount(); staleLocal.elements.localToggle.emit("click"); staleLocal.elements.localRefresh.emit("click"); await flush(); staleLocal.elements.localInput.value = "70"; staleLocal.elements.localCreate.emit("click"); await flush(); staleLocal.elements.actionSlot.children[4].emit("click"); await flush(); equal(staleLocal.elements.localNotice.textContent, "t:vela.surfaceLocalContextStale", "stale target is rejected with an explicit refresh-and-recreate notice");
+    const listenerFixture = fixture(); listenerFixture.controller.mount(); equal(listenerFixture.elements.localToggle.listeners.click.length, 1, "local utility binds its toggle once"); listenerFixture.controller.dispose(); equal(listenerFixture.elements.localToggle.listeners.click.length, 0, "dispose removes local utility listeners");
     check(test.controller.dispose(), "dispose succeeds once");
     console.log("test-vela-surface-controller: " + assertions + " assertions passed.");
 }

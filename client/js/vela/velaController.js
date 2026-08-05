@@ -107,6 +107,7 @@
                 contextRevision: contextRevision,
                 beforeValue: activeRecord ? activeRecord.beforeValue : (contextRecord ? contextRecord.beforeValue : null),
                 proposedValue: activeRecord ? activeRecord.proposedValue : null,
+                source: activeRecord ? activeRecord.source : null,
                 undoGroupLabel: activeRecord ? "Vela: Set Opacity" : null,
                 errorCode: activeRecord ? activeRecord.errorCode : (contextRecord ? contextRecord.errorCode : null),
                 moduleRevision: MODULE_REVISION
@@ -231,6 +232,7 @@
                     proposedValue: opacity,
                     beforeValue: review.beforeValue,
                     targetSummary: "Selected layer Opacity",
+                    source: "local-manual-opacity",
                     errorCode: null
                 };
                 state = "pending-confirmation";
@@ -238,7 +240,7 @@
             }, function (error) {
                 if (capturedGeneration === generation) {
                     var code = safeCode(protocol, stableErrorCodes, error);
-                    activeRecord = { planId: null, candidateId: null, proposedValue: opacity, beforeValue: null, targetSummary: "Selected layer Opacity", errorCode: code };
+                    activeRecord = { planId: null, candidateId: null, proposedValue: opacity, beforeValue: null, targetSummary: "Selected layer Opacity", source: "local-manual-opacity", errorCode: code };
                     state = code === protocol.ERROR_CODES.CONTEXT_STALE || code === protocol.ERROR_CODES.UNKNOWN_TARGET ? "stale" : "failed";
                 }
                 throw error;
