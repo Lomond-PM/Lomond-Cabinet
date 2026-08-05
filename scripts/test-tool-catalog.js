@@ -9,7 +9,7 @@ function check(value, message) {
 }
 
 function tool(id, extra = {}) {
-    return Object.assign({ id, titleKey: `tools.${id}.title`, sections: [], actions: [], i18n: { en: {}, "zh-CN": {} } }, extra);
+    return Object.assign({ id, titleKey: `tools.${id}.title`, descriptionKey: `tools.${id}.description`, sections: [], actions: [], i18n: { en: {}, "zh-CN": {} } }, extra);
 }
 
 function configuredCatalog() {
@@ -18,7 +18,6 @@ function configuredCatalog() {
     catalog.registerSystemSurface({ id: "settings" });
     catalog.registerLegacyFallback({ id: "vela", titleKey: "vela.title" });
     catalog.registerRegistryCompatibilityMetadata({ id: "ecommerceLayout", title: "Ad Component Kit" });
-    catalog.registerRegistryCompatibilityMetadata({ id: "shapeAdd", title: "Shape Add" });
     catalog.registerStaticHomeEntry("ecommerceLayout");
     catalog.registerStaticHomeEntry("vela");
     return catalog;
@@ -37,12 +36,17 @@ const registryDefinitions = [
 // Explicit classification and authority.
 {
     const catalog = configuredCatalog();
+    check(catalog.getRegistryTool("shapeAdd") === null && catalog.getTool("shapeAdd") === null && catalog.getDisplayMetadata("shapeAdd") === null, "Shape Add does not exist before a Registry definition is committed");
+    check(!catalog.getHomeEntries({ developerMode: true }).some((entry) => entry.id === "shapeAdd"), "loading projection contains no Shape Add ghost Home entry");
+    check(catalog.getRoute("shapeAdd").kind === "unknown" && catalog.getLegacyFallback("shapeAdd") === null, "Shape Add is unknown before Registry readiness and has no legacy fallback");
+    check(catalog.getDisplayMetadata("ecommerceLayout").title === "Ad Component Kit", "ecommerceLayout compatibility metadata remains available independently");
     check(catalog.getSystemSurface("velaPersistentSurface").kind === "system" && catalog.getSystemSurface("settings").kind === "system", "system surfaces are explicitly classified");
     check(catalog.getTool("vela").kind === "legacy" && catalog.getLegacyFallback("vela").definition.titleKey === "vela.title", "Vela is an explicit legacy fallback");
     check(catalog.getTool("velaPersistentSurface") === null && catalog.getRegistryTool("settings") === null, "system surfaces do not enter ordinary tool or Registry lookup");
     check(catalog.setRegistryTools(registryDefinitions), "complete Registry catalog commits");
     check(catalog.getTool("shapeAdd").kind === "registry" && catalog.getRegistryTool("textBackgroundBox") && catalog.getRegistryTool("selectionInfo"), "production Registry tools are queryable");
-    check(catalog.getDisplayMetadata("shapeAdd") === catalog.getRegistryTool("shapeAdd").definition, "Registry schema overrides compatibility metadata");
+    check(catalog.getRegistryTool("shapeAdd").homeOwnership === "dynamic" && catalog.getDisplayMetadata("shapeAdd") === registryDefinitions[1], "Shape Add becomes dynamic-owned and uses Registry definition identity");
+    check(catalog.getDisplayMetadata("shapeAdd").titleKey === "tools.shapeAdd.title" && catalog.getDisplayMetadata("shapeAdd").descriptionKey === "tools.shapeAdd.description", "Shape Add title and description keys come from its Registry definition");
     check(catalog.getRoute("shapeAdd").kind === "registry" && catalog.getRoute("vela").kind === "legacy" && catalog.getRoute("unknown").kind === "unknown", "routing distinguishes Registry, legacy, and unknown");
     check(catalog.getRoute("settings").kind === "system", "system routing remains outside ordinary detail routing");
 }
@@ -73,6 +77,17 @@ const registryDefinitions = [
     check(ordered[0].id === "selectionInfo" && ordered[1].id === "vela" && new Set(ordered.map((entry) => entry.id)).size === debug.length, "saved Home order preserves all known IDs without duplicates");
 }
 
+// A saved ID that is absent while loading remains usable once Registry entries arrive.
+{
+    const catalog = configuredCatalog();
+    const savedOrder = ["shapeAdd", "vela", "ecommerceLayout"];
+    const loading = catalog.applyHomeOrder(catalog.getHomeEntries({ developerMode: false }), savedOrder);
+    check(!loading.some((entry) => entry.id === "shapeAdd") && savedOrder[0] === "shapeAdd", "loading projection does not create Shape Add or mutate the persisted order input");
+    catalog.setRegistryTools([tool("ecommerceLayout"), tool("shapeAdd")]);
+    const ready = catalog.applyHomeOrder(catalog.getHomeEntries({ developerMode: false }), savedOrder);
+    check(ready[0].id === "shapeAdd" && ready.filter((entry) => entry.id === "shapeAdd").length === 1, "Registry readiness reapplies the saved Shape Add order without a ghost or duplicate");
+}
+
 // Atomic updates, stable diagnostics, snapshot isolation, and metadata immutability.
 {
     const catalog = configuredCatalog();
@@ -81,7 +96,7 @@ const registryDefinitions = [
     check(catalog.setRegistryTools(input), "initial Registry update succeeds");
     const oldShape = catalog.getRegistryTool("shapeAdd");
     check(catalog.setRegistryTools([tool("duplicate"), tool("duplicate")]) === false, "duplicate Registry ID is rejected deterministically");
-    check(catalog.getRegistryTool("shapeAdd") === oldShape, "failed Registry refresh retains the previously committed catalog");
+    check(catalog.getRegistryTool("shapeAdd") === oldShape && catalog.getHomeEntries({ developerMode: false }).filter((entry) => entry.id === "shapeAdd").length === 1, "failed Registry refresh retains one last-known-good Shape Add entry");
     check(catalog.getSnapshot().diagnostics.some((item) => item.code === "REGISTRY_ID_DUPLICATE" && item.id === "duplicate"), "duplicate conflict has a stable diagnostic");
     const replacement = tool("replacement");
     check(catalog.setRegistryTools([replacement]) && catalog.getRegistryTool("shapeAdd") === null && catalog.getRegistryTool("replacement").definition === replacement, "successful Registry update drops stale dynamic objects");
@@ -93,15 +108,31 @@ const registryDefinitions = [
     check(catalog.getTool("stack") === null && catalog.getTool("grid") === null, "Stack and Grid are not independent catalog tools");
 }
 
+// Successful refresh and retry replace Shape Add strictly from Registry authority.
+{
+    const catalog = configuredCatalog();
+    const first = tool("shapeAdd", { titleKey: "tools.shapeAdd.title", descriptionKey: "tools.shapeAdd.description" });
+    const replacement = tool("shapeAdd", { titleKey: "tools.shapeAdd.nextTitle", descriptionKey: "tools.shapeAdd.nextDescription" });
+    check(catalog.setRegistryTools([first]) && catalog.getRegistryTool("shapeAdd").definition === first, "first successful Registry load publishes Shape Add once");
+    check(catalog.setRegistryTools([replacement]) && catalog.getRegistryTool("shapeAdd").definition === replacement && catalog.getDisplayMetadata("shapeAdd").titleKey === "tools.shapeAdd.nextTitle", "successful refresh replaces Shape Add without retaining old compatibility fields");
+    check(catalog.getHomeEntries({ developerMode: false }).filter((entry) => entry.id === "shapeAdd").length === 1, "retry success projects exactly one Shape Add Home entry");
+    check(catalog.getRoute("shapeAdd").kind === "registry" && catalog.getRoute("missing").kind === "unknown", "Shape Add routes only through Registry and unknown IDs do not fall back to it");
+    check(catalog.getHomeEntries({ developerMode: false }).some((entry) => entry.id === "shapeAdd") && catalog.getHomeEntries({ developerMode: true }).some((entry) => entry.id === "shapeAdd"), "Developer Mode does not filter the production Shape Add tool");
+}
+
 // Production integration keeps projection and event ownership centralized.
 {
     const root = path.join(__dirname, "..");
     const main = fs.readFileSync(path.join(root, "client/js/main.js"), "utf8");
     const index = fs.readFileSync(path.join(root, "client/index.html"), "utf8");
+    const loadOrderSource = main.slice(main.indexOf("loadOrder: function ()"), main.indexOf("saveOrder: function ()"));
     check(!/DynamicTools|DynamicToolOrder|var ToolRegistry/.test(main), "main no longer owns parallel hard-coded and dynamic tool maps");
     check(/getHomeEntries\(\{ developerMode:/.test(main) && !/:not\(\[data-dynamic-tool='true'\]\)/.test(main), "Home deduplication is projected by Tool Catalog instead of DOM probing");
     check((main.match(/data-home-events-bound/g) || []).length >= 2 && /getAttribute\("data-home-events-bound"\) === "true"/.test(main), "Home buttons retain one-time event binding guard");
     check(/route\.kind === "registry"/.test(main) && /route\.kind === "legacy" && toolId === "vela"/.test(main), "configureToolDetail uses explicit Registry and legacy route kinds");
+    check(!/registerRegistryCompatibilityMetadata\(\{\s*id:\s*["']shapeAdd["']/.test(main), "production code contains no Shape Add compatibility metadata registration");
+    check(/registerRegistryCompatibilityMetadata\(\{\s*id:\s*["']ecommerceLayout["']/.test(main), "ecommerceLayout compatibility metadata remains in its existing boundary");
+    check(loadOrderSource.indexOf("saveStoredJson") === -1 && /commitDynamicToolCatalog[\s\S]*HomeLayoutManager\.loadOrder\(\)/.test(main), "loading filters only the in-memory order and Registry commit reapplies persisted Home order");
     check(index.indexOf("js/toolCatalog.js") < index.indexOf("js/main.js"), "Tool Catalog loads before main.js");
 }
 
