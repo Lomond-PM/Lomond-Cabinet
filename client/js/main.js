@@ -3620,6 +3620,11 @@
                     approve: function () { return velaRuntimeController.approveActiveCandidate(); },
                     reject: function () { return velaRuntimeController.rejectActiveCandidate(); },
                     getState: function () { return velaRuntimeController.getConfirmationSurfaceState(); }
+                },
+                localOpacity: {
+                    refresh: function () { return velaRuntimeController.refreshContext(); },
+                    create: function (input) { return velaRuntimeController.createOpacityCandidate(input); },
+                    getState: function () { return velaRuntimeController.getUiState(); }
                 }
             });
             mounted = controller && controller.mount && controller.mount();
