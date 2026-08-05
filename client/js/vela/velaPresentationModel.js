@@ -7,6 +7,7 @@
 }(typeof self !== "undefined" ? self : this, function () {
     "use strict";
 
+    var MAX_TRANSCRIPT_ITEMS = 16;
     var ERROR_DISPLAY_KEYS = Object.freeze({
         "VERIFICATION_UNAVAILABLE": "vela.surfaceContextUnavailable",
         "PROVIDER_CONNECTION_FAILED": "vela.surfaceProviderConnection",
@@ -33,12 +34,7 @@
     function errorDisplayKey(code) {
         return typeof code === "string" && Object.prototype.hasOwnProperty.call(ERROR_DISPLAY_KEYS, code) ? ERROR_DISPLAY_KEYS[code] : "vela.surfaceGenericError";
     }
-    function statusTone(state, disabledReason) {
-        var Contract = typeof StatusToneContract !== "undefined" ? StatusToneContract : typeof require === "function" ? require("../statusTone.js").StatusToneContract : null;
-        if (state === "experimental-disabled" && disabledReason === "user-disabled") { return "disabled"; }
-        return Contract && Contract.toneForState ? Contract.toneForState(state) : "idle";
-    }
-    function projectSurfaceState(providerState, confirmationState, composerValue, experimentalEnabled, experimentalState, activationPolicy, disabledReason) {
+    function projectSurfaceState(providerState, confirmationState, composerValue, experimentalEnabled, experimentalState, activationPolicy) {
         var provider = providerState && typeof providerState.state === "string" ? providerState.state : "idle";
         var confirmation = confirmationState && typeof confirmationState.state === "string" ? confirmationState.state : "idle";
         var state = "idle";
@@ -56,7 +52,6 @@
         else if (typeof composerValue === "string" && /\S/.test(composerValue)) { state = "composing"; }
         return Object.freeze({
             state: state,
-            tone: statusTone(state, disabledReason),
             experimental: activationPolicy && activationPolicy.releaseMode === "experimental-preview",
             qualified: !!(activationPolicy && activationPolicy.qualifiedDefaultModelId),
             manualOptInRequired: !!(activationPolicy && activationPolicy.experimentalOptInAllowed && !activationPolicy.productionEnabled),
@@ -79,6 +74,7 @@
         function append(kind, text, displayTextKey) {
             var item = Object.freeze({ kind: kind, text: safeText(text), displayTextKey: typeof displayTextKey === "string" ? displayTextKey : null });
             items.push(item);
+            while (items.length > MAX_TRANSCRIPT_ITEMS) { items.shift(); }
             return item;
         }
         function begin(message) {
@@ -116,5 +112,5 @@
         function reset() { items = []; pending = false; confirmationState = "idle"; terminalGeneration += 1; return snapshot(); }
         return Object.freeze({ begin: begin, apply: apply, applyConfirmation: applyConfirmation, clearConfirmationTerminal: clearConfirmationTerminal, reset: reset, getSnapshot: snapshot });
     }
-    return Object.freeze({ create: create, errorDisplayKey: errorDisplayKey, projectSurfaceState: projectSurfaceState, statusTone: statusTone });
+    return Object.freeze({ create: create, errorDisplayKey: errorDisplayKey, projectSurfaceState: projectSurfaceState });
 }));

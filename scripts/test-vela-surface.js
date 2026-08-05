@@ -33,7 +33,6 @@ function classList(owner) {
         remove: function () { Array.prototype.forEach.call(arguments, function (value) { delete values[value]; }); },
         contains: function (value) { return values[value] === true; },
         toggle: function (value, force) {
-            owner.classToggleCount = (owner.classToggleCount || 0) + 1;
             const next = force === undefined ? !values[value] : !!force;
             if (next) { values[value] = true; } else { delete values[value]; }
             owner.className = Object.keys(values).join(" ");
@@ -68,7 +67,6 @@ function FakeNode(documentRef, tag) {
     this.style = {
         values: {},
         setProperty: (name, value) => {
-            this.styleWriteCount = (this.styleWriteCount || 0) + 1;
             this.style.values[name] = String(value);
             if (name === "--vela-surface-height") { this._rect.height = Number(String(value).replace("px", "")); }
         },
@@ -96,7 +94,7 @@ FakeNode.prototype.removeChild = function (child) {
     if (index !== -1) { this.children.splice(index, 1); child.parentNode = null; }
     return child;
 };
-FakeNode.prototype.setAttribute = function (name, value) { this.attributeWriteCount = (this.attributeWriteCount || 0) + 1; this.attributes[name] = String(value); };
+FakeNode.prototype.setAttribute = function (name, value) { this.attributes[name] = String(value); };
 FakeNode.prototype.getAttribute = function (name) { return this.attributes[name] || null; };
 FakeNode.prototype.addEventListener = function (type, handler) { (this.listeners[type] || (this.listeners[type] = [])).push(handler); };
 FakeNode.prototype.removeEventListener = function (type, handler) {
@@ -132,7 +130,7 @@ function FakeResizeObserver(callback) { this.callback = callback; this.nodes = [
 FakeResizeObserver.instances = [];
 FakeResizeObserver.prototype.observe = function (node) { this.nodes.push(node); };
 FakeResizeObserver.prototype.disconnect = function () { this.nodes = []; this.disconnected = true; };
-FakeResizeObserver.prototype.trigger = function () { if (!this.disconnected) { this.callback([]); } };
+FakeResizeObserver.prototype.trigger = function () { this.callback([]); };
 
 function event(properties) {
     const result = properties || {};
@@ -140,7 +138,7 @@ function event(properties) {
     return result;
 }
 
-function setup(useResizeObserver) {
+function setup() {
     const documentRef = new FakeDocument();
     const windowRef = new FakeWindow();
     const home = documentRef.createElement("section");
@@ -157,7 +155,7 @@ function setup(useResizeObserver) {
     home.appendChild(header);
     home.appendChild(mount);
     home.appendChild(pool);
-    const options = {
+    const surface = Surface.create({
         mountElement: mount,
         homeContainer: home,
         headerElement: header,
@@ -166,10 +164,9 @@ function setup(useResizeObserver) {
         t: function (key) { return "t:" + key; },
         getUiScale: function () { return 1; },
         ResizeController: ResizeController,
+        ResizeObserver: FakeResizeObserver,
         eventTarget: windowRef
-    };
-    if (useResizeObserver !== false) { options.ResizeObserver = FakeResizeObserver; }
-    const surface = Surface.create(options);
+    });
     return { documentRef: documentRef, windowRef: windowRef, home: home, header: header, mount: mount, pool: pool, surface: surface, settingsCalls: function () { return settingsCalls; } };
 }
 
@@ -212,9 +209,6 @@ function testSurface() {
     equal(nodes.statusSlot.getAttribute("aria-live"), "polite", "state changes use a polite live region");
     equal(nodes.statusSlot.getAttribute("aria-atomic"), "true", "status and experimental qualification text are announced atomically");
     equal(nodes.experimentalText.textContent, "t:vela.surfaceExperimentalStatus", "experimental and not-qualified status is fixed local i18n text");
-    equal(nodes.statusSlot.getAttribute("aria-label"), "t:vela.surfaceStatusSetup · t:vela.surfaceExperimentalStatus", "complete status remains available as the live region accessible name");
-    equal(nodes.statusDot.getAttribute("title"), "t:vela.surfaceStatusSetup", "visible status dot title uses the short summary");
-    equal(nodes.experimentalText.getAttribute("title"), "t:vela.surfaceExperimentalStatus", "detail title preserves the complete untruncated status");
     equal(nodes.handle.getAttribute("role"), "separator", "resize handle has separator role");
     equal(nodes.handle.getAttribute("aria-orientation"), "horizontal", "resize handle has horizontal orientation");
     equal(nodes.handle.getBoundingClientRect().height, 20, "resize handle retains its overlay hit area");
@@ -226,69 +220,20 @@ function testSurface() {
     nodes.composer.focus();
     nodes.composer.setSelectionRange(2, 7);
     nodes.transcriptScroll.scrollTop = 19;
-    root._rect.width = 600;
+    nodes.controls._rect.width = 12;
     surface.refreshLayout();
-    fixture.windowRef.flush();
-    fixture.windowRef.flush();
-    equal(root.getAttribute("data-layout"), "wide", "wide mode derives from the Surface container width");
-    root._rect.width = 400;
+    ok(root.classList.contains("is-narrow"), "narrow class derives from actual available control width");
+    nodes.controls._rect.width = 500;
     surface.refreshLayout();
-    fixture.windowRef.flush();
-    fixture.windowRef.flush();
-    equal(root.getAttribute("data-layout"), "compact", "intermediate Surface width selects compact mode");
-    root._rect.width = 320;
-    surface.refreshLayout();
-    fixture.windowRef.flush();
-    fixture.windowRef.flush();
-    equal(root.getAttribute("data-layout"), "narrow", "very small Surface width selects narrow mode");
-    root._rect.width = 400;
-    surface.refreshLayout();
-    fixture.windowRef.flush();
-    fixture.windowRef.flush();
-    equal(root.getAttribute("data-layout"), "compact", "narrow returns through compact when width grows");
-    root._rect.width = 600;
-    surface.refreshLayout();
-    fixture.windowRef.flush();
-    fixture.windowRef.flush();
-    equal(root.getAttribute("data-layout"), "wide", "compact returns to wide when sufficient width is restored");
-    const writesBeforeWideBand = root.attributeWriteCount;
-    root._rect.width = 515;
-    surface.refreshLayout();
-    fixture.windowRef.flush();
-    equal(root.getAttribute("data-layout"), "wide", "wide mode remains stable inside the compact hysteresis band");
-    equal(root.attributeWriteCount, writesBeforeWideBand, "stable hysteresis does not rewrite the layout attribute");
-    root._rect.width = 507;
-    surface.refreshLayout();
-    fixture.windowRef.flush();
-    fixture.windowRef.flush();
-    equal(root.getAttribute("data-layout"), "compact", "wide enters compact below the lower hysteresis boundary");
-    root._rect.width = 525;
-    surface.refreshLayout();
-    fixture.windowRef.flush();
-    equal(root.getAttribute("data-layout"), "compact", "compact remains stable below the wide return boundary");
-    root._rect.width = 347;
-    surface.refreshLayout();
-    fixture.windowRef.flush();
-    fixture.windowRef.flush();
-    equal(root.getAttribute("data-layout"), "narrow", "compact enters narrow below the lower hysteresis boundary");
-    root._rect.width = 365;
-    surface.refreshLayout();
-    fixture.windowRef.flush();
-    equal(root.getAttribute("data-layout"), "narrow", "narrow remains stable below the compact return boundary");
-    root._rect.width = 372;
-    surface.refreshLayout();
-    fixture.windowRef.flush();
-    fixture.windowRef.flush();
-    equal(root.getAttribute("data-layout"), "compact", "narrow returns to compact at the upper hysteresis boundary");
+    ok(!root.classList.contains("is-narrow"), "wide class returns when space is restored");
     equal(nodes.composer, initialInput, "layout changes preserve textarea identity");
     equal(nodes.transcriptScroll, initialScroll, "layout changes preserve transcript identity");
     equal(nodes.composer.value, "draft retained locally", "layout changes preserve textarea value");
     equal(nodes.composer.selectionStart, 2, "layout changes preserve selection start");
     equal(nodes.composer.selectionEnd, 7, "layout changes preserve selection end");
     equal(nodes.transcriptScroll.scrollTop, 19, "layout changes preserve transcript scroll position");
-    equal(nodes.controls.children[0], nodes.settingsSlot, "Settings remains first in the shared controls DOM");
-    equal(nodes.controls.children[1], nodes.statusSlot, "status follows Settings in the shared controls DOM");
-    equal(nodes.controls.children[2], nodes.actionSlot, "dynamic actions remain last in the shared controls DOM");
+    const narrowRule = (fs.readFileSync(path.join(ROOT, "client/css/velaSurface.css"), "utf8").match(/\.vela-surface\.is-narrow\s*\{([^}]*)\}/) || [])[1] || "";
+    ok(/"composer composer"[\s\S]*"status status"[\s\S]*"settings actions"/.test(narrowRule), "narrow CSS retains stable named status, Settings, and action slots without reordering the DOM; real CEP status-row reflow remains deferred to 0.3.1");
     nodes.settingsButton.emit("click", event());
     equal(fixture.settingsCalls(), 1, "settings button only forwards the Settings callback");
 
@@ -371,55 +316,6 @@ function testSurface() {
     equal(surface.dispose(), false, "dispose is idempotent");
 }
 
-function testResizeScheduling() {
-    FakeResizeObserver.instances = [];
-    const fixture = setup(true);
-    fixture.surface.mount();
-    fixture.windowRef.flush();
-    const nodes = fixture.surface.getElementsForTest();
-    const observer = FakeResizeObserver.instances[0];
-    const initialStyleWrites = nodes.root.styleWriteCount || 0;
-    const initialAttributeWrites = nodes.handle.attributeWriteCount || 0;
-    const initialLayoutWrites = nodes.root.attributeWriteCount || 0;
-
-    equal(FakeResizeObserver.instances.length, 1, "Surface owns one ResizeObserver for external size signals");
-    equal((fixture.windowRef.listeners.resize || []).length, 0, "ResizeObserver support avoids an equivalent window resize listener");
-    observer.trigger();
-    observer.trigger();
-    observer.trigger();
-    equal(fixture.windowRef.frames.length, 1, "multiple observer signals coalesce into one animation frame");
-    fixture.windowRef.flush();
-    equal(nodes.root.styleWriteCount || 0, initialStyleWrites, "unchanged height does not rewrite the CSS variable");
-    equal(nodes.handle.attributeWriteCount || 0, initialAttributeWrites, "unchanged bounds and value do not rewrite ARIA attributes");
-    equal(nodes.root.attributeWriteCount || 0, initialLayoutWrites, "unchanged layout mode does not rewrite its root attribute");
-
-    observer.trigger();
-    equal(fixture.windowRef.frames.length, 1, "a pending external refresh can be cancelled");
-    fixture.surface.suspend();
-    equal(fixture.windowRef.frames.length, 0, "suspend cancels the pending refresh frame");
-    ok(observer.disconnected, "suspend disconnects the active observer");
-    fixture.surface.resume();
-    equal(FakeResizeObserver.instances.length, 2, "resume creates exactly one replacement observer");
-    fixture.surface.resume();
-    equal(FakeResizeObserver.instances.length, 2, "repeated resume does not duplicate observers");
-    fixture.surface.dispose();
-    ok(FakeResizeObserver.instances[1].disconnected, "dispose disconnects the resumed observer");
-    equal(fixture.windowRef.frames.length, 0, "dispose cancels the resumed refresh frame");
-
-    const fallback = setup(false);
-    fallback.surface.mount();
-    equal((fallback.windowRef.listeners.resize || []).length, 1, "window resize is bound only as the observer fallback");
-    fallback.windowRef.emit("resize", event());
-    fallback.windowRef.emit("resize", event());
-    equal(fallback.windowRef.frames.length, 1, "fallback resize signals share the same frame scheduler");
-    fallback.surface.suspend();
-    equal((fallback.windowRef.listeners.resize || []).length, 0, "suspend removes the fallback resize listener");
-    fallback.surface.resume();
-    equal((fallback.windowRef.listeners.resize || []).length, 1, "resume restores one fallback resize listener");
-    fallback.surface.dispose();
-    equal((fallback.windowRef.listeners.resize || []).length, 0, "dispose removes the fallback resize listener");
-}
-
 function testStaticContracts() {
     const surfaceSource = fs.readFileSync(path.join(ROOT, "client/js/vela/velaSurface.js"), "utf8");
     const composerSource = fs.readFileSync(path.join(ROOT, "client/js/vela/velaComposerView.js"), "utf8");
@@ -433,23 +329,11 @@ function testStaticContracts() {
     ok(!/provider-send|provider-review|approveCandidate|AEToolbox\.VelaExecution|VelaExecutionPreflight/.test(surfaceSource), "Surface has no provider or execution entry point");
     ok(!/VelaRuntime|ProviderController|PlanStore|ExecutionAdapter/.test(surfaceSource), "Surface has no trusted runtime dependency");
     ok(/\.vela-transcript-scroll[\s\S]*overflow-y: auto/.test(cssSource), "only transcript slot is vertically scrollable");
-    ok(/\.vela-surface\[data-layout="compact"\]/.test(cssSource) && /\.vela-surface\[data-layout="narrow"\]/.test(cssSource), "CSS owns explicit compact and narrow root layout states");
-    ok(/\.vela-bottom-controls\s*\{[\s\S]*?grid-template-areas:\s*"settings status actions"/.test(cssSource), "wide controls use the fixed Settings, status, actions Grid order");
-    ok(/\[data-layout="compact"\][\s\S]*?"status status"[\s\S]*?"settings actions"/.test(cssSource), "compact and narrow controls place status above the Settings and actions row");
-    ok(/\[data-layout="narrow"\] \.vela-action-slot[\s\S]*?display:\s*grid[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/.test(cssSource), "narrow actions use a deterministic single-column Grid instead of incidental wrapping");
-    ok(/\[data-layout="narrow"\] \.vela-status-text[\s\S]*?position:\s*absolute[\s\S]*?width:\s*1px[\s\S]*?clip:\s*rect\(0, 0, 0, 0\)/.test(cssSource), "narrow visually hides the short summary without retaining intrinsic width");
-    ok(/\[data-layout="narrow"\] \.vela-experimental-status[\s\S]*?flex:\s*1 1 auto[\s\S]*?min-width:\s*0/.test(cssSource), "narrow keeps the detail visible and lets it consume remaining width safely");
-    ok(/data-detail-empty="true"\] \.vela-status-text[\s\S]*?position:\s*static[\s\S]*?text-overflow:\s*ellipsis/.test(cssSource), "narrow restores the same summary node when detail is empty");
-    ok(/data-detail-empty="true"\] \.vela-experimental-status[\s\S]*?display:\s*none/.test(cssSource), "empty narrow detail contributes no intrinsic width");
-    ok(!/\[data-layout="(?:wide|compact)"\] \.vela-(?:status-text|experimental-status)/.test(cssSource), "wide and compact retain visible status text without layout-specific hiding");
-    ok(/\[data-tone="warning"\] \.vela-status-dot[\s\S]*?background:\s*var\(--status-tone-warning\)/.test(cssSource), "Vela warning consumes the shared warning token");
-    ok(!/\.vela-surface\.is-narrow/.test(cssSource), "legacy binary is-narrow layout selectors are removed");
+    ok(/\.vela-surface\.is-narrow/.test(cssSource) && /grid-template-areas/.test(cssSource), "CSS owns wide and narrow grid layouts");
     ok(/@media \(prefers-reduced-motion: reduce\)/.test(cssSource) && /transition:\s*none/.test(cssSource) && /scroll-behavior:\s*auto/.test(cssSource), "reduced-motion disables non-essential Surface transitions and smooth scrolling");
     ok(/\.vela-transcript-scroll[\s\S]*border: 1px solid var\(--separator\)[\s\S]*border-radius: var\(--radius-sm\)/.test(cssSource), "transcript uses the same restrained plate language as the composer");
     ok(/\.vela-settings-button[\s\S]*min-height: calc\(26px \* var\(--ui-scale\)\)/.test(cssSource), "Settings uses the compact Surface button treatment");
     ok(/\.vela-surface-action\s*\{[\s\S]*min-height: calc\(26px \* var\(--ui-scale\)\)/.test(cssSource), "Send and Cancel use the compact Surface action height contract");
-    ok(/\.vela-surface-action\s*\{[\s\S]*?min-width:\s*0[\s\S]*?text-overflow:\s*ellipsis/.test(cssSource), "long action labels cannot force horizontal overflow");
-    ok(/\.vela-status-text\s*\{[\s\S]*?min-width:\s*0[\s\S]*?text-overflow:\s*ellipsis/.test(cssSource), "long status text remains in its shrinkable Grid area");
     ok(/vela-compact-action/.test(composerSource) && !/primary-action|secondary-action/.test(composerSource), "Send and Cancel do not reuse Tool Detail primary or secondary action classes");
     ok(/\.vela-transcript-scroll::-webkit-scrollbar\s*\{[\s\S]*width: calc\(7px \* var\(--ui-scale\)\)/.test(cssSource) && /\.vela-transcript-scroll::-webkit-scrollbar-thumb:hover/.test(cssSource), "Transcript has visible CEP/WebKit scrollbar and hover selectors");
     ok(/"vela\.surfaceSettings": "Settings"/.test(i18nSource) && /"vela\.surfaceSettings": "\\u8bbe\\u7f6e"/.test(i18nSource), "Surface Settings label is temporarily localized as Settings / 设置");
@@ -473,6 +357,5 @@ function testStaticContracts() {
 }
 
 testSurface();
-testResizeScheduling();
 testStaticContracts();
 console.log("Vela Surface tests passed: " + assertions + " assertions.");

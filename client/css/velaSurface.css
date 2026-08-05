@@ -17,11 +17,12 @@
     position: relative;
     display: grid;
     grid-template-areas:
-        "transcript"
-        "composer"
-        "controls";
-    grid-template-columns: minmax(0, 1fr);
+        "transcript transcript transcript"
+        "composer composer composer"
+        "settings status actions";
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, auto);
     grid-template-rows: minmax(0, 1fr) auto auto;
+    column-gap: var(--tool-gap);
     height: var(--vela-surface-height);
     min-height: 0;
     overflow: hidden;
@@ -33,20 +34,14 @@
 .vela-transcript-slot {
     grid-area: transcript;
     min-height: 0;
-    min-width: 0;
-    overflow: hidden;
     padding: var(--vela-surface-inset);
     padding-bottom: 0;
 }
 
 .vela-transcript-scroll {
-    box-sizing: border-box;
-    width: 100%;
     height: 100%;
     min-height: 0;
-    min-width: 0;
     overflow-y: auto;
-    overflow-x: hidden;
     padding: var(--vela-surface-inset);
     border: 1px solid var(--separator);
     border-radius: var(--radius-sm);
@@ -64,27 +59,15 @@
 
 .vela-transcript-list {
     display: grid;
-    min-width: 0;
     gap: var(--vela-inline-gap);
     margin-top: var(--vela-inline-gap);
 }
 
 .vela-transcript-message {
-    min-width: 0;
-    max-width: 100%;
-    overflow-wrap: anywhere;
     margin: 0;
     color: var(--text-primary);
     font-size: var(--font-small);
     line-height: 1.5;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.vela-transcript-message pre,
-.vela-transcript-message code {
-    max-width: 100%;
-    overflow-wrap: anywhere;
     white-space: pre-wrap;
     word-break: break-word;
 }
@@ -148,12 +131,7 @@
 }
 
 .vela-bottom-controls {
-    grid-area: controls;
-    display: grid;
-    grid-template-areas: "settings status actions";
-    grid-template-columns: auto minmax(0, 1fr) minmax(0, auto);
-    min-width: 0;
-    column-gap: var(--tool-gap);
+    display: contents;
 }
 
 .vela-settings-slot {
@@ -192,20 +170,13 @@
 
 .vela-status-dot {
     flex: 0 0 auto;
-    width: var(--status-dot-size);
-    height: var(--status-dot-size);
+    width: var(--vela-inline-gap);
+    height: var(--vela-inline-gap);
     border-radius: 50%;
-    background: var(--status-tone-idle);
+    background: var(--gold-soft);
 }
 
-.vela-status-slot[data-tone="processing"] .vela-status-dot { background: var(--status-tone-processing); animation: statusTonePulse 1.2s ease-in-out infinite; }
-.vela-status-slot[data-tone="success"] .vela-status-dot { background: var(--status-tone-success); }
-.vela-status-slot[data-tone="warning"] .vela-status-dot { background: var(--status-tone-warning); }
-.vela-status-slot[data-tone="error"] .vela-status-dot { background: var(--status-tone-error); }
-.vela-status-slot[data-tone="disabled"] .vela-status-dot { background: var(--status-tone-disabled); opacity: 0.62; }
-
 .vela-status-text {
-    flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -213,12 +184,8 @@
 }
 
 .vela-experimental-status {
-    flex: 0 1 auto;
-    min-width: 0;
-    overflow: hidden;
     color: var(--text-muted);
     font-size: calc(10px * var(--ui-scale));
-    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
@@ -249,9 +216,6 @@
 }
 
 .vela-surface-action {
-    min-width: 0;
-    max-width: 100%;
-    overflow: hidden;
     min-height: calc(26px * var(--ui-scale));
     padding: 0 calc(10px * var(--ui-scale));
     border-radius: var(--radius-sm);
@@ -259,8 +223,6 @@
     box-shadow: none;
     font-size: var(--font-small);
     line-height: 1;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .vela-resize-handle {
@@ -311,67 +273,18 @@
     pointer-events: none;
 }
 
-.vela-surface[data-layout="compact"] .vela-bottom-controls,
-.vela-surface[data-layout="narrow"] .vela-bottom-controls {
+.vela-surface.is-narrow {
     grid-template-areas:
+        "transcript transcript"
+        "composer composer"
         "status status"
         "settings actions";
     grid-template-columns: auto minmax(0, 1fr);
-    row-gap: var(--vela-surface-stack-gap);
+    grid-template-rows: minmax(0, 1fr) auto auto auto;
 }
 
-.vela-surface[data-layout="compact"] .vela-status-slot,
-.vela-surface[data-layout="narrow"] .vela-status-slot {
-    padding: 0 var(--vela-surface-inset);
-}
-
-.vela-surface[data-layout="compact"] .vela-action-slot {
-    align-items: stretch;
-}
-
-.vela-surface[data-layout="compact"] .vela-surface-action {
-    flex: 1 1 0;
-}
-
-.vela-surface[data-layout="narrow"] .vela-action-slot {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    align-items: stretch;
-}
-
-.vela-surface[data-layout="narrow"] .vela-status-text {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-}
-
-.vela-surface[data-layout="narrow"] .vela-experimental-status {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-.vela-surface[data-layout="narrow"] .vela-status-slot[data-detail-empty="true"] .vela-status-text {
-    position: static;
-    width: auto;
-    height: auto;
-    margin: 0;
-    overflow: hidden;
-    clip: auto;
-    text-overflow: ellipsis;
-}
-
-.vela-surface[data-layout="narrow"] .vela-status-slot[data-detail-empty="true"] .vela-experimental-status {
-    display: none;
-}
-
-.vela-surface[data-layout="narrow"] .vela-surface-action {
-    width: 100%;
+.vela-surface.is-narrow .vela-status-slot {
+    padding: 0 var(--vela-surface-inset) var(--vela-surface-stack-gap);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -379,6 +292,5 @@
     .vela-surface * {
         scroll-behavior: auto;
         transition: none;
-        animation: none;
     }
 }

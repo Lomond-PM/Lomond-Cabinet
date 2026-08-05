@@ -163,23 +163,6 @@ node scripts/report-i18n-usage.js
 
 and inspect `docs/reports/i18n-usage-report.md`. Do not bulk-delete keys based only on static search.
 
-After changing `client/`, `host/`, i18n keys, tool schemas, or related references, verify the generated report before completing the task:
-
-```text
-node scripts/report-i18n-usage.js --check
-node scripts/check-project-consistency.js
-```
-
-If the report check fails, run `node scripts/report-i18n-usage.js` and include the resulting `docs/reports/i18n-usage-report.md` change in the same task. Do not maintain generated report content by hand or bypass CI to ignore report differences.
-
-Enable the repository pre-commit checks once per clone with:
-
-```text
-git config core.hooksPath .githooks
-```
-
-The hook checks report freshness only; it does not modify or stage files.
-
 ## Vela 0.3.0 boundaries
 
 Vela ships in 0.3.0 as an **Experimental Preview**.

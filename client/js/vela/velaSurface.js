@@ -7,9 +7,8 @@
 }(typeof self !== "undefined" ? self : this, function () {
     "use strict";
 
-    var COMPACT_BREAKPOINT_PX = 520;
-    var NARROW_BREAKPOINT_PX = 360;
-    var LAYOUT_HYSTERESIS_PX = 12;
+    var LAYOUT_SAFETY_GAP_PX = 16;
+    var STATUS_MIN_VISIBLE_CHARS = 8;
 
     function create(options) {
         options = options || {};
@@ -29,9 +28,6 @@
         var resizeController = null;
         var observer = null;
         var observerFrame = null;
-        var resizeFallback = null;
-        var sizeSignalsBound = false;
-        var lastLayoutMode = null;
         var mounted = false;
         var suspended = false;
         var disposed = false;
@@ -57,99 +53,44 @@
         function scheduleLayout() {
             if (disposed || suspended || observerFrame !== null) { return; }
             if (eventTarget && typeof eventTarget.requestAnimationFrame === "function") {
-                observerFrame = eventTarget.requestAnimationFrame(function () { observerFrame = null; performLayoutRefresh(); });
+                observerFrame = eventTarget.requestAnimationFrame(function () { observerFrame = null; refreshLayout(); });
             } else if (eventTarget && typeof eventTarget.setTimeout === "function") {
-                observerFrame = eventTarget.setTimeout(function () { observerFrame = null; performLayoutRefresh(); }, 0);
-            } else { performLayoutRefresh(); }
+                observerFrame = eventTarget.setTimeout(function () { observerFrame = null; refreshLayout(); }, 0);
+            } else { refreshLayout(); }
         }
-        function layoutWidth(nodeRef) {
+        function contentWidth(nodeRef) {
             var rect = nodeRef && typeof nodeRef.getBoundingClientRect === "function" ? nodeRef.getBoundingClientRect() : null;
-            return Math.max(rect && rect.width || 0, 0);
+            return Math.max(nodeRef && nodeRef.scrollWidth || 0, rect && rect.width || 0, nodeRef && nodeRef.offsetWidth || 0, 0);
         }
-        function measureLayoutMode() {
-            var width;
-            var compactAt = COMPACT_BREAKPOINT_PX * scale();
-            var narrowAt = NARROW_BREAKPOINT_PX * scale();
-            var hysteresis = LAYOUT_HYSTERESIS_PX * scale();
-            if (!elements) { return "wide"; }
-            width = layoutWidth(rootElement);
-            if (lastLayoutMode === "wide") {
-                return width < compactAt - hysteresis ? "compact" : "wide";
-            }
-            if (lastLayoutMode === "compact") {
-                if (width >= compactAt + hysteresis) { return "wide"; }
-                if (width < narrowAt - hysteresis) { return "narrow"; }
-                return "compact";
-            }
-            if (lastLayoutMode === "narrow") {
-                return width >= narrowAt + hysteresis ? "compact" : "narrow";
-            }
-            if (width < narrowAt) { return "narrow"; }
-            if (width < compactAt) { return "compact"; }
-            return "wide";
-        }
-        function applyLayoutMode(mode) {
-            if (lastLayoutMode === mode) { return false; }
-            rootElement.setAttribute("data-layout", mode);
-            lastLayoutMode = mode;
-            return true;
-        }
-        function performLayoutRefresh() {
-            var mode;
-            var boundsMeasurement;
-            if (disposed || suspended || !elements) { return; }
-            mode = measureLayoutMode();
-            if (applyLayoutMode(mode)) {
-                scheduleLayout();
-                return;
-            }
-            boundsMeasurement = resizeController && resizeController.measureBounds ? resizeController.measureBounds() : null;
-            if (resizeController && boundsMeasurement) { resizeController.applyMeasurement(boundsMeasurement); }
-        }
-        function bindSizeSignals() {
-            if (sizeSignalsBound || disposed || suspended) { return; }
-            if (ResizeObserverCtor) {
-                observer = new ResizeObserverCtor(scheduleLayout);
-                observer.observe(homeContainer);
-                observer.observe(headerElement);
-                observer.observe(toolPoolElement);
-                observer.observe(elements.controls);
-            } else if (eventTarget && typeof eventTarget.addEventListener === "function") {
-                resizeFallback = scheduleLayout;
-                eventTarget.addEventListener("resize", resizeFallback);
-            }
-            sizeSignalsBound = true;
-        }
-        function unbindSizeSignals() {
-            if (!sizeSignalsBound) { return; }
-            if (observer) { observer.disconnect(); observer = null; }
-            if (resizeFallback && eventTarget && typeof eventTarget.removeEventListener === "function") {
-                eventTarget.removeEventListener("resize", resizeFallback);
-            }
-            resizeFallback = null;
-            sizeSignalsBound = false;
+        function updateLayoutMode() {
+            var controlsWidth;
+            var settingsWidth;
+            var statusWidth;
+            var requiredWidth;
+            if (!elements) { return; }
+            controlsWidth = contentWidth(elements.controls);
+            settingsWidth = contentWidth(elements.settingsButton);
+            statusWidth = Math.max(contentWidth(elements.statusDot) + Math.min(contentWidth(elements.statusText), STATUS_MIN_VISIBLE_CHARS * 8 * scale()), 1);
+            requiredWidth = settingsWidth + statusWidth + (LAYOUT_SAFETY_GAP_PX * scale());
+            rootElement.classList.toggle("is-narrow", controlsWidth > 0 && controlsWidth < requiredWidth);
         }
         function refreshLocale() {
-            var completeStatus;
             if (!elements) { return; }
             rootElement.setAttribute("aria-label", t("vela.surfaceLabel"));
             elements.transcriptMessage.textContent = t("vela.surfaceTranscriptIntro");
             elements.composer.setAttribute("placeholder", t("vela.surfaceComposerPlaceholder"));
             elements.statusText.textContent = t("vela.surfaceStatusSetup");
             elements.experimentalText.textContent = t("vela.surfaceExperimentalStatus");
-            completeStatus = elements.statusText.textContent === elements.experimentalText.textContent ? elements.statusText.textContent : elements.statusText.textContent + " · " + elements.experimentalText.textContent;
-            elements.statusSlot.setAttribute("aria-label", completeStatus);
-            elements.statusDot.setAttribute("title", elements.statusText.textContent);
-            elements.experimentalText.setAttribute("title", elements.experimentalText.textContent);
-            elements.statusSlot.setAttribute("data-detail-empty", elements.experimentalText.textContent ? "false" : "true");
             elements.settingsButton.setAttribute("title", t("vela.surfaceSettings"));
             elements.settingsButton.setAttribute("aria-label", t("vela.surfaceSettings"));
             elements.settingsButton.textContent = t("vela.surfaceSettings");
             elements.handle.setAttribute("aria-label", t("vela.surfaceResize"));
-            scheduleLayout();
+            updateLayoutMode();
         }
         function refreshLayout() {
-            scheduleLayout();
+            if (disposed || !elements) { return; }
+            updateLayoutMode();
+            if (resizeController) { resizeController.refreshBounds(); }
         }
         function mount() {
             var transcriptSlot;
@@ -200,6 +141,7 @@
             settingsSlot.appendChild(settingsButton);
             actionSlot = node("div", "vela-action-slot");
             controls.appendChild(settingsSlot);
+            controls.appendChild(actionSlot);
             handle = node("div", "vela-resize-handle");
             handle.setAttribute("role", "separator");
             handle.setAttribute("aria-orientation", "horizontal");
@@ -209,8 +151,7 @@
             handle.appendChild(grip);
             rootElement.appendChild(transcriptSlot);
             rootElement.appendChild(composerSlot);
-            controls.appendChild(statusSlot);
-            controls.appendChild(actionSlot);
+            rootElement.appendChild(statusSlot);
             rootElement.appendChild(controls);
             rootElement.appendChild(handle);
             mountElement.appendChild(rootElement);
@@ -219,9 +160,14 @@
             settingsButton.addEventListener("click", settingsHandler);
             resizeController = ResizeController.create({ root: rootElement, handle: handle, transcript: transcriptScroll, composer: composerSlot, status: statusSlot, controls: controls, settings: settingsSlot, homeContainer: homeContainer, headerElement: headerElement, toolPoolElement: toolPoolElement, getUiScale: getUiScale, eventTarget: eventTarget });
             resizeController.start();
+            if (ResizeObserverCtor) {
+                observer = new ResizeObserverCtor(scheduleLayout);
+                observer.observe(rootElement);
+                observer.observe(controls);
+            }
             mounted = true;
-            bindSizeSignals();
             refreshLocale();
+            refreshLayout();
             return true;
         }
         function suspend() {
@@ -230,7 +176,6 @@
             rootElement.classList.add("is-suspended");
             if (resizeController) { resizeController.suspend(); }
             cancelObserverFrame();
-            unbindSizeSignals();
             return true;
         }
         function resume() {
@@ -238,8 +183,7 @@
             suspended = false;
             rootElement.classList.remove("is-suspended");
             if (resizeController) { resizeController.resume(); }
-            bindSizeSignals();
-            scheduleLayout();
+            refreshLayout();
             return true;
         }
         function getElementsForTest() { return elements; }
@@ -247,7 +191,7 @@
             if (disposed) { return false; }
             disposed = true;
             cancelObserverFrame();
-            unbindSizeSignals();
+            if (observer) { observer.disconnect(); observer = null; }
             if (resizeController) { resizeController.dispose(); resizeController = null; }
             if (elements && settingsHandler) { elements.settingsButton.removeEventListener("click", settingsHandler); }
             if (rootElement && rootElement.parentNode) { rootElement.parentNode.removeChild(rootElement); }

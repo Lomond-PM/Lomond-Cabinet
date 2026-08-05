@@ -16,8 +16,6 @@
     var DEFAULT_SEED = "background-demo-01";
     var DEFAULT_PALETTE_ID = "algorithmDefault";
     var DEFAULT_INTENSITY = 0.28;
-    // AE CEP can emit uneven ResizeObserver signals during a slow native panel drag.
-    var RESIZE_QUIET_WINDOW_MS = 360;
     function clamp(value, min, max) {
         return Math.min(max, Math.max(min, value));
     }
@@ -235,11 +233,6 @@
             resizeHandler: null,
             visibilityHandler: null,
             frameId: null,
-            resizeFrameId: null,
-            resizeSettleTimer: null,
-            resizeSessionActive: false,
-            resizeFinalizing: false,
-            lastResizeSignalTime: 0,
             generation: 0,
             rendered: false,
             sourceSignature: "",
@@ -533,12 +526,8 @@
             if (!context) {
                 throw new Error("BACKGROUND_CONTEXT_MISSING");
             }
-            if (state.canvas.width !== field.width) {
-                state.canvas.width = field.width;
-            }
-            if (state.canvas.height !== field.height) {
-                state.canvas.height = field.height;
-            }
+            state.canvas.width = field.width;
+            state.canvas.height = field.height;
             if (!colors) {
                 if (typeof context.clearRect !== "function" || typeof context.drawImage !== "function") {
                     throw new Error("BACKGROUND_PRESENTATION_DRAW_UNAVAILABLE");
@@ -618,93 +607,6 @@
                 return env.setTimeout(callback, 0);
             }
             return null;
-        }
-
-        function nowMs() {
-            if (typeof env.nowMs === "function") {
-                return Number(env.nowMs()) || 0;
-            }
-            if (env.window && typeof env.window.performance !== "undefined" && typeof env.window.performance.now === "function") {
-                return env.window.performance.now();
-            }
-            return new Date().getTime();
-        }
-
-        function cancelResizeWork() {
-            if (state.resizeFrameId !== null) {
-                if (typeof env.cancelAnimationFrame === "function") {
-                    env.cancelAnimationFrame(state.resizeFrameId);
-                } else if (env.window && typeof env.window.cancelAnimationFrame === "function") {
-                    env.window.cancelAnimationFrame(state.resizeFrameId);
-                } else if (typeof env.clearTimeout === "function") {
-                    env.clearTimeout(state.resizeFrameId);
-                } else if (env.window && typeof env.window.clearTimeout === "function") {
-                    env.window.clearTimeout(state.resizeFrameId);
-                }
-                state.resizeFrameId = null;
-            }
-            if (state.resizeSettleTimer !== null) {
-                if (typeof env.clearTimeout === "function") {
-                    env.clearTimeout(state.resizeSettleTimer);
-                } else if (env.window && typeof env.window.clearTimeout === "function") {
-                    env.window.clearTimeout(state.resizeSettleTimer);
-                }
-                state.resizeSettleTimer = null;
-            }
-            state.resizeSessionActive = false;
-            state.resizeFinalizing = false;
-            state.lastResizeSignalTime = 0;
-        }
-
-        function scheduleResizeWatchdog(delay) {
-            var setTimer = typeof env.setTimeout === "function" ? env.setTimeout :
-                (env.window && typeof env.window.setTimeout === "function" ? env.window.setTimeout : null);
-            var clearTimer = typeof env.clearTimeout === "function" ? env.clearTimeout :
-                (env.window && typeof env.window.clearTimeout === "function" ? env.window.clearTimeout : null);
-            if (state.resizeSettleTimer !== null && clearTimer) {
-                clearTimer(state.resizeSettleTimer);
-                state.resizeSettleTimer = null;
-            }
-            if (!setTimer) {
-                state.resizeFinalizing = true;
-                schedule();
-                return;
-            }
-            state.resizeSettleTimer = setTimer(function () {
-                var quietFor;
-                state.resizeSettleTimer = null;
-                if (!state.resizeSessionActive || state.shuttingDown || state.config.mode === "classic" || !isVisible()) {
-                    return;
-                }
-                quietFor = nowMs() - state.lastResizeSignalTime;
-                if (quietFor < RESIZE_QUIET_WINDOW_MS) {
-                    scheduleResizeWatchdog(RESIZE_QUIET_WINDOW_MS - quietFor);
-                    return;
-                }
-                state.resizeFinalizing = true;
-                schedule();
-            }, Math.max(0, Number(delay) || RESIZE_QUIET_WINDOW_MS));
-        }
-
-        function scheduleResize() {
-            if (!state.initialized || state.shuttingDown || state.config.mode === "classic" || !isVisible()) {
-                return;
-            }
-            if (!state.rendered || !state.sourceField) {
-                schedule();
-                return;
-            }
-            state.resizeSessionActive = true;
-            state.lastResizeSignalTime = nowMs();
-            if (state.resizeFrameId === null) {
-                state.resizeFrameId = requestFrame(function () {
-                    state.resizeFrameId = null;
-                    if (state.initialized && !state.shuttingDown && state.config.mode !== "classic" && isVisible()) {
-                        showSurface();
-                    }
-                });
-            }
-            scheduleResizeWatchdog(RESIZE_QUIET_WINDOW_MS);
         }
 
         function hideSurface() {
@@ -810,15 +712,7 @@
             }
             (function (token) {
                 state.frameId = requestFrame(function () {
-                    try {
-                        renderNow(token);
-                    } finally {
-                        if (state.resizeFinalizing) {
-                            state.resizeSessionActive = false;
-                            state.resizeFinalizing = false;
-                            state.lastResizeSignalTime = 0;
-                        }
-                    }
+                    renderNow(token);
                 });
             }(state.generation));
         }
@@ -826,10 +720,10 @@
         function bindObservers() {
             var Observer = env.ResizeObserver || (env.window && env.window.ResizeObserver);
             var doc = getDocument();
-            state.resizeHandler = scheduleResize;
+            state.resizeHandler = schedule;
             if (typeof Observer === "function" && state.shell) {
                 state.resizeObserver = new Observer(function () {
-                    scheduleResize();
+                    schedule();
                 });
                 state.resizeObserver.observe(state.shell);
             } else if (typeof env.addEventListener === "function") {
@@ -844,7 +738,6 @@
                     state.generation += 1;
                     hideSurface();
                     cancelFrame();
-                    cancelResizeWork();
                 }
             };
             if (doc && typeof doc.addEventListener === "function") {
@@ -941,14 +834,12 @@
             if (!isVisible()) {
                 state.generation += 1;
                 cancelFrame();
-                cancelResizeWork();
                 hideSurface();
                 return api;
             }
             if (state.config.mode === "classic") {
                 state.generation += 1;
                 cancelFrame();
-                cancelResizeWork();
                 hideSurface();
                 return api;
             }
@@ -970,7 +861,6 @@
             }
             state.generation += 1;
             cancelFrame();
-            cancelResizeWork();
             state.sourceField = null;
             state.sourceSignature = "";
             state.presentationSignature = "";
@@ -985,7 +875,6 @@
             }
             state.generation += 1;
             cancelFrame();
-            cancelResizeWork();
             state.presentationSignature = "";
             state.lut = null;
             schedule();
@@ -1009,7 +898,6 @@
         function teardown() {
             state.generation += 1;
             cancelFrame();
-            cancelResizeWork();
             unbindObservers();
             hideSurface();
             state.initialized = false;
@@ -1033,9 +921,6 @@
                 presentationSignature: state.presentationSignature,
                 sourceGenerationCount: state.sourceGenerationCount,
                 presentationGenerationCount: state.presentationGenerationCount,
-                resizeSessionActive: state.resizeSessionActive,
-                resizeFinalizing: state.resizeFinalizing,
-                lastResizeSignalTime: state.lastResizeSignalTime,
                 generation: state.generation,
                 hasSourceField: !!state.sourceField,
                 hasSourceCanvas: !!state.sourceCanvas,

@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 266 |
+| A | Core / Global; keep | 262 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -31,10 +31,6 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | key | group | en value summary | zh-CN value summary | found in runtime files | found in tool-local i18n | classification | recommendation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | app.title | app | Lomond Cabinet | Lomond Cabinet | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| bootstrap.loadFailed | bootstrap | Tools failed to load. | 工具加载失败。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| bootstrap.loadingTools | bootstrap | Loading tools... | 正在加载工具... | client/index.html, client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| bootstrap.partialFailure | bootstrap | Some tools failed to load. | 部分工具加载失败。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| bootstrap.retry | bootstrap | Retry | 重试 | client/index.html, client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | button.createBackgroundBox | button | Create Rounded Rectangle | 创建圆角矩形 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | button.randomize | button | Randomize | 随机 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | button.refreshSelection | button | Refresh Selection | 刷新选择 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -385,7 +381,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | status.defaultsRestored | status | Defaults restored. | 已恢复默认值。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.homeEditing | status | Home editing. Drag tools to reorder. | 主页编辑中。拖动工具可重排。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.homeLayoutSaved | status | Home layout saved. | 主页布局已保存。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| status.hostLoadError | status | Error: host JSX did not load. Check host/index.jsx includes. | 错误：host JSX 未加载。请检查 host/index.jsx include。 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| status.hostLoadError | status | Error: host JSX did not load. Check host/index.jsx includes. | 错误：host JSX 未加载。请检查 host/index.jsx include。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.hostLoading | status | Host JSX is still loading... | host JSX 仍在加载... | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.loadingHost | status | Loading host JSX... | 正在加载 host JSX... | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.motionSpeedUpdated | status | Motion speed updated. | 动画速度已更新。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -394,7 +390,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | status.noResponse | status | No response from After Effects. | After Effects 没有响应。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.noSelectedLayers | status | No selected layers. | 没有选中图层。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.noTextLayer | status | Please select at least one text layer | 请至少选择一个文本层 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| status.openComp | status | Please open a composition | 请打开合成 | client/js/main.js, host/tools/shapeAdd.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| status.openComp | status | Please open a composition | 请打开合成 | host/tools/shapeAdd.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.paletteAccentSuggested | status | Palette secondary color applied to Interface Accent; it can be adjust... | 已将色卡辅色设为界面强调色，之后可独立调整。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.proceduralAppearanceDefaultsRestored | status | Procedural appearance defaults restored. | 程序化外观默认参数已恢复。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.proceduralBackgroundSeedRegenerated | status | Procedural background seed regenerated. | 程序化背景种子已重新生成。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |

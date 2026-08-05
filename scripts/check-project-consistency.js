@@ -3,7 +3,6 @@
 
 const fs = require("fs");
 const path = require("path");
-const I18nUsageReport = require("./report-i18n-usage.js");
 
 const ROOT = path.resolve(__dirname, "..");
 const checks = [];
@@ -444,15 +443,6 @@ function checkRegistryTools() {
     });
 }
 
-function checkGeneratedI18nReport() {
-    const result = I18nUsageReport.checkReport();
-    check(
-        "Generated i18n report is current",
-        result.ok,
-        "Run: node scripts/report-i18n-usage.js"
-    );
-}
-
 function main() {
     const version = checkVersions();
     checkChangelog(version);
@@ -463,7 +453,6 @@ function main() {
     checkVelaProviderQualificationRubric();
     checkVelaContextHostIncludes();
     checkRegistryTools();
-    checkGeneratedI18nReport();
 
     let failed = 0;
     checks.forEach((item) => {

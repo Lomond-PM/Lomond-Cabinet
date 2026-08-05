@@ -325,7 +325,7 @@ function markdownTable(headers, rows) {
     return lines.join("\n");
 }
 
-function buildReport() {
+function main() {
     const dictionaries = loadGlobalI18n();
     const tools = loadToolDefinitions();
     const toolLocalKeys = new Map();
@@ -494,73 +494,16 @@ function buildReport() {
         ""
     ].join("\n");
 
-    return {
-        content: report,
-        summary: {
+    fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
+    fs.writeFileSync(REPORT_PATH, report, "utf8");
+
+    console.log(JSON.stringify({
         report: path.relative(ROOT, REPORT_PATH).replace(/\\/g, "/"),
         globalKeyCount: globalKeys.length,
         candidateDeleteCount: candidateRows.length,
         deferredCount: deferredRows.length,
         duplicateToolKeyCount: duplicateRows.length
-        }
-    };
+    }, null, 2));
 }
 
-function normalizeLineEndings(value) {
-    return String(value).replace(/\r\n/g, "\n");
-}
-
-function checkReport(reportPath, expectedContent) {
-    const target = reportPath || REPORT_PATH;
-    if (!fs.existsSync(target)) {
-        return { ok: false, reason: "missing" };
-    }
-    const expected = expectedContent === undefined ? buildReport().content : expectedContent;
-    return {
-        ok: normalizeLineEndings(readText(target)) === normalizeLineEndings(expected),
-        reason: "out-of-date"
-    };
-}
-
-function writeReport(reportPath, expectedContent) {
-    const target = reportPath || REPORT_PATH;
-    const expected = expectedContent === undefined ? buildReport().content : expectedContent;
-    if (fs.existsSync(target) && normalizeLineEndings(readText(target)) === normalizeLineEndings(expected)) {
-        return false;
-    }
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(target, expected, "utf8");
-    return true;
-}
-
-function printCheckFailure() {
-    console.error("Generated i18n report is out of date.");
-    console.error("Run: node scripts/report-i18n-usage.js");
-    console.error("Then stage docs/reports/i18n-usage-report.md.");
-}
-
-function runCli(args) {
-    const options = args || [];
-    if (options.length > 1 || (options.length === 1 && options[0] !== "--check")) {
-        console.error("Usage: node scripts/report-i18n-usage.js [--check]");
-        return 2;
-    }
-    const built = buildReport();
-    if (options[0] === "--check") {
-        if (!checkReport(REPORT_PATH, built.content).ok) {
-            printCheckFailure();
-            return 1;
-        }
-        console.log("Generated i18n report is up to date.");
-        return 0;
-    }
-    writeReport(REPORT_PATH, built.content);
-    console.log(JSON.stringify(built.summary, null, 2));
-    return 0;
-}
-
-module.exports = Object.freeze({ buildReport, checkReport, normalizeLineEndings, runCli, writeReport });
-
-if (require.main === module) {
-    process.exitCode = runCli(process.argv.slice(2));
-}
+main();
