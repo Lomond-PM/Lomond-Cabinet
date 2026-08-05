@@ -66,8 +66,5 @@ jobs:
       - name: Test Theme Settings integration
         run: node scripts/test-theme-settings-integration.js
 
-      - name: Refresh i18n report
-        run: node scripts/report-i18n-usage.js
-
-      - name: Verify generated reports are committed
-        run: git diff --exit-code -- docs/reports/i18n-usage-report.md
+      - name: Verify generated i18n report
+        run: node scripts/report-i18n-usage.js --check

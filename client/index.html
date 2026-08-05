@@ -33,6 +33,10 @@
 
             <main class="home-content">
                 <section id="velaSurfaceMount" class="vela-surface-mount" data-i18n-aria-label="vela.surfaceLabel"></section>
+                <div class="tool-bootstrap-status" id="toolBootstrapStatus" role="status" aria-live="polite">
+                    <span id="toolBootstrapStatusText" data-i18n="bootstrap.loadingTools">Loading tools...</span>
+                    <button class="panel-button tool-bootstrap-retry" id="toolBootstrapRetry" type="button" data-i18n="bootstrap.retry" hidden>Retry</button>
+                </div>
                 <div class="tool-grid" id="toolGrid" aria-label="Tool grid">
                     <button class="tool-app app-card" id="openEcommerceLayoutTool" data-tool="ecommerceLayout">
                         <span class="tool-icon ecommerce-tool-icon">
@@ -107,6 +111,7 @@
 
     <script src="js/lib/CSInterface.js"></script>
     <script src="js/i18n.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/statusTone.js?v=20260803-vela-0.3.0-release-1"></script>
     <script src="js/settingsSchema.js?v=20260803-vela-0.3.0-release-1"></script>
     <script src="js/proceduralCache.js?v=20260803-vela-0.3.0-release-1"></script>
     <script src="js/proceduralPaletteLibrary.js?v=20260803-vela-0.3.0-release-1"></script>
@@ -129,6 +134,7 @@
     <script src="js/vela/velaConfirmationView.js?v=20260803-vela-0.3.0-release-1"></script>
     <script src="js/vela/velaSurfaceController.js?v=20260803-vela-0.3.0-release-1"></script>
     <script src="js/vela/velaCepModuleLoader.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/coreBootstrap.js?v=20260803-vela-0.3.0-release-1"></script>
     <script src="js/main.js?v=20260803-vela-0.3.0-release-1"></script>
 </body>
 </html>

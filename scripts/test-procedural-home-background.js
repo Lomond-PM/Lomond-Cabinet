@@ -30,6 +30,10 @@ function makeEnvironment(engine, paletteResolver, themeMap) {
     const frames = [];
     const cancelled = {};
     let nextFrameId = 1;
+    const timers = [];
+    const cancelledTimers = {};
+    let nextTimerId = 1000;
+    let currentTime = 0;
     const listeners = {};
     const observerInstances = [];
     const homeView = { classList: makeClassList() };
@@ -42,7 +46,11 @@ function makeEnvironment(engine, paletteResolver, themeMap) {
         height: 360
     };
     function makeCanvas() {
-        const canvas = { style: {}, width: 0, height: 0, _pixels: null };
+        let width = 0;
+        let height = 0;
+        const canvas = { style: {}, _pixels: null, _widthWrites: 0, _heightWrites: 0 };
+        Object.defineProperty(canvas, "width", { get() { return width; }, set(value) { width = value; canvas._widthWrites += 1; } });
+        Object.defineProperty(canvas, "height", { get() { return height; }, set(value) { height = value; canvas._heightWrites += 1; } });
         function ensurePixels() {
             const length = Math.max(0, canvas.width * canvas.height * 4);
             if (!canvas._pixels || canvas._pixels.length !== length) {
@@ -105,6 +113,7 @@ function makeEnvironment(engine, paletteResolver, themeMap) {
         canvas,
         homeView,
         frames,
+        timers,
         cancelled,
         listeners,
         observerInstances,
@@ -121,11 +130,41 @@ function makeEnvironment(engine, paletteResolver, themeMap) {
         cancelAnimationFrame(id) {
             cancelled[id] = true;
         },
+        setTimeout(callback, delay) {
+            const id = nextTimerId++;
+            timers.push({ id, callback, delay, due: currentTime + delay });
+            return id;
+        },
+        clearTimeout(id) {
+            cancelledTimers[id] = true;
+        },
         runFrames() {
             while (frames.length) {
                 const frame = frames.shift();
                 if (!cancelled[frame.id]) frame.callback();
             }
+        },
+        runTimers() {
+            const active = timers.filter((timer) => !cancelledTimers[timer.id]);
+            const finalTime = active.reduce((latest, timer) => Math.max(latest, timer.due), currentTime);
+            this.advanceTo(finalTime);
+        },
+        advanceTo(time) {
+            let next;
+            while (true) {
+                next = timers.filter((timer) => !cancelledTimers[timer.id] && timer.due <= time).sort((a, b) => a.due - b.due)[0];
+                if (!next) break;
+                timers.splice(timers.indexOf(next), 1);
+                currentTime = next.due;
+                next.callback();
+            }
+            currentTime = time;
+        },
+        nowMs() {
+            return currentTime;
+        },
+        activeTimerCount() {
+            return timers.filter((timer) => !cancelledTimers[timer.id]).length;
         },
         emit(type) {
             if (listeners[type]) listeners[type]();
@@ -225,9 +264,18 @@ function run() {
 
     env.shell.width = 700;
     env.observerInstances[0].callback();
+    env.observerInstances[0].callback();
     env.runFrames();
-    assert(renderCount === 2 && controller.getState().sourceGenerationCount === 2, "Resize should schedule a merged source refresh for the new dimensions.");
-    assertions += 1;
+    assert(renderCount === 1 && controller.getState().sourceGenerationCount === 1 && env.shell.classList.contains("procedural-background-active"), "Continuous resize should keep the cached presentation visible without regenerating its source.");
+    assert(env.activeTimerCount() === 1, "Repeated resize signals should retain only one trailing regeneration timer.");
+    env.shell.width = 710;
+    env.observerInstances[0].callback();
+    env.runFrames();
+    assert(renderCount === 1 && env.activeTimerCount() === 1, "A newer resize should cancel the older trailing regeneration.");
+    env.runTimers();
+    env.runFrames();
+    assert(renderCount === 2 && controller.getState().sourceGenerationCount === 2, "Resize settlement should perform one full-quality source refresh at the final dimensions.");
+    assertions += 4;
 
     env.document.hidden = true;
     controller.update({ seed: "hidden-seed" });
@@ -240,12 +288,71 @@ function run() {
     assert(renderCount === 3, "Returning to a visible Home should resume rendering.");
     assertions += 1;
 
+    env.shell.width = 720;
+    env.observerInstances[0].callback();
+    env.runFrames();
+    assert(env.activeTimerCount() === 1, "A rendered procedural background should defer resize regeneration.");
+    controller.update({ seed: "immediate-seed" });
+    assert(env.activeTimerCount() === 0, "A seed change should cancel deferred resize work.");
+    env.runFrames();
+    assert(renderCount === 4, "A seed change should regenerate immediately instead of waiting for resize settlement.");
+    env.observerInstances[0].callback();
+    env.runFrames();
+    controller.update({ mode: "classic" });
+    assert(env.activeTimerCount() === 0, "Switching to classic should cancel deferred resize regeneration.");
+    env.runTimers();
+    env.runFrames();
+    assert(renderCount === 4, "Classic mode should not run stale resize regeneration.");
+    controller.update({ mode: "procedural", seed: "teardown-seed" });
+    env.runFrames();
+    env.observerInstances[0].callback();
+    env.runFrames();
+    assert(env.activeTimerCount() === 1, "Procedural mode should resume deferred resize handling after classic.");
+    assertions += 6;
+
     const observer = env.observerInstances[0];
     const generationBeforeTeardown = controller.getState().generation;
     controller.teardown();
     env.runFrames();
-    assert(observer.disconnected && !env.shell.classList.contains("procedural-background-active") && controller.getState().generation > generationBeforeTeardown && !controller.getState().hasSourceField && !controller.getState().hasSourceCanvas && !controller.getState().hasLut, "Teardown must disconnect observers, invalidate stale work, hide the surface, and release source references.");
+    assert(observer.disconnected && env.activeTimerCount() === 0 && !env.shell.classList.contains("procedural-background-active") && controller.getState().generation > generationBeforeTeardown && !controller.getState().hasSourceField && !controller.getState().hasSourceCanvas && !controller.getState().hasLut, "Teardown must disconnect observers, cancel deferred resize work, invalidate stale work, hide the surface, and release source references.");
     assertions += 1;
+
+    let sparseRenderCount = 0;
+    const sparseEngine = {
+        engineVersion: "procedural-appearance-v7",
+        render(canvas, options) {
+            sparseRenderCount += 1;
+            canvas.width = Math.round(options.logicalWidth * options.renderScale);
+            canvas.height = Math.round(options.logicalHeight * options.renderScale);
+            const context = canvas.getContext("2d");
+            context.putImageData(context.createImageData(canvas.width, canvas.height), 0, 0);
+            return { ok: true };
+        }
+    };
+    const sparseEnv = makeEnvironment(sparseEngine, resolver);
+    const sparseController = background.createController(sparseEnv);
+    sparseController.initialize({ mode: "procedural", seed: "sparse-resize" });
+    sparseEnv.runFrames();
+    [0, 80, 170, 310, 470, 650].forEach((time, index) => {
+        sparseEnv.advanceTo(time);
+        sparseEnv.shell.width = 640 + index * 10;
+        sparseEnv.observerInstances[0].callback();
+        sparseEnv.runFrames();
+        assert(sparseRenderCount === 1, "Sparse resize signal at " + time + "ms must not regenerate during the active session.");
+    });
+    assert(sparseController.getState().resizeSessionActive && sparseEnv.activeTimerCount() === 1, "Uneven slow resize signals should remain one active session with one watchdog.");
+    sparseEnv.advanceTo(1009);
+    sparseEnv.runFrames();
+    assert(sparseRenderCount === 1, "A quiet period shorter than 360ms must not finalize the resize session.");
+    sparseEnv.advanceTo(1010);
+    sparseEnv.runFrames();
+    assert(sparseRenderCount === 2 && !sparseController.getState().resizeSessionActive, "A 360ms quiet period should finalize exactly one source generation and close the session.");
+    sparseEnv.observerInstances[0].callback();
+    sparseEnv.runFrames();
+    sparseEnv.advanceTo(1370);
+    sparseEnv.runFrames();
+    assert(sparseRenderCount === 2 && !sparseController.getState().resizeSessionActive, "A new session ending at an unchanged final signature must skip redundant source generation.");
+    assertions += 10;
 
     const failingEnv = makeEnvironment({
         engineVersion: "procedural-appearance-v7",
@@ -312,11 +419,20 @@ function run() {
     });
     themeEnv.runFrames();
     const sourceBeforeThemeChange = themeController.getState().sourceSignature;
+    const widthWritesBeforeThemeChange = themeEnv.canvas._widthWrites;
+    const heightWritesBeforeThemeChange = themeEnv.canvas._heightWrites;
     assert(themeRenderCount === 1 && themeController.getState().sourceGenerationCount === 1 && themeController.getState().presentationGenerationCount === 1 && themeEnv.canvas._pixels[11] === 128, "Follow Icon Theme must map the procedural background after one source render while preserving alpha.");
+    themeEnv.observerInstances[0].callback();
+    themeEnv.runFrames();
+    assert(themeController.getState().resizeSessionActive && themeEnv.activeTimerCount() === 1, "Theme changes can arrive during an active resize session.");
     themeController.update({ iconAppearance: { mode: "themeMapped", darkSourceMode: "manualEndpoints", darkColor: "#202020", lightColor: "#ffe0a0" } });
+    assert(!themeController.getState().resizeSessionActive && themeEnv.activeTimerCount() === 0, "A presentation-only theme change should cancel the old resize finalization.");
+    themeEnv.runFrames();
+    themeEnv.advanceTo(1000);
     themeEnv.runFrames();
     assert(themeRenderCount === 1 && themeController.getState().presentationGenerationCount === 2 && lutBuildCount === 514 && themeController.getState().sourceSignature === sourceBeforeThemeChange, "Changing icon endpoints must refresh presentation without changing background source identity.");
-    assertions += 2;
+    assert(themeEnv.canvas._widthWrites === widthWritesBeforeThemeChange && themeEnv.canvas._heightWrites === heightWritesBeforeThemeChange, "Presentation-only changes must not rewrite an unchanged canvas backing size.");
+    assertions += 5;
 
     themeController.update({ iconAppearance: { mode: "themeMapped", darkSourceMode: "manualEndpoints", darkColor: "#303030", lightColor: "#ffe0a0" } });
     themeController.update({ iconAppearance: { mode: "themeMapped", darkSourceMode: "manualEndpoints", darkColor: "#404040", lightColor: "#ffe0a0" } });
