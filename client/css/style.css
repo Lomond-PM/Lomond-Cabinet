@@ -1774,7 +1774,11 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .detail-content {
-    padding: calc(14px * var(--ui-scale)) var(--view-inset) calc(132px * var(--ui-scale));
+    padding: calc(14px * var(--ui-scale)) var(--view-inset) calc(20px * var(--ui-scale));
+}
+
+.detail-view.has-visible-tool-actions .detail-content {
+    padding-bottom: calc(132px * var(--ui-scale));
 }
 
 .home-content,
@@ -2346,6 +2350,12 @@ p {
 
 .tool-actions.is-active {
     display: flex;
+}
+
+.tool-actions[hidden],
+.tool-actions[data-empty="true"] {
+    display: none !important;
+    pointer-events: none;
 }
 
 .selection-result {
@@ -3408,6 +3418,23 @@ p {
     background: #080706;
     color: var(--text-tertiary);
     line-height: 1.35;
+}
+
+.registry-field-subheading {
+    width: 100%;
+    margin: calc(16px * var(--ui-scale)) 0 calc(6px * var(--ui-scale));
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: var(--font-body);
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.registry-section-body > .registry-field-subheading:first-child {
+    margin-top: calc(4px * var(--ui-scale));
 }
 
 .registry-procedural-preview {

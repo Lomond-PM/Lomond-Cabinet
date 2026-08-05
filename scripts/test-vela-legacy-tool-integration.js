@@ -35,24 +35,40 @@ function makeDocument() {
     const ids = {};
     let documentRef;
     function node(tag) {
-        return {
+        const element = {
             tagName: tag, children: [], parentNode: null, firstChild: null, className: "", textContent: "", value: "", disabled: false, hidden: false, listeners: {}, attributes: {}, style: {}, ownerDocument: documentRef,
-            classList: { add() {}, remove() {}, contains() { return false; } },
+            classList: { add() {}, remove() {}, contains() { return false; }, toggle() {} },
             appendChild(child) { child.parentNode = this; this.children.push(child); this.firstChild = this.children[0] || null; return child; },
             removeChild(child) { this.children = this.children.filter((item) => item !== child); child.parentNode = null; this.firstChild = this.children[0] || null; },
             addEventListener(type, handler) { (this.listeners[type] || (this.listeners[type] = [])).push(handler); },
             removeEventListener(type, handler) { this.listeners[type] = (this.listeners[type] || []).filter((item) => item !== handler); },
             setAttribute(name, value) { this.attributes[name] = String(value); },
             getAttribute(name) { return Object.prototype.hasOwnProperty.call(this.attributes, name) ? this.attributes[name] : null; },
+            hasAttribute(name) { return Object.prototype.hasOwnProperty.call(this.attributes, name); },
+            querySelectorAll() { return []; },
+            querySelector() { return null; },
+            closest() { return null; },
             click() { if (!this.disabled) (this.listeners.click || []).forEach((handler) => handler({ type: "click" })); },
             dispatch(type) { (this.listeners[type] || []).forEach((handler) => handler({ type })); }
         };
+        Object.defineProperty(element, "childNodes", { get() { return this.children; } });
+        Object.defineProperty(element, "innerHTML", {
+            get() { return ""; },
+            set(value) {
+                if (value === "") {
+                    this.children.forEach((child) => { child.parentNode = null; });
+                    this.children = [];
+                    this.firstChild = null;
+                }
+            }
+        });
+        return element;
     }
     documentRef = {
         hidden: false, body: node("body"), documentElement: node("html"), createElement: node, createDocumentFragment() { return node("fragment"); },
         getElementById(id) { return ids[id] || null; }, querySelector() { return null; }, querySelectorAll() { return []; }, addEventListener() {}
     };
-    ["registryToolPanel", "registryToolActions", "statusText", "statusPill", "detailHeading"].forEach((id) => { ids[id] = node("div"); ids[id].id = id; });
+    ["registryToolPanel", "registryToolActions", "homeView", "detailView", "statusText", "statusPill", "detailHeading"].forEach((id) => { ids[id] = node("div"); ids[id].id = id; });
     return documentRef;
 }
 
@@ -83,7 +99,15 @@ async function run() {
     check(policyDescriptor && Object.prototype.hasOwnProperty.call(policyDescriptor, "value") && !Object.prototype.hasOwnProperty.call(policyDescriptor, "get") && !Object.prototype.hasOwnProperty.call(policyDescriptor, "set") && policyDescriptor.writable === false && policyDescriptor.configurable === false, "Legacy integration VM loads Request Branch Policy as an immutable own data global before Prompt Builder.");
     check(windowRef.__velaProtocolCoreBootstrapV1.getModule("VelaProviderRequestBranchPolicy") === policyDescriptor.value && windowRef.__velaProtocolCoreBootstrapV1.getModule("VelaCapabilityPromptBuilder") === windowRef.VelaCapabilityPromptBuilder, "Prompt Builder and Request Branch Policy retain their formal browser-bootstrap identities.");
     let mainSource = fs.readFileSync(path.join(ROOT, "client", mainRef), "utf8");
-    mainSource = mainSource.replace(/\}\)\(\);\s*$/, "window.__velaLegacyToolIntegration = { render: renderVelaDetail, configure: configureToolDetail, registerTool: function (id, tool) { var current = toolCatalog.getSnapshot().registryTools; var tools = []; var i; for (i = 0; i < current.length; i++) { tools[tools.length] = toolCatalog.getRegistryTool(current[i].id).definition; } tools[tools.length] = tool; return toolCatalog.setRegistryTools(tools); }, route: function (id) { return toolCatalog.getRoute(id).kind; }, suspend: suspendPanelRuntime, resume: resumePanelRuntime, setRuntime: function (value) { velaRuntimeController = value; } };\n}());");
+    const styleSource = fs.readFileSync(path.join(ROOT, "client", "css", "style.css"), "utf8");
+    const shapeSource = fs.readFileSync(path.join(ROOT, "host", "tools", "shapeAdd.tool.jsx"), "utf8");
+    check((shapeSource.match(/type:\s*"subheading"/g) || []).length === 2 && /type:\s*"subheading",\s*labelKey:\s*"tools\.shapeAdd\.sections\.trimPaths"/.test(shapeSource) && /type:\s*"subheading",\s*labelKey:\s*"tools\.shapeAdd\.sections\.strokeTaper"/.test(shapeSource), "Shape Add uses exactly two explicit subheading primitives for Trim Paths and Stroke Taper.");
+    check(!/type:\s*"info",\s*labelKey:\s*"tools\.shapeAdd\.sections\.(trimPaths|strokeTaper)"/.test(shapeSource), "Shape Add no longer models either group heading as generic info.");
+    check(/\.registry-field-subheading\s*\{[\s\S]*?border:\s*0;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;/.test(styleSource) && /font-weight:\s*600;/.test(styleSource), "Subheading CSS is borderless, background-free, and uses a medium heading weight.");
+    check(/\.registry-info-note\s*\{[\s\S]*?border:\s*1px solid var\(--separator\);[\s\S]*?background:\s*#080706;/.test(styleSource), "Generic info callout CSS retains its existing bordered background treatment.");
+    check(/\.tool-actions\[hidden\][\s\S]*?display:\s*none !important;[\s\S]*?pointer-events:\s*none;/.test(styleSource), "Explicit empty Action Sheet state removes layout and pointer events even when is-active is present.");
+    check(/\.detail-content\s*\{[\s\S]*?padding:[^;]*calc\(20px \* var\(--ui-scale\)\);/.test(styleSource) && /\.detail-view\.has-visible-tool-actions \.detail-content\s*\{[\s\S]*?padding-bottom:\s*calc\(132px \* var\(--ui-scale\)\);/.test(styleSource), "Detail content reserves the large bottom inset only while visible tool actions exist.");
+    mainSource = mainSource.replace(/\}\)\(\);\s*$/, "window.__velaLegacyToolIntegration = { render: renderVelaDetail, configure: configureToolDetail, registerTool: function (id, tool) { var current = toolCatalog.getSnapshot().registryTools; var tools = []; var i; for (i = 0; i < current.length; i++) { tools[tools.length] = toolCatalog.getRegistryTool(current[i].id).definition; } tools[tools.length] = tool; return toolCatalog.setRegistryTools(tools); }, route: function (id) { return toolCatalog.getRoute(id).kind; }, collect: collectDynamicToolParams, showHome: showHomeView, suspend: suspendPanelRuntime, resume: resumePanelRuntime, setRuntime: function (value) { velaRuntimeController = value; } };\n}());");
     vm.runInContext(mainSource, sandbox, { filename: mainRef });
     const hooks = windowRef.__velaLegacyToolIntegration;
     check(hooks && typeof hooks.render === "function" && typeof hooks.configure === "function" && typeof hooks.suspend === "function", "Actual main.js exposes only the production legacy-tool closure to this test VM.");
@@ -99,6 +123,10 @@ async function run() {
     const controller = vm.runInContext("({ refreshContext: function () { return __refresh(); }, createOpacityCandidate: function (input) { return __create(Number(input.opacity)); }, approveCandidate: function () { return Promise.reject(new Error('unused')); }, rejectCandidate: function () { return false; }, suspend: function () { return __suspend(); }, resume: function () { return __resume(); }, getUiState: function () { return __uiState(); }, getProviderUiState: function () { return __providerUiState(); } })", sandbox);
     hooks.setRuntime(controller);
     const registeredFixture = hooks.registerTool("registryA", { id: "registryA", title: "Registry A", description: "Registry A content", sections: [], actions: [] });
+    hooks.registerTool("registryMixed", { id: "registryMixed", title: "Registry Mixed", description: "Registry actions", sections: [], actions: [{ id: "hidden", hidden: true }, { id: "field", fieldOnly: true }, { id: "run", labelKey: "run", enabledWhen: { stateKey: "ready", equals: true } }] });
+    hooks.registerTool("registryHidden", { id: "registryHidden", title: "Registry Hidden", description: "Hidden actions", sections: [], actions: [{ id: "hiddenA", hidden: true }, { id: "hiddenB", hidden: true }] });
+    hooks.registerTool("registryFieldOnly", { id: "registryFieldOnly", title: "Registry Field", description: "Field actions", sections: [], actions: [{ id: "fieldA", fieldOnly: true }, { id: "fieldB", fieldOnly: true }] });
+    hooks.registerTool("registrySubheading", { id: "registrySubheading", title: "Registry Subheading", description: "Registry fields", hideRestoreDefaults: true, sections: [{ id: "fields", labelKey: "fields", fields: [{ type: "info", labelKey: "info.label" }, { type: "subheading", labelKey: "subheading.label" }, { type: "text", key: "value", defaultValue: "safe" }, { type: "futureType", key: "future", defaultValue: "fallback" }, { type: "button", key: "runInside", labelKey: "run.inside", actionId: "runInside" }] }], actions: [{ id: "runInside", hidden: true, fieldOnly: true }] });
     const fixtureRoute = hooks.route("registryA");
     check(registeredFixture === true && fixtureRoute === "registry", "Legacy integration fixture enters the production Registry route through Tool Catalog: " + registeredFixture + "/" + fixtureRoute);
     hooks.configure("registryA");
@@ -106,6 +134,34 @@ async function run() {
     const actions = documentRef.getElementById("registryToolActions");
     const registryRoot = panel.firstChild;
     check(registryRoot && registryRoot.parentNode === panel && panel.children.length === 1, "Production Registry renderer owns the shared content root before Vela navigation.");
+    check(actions.hidden === true && actions.getAttribute("data-empty") === "true" && buttons(actions).length === 0, "Registry tool with no visible global actions explicitly hides an empty Action Sheet.");
+    hooks.configure("registryHidden");
+    check(actions.hidden === true && buttons(actions).length === 0, "Registry tool with only hidden actions keeps the Action Sheet hidden.");
+    hooks.configure("registryFieldOnly");
+    check(actions.hidden === true && buttons(actions).length === 0, "Registry tool with only fieldOnly actions keeps the Action Sheet hidden.");
+    hooks.configure("registryMixed");
+    let mixedButtons = buttons(actions);
+    check(actions.hidden === false && actions.getAttribute("data-empty") === "false" && mixedButtons.filter((button) => button.getAttribute("data-dynamic-action") === "run").length === 1 && mixedButtons.filter((button) => button.getAttribute("data-dynamic-action") === "hidden" || button.getAttribute("data-dynamic-action") === "field").length === 0, "Mixed actions show only the visible schema action and explicitly reveal the Action Sheet.");
+    hooks.configure("registryA");
+    check(actions.hidden === true && actions.getAttribute("data-empty") === "true", "Switching from visible actions to no actions hides the Action Sheet without stale visibility.");
+    hooks.configure("registryMixed");
+    check(actions.hidden === false && buttons(actions).filter((button) => button.getAttribute("data-dynamic-action") === "run").length === 1, "Switching back and repeated rendering creates one visible action without duplicate listeners or buttons.");
+    hooks.configure("registrySubheading");
+    const infoField = find(panel, (node) => (node.className || "").split(/\s+/).indexOf("registry-info-note") !== -1);
+    const subheading = find(panel, (node) => (node.className || "").split(/\s+/).indexOf("registry-field-subheading") !== -1);
+    const collected = hooks.collect("registrySubheading");
+    check(infoField && subheading && subheading.tagName === "h4" && (subheading.className || "").indexOf("registry-info-note") === -1, "Subheading renders as a semantic heading while generic info retains its callout primitive.");
+    check(subheading.textContent === "subheading.label" && !find(subheading, (node) => node !== subheading && /^(input|select|button)$/.test(node.tagName)) && Object.keys(subheading.listeners).length === 0, "Subheading text uses i18n and creates no input, action, or interactive listener.");
+    check(Object.keys(collected).join(",") === "value,future" && collected.value === "safe", "Subheading and info fields do not participate in Registry value collection or storage payloads.");
+    check(find(panel, (node) => node.id === "dynamic_registrySubheading_future") !== null && collected.future === "fallback", "Unknown field types retain the existing safe generic-field fallback.");
+    check(buttons(panel).length === 1 && buttons(actions).length === 0 && actions.hidden === true, "Field-level action button remains in its section while its fieldOnly action stays out of the bottom Action Sheet.");
+    const originalTranslate = windowRef.I18n.t;
+    windowRef.I18n.t = (key) => key === "subheading.label" ? "分组标题" : originalTranslate(key);
+    hooks.configure("registrySubheading");
+    check(find(panel, (node) => (node.className || "").split(/\s+/).indexOf("registry-field-subheading") !== -1).textContent === "分组标题", "Re-render after language change refreshes the translated subheading text.");
+    windowRef.I18n.t = originalTranslate;
+    hooks.showHome();
+    check(actions.hidden === true && actions.getAttribute("data-empty") === "true", "Returning Home explicitly hides the shared Action Sheet.");
     hooks.configure("vela");
     let input = find(panel, (node) => node.tagName === "input");
     let validation = find(panel, (node) => node.id === "vela-manual-opacity-validation");
@@ -142,7 +198,7 @@ async function run() {
     hooks.render();
     check(find(panel, (node) => node.id === validation.id) !== null && buttons(actions).length === 4, "A new legacy UI lifecycle leaves no duplicate validation node or action listener set.");
     hooks.configure("registryA");
-    check(panel.children.length === 1 && find(panel, (node) => node.id === "vela-manual-opacity-validation") === null && buttons(actions).length === 1, "Leaving Vela tears down legacy nodes and lets the single Registry action owner reclaim the shared content root.");
+    check(panel.children.length === 1 && find(panel, (node) => node.id === "vela-manual-opacity-validation") === null && buttons(actions).length === 0 && actions.hidden === true, "Leaving Vela tears down legacy nodes and lets an actionless Registry tool reclaim the shared content root without an empty Action Sheet.");
     hooks.configure("vela");
     check(panel.children.length === 1 && find(panel, (node) => node.id === "vela-manual-opacity-validation") !== null && buttons(actions).length === 4, "Registry A to Vela repeated navigation leaves one active Vela root and one action set.");
     console.log("test-vela-legacy-tool-integration: " + assertions + " assertions passed.");

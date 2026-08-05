@@ -4051,6 +4051,7 @@
         var detail = byId("detailView");
 
         stopRegistryStatePolling();
+        setToolActionsVisible(byId("registryToolActions"), false);
         clearRegistryProceduralPreviewTimer(activeToolId);
         resetDetailMorphStyles();
         clearDetailContentClasses();
@@ -6098,6 +6099,15 @@
             return row;
         }
 
+        if (fieldType === "subheading") {
+            row = document.createElement("h4");
+            row.className = "registry-field-subheading registry-schema-field";
+            row.textContent = tr(field.labelKey || field.textKey || field.text || "");
+            applyVisibleWhenMetadata(row, field);
+            row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
+            return row;
+        }
+
         if (fieldType === "proceduralPreview") {
             row = document.createElement("div");
             row.className = "registry-info-note registry-schema-field registry-procedural-preview is-preview-icon";
@@ -6845,13 +6855,39 @@
         return collectSchemaValues(entry ? entry.definition : { id: toolId, uiSchema: [] });
     }
 
+    function getVisibleGlobalActions(actions) {
+        var visible = [];
+        var i;
+        var action;
+        for (i = 0; actions && i < actions.length; i++) {
+            action = actions[i];
+            if (action && action.id && action.hidden !== true && action.fieldOnly !== true) {
+                visible[visible.length] = action;
+            }
+        }
+        return visible;
+    }
+
+    function setToolActionsVisible(actionsRoot, visible) {
+        var detail = byId("detailView");
+        if (actionsRoot) {
+            actionsRoot.hidden = visible !== true;
+            actionsRoot.setAttribute("data-empty", visible === true ? "false" : "true");
+            actionsRoot.setAttribute("aria-hidden", visible === true ? "false" : "true");
+        }
+        if (detail) {
+            detail.classList.toggle("has-visible-tool-actions", visible === true);
+        }
+    }
+
     function renderToolActions(actions, toolDef) {
         var fragment = document.createDocumentFragment();
+        var visibleActions = getVisibleGlobalActions(actions);
         var i;
         var action;
         var button;
 
-        if (!toolDef || toolDef.hideRestoreDefaults !== true) {
+        if (visibleActions.length && (!toolDef || toolDef.hideRestoreDefaults !== true)) {
             button = document.createElement("button");
             button.type = "button";
             button.className = "panel-button secondary-action";
@@ -6862,14 +6898,8 @@
             fragment.appendChild(button);
         }
 
-        for (i = 0; actions && i < actions.length; i++) {
-            action = actions[i];
-            if (!action || !action.id) {
-                continue;
-            }
-            if (action.hidden || action.fieldOnly) {
-                continue;
-            }
+        for (i = 0; i < visibleActions.length; i++) {
+            action = visibleActions[i];
             button = document.createElement("button");
             button.type = "button";
             button.className = action.style === "secondary" ? "panel-button secondary-action" : "primary-action";
@@ -6981,6 +7011,7 @@
 
         panel.innerHTML = "";
         actions.innerHTML = "";
+        setToolActionsVisible(actions, false);
 
         intro = document.createElement("section");
         intro.className = "info-panel intro-panel dynamic-tool-intro";
@@ -7000,7 +7031,9 @@
             panel.appendChild(renderToolSection(sections[i], tool));
         }
 
-        actions.appendChild(renderToolActions(tool.actions || [], tool));
+        var visibleGlobalActions = getVisibleGlobalActions(tool.actions || []);
+        actions.appendChild(renderToolActions(visibleGlobalActions, tool));
+        setToolActionsVisible(actions, visibleGlobalActions.length > 0);
 
         setupCustomSelectInputs();
         updateRegistryVisibleFields(tool);
@@ -7060,11 +7093,13 @@
         if (velaProviderUiController) { velaProviderUiController.teardown(); velaProviderUiController = null; }
         while (panel.firstChild) { panel.removeChild(panel.firstChild); }
         while (actions.firstChild) { actions.removeChild(actions.firstChild); }
+        setToolActionsVisible(actions, false);
         if (!window.VelaUi || typeof window.VelaUi.createVelaUi !== "function") {
             panel.textContent = tr("vela.runtimeUnavailable");
             return;
         }
         velaUiController = window.VelaUi.createVelaUi({ root: panel, actionsRoot: actions, t: tr, onIntent: handleIntent });
+        setToolActionsVisible(actions, actions.childNodes.length > 0);
         if (window.VelaProviderUi && typeof window.VelaProviderUi.createProviderUi === "function") {
             velaProviderUiController = window.VelaProviderUi.createProviderUi({ root: panel, t: tr, onIntent: handleIntent, getModel: function () { return VelaProviderModel; }, saveModel: function (value) { VelaProviderModel = normalizeVelaProviderModel(value); saveSettings(); return VelaProviderModel; } });
         }
@@ -7104,6 +7139,7 @@
             renderDynamicToolDetail(activeToolId);
         } else {
             stopRegistryStatePolling();
+            setToolActionsVisible(byId("registryToolActions"), false);
             if (route.kind === "unknown" && toolId && window.console && console.warn) {
                 console.warn("[Tool Catalog] unknown tool route", { id: String(toolId) });
             }
