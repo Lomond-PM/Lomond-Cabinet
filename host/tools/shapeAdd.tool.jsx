@@ -273,14 +273,14 @@
                         defaultValue: "#d6b25e"
                     },
                     {
-                        type: "info",
+                        type: "subheading",
                         labelKey: "tools.shapeAdd.sections.trimPaths"
                     },
                     rangeField("trimStart", "tools.shapeAdd.fields.trimStart", 0, 0, 100, 0.1),
                     rangeField("trimEnd", "tools.shapeAdd.fields.trimEnd", 100, 0, 100, 0.1),
                     rangeField("trimOffset", "tools.shapeAdd.fields.trimOffset", 0, -360, 360, 0.1),
                     {
-                        type: "info",
+                        type: "subheading",
                         labelKey: "tools.shapeAdd.sections.strokeTaper"
                     },
                     rangeField("taperStartLength", "tools.shapeAdd.fields.taperStartLength", 15, 0, 100, 0.1),
