@@ -147,13 +147,13 @@ function run() {
     assert(base.params.paletteId === icons.resolveHomePaletteId("shapeAdd"), "Home icon input should include only the stable palette id color source.");
     assertions += 2;
 
-    const staticCard = makeCard("ecommerceLayout");
+    const dynamicAdCard = makeCard("ecommerceLayout", { "data-dynamic-tool": "true" });
     const dynamicDuplicate = makeCard("ecommerceLayout", { "data-dynamic-tool": "true" });
     const shapeCard = makeCard("shapeAdd");
     const invalidCard = makeCard("");
-    const collected = icons.collectUniqueToolCards(makeRoot([staticCard, dynamicDuplicate, shapeCard, invalidCard]));
-    assert(collected.length === 2, "Static/dynamic duplicate or invalid card was not filtered.");
-    assert(collected[0].toolId === "ecommerceLayout" && collected[1].toolId === "shapeAdd", "Unique card order was not preserved.");
+    const collected = icons.collectUniqueToolCards(makeRoot([dynamicAdCard, dynamicDuplicate, shapeCard, invalidCard]));
+    assert(collected.length === 2, "Dynamic duplicate or invalid card was not filtered.");
+    assert(collected[0].toolId === "ecommerceLayout" && collected[0].card === dynamicAdCard && collected[1].toolId === "shapeAdd", "Dynamic Ad Component Kit card is accepted without static DOM and unique order is preserved.");
     assertions += 2;
 
     const ids = icons.uniqueToolIds([

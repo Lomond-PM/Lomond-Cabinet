@@ -121,8 +121,6 @@
         toolCatalog.registerSystemSurface({ id: "velaPersistentSurface" });
         toolCatalog.registerSystemSurface({ id: "settings" });
         toolCatalog.registerLegacyFallback({ id: "vela", titleKey: "vela.title", descriptionKey: "vela.description", selectionMode: "property" });
-        toolCatalog.registerRegistryCompatibilityMetadata({ id: "ecommerceLayout", title: "Ad Component Kit", description: "Ad Component Kit", selectionMode: "layers" });
-        toolCatalog.registerStaticHomeEntry("ecommerceLayout");
         toolCatalog.registerStaticHomeEntry("vela");
     }
     var RegistryToolState = {};
