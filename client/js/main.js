@@ -116,25 +116,16 @@
         homeOrder: "aeToolbox.homeToolOrder",
         colorPickerAxis: "AEToolbox.colorPicker.axisMode.v1"
     };
-    var ToolRegistry = {
-        ecommerceLayout: {
-            title: "Ad Component Kit",
-            description: "Ad Component Kit",
-            selectionMode: "layers"
-        },
-        vela: {
-            titleKey: "vela.title",
-            descriptionKey: "vela.description",
-            selectionMode: "property"
-        },
-        shapeAdd: {
-            title: "Shape Add",
-            description: "Shape Add",
-            selectionMode: "shape"
-        }
-    };
-    var DynamicTools = {};
-    var DynamicToolOrder = [];
+    var toolCatalog = window.ToolCatalog && typeof window.ToolCatalog.createCatalog === "function" ? window.ToolCatalog.createCatalog() : null;
+    if (toolCatalog) {
+        toolCatalog.registerSystemSurface({ id: "velaPersistentSurface" });
+        toolCatalog.registerSystemSurface({ id: "settings" });
+        toolCatalog.registerLegacyFallback({ id: "vela", titleKey: "vela.title", descriptionKey: "vela.description", selectionMode: "property" });
+        toolCatalog.registerRegistryCompatibilityMetadata({ id: "ecommerceLayout", title: "Ad Component Kit", description: "Ad Component Kit", selectionMode: "layers" });
+        toolCatalog.registerRegistryCompatibilityMetadata({ id: "shapeAdd", title: "Shape Add", description: "Shape Add", selectionMode: "shape" });
+        toolCatalog.registerStaticHomeEntry("ecommerceLayout");
+        toolCatalog.registerStaticHomeEntry("vela");
+    }
     var RegistryToolState = {};
     var RegistrySaveTimers = {};
     var ProceduralPreviewTimers = {};
@@ -1276,35 +1267,11 @@
     }
 
     function getToolMeta(toolId) {
-        return DynamicTools[toolId] || ToolRegistry[toolId] || ToolRegistry.shapeAdd;
+        return toolCatalog ? toolCatalog.getDisplayMetadata(toolId) : null;
     }
 
     function isDynamicTool(toolId) {
-        return !!DynamicTools[toolId];
-    }
-
-    function isDeveloperRegistryTool(tool) {
-        var id;
-        var titleKey;
-        var descriptionKey;
-        var haystack;
-
-        if (!tool) {
-            return false;
-        }
-        if (tool.debugOnly === true || tool.developerOnly === true || tool.category === "debug") {
-            return true;
-        }
-
-        id = String(tool.id || "");
-        titleKey = String(tool.titleKey || "");
-        descriptionKey = String(tool.descriptionKey || "");
-        haystack = (id + " " + titleKey + " " + descriptionKey).toLowerCase();
-        return haystack.indexOf("probe") !== -1 ||
-            haystack.indexOf("lab") !== -1 ||
-            haystack.indexOf("test") !== -1 ||
-            haystack.indexOf("debug") !== -1 ||
-            haystack.indexOf("controllab") !== -1;
+        return !!(toolCatalog && toolCatalog.getRegistryTool(toolId));
     }
 
     function renderDynamicToolHome() {
@@ -1312,6 +1279,8 @@
         var more = grid ? grid.querySelector(".tool-app.is-disabled") : null;
         var oldTools;
         var i;
+        var entries;
+        var entry;
         var tool;
         var button;
         var icon;
@@ -1330,14 +1299,13 @@
             oldTools[i].parentNode.removeChild(oldTools[i]);
         }
 
-        for (i = 0; i < DynamicToolOrder.length; i++) {
-            tool = DynamicTools[DynamicToolOrder[i]];
-            if (!tool || tool.hidden || (isDeveloperRegistryTool(tool) && window.AETOOLBOX_DEBUG_REGISTRY !== true)) {
+        entries = toolCatalog ? toolCatalog.getHomeEntries({ developerMode: window.AETOOLBOX_DEBUG_REGISTRY === true }) : [];
+        for (i = 0; i < entries.length; i++) {
+            entry = entries[i];
+            if (!entry || entry.homeOwnership !== "dynamic") {
                 continue;
             }
-            if (grid.querySelector(".tool-app[data-tool='" + tool.id + "']:not([data-dynamic-tool='true'])")) {
-                continue;
-            }
+            tool = entry.definition;
             button = document.createElement("button");
             button.type = "button";
             button.className = "tool-app app-card";
@@ -3443,11 +3411,17 @@
     }
 
     function commitDynamicToolCatalog(candidate) {
+        var snapshot;
         var i;
-        DynamicTools = candidate.tools;
-        DynamicToolOrder = candidate.order.slice(0);
-        for (i = 0; i < DynamicToolOrder.length; i++) {
-            mergeDynamicToolI18n(DynamicTools[DynamicToolOrder[i]]);
+        if (!toolCatalog || !toolCatalog.setRegistryTools(candidate.tools, candidate.order)) {
+            if (window.console && console.warn) {
+                console.warn("[Tool Catalog] registry commit rejected");
+            }
+            return;
+        }
+        snapshot = toolCatalog.getSnapshot();
+        for (i = 0; i < snapshot.registryTools.length; i++) {
+            mergeDynamicToolI18n(toolCatalog.getRegistryTool(snapshot.registryTools[i].id).definition);
         }
         renderDynamicToolHome();
         if (panelShuttingDown) {
@@ -3483,7 +3457,7 @@
         if ((snapshot.state === "ready" || snapshot.state === "degraded") && !panelSuspended) {
             startSelectionPolling();
             if (isDynamicTool(activeToolId)) {
-                startRegistryStatePolling(DynamicTools[activeToolId]);
+                startRegistryStatePolling(toolCatalog.getRegistryTool(activeToolId).definition);
             }
         } else {
             stopSelectionPolling();
@@ -4289,7 +4263,8 @@
     }
 
     function resetRegistryToolValues(toolId) {
-        var tool = DynamicTools[toolId];
+        var entry = toolCatalog && toolCatalog.getRegistryTool(toolId);
+        var tool = entry ? entry.definition : null;
         if (!tool) {
             return;
         }
@@ -6867,7 +6842,8 @@
     }
 
     function collectDynamicToolParams(toolId) {
-        return collectSchemaValues(DynamicTools[toolId] || { id: toolId, uiSchema: [] });
+        var entry = toolCatalog && toolCatalog.getRegistryTool(toolId);
+        return collectSchemaValues(entry ? entry.definition : { id: toolId, uiSchema: [] });
     }
 
     function renderToolActions(actions, toolDef) {
@@ -6958,7 +6934,8 @@
     }
 
     function runDynamicToolAction(toolId, actionId, actionPayload, actionDef) {
-        var toolDef = DynamicTools[toolId];
+        var entry = toolCatalog && toolCatalog.getRegistryTool(toolId);
+        var toolDef = entry ? entry.definition : null;
         var action = actionDef || findRegistryAction(toolDef, actionId) || {};
         var params = mergeActionPayload(collectDynamicToolParams(toolId), actionPayload || action.actionPayload || {});
         var json = JSON.stringify(params);
@@ -7034,7 +7011,8 @@
     }
 
     function renderDynamicToolDetail(toolId) {
-        renderRegistryToolDetail(DynamicTools[toolId]);
+        var entry = toolCatalog && toolCatalog.getRegistryTool(toolId);
+        renderRegistryToolDetail(entry ? entry.definition : null);
     }
 
     function renderVelaDetail() {
@@ -7096,15 +7074,16 @@
     }
 
     function configureToolDetail(toolId) {
+        var route = toolCatalog ? toolCatalog.getRoute(toolId) : { kind: "unknown", entry: null };
         var meta = getToolMeta(toolId);
         var panels = document.querySelectorAll(".tool-panel");
         var actions = document.querySelectorAll(".tool-actions");
         var i;
-        var dynamic = isDynamicTool(toolId);
-        var vela = toolId === "vela";
+        var dynamic = route.kind === "registry";
+        var vela = route.kind === "legacy" && toolId === "vela";
         var previousToolId = activeToolId;
 
-        activeToolId = toolId || "shapeAdd";
+        activeToolId = toolId || "";
         if (previousToolId && previousToolId !== activeToolId) {
             clearRegistryProceduralPreviewTimer(previousToolId);
         }
@@ -7126,6 +7105,9 @@
             renderDynamicToolDetail(activeToolId);
         } else {
             stopRegistryStatePolling();
+            if (route.kind === "unknown" && toolId && window.console && console.warn) {
+                console.warn("[Tool Catalog] unknown tool route", { id: String(toolId) });
+            }
         }
 
         for (i = 0; i < panels.length; i++) {
@@ -8129,7 +8111,7 @@
             startSelectionPolling();
         }
         if (isDynamicTool(activeToolId)) {
-            startRegistryStatePolling(DynamicTools[activeToolId]);
+            startRegistryStatePolling(toolCatalog.getRegistryTool(activeToolId).definition);
         }
         refreshActiveTool();
     }

@@ -196,7 +196,7 @@ check(Bootstrap.validateCatalog('{"ok":true,"tools":{},"loadErrors":[]}').code =
     const root = path.join(__dirname, "..");
     const main = fs.readFileSync(path.join(root, "client/js/main.js"), "utf8");
     const html = fs.readFileSync(path.join(root, "client/index.html"), "utf8");
-    check(main.includes(":not([data-dynamic-tool='true'])"), "static ecommerceLayout and dynamic cards retain duplicate suppression");
+    check(/toolCatalog\.getHomeEntries\(\{ developerMode:/.test(main) && !main.includes(":not([data-dynamic-tool='true'])"), "static ecommerceLayout and dynamic cards are deduplicated by Tool Catalog projection");
     check(/oldTools = grid\.querySelectorAll\("\.tool-app\[data-dynamic-tool='true'\]"\)/.test(main), "dynamic cards are replaced rather than accumulated");
     check((main.match(/toolBootstrapRetry"\)\.addEventListener\("click"/g) || []).length === 1, "Retry listener is bound once");
     check(!/bindPanelLifecycle\(\);\s*startSelectionPolling\(\)/.test(main), "selection polling no longer starts before Registry readiness");
