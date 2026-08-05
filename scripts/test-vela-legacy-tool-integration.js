@@ -76,13 +76,14 @@ async function run() {
     windowRef.self = windowRef;
     const sandbox = vm.createContext(windowRef);
     vm.runInContext(fs.readFileSync(path.join(ROOT, "client", uiRef), "utf8"), sandbox, { filename: uiRef });
+    vm.runInContext(fs.readFileSync(path.join(ROOT, "client", "js", "toolCatalog.js"), "utf8"), sandbox, { filename: "toolCatalog.js" });
     vm.runInContext(fs.readFileSync(path.join(ROOT, "client", "js", "vela", "velaActivationPolicy.js"), "utf8"), sandbox, { filename: "velaActivationPolicy.js" });
     ["velaProtocol.js", "velaResponseParser.js", "velaCapabilityContracts.js", "velaProviderRequestBranchPolicy.js", "velaCapabilityPromptBuilder.js", "velaProviderAdapter.js", "velaProviderIntentGate.js", "velaLocalTransport.js", "velaContext.js", "velaValidator.js", "velaPlan.js", "velaExecutionGuard.js", "velaContextBridge.js", "velaExecutionPreflight.js", "velaExecutionAdapter.js", "velaController.js", "velaProviderController.js", "velaProviderProposalRouter.js", "velaRuntime.js"].forEach((file) => vm.runInContext(fs.readFileSync(path.join(ROOT, "client", "js", "vela", file), "utf8"), sandbox, { filename: file }));
     const policyDescriptor = Object.getOwnPropertyDescriptor(windowRef, "VelaProviderRequestBranchPolicy");
     check(policyDescriptor && Object.prototype.hasOwnProperty.call(policyDescriptor, "value") && !Object.prototype.hasOwnProperty.call(policyDescriptor, "get") && !Object.prototype.hasOwnProperty.call(policyDescriptor, "set") && policyDescriptor.writable === false && policyDescriptor.configurable === false, "Legacy integration VM loads Request Branch Policy as an immutable own data global before Prompt Builder.");
     check(windowRef.__velaProtocolCoreBootstrapV1.getModule("VelaProviderRequestBranchPolicy") === policyDescriptor.value && windowRef.__velaProtocolCoreBootstrapV1.getModule("VelaCapabilityPromptBuilder") === windowRef.VelaCapabilityPromptBuilder, "Prompt Builder and Request Branch Policy retain their formal browser-bootstrap identities.");
     let mainSource = fs.readFileSync(path.join(ROOT, "client", mainRef), "utf8");
-    mainSource = mainSource.replace(/\}\)\(\);\s*$/, "window.__velaLegacyToolIntegration = { render: renderVelaDetail, configure: configureToolDetail, registerTool: function (id, tool) { DynamicTools[id] = tool; }, suspend: suspendPanelRuntime, resume: resumePanelRuntime, setRuntime: function (value) { velaRuntimeController = value; } };\n}());");
+    mainSource = mainSource.replace(/\}\)\(\);\s*$/, "window.__velaLegacyToolIntegration = { render: renderVelaDetail, configure: configureToolDetail, registerTool: function (id, tool) { var current = toolCatalog.getSnapshot().registryTools; var tools = []; var i; for (i = 0; i < current.length; i++) { tools[tools.length] = toolCatalog.getRegistryTool(current[i].id).definition; } tools[tools.length] = tool; return toolCatalog.setRegistryTools(tools); }, route: function (id) { return toolCatalog.getRoute(id).kind; }, suspend: suspendPanelRuntime, resume: resumePanelRuntime, setRuntime: function (value) { velaRuntimeController = value; } };\n}());");
     vm.runInContext(mainSource, sandbox, { filename: mainRef });
     const hooks = windowRef.__velaLegacyToolIntegration;
     check(hooks && typeof hooks.render === "function" && typeof hooks.configure === "function" && typeof hooks.suspend === "function", "Actual main.js exposes only the production legacy-tool closure to this test VM.");
@@ -97,7 +98,9 @@ async function run() {
     windowRef.__providerUiState = () => runtime.getProviderUiState();
     const controller = vm.runInContext("({ refreshContext: function () { return __refresh(); }, createOpacityCandidate: function (input) { return __create(Number(input.opacity)); }, approveCandidate: function () { return Promise.reject(new Error('unused')); }, rejectCandidate: function () { return false; }, suspend: function () { return __suspend(); }, resume: function () { return __resume(); }, getUiState: function () { return __uiState(); }, getProviderUiState: function () { return __providerUiState(); } })", sandbox);
     hooks.setRuntime(controller);
-    hooks.registerTool("registryA", { id: "registryA", title: "Registry A", description: "Registry A content", sections: [], actions: [] });
+    const registeredFixture = hooks.registerTool("registryA", { id: "registryA", title: "Registry A", description: "Registry A content", sections: [], actions: [] });
+    const fixtureRoute = hooks.route("registryA");
+    check(registeredFixture === true && fixtureRoute === "registry", "Legacy integration fixture enters the production Registry route through Tool Catalog: " + registeredFixture + "/" + fixtureRoute);
     hooks.configure("registryA");
     const panel = documentRef.getElementById("registryToolPanel");
     const actions = documentRef.getElementById("registryToolActions");
