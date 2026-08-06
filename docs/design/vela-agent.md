@@ -385,9 +385,12 @@ state, or call the Host. Its dynamic action slot is empty. The Settings button
 only forwards the existing global Settings intent.
 
 The Surface uses CSS Grid areas for wide and narrow layouts without moving or
-recreating DOM nodes. Its height is session-only, held in
-`--vela-surface-height`; it is clamped from current Home/header/tool-pool
-measurements and is never written to Settings, storage or a transcript store.
+recreating DOM nodes. Its effective height is held in
+`--vela-surface-height` and clamped from current Home/header/tool-pool and UI-scale
+measurements. The unclamped user preference is stored separately in the versioned
+layout record `AEToolbox.velaSurfaceLayout.v1`; temporary viewport clamps never
+overwrite it. This does not persist transcript/context state or change the
+session-only Provider acknowledgement, readiness, enablement, or authority model.
 UI-B may connect bounded provider presentation, UI-C may connect the existing
 local confirmation presentation, and UI-D may consolidate the legacy Vela Tool
 only after their own review. None of those later phases may merge the Review,

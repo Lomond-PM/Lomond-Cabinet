@@ -31,6 +31,7 @@ Vela remains experimental:
 - no qualified/recommended/default model;
 - production activation locked;
 - Vela Persistent Surface is the only Vela entry; the legacy fallback is retired.
+- Vela Surface height is a versioned, persistent layout preference. Viewport/UI-scale clamps affect only the displayed height and do not overwrite that preference. Provider enablement remains session-only, and conversation/context persistence is still out of scope.
 
 ## Source of truth and junction setup
 
