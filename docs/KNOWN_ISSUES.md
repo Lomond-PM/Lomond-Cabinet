@@ -72,6 +72,8 @@ Main risks:
 - Cleanup must never delete layers that lack Lomond artifact metadata.
 - Cleanup must not use layer-name heuristics for old output.
 - Icon Grid source layers are user-owned and must not be deleted.
+- Icon Grid is deliberately fail-closed: one unsupported layer rejects the complete selection before input-layer writes. A failed source-bounds read or `toComp()` conversion must never fall back to guessed or layer-space coordinates.
+- The strict 0.3.1 input contract does not resolve fixed-cell layout semantics, final visual-union recentering, or Refresh controller-local/comp-space behavior; those remain separate follow-up work.
 - Only expressions with the matching Lomond signature may be restored or cleared.
 - Host action messages should continue moving toward `messageKey` fallbacks without changing the AE algorithms.
 
