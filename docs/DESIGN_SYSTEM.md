@@ -422,9 +422,9 @@ The formal registry Shape Add uses:
 
 Known constraints remain:
 
-- The static Home Shape Add card must not coexist with the dynamic registry `shapeAdd` card.
+- Shape Add has no static Home fallback; the Registry projection owns its single Home card.
 - The registry tool keeps the same `shapeAdd` id so saved Home layout order remains meaningful.
-- The legacy detail panel may remain in markup while the registry detail path owns the active `shapeAdd` page.
+- The legacy Shape Add detail panel is retired; Registry Renderer owns the active detail page.
 - The Stroke / Fill Shape Layer subtool UI is registry-rendered, while host execution remains in `host/tools/shapeAdd.jsx`.
 - Plain host `message` strings should continue moving toward `messageKey` normalization.
 
@@ -452,7 +452,7 @@ Current registry design:
 - `AEToolbox.ecommerceLayout.v1` remains the storage key to preserve user parameters.
 - The registry id remains `ecommerceLayout` for HomeLayout and storage compatibility; do not rename it without a dedicated migration.
 - The legacy Ad Component Kit detail DOM, footer actions, frontend event binding, and unused component/ecom CSS have been removed after AE verification.
-- The static Home card remains only as a saved-order-compatible Home entry for the same `ecommerceLayout` id; registry metadata owns the active detail page and actions.
+- Ad Component Kit has no static Home fallback; Registry metadata owns its Home card, detail page and actions while the stable id preserves saved order.
 - The legacy `host/tools/ecommerceLayout.jsx` host module has been removed; active behavior is `host/tools/adComponentKit.jsx`.
 
 Migration was phased:
@@ -496,7 +496,7 @@ By default, registry tools must not show `Registry`, tool id, host function, raw
 Before the 0.2.3 release, the current design-system-relevant cleanup state is:
 
 - Ad Component Kit is a unified registry tool with id `ecommerceLayout`, storage `AEToolbox.ecommerceLayout.v1`, schema `host/tools/adComponentKit.tool.jsx`, and host behavior `host/tools/adComponentKit.jsx`.
-- Shape Add is a registry tool with legacy frontend adapter, duplicate `shapeAdd.item.*` global i18n, old Shape Add CSS, and old global host wrappers removed.
+- Shape Add is a Registry-owned tool; its legacy frontend adapter, duplicate `shapeAdd.item.*` global i18n, old Shape Add CSS, and old global host wrappers are removed.
 - Text Background Box is a registry tool with the old frontend adapter removed.
 - Registry tool-specific i18n should live in `.tool.jsx`; `client/js/i18n.js` should keep core, Home, Settings, common, and fallback strings.
 - Registry Control Lab and Settings Renderer Lab remain Developer Mode-only labs; retired probes should not reappear as formal Home tools.

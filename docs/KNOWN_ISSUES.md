@@ -34,9 +34,9 @@ Current conclusion:
 
 Main risks:
 
-- Static and dynamic Home entries with the same `shapeAdd` id can conflict.
+- Shape Add must remain Registry-owned so a static Home duplicate is not reintroduced.
 - `HomeLayoutManager` saved order depends on the stable `shapeAdd` id.
-- Legacy and registry detail panels must not be allowed to coexist again.
+- The retired legacy detail panel must not be reintroduced alongside Registry Renderer.
 - Button enabled state depends on host state, not only local schema.
 - Shape Add host behavior must not be rewritten opportunistically during UI or procedural appearance work.
 

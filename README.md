@@ -135,7 +135,7 @@ The trusted activation policy keeps:
 - `formalUiD2Enabled = false`
 - `legacyFallbackRetained = false`
 
-A model proposal cannot execute directly. Explicit opacity edits pass through local request classification, parsing, profile checks, Intent Gate, Review, Confirmation, Preflight, ExecutionAdapter, and Host boundaries. The legacy Vela Tool remains available as a fallback.
+A model proposal cannot execute directly. Explicit opacity edits pass through local request classification, parsing, profile checks, Intent Gate, Review, Confirmation, Preflight, ExecutionAdapter, and Host boundaries. Vela Persistent Surface is the only Vela user entry; the legacy Tool fallback is retired.
 
 See [`docs/design/vela-agent.md`](docs/design/vela-agent.md) for the complete safety architecture and [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) for accepted preview limitations.
 

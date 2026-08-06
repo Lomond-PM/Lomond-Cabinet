@@ -22,7 +22,7 @@ check(!/openVelaTool|data-tool=["']vela["']|vela-tool-icon|commerce-glyph/.test(
 check(/id="velaSurfaceMount"/.test(html), "Persistent Surface mount remains in Home.");
 check(/tools\.moreTools\.title/.test(html) && /tool-app app-card is-disabled/.test(html), "Disabled More Tools placeholder remains.");
 check(!/velaUi\.js|velaProviderUi\.js/.test(html), "Legacy detail UI scripts are not loaded.");
-check(!/registerLegacyFallback\(\{\s*id:\s*["']vela|registerStaticHomeEntry\(["']vela|renderVelaDetail|route\.kind === ["']legacy/.test(main), "main has no Vela legacy Catalog registration, renderer, or route.");
+check(!/renderVelaDetail|route\.kind === ["']legacy/.test(main), "main has no Vela legacy renderer or route.");
 check(!/localOpacity\s*:|refreshContext\(\)|createOpacityCandidate|local-manual-opacity/.test(main), "main exposes no local manual opacity facade.");
 check(!/vela-local-|surfaceLocalOpacity|manualOpacity|velaSurfaceLocalOpacityInput/.test(surface + surfaceController + css), "Persistent Surface has no local opacity presentation, input, or CSS.");
 check(!/surfaceLocalOpacity|surfaceLocalTarget|surfaceLocalRefresh|manualOpacity|local-manual-opacity/.test(i18n + controller), "Local-only i18n and source markers are absent.");

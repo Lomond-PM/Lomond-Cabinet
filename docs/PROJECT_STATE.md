@@ -32,10 +32,10 @@ The product status is intentionally experimental rather than production-enabled:
 - production activation is locked;
 - no model is qualified, recommended, or selected as default;
 - formal UI-D2 default enablement is false;
-- the legacy Vela fallback is retained;
+- Vela Persistent Surface is the only Vela entry and the legacy fallback is retired;
 - narrow-width Vela layout issues are deferred to 0.3.1.
 
-Future model qualification, default-model selection, production activation and legacy retirement are separate product decisions, not unfinished D-phase tasks.
+Future model qualification, default-model selection and production activation are separate product decisions, not unfinished D-phase tasks.
 
 ## Runtime architecture
 
