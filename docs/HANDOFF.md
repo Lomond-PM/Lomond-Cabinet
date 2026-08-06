@@ -169,6 +169,8 @@ Production tool ids:
 
 Do not rename `ecommerceLayout` without a dedicated storage/Home-order migration. Do not remove retained host modules such as `shapeAdd.jsx` while registry actions still depend on them.
 
+Icon Grid uses a strict all-or-nothing input contract. It supports unlocked, unparented 2D Text, Shape, Solid, Footage, and Precomp layers only when transforms and visual bounds are safe (zero rotation, positive scale, finite source rectangle, and successful `toComp()` for every corner). It rejects 3D, parented, locked, expression-driven, negative-scale, collapsed/continuously rasterized, zero-size, non-finite, and unsupported layers without silently skipping them. Keep the existing fixed-cell algorithm unchanged until the separate final-recentering and Refresh-transform work is undertaken.
+
 ### Settings
 
 Settings is app-owned, not a registry tool.
