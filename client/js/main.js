@@ -114,7 +114,8 @@
         backgroundCollapsed: "AEToolbox.backgroundSettingsCollapsed.v1",
         language: "aeToolbox.language",
         homeOrder: "aeToolbox.homeToolOrder",
-        colorPickerAxis: "AEToolbox.colorPicker.axisMode.v1"
+        colorPickerAxis: "AEToolbox.colorPicker.axisMode.v1",
+        velaSurfaceLayout: "AEToolbox.velaSurfaceLayout.v1"
     };
     var toolCatalog = window.ToolCatalog && typeof window.ToolCatalog.createCatalog === "function" ? window.ToolCatalog.createCatalog() : null;
     if (toolCatalog) {
@@ -3645,6 +3646,12 @@
             openSettings: openVelaSettingsPanel,
             t: tr,
             getUiScale: getVelaSurfaceUiScale,
+            loadHeightPreference: function () {
+                return loadStoredJson(StorageKeys.velaSurfaceLayout, null);
+            },
+            saveHeightPreference: function (heightPx) {
+                saveStoredJson(StorageKeys.velaSurfaceLayout, { schemaVersion: 1, heightPx: heightPx });
+            },
             composerReadOnly: false,
             ResizeController: window.VelaResizeController,
             eventTarget: window

@@ -20,6 +20,8 @@
         var openSettings = typeof options.openSettings === "function" ? options.openSettings : function () {};
         var t = typeof options.t === "function" ? options.t : function (key) { return key; };
         var getUiScale = typeof options.getUiScale === "function" ? options.getUiScale : function () { return 1; };
+        var loadHeightPreference = typeof options.loadHeightPreference === "function" ? options.loadHeightPreference : function () { return null; };
+        var saveHeightPreference = typeof options.saveHeightPreference === "function" ? options.saveHeightPreference : function () {};
         var composerReadOnly = options.composerReadOnly !== false;
         var ResizeController = options.ResizeController;
         var ResizeObserverCtor = options.ResizeObserver || (typeof ResizeObserver !== "undefined" ? ResizeObserver : null);
@@ -217,7 +219,7 @@
             elements = { root: rootElement, transcriptSlot: transcriptSlot, transcriptScroll: transcriptScroll, transcriptMessage: transcriptMessage, composerSlot: composerSlot, composer: composer, statusSlot: statusSlot, statusDot: statusDot, statusText: statusText, experimentalText: experimentalText, controls: controls, settingsSlot: settingsSlot, settingsButton: settingsButton, actionSlot: actionSlot, handle: handle, grip: grip };
             settingsHandler = function () { openSettings(); };
             settingsButton.addEventListener("click", settingsHandler);
-            resizeController = ResizeController.create({ root: rootElement, handle: handle, transcript: transcriptScroll, composer: composerSlot, status: statusSlot, controls: controls, settings: settingsSlot, homeContainer: homeContainer, headerElement: headerElement, toolPoolElement: toolPoolElement, getUiScale: getUiScale, eventTarget: eventTarget });
+            resizeController = ResizeController.create({ root: rootElement, handle: handle, transcript: transcriptScroll, composer: composerSlot, status: statusSlot, controls: controls, settings: settingsSlot, homeContainer: homeContainer, headerElement: headerElement, toolPoolElement: toolPoolElement, getUiScale: getUiScale, loadHeightPreference: loadHeightPreference, saveHeightPreference: saveHeightPreference, eventTarget: eventTarget });
             resizeController.start();
             mounted = true;
             bindSizeSignals();

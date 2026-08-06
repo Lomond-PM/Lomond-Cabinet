@@ -140,7 +140,8 @@ function event(properties) {
     return result;
 }
 
-function setup(useResizeObserver) {
+function setup(useResizeObserver, overrides) {
+    overrides = overrides || {};
     const documentRef = new FakeDocument();
     const windowRef = new FakeWindow();
     const home = documentRef.createElement("section");
@@ -164,13 +165,100 @@ function setup(useResizeObserver) {
         toolPoolElement: pool,
         openSettings: function () { settingsCalls += 1; },
         t: function (key) { return "t:" + key; },
-        getUiScale: function () { return 1; },
+        getUiScale: overrides.getUiScale || function () { return 1; },
+        loadHeightPreference: overrides.loadHeightPreference,
+        saveHeightPreference: overrides.saveHeightPreference,
         ResizeController: ResizeController,
         eventTarget: windowRef
     };
     if (useResizeObserver !== false) { options.ResizeObserver = FakeResizeObserver; }
     const surface = Surface.create(options);
     return { documentRef: documentRef, windowRef: windowRef, home: home, header: header, mount: mount, pool: pool, surface: surface, settingsCalls: function () { return settingsCalls; } };
+}
+
+function heightValue(nodes) {
+    return Number(nodes.root.style.getPropertyValue("--vela-surface-height").replace("px", ""));
+}
+
+function testHeightPersistence() {
+    FakeResizeObserver.instances = [];
+    let stored = null;
+    let saves = [];
+    let uiScale = 1;
+    const storage = {
+        loadHeightPreference: function () { return stored; },
+        saveHeightPreference: function (height) { saves.push(height); stored = { schemaVersion: 1, heightPx: height }; },
+        getUiScale: function () { return uiScale; }
+    };
+    let fixture = setup(true, storage);
+    fixture.surface.mount();
+    let nodes = fixture.surface.getElementsForTest();
+    equal(heightValue(nodes), 196, "missing preference uses the formal bounded default");
+    equal(saves.length, 0, "mount does not forge a user height commit");
+    fixture.surface.dispose();
+
+    stored = { schemaVersion: 1, heightPx: 300 };
+    fixture = setup(true, storage);
+    fixture.surface.mount();
+    nodes = fixture.surface.getElementsForTest();
+    equal(heightValue(nodes), 300, "a valid persisted height is restored on a new page instance");
+    nodes.handle.emit("pointerdown", event({ pointerId: 40, clientY: 100 }));
+    nodes.handle.emit("pointermove", event({ pointerId: 40, clientY: 125 }));
+    nodes.handle.emit("pointermove", event({ pointerId: 40, clientY: 140 }));
+    equal(saves.length, 0, "pointermove never writes persistent storage");
+    fixture.windowRef.flush();
+    nodes.handle.emit("pointerup", event({ pointerId: 40 }));
+    equal(saves.length, 1, "drag end persists exactly one user preference");
+    equal(saves[0], 340, "drag end saves the unclamped CSS-pixel preference");
+
+    stored = { schemaVersion: 1, heightPx: 420 };
+    FakeResizeObserver.instances[FakeResizeObserver.instances.length - 1].trigger();
+    fixture.windowRef.flush();
+    equal(heightValue(nodes), 340, "external storage changes do not mutate a mounted Surface preference");
+    fixture.surface.dispose();
+    fixture = setup(true, storage);
+    fixture.home._rect.height = 470;
+    fixture.surface.mount();
+    nodes = fixture.surface.getElementsForTest();
+    equal(heightValue(nodes), 274, "small viewport temporarily clamps a larger stored preference");
+    equal(saves.length, 1, "viewport clamp does not overwrite the stored preference");
+    fixture.home._rect.height = 700;
+    FakeResizeObserver.instances[FakeResizeObserver.instances.length - 1].trigger();
+    fixture.windowRef.flush();
+    fixture.windowRef.flush();
+    equal(heightValue(nodes), 420, "panel growth restores the original unclamped preference");
+    nodes.root._rect.width = 320;
+    fixture.surface.refreshLayout();
+    fixture.windowRef.flush();
+    fixture.windowRef.flush();
+    equal(heightValue(nodes), 420, "narrow layout retains the same preference");
+    uiScale = 1.18;
+    fixture.surface.refreshLayout();
+    fixture.windowRef.flush();
+    fixture.windowRef.flush();
+    equal(heightValue(nodes), 420, "UI scale recalculates bounds without accumulating height error");
+    equal(saves.length, 1, "responsive and UI-scale refreshes do not persist");
+    fixture.surface.dispose();
+    nodes.handle.emit("pointerdown", event({ pointerId: 41, clientY: 100 }));
+    nodes.handle.emit("pointermove", event({ pointerId: 41, clientY: 160 }));
+    nodes.handle.emit("pointerup", event({ pointerId: 41 }));
+    equal(saves.length, 1, "disposed Surface no longer handles drag events");
+
+    [null, "", "420", NaN, Infinity, -1, 0, { schemaVersion: 0, heightPx: 300 }, { schemaVersion: 1, heightPx: "300" }, { schemaVersion: 1, heightPx: 100001 }].forEach(function (invalid) {
+        const invalidFixture = setup(true, { loadHeightPreference: function () { return invalid; } });
+        invalidFixture.surface.mount();
+        equal(heightValue(invalidFixture.surface.getElementsForTest()), 196, "invalid preference falls back to the default");
+        invalidFixture.surface.dispose();
+    });
+    const throwingFixture = setup(true, { loadHeightPreference: function () { throw new Error("storage denied"); }, saveHeightPreference: function () { throw new Error("storage denied"); } });
+    ok(throwingFixture.surface.mount(), "storage access failure does not block Surface mount");
+    throwingFixture.surface.dispose();
+
+    const smallFixture = setup(true, { loadHeightPreference: function () { return { schemaVersion: 1, heightPx: 10 }; } });
+    smallFixture.surface.mount();
+    const smallNodes = smallFixture.surface.getElementsForTest();
+    equal(heightValue(smallNodes), Number(smallNodes.handle.getAttribute("aria-valuemin")), "small positive preference clamps to the current minimum");
+    smallFixture.surface.dispose();
 }
 
 function testSurface() {
@@ -429,7 +517,8 @@ function testStaticContracts() {
     const i18nSource = fs.readFileSync(path.join(ROOT, "client/js/i18n.js"), "utf8");
     const mainSource = fs.readFileSync(path.join(ROOT, "client/js/main.js"), "utf8");
     ok(surfaceSource.indexOf("innerHTML") === -1, "Surface never rebuilds DOM with innerHTML");
-    ok(surfaceSource.indexOf("localStorage") === -1 && resizeSource.indexOf("localStorage") === -1, "Surface height is not persisted");
+    ok(surfaceSource.indexOf("localStorage") === -1 && resizeSource.indexOf("localStorage") === -1, "Surface and resize controller use injected storage callbacks rather than localStorage");
+    ok(/velaSurfaceLayout:\s*"AEToolbox\.velaSurfaceLayout\.v1"/.test(mainSource), "height preference uses a namespaced versioned storage key");
     ok(!/provider-send|provider-review|approveCandidate|AEToolbox\.VelaExecution|VelaExecutionPreflight/.test(surfaceSource), "Surface has no provider or execution entry point");
     ok(!/VelaRuntime|ProviderController|PlanStore|ExecutionAdapter/.test(surfaceSource), "Surface has no trusted runtime dependency");
     ok(/\.vela-transcript-scroll[\s\S]*overflow-y: auto/.test(cssSource), "only transcript slot is vertically scrollable");
@@ -474,5 +563,6 @@ function testStaticContracts() {
 
 testSurface();
 testResizeScheduling();
+testHeightPersistence();
 testStaticContracts();
 console.log("Vela Surface tests passed: " + assertions + " assertions.");

@@ -27,6 +27,11 @@ check(!/localOpacity\s*:|refreshContext\(\)|createOpacityCandidate|local-manual-
 check(!/vela-local-|surfaceLocalOpacity|manualOpacity|velaSurfaceLocalOpacityInput/.test(surface + surfaceController + css), "Persistent Surface has no local opacity presentation, input, or CSS.");
 check(!/surfaceLocalOpacity|surfaceLocalTarget|surfaceLocalRefresh|manualOpacity|local-manual-opacity/.test(i18n + controller), "Local-only i18n and source markers are absent.");
 check(/createBoundOpacityCandidate/.test(controller) && !/createOpacityCandidate/.test(controller), "Model proposal candidate factory has a non-manual internal contract.");
+check(/velaSurfaceLayout:\s*"AEToolbox\.velaSurfaceLayout\.v1"/.test(main), "Surface height uses a dedicated namespaced schema-versioned storage key.");
+check(/loadHeightPreference:[\s\S]*?loadStoredJson\(StorageKeys\.velaSurfaceLayout, null\)/.test(main), "Surface height restore goes through the shared JSON storage facade.");
+check(/saveHeightPreference:[\s\S]*?schemaVersion:\s*1, heightPx: heightPx/.test(main), "Surface height persists only its schema and CSS-pixel preference.");
+check(/loadHeightPreference:\s*loadHeightPreference/.test(surface) && /saveHeightPreference:\s*saveHeightPreference/.test(surface), "Persistent Surface injects storage at the resize-controller boundary.");
+check(!/velaSurfaceLayout[\s\S]{0,200}(?:velaProvider|experimentalAcknowledged)/.test(main), "Surface layout storage remains separate from Provider session state.");
 
 const catalog = ToolCatalog.createCatalog();
 catalog.registerSystemSurface({ id: "velaPersistentSurface" });

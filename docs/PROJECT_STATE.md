@@ -162,6 +162,8 @@ Detailed design: `docs/design/procedural-appearance.md`.
 
 Vela provides a persistent transcript/composer Surface on Home. The optional local Provider is restricted to loopback endpoints:
 
+The user's preferred Surface height persists separately under the versioned layout key `AEToolbox.velaSurfaceLayout.v1`. Mount, panel resize, responsive-mode changes, and UI-scale changes derive a clamped effective CSS-pixel height without replacing the original preference. Provider acknowledgement, readiness, and enablement remain session-only; transcript, multi-session, and context state are not persisted by this feature.
+
 - `127.0.0.1`
 - `localhost`
 - `[::1]`
