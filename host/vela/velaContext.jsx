@@ -96,7 +96,7 @@ var AEToolbox = AEToolbox || {};
     }
     json = jsonDescriptor.value;
 
-    function fail(code) {
+    function fail(code, reason) {
         var messages = {
             HOST_CONTEXT_REQUEST_INVALID: "The Host context request is invalid.",
             HOST_CONTEXT_OPERATION_UNSUPPORTED: "The Host context operation is unsupported.",
@@ -110,7 +110,9 @@ var AEToolbox = AEToolbox || {};
             ,HOST_CONTEXT_VALUE_UNSUPPORTED: "The requested Host property value type is unsupported."
             ,HOST_CONTEXT_VALUE_INVALID: "The requested Host property value is invalid."
         };
-        throw hostError(code, messages[code] || messages.HOST_CONTEXT_READ_FAILED);
+        var error = hostError(code, messages[code] || messages.HOST_CONTEXT_READ_FAILED);
+        if (typeof reason === "string") { error.reason = reason; }
+        throw error;
     }
 
     function own(value, key) {
@@ -302,7 +304,7 @@ var AEToolbox = AEToolbox || {};
         };
     }
 
-    function errorResult(request, code) {
+    function errorResult(request, code, reason) {
         var messages = {
             HOST_CONTEXT_REQUEST_INVALID: "The Host context request is invalid.",
             HOST_CONTEXT_OPERATION_UNSUPPORTED: "The Host context operation is unsupported.",
@@ -321,6 +323,7 @@ var AEToolbox = AEToolbox || {};
             code: messages[code] ? code : "HOST_CONTEXT_READ_FAILED",
             message: messages[code] || messages.HOST_CONTEXT_READ_FAILED
         };
+        if (typeof reason === "string") { result.error.reason = reason; }
         return result;
     }
 
@@ -426,7 +429,7 @@ var AEToolbox = AEToolbox || {};
         observeProject(project);
         if (!project) {
             if (request.scope.purpose === "binding") {
-                fail("HOST_CONTEXT_UNAVAILABLE");
+                fail("HOST_CONTEXT_UNAVAILABLE", "no-project");
             }
             return {
                 hostInstanceId: hostInstanceId,
@@ -444,7 +447,7 @@ var AEToolbox = AEToolbox || {};
         }
         if (!activeItem || typeof CompItem === "undefined" || !(activeItem instanceof CompItem)) {
             if (request.scope.purpose === "binding") {
-                fail("HOST_CONTEXT_UNAVAILABLE");
+                fail("HOST_CONTEXT_UNAVAILABLE", "no-active-composition");
             }
             return {
                 hostInstanceId: hostInstanceId,
@@ -515,7 +518,7 @@ var AEToolbox = AEToolbox || {};
             nativeLayerIdObserved = true;
         }
         if (request.scope.purpose === "binding" && (!nativeLayerIdObserved || !allNative)) {
-            fail("HOST_CONTEXT_UNAVAILABLE");
+            fail("HOST_CONTEXT_UNAVAILABLE", "no-actionable-target");
         }
         snapshot = {
             hostInstanceId: hostInstanceId,
@@ -1050,7 +1053,7 @@ var AEToolbox = AEToolbox || {};
         }
         try { activeItem = project && project.activeItem; }
         catch (ignoredActive) { fail("HOST_CONTEXT_READ_FAILED"); }
-        if (!activeItem || typeof CompItem === "undefined" || !(activeItem instanceof CompItem)) { fail("HOST_CONTEXT_UNAVAILABLE"); }
+        if (!activeItem || typeof CompItem === "undefined" || !(activeItem instanceof CompItem)) { fail("HOST_CONTEXT_UNAVAILABLE", "no-active-composition"); }
         for (i = 0; i < request.scope.targets.length; i++) {
             target = request.scope.targets[i];
             if (activeItem.id !== target.itemId) { fail("HOST_CONTEXT_AUTHORITY_MISMATCH"); }
@@ -1100,7 +1103,7 @@ var AEToolbox = AEToolbox || {};
         }
         try { activeItem = project && project.activeItem; }
         catch (ignoredActive) { fail("HOST_CONTEXT_READ_FAILED"); }
-        if (!activeItem || typeof CompItem === "undefined" || !(activeItem instanceof CompItem)) { fail("HOST_CONTEXT_UNAVAILABLE"); }
+        if (!activeItem || typeof CompItem === "undefined" || !(activeItem instanceof CompItem)) { fail("HOST_CONTEXT_UNAVAILABLE", "no-active-composition"); }
         try {
             duration = activeItem.duration;
             sampleTime = activeItem.time;
@@ -1176,7 +1179,7 @@ var AEToolbox = AEToolbox || {};
         } catch (error) {
             code = error && typeof error.code === "string" ? error.code : "HOST_CONTEXT_READ_FAILED";
             try {
-                return json.stringifyBounded(errorResult(request, code), {
+                return json.stringifyBounded(errorResult(request, code, error && error.reason), {
                     maxBytes: 16 * 1024,
                     maxStringBytes: 8 * 1024,
                     maxDepth: 5,

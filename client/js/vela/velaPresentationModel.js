@@ -20,7 +20,7 @@
         "LIFECYCLE_BLOCKED": "vela.surfaceRuntimeUnavailable",
         "SCHEMA_VALIDATION_FAILED": "vela.surfaceGenericError",
         "PAYLOAD_BUDGET_EXCEEDED": "vela.surfaceGenericError",
-        "UNKNOWN_TARGET": "vela.surfaceGenericError",
+        "UNKNOWN_TARGET": "vela.surfaceNoActionableTarget",
         "CONTEXT_STALE": "vela.surfaceGenericError",
         "CONTEXT_VALUE_EVALUATION_DISALLOWED": "vela.surfaceGenericError",
         "CONTEXT_VALUE_UNSUPPORTED": "vela.surfaceGenericError",
@@ -49,7 +49,7 @@
         else if (confirmation === "execution-completed") { state = "completed"; }
         else if (confirmation === "rejected") { state = "cancelled"; }
         else if (provider === "pending") { state = "requesting"; }
-        else if (provider === "proposal-ready") { state = "reviewing"; }
+        else if (provider === "proposal-ready" || provider === "proposal-reviewing") { state = "reviewing"; }
         else if (provider === "failed" || provider === "intent-rejected") { state = "error"; }
         else if (provider === "cancelled") { state = "cancelled"; }
         else if (provider === "completed") { state = "completed"; }
@@ -69,6 +69,7 @@
         var pending = false;
         var terminalGeneration = 0;
         var confirmationState = "idle";
+        var proposalReviewPending = false;
         function snapshot() {
             return Object.freeze({
                 pending: pending,
@@ -92,14 +93,22 @@
             var code = providerState && typeof providerState.errorCode === "string" ? providerState.errorCode : null;
             var intentReason = providerState && typeof providerState.intentReason === "string" ? providerState.intentReason : null;
             if (state === "pending") { pending = true; return snapshot(); }
-            if (!pending) { return snapshot(); }
+            if (!pending && !proposalReviewPending) { return snapshot(); }
+            if (proposalReviewPending && (state === "proposal-reviewing" || state === "idle")) {
+                if (state === "idle") {
+                    proposalReviewPending = false;
+                    if (code) { terminalGeneration += 1; append("error", "", errorDisplayKey(code)); }
+                }
+                return snapshot();
+            }
             pending = false;
             terminalGeneration += 1;
             if (state === "completed" && text) { append("assistant", text, null); }
-            else if (state === "proposal-ready") { append("notice", "", "vela.surfaceLocalProposalNotice"); }
+            else if (state === "proposal-ready") { proposalReviewPending = true; append("notice", "", "vela.surfaceLocalProposalNotice"); }
             else if (state === "intent-rejected") { append("notice", "", intentReason === "target-mismatch" ? "vela.surfaceIntentTargetMismatch" : "vela.surfaceIntentRejected"); }
             else if (state === "cancelled") { append("error", "", errorDisplayKey(code || "PROVIDER_REQUEST_ABORTED")); }
             else { append("error", "", errorDisplayKey(code || "PROVIDER_RESPONSE_INVALID")); }
+            if (state !== "proposal-ready" && state !== "proposal-reviewing") { proposalReviewPending = false; }
             return snapshot();
         }
         function applyConfirmation(state, currentSnapshot) {
@@ -113,7 +122,7 @@
             return snapshot();
         }
         function clearConfirmationTerminal() { if (confirmationState === "execution-completed" || confirmationState === "rejected" || confirmationState === "execution-failed") { confirmationState = "idle"; } return snapshot(); }
-        function reset() { items = []; pending = false; confirmationState = "idle"; terminalGeneration += 1; return snapshot(); }
+        function reset() { items = []; pending = false; proposalReviewPending = false; confirmationState = "idle"; terminalGeneration += 1; return snapshot(); }
         return Object.freeze({ begin: begin, apply: apply, applyConfirmation: applyConfirmation, clearConfirmationTerminal: clearConfirmationTerminal, reset: reset, getSnapshot: snapshot });
     }
     return Object.freeze({ create: create, errorDisplayKey: errorDisplayKey, projectSurfaceState: projectSurfaceState, statusTone: statusTone });

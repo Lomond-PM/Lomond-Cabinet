@@ -21,6 +21,7 @@ function check(value, message) { assert.ok(value, message); assertions += 1; }
 function decode(source) { return JSON.parse(JSON.parse(source.slice("AEToolbox.VelaContext.handle(".length, -1))); }
 function protocol() { let id = 0; return protocolModule.createProtocol({ utf8ByteLength: (v) => Buffer.byteLength(v, "utf8"), sha256Hex: (v) => crypto.createHash("sha256").update(v, "utf8").digest("hex"), randomId: (kind) => kind + "_" + (++id).toString().padStart(32, "a"), now: () => 1 }); }
 function hostResult(request) { const hostInstanceId = "host_" + "a".repeat(48); const tierOne = { hostInstanceId, hostReloadEpoch: 1, tier: 1, projectGeneration: 1, activeComp: { itemId: 1, projectGeneration: 1, type: "CompItem", width: 100, height: 100, duration: 1, frameRate: 24 }, selection: { count: 1, identityQuality: "native-layer-id", items: [{ nativeLayerId: 2, layerIndex: 1, selectedOrder: 0, matchName: "ADBE AV Layer", type: "AVLayer" }] } }; let snapshot = tierOne; if (request.tier === 3) snapshot = { hostInstanceId, hostReloadEpoch: 1, tier: 3, projectGeneration: 1, sampleTime: 0, targets: request.scope.targets.map((target, index) => ({ targetOrdinal: index, nativeLayerId: target.nativeLayerId, layerIndex: target.layerIndex, propertyPath: target.propertyPath, propertyMatchName: "ADBE Opacity", value: { kind: "number", data: 57.5 } })) }; return JSON.stringify({ protocol: "vela.host-context-result.v1", schemaVersion: "1.0", requestId: request.requestId, sessionId: request.sessionId, operation: request.operation, ok: true, hostAdapterRevision: "vela-context-host-v4", snapshot }); }
+function hostError(request, code, reason) { const error = { code, message: "bounded" }; if (reason) error.reason = reason; return JSON.stringify({ protocol: "vela.host-context-result.v1", schemaVersion: "1.0", requestId: request.requestId, sessionId: request.sessionId, operation: request.operation, ok: false, hostAdapterRevision: "vela-context-host-v4", error }); }
 function deferred() { let resolve; let reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
 async function flush() { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); }
 function observedControllerModule(observed, options) {
@@ -42,7 +43,8 @@ function observedControllerModule(observed, options) {
         createLocalOpenAICompatibleProvider(config) {
             observed.events.push("provider:" + config.requestProfile);
             observed.providerProfiles.push(config.requestProfile);
-            return adapterModule.createLocalOpenAICompatibleProvider(config);
+            const provider = adapterModule.createLocalOpenAICompatibleProvider(config);
+            return Object.freeze({ start(input) { observed.providerInputs.push(input); return provider.start(input); }, cancel(requestId) { return provider.cancel(requestId); }, getState() { return provider.getState(); }, getDiagnostics() { return provider.getDiagnostics(); } });
         }
     });
     const intentFacade = Object.freeze({
@@ -78,7 +80,7 @@ function observedControllerModule(observed, options) {
 }
 function observedHarness(options) {
     options = options || {};
-    const observed = { events: [], classifyInputs: [], providerProfiles: [], intentInputs: [], hostCalls: [], transportBodies: [] };
+    const observed = { events: [], classifyInputs: [], providerProfiles: [], providerInputs: [], intentInputs: [], hostCalls: [], transportBodies: [] };
     const observedModule = observedControllerModule(observed, options);
     const p = protocol();
     const context = contextModule.createContextApi(p);
@@ -90,8 +92,9 @@ function observedHarness(options) {
             const request = decode(source);
             observed.events.push("capture:" + request.tier);
             observed.hostCalls.push(request);
+            if (options.hostThrow) throw new Error("Host transport unavailable");
             if (options.deferHost) pendingHost.push({ request, callback });
-            else callback(hostResult(request));
+            else callback(typeof options.hostResponse === "function" ? options.hostResponse(request, observed.hostCalls.length) : hostResult(request));
         },
         runtime: { setTimeout, clearTimeout, timeoutMs: 1000 }
     });
@@ -135,6 +138,27 @@ function runtimeDeferredHarness() {
 }
 async function runRequestProfileLifecycleTests() {
     const endpoint = "http://127.0.0.1:1234/v1/chat/completions";
+    const cold = observedHarness({ responseKind: () => "text", hostResponse: (request) => hostError(request, "HOST_CONTEXT_UNAVAILABLE", "no-actionable-target") });
+    const coldFirst = await cold.controller.send({ message: "ordinary cold question", endpoint, model: "m" });
+    const coldSecond = await cold.controller.send({ message: "ordinary cold follow-up", endpoint, model: "m" });
+    check(coldFirst.state === "completed" && coldFirst.text === "safe" && coldSecond.state === "completed" && cold.observed.transportBodies.length === 2, "Fresh Context-unavailable runtime sends two ordinary Provider requests and completes both text responses.");
+    check(cold.observed.providerInputs.length === 2 && cold.observed.providerInputs.every((input) => input.context.tier === 0 && /^provider-context-unavailable-/.test(input.context.contextId) && input.messages[0].content.includes("active composition type none") && input.messages[0].content.includes("selected layers 0") && input.messages[0].content.includes("opacity unavailable")), "Each cold request carries the existing explicit identity-free unavailable projection instead of failing before Provider start.");
+    check(cold.observed.providerInputs[0].context.contextId !== cold.observed.providerInputs[1].context.contextId && cold.observed.providerInputs[0].context.fingerprint !== cold.observed.providerInputs[1].context.fingerprint, "Consecutive unavailable requests receive isolated request generations and never share Context correlation.");
+    const hostTransportFailure = observedHarness({ responseKind: () => "text", hostThrow: true });
+    const hostTransportState = await hostTransportFailure.controller.send({ message: "transport failure", endpoint, model: "m" });
+    check(hostTransportState.state === "failed" && hostTransportState.errorCode === "RUNTIME_CAPABILITY_UNAVAILABLE" && hostTransportFailure.observed.transportBodies.length === 0 && hostTransportFailure.observed.providerInputs.length === 0, "A Host transport failure fails closed before Provider invocation and is never projected as zero selection.");
+    const malformedHost = observedHarness({ responseKind: () => "text", hostResponse: () => "not-json" });
+    const malformedState = await malformedHost.controller.send({ message: "malformed host", endpoint, model: "m" });
+    check(malformedState.state === "failed" && malformedState.errorCode === "SCHEMA_VALIDATION_FAILED" && malformedHost.observed.transportBodies.length === 0 && malformedHost.observed.providerInputs.length === 0, "A malformed Host response fails closed before Provider invocation and is never projected as zero selection.");
+    const facadeUnavailable = observedHarness({ responseKind: () => "text", hostResponse: (request) => hostError(request, "HOST_CONTEXT_UNAVAILABLE") });
+    const facadeUnavailableState = await facadeUnavailable.controller.send({ message: "facade unavailable", endpoint, model: "m" });
+    check(facadeUnavailableState.state === "failed" && facadeUnavailableState.errorCode === "RUNTIME_CAPABILITY_UNAVAILABLE" && facadeUnavailable.observed.transportBodies.length === 0 && facadeUnavailable.observed.providerInputs.length === 0, "An unclassified Host infrastructure unavailable error fails closed instead of taking the benign unavailable projection.");
+    let warmedUnavailable = false;
+    const warmed = observedHarness({ responseKind: () => "text", hostResponse: (request) => warmedUnavailable && request.operation === "captureContext" ? hostError(request, "HOST_CONTEXT_UNAVAILABLE", "no-actionable-target") : hostResult(request) });
+    const warmedFirst = await warmed.controller.send({ message: "selected question", endpoint, model: "m" }); warmedUnavailable = true;
+    const warmedSecond = await warmed.controller.send({ message: "after deselection", endpoint, model: "m" });
+    check(warmedFirst.state === "completed" && warmedSecond.state === "completed" && warmed.observed.transportBodies.length === 2, "A warmed request followed by current Context unavailability behaves like a fresh unavailable request.");
+    check(warmed.observed.providerInputs[0].context.tier === 1 && warmed.observed.providerInputs[1].context.tier === 0 && warmed.observed.providerInputs[0].context.contextId !== warmed.observed.providerInputs[1].context.contextId && warmed.observed.providerInputs[0].context.fingerprint !== warmed.observed.providerInputs[1].context.fingerprint && !/layerId|nativeLayerId|propertyPath/.test(JSON.stringify(warmed.observed.providerInputs[1])), "Deselection never reuses the warmed target identity, fingerprint, or execution authority.");
     const isolated = observedHarness();
     const messages = ["hello", "Set opacity to 50%", "hello again"];
     const states = [];
@@ -152,14 +176,14 @@ async function runRequestProfileLifecycleTests() {
         check(!/layerId|compId|propertyPath|contextId|fingerprint|nativeLayerId|nonce|digest|callback|execution authority/i.test(body.messages[0].content), "Profile Prompt contains no Context identity or execution authority.");
     });
     const proposalPort = isolated.observedModule.createProposalPort(isolated.controller, isolated.p);
-    await assert.rejects(Promise.resolve().then(() => proposalPort.consume()), (error) => error.code === isolated.p.ERROR_CODES.CANDIDATE_NOT_FOUND); assertions += 1;
+    await assert.rejects(Promise.resolve().then(() => proposalPort.beginReview()), (error) => error.code === isolated.p.ERROR_CODES.CANDIDATE_NOT_FOUND); assertions += 1;
     check(isolated.controller.getUiState().proposalCapabilityId === null, "A later text generation clears the prior active proposal without retaining Profile data.");
 
     const textMismatch = observedHarness({ responseKind: () => "localProposal" });
     const textMismatchState = await textMismatch.controller.send({ message: "hello", endpoint, model: "m" });
     check(textMismatchState.state === "failed" && textMismatchState.errorCode === textMismatch.p.ERROR_CODES.PROVIDER_RESPONSE_INVALID && textMismatch.observed.intentInputs.length === 0 && textMismatchState.proposalCapabilityId === null, "A protocol-valid localProposal on text-only fails locally before Intent Gate and cannot reach proposal-ready.");
     const textMismatchPort = textMismatch.observedModule.createProposalPort(textMismatch.controller, textMismatch.p);
-    await assert.rejects(Promise.resolve().then(() => textMismatchPort.consume()), (error) => error.code === textMismatch.p.ERROR_CODES.CANDIDATE_NOT_FOUND); assertions += 1;
+    await assert.rejects(Promise.resolve().then(() => textMismatchPort.beginReview()), (error) => error.code === textMismatch.p.ERROR_CODES.CANDIDATE_NOT_FOUND); assertions += 1;
 
     const extractionMismatch = observedHarness({ responseKind: () => "text" });
     const extractionMismatchState = await extractionMismatch.controller.send({ message: "Set opacity to 50%", endpoint, model: "m" });
@@ -181,7 +205,9 @@ async function runRequestProfileLifecycleTests() {
     const repeatedFirst = await repeated.controller.send({ message: chineseMessage, endpoint, model: "m" });
     const repeatedFirstRequestId = repeatedFirst.requestId;
     const repeatedPort = repeated.observedModule.createProposalPort(repeated.controller, repeated.p);
-    const repeatedFirstProposal = repeatedPort.consume();
+    const repeatedFirstProposal = repeatedPort.beginReview();
+    check(repeatedFirstProposal.requestId === repeatedFirstRequestId && Number.isInteger(repeatedFirstProposal.generation), "The first proposal is explicitly bound to its Provider request identity.");
+    check(repeatedPort.finalizeReview({ requestId: repeatedFirstProposal.requestId, generation: repeatedFirstProposal.generation, outcome: "completed", errorCode: null }) === true, "The first request transaction is finalized before the next send.");
     const repeatedSecond = await repeated.controller.send({ message: chineseMessage, endpoint, model: "m" });
     check(repeated.observed.classifyInputs.join("|") === chineseMessage + "|" + chineseMessage && repeated.observed.providerProfiles.join("|") === "explicit-edit-eligible|explicit-edit-eligible", "Two identical Chinese turns are independently classified and Profile-bound.");
     check(repeatedFirstRequestId !== repeatedSecond.requestId && repeated.observed.transportBodies[0].response_format.json_schema.schema.properties.requestId.enum[0] === repeatedFirstRequestId && repeated.observed.transportBodies[1].response_format.json_schema.schema.properties.requestId.enum[0] === repeatedSecond.requestId, "Repeated turns receive distinct requestIds bound to their own response schemas.");
@@ -250,19 +276,8 @@ async function runDeferredGroundingTests() {
     check(suspended.transportCalls.length === 0 && suspended.controller.getUiState().state === "idle", "Runtime-equivalent invalidate then suspend prevents a late Tier 3 from transport or UI revival.");
     suspended.bridge.resume(); const resumed = suspended.controller.send({ message: "resume", endpoint, model: "m" }); await flush(); const resumedTier1 = suspended.hostCalls[2]; suspended.resolve(resumedTier1, suspended.tierOne(resumedTier1.request, 1)); await flush(); const resumedTier3 = suspended.hostCalls[3]; suspended.resolve(resumedTier3, suspended.tierThree(resumedTier3.request, 50)); await resumed; await flush();
     check(suspended.transportCalls.length === 1 && suspended.transportCalls[0].messages[1].content.includes("50"), "A new post-resume send uses a fresh capture and completes normally.");
+    const coldCancelled = deferredHarness(); const coldCancelledRequest = coldCancelled.controller.send({ message: "cancel cold context", endpoint, model: "m" }); await flush(); const coldPendingCapture = coldCancelled.hostCalls[0]; check(coldCancelled.controller.cancel({ requestId: null }) === true, "A request may be cancelled while its cold Context capture is pending."); coldCancelled.resolve(coldPendingCapture, hostError(coldPendingCapture.request, "HOST_CONTEXT_UNAVAILABLE", "no-actionable-target")); await coldCancelledRequest; await flush(); check(coldCancelled.transportCalls.length === 0 && coldCancelled.controller.getUiState().state === "cancelled", "Late unavailable Context after cancel cannot trigger the best-effort Provider fallback.");
     const ownership = deferredHarness(); const providerPending = ownership.controller.send({ message: "provider", endpoint, model: "m" }); await flush(); const legacyAttempt = ownership.bridge.beginOwnedCapture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true }); await assert.rejects(legacyAttempt.promise, error => error.code === ownership.p.ERROR_CODES.EXECUTION_BUSY); assertions += 1; check(ownership.bridge.cancelOwnedCapture(legacyAttempt.handle) === false, "A busy legacy attempt receives no owned handle and cannot cancel Provider capture."); ownership.resolve(ownership.hostCalls[0], ownership.tierOne(ownership.hostCalls[0].request, 1)); await flush(); ownership.resolve(ownership.hostCalls[1], ownership.tierThree(ownership.hostCalls[1].request, 25)); await providerPending; await flush(); check(ownership.transportCalls.length === 1, "Provider-owned capture remains valid after a competing legacy Refresh attempt.");
-    const legacyFirst = deferredHarness(); const legacyOwned = legacyFirst.bridge.beginOwnedCapture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true }); const blockedProvider = legacyFirst.controller.send({ message: "blocked", endpoint, model: "m" }); await flush(); check(legacyFirst.hostCalls.length === 1, "A Provider Send does not create a second Bridge while legacy Refresh owns capture."); legacyFirst.resolve(legacyFirst.hostCalls[0], legacyFirst.tierOne(legacyFirst.hostCalls[0].request, 1)); await legacyOwned.promise; await blockedProvider; await flush(); check(legacyFirst.transportCalls.length === 0 && legacyFirst.controller.getUiState().state === "failed", "Provider busy failure neither steals nor cancels the legacy owned capture.");
-    const runtimeProviderOwns = runtimeDeferredHarness(); await runtimeProviderOwns.initialize(); const providerOwnsRequest = runtimeProviderOwns.runtime.sendProviderMessage({ message: "provider", endpoint, model: "m" }); await flush(); const providerOwnedTier1 = runtimeProviderOwns.hostCalls[1]; await assert.rejects(runtimeProviderOwns.runtime.refreshContext(), error => error.code === "EXECUTION_BUSY"); await assert.rejects(runtimeProviderOwns.runtime.refreshContext(), error => error.code === "EXECUTION_BUSY"); assertions += 2;
-    check(runtimeProviderOwns.hostCalls.length === 2 && runtimeProviderOwns.transportCalls.length === 0, "Two real Runtime legacy Refresh calls receive the shared Bridge busy contract without starting another capture or transport.");
-    runtimeProviderOwns.resolve(providerOwnedTier1, runtimeProviderOwns.tierOne(providerOwnedTier1.request)); await flush(); const providerOwnedTier3 = runtimeProviderOwns.hostCalls[2]; runtimeProviderOwns.resolve(providerOwnedTier3, runtimeProviderOwns.tierThree(providerOwnedTier3.request, 25)); const providerOwnsFinal = await providerOwnsRequest; await flush();
-    check(runtimeProviderOwns.hostCalls.length === 3, "Provider ownership collision leaves exactly one initialization, one Tier 1, and one Tier 3 Host call.");
-    check(runtimeProviderOwns.transportCalls.length === 1, "Provider ownership collision reaches Transport exactly once after its own Tier 3 resolves.");
-    check(providerOwnsFinal.state === "completed", "Provider ownership collision preserves a normal completed Provider terminal state.");
-    check(runtimeProviderOwns.transportCalls[0].messages[1].content.includes("25"), "Provider ownership collision preserves the verified Provider opacity in its single request.");
-    const runtimeLegacyOwns = runtimeDeferredHarness(); await runtimeLegacyOwns.initialize(); const legacyRefresh = runtimeLegacyOwns.runtime.refreshContext(); await flush(); const legacyTier1 = runtimeLegacyOwns.hostCalls[1]; const blockedByLegacy = await runtimeLegacyOwns.runtime.sendProviderMessage({ message: "blocked", endpoint, model: "m" }); await flush();
-    check(runtimeLegacyOwns.hostCalls.length === 2 && runtimeLegacyOwns.transportCalls.length === 0 && blockedByLegacy.state === "failed", "A real Provider Send cannot steal a real legacy Refresh handle, start Tier 3, or reach transport while the Bridge is owned.");
-    runtimeLegacyOwns.resolve(legacyTier1, runtimeLegacyOwns.tierOne(legacyTier1.request)); await flush(); const legacyTier3 = runtimeLegacyOwns.hostCalls[2]; runtimeLegacyOwns.resolve(legacyTier3, runtimeLegacyOwns.tierThree(legacyTier3.request, 25)); await legacyRefresh; await flush(); const recoveredProvider = runtimeLegacyOwns.runtime.sendProviderMessage({ message: "recovered", endpoint, model: "m" }); await flush(); const recoveredTier1 = runtimeLegacyOwns.hostCalls[3]; runtimeLegacyOwns.resolve(recoveredTier1, runtimeLegacyOwns.tierOne(recoveredTier1.request)); await flush(); const recoveredTier3 = runtimeLegacyOwns.hostCalls[4]; runtimeLegacyOwns.resolve(recoveredTier3, runtimeLegacyOwns.tierThree(recoveredTier3.request, 57.5)); const recoveredProviderFinal = await recoveredProvider; await flush();
-    check(runtimeLegacyOwns.transportCalls.length === 1 && recoveredProviderFinal.state === "completed" && runtimeLegacyOwns.transportCalls[0].messages[1].content.includes("57.5") && !runtimeLegacyOwns.transportCalls[0].messages[1].content.includes("25"), "After real legacy Refresh releases ownership, a new Provider Send recaptures fresh 57.5 grounding without inheriting legacy data.");
     const disposed = deferredHarness(); const oldRequest = disposed.controller.send({ message: "old", endpoint, model: "m" }); await flush(); disposed.resolve(disposed.hostCalls[0], disposed.tierOne(disposed.hostCalls[0].request, 1)); await flush(); const oldTier3 = disposed.hostCalls[1]; disposed.controller.invalidate("idle"); disposed.resolve(oldTier3, disposed.tierThree(oldTier3.request, 25)); await oldRequest; await flush(); check(disposed.transportCalls.length === 0 && disposed.controller.getUiState().state === "idle", "Runtime disposal's Provider invalidate prevents old Tier 3 completion from transport or revival.");
     const newLifecycle = deferredHarness(); const newRequest = newLifecycle.controller.send({ message: "new", endpoint, model: "m" }); await flush(); newLifecycle.resolve(newLifecycle.hostCalls[0], newLifecycle.tierOne(newLifecycle.hostCalls[0].request, 1)); await flush(); newLifecycle.resolve(newLifecycle.hostCalls[1], newLifecycle.tierThree(newLifecycle.hostCalls[1].request, 100)); await newRequest; await flush(); check(newLifecycle.transportCalls.length === 1 && newLifecycle.transportCalls[0].messages[1].content.includes("100") && !newLifecycle.transportCalls[0].messages[1].content.includes("25"), "A new Controller lifecycle has no old projection, callback, or transport completion inheritance.");
 }

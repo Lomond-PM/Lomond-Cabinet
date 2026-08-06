@@ -192,7 +192,7 @@ The trusted activation policy is owned by `client/js/vela/velaActivationPolicy.j
 - production block reason: `no-qualified-default-model`
 - qualified default model: none
 - formal UI-D2 enabled: false
-- legacy fallback retained: true
+- legacy fallback retained: false
 
 The local Provider is disabled by default. Endpoint and Model ID may persist; acknowledgement, readiness, enablement and authority are session-only and clear on reload. Readiness proves only that a local model instance is loaded; it is not qualification.
 

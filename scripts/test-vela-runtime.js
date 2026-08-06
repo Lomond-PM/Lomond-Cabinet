@@ -56,7 +56,7 @@ function createController(options) {
 async function run() {
     const controller = createController();
     check(Object.isFrozen(controller), "Controller is frozen.");
-    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,approveCandidate,cancelProviderRequest,checkProviderReadiness,createOpacityCandidate,dispose,getConfirmationSurfaceState,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,initialize,refreshContext,rejectActiveCandidate,rejectCandidate,resetSession,resume,reviewProviderProposal,sendProviderMessage,suspend", "Controller exposes only lifecycle and bounded Vela UI methods, including read-only Provider readiness.");
+    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,cancelProviderRequest,checkProviderReadiness,dispose,getConfirmationSurfaceState,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,initialize,rejectActiveCandidate,resetSession,resume,reviewProviderProposal,sendProviderMessage,suspend", "Runtime exposes only Persistent Surface lifecycle, Provider, proposal review, and active confirmation facades.");
     check(controller.cancelProviderRequest.length === 0, "Provider cancellation has no caller-supplied request identifier seam.");
     check(controller.approveActiveCandidate.length === 0 && controller.rejectActiveCandidate.length === 0, "Surface confirmation facades accept no caller-supplied candidate identifier.");
     check(!Object.prototype.hasOwnProperty.call(controller, "getPreflight") && !Object.prototype.hasOwnProperty.call(controller, "getBridge") && !Object.prototype.hasOwnProperty.call(controller, "executeHostRequest"), "Controller does not expose private execution objects.");
@@ -73,9 +73,7 @@ async function run() {
     check(Object.isFrozen(controller.getUiState()) && !Object.prototype.hasOwnProperty.call(controller.getUiState(), "planId") && !Object.prototype.hasOwnProperty.call(controller.getUiState(), "propertyValueDigest"), "UI state is frozen and does not leak private plan or digest data.");
     check(Object.isFrozen(controller.getProviderSurfaceState()) && !Object.prototype.hasOwnProperty.call(controller.getProviderSurfaceState(), "requestId") && !Object.prototype.hasOwnProperty.call(controller.getProviderSurfaceState(), "proposalCapabilityId"), "Provider Surface projection is frozen and excludes request and proposal authority.");
     check(Object.isFrozen(controller.getConfirmationSurfaceState()) && Object.keys(controller.getConfirmationSurfaceState()).sort().join(",") === "beforeValue,errorCode,moduleRevision,proposedValue,state" && !/candidate|target|context|plan|nonce|digest|authority|payload/i.test(Object.keys(controller.getConfirmationSurfaceState()).join(",")), "Confirmation Surface projection is frozen and excludes trusted execution data.");
-    const refreshed = await controller.refreshContext();
-    check(refreshed.state === "ready" && refreshed.beforeValue === 57.5 && refreshed.candidateId === null && !/requestId|layerId|propertyPath/.test(JSON.stringify(refreshed)), "Runtime refresh publishes a bounded two-capture legacy context view without creating execution authority.");
-    check(controller.getConfirmationSurfaceState().state === "idle" && controller.getConfirmationSurfaceState().beforeValue === null && controller.getConfirmationSurfaceState().proposedValue === null, "Legacy refresh context values do not become Surface confirmation data.");
+    check(!Object.prototype.hasOwnProperty.call(controller, "refreshContext") && !Object.prototype.hasOwnProperty.call(controller, "createOpacityCandidate") && !Object.prototype.hasOwnProperty.call(controller, "approveCandidate") && !Object.prototype.hasOwnProperty.call(controller, "rejectCandidate"), "Runtime exposes no legacy/manual Context or candidate facade.");
     await expectCode(controller.approveActiveCandidate(), "CANDIDATE_STATE_INVALID", "Approve facade fails closed without a pending confirmation.");
     await expectCode(controller.rejectActiveCandidate(), "CANDIDATE_STATE_INVALID", "Reject facade fails closed without a pending confirmation.");
     check((await controller.initialize()).state === "ready" && controller.getStatus().state === "ready", "Repeated initialization is idempotent.");
@@ -91,8 +89,8 @@ async function run() {
     check(controller.suspend() === false && controller.resume() === false && controller.resetSession() === false, "Disposed lifecycle calls fail closed.");
 
     const unavailable = createController({ unavailable: true });
-    await expectCode(unavailable.initialize(), "VERIFICATION_UNAVAILABLE", "Host v4 unavailability is bounded and fail closed.");
-    check(unavailable.getStatus().state === "failed" && unavailable.getStatus().lastErrorCode === "VERIFICATION_UNAVAILABLE", "Runtime frozen status retains the raw Host error code for diagnostics while the Surface maps it separately.");
+    await expectCode(unavailable.initialize(), "RUNTIME_CAPABILITY_UNAVAILABLE", "Unclassified Host v4 infrastructure unavailability is bounded and fail closed.");
+    check(unavailable.getStatus().state === "failed" && unavailable.getStatus().lastErrorCode === "RUNTIME_CAPABILITY_UNAVAILABLE", "Runtime frozen status retains the classified infrastructure error code for diagnostics.");
 
     const late = {};
     const pending = createController({ late });

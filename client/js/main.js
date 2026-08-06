@@ -7,8 +7,8 @@
 
     var cs = new CSInterface();
     var velaRuntimeController = null;
-    var velaUiController = null;
-    var velaProviderUiController = null;
+    var velaRuntimeInitTransaction = null;
+    var velaRuntimeLastAttemptCoreGeneration = null;
     var velaSurfaceShell = null;
     var velaSurfaceController = null;
     var velaSurfaceBootstrapState = "idle";
@@ -120,8 +120,6 @@
     if (toolCatalog) {
         toolCatalog.registerSystemSurface({ id: "velaPersistentSurface" });
         toolCatalog.registerSystemSurface({ id: "settings" });
-        toolCatalog.registerLegacyFallback({ id: "vela", titleKey: "vela.title", descriptionKey: "vela.description", selectionMode: "property" });
-        toolCatalog.registerStaticHomeEntry("vela");
     }
     var RegistryToolState = {};
     var RegistrySaveTimers = {};
@@ -134,6 +132,7 @@
     var PanelLifecycleListenersBound = false;
     var panelShuttingDown = false;
     var panelSuspended = false;
+    var panelLifecycleGeneration = 1;
     var selectionPollTimer = null;
     var ThemeSettingsStoreListener = null;
     var ProceduralAppearanceParams = null;
@@ -190,6 +189,22 @@
     function normalizeVelaExperimentalModel(value) { var normalized = typeof value === "string" ? value.replace(/^\s+|\s+$/g, "") : ""; return normalized.length <= 256 ? normalized : ""; }
     function normalizeVelaProviderEndpoint(value) { var normalized = typeof value === "string" ? value.replace(/^\s+|\s+$/g, "") : ""; var match; if (normalized.length > 512) { return ""; } match = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):([1-9][0-9]{0,4})(?:\/|\/v1\/chat\/completions)?$/.exec(normalized); return match && Number(match[2]) <= 65535 ? "http://" + match[1] + ":" + match[2] : normalized; }
     function velaExperimentalStatusKey(state) { var keys = { "experimental-ready": "settings.vela.ready", "checking": "settings.vela.checking", "endpoint-invalid": "settings.vela.endpointInvalid", "readiness-network-failed": "settings.vela.networkFailed", "readiness-http-failed": "settings.vela.httpFailed", "readiness-response-invalid": "settings.vela.responseInvalid", "configured-model-not-found": "settings.vela.modelNotFound", "configured-model-not-loaded": "settings.vela.modelNotLoaded" }; return keys[state] || "settings.vela.disabled"; }
+    function configureVelaExperimentalSession() {
+        if (velaSurfaceController && typeof velaSurfaceController.configureExperimental === "function") {
+            velaSurfaceController.configureExperimental({ endpoint: VelaProviderEndpoint, model: VelaProviderModel, acknowledged: VelaExperimentalAcknowledged });
+        }
+    }
+    function refreshVelaExperimentalSettings(snapshot) {
+        var current = snapshot || (velaSurfaceController && typeof velaSurfaceController.getExperimentalState === "function" ? velaSurfaceController.getExperimentalState() : null);
+        var acknowledgement = byId("velaExperimentalAcknowledgement");
+        var enableButton = byId("velaExperimentalEnable");
+        var disableButton = byId("velaExperimentalDisable");
+        var status = byId("velaExperimentalStatus");
+        if (acknowledgement) { acknowledgement.checked = VelaExperimentalAcknowledged === true; }
+        if (status) { status.textContent = tr(!current && velaRuntimeLastErrorCode ? "vela.surfaceRuntimeUnavailable" : velaExperimentalStatusKey(current && current.state)); }
+        if (enableButton) { enableButton.disabled = !velaSurfaceController || !VelaExperimentalAcknowledged || !VelaProviderEndpoint || !VelaProviderModel || !!(current && (current.enabled || current.state === "checking")); }
+        if (disableButton) { disableButton.disabled = !(current && (current.enabled || current.state === "checking" || current.state === "unavailable")); }
+    }
     var BackgroundEngine = {
         defaults: {
             preset: "blackGold",
@@ -2094,16 +2109,8 @@
         var enableButton;
         var disableButton;
         var status;
-        function configureSession() {
-            if (velaSurfaceController && typeof velaSurfaceController.configureExperimental === "function") { velaSurfaceController.configureExperimental({ endpoint: VelaProviderEndpoint, model: VelaProviderModel, acknowledged: VelaExperimentalAcknowledged }); }
-        }
-        function refreshSession(snapshot) {
-            var current = snapshot || (velaSurfaceController && typeof velaSurfaceController.getExperimentalState === "function" ? velaSurfaceController.getExperimentalState() : null);
-            if (status) { status.textContent = tr(velaExperimentalStatusKey(current && current.state)); }
-            if (enableButton) { enableButton.disabled = !velaSurfaceController || !VelaExperimentalAcknowledged || !VelaProviderEndpoint || !VelaProviderModel || !!(current && (current.enabled || current.state === "checking")); }
-            if (disableButton) { disableButton.disabled = !(current && (current.enabled || current.state === "checking" || current.state === "unavailable")); }
-            if (acknowledgement && current && current.acknowledged === false && VelaExperimentalAcknowledged) { VelaExperimentalAcknowledged = false; acknowledgement.checked = false; }
-        }
+        function configureSession() { configureVelaExperimentalSession(); }
+        function refreshSession(snapshot) { refreshVelaExperimentalSettings(snapshot); }
         function saveModel() {
             VelaProviderModel = normalizeVelaExperimentalModel(input.value);
             input.value = VelaProviderModel;
@@ -2140,14 +2147,14 @@
         input.addEventListener("blur", saveModel);
         fieldRow.controls.appendChild(input);
         mount.appendChild(fieldRow.row);
-        acknowledgement = document.createElement("input"); acknowledgement.type = "checkbox"; acknowledgement.id = "velaExperimentalAcknowledgement"; acknowledgement.checked = false;
+        acknowledgement = document.createElement("input"); acknowledgement.type = "checkbox"; acknowledgement.id = "velaExperimentalAcknowledgement"; acknowledgement.checked = VelaExperimentalAcknowledged === true;
         acknowledgementLabel = document.createElement("label"); acknowledgementLabel.setAttribute("for", acknowledgement.id); acknowledgementLabel.textContent = tr("settings.vela.acknowledgement"); acknowledgementLabel.appendChild(acknowledgement);
         enableButton = document.createElement("button"); enableButton.type = "button"; enableButton.id = "velaExperimentalEnable"; enableButton.className = "panel-button"; enableButton.textContent = tr("settings.vela.enableSession");
         disableButton = document.createElement("button"); disableButton.type = "button"; disableButton.id = "velaExperimentalDisable"; disableButton.className = "panel-button"; disableButton.textContent = tr("settings.vela.disableSession");
         status = document.createElement("p"); status.id = "velaExperimentalStatus"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
-        acknowledgement.addEventListener("change", function () { VelaExperimentalAcknowledged = acknowledgement.checked === true; configureSession(); refreshSession(); });
+        acknowledgement.addEventListener("change", function () { VelaExperimentalAcknowledged = acknowledgement.checked === true; saveSettings(); configureSession(); refreshSession(); });
         enableButton.addEventListener("click", function () { saveEndpoint(); saveModel(); if (velaSurfaceController && typeof velaSurfaceController.enableExperimental === "function") { velaSurfaceController.enableExperimental().then(refreshSession, refreshSession); } });
-        disableButton.addEventListener("click", function () { if (velaSurfaceController && typeof velaSurfaceController.disableExperimental === "function") { velaSurfaceController.disableExperimental(); } VelaExperimentalAcknowledged = false; acknowledgement.checked = false; refreshSession(); });
+        disableButton.addEventListener("click", function () { if (velaSurfaceController && typeof velaSurfaceController.disableExperimental === "function") { velaSurfaceController.disableExperimental(); } refreshSession(); });
         mount.appendChild(acknowledgementLabel); mount.appendChild(enableButton); mount.appendChild(disableButton); mount.appendChild(status);
         configureSession(); refreshSession();
     }
@@ -3452,6 +3459,7 @@
             setStatus(tr("status.ready"), "ok");
         }
         if ((snapshot.state === "ready" || snapshot.state === "degraded") && !panelSuspended) {
+            initializeVelaRuntime(snapshot);
             startSelectionPolling();
             if (isDynamicTool(activeToolId)) {
                 startRegistryStatePolling(toolCatalog.getRegistryTool(activeToolId).definition);
@@ -3476,11 +3484,11 @@
             },
             hostLoadSource: '$.evalFile("' + jsxPath + '")',
             onStateChange: updateCoreBootstrapState,
-            onHostReady: function () {
+            onHostReady: function (snapshot) {
                 if (panelShuttingDown) {
                     return;
                 }
-                initializeVelaRuntime();
+                initializeVelaRuntime(snapshot);
                 refreshSelection();
             },
             onCatalog: function (candidate) {
@@ -3540,26 +3548,84 @@
         }
     }
 
-    function initializeVelaRuntime() {
-        if (panelShuttingDown || velaRuntimeController || !window.VelaCepModuleLoader || typeof window.VelaCepModuleLoader.load !== "function") {
-            return;
+    function disposeVelaRuntimeCandidate(transaction) {
+        if (!transaction || !transaction.candidate || transaction.candidateDisposed) { return false; }
+        transaction.candidateDisposed = true;
+        try { transaction.candidate.dispose(); } catch (ignored) {}
+        return true;
+    }
+
+    function clearVelaRuntimeInitTransaction(transaction) {
+        if (!transaction || velaRuntimeInitTransaction !== transaction) { return false; }
+        velaRuntimeInitTransaction = null;
+        return true;
+    }
+
+    function initializeVelaRuntime(coreSnapshot) {
+        var snapshot = coreSnapshot || coreBootstrapSnapshot;
+        var coreGeneration = snapshot && typeof snapshot.generation === "number" ? snapshot.generation : 0;
+        var committedStatus = velaRuntimeController && typeof velaRuntimeController.getStatus === "function" ? velaRuntimeController.getStatus() : null;
+        var transaction;
+        if (panelShuttingDown || !snapshot || snapshot.hostReady !== true || !window.VelaCepModuleLoader || typeof window.VelaCepModuleLoader.load !== "function") {
+            return null;
         }
-        window.VelaCepModuleLoader.load().then(function () {
-            if (panelShuttingDown || velaRuntimeController || !window.VelaRuntime || typeof window.VelaRuntime.createRuntime !== "function") {
-                return;
+        if (velaRuntimeController && committedStatus && committedStatus.state === "ready" && committedStatus.disposed !== true) {
+            return null;
+        }
+        if (velaRuntimeController) {
+            try { velaRuntimeController.dispose(); } catch (ignoredCommittedRuntime) {}
+            velaRuntimeController = null;
+        }
+        if (velaRuntimeInitTransaction) {
+            if (velaRuntimeInitTransaction.panelGeneration === panelLifecycleGeneration && velaRuntimeInitTransaction.coreGeneration === coreGeneration) {
+                return velaRuntimeInitTransaction.promise;
             }
-            if (!getVelaActivationPolicy()) { throw new Error("VELA_ACTIVATION_POLICY_UNAVAILABLE"); }
-            velaRuntimeController = window.VelaRuntime.createRuntime({ invokeHost: invokeVelaHost });
-            velaRuntimeStatusRevision += 1;
-            return velaRuntimeController.initialize();
+            disposeVelaRuntimeCandidate(velaRuntimeInitTransaction);
+            clearVelaRuntimeInitTransaction(velaRuntimeInitTransaction);
+        }
+        if (velaRuntimeLastAttemptCoreGeneration === coreGeneration) {
+            return null;
+        }
+        velaRuntimeLastAttemptCoreGeneration = coreGeneration;
+        transaction = {
+            panelGeneration: panelLifecycleGeneration,
+            coreGeneration: coreGeneration,
+            candidate: null,
+            candidateDisposed: false,
+            promise: null
+        };
+        velaRuntimeInitTransaction = transaction;
+        transaction.promise = Promise.resolve(window.VelaCepModuleLoader.load()).then(function () {
+            if (panelShuttingDown || velaRuntimeInitTransaction !== transaction || transaction.panelGeneration !== panelLifecycleGeneration || !coreBootstrapSnapshot || coreBootstrapSnapshot.generation !== transaction.coreGeneration || coreBootstrapSnapshot.hostReady !== true || !window.VelaRuntime || typeof window.VelaRuntime.createRuntime !== "function") {
+                throw { code: "LIFECYCLE_BLOCKED" };
+            }
+            if (!getVelaActivationPolicy()) { throw { code: "VELA_ACTIVATION_POLICY_UNAVAILABLE" }; }
+            transaction.candidate = window.VelaRuntime.createRuntime({ invokeHost: invokeVelaHost });
+            return transaction.candidate.initialize();
         }).then(function (result) {
+            if (panelShuttingDown || velaRuntimeInitTransaction !== transaction || transaction.panelGeneration !== panelLifecycleGeneration || !coreBootstrapSnapshot || coreBootstrapSnapshot.generation !== transaction.coreGeneration || coreBootstrapSnapshot.hostReady !== true || !transaction.candidate || transaction.candidate.getStatus().state !== "ready") {
+                throw { code: "LIFECYCLE_BLOCKED" };
+            }
+            velaRuntimeController = transaction.candidate;
+            transaction.candidate = null;
+            clearVelaRuntimeInitTransaction(transaction);
+            velaRuntimeLastErrorCode = null;
             velaRuntimeStatusRevision += 1;
             initializeVelaSurfaceController();
-            if (activeToolId === "vela") {
-                renderVelaDetail();
-            }
+            configureVelaExperimentalSession();
+            refreshVelaExperimentalSettings();
             return result;
-        }, reportVelaRuntimeError);
+        }).then(null, function (error) {
+            var isCurrent = velaRuntimeInitTransaction === transaction;
+            disposeVelaRuntimeCandidate(transaction);
+            if (isCurrent) {
+                clearVelaRuntimeInitTransaction(transaction);
+                reportVelaRuntimeError(error);
+                refreshVelaExperimentalSettings();
+            }
+            return null;
+        });
+        return transaction.promise;
     }
 
     function getVelaSurfaceUiScale() {
@@ -3606,7 +3672,7 @@
                 ComposerView: window.VelaComposerView,
                 ConfirmationView: window.VelaConfirmationView,
                 ActivationPolicy: window.VelaActivationPolicy,
-                onExperimentalStateChange: function (snapshot) { var node = byId("velaExperimentalStatus"); if (node) { node.textContent = tr(velaExperimentalStatusKey(snapshot && snapshot.state)); } },
+                onExperimentalStateChange: refreshVelaExperimentalSettings,
                 provider: {
                     check: function (config) { return velaRuntimeController.checkProviderReadiness(config); },
                     send: function (message) {
@@ -3620,11 +3686,6 @@
                     approve: function () { return velaRuntimeController.approveActiveCandidate(); },
                     reject: function () { return velaRuntimeController.rejectActiveCandidate(); },
                     getState: function () { return velaRuntimeController.getConfirmationSurfaceState(); }
-                },
-                localOpacity: {
-                    refresh: function () { return velaRuntimeController.refreshContext(); },
-                    create: function (input) { return velaRuntimeController.createOpacityCandidate(input); },
-                    getState: function () { return velaRuntimeController.getUiState(); }
                 }
             });
             mounted = controller && controller.mount && controller.mount();
@@ -3634,6 +3695,8 @@
             velaSurfaceController = controller;
             velaSurfaceBootstrapState = "ready";
             velaSurfaceBootstrapRevision += 1;
+            configureVelaExperimentalSession();
+            refreshVelaExperimentalSettings();
         } catch (error) {
             if (controller && typeof controller.dispose === "function") {
                 try { controller.dispose(); } catch (ignored) {}
@@ -7050,66 +7113,6 @@
         renderRegistryToolDetail(entry ? entry.definition : null);
     }
 
-    function renderVelaDetail() {
-        var panel = byId("registryToolPanel");
-        var actions = byId("registryToolActions");
-        function renderState(state) {
-            if (velaUiController) {
-                velaUiController.render(state || (velaRuntimeController && velaRuntimeController.getUiState ? velaRuntimeController.getUiState() : { state: "idle" }));
-            }
-            renderProviderState();
-        }
-        function handleIntent(intent) {
-            var operation;
-            var providerIntent = false;
-            if (panelShuttingDown || !velaRuntimeController || !intent) { return; }
-            if (intent.type === "refresh") { operation = velaRuntimeController.refreshContext(); }
-            else if (intent.type === "proposal") { operation = velaRuntimeController.createOpacityCandidate({ opacity: intent.opacity }); }
-            else if (intent.type === "approve") { operation = velaRuntimeController.approveCandidate({ candidateId: intent.candidateId }); }
-            else if (intent.type === "reject") { operation = velaRuntimeController.rejectCandidate({ candidateId: intent.candidateId }); }
-            else if (intent.type === "provider-send") { providerIntent = true; operation = velaRuntimeController.sendProviderMessage({ message: intent.message, endpoint: intent.endpoint, model: intent.model }); renderProviderState(); }
-            else if (intent.type === "provider-cancel") { velaRuntimeController.cancelProviderRequest({ requestId: intent.requestId }); renderProviderState(); return; }
-            else if (intent.type === "provider-review") { operation = velaRuntimeController.reviewProviderProposal(); }
-            else { return; }
-            setStatus(tr("vela.statusWorking"), "busy", true);
-            operation.then(function (state) {
-                velaRuntimeStatusRevision += 1;
-                if (providerIntent) { renderProviderState(); } else { renderState(state); }
-                setStatus(tr("status.ready"), "ok");
-            }, function (error) {
-                var state = velaRuntimeController && velaRuntimeController.getUiState ? velaRuntimeController.getUiState() : { state: "failed", errorCode: "RUNTIME_CAPABILITY_UNAVAILABLE" };
-                velaRuntimeStatusRevision += 1;
-                if (providerIntent) { renderProviderState(); } else { renderState(state); }
-                setStatus(tr("vela.statusFailed", { code: state.errorCode || (error && error.code) || "RUNTIME_CAPABILITY_UNAVAILABLE" }), "error");
-            });
-        }
-        function renderProviderState() {
-            if (velaProviderUiController) { velaProviderUiController.render(velaRuntimeController && velaRuntimeController.getProviderUiState ? velaRuntimeController.getProviderUiState() : { state: "idle" }); }
-        }
-        if (!panel || !actions) { return; }
-        stopRegistryStatePolling();
-        clearRegistryProceduralPreviewTimer(activeToolId);
-        if (velaUiController) {
-            velaUiController.teardown();
-            velaUiController = null;
-        }
-        if (velaProviderUiController) { velaProviderUiController.teardown(); velaProviderUiController = null; }
-        while (panel.firstChild) { panel.removeChild(panel.firstChild); }
-        while (actions.firstChild) { actions.removeChild(actions.firstChild); }
-        setToolActionsVisible(actions, false);
-        if (!window.VelaUi || typeof window.VelaUi.createVelaUi !== "function") {
-            panel.textContent = tr("vela.runtimeUnavailable");
-            return;
-        }
-        velaUiController = window.VelaUi.createVelaUi({ root: panel, actionsRoot: actions, t: tr, onIntent: handleIntent });
-        setToolActionsVisible(actions, actions.childNodes.length > 0);
-        if (window.VelaProviderUi && typeof window.VelaProviderUi.createProviderUi === "function") {
-            velaProviderUiController = window.VelaProviderUi.createProviderUi({ root: panel, t: tr, onIntent: handleIntent, getModel: function () { return VelaProviderModel; }, saveModel: function (value) { VelaProviderModel = normalizeVelaProviderModel(value); saveSettings(); return VelaProviderModel; } });
-        }
-        renderState(velaRuntimeController && velaRuntimeController.getUiState ? velaRuntimeController.getUiState() : { state: "idle" });
-        renderProviderState();
-    }
-
     function configureToolDetail(toolId) {
         var route = toolCatalog ? toolCatalog.getRoute(toolId) : { kind: "unknown", entry: null };
         var meta = getToolMeta(toolId);
@@ -7117,28 +7120,15 @@
         var actions = document.querySelectorAll(".tool-actions");
         var i;
         var dynamic = route.kind === "registry";
-        var vela = route.kind === "legacy" && toolId === "vela";
         var previousToolId = activeToolId;
 
         activeToolId = toolId || "";
         if (previousToolId && previousToolId !== activeToolId) {
             clearRegistryProceduralPreviewTimer(previousToolId);
         }
-        if (previousToolId === "vela" && !vela) {
-            if (velaUiController) {
-                velaUiController.teardown();
-                velaUiController = null;
-            }
-            if (velaProviderUiController) {
-                velaProviderUiController.teardown();
-                velaProviderUiController = null;
-            }
-        }
         byId("detailHeading").textContent = toolText(meta, "titleKey", "title", tr("app.title"));
 
-        if (vela) {
-            renderVelaDetail();
-        } else if (dynamic) {
+        if (dynamic) {
             renderDynamicToolDetail(activeToolId);
         } else {
             stopRegistryStatePolling();
@@ -7149,10 +7139,10 @@
         }
 
         for (i = 0; i < panels.length; i++) {
-            panels[i].classList.toggle("is-active", panels[i].getAttribute("data-tool-panel") === (dynamic || vela ? "__dynamic" : activeToolId));
+            panels[i].classList.toggle("is-active", panels[i].getAttribute("data-tool-panel") === (dynamic ? "__dynamic" : activeToolId));
         }
         for (i = 0; i < actions.length; i++) {
-            actions[i].classList.toggle("is-active", actions[i].getAttribute("data-tool-actions") === (dynamic || vela ? "__dynamic" : activeToolId));
+            actions[i].classList.toggle("is-active", actions[i].getAttribute("data-tool-actions") === (dynamic ? "__dynamic" : activeToolId));
         }
     }
 
@@ -7326,11 +7316,6 @@
         }
 
         clearRegistryProceduralPreviewTimer(activeToolId);
-        if (activeToolId === "vela" && velaUiController) {
-            velaUiController.teardown();
-            velaUiController = null;
-        }
-        if (activeToolId === "vela" && velaProviderUiController) { velaProviderUiController.teardown(); velaProviderUiController = null; }
         beginAnimation();
         exitDetailContent(function () {
             iconRect = getHomeToolIconRect(toolButton);
@@ -8111,9 +8096,6 @@
 
     function suspendPanelRuntime() {
         panelSuspended = true;
-        if (velaUiController && typeof velaUiController.resetTransientState === "function") {
-            velaUiController.resetTransientState();
-        }
         if (velaSurfaceController) {
             velaSurfaceController.suspend();
         }
@@ -8160,8 +8142,15 @@
         }
         lifecycleDebug("panel close start");
         panelShuttingDown = true;
+        panelLifecycleGeneration += 1;
+        if (velaRuntimeInitTransaction) {
+            disposeVelaRuntimeCandidate(velaRuntimeInitTransaction);
+            clearVelaRuntimeInitTransaction(velaRuntimeInitTransaction);
+        }
+        velaRuntimeLastAttemptCoreGeneration = null;
         if (coreBootstrapController) {
             coreBootstrapController.shutdown();
+            coreBootstrapController = null;
         }
         if (velaSurfaceController) {
             velaSurfaceController.dispose();
@@ -8200,13 +8189,29 @@
         }
         closeRegistryColorPicker();
         cleanupTransientUiState();
+        refreshVelaExperimentalSettings();
+    }
+
+    function recoverPanelRuntime() {
+        if (!panelShuttingDown) { resumePanelRuntime(); return false; }
+        panelLifecycleGeneration += 1;
+        panelShuttingDown = false;
+        panelSuspended = false;
+        hostLoaded = false;
+        coreBootstrapSnapshot = null;
+        velaRuntimeLastErrorCode = null;
+        velaSurfaceBootstrapState = "idle";
+        initializeVelaSurface();
+        refreshVelaExperimentalSettings();
+        loadHost();
+        return true;
     }
 
     function handleVisibilityChange() {
         if (document.hidden) {
             suspendPanelRuntime();
         } else {
-            resumePanelRuntime();
+            recoverPanelRuntime();
         }
     }
 
@@ -8217,6 +8222,7 @@
         PanelLifecycleListenersBound = true;
         document.addEventListener("visibilitychange", handleVisibilityChange);
         window.addEventListener("pagehide", shutdownPanelRuntime);
+        window.addEventListener("pageshow", recoverPanelRuntime);
         window.addEventListener("beforeunload", shutdownPanelRuntime);
         window.addEventListener("unload", shutdownPanelRuntime);
     }
@@ -8667,6 +8673,7 @@
             toolIconDarkPaletteId: byId("toolIconDarkPaletteId") ? String(byId("toolIconDarkPaletteId").value || "") : DefaultSettings.toolIconDarkPaletteId,
             velaProviderModel: VelaProviderModel,
             velaProviderEndpoint: VelaProviderEndpoint,
+            velaExperimentalAcknowledged: VelaExperimentalAcknowledged === true,
             proceduralParams: collectProceduralAppearanceParamsFromControls(),
             homeIconRadius: byId("homeIconRadiusNumber") ? clampNumber(byId("homeIconRadiusNumber").value, DefaultSettings.homeIconRadius, 18, 40) : DefaultSettings.homeIconRadius,
             homeDragShadowIntensity: byId("homeDragShadowIntensityNumber") ? clampNumber(byId("homeDragShadowIntensityNumber").value, DefaultSettings.homeDragShadowIntensity, 0, 1.5) : DefaultSettings.homeDragShadowIntensity,
@@ -8684,10 +8691,12 @@
         var speed = clampNumber(data.motionSpeed, DefaultSettings.motionSpeed, 0.75, 1.35);
         VelaProviderModel = typeof data.velaProviderModel === "string" ? normalizeVelaExperimentalModel(data.velaProviderModel) : DefaultSettings.velaProviderModel;
         VelaProviderEndpoint = typeof data.velaProviderEndpoint === "string" ? normalizeVelaProviderEndpoint(data.velaProviderEndpoint) : DefaultSettings.velaProviderEndpoint;
+        VelaExperimentalAcknowledged = data.velaExperimentalAcknowledged === true;
         if (byId("velaProviderModel")) {
             byId("velaProviderModel").value = VelaProviderModel;
         }
         if (byId("velaProviderEndpoint")) { byId("velaProviderEndpoint").value = VelaProviderEndpoint; }
+        refreshVelaExperimentalSettings();
         byId("motionSpeed").value = speed;
         byId("motionSpeedNumber").value = speed;
         motionScale = speed;
