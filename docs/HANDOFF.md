@@ -30,7 +30,7 @@ Vela remains experimental:
 - loopback endpoints only;
 - no qualified/recommended/default model;
 - production activation locked;
-- legacy Vela fallback retained.
+- Vela Persistent Surface is the only Vela entry; the legacy fallback is retired.
 
 ## Source of truth and junction setup
 
@@ -304,5 +304,5 @@ Do not describe these as unfinished D-phase tasks.
 - Provider remains disabled by default;
 - explicit session opt-in can reach readiness;
 - reload clears acknowledgement/readiness/enablement;
-- legacy Vela fallback opens;
+- Vela Persistent Surface mounts without a legacy Home/detail fallback;
 - no new console/bootstrap/controller errors appear.

@@ -33,12 +33,8 @@
     function createCatalog() {
         var registry = {};
         var registryOrder = [];
-        var legacy = {};
-        var legacyOrder = [];
         var systems = {};
         var systemOrder = [];
-        var staticHome = {};
-        var staticHomeOrder = [];
         var diagnostics = [];
 
         function diagnose(code, id) {
@@ -82,7 +78,7 @@
                         diagnose(!validId(id) ? "REGISTRY_ID_INVALID" : "REGISTRY_ID_DUPLICATE", id);
                         return false;
                     }
-                    next[id] = createEntry("registry", definition, staticHome[id] ? "static" : "dynamic");
+                    next[id] = createEntry("registry", definition, "dynamic");
                     ids[ids.length] = id;
                 }
             } else {
@@ -93,7 +89,7 @@
                         diagnose(Object.prototype.hasOwnProperty.call(next, id) ? "REGISTRY_ID_DUPLICATE" : "REGISTRY_ID_INVALID", id);
                         return false;
                     }
-                    next[id] = createEntry("registry", definition, staticHome[id] ? "static" : "dynamic");
+                    next[id] = createEntry("registry", definition, "dynamic");
                 }
             }
             if (!ids.length) {
@@ -108,46 +104,22 @@
             return true;
         }
 
-        function registerStaticHomeEntry(id) {
-            if (!validId(id)) {
-                diagnose("HOME_ID_INVALID", id);
-                return false;
-            }
-            if (staticHome[id]) {
-                diagnose("HOME_ID_DUPLICATE", id);
-                return false;
-            }
-            staticHome[id] = true;
-            staticHomeOrder[staticHomeOrder.length] = id;
-            return true;
-        }
-
         function getRegistryTool(id) {
             return registry[id] || null;
-        }
-
-        function getLegacyFallback(id) {
-            return legacy[id] || null;
         }
 
         function getSystemSurface(id) {
             return systems[id] || null;
         }
 
-        function getTool(id) {
-            return getRegistryTool(id) || getLegacyFallback(id);
-        }
-
         function getDisplayMetadata(id) {
-            var entry = getTool(id);
+            var entry = getRegistryTool(id);
             return entry ? entry.definition : null;
         }
 
         function getRoute(id) {
             var entry = getRegistryTool(id);
             if (entry) return freeze({ kind: "registry", entry: entry });
-            entry = getLegacyFallback(id);
-            if (entry) return freeze({ kind: "legacy", entry: entry });
             entry = getSystemSurface(id);
             if (entry) return freeze({ kind: "system", entry: entry });
             return freeze({ kind: "unknown", entry: null });
@@ -157,29 +129,17 @@
             options = options || {};
             var developerMode = options.developerMode === true;
             var entries = [];
-            var seen = {};
             var i;
             var id;
-            var entry;
 
-            function append(candidate, ownership) {
-                if (!candidate || seen[candidate.id] || candidate.definition.hidden === true || (!developerMode && isDeveloperDefinition(candidate.definition))) return;
-                seen[candidate.id] = true;
-                entries[entries.length] = freeze({ id: candidate.id, kind: candidate.kind, definition: candidate.definition, homeOwnership: ownership });
+            function append(candidate) {
+                if (!candidate || candidate.definition.hidden === true || (!developerMode && isDeveloperDefinition(candidate.definition))) return;
+                entries[entries.length] = freeze({ id: candidate.id, kind: candidate.kind, definition: candidate.definition, homeOwnership: "dynamic" });
             }
 
-            for (i = 0; i < staticHomeOrder.length; i++) {
-                id = staticHomeOrder[i];
-                entry = getTool(id);
-                if (entry) append(entry, entry.kind === "legacy" ? "legacy" : "static");
-            }
             for (i = 0; i < registryOrder.length; i++) {
                 id = registryOrder[i];
-                append(registry[id], staticHome[id] ? "static" : "dynamic");
-            }
-            for (i = 0; i < legacyOrder.length; i++) {
-                id = legacyOrder[i];
-                if (!registry[id]) append(legacy[id], staticHome[id] ? "legacy" : "legacy");
+                append(registry[id]);
             }
             return applyHomeOrder(entries, options.homeOrder || []);
         }
@@ -215,27 +175,20 @@
             }
             return freeze({
                 registryTools: freeze(registryOrder.map(function (id) { return describe(registry[id]); })),
-                legacyFallbacks: freeze(legacyOrder.map(function (id) { return describe(legacy[id]); })),
                 systemSurfaces: freeze(systemOrder.map(function (id) { return describe(systems[id]); })),
-                staticHomeIds: freeze(staticHomeOrder.slice(0)),
                 diagnostics: freeze(diagnostics.slice(0))
             });
         }
 
         return freeze({
             setRegistryTools: setRegistryTools,
-            registerLegacyFallback: function (definition) { return register(legacy, legacyOrder, "legacy", definition); },
             registerSystemSurface: function (definition) { return register(systems, systemOrder, "system", definition); },
-            registerStaticHomeEntry: registerStaticHomeEntry,
-            getTool: getTool,
             getRegistryTool: getRegistryTool,
-            getLegacyFallback: getLegacyFallback,
             getSystemSurface: getSystemSurface,
             getDisplayMetadata: getDisplayMetadata,
             getRoute: getRoute,
             getHomeEntries: getHomeEntries,
             applyHomeOrder: applyHomeOrder,
-            hasTool: function (id) { return !!getTool(id); },
             getSnapshot: getSnapshot
         });
     }

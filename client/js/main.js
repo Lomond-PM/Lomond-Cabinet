@@ -4136,7 +4136,7 @@
     }
 
     function getActiveToolButton() {
-        return HomeLayoutManager.getButtonByToolId(activeToolId) || byId("openShapeAddTool");
+        return HomeLayoutManager.getButtonByToolId(activeToolId);
     }
 
     function dynamicFieldId(toolId, key) {

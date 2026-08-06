@@ -173,7 +173,7 @@ Stable seed inputs:
 
 - Primary: registry tool id, for example `shapeAdd`, `textBackgroundBox`, `selectionInfo`, `ecommerceLayout`.
 - Optional namespace: `LomondCabinet.icon.v1`.
-- Optional fallback for static entries: stable Home tool id.
+- Home icon identity uses the stable Registry tool id; disabled placeholders are not Catalog tools.
 
 Do not include:
 
