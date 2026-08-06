@@ -2198,7 +2198,6 @@ p {
     line-height: 1;
 }
 
-.commerce-glyph,
 .shape-add-glyph {
     color: var(--tool-icon-line);
     font-size: calc(28px * var(--ui-scale));
@@ -3495,32 +3494,6 @@ p {
 
 .registry-schema-field.is-registry-hidden {
     display: none;
-}
-
-.vela-tool-icon {
-    border-color: var(--gold-soft);
-    background: rgba(214, 178, 94, 0.18);
-}
-
-.vela-panel {
-    display: flex;
-    flex-direction: column;
-    gap: calc(10px * var(--ui-scale));
-}
-
-.vela-context-summary,
-.vela-review-card {
-    display: flex;
-    flex-direction: column;
-    gap: calc(6px * var(--ui-scale));
-}
-
-.vela-review-card[hidden] {
-    display: none;
-}
-
-.vela-opacity-input {
-    max-width: calc(130px * var(--ui-scale));
 }
 
 .registry-button-row {

@@ -206,7 +206,7 @@ experimentalOptInAllowed = true
 productionEnabled = false
 productionBlockReason = no-qualified-default-model
 qualifiedDefaultModelId = null
-legacyFallbackRetained = true
+legacyFallbackRetained = false
 formalUiD2Enabled = false
 ```
 

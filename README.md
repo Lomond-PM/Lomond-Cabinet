@@ -133,7 +133,7 @@ The trusted activation policy keeps:
 - `productionBlockReason = no-qualified-default-model`
 - `qualifiedDefaultModelId = null`
 - `formalUiD2Enabled = false`
-- `legacyFallbackRetained = true`
+- `legacyFallbackRetained = false`
 
 A model proposal cannot execute directly. Explicit opacity edits pass through local request classification, parsing, profile checks, Intent Gate, Review, Confirmation, Preflight, ExecutionAdapter, and Host boundaries. The legacy Vela Tool remains available as a fallback.
 

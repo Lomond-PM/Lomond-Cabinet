@@ -12,7 +12,7 @@ const end = source.indexOf("    function playAnimation(", start);
 let assertions = 0;
 
 function check(value, message) { assertions += 1; assert.ok(value, message); }
-async function flush() { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); }
+async function flush() { for (let index = 0; index < 8; index += 1) await Promise.resolve(); }
 
 function actionSlot() {
     return {
@@ -27,15 +27,24 @@ function harness(options) {
     options = options || {};
     const warnings = [];
     const slot = actionSlot();
-    const calls = { runtimeInitialize: 0, surfaceCreate: 0, surfaceMount: 0, surfaceDispose: 0, renderLegacy: 0, runtimeOptions: null, surfaceOptions: null };
-    const policy = Object.freeze({ releaseMode: "experimental-preview", experimentalOptInAllowed: true, productionEnabled: false, productionBlockReason: "no-qualified-default-model", qualifiedDefaultModelId: null, legacyFallbackRetained: true, formalUiD2Enabled: false });
+    const calls = { runtimeCreate: 0, runtimeInitialize: 0, runtimeDispose: 0, surfaceCreate: 0, surfaceMount: 0, surfaceDispose: 0, runtimeOptions: null, surfaceOptions: null, resolveFirst: null, rejectFirst: null };
+    const policy = Object.freeze({ releaseMode: "experimental-preview", experimentalOptInAllowed: true, productionEnabled: false, productionBlockReason: "no-qualified-default-model", qualifiedDefaultModelId: null, legacyFallbackRetained: false, formalUiD2Enabled: false, moduleRevision: "vela-activation-policy-v2" });
     const activationModule = Object.freeze({ getPolicy() { return policy; }, isTrustedPolicy(value) { return value === policy; } });
-    const runtime = Object.freeze({
-        initialize() { calls.runtimeInitialize += 1; return options.runtimeFailure ? Promise.reject({ code: "RUNTIME_CAPABILITY_UNAVAILABLE" }) : Promise.resolve({ ok: true }); },
-        getStatus() { return Object.freeze({ state: "ready", initialized: true, activationPolicy: policy }); },
-        sendProviderMessage() {}, cancelProviderRequest() {}, getProviderSurfaceState() { return Object.freeze({ state: "idle" }); },
-        reviewProviderProposal() {}, approveActiveCandidate() {}, rejectActiveCandidate() {}, getConfirmationSurfaceState() { return Object.freeze({ state: "idle" }); }
-    });
+    function runtimeCandidate(ordinal) {
+        let disposed = false;
+        return Object.freeze({
+            initialize() {
+                calls.runtimeInitialize += 1;
+                if (options.deferFirst && ordinal === 1) return new Promise((resolve, reject) => { calls.resolveFirst = resolve; calls.rejectFirst = reject; });
+                return options.runtimeFailure && ordinal === 1 ? Promise.reject({ code: "SCHEMA_VALIDATION_FAILED" }) : Promise.resolve({ ok: true });
+            },
+            getStatus() { return Object.freeze({ state: disposed ? "disposed" : "ready", initialized: !disposed, disposed, activationPolicy: policy }); },
+            dispose() { if (disposed) return false; disposed = true; calls.runtimeDispose += 1; return true; },
+            sendProviderMessage() {}, checkProviderReadiness() {}, cancelProviderRequest() {}, getProviderSurfaceState() { return Object.freeze({ state: "idle" }); },
+            reviewProviderProposal() {}, approveActiveCandidate() {}, rejectActiveCandidate() {}, getConfirmationSurfaceState() { return Object.freeze({ state: "idle" }); }
+        });
+    }
+    const runtime = runtimeCandidate(1);
     const controllerModule = {
         create(createOptions) {
             calls.surfaceOptions = createOptions;
@@ -48,6 +57,7 @@ function harness(options) {
                     ["send", "cancel", "review", "approve", "reject"].forEach((name) => slot.appendChild({ type: name }));
                     return true;
                 },
+                configureExperimental() {}, getExperimentalState() { return { state: "disabled", enabled: false }; },
                 dispose() { calls.surfaceDispose += 1; }
             };
         }
@@ -57,6 +67,10 @@ function harness(options) {
         Error,
         console: { warn() { warnings.push(Array.prototype.join.call(arguments, " ")); } },
         panelShuttingDown: false,
+        panelLifecycleGeneration: 1,
+        coreBootstrapSnapshot: { state: "host-ready", generation: 1, hostReady: true },
+        velaRuntimeInitTransaction: null,
+        velaRuntimeLastAttemptCoreGeneration: null,
         velaRuntimeController: null,
         velaSurfaceShell: { getElementsForTest() { return { actionSlot: slot }; } },
         velaSurfaceController: null,
@@ -66,15 +80,18 @@ function harness(options) {
         velaRuntimeLastErrorCode: null,
         activeToolId: "shapeAdd",
         VelaProviderModel: "qwen3.5-4b",
+        VelaProviderEndpoint: "http://127.0.0.1:1234",
+        VelaExperimentalAcknowledged: true,
+        configureVelaExperimentalSession() {},
+        refreshVelaExperimentalSettings() {},
         tr(key) { return key; },
-        invokeVelaHost() {},
-        renderVelaDetail() { calls.renderLegacy += 1; }
+        invokeVelaHost() {}
     };
     context.window = context;
     context.window.VelaCepModuleLoader = { load() { return options.loaderFailure ? Promise.reject({ code: "RUNTIME_CAPABILITY_UNAVAILABLE" }) : Promise.resolve(); } };
     context.window.VelaActivationPolicy = activationModule;
     context.getVelaActivationPolicy = function () { return activationModule.getPolicy(); };
-    context.window.VelaRuntime = { createRuntime(runtimeOptions) { calls.runtimeOptions = runtimeOptions; return runtime; } };
+    context.window.VelaRuntime = { createRuntime(runtimeOptions) { calls.runtimeCreate += 1; calls.runtimeOptions = runtimeOptions; return calls.runtimeCreate === 1 ? runtime : runtimeCandidate(calls.runtimeCreate); } };
     context.window.VelaSurfaceController = controllerModule;
     context.window.VelaPresentationModel = { create() {} };
     context.window.VelaTranscriptView = { create() {} };
@@ -105,8 +122,30 @@ async function run() {
 
     test = harness({ runtimeFailure: true });
     test.context.__testHooks.initializeRuntime(); await flush();
-    check(test.context.__testHooks.runtime() === test.runtime && test.context.__testHooks.runtimeError() === "RUNTIME_CAPABILITY_UNAVAILABLE", "A real Runtime initialization failure remains on the Runtime error boundary.");
+    check(test.context.__testHooks.runtime() === null && test.context.__testHooks.runtimeError() === "SCHEMA_VALIDATION_FAILED" && test.calls.runtimeDispose === 1, "A failed Runtime candidate is disposed and never committed globally.");
     check(test.calls.surfaceCreate === 0 && test.slot.children.length === 0, "A failed Runtime never starts the Surface Controller.");
+    test.context.coreBootstrapSnapshot = { state: "host-ready", generation: 3, hostReady: true };
+    test.context.__testHooks.initializeRuntime(test.context.coreBootstrapSnapshot); await flush();
+    check(test.calls.runtimeCreate === 2 && test.calls.runtimeInitialize === 2 && test.context.__testHooks.runtime() !== null, "A new Core generation retries with a fresh Runtime candidate and commits it after success.");
+    check(test.calls.surfaceCreate === 1 && test.calls.surfaceMount === 1, "A successful retry mounts one Surface Controller without remounting the shell.");
+    test.context.__testHooks.initializeRuntime(test.context.coreBootstrapSnapshot); await flush();
+    check(test.calls.runtimeCreate === 2 && test.calls.surfaceCreate === 1, "Repeated host-ready/ready notifications for one generation do not duplicate Runtime or Surface controllers.");
+
+    test = harness({ deferFirst: true });
+    test.context.__testHooks.initializeRuntime(); await flush();
+    check(test.calls.runtimeCreate === 1 && test.context.__testHooks.runtime() === null, "An initializing candidate remains private until its initialize promise succeeds.");
+    test.context.coreBootstrapSnapshot = { state: "host-ready", generation: 3, hostReady: true };
+    test.context.__testHooks.initializeRuntime(test.context.coreBootstrapSnapshot); await flush();
+    check(test.calls.runtimeDispose === 1 && test.calls.runtimeCreate === 2 && test.context.__testHooks.runtime() !== null, "A newer Core generation disposes the stale candidate and commits a fresh candidate.");
+    test.calls.resolveFirst({ ok: true }); await flush();
+    check(test.calls.runtimeCreate === 2 && test.calls.surfaceCreate === 1 && test.context.__testHooks.runtime().getStatus().state === "ready", "A stale candidate's late success cannot replace or clear the committed Runtime.");
+
+    test = harness({ deferFirst: true });
+    test.context.__testHooks.initializeRuntime(); await flush();
+    test.context.panelShuttingDown = true;
+    test.context.panelLifecycleGeneration = 2;
+    test.calls.resolveFirst({ ok: true }); await flush();
+    check(test.context.__testHooks.runtime() === null && test.calls.runtimeDispose === 1 && test.calls.surfaceCreate === 0, "A candidate completing during shutdown is disposed and cannot commit or mount a Surface Controller.");
 
     test = harness({ surfaceConstructorFailure: true });
     test.context.__testHooks.initializeRuntime(); await flush();

@@ -45,8 +45,10 @@ function success(request, snapshot) {
     return JSON.stringify({ protocol: "vela.host-context-result.v1", schemaVersion: "1.0", requestId: request.requestId, sessionId: request.sessionId, operation: request.operation, ok: true, hostAdapterRevision: "vela-context-host-v4", snapshot });
 }
 
-function hostError(request, code) {
-    return JSON.stringify({ protocol: "vela.host-context-result.v1", schemaVersion: "1.0", requestId: request.requestId, sessionId: request.sessionId, operation: request.operation, ok: false, hostAdapterRevision: "vela-context-host-v4", error: { code, message: "local test error" } });
+function hostError(request, code, reason) {
+    const error = { code, message: "local test error" };
+    if (reason) error.reason = reason;
+    return JSON.stringify({ protocol: "vela.host-context-result.v1", schemaVersion: "1.0", requestId: request.requestId, sessionId: request.sessionId, operation: request.operation, ok: false, hostAdapterRevision: "vela-context-host-v4", error });
 }
 
 function bindingSnapshot(state) {
@@ -104,7 +106,7 @@ function proposal(fingerprint, digest, overrides) {
 
 function makeHarness() {
     const harnessId = ++harnessCount;
-    const state = { hostInstanceId: HOST, hostReloadEpoch: 1, projectGeneration: 3, layerIndex: 3, selectionExtra: false, value: 50, sampleTime: 1, errorCode: null, targetMissing: false, responsePath: null, responseMatchName: null, deferred: false, clockThrowAfter: null };
+    const state = { hostInstanceId: HOST, hostReloadEpoch: 1, projectGeneration: 3, layerIndex: 3, selectionExtra: false, value: 50, sampleTime: 1, errorCode: null, errorReason: null, targetMissing: false, responsePath: null, responseMatchName: null, deferred: false, clockThrowAfter: null };
     const scheduler = makeScheduler();
     const calls = [];
     const callbacks = [];
@@ -120,7 +122,7 @@ function makeHarness() {
             if (state.deferred) return;
             if (request.operation === "captureContext") callback(success(request, bindingSnapshot(state)));
             else if (state.targetMissing) callback(hostError(request, "HOST_CONTEXT_TARGET_NOT_FOUND"));
-            else if (state.errorCode) callback(hostError(request, state.errorCode));
+            else if (state.errorCode) callback(hostError(request, state.errorCode, state.errorReason));
             else callback(success(request, valueSnapshot(request, state)));
         },
         runtime: { setTimeout: scheduler.setTimeout, clearTimeout: scheduler.clearTimeout, timeoutMs: 10 }
@@ -281,9 +283,10 @@ async function run() {
     const unavailablePlan = await seedAndCreate(unavailable);
     await confirm(unavailable, unavailablePlan);
     unavailable.state.errorCode = "HOST_CONTEXT_UNAVAILABLE";
+    unavailable.state.errorReason = "no-active-composition";
     await expectCode(unavailable.preflight.executeStep({ planId: unavailablePlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "Temporary Host unavailability must remain a transient verification failure.");
     check(unavailable.store.getCandidate(unavailablePlan.candidateIds[0]).state === "confirmed" && unavailable.executorCalls === 0, "Temporary Host unavailability must not stale, reserve or execute the candidate.");
-    unavailable.state.errorCode = null;
+    unavailable.state.errorCode = null; unavailable.state.errorReason = null;
     check((await unavailable.preflight.executeStep({ planId: unavailablePlan.planId, stepIndex: 0 })).candidate.state === "consumed", "A candidate must retry successfully after temporary Host recovery.");
 
     const verifier = makeHarness();
