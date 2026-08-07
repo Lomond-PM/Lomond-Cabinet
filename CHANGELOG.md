@@ -12,6 +12,44 @@ This project follows simple semantic versioning for development handoff:
 
 _No unreleased changes._
 
+## [0.3.1] - 2026-08-07
+
+### Vela
+
+- Added the bounded experimental `proposal-capable-union` transition profile for actionable Context, restoring natural-language `set-opacity-v1` proposal reachability while permitting either conversational text or the existing strictly bounded local proposal.
+- Kept mutation authority unchanged: model proposals remain identity-free until trusted Review binding and must still pass Intent Gate, Review, Confirmation, fresh Preflight, Execution Guard, Execution Adapter, and the Host allowlist.
+- Added bounded Provider diagnostics for provisional/final profile, Context eligibility, response schema/type, and Intent Gate outcome without exposing raw messages, Provider responses, or Host identity.
+- Persisted the user's preferred Vela Surface height independently from viewport/UI-scale clamps and Provider session state.
+- Preserved complete conversation history and improved transcript scroll behavior.
+- Completed Wide/Compact/Narrow responsive status presentation, shared status tones, and resize stabilization without expanding Vela beyond Experimental Preview.
+- Expanded the local Provider default/maximum response timeouts and hardened restored-panel Runtime lifecycle recovery.
+
+### Registry and tool architecture
+
+- Added recoverable Core Host/Registry bootstrap and transactional Host Registry publication.
+- Centralized the Tool Catalog boundary, then removed retired generic legacy/static catalog APIs.
+- Completed Registry-owned Home/catalog migration for Ad Component Kit while retaining the compatibility id `ecommerceLayout`.
+- Removed Shape Add compatibility catalog metadata after its Registry-owned path was established.
+- Fixed Registry Renderer empty Action Sheet output and section subheadings.
+- Removed the legacy Vela Home/detail path so the Persistent Surface is the single production entry.
+
+### Grid
+
+- Added strict visual-bounds measurement through `sourcePointToComp()` with all-or-nothing, fail-closed handling for unsupported or unsafe layers.
+- Made Grid Refresh scale-idempotent while preserving Controller transforms.
+- Stabilized the current fixed-cell/unified sizing behavior for supported Text, Shape, Solid, Footage, and Precomp inputs.
+
+### UI
+
+- Completed a narrow semantic-token contract pass for `--text-muted`, shared panel surfaces, text on accent, danger surfaces/borders, and the Settings divider.
+- Preserved existing computed layout and visuals; this is not a complete Design System tokenization.
+
+### Infrastructure and release safety
+
+- Made the generated i18n report guard portable across LF/CRLF worktrees while retaining local hook, consistency, and CI freshness checks.
+- Added and passed the formal 0.3.1 release-readiness suite and AE P0 Release Regression.
+- Expanded bootstrap, lifecycle, restored-panel, Provider, Registry, Grid, and generated-report regression coverage.
+
 ## [0.3.0] - 2026-08-03
 
 ### Added

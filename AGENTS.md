@@ -4,7 +4,7 @@
 
 This repository is **Lomond Cabinet**, an After Effects CEP extension.
 
-- Product version: `0.3.0`
+- Product version: `0.3.1`
 - Published tag: `v0.3.0`
 - Visible panel title: `Lomond Cabinet`
 - Manifest menu name: `AE Toolbox`
@@ -180,9 +180,9 @@ git config core.hooksPath .githooks
 
 The hook checks report freshness only; it does not modify or stage files.
 
-## Vela 0.3.0 boundaries
+## Vela 0.3.1 boundaries
 
-Vela ships in 0.3.0 as an **Experimental Preview**.
+Vela ships in 0.3.1 as an **Experimental Preview**. The bounded `proposal-capable-union` profile is a transition mechanism for text or `set-opacity-v1` proposals when actionable Context exists; it is not autonomous Agent execution.
 
 The trusted activation policy is owned by `client/js/vela/velaActivationPolicy.js` and remains:
 
@@ -257,7 +257,7 @@ AE smoke should verify the active path, not merely file presence. When behavior 
 
 Consult `docs/KNOWN_ISSUES.md` before opportunistic fixes.
 
-Current accepted 0.3.1 work includes cramped narrow-width Vela status/action and experimental Settings presentation; there is no known safety-path impact.
+The accepted 0.3.1 responsive, Grid, Registry/bootstrap, generated-report, lifecycle, and narrow semantic-token work is closed. Do not reopen that scope during post-release work without a new focused regression and explicit authorization. The next development entry is 0.3.2 UI / Design System Foundation.
 
 Other sensitive areas:
 
@@ -270,7 +270,7 @@ Other sensitive areas:
 
 ## Release management
 
-Current published release: `0.3.0`, tag `v0.3.0`.
+Current release version: `0.3.1`. The latest existing published tag remains immutable `v0.3.0` until the reviewed 0.3.1 release commit is merged and tagged.
 
 Future release version changes must keep synchronized:
 
