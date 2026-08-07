@@ -95,7 +95,7 @@ Current production registry tools include:
 
 - **Text Background Box** — creates shape backgrounds behind selected text layers.
 - **Selection Info** — reports active composition and selected-layer information.
-- **Ad Component Kit** — creates and maintains Feature Stack and Icon Grid components. Icon Grid accepts a fully valid selection of unlocked, unparented 2D Text, Shape, Solid, Footage, or Precomp layers with finite visual bounds, zero rotation, and positive scale; it rejects the whole selection instead of skipping invalid layers or guessing coordinates. Its compatibility registry id remains `ecommerceLayout`.
+- **Ad Component Kit** — creates and maintains Feature Stack and Icon Grid components. Icon Grid accepts a fully valid selection of unlocked, unparented 2D Text, Shape, Solid, Footage, or Precomp layers with finite visual bounds, zero rotation, and positive scale; it rejects the whole selection instead of skipping invalid layers or guessing coordinates. Refresh uses member-local visual sizes, is idempotent, and preserves the Controller transform. Its compatibility registry id remains `ecommerceLayout`.
 - **Shape Add / Shape Builder** — adds native shape contents and creates linked Stroke / Fill shape layers.
 
 Developer Mode retains renderer and procedural labs used for regression work. They are hidden in normal Home mode.

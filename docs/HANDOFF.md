@@ -169,7 +169,7 @@ Production tool ids:
 
 Do not rename `ecommerceLayout` without a dedicated storage/Home-order migration. Do not remove retained host modules such as `shapeAdd.jsx` while registry actions still depend on them.
 
-Icon Grid uses a strict all-or-nothing input contract. It supports unlocked, unparented 2D Text, Shape, Solid, Footage, and Precomp layers only when transforms and visual bounds are safe (zero rotation, positive scale, finite source rectangle, and successful `toComp()` for every corner). It rejects 3D, parented, locked, expression-driven, negative-scale, collapsed/continuously rasterized, zero-size, non-finite, and unsupported layers without silently skipping them. Keep the existing fixed-cell algorithm unchanged until the separate final-recentering and Refresh-transform work is undertaken.
+Icon Grid uses a strict all-or-nothing input contract. It supports unlocked, unparented 2D Text, Shape, Solid, Footage, and Precomp layers only when transforms and visual bounds are safe (zero rotation, positive scale, finite source rectangle, and successful `sourcePointToComp()` for every corner). It rejects 3D, parented, locked, expression-driven, negative-scale, collapsed Precomp, zero-size, non-finite, and unsupported layers without silently skipping them; ordinary Shape continuous rasterization remains supported. Refresh measures member-local source bounds with current member Scale, so unchanged inputs are idempotent even when the Controller is moved, rotated, or positively scaled. It does not rewrite member metadata. Keep fixed-cell layout and final visual recentering as separate work.
 
 ### Settings
 
