@@ -75,7 +75,7 @@
         if (!contract || contract.localPolicy.intentValidatorId !== "set-opacity-direct-edit-v1" || capabilityId !== contract.capabilityId) { return result(false, REASONS.UNSUPPORTED_CAPABILITY); }
         if (!isFiniteOpacity(proposedOpacity)) { return result(false, REASONS.INVALID_PROPOSAL); }
         if (hasDisallowedLanguage(message)) { return result(false, REASONS.DISALLOWED_LANGUAGE); }
-        if (!/(?:设置|设为|改为|调整为|调到|改成)/.test(message) && !/\b(?:set|change|adjust)\b/i.test(message)) { return result(false, REASONS.MISSING_ACTION); }
+        if (!/(?:设置|设为|改为|调整为|调整到|调到|改成)/.test(message) && !/\b(?:set|change|adjust)\b/i.test(message)) { return result(false, REASONS.MISSING_ACTION); }
         if (message.indexOf("不透明度") === -1 && !/\bopacity\b/i.test(message)) { return result(false, REASONS.MISSING_PROPERTY); }
         numbers = targetNumbers(message);
         if (numbers.length !== 1) { return result(false, REASONS.TARGET_COUNT); }

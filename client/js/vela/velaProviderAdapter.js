@@ -144,7 +144,7 @@
     var DEFAULT_ENDPOINT = "http://127.0.0.1:1234/v1/chat/completions";
     var PROVIDER_ID = "lmstudio";
     var PROVIDER_KIND = "openai-compatible";
-    var RESPONSE_SCHEMA_IDS = Object.freeze({ TEXT_ONLY: "vela-text-response.v1", EXPLICIT_EDIT_ELIGIBLE: "vela-local-proposal-response.v1" });
+    var RESPONSE_SCHEMA_IDS = Object.freeze({ TEXT_ONLY: "vela-text-response.v1", EXPLICIT_EDIT_ELIGIBLE: "vela-local-proposal-response.v1", PROPOSAL_CAPABLE_UNION: "vela-bounded-union-response.v1" });
     var MODEL_ERROR_NOT_AUTHORIZED = "MODEL_ERROR_NOT_AUTHORIZED";
     var RESPONSE_FORMAT_MODE = "json-schema";
     var LMSTUDIO_TEXT_GENERATION_MAX_CHARS = 1024;
@@ -166,18 +166,20 @@
         var profiles;
         var text;
         var explicit;
+        var union;
         try {
             profiles = Object.getOwnPropertyDescriptor(requestBranchPolicy, "PROFILES");
             if (!profiles || profiles.get || profiles.set || !Object.prototype.hasOwnProperty.call(profiles, "value") || !Object.isFrozen(profiles.value)) { throw new Error(); }
             text = Object.getOwnPropertyDescriptor(profiles.value, "TEXT_ONLY");
             explicit = Object.getOwnPropertyDescriptor(profiles.value, "EXPLICIT_EDIT_ELIGIBLE");
-            if (!text || !explicit || text.get || text.set || explicit.get || explicit.set || text.writable !== false || text.configurable !== false || explicit.writable !== false || explicit.configurable !== false || text.value !== "text-only" || explicit.value !== "explicit-edit-eligible") { throw new Error(); }
+            union = Object.getOwnPropertyDescriptor(profiles.value, "PROPOSAL_CAPABLE_UNION");
+            if (!text || !explicit || !union || text.get || text.set || explicit.get || explicit.set || union.get || union.set || text.writable !== false || text.configurable !== false || explicit.writable !== false || explicit.configurable !== false || union.writable !== false || union.configurable !== false || text.value !== "text-only" || explicit.value !== "explicit-edit-eligible" || union.value !== "proposal-capable-union") { throw new Error(); }
             return profiles.value;
         } catch (error) { throw configFailure(); }
     }
     var REQUEST_PROFILES = getRequestProfiles();
     function assertRequestProfile(value) {
-        if (value !== REQUEST_PROFILES.TEXT_ONLY && value !== REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE) { throw configFailure(); }
+        if (value !== REQUEST_PROFILES.TEXT_ONLY && value !== REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE && value !== REQUEST_PROFILES.PROPOSAL_CAPABLE_UNION) { throw configFailure(); }
         return value;
     }
 
@@ -559,9 +561,9 @@
                     }
                 }
             };
-            var envelope = requestProfile === REQUEST_PROFILES.TEXT_ONLY ? textEnvelope : localProposalEnvelope;
+            var envelope = requestProfile === REQUEST_PROFILES.TEXT_ONLY ? textEnvelope : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? localProposalEnvelope : { oneOf: [textEnvelope, localProposalEnvelope] });
             return protocol.deepFreeze({
-                name: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? "vela_text_response" : "vela_local_proposal_response",
+                name: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? "vela_text_response" : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? "vela_local_proposal_response" : "vela_bounded_union_response"),
                 strict: true,
                 schema: {
                     type: "object",
@@ -610,7 +612,7 @@
                 requestId: requestId,
                 model: model,
                 messages: [{ role: "system", content: systemMessage(requestId) }].concat(messages),
-                responseFormat: { type: "json_object", schemaId: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? RESPONSE_SCHEMA_IDS.TEXT_ONLY : RESPONSE_SCHEMA_IDS.EXPLICIT_EDIT_ELIGIBLE },
+                responseFormat: { type: "json_object", schemaId: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? RESPONSE_SCHEMA_IDS.TEXT_ONLY : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? RESPONSE_SCHEMA_IDS.EXPLICIT_EDIT_ELIGIBLE : RESPONSE_SCHEMA_IDS.PROPOSAL_CAPABLE_UNION) },
                 context: context
             };
             protocol.validateCanonicalRequest(request);

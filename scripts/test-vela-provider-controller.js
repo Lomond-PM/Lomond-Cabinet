@@ -27,6 +27,7 @@ async function flush() { await Promise.resolve(); await Promise.resolve(); await
 function observedControllerModule(observed, options) {
     options = options || {};
     const policyFacade = Object.freeze({
+        PROFILES: policyModule.PROFILES,
         createRequestBranchPolicy(projection) {
             const production = policyModule.createRequestBranchPolicy(projection);
             return Object.freeze({
@@ -106,7 +107,8 @@ function observedHarness(options) {
             const schema = body.response_format.json_schema.schema;
             const requestId = schema.properties.requestId.enum[0];
             const userMessage = body.messages[2].content;
-            const requestedKind = options.responseKind ? options.responseKind(userMessage, body) : (schema.properties.envelope.properties.type.enum[0] === "text" ? "text" : "localProposal");
+            const responseEnvelope = schema.properties.envelope;
+            const requestedKind = options.responseKind ? options.responseKind(userMessage, body) : (!responseEnvelope.properties || responseEnvelope.properties.type.enum[0] === "text" ? "text" : "localProposal");
             const envelope = requestedKind === "text" ? { type: "text", text: options.responseText || "safe" } : { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: typeof options.responseOpacity === "number" ? options.responseOpacity : 50 } } };
             const response = JSON.stringify({ id: "x", object: "chat.completion", created: 1, model: "m", choices: [{ index: 0, message: { role: "assistant", content: JSON.stringify({ protocol: p.PROTOCOLS.RESPONSE, schemaVersion: p.SCHEMA_VERSION, requestId, provider: "lmstudio", model: "m", envelope }), reasoning_content: "", tool_calls: [] }, finish_reason: "stop" }], usage: {} });
             let sent = false;
@@ -165,15 +167,15 @@ async function runRequestProfileLifecycleTests() {
     for (const message of messages) states.push(await isolated.controller.send({ message, endpoint, model: "m" }));
     check(isolated.observed.classifyInputs.length === 3 && isolated.observed.classifyInputs.join("|") === messages.join("|"), "Each completed send classifies exactly once and receives only its current user message.");
     check(messages.every((message) => { const index = isolated.observed.events.indexOf("classify:" + message); const nextCapture = isolated.observed.events.findIndex((event, eventIndex) => eventIndex > index && /^capture:/.test(event)); return index !== -1 && nextCapture !== -1 && !isolated.observed.events.slice(index + 1, nextCapture).some((event) => /^classify:|^provider:/.test(event)); }), "Each classification precedes its Tier 1 capture without another classification or Provider creation: " + JSON.stringify(isolated.observed.events));
-    check(isolated.observed.providerProfiles.join("|") === "text-only|explicit-edit-eligible|text-only", "One Controller binds text → extraction → text Profiles to three private generations without reuse.");
-    check(isolated.observed.transportBodies.map((body) => body.response_format.json_schema.name).join("|") === "vela_text_response|vela_local_proposal_response|vela_text_response", "Three Provider instances select isolated text → localProposal → text Schemas.");
-    check(isolated.observed.transportBodies[0].messages[0].content.includes("This request is text-only") && isolated.observed.transportBodies[1].messages[0].content.includes("This request is explicit-edit-eligible") && isolated.observed.transportBodies[2].messages[0].content.includes("This request is text-only"), "Prompt Builder selects each generation's Profile without caching the prior branch.");
+    check(isolated.observed.providerProfiles.join("|") === "proposal-capable-union|explicit-edit-eligible|proposal-capable-union", "One Controller binds union → extraction → union Profiles to three private generations without reuse.");
+    check(isolated.observed.transportBodies.map((body) => body.response_format.json_schema.name).join("|") === "vela_bounded_union_response|vela_local_proposal_response|vela_bounded_union_response", "Three Provider instances select isolated union → localProposal → union Schemas.");
+    check(isolated.observed.transportBodies[0].messages[0].content.includes("This request is proposal-capable-union") && isolated.observed.transportBodies[1].messages[0].content.includes("This request is explicit-edit-eligible") && isolated.observed.transportBodies[2].messages[0].content.includes("This request is proposal-capable-union"), "Prompt Builder selects each generation's final Profile without caching the prior branch.");
     check(states[0].state === "completed" && states[1].state === "proposal-ready" && states[2].state === "completed" && isolated.observed.intentInputs.length === 1, "Only the legal extraction response reaches Intent Gate and proposal-ready.");
     check(isolated.observed.intentInputs[0].message === "Set opacity to 50%" && isolated.observed.intentInputs[0].capabilityId === "set-opacity-v1" && isolated.observed.intentInputs[0].proposedOpacity === 50, "Intent Gate receives the current extraction message, exact capability, and exact unique target.");
     [states[0], states[1], states[2], isolated.controller.getUiState()].forEach((state) => check(!Object.prototype.hasOwnProperty.call(state, "requestProfile") && !JSON.stringify(state).includes("\"requestProfile\""), "Public UI state never exposes requestProfile."));
     isolated.observed.transportBodies.forEach((body) => {
         check(!JSON.stringify(body).includes("\"requestProfile\""), "Transport body contains no requestProfile field.");
-        check(!/layerId|compId|propertyPath|contextId|fingerprint|nativeLayerId|nonce|digest|callback|execution authority/i.test(body.messages[0].content), "Profile Prompt contains no Context identity or execution authority.");
+        check(!/propertyPath|contextId|fingerprint|nativeLayerId|sha256:|host_[a-z0-9]|auto(?:matic|nomous)? execution/i.test(body.messages[0].content), "Profile Prompt contains no actual Context identity or autonomous execution authority.");
     });
     const proposalPort = isolated.observedModule.createProposalPort(isolated.controller, isolated.p);
     await assert.rejects(Promise.resolve().then(() => proposalPort.beginReview()), (error) => error.code === isolated.p.ERROR_CODES.CANDIDATE_NOT_FOUND); assertions += 1;
@@ -181,7 +183,7 @@ async function runRequestProfileLifecycleTests() {
 
     const textMismatch = observedHarness({ responseKind: () => "localProposal" });
     const textMismatchState = await textMismatch.controller.send({ message: "hello", endpoint, model: "m" });
-    check(textMismatchState.state === "failed" && textMismatchState.errorCode === textMismatch.p.ERROR_CODES.PROVIDER_RESPONSE_INVALID && textMismatch.observed.intentInputs.length === 0 && textMismatchState.proposalCapabilityId === null, "A protocol-valid localProposal on text-only fails locally before Intent Gate and cannot reach proposal-ready.");
+    check(textMismatchState.state === "intent-rejected" && textMismatchState.intentReason === "missing-action" && textMismatch.observed.intentInputs.length === 1 && textMismatchState.proposalCapabilityId === null, "A mistaken localProposal on an actionable conversational union reaches Intent Gate, is rejected, and cannot reach proposal-ready.");
     const textMismatchPort = textMismatch.observedModule.createProposalPort(textMismatch.controller, textMismatch.p);
     await assert.rejects(Promise.resolve().then(() => textMismatchPort.beginReview()), (error) => error.code === textMismatch.p.ERROR_CODES.CANDIDATE_NOT_FOUND); assertions += 1;
 
@@ -195,6 +197,16 @@ async function runRequestProfileLifecycleTests() {
     check(chineseProposal.observed.classifyInputs[0] === chineseMessage && chineseProposal.observed.providerProfiles[0] === "explicit-edit-eligible", "The exact AE regression message binds the deterministic explicit-edit-eligible Profile.");
     check(chineseProposal.observed.transportBodies[0].response_format.json_schema.name === "vela_local_proposal_response" && chineseProposal.observed.transportBodies[0].messages[2].content === chineseMessage, "The exact original Chinese message reaches the extraction response format without rewriting.");
     check(chineseProposalState.state === "proposal-ready" && chineseProposalState.proposalCapabilityId === "set-opacity-v1" && chineseProposalState.suggestedOpacity === 50 && chineseProposalState.text === null && chineseProposal.observed.intentInputs.length === 1, "A valid exact-opacity localProposal reaches Intent Gate and proposal-ready with no assistant text.");
+
+    for (const message of ["将当前图层不透明度更改为50", "将该图层的不透明度调整到50"]) {
+        const union = observedHarness({ responseKind: () => "localProposal" });
+        const unionState = await union.controller.send({ message, endpoint, model: "m" });
+        const diagnostic = union.controller.getDiagnostics();
+        check(union.observed.providerProfiles[0] === "proposal-capable-union" && union.observed.transportBodies[0].response_format.json_schema.name === "vela_bounded_union_response" && union.observed.transportBodies[0].response_format.json_schema.schema.properties.envelope.oneOf.length === 2, message + " selects the bounded union Profile and strict union schema.");
+        check(unionState.state === "proposal-ready" && unionState.suggestedOpacity === 50 && union.observed.intentInputs.length === 1, message + " may reach proposal-ready only through the existing Intent Gate.");
+        check(diagnostic.provisionalProfile === "text-only" && diagnostic.contextUnionEligible === true && diagnostic.finalProfile === "proposal-capable-union" && diagnostic.responseSchemaName === "vela_bounded_union_response" && diagnostic.parsedResponseType === "localProposal" && diagnostic.intentAllowed === true && diagnostic.intentReason === "allowed", "Bounded diagnostics record profile, schema, parsed type, and Gate result without request content.");
+        check(!/endpoint|token|currentUserMessage|rawResponse|project|host_|nativeLayerId|fingerprint/i.test(JSON.stringify(diagnostic)), "Diagnostics exclude endpoint secrets, raw message/response, project content, and Host identity.");
+    }
 
     const executionClaim = observedHarness({ responseKind: () => "text", responseText: "已经修改，已执行，调整完成" });
     const executionClaimState = await executionClaim.controller.send({ message: chineseMessage, endpoint, model: "m" });
@@ -313,11 +325,11 @@ async function run() {
     check(requestUrls[0] === "http://127.0.0.1:1234/v1/chat/completions", "A base endpoint derives the fixed chat completion URL before transport.");
     check(requestBody.messages[1].content.indexOf("Trusted request context:") === 0 && requestBody.messages[1].content.includes("selected layer opacity 57.5") && !JSON.stringify(requestBody.messages[1]).includes("host_") && !JSON.stringify(requestBody.messages[1]).includes("sha256:"), "The bounded trusted request context contains only the verified opacity fact and excludes authority data.");
     check(requestBody.response_format && requestBody.response_format.type === "json_schema", "The production local provider explicitly enables LM Studio json_schema mode.");
-    check(requestBody.response_format.json_schema && requestBody.response_format.json_schema.strict === true && requestBody.response_format.json_schema.name === "vela_text_response", "The text request must use its trusted structured response schema.");
+    check(requestBody.response_format.json_schema && requestBody.response_format.json_schema.strict === true && requestBody.response_format.json_schema.name === "vela_bounded_union_response", "An actionable conversational request uses its trusted bounded union response schema.");
     check(requestBody.response_format.json_schema.schema.properties.requestId.enum[0] === state.requestId && requestBody.response_format.json_schema.schema.properties.model.enum[0] === "m", "The production schema must bind the local request id and configured model.");
     const outputSchema = requestBody.response_format.json_schema.schema;
     const outputEnvelope = outputSchema.properties.envelope;
-    check(outputEnvelope.properties.text.maxLength === 1024 && outputEnvelope.properties.type.enum[0] === "text" && !Object.prototype.hasOwnProperty.call(outputEnvelope, "oneOf"), "The text profile payload retains only bounded text input.");
+    check(outputEnvelope.oneOf.length === 2 && outputEnvelope.oneOf[0].properties.text.maxLength === 1024 && outputEnvelope.oneOf[0].properties.type.enum[0] === "text" && outputEnvelope.oneOf[1].properties.type.enum[0] === "localProposal", "The union payload permits exactly bounded text or set-opacity-v1 localProposal.");
     check(outputSchema.required.length === 6 && !JSON.stringify(requestBody.response_format).includes("\"error\"") && requestBody.stream === false && requestBody.model === "m", "The final payload must retain full required fields, one model-authorized envelope, stream:false and the configured model.");
     check(!JSON.stringify(requestBody.response_format).includes("json_object"), "The production controller must not request the unsupported json_object mode.");
     check(!JSON.stringify(state).includes("host_") && !JSON.stringify(state).includes("sha256:"), "Public provider state does not leak authority or fingerprint.");

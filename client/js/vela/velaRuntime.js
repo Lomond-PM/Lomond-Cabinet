@@ -331,7 +331,8 @@
                 return !!providerController.cancel({ requestId: providerState.requestId });
             } catch (error) { return false; }
         }
-        function getProviderUiState() { return providerController ? providerController.getUiState() : Object.freeze({ state: disposed ? "disposed" : state, requestId: null, text: null, errorCode: lastErrorCode, intentReason: null, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: "vela-provider-controller-v1" }); }
+        function getProviderUiState() { return providerController ? providerController.getUiState() : Object.freeze({ state: disposed ? "disposed" : state, requestId: null, text: null, errorCode: lastErrorCode, intentReason: null, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: "vela-provider-controller-v2" }); }
+        function getProviderDiagnostics() { return providerController && typeof providerController.getDiagnostics === "function" ? providerController.getDiagnostics() : null; }
         function getProviderSurfaceState() {
             var source = getProviderUiState();
             var nextState = source && typeof source.state === "string" ? source.state : "failed";
@@ -346,7 +347,7 @@
             var proposedValue = hasConfirmation && source && typeof source.proposedValue === "number" && isFinite(source.proposedValue) && source.proposedValue >= 0 && source.proposedValue <= 100 ? source.proposedValue : null;
             return Object.freeze({ state: state, beforeValue: beforeValue, proposedValue: proposedValue, errorCode: source && typeof source.errorCode === "string" ? source.errorCode : null, moduleRevision: "vela-confirmation-surface-v1" });
         }
-        return Object.freeze({ initialize: initialize, getStatus: safeStatus, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, approveActiveCandidate: approveActiveCandidate, rejectActiveCandidate: rejectActiveCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, checkProviderReadiness: checkProviderReadiness, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderSurfaceState: getProviderSurfaceState, getConfirmationSurfaceState: getConfirmationSurfaceState });
+        return Object.freeze({ initialize: initialize, getStatus: safeStatus, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, approveActiveCandidate: approveActiveCandidate, rejectActiveCandidate: rejectActiveCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, checkProviderReadiness: checkProviderReadiness, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderDiagnostics: getProviderDiagnostics, getProviderSurfaceState: getProviderSurfaceState, getConfirmationSurfaceState: getConfirmationSurfaceState });
     }
     return Object.freeze({ createRuntime: createRuntime });
 }));

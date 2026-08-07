@@ -23,12 +23,14 @@ function build(modelProjection, requestId, model, profile) { return builder.buil
 const modelProjection = contracts.getModelProjection("set-opacity-v1");
 const prompt = build(modelProjection);
 const extractionPrompt = build(modelProjection, undefined, undefined, requestPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE);
+const unionPrompt = build(modelProjection, undefined, undefined, requestPolicy.PROFILES.PROPOSAL_CAPABLE_UNION);
 check(Object.isFrozen(builder) && builder.MODULE_REVISION === "vela-capability-prompt-builder-v3", "Prompt Builder exports one frozen bounded module.");
-check(typeof prompt === "string" && typeof extractionPrompt === "string" && prompt !== extractionPrompt, "Production projection produces distinct deterministic branch prompts.");
+check(typeof prompt === "string" && typeof extractionPrompt === "string" && typeof unionPrompt === "string" && prompt !== extractionPrompt && unionPrompt !== prompt && unionPrompt !== extractionPrompt, "Production projection produces three distinct deterministic branch prompts.");
 check(prompt.includes("text-only") && !prompt.includes("localProposal envelope; text is invalid"), "Text profile permits only text.");
 check(extractionPrompt.includes("explicit-edit-eligible") && extractionPrompt.includes("localProposal envelope; text is invalid"), "Extraction profile permits only localProposal.");
+check(unionPrompt.includes("proposal-capable-union") && unionPrompt.includes("either a conversational text envelope or one bounded localProposal") && unionPrompt.includes("does not modify After Effects"), "Transition profile permits only bounded text or set-opacity-v1 proposal without execution authority.");
 check(!prompt.includes("localProposal uses") && !extractionPrompt.includes("current-value queries"), "Neither branch prompt carries the other branch policy.");
-for (let index = 0; index < 100; index += 1) { check(build(modelProjection) === prompt && build(modelProjection, undefined, undefined, requestPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE) === extractionPrompt, "Repeated builder calls are deterministic (" + index + ")."); }
+for (let index = 0; index < 100; index += 1) { check(build(modelProjection) === prompt && build(modelProjection, undefined, undefined, requestPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE) === extractionPrompt && build(modelProjection, undefined, undefined, requestPolicy.PROFILES.PROPOSAL_CAPABLE_UNION) === unionPrompt, "Repeated builder calls are deterministic (" + index + ")."); }
 assert.throws(() => { modelProjection.modelPolicy.modelMaySupply[0] = "params.other"; }, TypeError, "Frozen model projections reject caller mutation."); assertions += 1;
 check(build(contracts.getModelProjection("set-opacity-v1")) === prompt, "A rejected caller mutation cannot contaminate a subsequent prompt.");
 check(extractionPrompt.includes('"capabilityId":"set-opacity-v1"') && extractionPrompt.includes('"opacity":57.5'), "The positive example derives the current Contract capability and model-supplied field.");

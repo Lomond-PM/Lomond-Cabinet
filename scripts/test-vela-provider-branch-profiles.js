@@ -13,6 +13,7 @@ const providerAdapter = require("../client/js/vela/velaProviderAdapter");
 
 const ROOT = path.resolve(__dirname, "..");
 const FIXTURE_PATH = path.join(ROOT, "scripts", "fixtures", "vela-capability-contracts", "provider-branch-profiles-v1.json");
+const UNION_FIXTURE_PATH = path.join(ROOT, "scripts", "fixtures", "vela-capability-contracts", "provider-bounded-union-transition-v1.json");
 const C3_FIXTURE_PATH = path.join(ROOT, "scripts", "fixtures", "vela-capability-contracts", "provider-branch-policy-v2.json");
 const C3_FIXTURE_SHA256 = "04e381575a34d0bf83459adab2d609ae5c2a26b9e96d3179ac54c06319958e28";
 const EXPECTED_KEYS = [
@@ -124,6 +125,7 @@ async function capture(profile, fixture) {
 async function run() {
     const fixtureText = fs.readFileSync(FIXTURE_PATH, "utf8");
     const fixture = JSON.parse(fixtureText);
+    const unionFixture = JSON.parse(fs.readFileSync(UNION_FIXTURE_PATH, "utf8"));
     const projection = contracts.getModelProjection("set-opacity-v1");
     equal(Object.keys(fixture).sort().join("|"), EXPECTED_KEYS.slice().sort().join("|"), "Fixture must contain exactly the bounded Profile contract fields.");
     equal(Object.keys(fixture.textOnly).sort().join("|"), PROFILE_KEYS.slice().sort().join("|"), "textOnly contains exactly three SHA fields.");
@@ -131,8 +133,8 @@ async function run() {
     check(!/(?:qualification|caseProfileFingerprint|runsPerCase|operator|endpoint|timestamp|localPath|modelResponse)/i.test(fixtureText), "Fixture excludes qualification, operator, endpoint, timestamp, path, and model-response metadata.");
     equal(fixture.fixtureType, "vela-provider-branch-profiles", "Fixture type is fixed.");
     equal(fixture.schemaRevision, "v1", "Fixture schema revision is fixed.");
-    equal(fixture.promptBuilderRevision, promptBuilder.MODULE_REVISION, "Fixture records production Prompt Builder v3.");
-    equal(fixture.requestBranchPolicyRevision, requestBranchPolicy.MODULE_REVISION, "Fixture records the production Request Branch Policy revision.");
+    equal(fixture.promptBuilderRevision, "vela-capability-prompt-builder-v3", "Historical fixture retains Prompt Builder v3 identity.");
+    equal(fixture.requestBranchPolicyRevision, "vela-provider-request-branch-policy-v1", "Historical fixture retains Request Branch Policy v1 identity.");
     equal(fixture.capabilityId, projection.capabilityId, "Fixture capability id matches production.");
     equal(fixture.capabilityRevision, projection.revision, "Fixture capability revision matches production.");
     equal(fixture.protocolVersion, "vela.model-response.v1", "Fixture Protocol version remains 1.1 response protocol.");
@@ -143,9 +145,12 @@ async function run() {
     const textB = await capture(requestBranchPolicy.PROFILES.TEXT_ONLY, fixture);
     const extractionA = await capture(requestBranchPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE, fixture);
     const extractionB = await capture(requestBranchPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE, fixture);
+    const unionA = await capture(requestBranchPolicy.PROFILES.PROPOSAL_CAPABLE_UNION, fixture);
+    const unionB = await capture(requestBranchPolicy.PROFILES.PROPOSAL_CAPABLE_UNION, fixture);
     if (process.argv.indexOf("--diagnose") !== -1) {
         byteDiagnostics("text-only", textA);
         byteDiagnostics("explicit-edit-eligible", extractionA);
+        byteDiagnostics("proposal-capable-union", unionA);
     }
     [
         [textA, textB, "text-only"],
@@ -170,6 +175,19 @@ async function run() {
     check(textA.prompt !== extractionA.prompt && fixture.textOnly.promptSha256 !== fixture.explicitEditEligible.promptSha256, "Profile Prompt SHA values differ.");
     check(textA.responseFormatBytes !== extractionA.responseFormatBytes && fixture.textOnly.responseFormatSha256 !== fixture.explicitEditEligible.responseFormatSha256, "Profile response_format SHA values differ.");
     check(textA.stableBodyBytes !== extractionA.stableBodyBytes && fixture.textOnly.stableRequestBodySha256 !== fixture.explicitEditEligible.stableRequestBodySha256, "Profile stable body SHA values differ.");
+    equal(unionFixture.fixtureType, "vela-provider-experimental-transition", "Union fixture is isolated from historical qualification evidence.");
+    equal(unionFixture.profile, "proposal-capable-union", "Union fixture freezes the third Profile identity.");
+    equal(unionFixture.qualificationStatus, "experimental-transition", "Union is not marked as a qualified default.");
+    equal(unionFixture.promptBuilderRevision, promptBuilder.MODULE_REVISION, "Union fixture records the current Prompt Builder revision.");
+    equal(unionFixture.requestBranchPolicyRevision, requestBranchPolicy.MODULE_REVISION, "Union fixture records the current Request Branch Policy revision.");
+    equal(unionA.prompt, unionB.prompt, "Union Prompt bytes are deterministic.");
+    equal(unionA.responseFormatBytes, unionB.responseFormatBytes, "Union response_format bytes are deterministic.");
+    equal(unionA.stableBodyBytes, unionB.stableBodyBytes, "Union stable body bytes are deterministic.");
+    equal(sha256(unionA.prompt), unionFixture.promptSha256, "Union Prompt SHA matches its transition fixture.");
+    equal(sha256(unionA.responseFormatBytes), unionFixture.responseFormatSha256, "Union response_format SHA matches its transition fixture.");
+    equal(sha256(unionA.stableBodyBytes), unionFixture.stableRequestBodySha256, "Union stable body SHA matches its transition fixture.");
+    check(containsUnion(unionA.body.response_format) && unionA.body.response_format.json_schema.name === "vela_bounded_union_response", "Union schema alone contains the frozen oneOf transition contract.");
+    assertClosedObjects(unionA.body.response_format);
 
     const textSchema = textA.body.response_format.json_schema.schema;
     const extractionSchema = extractionA.body.response_format.json_schema.schema;

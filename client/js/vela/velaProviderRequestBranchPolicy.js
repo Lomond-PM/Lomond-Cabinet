@@ -27,7 +27,7 @@
     var MODULE_REVISION = "vela-provider-request-branch-policy-v1";
     var CAPABILITY_ID = "set-opacity-v1";
     var CAPABILITY_REVISION = "vela-capability-contract-v1";
-    var PROFILES = Object.freeze({ TEXT_ONLY: "text-only", EXPLICIT_EDIT_ELIGIBLE: "explicit-edit-eligible" });
+    var PROFILES = Object.freeze({ TEXT_ONLY: "text-only", EXPLICIT_EDIT_ELIGIBLE: "explicit-edit-eligible", PROPOSAL_CAPABLE_UNION: "proposal-capable-union" });
     var canonicalProjection = capabilityContracts.getModelProjection(CAPABILITY_ID);
 
     if (!canonicalProjection || !Object.isFrozen(canonicalProjection)) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }

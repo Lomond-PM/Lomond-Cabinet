@@ -47,6 +47,7 @@
         var disposed = false;
         var moduleRevision = null;
         var hostAdapterRevision = null;
+        var providerDiagnostics = null;
         var lastErrorCode = velaRuntimeLastErrorCode;
         try {
             if (velaRuntimeController && typeof velaRuntimeController.getStatus === "function") {
@@ -58,6 +59,9 @@
                 moduleRevision = velaOwnStatusValue(runtimeStatus, "moduleRevision", moduleRevision);
                 hostAdapterRevision = velaOwnStatusValue(runtimeStatus, "hostAdapterRevision", hostAdapterRevision);
                 lastErrorCode = velaOwnStatusValue(runtimeStatus, "lastErrorCode", lastErrorCode);
+                if (typeof velaRuntimeController.getProviderDiagnostics === "function") {
+                    providerDiagnostics = velaRuntimeController.getProviderDiagnostics();
+                }
             }
             if (window.VelaCepModuleLoader && typeof window.VelaCepModuleLoader.getStatus === "function") {
                 loaderStatus = window.VelaCepModuleLoader.getStatus();
@@ -76,6 +80,7 @@
             loaderState: typeof loaderState === "string" ? loaderState : "idle",
             moduleRevision: typeof moduleRevision === "string" ? moduleRevision : null,
             hostAdapterRevision: typeof hostAdapterRevision === "string" ? hostAdapterRevision : null,
+            providerDiagnostics: providerDiagnostics && typeof providerDiagnostics === "object" ? providerDiagnostics : null,
             lastErrorCode: typeof lastErrorCode === "string" ? lastErrorCode : null,
             statusRevision: velaRuntimeStatusRevision
         });
