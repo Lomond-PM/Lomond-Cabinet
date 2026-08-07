@@ -59,10 +59,12 @@ ok(consistency.includes("Run: node scripts/report-i18n-usage.js"), "consistency 
 
 const hookPath = path.join(ROOT, ".githooks", "pre-commit");
 const hook = fs.readFileSync(hookPath, "utf8");
-ok(hook.startsWith("#!/bin/sh\n") && hook.includes("node scripts/report-i18n-usage.js --check"), "pre-commit hook runs the shared check CLI");
+const normalizedHook = Report.normalizeLineEndings(hook);
+ok(normalizedHook.startsWith("#!/bin/sh\n"), "pre-commit hook has a portable shell entrypoint");
+ok(/(?:^|\n)node\s+scripts\/report-i18n-usage\.js\s+--check(?:\s|$)/.test(normalizedHook), "pre-commit hook runs the shared check CLI");
 ok(!/\bgit\s+add\b/.test(hook), "pre-commit hook never stages files");
-ok(/checkout-index[\s\S]*--all[\s\S]*--prefix="\$temp_root\/"/.test(hook), "pre-commit hook exports the complete Git index snapshot");
-ok(/mktemp -d/.test(hook) && /trap cleanup EXIT HUP INT TERM/.test(hook) && /rm -rf "\$temp_root"/.test(hook), "pre-commit hook always cleans its temporary snapshot");
+ok(/checkout-index[\s\S]*--all[\s\S]*--prefix="\$temp_root\/"/.test(normalizedHook), "pre-commit hook exports the complete Git index snapshot");
+ok(/mktemp -d/.test(normalizedHook) && /trap cleanup EXIT HUP INT TERM/.test(normalizedHook) && /rm -rf "\$temp_root"/.test(normalizedHook), "pre-commit hook always cleans its temporary snapshot");
 
 const workflow = fs.readFileSync(path.join(ROOT, ".github", "workflows", "project-checks.yml"), "utf8");
 ok(workflow.includes("- name: Verify generated i18n report") && workflow.includes("run: node scripts/report-i18n-usage.js --check"), "workflow has an explicit read-only report step");
@@ -100,7 +102,11 @@ try {
     git(hookRepo, ["config", "core.hooksPath", ".githooks"]);
 
     fs.writeFileSync(path.join(hookRepo, "source.txt"), "beta\n", "utf8");
+    const staleCli = run(process.execPath, ["scripts/report-i18n-usage.js", "--check"], hookRepo);
+    ok(staleCli.status !== 0, "shared check CLI rejects a stale generated report");
+    equal(fs.readFileSync(path.join(hookRepo, "docs", "reports", "i18n-usage-report.md"), "utf8"), "REPORT:alpha\n", "shared check CLI does not modify a stale report");
     equal(run(process.execPath, ["scripts/report-i18n-usage.js"], hookRepo).status, 0, "fixture generator updates the working-tree report");
+    equal(run(process.execPath, ["scripts/report-i18n-usage.js", "--check"], hookRepo).status, 0, "shared check CLI accepts a fresh generated report");
     git(hookRepo, ["add", "source.txt"]);
     const reportUnstaged = run("git", ["hook", "run", "pre-commit"], hookRepo);
     ok(reportUnstaged.status !== 0, "hook rejects staged source when its generated report is only updated in the working tree");
