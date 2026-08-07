@@ -285,6 +285,8 @@ Accepted 0.3.1 work:
 
 These are presentation issues with no known execution-safety impact.
 
+0.3.1 also permits a narrow semantic-token contract cleanup for explicit muted text and exact-value shared surface, on-accent, danger, and Settings-divider consumers. This is not a visual redesign or a full design-system migration. Keep Settings UI-scale isolation, Vela responsive geometry, and procedural presentation ownership unchanged.
+
 Separate future product decisions:
 
 - new model qualification;

@@ -248,6 +248,8 @@ Accepted 0.3.1 Vela layout work:
 - experimental Settings helper text/actions/readiness can be cramped at narrow widths;
 - no known safety or execution-path impact.
 
+The 0.3.1 UI maintenance scope also includes a narrow semantic-token contract for explicit muted text and proven shared surface, on-accent, danger, and Settings-divider values. It preserves computed values except for replacing the previous undefined `--text-muted` inheritance with the established tertiary text color. Full design-system tokenization is deferred; Settings scale isolation, Vela responsive behavior, and procedural presentation are unchanged.
+
 Other areas to watch:
 
 - Settings Background Engine preset dropdown render/layout issue;
