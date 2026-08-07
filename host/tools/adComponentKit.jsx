@@ -2231,15 +2231,94 @@
         };
     }
 
+    function validateGridRefreshController(ctrl) {
+        var tr;
+        var anchor;
+        var position;
+        var scale;
+        var rotation;
+        try {
+            if (!ctrl || ctrl.threeDLayer || ctrl.parent || ctrl.locked) { return false; }
+            tr = ctrl.property("ADBE Transform Group");
+            anchor = tr && tr.property("ADBE Anchor Point");
+            position = tr && tr.property("ADBE Position");
+            scale = tr && tr.property("ADBE Scale");
+            rotation = tr && tr.property("ADBE Rotate Z");
+            if (!gridPropertyWritable(anchor) || !gridPropertyWritable(position) || !gridPropertyWritable(scale) || !gridPropertyWritable(rotation)) { return false; }
+            if (gridPropertyHasExpression(anchor) || gridPropertyHasExpression(position) || gridPropertyHasExpression(scale) || gridPropertyHasExpression(rotation)) { return false; }
+            if (!gridFinitePoint(anchor.value) || !gridFinitePoint(position.value) || !gridFinitePoint(scale.value) || !gridFiniteNumber(rotation.value)) { return false; }
+            if (scale.value[0] <= 0 || scale.value[1] <= 0) { return false; }
+        } catch (err) {
+            return false;
+        }
+        return true;
+    }
+
+    function getGridRefreshLocalBounds(layer, ctrl, time) {
+        var layerType = classifyGridLayer(layer);
+        var rect = null;
+        var fallback;
+        var tr;
+        var anchor;
+        var position;
+        var scale;
+        var rotation;
+        var width;
+        var height;
+        var centerX;
+        var centerY;
+        try {
+            if (!layer || layer.parent !== ctrl || layer.threeDLayer || layer.locked || layer.nullLayer || layer.adjustmentLayer) {
+                return gridFailure("GRID_UNSUPPORTED_LAYER_TYPE");
+            }
+            if (layerType === "unsupported") { return gridFailure("GRID_UNSUPPORTED_LAYER_TYPE"); }
+            if (layerType === "av" && (layer.collapseTransformation === true || layer.continuouslyRasterize === true)) {
+                return gridFailure("GRID_UNSUPPORTED_LAYER_TYPE");
+            }
+            tr = layer.property("ADBE Transform Group");
+            anchor = tr && tr.property("ADBE Anchor Point");
+            position = tr && tr.property("ADBE Position");
+            scale = tr && tr.property("ADBE Scale");
+            rotation = tr && tr.property("ADBE Rotate Z");
+            if (!gridPropertyWritable(anchor) || !gridPropertyWritable(position) || !gridPropertyWritable(scale) || !gridPropertyWritable(rotation)) { return gridFailure("GRID_TRANSFORM_NOT_WRITABLE"); }
+            if (gridPropertyHasExpression(anchor) || gridPropertyHasExpression(position) || gridPropertyHasExpression(scale) || gridPropertyHasExpression(rotation)) { return gridFailure("GRID_TRANSFORM_EXPRESSION"); }
+            if (!gridFinitePoint(anchor.value) || !gridFinitePoint(position.value) || !gridFinitePoint(scale.value) || !gridFiniteNumber(rotation.value)) { return gridFailure("GRID_TRANSFORM_NOT_WRITABLE"); }
+            if (scale.value[0] <= 0 || scale.value[1] <= 0) { return gridFailure("GRID_UNSUPPORTED_NEGATIVE_SCALE"); }
+            if (Math.abs(rotation.value) > 0.001) { return gridFailure("GRID_UNSUPPORTED_ROTATION"); }
+            if (typeof layer.sourceRectAtTime === "function") { rect = layer.sourceRectAtTime(time, false); }
+        } catch (err) {
+            return gridFailure("GRID_INVALID_SOURCE_BOUNDS");
+        }
+        if (!rect) {
+            if (layerType === "shape" || layerType === "text") { return gridFailure("GRID_INVALID_SOURCE_BOUNDS"); }
+            fallback = gridSourceSizeRect(layer);
+            if (!fallback) { return gridFailure("GRID_INVALID_SOURCE_BOUNDS"); }
+            if (fallback.invalid) { return gridFailure(fallback.invalid); }
+            rect = fallback;
+        }
+        if (!gridFiniteNumber(rect.left) || !gridFiniteNumber(rect.top) || !gridFiniteNumber(rect.width) || !gridFiniteNumber(rect.height)) {
+            return gridFailure("GRID_NON_FINITE_BOUNDS");
+        }
+        if (rect.width <= 0 || rect.height <= 0) { return gridFailure("GRID_ZERO_SIZE_BOUNDS"); }
+        width = rect.width * scale.value[0] / 100;
+        height = rect.height * scale.value[1] / 100;
+        if (!gridFiniteNumber(width) || !gridFiniteNumber(height)) { return gridFailure("GRID_NON_FINITE_BOUNDS"); }
+        if (width <= 0 || height <= 0) { return gridFailure("GRID_ZERO_SIZE_BOUNDS"); }
+        centerX = position.value[0] + (rect.left + rect.width / 2 - anchor.value[0]) * scale.value[0] / 100;
+        centerY = position.value[1] + (rect.top + rect.height / 2 - anchor.value[1]) * scale.value[1] / 100;
+        if (!gridFiniteNumber(centerX) || !gridFiniteNumber(centerY)) { return gridFailure("GRID_NON_FINITE_BOUNDS"); }
+        return { ok: true, bounds: area(centerX - width / 2, centerY - height / 2, centerX + width / 2, centerY + height / 2), scaleX: scale.value[0], scaleY: scale.value[1] };
+    }
+
     function refreshIconGrid(comp, ctrl, data) {
         var layers = componentLayers(comp, data.componentId);
         var items = [];
         var i;
         var item;
-        var b;
-        var scale;
+        var measurement;
         var gridItems = [];
         var p = readIconParams(ctrl);
+        if (!validateGridRefreshController(ctrl)) { throw new Error("GRID_REFRESH_CONTROLLER_UNSUPPORTED"); }
         for (i = 0; i < layers.length; i++) {
             item = layers[i];
             if (item.data.role === "item" || item.data.role === "icon" || item.data.role === "generatedLayer" || item.data.role === "sourceLayerBinding") {
@@ -2255,15 +2334,16 @@
             return 0;
         }
         for (i = 0; i < items.length; i++) {
-            b = getLayerVisualBoundsInComp(items[i], comp.time);
-            scale = getScale2D(items[i]);
+            measurement = getGridRefreshLocalBounds(items[i], ctrl, comp.time);
+            if (!measurement.ok) { throw new Error(measurement.reason); }
             gridItems[gridItems.length] = {
                 layer: items[i],
-                bounds: b,
-                scaleX: scale[0],
-                scaleY: scale[1]
+                bounds: measurement.bounds,
+                scaleX: measurement.scaleX,
+                scaleY: measurement.scaleY
             };
         }
+        sortGridItems(gridItems, p.gridSortMode);
         layoutIconGridLocal(gridItems, p, true);
         return items.length;
     }

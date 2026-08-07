@@ -96,8 +96,8 @@ Current production registry tools:
 - Schema: `host/tools/adComponentKit.tool.jsx`
 - Host behavior: `host/tools/adComponentKit.jsx`
 - Creates Feature Stack and Icon Grid components.
-- Icon Grid now validates the complete selection before input-layer writes. Its 0.3.1 contract supports unlocked, unparented 2D Text/Shape/AV layers with zero rotation, positive uniform or non-uniform scale, finite source bounds, and four successful `toComp()` conversions.
-- Unsupported or unsafe input rejects the entire action with a stable reason; bounds conversion failure is never replaced with layer-space coordinates. Fixed-cell layout remains current behavior; final visual recentering and Refresh transform correction remain deferred.
+- Icon Grid validates the complete selection before input-layer writes. Its 0.3.1 contract supports unlocked, unparented 2D Text/Shape/AV layers with zero rotation, positive uniform or non-uniform scale, finite source bounds, and four successful `sourcePointToComp()` conversions.
+- Unsupported or unsafe input rejects the entire action with a stable reason; bounds conversion failure is never replaced with layer-space coordinates. Refresh derives normalize corrections from member-local source bounds and current member Scale, so repeated Refresh is idempotent and Controller Position/Scale/Rotation remain unchanged. Fixed-cell layout and final visual recentering remain outside this work.
 - New output uses Lomond metadata and signed tool expressions for forward-only cleanup.
 - The `ecommerceLayout` id and `AEToolbox.ecommerceLayout.v1` storage key remain for Home-order/storage compatibility.
 - The removed `host/tools/ecommerceLayout.jsx` module is not an active path.
