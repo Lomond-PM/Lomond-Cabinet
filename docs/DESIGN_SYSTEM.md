@@ -507,3 +507,9 @@ Before the 0.2.3 release, the current design-system-relevant cleanup state is:
 - Color picker updates include axis modes, channel sliders, Hex input select-all, popup flip / clamp positioning, and a Windows-only eyedropper helper MVP.
 - Shape Add native components now use the generic registry section collapse behavior.
 - 0.2.5 procedural appearance is part of the shipped baseline retained in the 0.3.0 release-preparation line; future visual changes should be planned separately from the 0.2.4 baseline notes above.
+
+## 0.3.1 Semantic Token Contract
+
+0.3.1 performs only a narrow semantic-token consolidation: muted text has an explicit tertiary alias, and proven shared panel surfaces, on-accent text, danger presentation, and Settings dividers use named tokens without changing their audited values. Full spacing, typography, radius, shadow, and control-size tokenization remains deferred.
+
+Settings retains its fixed UI-scale isolation, Vela retains its existing Wide / Compact / Narrow responsive geometry, and procedural appearance retains its separate runtime presentation ownership.

@@ -16,6 +16,10 @@
     --text-primary: #f6f0df;
     --text-secondary: rgba(246, 240, 223, 0.66);
     --text-tertiary: rgba(246, 240, 223, 0.42);
+    --text-muted: var(--text-tertiary);
+
+    --surface-panel: #0b0a08;
+    --text-on-accent: #130f08;
 
     --separator: rgba(214, 178, 94, 0.16);
     --panel-border: rgba(214, 178, 94, 0.22);
@@ -43,6 +47,8 @@
 
     --success: #c8e08a;
     --danger: #ff6b5f;
+    --danger-border: rgba(255, 107, 95, 0.34);
+    --danger-surface: rgba(255, 107, 95, 0.06);
     --status-tone-idle: var(--text-secondary);
     --status-tone-processing: var(--gold-hot);
     --status-tone-success: var(--success);
@@ -173,7 +179,7 @@ body:not(.i18n-ready) .app-shell {
     overflow: hidden;
     border: 1px solid var(--panel-border);
     border-radius: 22px;
-    background: #0b0a08;
+    background: var(--surface-panel);
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
 }
 
@@ -317,6 +323,7 @@ body:not(.i18n-ready) .app-shell {
     --radius-sm: calc(10px * var(--ui-scale));
     --button-height: calc(38px * var(--ui-scale));
     --button-pad-x: calc(14px * var(--ui-scale));
+    --settings-divider-soft: rgba(214, 178, 94, 0.085);
 
     position: absolute;
     inset: 0;
@@ -355,7 +362,7 @@ body:not(.i18n-ready) .app-shell {
     max-width: calc(100% - 28px);
     display: flex;
     flex-direction: column;
-    background: #0b0a08;
+    background: var(--surface-panel);
     opacity: 0;
     transform: translateX(14px) scale(0.985);
     transition:
@@ -426,7 +433,7 @@ body:not(.i18n-ready) .app-shell {
     padding: var(--card-pad);
     border: 1px solid var(--separator);
     border-radius: var(--radius-lg);
-    background: #0b0a08;
+    background: var(--surface-panel);
     overflow: hidden;
 }
 
@@ -471,7 +478,7 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .settings-field + .settings-field {
-    border-top: 1px solid rgba(214, 178, 94, 0.085);
+    border-top: 1px solid var(--settings-divider-soft);
 }
 
 .settings-field-copy {
@@ -613,7 +620,7 @@ body:not(.i18n-ready) .app-shell {
     align-items: center;
     margin-top: calc(7px * var(--ui-scale));
     padding: calc(8px * var(--ui-scale)) 0;
-    border-top: 1px solid rgba(214, 178, 94, 0.085);
+    border-top: 1px solid var(--settings-divider-soft);
 }
 
 .settings-source-summary-title,
@@ -969,9 +976,9 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .palette-library-action.is-danger {
-    border-color: rgba(255, 107, 95, 0.34);
+    border-color: var(--danger-border);
     color: var(--danger);
-    background: rgba(255, 107, 95, 0.06);
+    background: var(--danger-surface);
 }
 
 .palette-library-item {
@@ -1091,7 +1098,7 @@ body:not(.i18n-ready) .app-shell {
 .palette-import-export {
     margin-top: calc(12px * var(--ui-scale));
     padding-top: calc(10px * var(--ui-scale));
-    border-top: 1px solid rgba(214, 178, 94, 0.085);
+    border-top: 1px solid var(--settings-divider-soft);
 }
 
 .palette-tool-map-row {
@@ -1181,13 +1188,13 @@ body:not(.i18n-ready) .app-shell {
 
 .palette-editor-action-bar .palette-library-action.is-primary {
     background: var(--gold-button);
-    color: #130f08;
+    color: var(--text-on-accent);
 }
 
 .palette-editor-action-bar .palette-library-action.is-danger {
-    border-color: rgba(255, 107, 95, 0.34);
+    border-color: var(--danger-border);
     color: var(--danger);
-    background: rgba(255, 107, 95, 0.06);
+    background: var(--danger-surface);
 }
 
 .palette-editor-action-bar .palette-library-action.is-danger:hover {
@@ -2325,7 +2332,7 @@ p {
 
 .control-card {
     margin-bottom: 12px;
-    background: #0b0a08;
+    background: var(--surface-panel);
     box-shadow: none;
     animation: none;
 }
@@ -2909,7 +2916,7 @@ p {
     min-width: 0;
     border: 1px solid var(--panel-border);
     background: var(--gold-button);
-    color: #130f08;
+    color: var(--text-on-accent);
     font-size: var(--font-h3);
     font-weight: 800;
 }
@@ -3641,7 +3648,7 @@ p {
     padding: calc(10px * var(--ui-scale));
     border: 1px solid var(--panel-border);
     border-radius: var(--radius-md);
-    background: #0b0a08;
+    background: var(--surface-panel);
     box-shadow: 0 14px 28px rgba(0, 0, 0, 0.42);
 }
 
