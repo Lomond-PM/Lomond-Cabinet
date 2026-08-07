@@ -13,9 +13,9 @@
         productionEnabled: false,
         productionBlockReason: "no-qualified-default-model",
         qualifiedDefaultModelId: null,
-        legacyFallbackRetained: true,
+        legacyFallbackRetained: false,
         formalUiD2Enabled: false,
-        moduleRevision: "vela-activation-policy-v1"
+        moduleRevision: "vela-activation-policy-v2"
     });
 
     function getPolicy() { return POLICY; }

@@ -34,9 +34,9 @@ Current conclusion:
 
 Main risks:
 
-- Static and dynamic Home entries with the same `shapeAdd` id can conflict.
+- Shape Add must remain Registry-owned so a static Home duplicate is not reintroduced.
 - `HomeLayoutManager` saved order depends on the stable `shapeAdd` id.
-- Legacy and registry detail panels must not be allowed to coexist again.
+- The retired legacy detail panel must not be reintroduced alongside Registry Renderer.
 - Button enabled state depends on host state, not only local schema.
 - Shape Add host behavior must not be rewritten opportunistically during UI or procedural appearance work.
 
@@ -72,6 +72,8 @@ Main risks:
 - Cleanup must never delete layers that lack Lomond artifact metadata.
 - Cleanup must not use layer-name heuristics for old output.
 - Icon Grid source layers are user-owned and must not be deleted.
+- Icon Grid is deliberately fail-closed: one unsupported layer rejects the complete selection before input-layer writes. A failed source-bounds read or `sourcePointToComp()` conversion must never fall back to guessed or layer-space coordinates.
+- Refresh scale accumulation is fixed by measuring member-local source bounds with current member Scale; after parameters are reapplied, subsequent Refresh calls keep the computed member transforms stable and always preserve the Controller transform. Fixed-cell layout semantics and final visual-union recentering remain separate follow-up work.
 - Only expressions with the matching Lomond signature may be restored or cleared.
 - Host action messages should continue moving toward `messageKey` fallbacks without changing the AE algorithms.
 
@@ -206,17 +208,17 @@ Accepted 0.2.5 limitation.
 
 The first source/geometry parameter change after plugin startup may incur a one-time render warm-up delay. Subsequent source changes are noticeably faster. This is currently acceptable for the Developer Mode procedural controls. Palette/theme presentation changes should remain presentation-only and must not trigger the complete source rebuild.
 
-## Vela narrow status row reflow
+## Vela request-to-Review target continuity
 
 Status:
 
-Deferred to 0.3.1. The D2-A AE CEP Surface smoke test passed with this known layout issue.
+Deferred architecture issue; not a 0.3.1 release blocker.
 
-At narrow panel widths, the Vela status row does not reflow above the action row and can
-appear cramped or truncated in the bottom controls. This has no safety or execution-path
-impact. Do not temporarily change the breakpoint, DOM order, or grid structure as part of
-D2-A closeout; address the reflow in the dedicated 0.3.1 layout pass.
+Current behavior:
 
-The Vela experimental Settings helper text, acknowledgement, actions, and readiness
-feedback are also cramped at narrow panel widths. This is deferred to 0.3.1 and has no
-safety or execution-path impact.
+- `proposal-ready` remains identity-free.
+- Review captures fresh Context and binds the actual current target.
+- After Review binds a candidate, later target changes fail through `CONTEXT_STALE` or `UNKNOWN_TARGET` during Confirmation/Preflight.
+- A selection change between the original Provider request and Review is therefore not request-time stale detection; Review intentionally binds the then-current target.
+
+The 0.3.1 bounded union profile does not change this behavior. Future Context/Authority work must define request-time continuity explicitly rather than weakening fresh binding, fingerprints, generation protection, Preflight, Execution Guard, or Host authority.

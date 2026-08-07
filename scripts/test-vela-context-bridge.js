@@ -60,7 +60,9 @@ function successResult(request, snapshot) {
     });
 }
 
-function errorResult(request, code) {
+function errorResult(request, code, reason) {
+    const error = { code, message: "A local safe Host context error." };
+    if (reason) error.reason = reason;
     return JSON.stringify({
         protocol: "vela.host-context-result.v1",
         schemaVersion: "1.0",
@@ -69,7 +71,7 @@ function errorResult(request, code) {
         operation: request.operation,
         ok: false,
         hostAdapterRevision: "vela-context-host-v4",
-        error: { code, message: "A local safe Host context error." }
+        error
     });
 }
 
@@ -521,7 +523,8 @@ async function runCurrentHostAuthorityTests() {
     }
 
     await rejectedResponseDoesNotUpdate("malformed", (req, callback) => callback("not-json"), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
-    await rejectedResponseDoesNotUpdate("host_error", (req, callback) => callback(errorResult(req, "HOST_CONTEXT_UNAVAILABLE")), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE);
+    await rejectedResponseDoesNotUpdate("host_error", (req, callback) => callback(errorResult(req, "HOST_CONTEXT_UNAVAILABLE", "no-actionable-target")), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE);
+    await rejectedResponseDoesNotUpdate("host_infrastructure_unavailable", (req, callback) => callback(errorResult(req, "HOST_CONTEXT_UNAVAILABLE")), protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
     await rejectedResponseDoesNotUpdate("requestId_mismatch", (req, callback) => callback(successResult(Object.assign({}, req, { requestId: "req_" + "x".repeat(32) }), tierOneSnapshot({ hostReloadEpoch: 2 }))), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
     await rejectedResponseDoesNotUpdate("sessionId_mismatch", (req, callback) => callback(successResult(Object.assign({}, req, { sessionId: "session_" + "x".repeat(32) }), tierOneSnapshot({ hostReloadEpoch: 2 }))), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
     await rejectedResponseDoesNotUpdate("operation_mismatch", (req, callback) => callback(successResult(Object.assign({}, req, { operation: "captureLayerDetails" }), tierOneSnapshot({ hostReloadEpoch: 2 }))), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
@@ -601,7 +604,7 @@ async function runCurrentHostAuthorityTests() {
     const stableHarness = makeHarness((source, callback) => {
         const request = decodeSource(source);
         sameAuthorityCall += 1;
-        if (sameAuthorityCall === 3) callback(errorResult(request, "HOST_CONTEXT_UNAVAILABLE"));
+        if (sameAuthorityCall === 3) callback(errorResult(request, "HOST_CONTEXT_UNAVAILABLE", "no-actionable-target"));
         else callback(successResult(request, tierOneSnapshot({ hostReloadEpoch: 1 })));
     });
     const stableOne = await stableHarness.bridge.capture({ tier: 1, purpose: "binding" });
@@ -832,6 +835,9 @@ async function runPropertyValueReviewPortTests() {
     check(bridgeModule.isTrustedProviderContextPortForProtocol(providerPort, protocol) && Object.isFrozen(providerContext) && providerContext.selectedLayerOpacity.available === true && providerContext.selectedLayerOpacity.value === 25, "Provider context port must release only the verified finite Opacity fact from the exact binding ancestry.");
     check(Object.keys(providerContext).sort().join(",") === "activeCompositionType,firstSelectedLayerType,selectedLayerCount,selectedLayerOpacity" && !/layerId|host_|fingerprint|propertyPath|requestId|candidate|plan|nonce|digest|schemaRevision/.test(JSON.stringify(providerContext)), "Provider context projection must be a strict identity-free, version-free whitelist.");
     check(providerPort.project(binding, null).selectedLayerOpacity.available === false && !Object.prototype.hasOwnProperty.call(providerPort.project(binding, null).selectedLayerOpacity, "value"), "Provider context without a Tier 3 value must be explicitly unavailable without a fallback value.");
+    const unavailableProviderContext = providerPort.unavailable();
+    check(Object.isFrozen(unavailableProviderContext) && unavailableProviderContext.activeCompositionType === "none" && unavailableProviderContext.selectedLayerCount === 0 && unavailableProviderContext.firstSelectedLayerType === "none" && unavailableProviderContext.selectedLayerOpacity.available === false, "Provider context port exposes the existing identity-free projection shape for unavailable current Context.");
+    check(!/layerId|host_|fingerprint|propertyPath|requestId|candidate|plan|nonce|digest/.test(JSON.stringify(unavailableProviderContext)), "Unavailable Provider projection contains no stale target identity or execution authority.");
     check(!JSON.stringify(value).includes("beforeValue") && !JSON.stringify(value).includes("\"data\"") && !JSON.stringify(value).includes("\"value\""), "Public property-value capture must not expose beforeValue or raw value.");
     check(!Object.prototype.hasOwnProperty.call(harness.bridge, "createReviewPort") && !Object.prototype.hasOwnProperty.call(harness.bridge, "reviewPort"), "Review port must not appear on the public Bridge object.");
     expectThrowCode(() => reviewPort.summarize(protocol.deepFreeze(protocol.cloneJson(binding)), value), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Review port must reject cloned binding captures.");

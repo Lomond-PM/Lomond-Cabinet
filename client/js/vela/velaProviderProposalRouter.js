@@ -46,7 +46,18 @@
         protocol.assertNoUnknownKeys(options, ["protocol", "providerController", "controller"], "providerProposalRouter.options");
         if (!providerControllerModule.isTrustedProviderControllerForProtocol(providerController, protocol) || !controllerModule.isTrustedControllerForProtocol(controller, protocol)) { protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Provider proposal dependencies are unavailable."); }
         proposalPort = providerControllerModule.createProposalPort(providerController, protocol);
-        if (!proposalPort || typeof ownData(proposalPort, "consume") !== "function") { protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Provider proposal port is unavailable."); }
+        if (!proposalPort || typeof ownData(proposalPort, "beginReview") !== "function" || typeof ownData(proposalPort, "finalizeReview") !== "function") { protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Provider proposal port is unavailable."); }
+        function stableErrorCode(error) {
+            var code = ownData(error, "code");
+            var keys = Object.keys(protocol.ERROR_CODES);
+            var index;
+            for (index = 0; index < keys.length; index += 1) { if (protocol.ERROR_CODES[keys[index]] === code) { return code; } }
+            return protocol.ERROR_CODES.PLAN_FAILED;
+        }
+        function finalize(proposal, outcome, error) {
+            if (outcome === "failed") { try { controller.invalidate("idle"); } catch (ignored) {} }
+            proposalPort.finalizeReview({ requestId: ownData(proposal, "requestId"), generation: ownData(proposal, "generation"), outcome: outcome, errorCode: outcome === "failed" ? stableErrorCode(error) : null });
+        }
         function review() {
             var proposal;
             var capability;
@@ -56,19 +67,20 @@
             if (reviewing) { return Promise.reject(new protocol.VelaProtocolError(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID)); }
             reviewing = true;
             try {
-                proposal = proposalPort.consume();
+                proposal = proposalPort.beginReview();
                 capability = capabilityContracts.getLocalProjection("set-opacity-v1");
                 if (!capability || !capability.localPolicy || capability.localPolicy.routerId !== capability.capabilityId || capability.localPolicy.parameterValidatorId !== "opacity-percent-v1" ||
                     !capability.parameters || !Array.isArray(capability.parameters.required) || capability.parameters.required.length !== 1 ||
-                    !proposal || ownData(proposal, "capabilityId") !== capability.capabilityId) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "Local proposal is invalid."); }
+                    !proposal || typeof ownData(proposal, "requestId") !== "string" || !Number.isInteger(ownData(proposal, "generation")) || ownData(proposal, "capabilityId") !== capability.capabilityId) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "Local proposal is invalid."); }
                 parameterName = capability.parameters.required[0];
                 if (parameterName !== "opacity" || !capability.parameters.properties || !Object.prototype.hasOwnProperty.call(capability.parameters.properties, parameterName)) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "Local proposal contract is invalid."); }
                 params = {};
                 params[parameterName] = ownData(proposal, parameterName);
                 try { validated = capabilityContracts.validateCapabilityParams(capability, params); }
                 catch (error) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "Local proposal parameters are invalid."); }
-                return Promise.resolve(controller.createOpacityCandidate({ opacity: validated[parameterName] })).then(function (result) { reviewing = false; return result; }, function (error) { reviewing = false; throw error; });
+                return Promise.resolve(controller.createBoundOpacityCandidate({ opacity: validated[parameterName], requestId: proposal.requestId, requestGeneration: proposal.generation })).then(function (result) { finalize(proposal, "completed", null); reviewing = false; return result; }, function (error) { finalize(proposal, "failed", error); reviewing = false; throw error; });
             } catch (error) {
+                if (proposal) { finalize(proposal, "failed", error); }
                 reviewing = false;
                 return Promise.reject(error);
             }

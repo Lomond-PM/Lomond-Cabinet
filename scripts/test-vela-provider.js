@@ -171,7 +171,7 @@ function createHarness(options) {
         endpoint: options.endpoint,
         model: options.model || "Qwen3.5-4B-Q6_K",
         requestProfile: options.requestProfile === undefined ? requestBranchPolicy.PROFILES.TEXT_ONLY : options.requestProfile,
-        timeoutMs: options.timeoutMs === undefined ? 30000 : options.timeoutMs,
+        timeoutMs: options.timeoutMs === undefined ? 120000 : options.timeoutMs,
         responseFormatMode: options.responseFormatMode === undefined ? "json-schema" : options.responseFormatMode,
         runtime: runtimeBundle.runtime
     };
@@ -208,8 +208,8 @@ async function run() {
     expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: Object.create(validTransport), model: "m", requestProfile: requestBranchPolicy.PROFILES.TEXT_ONLY, runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Inherited transport methods must be rejected.");
     const getterRuntime = Object.assign({}, runtimeBundle.runtime); Object.defineProperty(getterRuntime, "parseUrl", { get() { return parseUrl; } });
     expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "m", requestProfile: requestBranchPolicy.PROFILES.TEXT_ONLY, runtime: getterRuntime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Runtime getters must be rejected.");
-    [999, 120001, Infinity, "30000"].forEach((timeoutMs) => expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "m", requestProfile: requestBranchPolicy.PROFILES.TEXT_ONLY, timeoutMs, runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Invalid timeout values must be rejected."));
-    check(createHarness({ timeoutMs: 1000 }).provider.id === "lmstudio" && createHarness({ timeoutMs: 120000 }).provider.kind === "openai-compatible", "Timeout boundary values must be accepted.");
+    [999, 300001, Infinity, "120000"].forEach((timeoutMs) => expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "m", requestProfile: requestBranchPolicy.PROFILES.TEXT_ONLY, timeoutMs, runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Invalid timeout values must be rejected."));
+    check(createHarness({ timeoutMs: 1000 }).provider.id === "lmstudio" && createHarness({ timeoutMs: 300000 }).provider.kind === "openai-compatible", "Timeout boundary values must be accepted.");
     expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "", requestProfile: requestBranchPolicy.PROFILES.TEXT_ONLY, runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Empty model ids must be rejected.");
     check(createHarness({ model: "\ud83d\ude00".repeat(64) }).provider.id === "lmstudio", "Model ids at the 256-byte UTF-8 limit must be accepted.");
     expectCode(() => providerModule.createLocalOpenAICompatibleProvider({ protocol: base.protocol, transport: validTransport, model: "\ud83d\ude00".repeat(65), requestProfile: requestBranchPolicy.PROFILES.TEXT_ONLY, runtime: runtimeBundle.runtime }), base.protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID, "Model ids must use UTF-8 byte limits.");
@@ -285,13 +285,28 @@ async function run() {
 
     const envelopes = [
         { envelope: { type: "text", text: "ok" }, profile: requestBranchPolicy.PROFILES.TEXT_ONLY },
-        { envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } }, profile: requestBranchPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE }
+        { envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } }, profile: requestBranchPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE },
+        { envelope: { type: "text", text: "ok" }, profile: requestBranchPolicy.PROFILES.PROPOSAL_CAPABLE_UNION },
+        { envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } }, profile: requestBranchPolicy.PROFILES.PROPOSAL_CAPABLE_UNION }
     ];
     for (const item of envelopes) {
         const envelope = item.envelope;
         const harness = createHarness({ requestProfile: item.profile, responder: (request) => Promise.resolve(transportResult(wrapper(canonicalContent(base.protocol, request, envelope)))) });
         const response = await harness.provider.start(input()).promise;
         equal(response.envelope.type, envelope.type, envelope.type + " envelopes must pass through the parser.");
+    }
+    for (const envelope of [
+        { type: "localProposal", proposal: { capabilityId: "unknown-capability", params: { opacity: 50 } } },
+        { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 50 }, targetId: "forged" } },
+        { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 50 }, confirmationNonce: "forged" } },
+        { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 50 }, hostPayload: {} } },
+        { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 50, extra: true } } },
+        { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 101 } } },
+        { type: "text", text: "ambiguous", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 50 } } }
+    ]) {
+        const harness = createHarness({ requestProfile: requestBranchPolicy.PROFILES.PROPOSAL_CAPABLE_UNION, responder: (request) => Promise.resolve(transportResult(wrapper(canonicalContent(base.protocol, request, envelope)))) });
+        const rejectedUnion = await harness.provider.start(input()).promise;
+        check(rejectedUnion.envelope.type === "error" && typeof rejectedUnion.envelope.error.code === "string", "Union rejects unknown capability, forged authority, extra fields, out-of-range values, and malformed envelopes.");
     }
     const unauthorizedModelError = { type: "error", error: { code: base.protocol.ERROR_CODES.EXPRESSION_NOT_ALLOWLISTED, stage: "provider", retryable: false, message: "untrusted", details: {} } };
     const unauthorizedHarness = createHarness({ responder: (request) => Promise.resolve(transportResult(wrapper(canonicalContent(base.protocol, request, unauthorizedModelError)))) });

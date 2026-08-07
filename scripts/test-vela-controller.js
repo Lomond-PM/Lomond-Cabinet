@@ -96,7 +96,7 @@ function makeHarness(options) {
             return { state: "discarded" };
         }
     };
-    const controller = controllerModule.createController({ protocol, preflight, contextBridge, reviewPort });
+    const controller = controllerModule.createController({ protocol, preflight });
     return { protocol, controller, preflight, contextBridge, respond, get contextCalls() { return contextCalls; }, get executionCalls() { return executionCalls; }, get discardCalls() { return discardCalls; } };
 }
 
@@ -104,17 +104,18 @@ async function run() {
     const harness = makeHarness();
     check(Object.isFrozen(harness.controller), "Controller instance is frozen.");
     check(controllerModule.isTrustedControllerForProtocol(harness.controller, harness.protocol), "Controller carries exact trusted protocol identity.");
-    await expectCode(harness.controller.createOpacityCandidate({ opacity: "57" }), "PARAM_OUT_OF_RANGE", "String opacity is rejected.");
-    await expectCode(harness.controller.createOpacityCandidate({ opacity: NaN }), "PARAM_OUT_OF_RANGE", "NaN opacity is rejected.");
-    await expectCode(harness.controller.createOpacityCandidate({ opacity: Infinity }), "PARAM_OUT_OF_RANGE", "Infinity opacity is rejected.");
-    await expectCode(harness.controller.createOpacityCandidate({ opacity: -0 }), "PARAM_OUT_OF_RANGE", "Negative zero opacity is rejected.");
-    await expectCode(harness.controller.createOpacityCandidate({ opacity: 101 }), "PARAM_OUT_OF_RANGE", "Out of range opacity is rejected.");
-    await expectCode(harness.controller.createOpacityCandidate({ opacity: 10, target: {} }), "SCHEMA_VALIDATION_FAILED", "UI cannot supply target overrides.");
+    function proposal(opacity, generation) { return { opacity, requestId: "req_" + String(generation || 1).padStart(32, "a"), requestGeneration: generation || 1 }; }
+    await expectCode(harness.controller.createBoundOpacityCandidate(proposal("57", 1)), "PARAM_OUT_OF_RANGE", "String opacity is rejected.");
+    await expectCode(harness.controller.createBoundOpacityCandidate(proposal(NaN, 1)), "PARAM_OUT_OF_RANGE", "NaN opacity is rejected.");
+    await expectCode(harness.controller.createBoundOpacityCandidate(proposal(Infinity, 1)), "PARAM_OUT_OF_RANGE", "Infinity opacity is rejected.");
+    await expectCode(harness.controller.createBoundOpacityCandidate(proposal(-0, 1)), "PARAM_OUT_OF_RANGE", "Negative zero opacity is rejected.");
+    await expectCode(harness.controller.createBoundOpacityCandidate(proposal(101, 1)), "PARAM_OUT_OF_RANGE", "Out of range opacity is rejected.");
+    await expectCode(harness.controller.createBoundOpacityCandidate({ opacity: 10, target: {} }), "SCHEMA_VALIDATION_FAILED", "Provider proposal cannot supply target overrides.");
 
-    const pending = await harness.controller.createOpacityCandidate({ opacity: 57.5 });
+    const pending = await harness.controller.createBoundOpacityCandidate(proposal(57.5, 1));
     check(pending.state === "pending-confirmation" && pending.beforeValue === 25 && pending.proposedValue === 57.5 && pending.candidateId.indexOf("cand_") === 0, "Valid opacity creates a pending confirmation with review values.");
     check(!JSON.stringify(pending).includes("planId") && !JSON.stringify(pending).includes("Digest") && !JSON.stringify(pending).includes("capture"), "Public UI state does not leak plan, digest or capture.");
-    const edited = await harness.controller.createOpacityCandidate({ opacity: 10 });
+    const edited = await harness.controller.createBoundOpacityCandidate(proposal(10, 2));
     check(edited.candidateId !== pending.candidateId && edited.beforeValue === 30 && harness.discardCalls === 1, "Editing discards the previous pending candidate and creates a new candidate with a fresh beforeValue.");
     await expectCode(harness.controller.approveCandidate({ candidateId: pending.candidateId }), "CANDIDATE_NOT_FOUND", "Old edited candidate cannot be approved.");
     const consumed = await harness.controller.approveCandidate({ candidateId: edited.candidateId });
@@ -123,86 +124,15 @@ async function run() {
     check(harness.executionCalls === 1, "Double approve does not call executor a second time.");
 
     const reject = makeHarness();
-    const rejectPending = await reject.controller.createOpacityCandidate({ opacity: 20 });
+    const rejectPending = await reject.controller.createBoundOpacityCandidate(proposal(20, 1));
     const rejected = reject.controller.rejectCandidate({ candidateId: rejectPending.candidateId });
     check(rejected.state === "discarded" && reject.executionCalls === 0 && reject.discardCalls === 1, "Reject discards without executing.");
     await expectCode(reject.controller.approveCandidate({ candidateId: rejectPending.candidateId }), "CANDIDATE_STATE_INVALID", "Rejected candidate is terminal.");
 
     const stale = makeHarness({ executeCode: "CONTEXT_STALE" });
-    const stalePending = await stale.controller.createOpacityCandidate({ opacity: 30 });
+    const stalePending = await stale.controller.createBoundOpacityCandidate(proposal(30, 1));
     await expectCode(stale.controller.approveCandidate({ candidateId: stalePending.candidateId }), "CONTEXT_STALE", "Execution context drift reports stale.");
     check(stale.controller.getUiState().state === "stale", "Stale execution is reflected in UI state.");
-
-    const refreshed = makeHarness({ beforeValue: 57.5 });
-    const refreshedState = await refreshed.controller.refreshContext();
-    check(refreshed.contextCalls === 2 && refreshedState.state === "ready" && refreshedState.beforeValue === 57.5 && refreshedState.contextLayerIndex === 3 && refreshedState.targetSummary === null, "Refresh performs one bound Tier 1 capture and one Tier 3 value capture before publishing the current opacity without hard-coding a localized target summary.");
-    check(!JSON.stringify(refreshedState).includes("layerId") && !JSON.stringify(refreshedState).includes("propertyPath") && !JSON.stringify(refreshedState).includes("requestId"), "Refresh projection does not expose trusted capture identity.");
-    for (const value of [0, 100]) {
-        const boundary = makeHarness({ beforeValue: value });
-        const state = await boundary.controller.refreshContext();
-        check(state.beforeValue === value, "Refresh preserves opacity boundary " + value + ".");
-    }
-    const noTarget = makeHarness({ selection: [] });
-    await expectCode(noTarget.controller.refreshContext(), "UNKNOWN_TARGET", "Refresh rejects an empty selection after the Tier 1 binding capture.");
-    check(noTarget.controller.getUiState().state === "no-target" && noTarget.controller.getUiState().beforeValue === null, "No-target refresh clears stale context values.");
-    const valueFailure = makeHarness({ valueCode: "HOST_CONTEXT_UNAVAILABLE" });
-    await expectCode(valueFailure.controller.refreshContext(), "VERIFICATION_UNAVAILABLE", "Tier 3 capture failures retain their finite mapped error.");
-    check(valueFailure.controller.getUiState().state === "failed" && valueFailure.controller.getUiState().beforeValue === null, "Tier 3 failure never publishes a partial Tier 1 context value.");
-
-    const mismatchDeferred = [];
-    const mismatch = makeHarness({ defer: mismatchDeferred });
-    const mismatchedRefresh = mismatch.controller.refreshContext();
-    mismatch.respond(mismatchDeferred[0]);
-    await Promise.resolve();
-    mismatch.respond(mismatchDeferred[1], { nativeLayerId: 99 });
-    await expectCode(mismatchedRefresh, "CONTEXT_STALE", "Tier 3 rejects a property result whose target identity differs from the Tier 1 binding.");
-    check(mismatch.controller.getUiState().state === "failed" && mismatch.controller.getUiState().beforeValue === null, "Target mismatch does not publish a partial context record.");
-
-    const deferred = [];
-    const rapid = makeHarness({ defer: deferred });
-    const firstRefresh = rapid.controller.refreshContext();
-    firstRefresh.catch(() => {});
-    const secondRefresh = rapid.controller.refreshContext();
-    check(deferred.length === 2 && rapid.contextCalls === 2, "Rapid refresh cancels only the older refresh capture and starts one latest Tier 1 capture.");
-    rapid.respond(deferred[1], { selection: [{ nativeLayerId: 99, layerIndex: 7 }] });
-    await Promise.resolve();
-    check(deferred.length === 3, "The latest Tier 1 capture alone advances to its Tier 3 value capture.");
-    rapid.respond(deferred[2], { beforeValue: 100 });
-    const latest = await secondRefresh;
-    await expectCode(firstRefresh, "LIFECYCLE_BLOCKED", "A cancelled older refresh cannot publish after a newer generation starts.");
-    rapid.respond(deferred[0], { selection: [{ nativeLayerId: 45, layerIndex: 3 }] });
-    check(latest.state === "ready" && latest.contextLayerIndex === 7 && latest.beforeValue === 100 && rapid.controller.getUiState().contextLayerIndex === 7, "Late selection A cannot overwrite the latest selection B context.");
-
-    const providerBusyDeferred = [];
-    const providerBusy = makeHarness({ defer: providerBusyDeferred });
-    const providerCapture = providerBusy.contextBridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
-    await expectCode(providerBusy.controller.refreshContext(), "EXECUTION_BUSY", "Refresh fails closed while a separate Provider-owned Bridge capture is pending.");
-    await expectCode(providerBusy.controller.refreshContext(), "EXECUTION_BUSY", "Repeated Refresh still cannot claim or cancel a Provider-owned capture.");
-    check(providerBusy.contextCalls === 1 && providerBusy.contextBridge.getState().state === "pending", "Busy Refresh does not start, replace, or cancel the pending Provider capture.");
-    providerBusy.respond(providerBusyDeferred[0]);
-    check((await providerCapture).executable === true, "The pending Provider capture completes normally after isolated Refresh rejections.");
-
-    const recoverDeferred = [];
-    const recover = makeHarness({ defer: recoverDeferred });
-    const failedRefresh = recover.controller.refreshContext();
-    recover.respond(recoverDeferred[0]);
-    await Promise.resolve();
-    recover.respond(recoverDeferred[1], { errorCode: "HOST_CONTEXT_UNAVAILABLE" });
-    await expectCode(failedRefresh, "VERIFICATION_UNAVAILABLE", "A finite property capture failure is returned to the caller.");
-    const recoveredRefresh = recover.controller.refreshContext();
-    recover.respond(recoverDeferred[2], { selection: [{ nativeLayerId: 88, layerIndex: 8 }] });
-    await Promise.resolve();
-    recover.respond(recoverDeferred[3], { beforeValue: 0 });
-    check((await recoveredRefresh).state === "ready" && recover.controller.getUiState().beforeValue === 0, "A later refresh recovers from an earlier finite capture failure without stale opacity.");
-
-    const lifecycleDeferred = [];
-    const lifecycle = makeHarness({ defer: lifecycleDeferred });
-    const blockedRefresh = lifecycle.controller.refreshContext();
-    blockedRefresh.catch(() => {});
-    lifecycle.controller.invalidate("stale");
-    lifecycle.respond(lifecycleDeferred[0]);
-    await expectCode(blockedRefresh, "LIFECYCLE_BLOCKED", "Invalidate blocks a late refresh callback before it can patch state.");
-    check(lifecycle.controller.getUiState().state === "stale" && lifecycle.controller.getUiState().beforeValue === null, "Lifecycle invalidation clears captured display values.");
 
     console.log("test-vela-controller: " + assertions + " assertions passed.");
 }

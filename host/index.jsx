@@ -8,7 +8,7 @@ AEToolbox.ping = function () {
 
 (function () {
     AEToolbox.hostApiVersion = "1.0.0";
-    AEToolbox.projectVersion = "0.3.0";
+    AEToolbox.projectVersion = "0.3.1";
     AEToolbox.version = AEToolbox.hostApiVersion;
     AEToolbox.tools = AEToolbox.tools || {};
 
@@ -73,35 +73,122 @@ AEToolbox.ping = function () {
         return "\"\"";
     };
 
-    AEToolbox._registeredTools = [];
-    AEToolbox._registeredToolMap = {};
-    AEToolbox._registeredToolLoadErrors = [];
+    AEToolbox._registeredTools = AEToolbox._registeredTools instanceof Array ? AEToolbox._registeredTools : [];
+    AEToolbox._registeredToolMap = AEToolbox._registeredToolMap && typeof AEToolbox._registeredToolMap === "object" ? AEToolbox._registeredToolMap : {};
+    AEToolbox._registeredToolLoadErrors = AEToolbox._registeredToolLoadErrors instanceof Array ? AEToolbox._registeredToolLoadErrors : [];
+    AEToolbox._hasValidRegisteredToolCatalog = typeof AEToolbox._hasValidRegisteredToolCatalog === "boolean" ? AEToolbox._hasValidRegisteredToolCatalog : AEToolbox._registeredTools.length > 0;
+    AEToolbox._registeredToolRegistryRevision = typeof AEToolbox._registeredToolRegistryRevision === "number" ? AEToolbox._registeredToolRegistryRevision : 0;
+    AEToolbox._registeredToolLastAttemptSucceeded = typeof AEToolbox._registeredToolLastAttemptSucceeded === "boolean" ? AEToolbox._registeredToolLastAttemptSucceeded : AEToolbox._hasValidRegisteredToolCatalog;
+    AEToolbox._registryTransaction = null;
+
+    AEToolbox.beginRegistryTransaction = function () {
+        if (AEToolbox._registryTransaction) {
+            return false;
+        }
+        AEToolbox._registryTransaction = {
+            tools: [],
+            map: {},
+            errors: [],
+            currentFileName: ""
+        };
+        return true;
+    };
+
+    AEToolbox.addRegistryTransactionError = function (code, fileName) {
+        var transaction = AEToolbox._registryTransaction;
+        var safeName = String(fileName || transaction && transaction.currentFileName || "unknown.tool.jsx").replace(/^.*[\\\/]/, "");
+        if (!transaction) {
+            return false;
+        }
+        transaction.errors[transaction.errors.length] = String(code || "REGISTRY_DEFINITION_INVALID") + ": " + safeName;
+        return true;
+    };
 
     AEToolbox.registerTool = function (toolDef) {
         var id;
-        var i;
-        if (!toolDef || !toolDef.id) {
+        var transaction = AEToolbox._registryTransaction;
+        if (!transaction) {
             return false;
         }
-        id = String(toolDef.id);
-        toolDef.id = id;
-        if (AEToolbox._registeredToolMap.hasOwnProperty(id)) {
-            for (i = 0; i < AEToolbox._registeredTools.length; i++) {
-                if (AEToolbox._registeredTools[i].id === id) {
-                    AEToolbox._registeredTools[i] = toolDef;
-                    break;
-                }
-            }
-        } else {
-            AEToolbox._registeredTools[AEToolbox._registeredTools.length] = toolDef;
+        if (!toolDef || typeof toolDef.id !== "string") {
+            AEToolbox.addRegistryTransactionError("REGISTRY_TOOL_INVALID", transaction.currentFileName);
+            return false;
         }
-        AEToolbox._registeredToolMap[id] = toolDef;
+        id = String(toolDef.id).replace(/^\s+|\s+$/g, "");
+        if (!id) {
+            AEToolbox.addRegistryTransactionError("REGISTRY_TOOL_INVALID", transaction.currentFileName);
+            return false;
+        }
+        toolDef.id = id;
+        if (transaction.map.hasOwnProperty(id)) {
+            AEToolbox.addRegistryTransactionError("REGISTRY_TOOL_DUPLICATE", transaction.currentFileName);
+            return false;
+        }
+        transaction.tools[transaction.tools.length] = toolDef;
+        transaction.map[id] = toolDef;
+        return true;
+    };
+
+    AEToolbox.validateRegistryTransaction = function () {
+        var transaction = AEToolbox._registryTransaction;
+        var mapCount = 0;
+        var i;
+        var id;
+        if (!transaction || transaction.errors.length) {
+            return false;
+        }
+        if (!transaction.tools.length) {
+            AEToolbox.addRegistryTransactionError("REGISTRY_EMPTY_CATALOG", "registry");
+            return false;
+        }
+        for (id in transaction.map) {
+            if (transaction.map.hasOwnProperty(id)) {
+                mapCount += 1;
+            }
+        }
+        if (mapCount !== transaction.tools.length) {
+            AEToolbox.addRegistryTransactionError("REGISTRY_MAP_MISMATCH", "registry");
+            return false;
+        }
+        for (i = 0; i < transaction.tools.length; i++) {
+            id = transaction.tools[i] && transaction.tools[i].id;
+            if (!id || transaction.map[id] !== transaction.tools[i]) {
+                AEToolbox.addRegistryTransactionError("REGISTRY_MAP_MISMATCH", "registry");
+                return false;
+            }
+        }
+        return true;
+    };
+
+    AEToolbox.commitRegistryTransaction = function () {
+        var transaction = AEToolbox._registryTransaction;
+        if (!transaction || !AEToolbox.validateRegistryTransaction()) {
+            return false;
+        }
+        AEToolbox._registeredTools = transaction.tools;
+        AEToolbox._registeredToolMap = transaction.map;
+        AEToolbox._registeredToolLoadErrors = [];
+        AEToolbox._hasValidRegisteredToolCatalog = true;
+        AEToolbox._registeredToolLastAttemptSucceeded = true;
+        AEToolbox._registeredToolRegistryRevision += 1;
+        AEToolbox._registryTransaction = null;
+        return true;
+    };
+
+    AEToolbox.rollbackRegistryTransaction = function () {
+        var transaction = AEToolbox._registryTransaction;
+        if (!transaction) {
+            return false;
+        }
+        AEToolbox._registeredToolLoadErrors = transaction.errors.slice(0);
+        AEToolbox._registeredToolLastAttemptSucceeded = false;
+        AEToolbox._registryTransaction = null;
         return true;
     };
 
     AEToolbox.getRegisteredTools = function () {
         return AEToolbox.stringify({
-            ok: true,
+            ok: AEToolbox._hasValidRegisteredToolCatalog === true,
             tools: AEToolbox._registeredTools,
             loadErrors: AEToolbox._registeredToolLoadErrors
         });
@@ -469,22 +556,34 @@ AEToolbox.ping = function () {
         var files;
         var i;
 
-        if (!toolsFolder.exists) {
+        if (!AEToolbox.beginRegistryTransaction()) {
             return false;
         }
-
-        files = sortFiles(toolsFolder.getFiles(function (file) {
-            return file instanceof File && /\.tool\.jsx$/i.test(file.name);
-        }));
-        for (i = 0; i < files.length; i++) {
-            try {
-                $.evalFile(files[i]);
-            } catch (e) {
-                AEToolbox._registeredToolLoadErrors[AEToolbox._registeredToolLoadErrors.length] = files[i].name + ": " + e.toString();
+        try {
+            if (!toolsFolder.exists) {
+                AEToolbox.addRegistryTransactionError("REGISTRY_DIRECTORY_UNAVAILABLE", "tools");
+            } else {
+                files = sortFiles(toolsFolder.getFiles(function (file) {
+                    return file instanceof File && /\.tool\.jsx$/i.test(file.name);
+                }));
+                for (i = 0; i < files.length; i++) {
+                    AEToolbox._registryTransaction.currentFileName = String(files[i].name || "unknown.tool.jsx").replace(/^.*[\\\/]/, "");
+                    try {
+                        $.evalFile(files[i]);
+                    } catch (e) {
+                        AEToolbox.addRegistryTransactionError("REGISTRY_DEFINITION_LOAD_FAILED", AEToolbox._registryTransaction.currentFileName);
+                    }
+                }
+            }
+            if (AEToolbox.validateRegistryTransaction()) {
+                return AEToolbox.commitRegistryTransaction();
+            }
+            return false;
+        } finally {
+            if (AEToolbox._registryTransaction) {
+                AEToolbox.rollbackRegistryTransaction();
             }
         }
-
-        return true;
     };
 
     AEToolbox.loadRegisteredToolFiles();
@@ -519,6 +618,10 @@ AEToolbox.ping = function () {
             hostFile: "host/index.jsx",
             registeredToolCount: AEToolbox._registeredTools ? AEToolbox._registeredTools.length : 0,
             registeredToolLoadErrors: AEToolbox._registeredToolLoadErrors ? AEToolbox._registeredToolLoadErrors.join("; ") : "",
+            registeredToolLoadErrorCount: AEToolbox._registeredToolLoadErrors ? AEToolbox._registeredToolLoadErrors.length : 0,
+            hasValidRegisteredToolCatalog: AEToolbox._hasValidRegisteredToolCatalog === true,
+            registeredToolLastAttemptSucceeded: AEToolbox._registeredToolLastAttemptSucceeded === true,
+            registeredToolRegistryRevision: AEToolbox._registeredToolRegistryRevision,
             includesAdComponentKit: true,
             hasAdComponentKitCreateIconGrid: !!(AEToolbox.tools && AEToolbox.tools.adComponentKit && AEToolbox.tools.adComponentKit.createIconGrid)
         });

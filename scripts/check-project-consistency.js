@@ -3,6 +3,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const I18nUsageReport = require("./report-i18n-usage.js");
 
 const ROOT = path.resolve(__dirname, "..");
 const checks = [];
@@ -124,7 +125,6 @@ function checkRequiredEntrypoints() {
         "client/js/vela/velaComposerView.js",
         "client/js/vela/velaConfirmationView.js",
         "client/js/vela/velaSurfaceController.js",
-        "client/js/vela/velaUi.js",
         "client/js/vela/velaCapabilityContracts.js",
         "client/js/vela/velaCapabilityPromptBuilder.js",
         "client/js/vela/velaProviderIntentGate.js",
@@ -239,7 +239,6 @@ function checkIndexHtml() {
         "js/proceduralPreviewContract.js",
         "js/proceduralHomeIcons.js",
         "js/proceduralHomeBackground.js",
-        "js/vela/velaUi.js",
         "js/vela/velaResizeController.js",
         "js/vela/velaSurface.js",
         "js/vela/velaCepModuleLoader.js",
@@ -443,6 +442,15 @@ function checkRegistryTools() {
     });
 }
 
+function checkGeneratedI18nReport() {
+    const result = I18nUsageReport.checkReport();
+    check(
+        "Generated i18n report is current",
+        result.ok,
+        "Run: node scripts/report-i18n-usage.js"
+    );
+}
+
 function main() {
     const version = checkVersions();
     checkChangelog(version);
@@ -453,6 +461,7 @@ function main() {
     checkVelaProviderQualificationRubric();
     checkVelaContextHostIncludes();
     checkRegistryTools();
+    checkGeneratedI18nReport();
 
     let failed = 0;
     checks.forEach((item) => {

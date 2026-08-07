@@ -178,7 +178,6 @@
         var controller = null;
         var providerController = null;
         var providerProposalRouter = null;
-        var providerContextRefreshPort = null;
         var protocolClock = null;
         var runtime = environment || {};
         function safeStatus() {
@@ -228,13 +227,11 @@
                 getCurrentExecutionBinding: function () { return { settingsFingerprint: contextApi.fingerprintSettings({}), permissionSnapshot: { mode: "confirm-every-action", grants: [], policyRevision: MODULE_REVISION }, lifecycle: "ready", hasVerifier: true }; },
                 executeValidatedAction: executionAdapter.executeValidatedAction
             });
-            controller = controllerModule.createController({ protocol: protocol, preflight: preflight, contextBridge: bridge, reviewPort: reviewPort });
+            controller = controllerModule.createController({ protocol: protocol, preflight: preflight });
             if (!controllerModule.isTrustedControllerForProtocol(controller, protocol)) { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
             if (typeof fetchFn !== "function" || typeof TextDecoderCtor !== "function" || typeof root.AbortController !== "function") { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
             var localTransport = localTransportModule.createLocalTransport({ protocol: protocol, fetch: fetchFn, TextDecoder: TextDecoderCtor });
             providerController = providerControllerModule.createProviderController({ protocol: protocol, contextBridge: bridge, transport: localTransport, runtime: { setTimeout: setTimer, clearTimeout: clearTimer, createAbortController: function () { var nativeController = new root.AbortController(); return { signal: nativeController.signal, abort: function () { nativeController.abort(); } }; }, parseUrl: function (value) { var parsed = new root.URL(value); return { protocol: parsed.protocol, hostname: parsed.hostname, port: parsed.port, pathname: parsed.pathname, username: parsed.username, password: parsed.password, search: parsed.search, hash: parsed.hash, href: parsed.href }; }, nowMs: wallClock } });
-            providerContextRefreshPort = providerControllerModule.createContextRefreshPort(providerController, protocol);
-            if (!providerContextRefreshPort || typeof providerContextRefreshPort.discardActiveProposalForContextRefresh !== "function") { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
             providerProposalRouter = proposalRouterModule.createProposalRouter({ protocol: protocol, providerController: providerController, controller: controller });
         }
         function initialize() {
@@ -290,33 +287,13 @@
             if (bridge) { try { bridge.suspend(); } catch (ignored) {} }
             if (controller) { try { controller.invalidate("idle"); } catch (ignoredController) {} }
             if (providerController) { try { providerController.invalidate("idle"); } catch (ignoredProvider) {} }
-            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; reviewPort = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; providerContextRefreshPort = null; protocolClock = null;
+            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; reviewPort = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; protocolClock = null;
             initialized = false; suspended = false; disposed = true; state = "disposed";
             return true;
         }
         function ensureReadyController() {
             if (disposed || state !== "ready" || !controller) { throw safeError(suspended ? "LIFECYCLE_BLOCKED" : "RUNTIME_CAPABILITY_UNAVAILABLE"); }
             return controller;
-        }
-        function refreshContext() {
-            try {
-                ensureReadyController();
-                providerContextRefreshPort.discardActiveProposalForContextRefresh();
-                return controller.refreshContext();
-            }
-            catch (error) { return Promise.reject(error); }
-        }
-        function createOpacityCandidate(input) {
-            try { return ensureReadyController().createOpacityCandidate(input); }
-            catch (error) { return Promise.reject(error); }
-        }
-        function approveCandidate(input) {
-            try { return ensureReadyController().approveCandidate(input); }
-            catch (error) { return Promise.reject(error); }
-        }
-        function rejectCandidate(input) {
-            try { return Promise.resolve(ensureReadyController().rejectCandidate(input)); }
-            catch (error) { return Promise.reject(error); }
         }
         function activeCandidateInput() {
             var source = ensureReadyController().getUiState();
@@ -354,7 +331,8 @@
                 return !!providerController.cancel({ requestId: providerState.requestId });
             } catch (error) { return false; }
         }
-        function getProviderUiState() { return providerController ? providerController.getUiState() : Object.freeze({ state: disposed ? "disposed" : state, requestId: null, text: null, errorCode: lastErrorCode, intentReason: null, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: "vela-provider-controller-v1" }); }
+        function getProviderUiState() { return providerController ? providerController.getUiState() : Object.freeze({ state: disposed ? "disposed" : state, requestId: null, text: null, errorCode: lastErrorCode, intentReason: null, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: "vela-provider-controller-v2" }); }
+        function getProviderDiagnostics() { return providerController && typeof providerController.getDiagnostics === "function" ? providerController.getDiagnostics() : null; }
         function getProviderSurfaceState() {
             var source = getProviderUiState();
             var nextState = source && typeof source.state === "string" ? source.state : "failed";
@@ -369,7 +347,7 @@
             var proposedValue = hasConfirmation && source && typeof source.proposedValue === "number" && isFinite(source.proposedValue) && source.proposedValue >= 0 && source.proposedValue <= 100 ? source.proposedValue : null;
             return Object.freeze({ state: state, beforeValue: beforeValue, proposedValue: proposedValue, errorCode: source && typeof source.errorCode === "string" ? source.errorCode : null, moduleRevision: "vela-confirmation-surface-v1" });
         }
-        return Object.freeze({ initialize: initialize, getStatus: safeStatus, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, refreshContext: refreshContext, createOpacityCandidate: createOpacityCandidate, approveCandidate: approveCandidate, rejectCandidate: rejectCandidate, approveActiveCandidate: approveActiveCandidate, rejectActiveCandidate: rejectActiveCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, checkProviderReadiness: checkProviderReadiness, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderSurfaceState: getProviderSurfaceState, getConfirmationSurfaceState: getConfirmationSurfaceState });
+        return Object.freeze({ initialize: initialize, getStatus: safeStatus, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, approveActiveCandidate: approveActiveCandidate, rejectActiveCandidate: rejectActiveCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, checkProviderReadiness: checkProviderReadiness, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderDiagnostics: getProviderDiagnostics, getProviderSurfaceState: getProviderSurfaceState, getConfirmationSurfaceState: getConfirmationSurfaceState });
     }
     return Object.freeze({ createRuntime: createRuntime });
 }));

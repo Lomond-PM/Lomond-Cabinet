@@ -21,10 +21,12 @@ function run() {
     equal(policy.productionEnabled, false, "Production activation is locked off.");
     equal(policy.productionBlockReason, "no-qualified-default-model", "Production has the stable local block reason.");
     equal(policy.qualifiedDefaultModelId, null, "No qualified default model is declared.");
-    equal(policy.legacyFallbackRetained, true, "Legacy Vela fallback remains retained.");
+    equal(policy.legacyFallbackRetained, false, "Legacy Vela fallback is formally retired.");
+    equal(policy.moduleRevision, "vela-activation-policy-v2", "Legacy retirement advances the trusted policy revision.");
     equal(policy.formalUiD2Enabled, false, "Formal UI-D2 default enablement remains off.");
     check(moduleApi.isTrustedPolicy(policy), "Only the module-owned policy has trusted identity.");
     check(!moduleApi.isTrustedPolicy(Object.freeze(Object.assign({}, policy))), "A shape-equivalent injected policy is not trusted.");
+    check(!moduleApi.isTrustedPolicy(Object.freeze(Object.assign({}, policy, { legacyFallbackRetained: true, moduleRevision: "vela-activation-policy-v1" }))), "The retired legacy-retained contract is not trusted by the current revision.");
     check(!Object.keys(policy).some((key) => /proposal|candidate|plan|nonce|digest|authority|host/i.test(key)), "Activation policy holds no execution authority or transient identity.");
 
     const context = { Object };

@@ -7,8 +7,8 @@
 
     var cs = new CSInterface();
     var velaRuntimeController = null;
-    var velaUiController = null;
-    var velaProviderUiController = null;
+    var velaRuntimeInitTransaction = null;
+    var velaRuntimeLastAttemptCoreGeneration = null;
     var velaSurfaceShell = null;
     var velaSurfaceController = null;
     var velaSurfaceBootstrapState = "idle";
@@ -17,6 +17,8 @@
     var velaRuntimeStatusRevision = 0;
     var velaRuntimeLastErrorCode = null;
     var hostLoaded = false;
+    var coreBootstrapController = null;
+    var coreBootstrapSnapshot = null;
     var statusTimer = null;
     var motionScale = 1;
     var animationWarmupDone = false;
@@ -45,6 +47,7 @@
         var disposed = false;
         var moduleRevision = null;
         var hostAdapterRevision = null;
+        var providerDiagnostics = null;
         var lastErrorCode = velaRuntimeLastErrorCode;
         try {
             if (velaRuntimeController && typeof velaRuntimeController.getStatus === "function") {
@@ -56,6 +59,9 @@
                 moduleRevision = velaOwnStatusValue(runtimeStatus, "moduleRevision", moduleRevision);
                 hostAdapterRevision = velaOwnStatusValue(runtimeStatus, "hostAdapterRevision", hostAdapterRevision);
                 lastErrorCode = velaOwnStatusValue(runtimeStatus, "lastErrorCode", lastErrorCode);
+                if (typeof velaRuntimeController.getProviderDiagnostics === "function") {
+                    providerDiagnostics = velaRuntimeController.getProviderDiagnostics();
+                }
             }
             if (window.VelaCepModuleLoader && typeof window.VelaCepModuleLoader.getStatus === "function") {
                 loaderStatus = window.VelaCepModuleLoader.getStatus();
@@ -74,6 +80,7 @@
             loaderState: typeof loaderState === "string" ? loaderState : "idle",
             moduleRevision: typeof moduleRevision === "string" ? moduleRevision : null,
             hostAdapterRevision: typeof hostAdapterRevision === "string" ? hostAdapterRevision : null,
+            providerDiagnostics: providerDiagnostics && typeof providerDiagnostics === "object" ? providerDiagnostics : null,
             lastErrorCode: typeof lastErrorCode === "string" ? lastErrorCode : null,
             statusRevision: velaRuntimeStatusRevision
         });
@@ -112,27 +119,14 @@
         backgroundCollapsed: "AEToolbox.backgroundSettingsCollapsed.v1",
         language: "aeToolbox.language",
         homeOrder: "aeToolbox.homeToolOrder",
-        colorPickerAxis: "AEToolbox.colorPicker.axisMode.v1"
+        colorPickerAxis: "AEToolbox.colorPicker.axisMode.v1",
+        velaSurfaceLayout: "AEToolbox.velaSurfaceLayout.v1"
     };
-    var ToolRegistry = {
-        ecommerceLayout: {
-            title: "Ad Component Kit",
-            description: "Ad Component Kit",
-            selectionMode: "layers"
-        },
-        vela: {
-            titleKey: "vela.title",
-            descriptionKey: "vela.description",
-            selectionMode: "property"
-        },
-        shapeAdd: {
-            title: "Shape Add",
-            description: "Shape Add",
-            selectionMode: "shape"
-        }
-    };
-    var DynamicTools = {};
-    var DynamicToolOrder = [];
+    var toolCatalog = window.ToolCatalog && typeof window.ToolCatalog.createCatalog === "function" ? window.ToolCatalog.createCatalog() : null;
+    if (toolCatalog) {
+        toolCatalog.registerSystemSurface({ id: "velaPersistentSurface" });
+        toolCatalog.registerSystemSurface({ id: "settings" });
+    }
     var RegistryToolState = {};
     var RegistrySaveTimers = {};
     var ProceduralPreviewTimers = {};
@@ -144,6 +138,7 @@
     var PanelLifecycleListenersBound = false;
     var panelShuttingDown = false;
     var panelSuspended = false;
+    var panelLifecycleGeneration = 1;
     var selectionPollTimer = null;
     var ThemeSettingsStoreListener = null;
     var ProceduralAppearanceParams = null;
@@ -200,6 +195,22 @@
     function normalizeVelaExperimentalModel(value) { var normalized = typeof value === "string" ? value.replace(/^\s+|\s+$/g, "") : ""; return normalized.length <= 256 ? normalized : ""; }
     function normalizeVelaProviderEndpoint(value) { var normalized = typeof value === "string" ? value.replace(/^\s+|\s+$/g, "") : ""; var match; if (normalized.length > 512) { return ""; } match = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):([1-9][0-9]{0,4})(?:\/|\/v1\/chat\/completions)?$/.exec(normalized); return match && Number(match[2]) <= 65535 ? "http://" + match[1] + ":" + match[2] : normalized; }
     function velaExperimentalStatusKey(state) { var keys = { "experimental-ready": "settings.vela.ready", "checking": "settings.vela.checking", "endpoint-invalid": "settings.vela.endpointInvalid", "readiness-network-failed": "settings.vela.networkFailed", "readiness-http-failed": "settings.vela.httpFailed", "readiness-response-invalid": "settings.vela.responseInvalid", "configured-model-not-found": "settings.vela.modelNotFound", "configured-model-not-loaded": "settings.vela.modelNotLoaded" }; return keys[state] || "settings.vela.disabled"; }
+    function configureVelaExperimentalSession() {
+        if (velaSurfaceController && typeof velaSurfaceController.configureExperimental === "function") {
+            velaSurfaceController.configureExperimental({ endpoint: VelaProviderEndpoint, model: VelaProviderModel, acknowledged: VelaExperimentalAcknowledged });
+        }
+    }
+    function refreshVelaExperimentalSettings(snapshot) {
+        var current = snapshot || (velaSurfaceController && typeof velaSurfaceController.getExperimentalState === "function" ? velaSurfaceController.getExperimentalState() : null);
+        var acknowledgement = byId("velaExperimentalAcknowledgement");
+        var enableButton = byId("velaExperimentalEnable");
+        var disableButton = byId("velaExperimentalDisable");
+        var status = byId("velaExperimentalStatus");
+        if (acknowledgement) { acknowledgement.checked = VelaExperimentalAcknowledged === true; }
+        if (status) { status.textContent = tr(!current && velaRuntimeLastErrorCode ? "vela.surfaceRuntimeUnavailable" : velaExperimentalStatusKey(current && current.state)); }
+        if (enableButton) { enableButton.disabled = !velaSurfaceController || !VelaExperimentalAcknowledged || !VelaProviderEndpoint || !VelaProviderModel || !!(current && (current.enabled || current.state === "checking")); }
+        if (disableButton) { disableButton.disabled = !(current && (current.enabled || current.state === "checking" || current.state === "unavailable")); }
+    }
     var BackgroundEngine = {
         defaults: {
             preset: "blackGold",
@@ -1208,10 +1219,20 @@
         }
     }
 
-    function setStatus(message, type, sticky) {
+    function globalStatusStateForResult(result) {
+        var key = result && result.messageKey;
+        if (key === "status.noLayer" || key === "status.noTextLayer" || key === "status.selectShapeLayer") { return "selection-required"; }
+        if (key === "status.noActiveComp" || key === "status.openComp") { return "no-active-comp"; }
+        return result && result.ok ? "completed" : "failed";
+    }
+
+    function setStatus(message, type, sticky, businessState) {
         var pill = byId("statusPill");
+        var toneContract = window.StatusToneContract;
+        var tone = toneContract && toneContract.toneForLegacyType ? toneContract.toneForLegacyType(type, businessState) : (type === "busy" ? "processing" : type === "ok" ? "success" : type === "error" ? "error" : "idle");
         byId("statusText").textContent = message || tr("status.ready");
         pill.classList.remove("is-error", "is-busy");
+        pill.setAttribute("data-tone", tone);
 
         if (statusTimer) {
             window.clearTimeout(statusTimer);
@@ -1264,35 +1285,11 @@
     }
 
     function getToolMeta(toolId) {
-        return DynamicTools[toolId] || ToolRegistry[toolId] || ToolRegistry.shapeAdd;
+        return toolCatalog ? toolCatalog.getDisplayMetadata(toolId) : null;
     }
 
     function isDynamicTool(toolId) {
-        return !!DynamicTools[toolId];
-    }
-
-    function isDeveloperRegistryTool(tool) {
-        var id;
-        var titleKey;
-        var descriptionKey;
-        var haystack;
-
-        if (!tool) {
-            return false;
-        }
-        if (tool.debugOnly === true || tool.developerOnly === true || tool.category === "debug") {
-            return true;
-        }
-
-        id = String(tool.id || "");
-        titleKey = String(tool.titleKey || "");
-        descriptionKey = String(tool.descriptionKey || "");
-        haystack = (id + " " + titleKey + " " + descriptionKey).toLowerCase();
-        return haystack.indexOf("probe") !== -1 ||
-            haystack.indexOf("lab") !== -1 ||
-            haystack.indexOf("test") !== -1 ||
-            haystack.indexOf("debug") !== -1 ||
-            haystack.indexOf("controllab") !== -1;
+        return !!(toolCatalog && toolCatalog.getRegistryTool(toolId));
     }
 
     function renderDynamicToolHome() {
@@ -1300,6 +1297,8 @@
         var more = grid ? grid.querySelector(".tool-app.is-disabled") : null;
         var oldTools;
         var i;
+        var entries;
+        var entry;
         var tool;
         var button;
         var icon;
@@ -1318,14 +1317,13 @@
             oldTools[i].parentNode.removeChild(oldTools[i]);
         }
 
-        for (i = 0; i < DynamicToolOrder.length; i++) {
-            tool = DynamicTools[DynamicToolOrder[i]];
-            if (!tool || tool.hidden || (isDeveloperRegistryTool(tool) && window.AETOOLBOX_DEBUG_REGISTRY !== true)) {
+        entries = toolCatalog ? toolCatalog.getHomeEntries({ developerMode: window.AETOOLBOX_DEBUG_REGISTRY === true }) : [];
+        for (i = 0; i < entries.length; i++) {
+            entry = entries[i];
+            if (!entry || entry.homeOwnership !== "dynamic") {
                 continue;
             }
-            if (grid.querySelector(".tool-app[data-tool='" + tool.id + "']:not([data-dynamic-tool='true'])")) {
-                continue;
-            }
+            tool = entry.definition;
             button = document.createElement("button");
             button.type = "button";
             button.className = "tool-app app-card";
@@ -2117,16 +2115,8 @@
         var enableButton;
         var disableButton;
         var status;
-        function configureSession() {
-            if (velaSurfaceController && typeof velaSurfaceController.configureExperimental === "function") { velaSurfaceController.configureExperimental({ endpoint: VelaProviderEndpoint, model: VelaProviderModel, acknowledged: VelaExperimentalAcknowledged }); }
-        }
-        function refreshSession(snapshot) {
-            var current = snapshot || (velaSurfaceController && typeof velaSurfaceController.getExperimentalState === "function" ? velaSurfaceController.getExperimentalState() : null);
-            if (status) { status.textContent = tr(velaExperimentalStatusKey(current && current.state)); }
-            if (enableButton) { enableButton.disabled = !velaSurfaceController || !VelaExperimentalAcknowledged || !VelaProviderEndpoint || !VelaProviderModel || !!(current && (current.enabled || current.state === "checking")); }
-            if (disableButton) { disableButton.disabled = !(current && (current.enabled || current.state === "checking" || current.state === "unavailable")); }
-            if (acknowledgement && current && current.acknowledged === false && VelaExperimentalAcknowledged) { VelaExperimentalAcknowledged = false; acknowledgement.checked = false; }
-        }
+        function configureSession() { configureVelaExperimentalSession(); }
+        function refreshSession(snapshot) { refreshVelaExperimentalSettings(snapshot); }
         function saveModel() {
             VelaProviderModel = normalizeVelaExperimentalModel(input.value);
             input.value = VelaProviderModel;
@@ -2163,14 +2153,14 @@
         input.addEventListener("blur", saveModel);
         fieldRow.controls.appendChild(input);
         mount.appendChild(fieldRow.row);
-        acknowledgement = document.createElement("input"); acknowledgement.type = "checkbox"; acknowledgement.id = "velaExperimentalAcknowledgement"; acknowledgement.checked = false;
+        acknowledgement = document.createElement("input"); acknowledgement.type = "checkbox"; acknowledgement.id = "velaExperimentalAcknowledgement"; acknowledgement.checked = VelaExperimentalAcknowledged === true;
         acknowledgementLabel = document.createElement("label"); acknowledgementLabel.setAttribute("for", acknowledgement.id); acknowledgementLabel.textContent = tr("settings.vela.acknowledgement"); acknowledgementLabel.appendChild(acknowledgement);
         enableButton = document.createElement("button"); enableButton.type = "button"; enableButton.id = "velaExperimentalEnable"; enableButton.className = "panel-button"; enableButton.textContent = tr("settings.vela.enableSession");
         disableButton = document.createElement("button"); disableButton.type = "button"; disableButton.id = "velaExperimentalDisable"; disableButton.className = "panel-button"; disableButton.textContent = tr("settings.vela.disableSession");
         status = document.createElement("p"); status.id = "velaExperimentalStatus"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
-        acknowledgement.addEventListener("change", function () { VelaExperimentalAcknowledged = acknowledgement.checked === true; configureSession(); refreshSession(); });
+        acknowledgement.addEventListener("change", function () { VelaExperimentalAcknowledged = acknowledgement.checked === true; saveSettings(); configureSession(); refreshSession(); });
         enableButton.addEventListener("click", function () { saveEndpoint(); saveModel(); if (velaSurfaceController && typeof velaSurfaceController.enableExperimental === "function") { velaSurfaceController.enableExperimental().then(refreshSession, refreshSession); } });
-        disableButton.addEventListener("click", function () { if (velaSurfaceController && typeof velaSurfaceController.disableExperimental === "function") { velaSurfaceController.disableExperimental(); } VelaExperimentalAcknowledged = false; acknowledgement.checked = false; refreshSession(); });
+        disableButton.addEventListener("click", function () { if (velaSurfaceController && typeof velaSurfaceController.disableExperimental === "function") { velaSurfaceController.disableExperimental(); } refreshSession(); });
         mount.appendChild(acknowledgementLabel); mount.appendChild(enableButton); mount.appendChild(disableButton); mount.appendChild(status);
         configureSession(); refreshSession();
     }
@@ -3404,89 +3394,116 @@
         }
     }
 
-    function loadRegisteredToolsFromHost() {
-        evalHost("AEToolbox.getRegisteredTools()", function (raw) {
-            if (panelShuttingDown) {
-                return;
-            }
-            var result = parseResult(raw);
-            var tools = result.tools || [];
-            var loadErrors = result.loadErrors || [];
-            var i;
-            var tool;
+    function renderCoreBootstrapState(snapshot) {
+        var root = byId("toolBootstrapStatus");
+        var text = byId("toolBootstrapStatusText");
+        var retry = byId("toolBootstrapRetry");
+        var key = "bootstrap.loadingTools";
+        if (!root || !text || !retry || !snapshot) {
+            return;
+        }
+        if (snapshot.state === "ready") {
+            root.hidden = true;
+            return;
+        }
+        if (snapshot.state === "degraded") {
+            key = "bootstrap.partialFailure";
+        } else if (snapshot.state === "failed") {
+            key = "bootstrap.loadFailed";
+        }
+        root.hidden = snapshot.state === "idle" || snapshot.state === "shutdown";
+        text.setAttribute("data-i18n", key);
+        text.textContent = tr(key);
+        retry.hidden = !snapshot.retryAvailable;
+        retry.textContent = tr("bootstrap.retry");
+        retry.setAttribute("aria-label", tr("bootstrap.retry"));
+        root.setAttribute("data-bootstrap-state", snapshot.state);
+    }
 
-            DynamicTools = {};
-            DynamicToolOrder = [];
-
-            if (!result.ok) {
-                setStatus("Tool registry failed: " + (result.message || raw), "error");
-            } else if (tools.length) {
-                for (i = 0; i < tools.length; i++) {
-                    tool = tools[i];
-                    if (!tool || !tool.id) {
-                        continue;
-                    }
-                    DynamicTools[tool.id] = tool;
-                    DynamicToolOrder[DynamicToolOrder.length] = tool.id;
-                    mergeDynamicToolI18n(tool);
-                }
-                setStatus("Tool registry loaded " + DynamicToolOrder.length + " dynamic tool(s).", "ok");
-            } else {
-                setStatus("Tool registry loaded 0 tools" + (loadErrors.length ? ": " + loadErrors.join("; ") : "."), loadErrors.length ? "error" : "ok");
-                if (window.console && console.warn) {
-                    console.warn("[AE Toolbox] No dynamic registry tools loaded.", result);
-                }
+    function commitDynamicToolCatalog(candidate) {
+        var snapshot;
+        var i;
+        if (!toolCatalog || !toolCatalog.setRegistryTools(candidate.tools, candidate.order)) {
+            if (window.console && console.warn) {
+                console.warn("[Tool Catalog] registry commit rejected");
             }
+            return;
+        }
+        snapshot = toolCatalog.getSnapshot();
+        for (i = 0; i < snapshot.registryTools.length; i++) {
+            mergeDynamicToolI18n(toolCatalog.getRegistryTool(snapshot.registryTools[i].id).definition);
+        }
+        renderDynamicToolHome();
+        if (panelShuttingDown) {
+            return;
+        }
+        HomeLayoutManager.loadOrder();
+        HomeLayoutManager.renderOrder();
+        HomeLayoutManager.bindIconEvents();
+        refreshLanguage();
+    }
 
-            renderDynamicToolHome();
-            if (panelShuttingDown) {
-                return;
+    function updateCoreBootstrapState(snapshot) {
+        coreBootstrapSnapshot = snapshot;
+        hostLoaded = snapshot.hostReady;
+        if (snapshot.state === "failed" && window.console && console.warn) {
+            console.warn("[Core Bootstrap] failed", {
+                stage: snapshot.lastErrorStage,
+                code: snapshot.lastErrorCode,
+                generation: snapshot.generation,
+                attempt: snapshot.attempt
+            });
+        }
+        renderCoreBootstrapState(snapshot);
+        if (snapshot.state === "host-loading" || snapshot.state === "registry-loading") {
+            setStatus(tr("status.loadingHost"), "busy", true);
+        } else if (snapshot.state === "failed") {
+            setStatus(tr("bootstrap.loadFailed"), "error", true);
+        } else if (snapshot.state === "degraded") {
+            setStatus(tr("bootstrap.partialFailure"), "error", true);
+        } else if (snapshot.state === "ready") {
+            setStatus(tr("status.ready"), "ok");
+        }
+        if ((snapshot.state === "ready" || snapshot.state === "degraded") && !panelSuspended) {
+            initializeVelaRuntime(snapshot);
+            startSelectionPolling();
+            if (isDynamicTool(activeToolId)) {
+                startRegistryStatePolling(toolCatalog.getRegistryTool(activeToolId).definition);
             }
-            HomeLayoutManager.loadOrder();
-            HomeLayoutManager.renderOrder();
-            HomeLayoutManager.bindIconEvents();
-            refreshLanguage();
-
-            if (window.console && console.log) {
-                console.log("[AE Toolbox] Dynamic tools:", DynamicToolOrder, result);
-            }
-        });
+        } else {
+            stopSelectionPolling();
+            stopRegistryStatePolling();
+        }
     }
 
     function loadHost() {
         var extensionRoot = cs.getSystemPath(SystemPath.EXTENSION);
         var jsxPath = extensionRoot + "/host/index.jsx";
         jsxPath = jsxPath.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
-        setStatus(tr("status.loadingHost"), "busy", true);
-        cs.evalScript('$.evalFile("' + jsxPath + '")', function (loadResult) {
-            if (panelShuttingDown) {
-                return;
-            }
-            hostLoaded = true;
-            cs.evalScript("AEToolbox.ping()", function (result) {
+        if (!window.CoreBootstrap || typeof window.CoreBootstrap.createController !== "function") {
+            updateCoreBootstrapState({ state: "failed", generation: 0, attempt: 0, hostReady: false, registryReady: false, toolCount: 0, loadErrorCount: 0, lastErrorStage: "eval-file", lastErrorCode: "BOOTSTRAP_MODULE_UNAVAILABLE", retryAvailable: false });
+            return;
+        }
+        coreBootstrapController = window.CoreBootstrap.createController({
+            evalScript: function (source, callback) {
+                cs.evalScript(source, callback);
+            },
+            hostLoadSource: '$.evalFile("' + jsxPath + '")',
+            onStateChange: updateCoreBootstrapState,
+            onHostReady: function (snapshot) {
                 if (panelShuttingDown) {
                     return;
                 }
-                if (window.console && console.log) {
-                    console.log(result);
-                }
-                if (loadResult === "EvalScript error." || result === "EvalScript error.") {
-                    setStatus(tr("status.hostLoadError"), "error");
-                    return;
-                }
-                cs.evalScript("AEToolbox.getHostLoadInfo()", function (infoRaw) {
-                    if (panelShuttingDown) {
-                        return;
-                    }
-                    if (window.console && console.log) {
-                        console.log("[AE Toolbox] Host load info:", infoRaw);
-                    }
-                });
-                initializeVelaRuntime();
-                loadRegisteredToolsFromHost();
+                initializeVelaRuntime(snapshot);
                 refreshSelection();
-            });
+            },
+            onCatalog: function (candidate) {
+                if (!panelShuttingDown) {
+                    commitDynamicToolCatalog(candidate);
+                }
+            }
         });
+        coreBootstrapController.start();
     }
 
     function invokeVelaHost(source, callback) {
@@ -3537,26 +3554,84 @@
         }
     }
 
-    function initializeVelaRuntime() {
-        if (panelShuttingDown || velaRuntimeController || !window.VelaCepModuleLoader || typeof window.VelaCepModuleLoader.load !== "function") {
-            return;
+    function disposeVelaRuntimeCandidate(transaction) {
+        if (!transaction || !transaction.candidate || transaction.candidateDisposed) { return false; }
+        transaction.candidateDisposed = true;
+        try { transaction.candidate.dispose(); } catch (ignored) {}
+        return true;
+    }
+
+    function clearVelaRuntimeInitTransaction(transaction) {
+        if (!transaction || velaRuntimeInitTransaction !== transaction) { return false; }
+        velaRuntimeInitTransaction = null;
+        return true;
+    }
+
+    function initializeVelaRuntime(coreSnapshot) {
+        var snapshot = coreSnapshot || coreBootstrapSnapshot;
+        var coreGeneration = snapshot && typeof snapshot.generation === "number" ? snapshot.generation : 0;
+        var committedStatus = velaRuntimeController && typeof velaRuntimeController.getStatus === "function" ? velaRuntimeController.getStatus() : null;
+        var transaction;
+        if (panelShuttingDown || !snapshot || snapshot.hostReady !== true || !window.VelaCepModuleLoader || typeof window.VelaCepModuleLoader.load !== "function") {
+            return null;
         }
-        window.VelaCepModuleLoader.load().then(function () {
-            if (panelShuttingDown || velaRuntimeController || !window.VelaRuntime || typeof window.VelaRuntime.createRuntime !== "function") {
-                return;
+        if (velaRuntimeController && committedStatus && committedStatus.state === "ready" && committedStatus.disposed !== true) {
+            return null;
+        }
+        if (velaRuntimeController) {
+            try { velaRuntimeController.dispose(); } catch (ignoredCommittedRuntime) {}
+            velaRuntimeController = null;
+        }
+        if (velaRuntimeInitTransaction) {
+            if (velaRuntimeInitTransaction.panelGeneration === panelLifecycleGeneration && velaRuntimeInitTransaction.coreGeneration === coreGeneration) {
+                return velaRuntimeInitTransaction.promise;
             }
-            if (!getVelaActivationPolicy()) { throw new Error("VELA_ACTIVATION_POLICY_UNAVAILABLE"); }
-            velaRuntimeController = window.VelaRuntime.createRuntime({ invokeHost: invokeVelaHost });
-            velaRuntimeStatusRevision += 1;
-            return velaRuntimeController.initialize();
+            disposeVelaRuntimeCandidate(velaRuntimeInitTransaction);
+            clearVelaRuntimeInitTransaction(velaRuntimeInitTransaction);
+        }
+        if (velaRuntimeLastAttemptCoreGeneration === coreGeneration) {
+            return null;
+        }
+        velaRuntimeLastAttemptCoreGeneration = coreGeneration;
+        transaction = {
+            panelGeneration: panelLifecycleGeneration,
+            coreGeneration: coreGeneration,
+            candidate: null,
+            candidateDisposed: false,
+            promise: null
+        };
+        velaRuntimeInitTransaction = transaction;
+        transaction.promise = Promise.resolve(window.VelaCepModuleLoader.load()).then(function () {
+            if (panelShuttingDown || velaRuntimeInitTransaction !== transaction || transaction.panelGeneration !== panelLifecycleGeneration || !coreBootstrapSnapshot || coreBootstrapSnapshot.generation !== transaction.coreGeneration || coreBootstrapSnapshot.hostReady !== true || !window.VelaRuntime || typeof window.VelaRuntime.createRuntime !== "function") {
+                throw { code: "LIFECYCLE_BLOCKED" };
+            }
+            if (!getVelaActivationPolicy()) { throw { code: "VELA_ACTIVATION_POLICY_UNAVAILABLE" }; }
+            transaction.candidate = window.VelaRuntime.createRuntime({ invokeHost: invokeVelaHost });
+            return transaction.candidate.initialize();
         }).then(function (result) {
+            if (panelShuttingDown || velaRuntimeInitTransaction !== transaction || transaction.panelGeneration !== panelLifecycleGeneration || !coreBootstrapSnapshot || coreBootstrapSnapshot.generation !== transaction.coreGeneration || coreBootstrapSnapshot.hostReady !== true || !transaction.candidate || transaction.candidate.getStatus().state !== "ready") {
+                throw { code: "LIFECYCLE_BLOCKED" };
+            }
+            velaRuntimeController = transaction.candidate;
+            transaction.candidate = null;
+            clearVelaRuntimeInitTransaction(transaction);
+            velaRuntimeLastErrorCode = null;
             velaRuntimeStatusRevision += 1;
             initializeVelaSurfaceController();
-            if (activeToolId === "vela") {
-                renderVelaDetail();
-            }
+            configureVelaExperimentalSession();
+            refreshVelaExperimentalSettings();
             return result;
-        }, reportVelaRuntimeError);
+        }).then(null, function (error) {
+            var isCurrent = velaRuntimeInitTransaction === transaction;
+            disposeVelaRuntimeCandidate(transaction);
+            if (isCurrent) {
+                clearVelaRuntimeInitTransaction(transaction);
+                reportVelaRuntimeError(error);
+                refreshVelaExperimentalSettings();
+            }
+            return null;
+        });
+        return transaction.promise;
     }
 
     function getVelaSurfaceUiScale() {
@@ -3576,6 +3651,12 @@
             openSettings: openVelaSettingsPanel,
             t: tr,
             getUiScale: getVelaSurfaceUiScale,
+            loadHeightPreference: function () {
+                return loadStoredJson(StorageKeys.velaSurfaceLayout, null);
+            },
+            saveHeightPreference: function (heightPx) {
+                saveStoredJson(StorageKeys.velaSurfaceLayout, { schemaVersion: 1, heightPx: heightPx });
+            },
             composerReadOnly: false,
             ResizeController: window.VelaResizeController,
             eventTarget: window
@@ -3603,7 +3684,7 @@
                 ComposerView: window.VelaComposerView,
                 ConfirmationView: window.VelaConfirmationView,
                 ActivationPolicy: window.VelaActivationPolicy,
-                onExperimentalStateChange: function (snapshot) { var node = byId("velaExperimentalStatus"); if (node) { node.textContent = tr(velaExperimentalStatusKey(snapshot && snapshot.state)); } },
+                onExperimentalStateChange: refreshVelaExperimentalSettings,
                 provider: {
                     check: function (config) { return velaRuntimeController.checkProviderReadiness(config); },
                     send: function (message) {
@@ -3626,6 +3707,8 @@
             velaSurfaceController = controller;
             velaSurfaceBootstrapState = "ready";
             velaSurfaceBootstrapRevision += 1;
+            configureVelaExperimentalSession();
+            refreshVelaExperimentalSettings();
         } catch (error) {
             if (controller && typeof controller.dispose === "function") {
                 try { controller.dispose(); } catch (ignored) {}
@@ -4046,6 +4129,7 @@
         var detail = byId("detailView");
 
         stopRegistryStatePolling();
+        setToolActionsVisible(byId("registryToolActions"), false);
         clearRegistryProceduralPreviewTimer(activeToolId);
         resetDetailMorphStyles();
         clearDetailContentClasses();
@@ -4064,7 +4148,7 @@
     }
 
     function getActiveToolButton() {
-        return HomeLayoutManager.getButtonByToolId(activeToolId) || byId("openShapeAddTool");
+        return HomeLayoutManager.getButtonByToolId(activeToolId);
     }
 
     function dynamicFieldId(toolId, key) {
@@ -4257,7 +4341,8 @@
     }
 
     function resetRegistryToolValues(toolId) {
-        var tool = DynamicTools[toolId];
+        var entry = toolCatalog && toolCatalog.getRegistryTool(toolId);
+        var tool = entry ? entry.definition : null;
         if (!tool) {
             return;
         }
@@ -4802,7 +4887,7 @@
         var runtime;
         var hostFunction;
 
-        if (!toolDef || !toolDef.id || !toolDef.stateAction || !toolDef.stateAction.hostFunction) {
+        if (panelShuttingDown || panelSuspended || !coreBootstrapSnapshot || (coreBootstrapSnapshot.state !== "ready" && coreBootstrapSnapshot.state !== "degraded") || !toolDef || !toolDef.id || !toolDef.stateAction || !toolDef.stateAction.hostFunction) {
             if (callback) {
                 callback(null);
             }
@@ -6092,6 +6177,15 @@
             return row;
         }
 
+        if (fieldType === "subheading") {
+            row = document.createElement("h4");
+            row.className = "registry-field-subheading registry-schema-field";
+            row.textContent = tr(field.labelKey || field.textKey || field.text || "");
+            applyVisibleWhenMetadata(row, field);
+            row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
+            return row;
+        }
+
         if (fieldType === "proceduralPreview") {
             row = document.createElement("div");
             row.className = "registry-info-note registry-schema-field registry-procedural-preview is-preview-icon";
@@ -6835,16 +6929,43 @@
     }
 
     function collectDynamicToolParams(toolId) {
-        return collectSchemaValues(DynamicTools[toolId] || { id: toolId, uiSchema: [] });
+        var entry = toolCatalog && toolCatalog.getRegistryTool(toolId);
+        return collectSchemaValues(entry ? entry.definition : { id: toolId, uiSchema: [] });
+    }
+
+    function getVisibleGlobalActions(actions) {
+        var visible = [];
+        var i;
+        var action;
+        for (i = 0; actions && i < actions.length; i++) {
+            action = actions[i];
+            if (action && action.id && action.hidden !== true && action.fieldOnly !== true) {
+                visible[visible.length] = action;
+            }
+        }
+        return visible;
+    }
+
+    function setToolActionsVisible(actionsRoot, visible) {
+        var detail = byId("detailView");
+        if (actionsRoot) {
+            actionsRoot.hidden = visible !== true;
+            actionsRoot.setAttribute("data-empty", visible === true ? "false" : "true");
+            actionsRoot.setAttribute("aria-hidden", visible === true ? "false" : "true");
+        }
+        if (detail) {
+            detail.classList.toggle("has-visible-tool-actions", visible === true);
+        }
     }
 
     function renderToolActions(actions, toolDef) {
         var fragment = document.createDocumentFragment();
+        var visibleActions = getVisibleGlobalActions(actions);
         var i;
         var action;
         var button;
 
-        if (!toolDef || toolDef.hideRestoreDefaults !== true) {
+        if (visibleActions.length && (!toolDef || toolDef.hideRestoreDefaults !== true)) {
             button = document.createElement("button");
             button.type = "button";
             button.className = "panel-button secondary-action";
@@ -6855,14 +6976,8 @@
             fragment.appendChild(button);
         }
 
-        for (i = 0; actions && i < actions.length; i++) {
-            action = actions[i];
-            if (!action || !action.id) {
-                continue;
-            }
-            if (action.hidden || action.fieldOnly) {
-                continue;
-            }
+        for (i = 0; i < visibleActions.length; i++) {
+            action = visibleActions[i];
             button = document.createElement("button");
             button.type = "button";
             button.className = action.style === "secondary" ? "panel-button secondary-action" : "primary-action";
@@ -6926,7 +7041,8 @@
     }
 
     function runDynamicToolAction(toolId, actionId, actionPayload, actionDef) {
-        var toolDef = DynamicTools[toolId];
+        var entry = toolCatalog && toolCatalog.getRegistryTool(toolId);
+        var toolDef = entry ? entry.definition : null;
         var action = actionDef || findRegistryAction(toolDef, actionId) || {};
         var params = mergeActionPayload(collectDynamicToolParams(toolId), actionPayload || action.actionPayload || {});
         var json = JSON.stringify(params);
@@ -6940,7 +7056,7 @@
             }
             var result = parseResult(raw);
             var fallback = result.ok ? (action.successMessageKey || "status.ready") : (action.errorMessageKey || "status.ready");
-            setStatus(dynamicActionMessage(result, fallback), result.ok ? "ok" : "error");
+            setStatus(dynamicActionMessage(result, fallback), result.ok ? "ok" : "error", false, globalStatusStateForResult(result));
             if (toolDef && toolDef.stateAction && (action.refreshStateAfterRun || toolDef.refreshStateAfterRun)) {
                 if (result.ok || action.refreshStateAfterError) {
                     refreshRegistryToolState(toolDef);
@@ -6973,6 +7089,7 @@
 
         panel.innerHTML = "";
         actions.innerHTML = "";
+        setToolActionsVisible(actions, false);
 
         intro = document.createElement("section");
         intro.className = "info-panel intro-panel dynamic-tool-intro";
@@ -6992,7 +7109,9 @@
             panel.appendChild(renderToolSection(sections[i], tool));
         }
 
-        actions.appendChild(renderToolActions(tool.actions || [], tool));
+        var visibleGlobalActions = getVisibleGlobalActions(tool.actions || []);
+        actions.appendChild(renderToolActions(visibleGlobalActions, tool));
+        setToolActionsVisible(actions, visibleGlobalActions.length > 0);
 
         setupCustomSelectInputs();
         updateRegistryVisibleFields(tool);
@@ -7002,105 +7121,40 @@
     }
 
     function renderDynamicToolDetail(toolId) {
-        renderRegistryToolDetail(DynamicTools[toolId]);
-    }
-
-    function renderVelaDetail() {
-        var panel = byId("registryToolPanel");
-        var actions = byId("registryToolActions");
-        function renderState(state) {
-            if (velaUiController) {
-                velaUiController.render(state || (velaRuntimeController && velaRuntimeController.getUiState ? velaRuntimeController.getUiState() : { state: "idle" }));
-            }
-            renderProviderState();
-        }
-        function handleIntent(intent) {
-            var operation;
-            var providerIntent = false;
-            if (panelShuttingDown || !velaRuntimeController || !intent) { return; }
-            if (intent.type === "refresh") { operation = velaRuntimeController.refreshContext(); }
-            else if (intent.type === "proposal") { operation = velaRuntimeController.createOpacityCandidate({ opacity: intent.opacity }); }
-            else if (intent.type === "approve") { operation = velaRuntimeController.approveCandidate({ candidateId: intent.candidateId }); }
-            else if (intent.type === "reject") { operation = velaRuntimeController.rejectCandidate({ candidateId: intent.candidateId }); }
-            else if (intent.type === "provider-send") { providerIntent = true; operation = velaRuntimeController.sendProviderMessage({ message: intent.message, endpoint: intent.endpoint, model: intent.model }); renderProviderState(); }
-            else if (intent.type === "provider-cancel") { velaRuntimeController.cancelProviderRequest({ requestId: intent.requestId }); renderProviderState(); return; }
-            else if (intent.type === "provider-review") { operation = velaRuntimeController.reviewProviderProposal(); }
-            else { return; }
-            setStatus(tr("vela.statusWorking"), "busy", true);
-            operation.then(function (state) {
-                velaRuntimeStatusRevision += 1;
-                if (providerIntent) { renderProviderState(); } else { renderState(state); }
-                setStatus(tr("status.ready"), "ok");
-            }, function (error) {
-                var state = velaRuntimeController && velaRuntimeController.getUiState ? velaRuntimeController.getUiState() : { state: "failed", errorCode: "RUNTIME_CAPABILITY_UNAVAILABLE" };
-                velaRuntimeStatusRevision += 1;
-                if (providerIntent) { renderProviderState(); } else { renderState(state); }
-                setStatus(tr("vela.statusFailed", { code: state.errorCode || (error && error.code) || "RUNTIME_CAPABILITY_UNAVAILABLE" }), "error");
-            });
-        }
-        function renderProviderState() {
-            if (velaProviderUiController) { velaProviderUiController.render(velaRuntimeController && velaRuntimeController.getProviderUiState ? velaRuntimeController.getProviderUiState() : { state: "idle" }); }
-        }
-        if (!panel || !actions) { return; }
-        stopRegistryStatePolling();
-        clearRegistryProceduralPreviewTimer(activeToolId);
-        if (velaUiController) {
-            velaUiController.teardown();
-            velaUiController = null;
-        }
-        if (velaProviderUiController) { velaProviderUiController.teardown(); velaProviderUiController = null; }
-        while (panel.firstChild) { panel.removeChild(panel.firstChild); }
-        while (actions.firstChild) { actions.removeChild(actions.firstChild); }
-        if (!window.VelaUi || typeof window.VelaUi.createVelaUi !== "function") {
-            panel.textContent = tr("vela.runtimeUnavailable");
-            return;
-        }
-        velaUiController = window.VelaUi.createVelaUi({ root: panel, actionsRoot: actions, t: tr, onIntent: handleIntent });
-        if (window.VelaProviderUi && typeof window.VelaProviderUi.createProviderUi === "function") {
-            velaProviderUiController = window.VelaProviderUi.createProviderUi({ root: panel, t: tr, onIntent: handleIntent, getModel: function () { return VelaProviderModel; }, saveModel: function (value) { VelaProviderModel = normalizeVelaProviderModel(value); saveSettings(); return VelaProviderModel; } });
-        }
-        renderState(velaRuntimeController && velaRuntimeController.getUiState ? velaRuntimeController.getUiState() : { state: "idle" });
-        renderProviderState();
+        var entry = toolCatalog && toolCatalog.getRegistryTool(toolId);
+        renderRegistryToolDetail(entry ? entry.definition : null);
     }
 
     function configureToolDetail(toolId) {
+        var route = toolCatalog ? toolCatalog.getRoute(toolId) : { kind: "unknown", entry: null };
         var meta = getToolMeta(toolId);
         var panels = document.querySelectorAll(".tool-panel");
         var actions = document.querySelectorAll(".tool-actions");
         var i;
-        var dynamic = isDynamicTool(toolId);
-        var vela = toolId === "vela";
+        var dynamic = route.kind === "registry";
         var previousToolId = activeToolId;
 
-        activeToolId = toolId || "shapeAdd";
+        activeToolId = toolId || "";
         if (previousToolId && previousToolId !== activeToolId) {
             clearRegistryProceduralPreviewTimer(previousToolId);
         }
-        if (previousToolId === "vela" && !vela) {
-            if (velaUiController) {
-                velaUiController.teardown();
-                velaUiController = null;
-            }
-            if (velaProviderUiController) {
-                velaProviderUiController.teardown();
-                velaProviderUiController = null;
-            }
-        }
         byId("detailHeading").textContent = toolText(meta, "titleKey", "title", tr("app.title"));
 
-        if (vela) {
-            renderVelaDetail();
-        } else if (dynamic) {
+        if (dynamic) {
             renderDynamicToolDetail(activeToolId);
         } else {
             stopRegistryStatePolling();
+            setToolActionsVisible(byId("registryToolActions"), false);
+            if (route.kind === "unknown" && toolId && window.console && console.warn) {
+                console.warn("[Tool Catalog] unknown tool route", { id: String(toolId) });
+            }
         }
 
         for (i = 0; i < panels.length; i++) {
-            panels[i].classList.toggle("is-active", panels[i].getAttribute("data-tool-panel") === (dynamic || vela ? "__dynamic" : activeToolId));
+            panels[i].classList.toggle("is-active", panels[i].getAttribute("data-tool-panel") === (dynamic ? "__dynamic" : activeToolId));
         }
         for (i = 0; i < actions.length; i++) {
-            actions[i].classList.toggle("is-active", actions[i].getAttribute("data-tool-actions") === (dynamic || vela ? "__dynamic" : activeToolId));
+            actions[i].classList.toggle("is-active", actions[i].getAttribute("data-tool-actions") === (dynamic ? "__dynamic" : activeToolId));
         }
     }
 
@@ -7145,6 +7199,7 @@
             velaSurfaceShell.refreshLocale();
             velaSurfaceShell.refreshLayout();
         }
+        renderCoreBootstrapState(coreBootstrapSnapshot);
     }
 
     function setupLanguageSelector() {
@@ -7273,11 +7328,6 @@
         }
 
         clearRegistryProceduralPreviewTimer(activeToolId);
-        if (activeToolId === "vela" && velaUiController) {
-            velaUiController.teardown();
-            velaUiController = null;
-        }
-        if (activeToolId === "vela" && velaProviderUiController) { velaProviderUiController.teardown(); velaProviderUiController = null; }
         beginAnimation();
         exitDetailContent(function () {
             iconRect = getHomeToolIconRect(toolButton);
@@ -8058,9 +8108,6 @@
 
     function suspendPanelRuntime() {
         panelSuspended = true;
-        if (velaUiController && typeof velaUiController.resetTransientState === "function") {
-            velaUiController.resetTransientState();
-        }
         if (velaSurfaceController) {
             velaSurfaceController.suspend();
         }
@@ -8092,9 +8139,11 @@
         if (velaSurfaceShell && byId("homeView") && byId("homeView").classList.contains("is-active")) {
             velaSurfaceShell.resume();
         }
-        startSelectionPolling();
+        if (coreBootstrapSnapshot && (coreBootstrapSnapshot.state === "ready" || coreBootstrapSnapshot.state === "degraded")) {
+            startSelectionPolling();
+        }
         if (isDynamicTool(activeToolId)) {
-            startRegistryStatePolling(DynamicTools[activeToolId]);
+            startRegistryStatePolling(toolCatalog.getRegistryTool(activeToolId).definition);
         }
         refreshActiveTool();
     }
@@ -8105,6 +8154,16 @@
         }
         lifecycleDebug("panel close start");
         panelShuttingDown = true;
+        panelLifecycleGeneration += 1;
+        if (velaRuntimeInitTransaction) {
+            disposeVelaRuntimeCandidate(velaRuntimeInitTransaction);
+            clearVelaRuntimeInitTransaction(velaRuntimeInitTransaction);
+        }
+        velaRuntimeLastAttemptCoreGeneration = null;
+        if (coreBootstrapController) {
+            coreBootstrapController.shutdown();
+            coreBootstrapController = null;
+        }
         if (velaSurfaceController) {
             velaSurfaceController.dispose();
             velaSurfaceController = null;
@@ -8142,13 +8201,29 @@
         }
         closeRegistryColorPicker();
         cleanupTransientUiState();
+        refreshVelaExperimentalSettings();
+    }
+
+    function recoverPanelRuntime() {
+        if (!panelShuttingDown) { resumePanelRuntime(); return false; }
+        panelLifecycleGeneration += 1;
+        panelShuttingDown = false;
+        panelSuspended = false;
+        hostLoaded = false;
+        coreBootstrapSnapshot = null;
+        velaRuntimeLastErrorCode = null;
+        velaSurfaceBootstrapState = "idle";
+        initializeVelaSurface();
+        refreshVelaExperimentalSettings();
+        loadHost();
+        return true;
     }
 
     function handleVisibilityChange() {
         if (document.hidden) {
             suspendPanelRuntime();
         } else {
-            resumePanelRuntime();
+            recoverPanelRuntime();
         }
     }
 
@@ -8159,6 +8234,7 @@
         PanelLifecycleListenersBound = true;
         document.addEventListener("visibilitychange", handleVisibilityChange);
         window.addEventListener("pagehide", shutdownPanelRuntime);
+        window.addEventListener("pageshow", recoverPanelRuntime);
         window.addEventListener("beforeunload", shutdownPanelRuntime);
         window.addEventListener("unload", shutdownPanelRuntime);
     }
@@ -8609,6 +8685,7 @@
             toolIconDarkPaletteId: byId("toolIconDarkPaletteId") ? String(byId("toolIconDarkPaletteId").value || "") : DefaultSettings.toolIconDarkPaletteId,
             velaProviderModel: VelaProviderModel,
             velaProviderEndpoint: VelaProviderEndpoint,
+            velaExperimentalAcknowledged: VelaExperimentalAcknowledged === true,
             proceduralParams: collectProceduralAppearanceParamsFromControls(),
             homeIconRadius: byId("homeIconRadiusNumber") ? clampNumber(byId("homeIconRadiusNumber").value, DefaultSettings.homeIconRadius, 18, 40) : DefaultSettings.homeIconRadius,
             homeDragShadowIntensity: byId("homeDragShadowIntensityNumber") ? clampNumber(byId("homeDragShadowIntensityNumber").value, DefaultSettings.homeDragShadowIntensity, 0, 1.5) : DefaultSettings.homeDragShadowIntensity,
@@ -8626,10 +8703,12 @@
         var speed = clampNumber(data.motionSpeed, DefaultSettings.motionSpeed, 0.75, 1.35);
         VelaProviderModel = typeof data.velaProviderModel === "string" ? normalizeVelaExperimentalModel(data.velaProviderModel) : DefaultSettings.velaProviderModel;
         VelaProviderEndpoint = typeof data.velaProviderEndpoint === "string" ? normalizeVelaProviderEndpoint(data.velaProviderEndpoint) : DefaultSettings.velaProviderEndpoint;
+        VelaExperimentalAcknowledged = data.velaExperimentalAcknowledged === true;
         if (byId("velaProviderModel")) {
             byId("velaProviderModel").value = VelaProviderModel;
         }
         if (byId("velaProviderEndpoint")) { byId("velaProviderEndpoint").value = VelaProviderEndpoint; }
+        refreshVelaExperimentalSettings();
         byId("motionSpeed").value = speed;
         byId("motionSpeedNumber").value = speed;
         motionScale = speed;
@@ -8984,6 +9063,13 @@
                 saveSettings();
             });
         }
+        if (byId("toolBootstrapRetry")) {
+            byId("toolBootstrapRetry").addEventListener("click", function () {
+                if (coreBootstrapController) {
+                    coreBootstrapController.retry();
+                }
+            });
+        }
         document.addEventListener("keydown", function (event) {
             if (event.keyCode === 27) {
                 closeRegistryColorPicker();
@@ -8997,7 +9083,6 @@
         });
 
         bindPanelLifecycle();
-        startSelectionPolling();
     }
 
     document.addEventListener("DOMContentLoaded", function () {

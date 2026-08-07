@@ -60,11 +60,10 @@
     }
 }(typeof self !== "undefined" ? self : this, function (protocolModule, bridgeModule, capabilityContracts, requestBranchPolicy, adapterModule, transportModule, intentGateModule) {
     "use strict";
-    var MODULE_REVISION = "vela-provider-controller-v1";
+    var MODULE_REVISION = "vela-provider-controller-v2";
     var trustedControllers = new WeakSet();
     var controllerProtocols = new WeakMap();
     var controllerProposalPorts = new WeakMap();
-    var controllerContextRefreshPorts = new WeakMap();
     var OPACITY_PROPERTY_PATH = Object.freeze(["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0]);
     var hasOwn = Object.prototype.hasOwnProperty;
     function ownData(value, key) {
@@ -93,19 +92,23 @@
         }
         try { providerContextPort = bridgeModule.createProviderContextPort(bridge, protocol); }
         catch (error) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
-        if (!bridgeModule.isTrustedProviderContextPortForProtocol(providerContextPort, protocol) || typeof ownData(providerContextPort, "project") !== "function") {
+        if (!bridgeModule.isTrustedProviderContextPortForProtocol(providerContextPort, protocol) || typeof ownData(providerContextPort, "project") !== "function" || typeof ownData(providerContextPort, "unavailable") !== "function") {
             throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
         }
         var modelProjection;
         var requestPolicy;
+        var requestPolicyProfiles;
         try {
             modelProjection = capabilityContracts.getModelProjection("set-opacity-v1");
             requestPolicy = requestBranchPolicy.createRequestBranchPolicy(modelProjection);
-            if (!Object.isFrozen(modelProjection) || !Object.isFrozen(requestPolicy) || typeof ownData(requestPolicy, "classify") !== "function") { throw new Error(); }
+            requestPolicyProfiles = ownData(requestBranchPolicy, "PROFILES");
+            if (!Object.isFrozen(modelProjection) || !Object.isFrozen(requestPolicy) || !Object.isFrozen(requestPolicyProfiles) || typeof ownData(requestPolicy, "classify") !== "function" || requestPolicyProfiles.PROPOSAL_CAPABLE_UNION !== "proposal-capable-union") { throw new Error(); }
         } catch (error) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
         var state = "idle";
         var active = null;
         var activeProposal = null;
+        var reviewingProposal = null;
+        var diagnostics = Object.freeze({ moduleRevision: MODULE_REVISION, provisionalProfile: null, contextUnionEligible: false, finalProfile: null, responseSchemaName: null, parsedResponseType: null, intentAllowed: null, intentReason: null });
         var generation = 1;
         var publicState = protocol.deepFreeze({ state: state, requestId: null, text: null, errorCode: null, intentReason: null, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: MODULE_REVISION });
         function publish(nextState, requestId, text, errorCode, model, proposal, intentReason) {
@@ -118,6 +121,44 @@
         }
         function summaryFromProjection(projection) {
             return "Trusted request context: active composition type " + projection.activeCompositionType + "; selected layers " + projection.selectedLayerCount + "; first selected layer type " + projection.firstSelectedLayerType + "; selected layer opacity " + (projection.selectedLayerOpacity.available ? String(projection.selectedLayerOpacity.value) : "unavailable") + ".";
+        }
+        function isUnionEligible(projection) {
+            var opacity;
+            if (!projection || typeof projection !== "object" || projection.activeCompositionType !== "CompItem" || projection.selectedLayerCount !== 1) { return false; }
+            opacity = projection.selectedLayerOpacity;
+            return !!opacity && opacity.available === true && typeof opacity.value === "number" && isFinite(opacity.value) && opacity.value >= 0 && opacity.value <= 100;
+        }
+        function schemaNameForProfile(profile) {
+            if (profile === requestPolicyProfiles.TEXT_ONLY) { return "vela_text_response"; }
+            if (profile === requestPolicyProfiles.EXPLICIT_EDIT_ELIGIBLE) { return "vela_local_proposal_response"; }
+            return "vela_bounded_union_response";
+        }
+        function updateDiagnostics(values) {
+            diagnostics = Object.freeze({
+                moduleRevision: MODULE_REVISION,
+                provisionalProfile: values.provisionalProfile === undefined ? diagnostics.provisionalProfile : values.provisionalProfile,
+                contextUnionEligible: values.contextUnionEligible === undefined ? diagnostics.contextUnionEligible : values.contextUnionEligible,
+                finalProfile: values.finalProfile === undefined ? diagnostics.finalProfile : values.finalProfile,
+                responseSchemaName: values.responseSchemaName === undefined ? diagnostics.responseSchemaName : values.responseSchemaName,
+                parsedResponseType: values.parsedResponseType === undefined ? diagnostics.parsedResponseType : values.parsedResponseType,
+                intentAllowed: values.intentAllowed === undefined ? diagnostics.intentAllowed : values.intentAllowed,
+                intentReason: values.intentReason === undefined ? diagnostics.intentReason : values.intentReason
+            });
+        }
+        function unavailableGrounding(capturedGeneration) {
+            var contextId = "provider-context-unavailable-" + String(capturedGeneration);
+            return {
+                projection: providerContextPort.unavailable(),
+                requestContext: {
+                    contextId: contextId,
+                    fingerprint: "sha256:" + protocol.sha256Hex(protocol.canonicalStringify({ available: false, requestGeneration: capturedGeneration })),
+                    tier: 0
+                }
+            };
+        }
+        function mayContinueWithoutContext(error) {
+            var code = ownData(error, "code");
+            return code === protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE || code === protocol.ERROR_CODES.UNKNOWN_TARGET;
         }
         function selectionTarget(capture) {
             var snapshot = capture && ownData(capture, "snapshot");
@@ -216,11 +257,14 @@
             var values;
             var capturedGeneration;
             var requestProfile;
-            if (state === "pending") { return Promise.reject(new protocol.VelaProtocolError(protocol.ERROR_CODES.PROVIDER_REQUEST_IN_FLIGHT)); }
+            var provisionalProfile;
+            if (state === "pending" || reviewingProposal) { return Promise.reject(new protocol.VelaProtocolError(protocol.ERROR_CODES.PROVIDER_REQUEST_IN_FLIGHT)); }
             try { values = validateInput(input); }
             catch (error) { publish("failed", null, null, safeCode(protocol, error), null); return Promise.reject(error); }
-            try { requestProfile = requestPolicy.classify(values.message); }
+            try { provisionalProfile = requestPolicy.classify(values.message); }
             catch (error) { publish("failed", null, null, safeCode(protocol, error), values.model); return Promise.reject(error); }
+            requestProfile = provisionalProfile;
+            diagnostics = Object.freeze({ moduleRevision: MODULE_REVISION, provisionalProfile: provisionalProfile, contextUnionEligible: false, finalProfile: null, responseSchemaName: null, parsedResponseType: null, intentAllowed: null, intentReason: null });
             capturedGeneration = generation + 1;
             generation = capturedGeneration;
             publish("pending", null, null, null, values.model);
@@ -234,21 +278,35 @@
                 if (capturedGeneration !== generation || state !== "pending") { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
                 clearActiveCapture(capturedGeneration);
                 target = selectionTarget(capture);
-                if (!target) { return { capture: capture, projection: providerContextPort.project(capture, null) }; }
+                if (!target) { return { projection: providerContextPort.project(capture, null), requestContext: { contextId: capture.contextId, fingerprint: capture.fingerprint, tier: 1 } }; }
                 valueStart = bridge.beginOwnedPropertyValueCapture(capture, [target]);
                 if (!active || active.generation !== capturedGeneration) { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
                 active.captureHandle = valueStart.handle;
                 return valueStart.promise.then(function (valueCapture) {
                     if (capturedGeneration !== generation || state !== "pending") { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
                     clearActiveCapture(capturedGeneration);
-                    return { capture: capture, projection: providerContextPort.project(capture, valueCapture) };
+                    return { projection: providerContextPort.project(capture, valueCapture), requestContext: { contextId: capture.contextId, fingerprint: capture.fingerprint, tier: 1 } };
+                }, function (error) {
+                    if (capturedGeneration !== generation || state !== "pending") { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
+                    clearActiveCapture(capturedGeneration);
+                    if (!mayContinueWithoutContext(error)) { throw error; }
+                    return unavailableGrounding(capturedGeneration);
                 });
+            }, function (error) {
+                if (capturedGeneration !== generation || state !== "pending") { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
+                clearActiveCapture(capturedGeneration);
+                if (!mayContinueWithoutContext(error)) { throw error; }
+                return unavailableGrounding(capturedGeneration);
             }).then(function (grounded) {
                 var provider;
                 var started;
+                var contextUnionEligible;
                 if (!active || active.generation !== capturedGeneration || capturedGeneration !== generation || state !== "pending") { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
+                contextUnionEligible = isUnionEligible(grounded.projection);
+                if (provisionalProfile === requestPolicyProfiles.TEXT_ONLY && contextUnionEligible) { requestProfile = requestPolicyProfiles.PROPOSAL_CAPABLE_UNION; }
+                updateDiagnostics({ contextUnionEligible: contextUnionEligible, finalProfile: requestProfile, responseSchemaName: schemaNameForProfile(requestProfile) });
                 provider = adapterModule.createLocalOpenAICompatibleProvider({ protocol: protocol, transport: transport, runtime: providerRuntime, endpoint: values.endpoint, model: values.model, requestProfile: requestProfile, responseFormatMode: "json-schema" });
-                started = provider.start({ messages: [{ role: "assistant", content: summaryFromProjection(grounded.projection) }, { role: "user", content: values.message }], context: { contextId: grounded.capture.contextId, fingerprint: grounded.capture.fingerprint, tier: 1 } });
+                started = provider.start({ messages: [{ role: "assistant", content: summaryFromProjection(grounded.projection) }, { role: "user", content: values.message }], context: grounded.requestContext });
                 active = { generation: capturedGeneration, requestId: started.requestId, provider: provider, captureHandle: null, requestProfile: requestProfile };
                 publish("pending", started.requestId, null, null, values.model);
                 return started.promise;
@@ -258,17 +316,19 @@
                 active = null;
                 envelope = response && ownData(response, "envelope");
                 if (!envelope || (envelope.type !== "text" && envelope.type !== "error" && envelope.type !== "localProposal")) { return publish("failed", publicState.requestId, null, protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, values.model); }
+                updateDiagnostics({ parsedResponseType: envelope.type });
                 if (envelope.type === "error") { return publish("failed", publicState.requestId, null, safeCode(protocol, ownData(envelope, "error")), values.model); }
                 if (envelope.type === "localProposal") {
                     var proposal = ownData(envelope, "proposal");
                     var capabilityId = ownData(proposal, "capabilityId");
                     var opacity = ownData(ownData(proposal, "params"), "opacity");
                     var intent = intentGateModule.evaluate({ message: values.message, capabilityId: capabilityId, proposedOpacity: opacity });
+                    updateDiagnostics({ intentAllowed: !!(intent && intent.allowed === true), intentReason: intent && typeof intent.reason === "string" ? intent.reason : null });
                     if (!intent || intent.allowed !== true) {
                         activeProposal = null;
                         return publish("intent-rejected", publicState.requestId, null, null, values.model, null, intent.reason);
                     }
-                    activeProposal = protocol.deepFreeze({ capabilityId: capabilityId, opacity: opacity });
+                    activeProposal = protocol.deepFreeze({ requestId: publicState.requestId, generation: capturedGeneration, capabilityId: capabilityId, opacity: opacity });
                     return publish("proposal-ready", publicState.requestId, null, null, values.model, { capabilityId: capabilityId, opacity: opacity });
                 }
                 return publish("completed", publicState.requestId, protocol.assertString(ownData(envelope, "text"), "provider text", protocol.HARD_LIMITS.maxMessageBytes), null, values.model);
@@ -300,31 +360,42 @@
             cancelActiveCapture();
             if (active && active.provider) { try { active.provider.cancel(active.requestId); } catch (ignored) {} }
             active = null;
+            activeProposal = null;
+            reviewingProposal = null;
             return publish(nextState || "idle", null, null, nextState === "failed" ? protocol.ERROR_CODES.LIFECYCLE_BLOCKED : null, null);
         }
         var proposalPort = Object.freeze({
-            consume: function () {
+            beginReview: function () {
                 var proposal;
                 if (state !== "proposal-ready" || !activeProposal) { protocol.fail(protocol.ERROR_CODES.CANDIDATE_NOT_FOUND, "No local proposal is available."); }
                 proposal = activeProposal;
                 activeProposal = null;
-                publish("idle", null, null, null, publicState.modelId);
+                reviewingProposal = proposal;
+                publish("proposal-reviewing", proposal.requestId, null, null, publicState.modelId);
                 return proposal;
-            }
-        });
-        var contextRefreshPort = Object.freeze({
-            discardActiveProposalForContextRefresh: function () {
-                if (state !== "proposal-ready" || !activeProposal) { return false; }
-                activeProposal = null;
-                publish("idle", null, null, null, publicState.modelId);
+            },
+            finalizeReview: function (input) {
+                var proposal = reviewingProposal;
+                var outcome;
+                var errorCode;
+                if (!protocol.isPlainObject(input)) { return false; }
+                try {
+                    protocol.assertNoUnknownKeys(input, ["requestId", "generation", "outcome", "errorCode"], "providerProposal.finalizeReview");
+                    if (!proposal || ownData(input, "requestId") !== proposal.requestId || ownData(input, "generation") !== proposal.generation) { return false; }
+                    outcome = ownData(input, "outcome");
+                    errorCode = ownData(input, "errorCode");
+                    if (outcome !== "completed" && outcome !== "failed") { return false; }
+                    if (outcome === "failed" && (typeof errorCode !== "string" || safeCode(protocol, { code: errorCode }) !== errorCode)) { return false; }
+                } catch (error) { return false; }
+                reviewingProposal = null;
+                publish("idle", proposal.requestId, null, outcome === "failed" ? errorCode : null, publicState.modelId);
                 return true;
             }
         });
-        var controller = Object.freeze({ send: send, cancel: cancel, invalidate: invalidate, checkReadiness: checkReadiness, getUiState: function () { return publicState; } });
+        var controller = Object.freeze({ send: send, cancel: cancel, invalidate: invalidate, checkReadiness: checkReadiness, getUiState: function () { return publicState; }, getDiagnostics: function () { return diagnostics; } });
         trustedControllers.add(controller);
         controllerProtocols.set(controller, protocol);
         controllerProposalPorts.set(controller, proposalPort);
-        controllerContextRefreshPorts.set(controller, contextRefreshPort);
         return controller;
     }
     function isTrustedProviderControllerForProtocol(value, protocol) { return trustedControllers.has(value) && controllerProtocols.get(value) === protocol && protocolModule.isTrustedProtocol(protocol); }
@@ -335,12 +406,5 @@
         if (!port) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
         return port;
     }
-    function createContextRefreshPort(controller, protocol) {
-        var port;
-        if (!isTrustedProviderControllerForProtocol(controller, protocol)) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
-        port = controllerContextRefreshPorts.get(controller);
-        if (!port) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
-        return port;
-    }
-    return Object.freeze({ createProviderController: createProviderController, isTrustedProviderControllerForProtocol: isTrustedProviderControllerForProtocol, createProposalPort: createProposalPort, createContextRefreshPort: createContextRefreshPort });
+    return Object.freeze({ createProviderController: createProviderController, isTrustedProviderControllerForProtocol: isTrustedProviderControllerForProtocol, createProposalPort: createProposalPort });
 }));

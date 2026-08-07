@@ -13,6 +13,8 @@
     var KEYBOARD_STEP_PX = 12;
     var KEYBOARD_LARGE_STEP_PX = 36;
     var TOOL_POOL_FALLBACK_CARD_HEIGHT_PX = 124;
+    var HEIGHT_PREFERENCE_SCHEMA_VERSION = 1;
+    var MAX_REASONABLE_PREFERENCE_PX = 100000;
 
     function finite(value, fallback) {
         return typeof value === "number" && isFinite(value) ? value : fallback;
@@ -41,9 +43,9 @@
         var headerElement = options.headerElement;
         var toolPoolElement = options.toolPoolElement;
         var getUiScale = typeof options.getUiScale === "function" ? options.getUiScale : function () { return 1; };
-        var ResizeObserverCtor = options.ResizeObserver || (typeof ResizeObserver !== "undefined" ? ResizeObserver : null);
+        var loadHeightPreference = typeof options.loadHeightPreference === "function" ? options.loadHeightPreference : function () { return null; };
+        var saveHeightPreference = typeof options.saveHeightPreference === "function" ? options.saveHeightPreference : function () {};
         var eventTarget = options.eventTarget || null;
-        var observer = null;
         var started = false;
         var suspended = false;
         var disposed = false;
@@ -52,8 +54,15 @@
         var startY = 0;
         var startHeight = 0;
         var pendingHeight = null;
+        var preferredHeight = null;
+        var dragPreferenceCandidate = null;
+        var dragMoved = false;
         var rafId = null;
         var bounds = { min: 0, max: 0 };
+        var lastAppliedHeight = null;
+        var lastAriaMin = null;
+        var lastAriaMax = null;
+        var lastAriaNow = null;
         var listeners = [];
 
         if (!rootElement || !handle || !transcript || !composer || !status || !controls || !homeContainer || !headerElement || !toolPoolElement) {
@@ -81,41 +90,74 @@
             return measured > 0 ? measured : 0;
         }
         function clamp(value) { return Math.max(bounds.min, Math.min(bounds.max, value)); }
+        function normalizePreference(value) {
+            var height = value && value.schemaVersion === HEIGHT_PREFERENCE_SCHEMA_VERSION ? value.heightPx : null;
+            return typeof height === "number" && isFinite(height) && height > 0 && height <= MAX_REASONABLE_PREFERENCE_PX ? height : null;
+        }
+        function normalizeUserPreference(value) {
+            return Math.max(1, Math.min(MAX_REASONABLE_PREFERENCE_PX, finite(value, 1)));
+        }
+        function readPreference() {
+            var stored;
+            try { stored = loadHeightPreference(); } catch (ignored) { return null; }
+            return normalizePreference(stored);
+        }
+        function persistPreference() {
+            if (preferredHeight === null) { return false; }
+            try { saveHeightPreference(preferredHeight); return true; } catch (ignored) { return false; }
+        }
         function updateAria(value) {
-            handle.setAttribute("aria-valuemin", String(Math.round(bounds.min)));
-            handle.setAttribute("aria-valuemax", String(Math.round(bounds.max)));
-            handle.setAttribute("aria-valuenow", String(Math.round(value)));
+            var min = Math.round(bounds.min);
+            var max = Math.round(bounds.max);
+            var now = Math.round(value);
+            if (lastAriaMin !== min) { handle.setAttribute("aria-valuemin", String(min)); lastAriaMin = min; }
+            if (lastAriaMax !== max) { handle.setAttribute("aria-valuemax", String(max)); lastAriaMax = max; }
+            if (lastAriaNow !== now) { handle.setAttribute("aria-valuenow", String(now)); lastAriaNow = now; }
         }
         function applyHeight(value) {
-            var next = clamp(value);
-            rootElement.style.setProperty("--vela-surface-height", Math.round(next) + "px");
+            var next = Math.round(clamp(value));
+            if (lastAppliedHeight !== next) {
+                rootElement.style.setProperty("--vela-surface-height", next + "px");
+                lastAppliedHeight = next;
+            }
             updateAria(next);
             return next;
         }
-        function computeBounds() {
+        function measureBounds() {
             var s = scale();
             var controlsHeight = Math.max(rectHeight(controls), rectHeight(settings));
             var minimumFixedHeight = rectHeight(composer) + rectHeight(status) + controlsHeight;
             var min = minimumFixedHeight + (TRANSCRIPT_MIN_READABLE_PX * s) + (HOME_VERTICAL_SAFETY_GAP_PX * s);
             var available = rectHeight(homeContainer) - rectHeight(headerElement) - toolPoolMinimumHeight() - (HOME_VERTICAL_SAFETY_GAP_PX * s);
-            bounds.min = Math.max(min, 1);
-            bounds.max = Math.max(bounds.min, available);
-            return bounds;
+            var measuredMin = Math.max(min, 1);
+            return {
+                current: getCurrentHeight(),
+                min: measuredMin,
+                max: Math.max(measuredMin, available)
+            };
+        }
+        function applyMeasurement(measurement) {
+            if (!measurement) { return 0; }
+            bounds.min = measurement.min;
+            bounds.max = measurement.max;
+            if (preferredHeight === null) {
+                preferredHeight = readPreference();
+            }
+            return applyHeight(preferredHeight !== null ? preferredHeight : bounds.max * DEFAULT_HEIGHT_RATIO);
         }
         function initializeHeight() {
-            var current;
-            computeBounds();
-            current = getCurrentHeight();
-            if (!(current > 0)) { current = bounds.max * DEFAULT_HEIGHT_RATIO; }
-            return applyHeight(current);
+            return applyMeasurement(measureBounds());
         }
         function refreshBounds() {
-            var current = getCurrentHeight();
-            computeBounds();
-            return applyHeight(current > 0 ? current : bounds.max * DEFAULT_HEIGHT_RATIO);
+            return applyMeasurement(measureBounds());
         }
         function endDrag() {
             if (!dragging) { return; }
+            if (dragMoved && dragPreferenceCandidate !== null) {
+                preferredHeight = dragPreferenceCandidate;
+                applyHeight(preferredHeight);
+                persistPreference();
+            }
             dragging = false;
             rootElement.classList.remove("is-resizing");
             if (pointerId !== null && typeof handle.releasePointerCapture === "function") {
@@ -123,6 +165,8 @@
             }
             pointerId = null;
             pendingHeight = null;
+            dragPreferenceCandidate = null;
+            dragMoved = false;
             if (rafId !== null) { cancelFrame(rafId); rafId = null; }
         }
         function scheduleHeight(value) {
@@ -155,6 +199,8 @@
             pointerId = event.pointerId;
             startY = event.clientY;
             startHeight = getCurrentHeight();
+            dragPreferenceCandidate = startHeight;
+            dragMoved = false;
             rootElement.classList.add("is-resizing");
             if (typeof handle.setPointerCapture === "function" && pointerId !== undefined) {
                 try { handle.setPointerCapture(pointerId); } catch (ignored) {}
@@ -163,7 +209,9 @@
         }
         function onPointerMove(event) {
             if (!dragging || !event || (pointerId !== null && event.pointerId !== undefined && event.pointerId !== pointerId)) { return; }
-            scheduleHeight(startHeight + (event.clientY - startY));
+            dragPreferenceCandidate = normalizeUserPreference(startHeight + (event.clientY - startY));
+            dragMoved = true;
+            scheduleHeight(dragPreferenceCandidate);
             if (typeof event.preventDefault === "function") { event.preventDefault(); }
         }
         function onKeyDown(event) {
@@ -171,11 +219,13 @@
             var current = getCurrentHeight();
             if (disposed || suspended || !event) { return; }
             refreshBounds();
-            if (event.key === "ArrowUp") { applyHeight(current - step); }
-            else if (event.key === "ArrowDown") { applyHeight(current + step); }
-            else if (event.key === "Home") { applyHeight(bounds.min); }
-            else if (event.key === "End") { applyHeight(bounds.max); }
+            if (event.key === "ArrowUp") { preferredHeight = current - step; }
+            else if (event.key === "ArrowDown") { preferredHeight = current + step; }
+            else if (event.key === "Home") { preferredHeight = bounds.min; }
+            else if (event.key === "End") { preferredHeight = bounds.max; }
             else { return; }
+            applyHeight(preferredHeight);
+            persistPreference();
             if (typeof event.preventDefault === "function") { event.preventDefault(); }
         }
         function start() {
@@ -188,29 +238,20 @@
             add(handle, "pointercancel", endDrag);
             add(handle, "lostpointercapture", endDrag);
             add(handle, "keydown", onKeyDown);
-            if (eventTarget) { add(eventTarget, "blur", endDrag); add(eventTarget, "resize", refreshBounds); }
-            if (ResizeObserverCtor) {
-                observer = new ResizeObserverCtor(function () {
-                    if (!disposed && !suspended) { refreshBounds(); }
-                });
-                observer.observe(homeContainer);
-                observer.observe(headerElement);
-                observer.observe(toolPoolElement);
-            }
+            if (eventTarget) { add(eventTarget, "blur", endDrag); }
             initializeHeight();
             return true;
         }
         function suspend() { if (disposed || suspended) { return false; } suspended = true; endDrag(); return true; }
-        function resume() { if (disposed || !suspended) { return false; } suspended = false; refreshBounds(); return true; }
+        function resume() { if (disposed || !suspended) { return false; } suspended = false; return true; }
         function dispose() {
             if (disposed) { return false; }
             disposed = true;
             endDrag();
-            if (observer) { observer.disconnect(); observer = null; }
             removeAll();
             return true;
         }
-        return Object.freeze({ start: start, refreshBounds: refreshBounds, suspend: suspend, resume: resume, dispose: dispose });
+        return Object.freeze({ start: start, measureBounds: measureBounds, applyMeasurement: applyMeasurement, refreshBounds: refreshBounds, suspend: suspend, resume: resume, dispose: dispose });
     }
 
     return Object.freeze({ create: create });

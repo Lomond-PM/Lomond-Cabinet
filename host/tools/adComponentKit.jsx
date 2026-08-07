@@ -137,6 +137,260 @@
         return area(left, top, right, bottom);
     }
 
+    function gridFiniteNumber(value) {
+        return typeof value === "number" && isFinite(value);
+    }
+
+    function gridFinitePoint(value) {
+        return value && value.length >= 2 && gridFiniteNumber(value[0]) && gridFiniteNumber(value[1]);
+    }
+
+    function convertGridSourcePointToCompStrict(layer, point) {
+        var result;
+        if (!layer || typeof layer.sourcePointToComp !== "function") {
+            return gridFailure("GRID_TO_COMP_FAILED");
+        }
+        try {
+            result = layer.sourcePointToComp([point[0], point[1]]);
+        } catch (err) {
+            return gridFailure("GRID_TO_COMP_FAILED");
+        }
+        if (!gridFinitePoint(result)) {
+            return gridFailure("GRID_NON_FINITE_BOUNDS");
+        }
+        return { ok: true, point: [result[0], result[1]] };
+    }
+
+    function gridFailure(reason) {
+        return { ok: false, reason: reason };
+    }
+
+    function classifyGridLayer(layer) {
+        var matchName;
+        if (!layer) { return "unsupported"; }
+        try { matchName = String(layer.matchName || ""); } catch (err) { return "unsupported"; }
+        if (matchName === "ADBE Vector Layer") { return "shape"; }
+        if (matchName === "ADBE Text Layer") { return "text"; }
+        if (matchName === "ADBE AV Layer") { return "av"; }
+        return "unsupported";
+    }
+
+    function gridSourceSizeRect(layer) {
+        var width;
+        var height;
+        if (!layer || layer.matchName !== "ADBE AV Layer") {
+            return null;
+        }
+        try {
+            width = layer.width;
+            height = layer.height;
+        } catch (err) {
+            return null;
+        }
+        if (!gridFiniteNumber(width) || !gridFiniteNumber(height)) {
+            return { invalid: "GRID_NON_FINITE_BOUNDS" };
+        }
+        if (width <= 0 || height <= 0) {
+            return { invalid: "GRID_ZERO_SIZE_BOUNDS" };
+        }
+        return { left: 0, top: 0, width: width, height: height };
+    }
+
+    function getGridVisualBoundsInComp(layer, comp, time) {
+        var rect = null;
+        var sourceReadFailed = false;
+        var layerType = classifyGridLayer(layer);
+        var pts;
+        var i;
+        var p;
+        var converted;
+        var left = 9999999;
+        var top = 9999999;
+        var right = -9999999;
+        var bottom = -9999999;
+        var fallback;
+        var bounds;
+        if (!layer || !comp) {
+            return gridFailure("GRID_INVALID_SOURCE_BOUNDS");
+        }
+        try {
+            if (layer.containingComp !== comp || !gridFiniteNumber(layer.index) || layer.index < 1 || comp.layer(layer.index) !== layer) {
+                return gridFailure("GRID_UNSUPPORTED_LAYER_TYPE");
+            }
+        } catch (membershipError) {
+            return gridFailure("GRID_UNSUPPORTED_LAYER_TYPE");
+        }
+        try {
+            if (typeof layer.sourceRectAtTime === "function") {
+                rect = layer.sourceRectAtTime(time, false);
+            } else {
+                sourceReadFailed = true;
+            }
+        } catch (sourceError) {
+            sourceReadFailed = true;
+        }
+        if (!rect) {
+            if (layerType === "text" || layerType === "shape") {
+                return gridFailure("GRID_INVALID_SOURCE_BOUNDS");
+            }
+            fallback = gridSourceSizeRect(layer);
+            if (!fallback) {
+                return gridFailure("GRID_INVALID_SOURCE_BOUNDS");
+            }
+            if (fallback.invalid) {
+                return gridFailure(fallback.invalid);
+            }
+            rect = fallback;
+        } else if (sourceReadFailed) {
+            return gridFailure("GRID_INVALID_SOURCE_BOUNDS");
+        }
+        if (!gridFiniteNumber(rect.left) || !gridFiniteNumber(rect.top) || !gridFiniteNumber(rect.width) || !gridFiniteNumber(rect.height)) {
+            return gridFailure("GRID_NON_FINITE_BOUNDS");
+        }
+        if (rect.width <= 0 || rect.height <= 0) {
+            return gridFailure("GRID_ZERO_SIZE_BOUNDS");
+        }
+        pts = [
+            [rect.left, rect.top],
+            [rect.left + rect.width, rect.top],
+            [rect.left + rect.width, rect.top + rect.height],
+            [rect.left, rect.top + rect.height]
+        ];
+        for (i = 0; i < pts.length; i++) {
+            converted = convertGridSourcePointToCompStrict(layer, pts[i]);
+            if (!converted.ok) { return converted; }
+            p = converted.point;
+            left = Math.min(left, p[0]);
+            top = Math.min(top, p[1]);
+            right = Math.max(right, p[0]);
+            bottom = Math.max(bottom, p[1]);
+        }
+        if (!gridFiniteNumber(left) || !gridFiniteNumber(top) || !gridFiniteNumber(right) || !gridFiniteNumber(bottom)) {
+            return gridFailure("GRID_NON_FINITE_BOUNDS");
+        }
+        bounds = area(left, top, right, bottom);
+        if (!gridFiniteNumber(bounds.width) || !gridFiniteNumber(bounds.height) || !gridFiniteNumber(bounds.centerX) || !gridFiniteNumber(bounds.centerY)) {
+            return gridFailure("GRID_NON_FINITE_BOUNDS");
+        }
+        if (bounds.width <= 0 || bounds.height <= 0) {
+            return gridFailure("GRID_ZERO_SIZE_BOUNDS");
+        }
+        return { ok: true, bounds: bounds };
+    }
+
+    function gridPropertyWritable(prop) {
+        return !!(prop && typeof prop.setValue === "function");
+    }
+
+    function gridPropertyHasExpression(prop) {
+        try {
+            return !!(prop && prop.expressionEnabled);
+        } catch (err) {
+            return true;
+        }
+    }
+
+    function validateGridLayer(layer, comp, time) {
+        var tr;
+        var anchor;
+        var position;
+        var scale;
+        var rotation;
+        var positionX;
+        var positionY;
+        var anchorValue;
+        var positionValue;
+        var scaleValue;
+        var rotationValue;
+        var boundsResult;
+        var separated = false;
+        var layerType = classifyGridLayer(layer);
+        if (!layer) { return gridFailure("GRID_UNSUPPORTED_LAYER_TYPE"); }
+        try { if (layer.threeDLayer) { return gridFailure("GRID_UNSUPPORTED_3D_LAYER"); } } catch (threeDError) { return gridFailure("GRID_UNSUPPORTED_LAYER_TYPE"); }
+        try { if (layer.parent) { return gridFailure("GRID_UNSUPPORTED_PARENTED_LAYER"); } } catch (parentError) { return gridFailure("GRID_UNSUPPORTED_PARENTED_LAYER"); }
+        try { if (layer.locked) { return gridFailure("GRID_LOCKED_LAYER"); } } catch (lockError) { return gridFailure("GRID_LOCKED_LAYER"); }
+        try {
+            if (layer.nullLayer || layer.adjustmentLayer || layer.matchName === "ADBE Camera Layer" || layer.matchName === "ADBE Light Layer") {
+                return gridFailure("GRID_UNSUPPORTED_LAYER_TYPE");
+            }
+            if (layerType === "av" && (layer.collapseTransformation === true || layer.continuouslyRasterize === true)) {
+                return gridFailure("GRID_UNSUPPORTED_LAYER_TYPE");
+            }
+        } catch (typeError) {
+            return gridFailure("GRID_UNSUPPORTED_LAYER_TYPE");
+        }
+        if (layerType === "unsupported") {
+            return gridFailure("GRID_UNSUPPORTED_LAYER_TYPE");
+        }
+        try {
+            tr = layer.property("ADBE Transform Group");
+            anchor = tr && tr.property("ADBE Anchor Point");
+            position = tr && tr.property("ADBE Position");
+            scale = tr && tr.property("ADBE Scale");
+            rotation = tr && tr.property("ADBE Rotate Z");
+        } catch (transformError) {
+            return gridFailure("GRID_TRANSFORM_NOT_WRITABLE");
+        }
+        if (!gridPropertyWritable(anchor) || !gridPropertyWritable(position) || !gridPropertyWritable(scale) || !gridPropertyWritable(rotation)) {
+            return gridFailure("GRID_TRANSFORM_NOT_WRITABLE");
+        }
+        if (gridPropertyHasExpression(anchor) || gridPropertyHasExpression(position) || gridPropertyHasExpression(scale) || gridPropertyHasExpression(rotation)) {
+            return gridFailure("GRID_TRANSFORM_EXPRESSION");
+        }
+        try {
+            anchorValue = anchor.value;
+            positionValue = position.value;
+            scaleValue = scale.value;
+            rotationValue = rotation.value;
+            separated = position.dimensionsSeparated === true;
+        } catch (valueError) {
+            return gridFailure("GRID_TRANSFORM_NOT_WRITABLE");
+        }
+        if (!gridFinitePoint(anchorValue) || !gridFinitePoint(positionValue) || !gridFinitePoint(scaleValue) || !gridFiniteNumber(rotationValue)) {
+            return gridFailure("GRID_TRANSFORM_NOT_WRITABLE");
+        }
+        if (Math.abs(rotationValue) > 0.001) {
+            return gridFailure("GRID_UNSUPPORTED_ROTATION");
+        }
+        if (scaleValue[0] <= 0 || scaleValue[1] <= 0) {
+            return gridFailure("GRID_UNSUPPORTED_NEGATIVE_SCALE");
+        }
+        if (separated) {
+            try {
+                positionX = tr.property("ADBE Position_0");
+                positionY = tr.property("ADBE Position_1");
+            } catch (separatedError) {
+                return gridFailure("GRID_TRANSFORM_NOT_WRITABLE");
+            }
+            if (!gridPropertyWritable(positionX) || !gridPropertyWritable(positionY) || gridPropertyHasExpression(positionX) || gridPropertyHasExpression(positionY)) {
+                return gridFailure(gridPropertyHasExpression(positionX) || gridPropertyHasExpression(positionY) ? "GRID_TRANSFORM_EXPRESSION" : "GRID_TRANSFORM_NOT_WRITABLE");
+            }
+        }
+        boundsResult = getGridVisualBoundsInComp(layer, comp, time);
+        if (!boundsResult.ok) { return boundsResult; }
+        return {
+            ok: true,
+            candidate: {
+                layer: layer,
+                bounds: boundsResult.bounds,
+                scaleX: scaleValue[0],
+                scaleY: scaleValue[1]
+            }
+        };
+    }
+
+    function gridFailureJson(reason, invalidCount, layer, fallbackMessage) {
+        var layerIndex = 0;
+        var layerName = "";
+        try { layerIndex = layer && gridFiniteNumber(layer.index) ? layer.index : 0; } catch (indexError) {}
+        try { layerName = layer ? String(layer.name || "") : ""; } catch (nameError) {}
+        return jsonResult(false, fallbackMessage || "Icon Grid input is not supported.",
+            "\"reason\":\"" + AEToolbox.jsonEscape(reason || "GRID_TRANSFORM_NOT_WRITABLE") + "\"," +
+            "\"invalidLayerCount\":" + Math.max(0, invalidCount || 0) + "," +
+            "\"firstInvalidLayerIndex\":" + layerIndex + "," +
+            "\"firstInvalidLayerName\":\"" + AEToolbox.jsonEscape(layerName) + "\"");
+    }
+
     function isShapeLayer(layer) {
         try {
             return !!layer.property("ADBE Root Vectors Group");
@@ -1814,7 +2068,9 @@
         var layers;
         var gridLayers = [];
         var gridItems = [];
-        var skipped = 0;
+        var invalidCount = 0;
+        var firstInvalidLayer = null;
+        var firstInvalidReason = "";
         var componentId;
         var artifactId;
         var createdAt;
@@ -1826,33 +2082,39 @@
         var ctrlTr;
         var ctrlPositionValue;
         var finalBounds;
+        var finalBoundsResult;
         var layoutResult;
         var warning = "";
+        var validation;
         if (!comp) {
             return jsonResult(false, "Open a composition before creating an icon grid.", "\"version\":\"" + activeIconGridVersion + "\",\"functionName\":\"" + ICON_GRID_FUNCTION_NAME + "\",\"file\":\"" + ICON_GRID_FILE + "\"");
         }
         layers = selectedLayers(comp);
+        if (!layers.length) {
+            return gridFailureJson("GRID_NO_SELECTION", 0, null, "Select one or more supported 2D layers for the icon grid.");
+        }
         for (i = 0; i < layers.length; i++) {
-            if (layers[i].threeDLayer || layers[i].parent || shouldSkipGridLayer(layers[i]) || hasTransformExpression(layers[i], "ADBE Position") || hasTransformExpression(layers[i], "ADBE Scale")) {
-                skipped++;
+            if (shouldSkipGridLayer(layers[i])) {
+                validation = gridFailure("GRID_UNSUPPORTED_LAYER_TYPE");
             } else {
-                b = getLayerVisualBoundsInComp(layers[i], comp.time);
-                if (b.width <= 0 || b.height <= 0) {
-                    skipped++;
-                } else {
-                    scale = getScale2D(layers[i]);
-                    gridLayers[gridLayers.length] = layers[i];
-                    gridItems[gridItems.length] = {
-                        layer: layers[i],
-                        bounds: b,
-                        scaleX: scale[0],
-                        scaleY: scale[1]
-                    };
+                validation = validateGridLayer(layers[i], comp, comp.time);
+            }
+            if (!validation.ok) {
+                invalidCount++;
+                if (!firstInvalidLayer) {
+                    firstInvalidLayer = layers[i];
+                    firstInvalidReason = validation.reason;
                 }
+            } else {
+                gridLayers[gridLayers.length] = layers[i];
+                gridItems[gridItems.length] = validation.candidate;
             }
         }
+        if (invalidCount > 0) {
+            return gridFailureJson(firstInvalidReason, invalidCount, firstInvalidLayer, "Icon Grid rejected the selection before making changes.");
+        }
         if (!gridItems.length) {
-            return jsonResult(false, "Select one or more 2D layers for the icon grid.", "\"version\":\"" + activeIconGridVersion + "\",\"functionName\":\"" + ICON_GRID_FUNCTION_NAME + "\",\"file\":\"" + ICON_GRID_FILE + "\"");
+            return gridFailureJson("GRID_NO_SELECTION", 0, null, "Select one or more supported 2D layers for the icon grid.");
         }
         sortGridItems(gridItems, p.gridSortMode);
         gridLayers = [];
@@ -1866,36 +2128,45 @@
         app.beginUndoGroup("AE Toolbox Create Icon Grid");
         try {
             layoutResult = computeIconGridWorldLayout(gridItems, p, selectionBounds.centerX, selectionBounds.centerY);
+            try {
+                if (!comp.layers || typeof comp.layers.addNull !== "function") {
+                    throw new Error("controller-unavailable");
+                }
+                ctrl = createController(comp, "ICON_GRID_CTRL", componentId, "iconGrid", 0, 0, p);
+                if (!ctrl) {
+                    throw new Error("controller-unavailable");
+                }
+                ctrl.parent = null;
+                ctrl.threeDLayer = false;
+                ctrlTr = ctrl.property("ADBE Transform Group");
+                if (!ctrlTr || !gridPropertyWritable(ctrlTr.property("ADBE Anchor Point")) || !gridPropertyWritable(ctrlTr.property("ADBE Position")) || !gridPropertyWritable(ctrlTr.property("ADBE Scale")) || !gridPropertyWritable(ctrlTr.property("ADBE Rotate Z"))) {
+                    throw new Error("controller-transform-unavailable");
+                }
+                ctrlTr.property("ADBE Anchor Point").setValue([0, 0]);
+                ctrlTr.property("ADBE Position").setValue([selectionBounds.centerX, selectionBounds.centerY]);
+                ctrlTr.property("ADBE Scale").setValue([100, 100]);
+                ctrlTr.property("ADBE Rotate Z").setValue(0);
+            } catch (controllerError) {
+                try { if (ctrl && typeof ctrl.remove === "function") { ctrl.remove(); } } catch (removeControllerError) {}
+                app.endUndoGroup();
+                return gridFailureJson("GRID_CONTROLLER_CREATE_FAILED", 0, null, "Icon Grid controller could not be created.");
+            }
             for (i = 0; i < gridItems.length; i++) {
                 centerLayerAnchorToVisualCenter(gridItems[i].layer, comp.time);
                 setLayerScaleFromOriginal(gridItems[i].layer, gridItems[i].scaleX, gridItems[i].scaleY, gridItems[i].scaleFactor);
                 setLayerLocalPosition(gridItems[i].layer, gridItems[i].targetCompX, gridItems[i].targetCompY);
             }
             for (i = 0; i < gridItems.length; i++) {
-                finalBounds = getLayerVisualBoundsInComp(gridItems[i].layer, comp.time);
+                finalBoundsResult = getGridVisualBoundsInComp(gridItems[i].layer, comp, comp.time);
+                if (!finalBoundsResult.ok) { throw new Error(finalBoundsResult.reason); }
+                finalBounds = finalBoundsResult.bounds;
                 gridItems[i].finalCompX = finalBounds.centerX;
                 gridItems[i].finalCompY = finalBounds.centerY;
                 layoutResult.items[i].finalCompX = finalBounds.centerX;
                 layoutResult.items[i].finalCompY = finalBounds.centerY;
             }
-            ctrl = createController(comp, "ICON_GRID_CTRL", componentId, "iconGrid", 0, 0, p);
-            setLayerArtifactMetadata(ctrl, {
-                kind: "iconGrid",
-                componentType: "iconGrid",
-                artifactId: artifactId,
-                componentId: componentId,
-                role: "controller",
-                index: 0,
-                createdAt: createdAt
-            });
-            ctrl.parent = null;
-            ctrl.threeDLayer = false;
-            ctrlTr = ctrl.property("ADBE Transform Group");
-            ctrlTr.property("ADBE Anchor Point").setValue([0, 0]);
-            ctrlTr.property("ADBE Position").setValue([selectionBounds.centerX, selectionBounds.centerY]);
-            ctrlTr.property("ADBE Scale").setValue([100, 100]);
-            ctrlTr.property("ADBE Rotate Z").setValue(0);
             for (i = 0; i < gridItems.length; i++) {
+                gridItems[i].layer.parent = ctrl;
                 setLayerArtifactMetadata(gridItems[i].layer, {
                     kind: "iconGrid",
                     componentType: "iconGrid",
@@ -1905,10 +2176,20 @@
                     index: i + 1,
                     createdAt: createdAt
                 });
-                gridItems[i].layer.parent = ctrl;
             }
+            setLayerArtifactMetadata(ctrl, {
+                kind: "iconGrid",
+                componentType: "iconGrid",
+                artifactId: artifactId,
+                componentId: componentId,
+                role: "controller",
+                index: 0,
+                createdAt: createdAt
+            });
             for (i = 0; i < gridItems.length; i++) {
-                finalBounds = getLayerVisualBoundsInComp(gridItems[i].layer, comp.time);
+                finalBoundsResult = getGridVisualBoundsInComp(gridItems[i].layer, comp, comp.time);
+                if (!finalBoundsResult.ok) { throw new Error(finalBoundsResult.reason); }
+                finalBounds = finalBoundsResult.bounds;
                 gridItems[i].finalCompX = finalBounds.centerX;
                 gridItems[i].finalCompY = finalBounds.centerY;
                 layoutResult.items[i].finalCompX = finalBounds.centerX;
@@ -1916,12 +2197,9 @@
             }
         } catch (err) {
             app.endUndoGroup();
-            return jsonResult(false, "Create icon grid failed: " + err.toString(), "\"version\":\"" + activeIconGridVersion + "\",\"functionName\":\"" + ICON_GRID_FUNCTION_NAME + "\",\"file\":\"" + ICON_GRID_FILE + "\"");
+            return gridFailureJson("GRID_TRANSFORM_NOT_WRITABLE", 0, null, "Icon Grid could not apply the validated layout.");
         }
         app.endUndoGroup();
-        if (skipped > 0) {
-            warning = "Skipped " + skipped + " unsupported, generated, parented, expression-driven, 3D, or zero-size layer(s).";
-        }
         ctrlPositionValue = positionProp(ctrl).value;
         if (Math.abs(ctrlPositionValue[0] - selectionBounds.centerX) > 0.5 || Math.abs(ctrlPositionValue[1] - selectionBounds.centerY) > 0.5) {
             warning = warning ? warning + " Controller position does not match original center." : "Controller position does not match original center.";
@@ -1953,15 +2231,94 @@
         };
     }
 
+    function validateGridRefreshController(ctrl) {
+        var tr;
+        var anchor;
+        var position;
+        var scale;
+        var rotation;
+        try {
+            if (!ctrl || ctrl.threeDLayer || ctrl.parent || ctrl.locked) { return false; }
+            tr = ctrl.property("ADBE Transform Group");
+            anchor = tr && tr.property("ADBE Anchor Point");
+            position = tr && tr.property("ADBE Position");
+            scale = tr && tr.property("ADBE Scale");
+            rotation = tr && tr.property("ADBE Rotate Z");
+            if (!gridPropertyWritable(anchor) || !gridPropertyWritable(position) || !gridPropertyWritable(scale) || !gridPropertyWritable(rotation)) { return false; }
+            if (gridPropertyHasExpression(anchor) || gridPropertyHasExpression(position) || gridPropertyHasExpression(scale) || gridPropertyHasExpression(rotation)) { return false; }
+            if (!gridFinitePoint(anchor.value) || !gridFinitePoint(position.value) || !gridFinitePoint(scale.value) || !gridFiniteNumber(rotation.value)) { return false; }
+            if (scale.value[0] <= 0 || scale.value[1] <= 0) { return false; }
+        } catch (err) {
+            return false;
+        }
+        return true;
+    }
+
+    function getGridRefreshLocalBounds(layer, ctrl, time) {
+        var layerType = classifyGridLayer(layer);
+        var rect = null;
+        var fallback;
+        var tr;
+        var anchor;
+        var position;
+        var scale;
+        var rotation;
+        var width;
+        var height;
+        var centerX;
+        var centerY;
+        try {
+            if (!layer || layer.parent !== ctrl || layer.threeDLayer || layer.locked || layer.nullLayer || layer.adjustmentLayer) {
+                return gridFailure("GRID_UNSUPPORTED_LAYER_TYPE");
+            }
+            if (layerType === "unsupported") { return gridFailure("GRID_UNSUPPORTED_LAYER_TYPE"); }
+            if (layerType === "av" && (layer.collapseTransformation === true || layer.continuouslyRasterize === true)) {
+                return gridFailure("GRID_UNSUPPORTED_LAYER_TYPE");
+            }
+            tr = layer.property("ADBE Transform Group");
+            anchor = tr && tr.property("ADBE Anchor Point");
+            position = tr && tr.property("ADBE Position");
+            scale = tr && tr.property("ADBE Scale");
+            rotation = tr && tr.property("ADBE Rotate Z");
+            if (!gridPropertyWritable(anchor) || !gridPropertyWritable(position) || !gridPropertyWritable(scale) || !gridPropertyWritable(rotation)) { return gridFailure("GRID_TRANSFORM_NOT_WRITABLE"); }
+            if (gridPropertyHasExpression(anchor) || gridPropertyHasExpression(position) || gridPropertyHasExpression(scale) || gridPropertyHasExpression(rotation)) { return gridFailure("GRID_TRANSFORM_EXPRESSION"); }
+            if (!gridFinitePoint(anchor.value) || !gridFinitePoint(position.value) || !gridFinitePoint(scale.value) || !gridFiniteNumber(rotation.value)) { return gridFailure("GRID_TRANSFORM_NOT_WRITABLE"); }
+            if (scale.value[0] <= 0 || scale.value[1] <= 0) { return gridFailure("GRID_UNSUPPORTED_NEGATIVE_SCALE"); }
+            if (Math.abs(rotation.value) > 0.001) { return gridFailure("GRID_UNSUPPORTED_ROTATION"); }
+            if (typeof layer.sourceRectAtTime === "function") { rect = layer.sourceRectAtTime(time, false); }
+        } catch (err) {
+            return gridFailure("GRID_INVALID_SOURCE_BOUNDS");
+        }
+        if (!rect) {
+            if (layerType === "shape" || layerType === "text") { return gridFailure("GRID_INVALID_SOURCE_BOUNDS"); }
+            fallback = gridSourceSizeRect(layer);
+            if (!fallback) { return gridFailure("GRID_INVALID_SOURCE_BOUNDS"); }
+            if (fallback.invalid) { return gridFailure(fallback.invalid); }
+            rect = fallback;
+        }
+        if (!gridFiniteNumber(rect.left) || !gridFiniteNumber(rect.top) || !gridFiniteNumber(rect.width) || !gridFiniteNumber(rect.height)) {
+            return gridFailure("GRID_NON_FINITE_BOUNDS");
+        }
+        if (rect.width <= 0 || rect.height <= 0) { return gridFailure("GRID_ZERO_SIZE_BOUNDS"); }
+        width = rect.width * scale.value[0] / 100;
+        height = rect.height * scale.value[1] / 100;
+        if (!gridFiniteNumber(width) || !gridFiniteNumber(height)) { return gridFailure("GRID_NON_FINITE_BOUNDS"); }
+        if (width <= 0 || height <= 0) { return gridFailure("GRID_ZERO_SIZE_BOUNDS"); }
+        centerX = position.value[0] + (rect.left + rect.width / 2 - anchor.value[0]) * scale.value[0] / 100;
+        centerY = position.value[1] + (rect.top + rect.height / 2 - anchor.value[1]) * scale.value[1] / 100;
+        if (!gridFiniteNumber(centerX) || !gridFiniteNumber(centerY)) { return gridFailure("GRID_NON_FINITE_BOUNDS"); }
+        return { ok: true, bounds: area(centerX - width / 2, centerY - height / 2, centerX + width / 2, centerY + height / 2), scaleX: scale.value[0], scaleY: scale.value[1] };
+    }
+
     function refreshIconGrid(comp, ctrl, data) {
         var layers = componentLayers(comp, data.componentId);
         var items = [];
         var i;
         var item;
-        var b;
-        var scale;
+        var measurement;
         var gridItems = [];
         var p = readIconParams(ctrl);
+        if (!validateGridRefreshController(ctrl)) { throw new Error("GRID_REFRESH_CONTROLLER_UNSUPPORTED"); }
         for (i = 0; i < layers.length; i++) {
             item = layers[i];
             if (item.data.role === "item" || item.data.role === "icon" || item.data.role === "generatedLayer" || item.data.role === "sourceLayerBinding") {
@@ -1977,15 +2334,16 @@
             return 0;
         }
         for (i = 0; i < items.length; i++) {
-            b = getLayerVisualBoundsInComp(items[i], comp.time);
-            scale = getScale2D(items[i]);
+            measurement = getGridRefreshLocalBounds(items[i], ctrl, comp.time);
+            if (!measurement.ok) { throw new Error(measurement.reason); }
             gridItems[gridItems.length] = {
                 layer: items[i],
-                bounds: b,
-                scaleX: scale[0],
-                scaleY: scale[1]
+                bounds: measurement.bounds,
+                scaleX: measurement.scaleX,
+                scaleY: measurement.scaleY
             };
         }
+        sortGridItems(gridItems, p.gridSortMode);
         layoutIconGridLocal(gridItems, p, true);
         return items.length;
     }

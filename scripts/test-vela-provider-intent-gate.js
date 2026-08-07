@@ -12,6 +12,7 @@ function rejected(message, opacity) { const value = evaluate(message, "set-opaci
     ["将当前图层不透明度改为 50%", 50],
     ["把 opacity 设置为 32.5%", 32.5],
     ["当前图层不透明度设为 57.5", 57.5],
+    ["将该图层的不透明度调整到50", 50],
     ["Set the selected layer opacity to 0%", 0],
     ["Change opacity to 100", 100],
     ["Adjust the current layer opacity to 50.0%", 50]

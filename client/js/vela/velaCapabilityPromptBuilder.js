@@ -75,7 +75,7 @@
         var textOnly;
         var explicitEdit;
         if (!Object.isFrozen(profiles) || Object.getPrototypeOf(profiles) !== Object.prototype ||
-            Object.getOwnPropertyNames(profiles).sort().join("\u0000") !== "EXPLICIT_EDIT_ELIGIBLE\u0000TEXT_ONLY" ||
+            Object.getOwnPropertyNames(profiles).sort().join("\u0000") !== "EXPLICIT_EDIT_ELIGIBLE\u0000PROPOSAL_CAPABLE_UNION\u0000TEXT_ONLY" ||
             (typeof Object.getOwnPropertySymbols === "function" && Object.getOwnPropertySymbols(profiles).length !== 0)) { fail("request profile export is invalid."); }
         textOnly = Object.getOwnPropertyDescriptor(profiles, "TEXT_ONLY");
         explicitEdit = Object.getOwnPropertyDescriptor(profiles, "EXPLICIT_EDIT_ELIGIBLE");
@@ -86,7 +86,7 @@
     }
     var PROFILES = assertProfileExport();
     function assertRequestProfile(value) {
-        if (value !== PROFILES.TEXT_ONLY && value !== PROFILES.EXPLICIT_EDIT_ELIGIBLE) { fail("requestProfile is invalid."); }
+        if (value !== PROFILES.TEXT_ONLY && value !== PROFILES.EXPLICIT_EDIT_ELIGIBLE && value !== PROFILES.PROPOSAL_CAPABLE_UNION) { fail("requestProfile is invalid."); }
         return value;
     }
     function rootEnvelope(requestId, model, envelope) {
@@ -111,6 +111,17 @@
             "Answer normal conversation, current-value queries, advice, explanations, ambiguity, and unavailable grounding as text. Trusted context is a fact only; never guess a missing current value.",
             "Do not claim an edit was performed, will be performed, or that a proposal was created. Do not describe a proposal.",
             "Use exactly this envelope shape: " + rootEnvelope(requestId, model, { type: "text", text: "A concise answer." })
+        ].join(" "); }
+        if (requestProfile === PROFILES.PROPOSAL_CAPABLE_UNION) { return [
+            "Return exactly one complete JSON object and nothing else.",
+            "This request is proposal-capable-union. Return either a conversational text envelope or one bounded localProposal envelope for set-opacity-v1.",
+            "Use protocol " + RESPONSE_PROTOCOL + " and schemaVersion " + RESPONSE_SCHEMA_VERSION + ".",
+            "Use requestId " + requestId + ", provider " + PROVIDER_ID + ", and model " + model + ".",
+            "Return text for questions, discussion, advice, ambiguity, or any message without a clear direct request to set the current actionable layer opacity.",
+            "For a clear direct opacity edit, use only capabilityId " + projection.capabilityId + " and only params.opacity from 0 through 100. Never include target identity, layer or comp ids, confirmation, nonce, Host payload, arbitrary code, or extra fields.",
+            "A localProposal does not modify After Effects. Trusted local intent validation, target binding, review, confirmation, preflight, and execution happen later.",
+            "Valid text example: " + rootEnvelope(requestId, model, { type: "text", text: "A concise answer." }),
+            "Valid proposal example: " + proposal57Example
         ].join(" "); }
         return [
             "Return exactly one complete JSON object and nothing else.",

@@ -291,10 +291,15 @@
             return true;
         }
 
-        function mapHostError(code) {
+        function mapHostError(code, reason) {
             if (code === "HOST_CONTEXT_BUDGET_EXCEEDED") { return protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED; }
             if (code === "HOST_CONTEXT_TARGET_NOT_FOUND") { return protocol.ERROR_CODES.UNKNOWN_TARGET; }
-            if (code === "HOST_CONTEXT_UNAVAILABLE") { return protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE; }
+            if (code === "HOST_CONTEXT_UNAVAILABLE") {
+                if (reason === "no-project" || reason === "no-active-composition" || reason === "no-actionable-target") {
+                    return protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE;
+                }
+                return protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE;
+            }
             if (code === "HOST_CONTEXT_SESSION_RESET_REQUIRED" || code === "HOST_CONTEXT_AUTHORITY_MISMATCH") { return protocol.ERROR_CODES.CONTEXT_STALE; }
             if (code === "HOST_CONTEXT_VALUE_EVALUATION_DISALLOWED") { return protocol.ERROR_CODES.CONTEXT_VALUE_EVALUATION_DISALLOWED; }
             if (code === "HOST_CONTEXT_VALUE_UNSUPPORTED") { return protocol.ERROR_CODES.CONTEXT_VALUE_UNSUPPORTED; }
@@ -425,11 +430,14 @@
             }
             if (!result.ok) {
                 if (!protocol.isPlainObject(result.error)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host context error is invalid."); }
-                protocol.assertNoUnknownKeys(result.error, ["code", "message"], "hostContext.error");
+                protocol.assertNoUnknownKeys(result.error, ["code", "message", "reason"], "hostContext.error");
                 if (HOST_ERROR_CODES.indexOf(result.error.code) === -1 || typeof result.error.message !== "string") {
                     protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host context error is invalid.");
                 }
-                throw protocolError(protocol, mapHostError(result.error.code));
+                if (result.error.reason !== undefined && typeof result.error.reason !== "string") {
+                    protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host context error reason is invalid.");
+                }
+                throw protocolError(protocol, mapHostError(result.error.code, result.error.reason));
             }
             return result;
         }
@@ -1483,7 +1491,17 @@
         var reviewPort = Object.freeze({ summarize: createPrivateReviewSummary });
         reviewPorts.set(bridge, reviewPort);
         reviewPortProtocols.set(reviewPort, protocol);
-        var providerContextPort = Object.freeze({ project: createPrivateProviderRequestContext });
+        var providerContextPort = Object.freeze({
+            project: createPrivateProviderRequestContext,
+            unavailable: function () {
+                return protocol.deepFreeze({
+                    activeCompositionType: "none",
+                    selectedLayerCount: 0,
+                    firstSelectedLayerType: "none",
+                    selectedLayerOpacity: { available: false }
+                });
+            }
+        });
         providerContextPorts.set(bridge, providerContextPort);
         providerContextPortProtocols.set(providerContextPort, protocol);
         return bridge;

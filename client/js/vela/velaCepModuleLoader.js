@@ -118,6 +118,7 @@
         var symbols;
         var textOnlyDescriptor;
         var explicitDescriptor;
+        var unionDescriptor;
         try {
             if (!value || typeof value !== "object" || !Object.isFrozen(value)) { return false; }
             profilesDescriptor = ownDescriptor(value, "PROFILES");
@@ -128,12 +129,13 @@
             if (!profiles || typeof profiles !== "object" || !Object.isFrozen(profiles)) { return false; }
             names = Object.getOwnPropertyNames(profiles).sort();
             symbols = typeof Object.getOwnPropertySymbols === "function" ? Object.getOwnPropertySymbols(profiles) : [];
-            if (symbols.length !== 0 || names.join("\u0000") !== "EXPLICIT_EDIT_ELIGIBLE\u0000TEXT_ONLY") { return false; }
+            if (symbols.length !== 0 || names.join("\u0000") !== "EXPLICIT_EDIT_ELIGIBLE\u0000PROPOSAL_CAPABLE_UNION\u0000TEXT_ONLY") { return false; }
             textOnlyDescriptor = ownDescriptor(profiles, "TEXT_ONLY");
             explicitDescriptor = ownDescriptor(profiles, "EXPLICIT_EDIT_ELIGIBLE");
-            return isFrozenOwnDataProperty(profiles, "TEXT_ONLY") && isFrozenOwnDataProperty(profiles, "EXPLICIT_EDIT_ELIGIBLE") &&
-                textOnlyDescriptor.enumerable === true && explicitDescriptor.enumerable === true &&
-                textOnlyDescriptor.value === "text-only" && explicitDescriptor.value === "explicit-edit-eligible";
+            unionDescriptor = ownDescriptor(profiles, "PROPOSAL_CAPABLE_UNION");
+            return isFrozenOwnDataProperty(profiles, "TEXT_ONLY") && isFrozenOwnDataProperty(profiles, "EXPLICIT_EDIT_ELIGIBLE") && isFrozenOwnDataProperty(profiles, "PROPOSAL_CAPABLE_UNION") &&
+                textOnlyDescriptor.enumerable === true && explicitDescriptor.enumerable === true && unionDescriptor.enumerable === true &&
+                textOnlyDescriptor.value === "text-only" && explicitDescriptor.value === "explicit-edit-eligible" && unionDescriptor.value === "proposal-capable-union";
         } catch (error) {
             return false;
         }
