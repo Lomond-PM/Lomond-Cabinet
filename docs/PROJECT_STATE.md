@@ -8,17 +8,15 @@ Lomond Cabinet is an After Effects CEP extension panel.
 - Manifest menu name: **AE Toolbox**
 - Extension id/folder: `com.kevin.aetoolbox`
 - Current release version: `0.3.1`
-- Latest existing published tag: `v0.3.0`
-- 0.3.1 release branch baseline: `release/0.3.1`
+- Latest published tag: `v0.3.1`
+- Post-release development baseline: `dev`
 - Host API version: `1.0.0`
 
-`VERSION`, both version fields in `CSXS/manifest.xml`, and `AEToolbox.projectVersion` identify product version `0.3.1`. The complete automated suite and AE P0 Release Regression passed before the release bump. No 0.3.1 commit, merge, or tag is implied by this document.
-
-The primary Windows development environment uses a junction from the CEP Extensions directory to the workspace repository, so normal work does not require a separate copy/sync operation.
+`VERSION`, both version fields in `CSXS/manifest.xml`, and `AEToolbox.projectVersion` identify product version `0.3.1`. The complete automated suite and AE P0 Release Regression passed before release. Version 0.3.1 is now published on `main` and tagged `v0.3.1`; `dev` is the post-release development baseline.
 
 ## 0.3.1 release status
 
-Version 0.3.1 stabilizes the completed Vela D-phase **Experimental Preview** and closes the accepted 0.3.1 Registry, Grid, UI, bootstrap, lifecycle, and release-safety scope.
+Version 0.3.1 is the published stabilization release for the completed Vela D-phase **Experimental Preview** and closes the accepted 0.3.1 Registry, Grid, UI, bootstrap, lifecycle, and release-safety scope.
 
 Completed scope:
 
@@ -261,7 +259,7 @@ Other areas to watch:
 
 ## Release baseline
 
-0.3.0 remains the latest existing immutable published tag. The 0.3.1 release bump is prepared only after the full automated suite and AE P0 regression passed.
+Version 0.3.1 is published on `main` and the latest immutable published tag is `v0.3.1`. Post-release development continues from `dev` toward 0.3.2.
 
 The release contains:
 

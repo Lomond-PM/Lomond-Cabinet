@@ -17,11 +17,11 @@ docs/HANDOFF.md
 ## Current release
 
 - Product version: `0.3.1`
-- Latest existing published tag: `v0.3.0`
-- Release status: **0.3.1 Vela Experimental Preview release bump prepared after automated and AE P0 regression**
+- Latest published tag: `v0.3.1`
+- Release status: **0.3.1 Vela Experimental Preview published**
 - Host API version: `1.0.0`
 
-Version 0.3.1 is prepared on the release branch. This handoff does not imply that a release commit, merge, or tag has occurred.
+Version 0.3.1 is published on `main` and tagged `v0.3.1`. Post-release development continues from `dev`, which is the baseline for the next 0.3.2 work.
 
 Vela remains experimental:
 
@@ -263,7 +263,7 @@ task branch -> dev -> main -> version tag
 - Use AE smoke for active runtime paths.
 - Keep published tags immutable.
 
-Existing published tag `v0.3.0` must not be moved. Create a new `v0.3.1` tag only after the reviewed release commit reaches the intended release branch.
+Published tags `v0.3.0` and `v0.3.1` are immutable. Future version tags should be created only after the reviewed release commit reaches `main`.
 
 ## Version management
 
