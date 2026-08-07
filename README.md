@@ -3,7 +3,7 @@
 Lomond Cabinet is an After Effects CEP extension that combines a registry-driven tool system, procedural Home visuals, and the experimental Vela local-assistant surface.
 
 - **Current version:** `0.3.1`
-- **Latest published tag:** `v0.3.0`
+- **Latest published tag:** `v0.3.1`
 - **Extension bundle id:** `com.kevin.aetoolbox`
 - **Manifest menu name:** `AE Toolbox`
 - **Visible panel name:** `Lomond Cabinet`
@@ -206,7 +206,7 @@ docs/HANDOFF.md
 
 ## Version and release status
 
-The current release version is `0.3.1`. The latest existing published tag remains `v0.3.0` until the 0.3.1 release commit is reviewed, merged, and tagged.
+The current release version is `0.3.1`, and the latest published tag is `v0.3.1`. Post-release development continues from `dev`; future releases follow the same reviewed `dev → main → version tag` flow.
 
 Keep these synchronized for future releases:
 
