@@ -7,18 +7,18 @@ Lomond Cabinet is an After Effects CEP extension panel.
 - Visible product name: **Lomond Cabinet**
 - Manifest menu name: **AE Toolbox**
 - Extension id/folder: `com.kevin.aetoolbox`
-- Current published version: `0.3.0`
-- Published tag: `v0.3.0`
-- Release commit: `d68a5b7cedc328db106691f90d8af8ada55e87b3`
+- Current release version: `0.3.1`
+- Latest existing published tag: `v0.3.0`
+- 0.3.1 release branch baseline: `release/0.3.1`
 - Host API version: `1.0.0`
 
-`VERSION`, both version fields in `CSXS/manifest.xml`, and `AEToolbox.projectVersion` identify product version `0.3.0`. Version 0.3.0 is published on `main`; it is no longer a release-preparation line.
+`VERSION`, both version fields in `CSXS/manifest.xml`, and `AEToolbox.projectVersion` identify product version `0.3.1`. The complete automated suite and AE P0 Release Regression passed before the release bump. No 0.3.1 commit, merge, or tag is implied by this document.
 
 The primary Windows development environment uses a junction from the CEP Extensions directory to the workspace repository, so normal work does not require a separate copy/sync operation.
 
-## 0.3.0 release status
+## 0.3.1 release status
 
-Version 0.3.0 ships the completed Vela D phase as a **Vela Experimental Preview**.
+Version 0.3.1 stabilizes the completed Vela D-phase **Experimental Preview** and closes the accepted 0.3.1 Registry, Grid, UI, bootstrap, lifecycle, and release-safety scope.
 
 Completed scope:
 
@@ -33,7 +33,8 @@ The product status is intentionally experimental rather than production-enabled:
 - no model is qualified, recommended, or selected as default;
 - formal UI-D2 default enablement is false;
 - Vela Persistent Surface is the only Vela entry and the legacy fallback is retired;
-- narrow-width Vela layout issues are deferred to 0.3.1.
+- Wide/Compact/Narrow Vela presentation and status behavior are complete for 0.3.1.
+- Release-readiness automation and the AE P0 Release Regression passed.
 
 Future model qualification, default-model selection and production activation are separate product decisions, not unfinished D-phase tasks.
 
@@ -48,7 +49,7 @@ Primary entry and ownership:
 - `client/js/i18n.js` — core/global English and Simplified Chinese text
 - `client/js/settingsSchema.js` — app-level Settings schema
 - `client/css/style.css` — shared application styling
-- `client/css/vela.css` — Vela Surface styling
+- `client/css/velaSurface.css` — Vela Surface styling
 
 The browser frontend loads host JSX through `CSInterface.evalScript()` / `$.evalFile(...)`. `client/index.html` does not load JSX directly.
 
@@ -128,11 +129,11 @@ Settings is an app-level core system, not a registry tool.
 
 Current Settings areas include language, Developer Mode, motion speed, UI scale, interface colors, tool icon appearance, Palette Library, procedural appearance parameters and background behavior.
 
-`BackgroundEngine` remains the owner of the classic path. `ProceduralHomeBackground` owns the optional procedural background source/presentation path. No Settings v2 migration is part of 0.3.0.
+`BackgroundEngine` remains the owner of the classic path. `ProceduralHomeBackground` owns the optional procedural background source/presentation path. No Settings v2 migration is part of 0.3.1.
 
 ## Procedural appearance
 
-Version 0.2.5 introduced the procedural appearance production paths retained in 0.3.0.
+Version 0.2.5 introduced the procedural appearance production paths retained in 0.3.1.
 
 Key modules:
 
@@ -210,6 +211,10 @@ Provider
 
 Review, Confirmation and Host authority remain independent. A model-authored proposal cannot execute directly. For the current `set-opacity-v1` capability, the model contributes only the bounded opacity value; target identity, request/candidate ids, plan, nonce, digest, authority and Host payload remain locally trusted.
 
+The 0.3.1 `proposal-capable-union` profile is a bounded transition mechanism: when trusted Context shows one actionable opacity target, the Provider may return text or a `set-opacity-v1` proposal. It is not autonomous execution, does not add capabilities, and does not weaken Review, Confirmation, Preflight, Execution Guard, Execution Adapter, or Host authority.
+
+The Context Bridge remains the foundation for observation, trusted target binding, fingerprints, lifecycle generations, and fresh execution checks. Request-time target continuity is intentionally deferred: proposal-ready remains identity-free and Review performs a fresh target bind.
+
 ### Qualification state
 
 The C4 profile qualification infrastructure, Runner and Rubric are present. Historical 4B and 9B pilot candidates did not qualify. No 20-run candidate was eligible, and no default model was selected.
@@ -242,13 +247,9 @@ Lifecycle and large core-file refactors require focused AE regression because `c
 
 Source of truth: `docs/KNOWN_ISSUES.md`.
 
-Accepted 0.3.1 Vela layout work:
+The 0.3.1 Vela responsive/status work and narrow semantic-token pass are complete. The token pass covers explicit muted text and proven shared surface, on-accent, danger, and Settings-divider values while preserving established layout and computed visual behavior. Full design-system tokenization is deferred to 0.3.2; Settings scale isolation, Vela responsive structure, and procedural presentation remain unchanged.
 
-- narrow status/action row can appear cramped or truncated;
-- experimental Settings helper text/actions/readiness can be cramped at narrow widths;
-- no known safety or execution-path impact.
-
-The 0.3.1 UI maintenance scope also includes a narrow semantic-token contract for explicit muted text and proven shared surface, on-accent, danger, and Settings-divider values. It preserves computed values except for replacing the previous undefined `--text-muted` inheritance with the established tertiary text color. Full design-system tokenization is deferred; Settings scale isolation, Vela responsive behavior, and procedural presentation are unchanged.
+The generated i18n report guard is line-ending tolerant and checks working-tree, Git-index, and CI snapshots through their existing boundaries. Grid strict visual bounds, fail-closed input handling, current fixed-cell sizing, and Refresh scale idempotence are closed for 0.3.1.
 
 Other areas to watch:
 
@@ -258,9 +259,9 @@ Other areas to watch:
 - Home ordering compatibility through stable tool ids;
 - remaining host messages that return plain text instead of `messageKey`.
 
-## Published release baseline
+## Release baseline
 
-0.3.0 was merged to `main` and tagged `v0.3.0` on 2026-08-03.
+0.3.0 remains the latest existing immutable published tag. The 0.3.1 release bump is prepared only after the full automated suite and AE P0 regression passed.
 
 The release contains:
 
@@ -272,8 +273,12 @@ The release contains:
 - retained 0.2.5 procedural appearance production paths;
 - expanded offline, browser VM, loader and production E2E coverage.
 
-`CHANGELOG.md` contains the formal 0.3.0 release section. Existing published tags must not be moved.
+`CHANGELOG.md` contains the formal 0.3.1 release section. Existing published tags must not be moved.
 
 ## Next development direction
 
-The next designated maintenance target is 0.3.1 for the accepted narrow-width Vela layout issues. Future qualification/production activation is a separate product decision and must retain the frozen safety/authority boundaries unless explicitly revised through a new reviewed contract.
+The next development target is **0.3.2 — UI / Design System Foundation**. It should establish a complete semantic token hierarchy and progressively align Vela, Registry Renderer, Settings, and Home without redesigning the accepted Vela structure.
+
+Registry evolves toward a typed Capability Registry consumable by both Agent and Human UI. Capabilities may be `read`, `analyze`, `mutate`, or `create`; a dedicated Human UI is not required for a capability to exist.
+
+Long-term natural-language understanding and candidate generation must remain separate from execution authority. Preserve typed allowlists, parameter schemas, trusted target binding, Context fingerprints, generation/replay protection, fresh Preflight, Execution Guard, Execution Adapter, Host allowlists, and lifecycle fail-closed behavior. Later authority work may replace single-message lexical denial, hard text/proposal splits, universal raw-message provenance, and confirm-every-action as the only authority model, but none of those migrations are part of 0.3.1.

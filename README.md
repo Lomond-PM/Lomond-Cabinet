@@ -2,13 +2,13 @@
 
 Lomond Cabinet is an After Effects CEP extension that combines a registry-driven tool system, procedural Home visuals, and the experimental Vela local-assistant surface.
 
-- **Current version:** `0.3.0`
+- **Current version:** `0.3.1`
 - **Latest published tag:** `v0.3.0`
 - **Extension bundle id:** `com.kevin.aetoolbox`
 - **Manifest menu name:** `AE Toolbox`
 - **Visible panel name:** `Lomond Cabinet`
 
-Version 0.3.0 is published as the **Vela Experimental Preview**. The D phase is complete for this release scope, while production Provider activation remains locked because no model is qualified or selected as the default.
+Version 0.3.1 is the stabilized **Vela Experimental Preview** release line. Its automated release suite and AE P0 regression have passed, while production Provider activation remains locked because no model is qualified or selected as the default.
 
 ## Runtime architecture
 
@@ -124,7 +124,7 @@ The optional LM Studio Provider is:
 - reset on reload for acknowledgement, readiness, and enablement;
 - allowed to persist only endpoint and Model ID configuration.
 
-Readiness means only that the configured local model instance is loaded. It is **not** qualification. No model is qualified, recommended, or selected as the production default in 0.3.0.
+Readiness means only that the configured local model instance is loaded. It is **not** qualification. No model is qualified, recommended, or selected as the production default in 0.3.1.
 
 The trusted activation policy keeps:
 
@@ -135,7 +135,7 @@ The trusted activation policy keeps:
 - `formalUiD2Enabled = false`
 - `legacyFallbackRetained = false`
 
-A model proposal cannot execute directly. Explicit opacity edits pass through local request classification, parsing, profile checks, Intent Gate, Review, Confirmation, Preflight, ExecutionAdapter, and Host boundaries. Vela Persistent Surface is the only Vela user entry; the legacy Tool fallback is retired.
+A model proposal cannot execute directly. With actionable Context, the transitional `proposal-capable-union` profile may return conversational text or a bounded `set-opacity-v1` proposal. Every proposal still passes parsing, profile checks, Intent Gate, Review, Confirmation, fresh Preflight, Execution Guard, ExecutionAdapter, and Host boundaries. Vela Persistent Surface is the only Vela user entry; the legacy Tool fallback is retired.
 
 The Surface remembers the user's vertical height preference in `AEToolbox.velaSurfaceLayout.v1`. Current viewport, responsive layout, and UI-scale constraints clamp only the effective displayed height, so a temporarily small panel does not overwrite the preference. This layout preference is independent of Vela conversation data and Provider session enablement; acknowledgement, readiness, and enablement still clear on reload, and no multi-session or context persistence is introduced.
 
@@ -206,7 +206,7 @@ docs/HANDOFF.md
 
 ## Version and release status
 
-The current published release is `0.3.0`, tagged `v0.3.0` from `main`.
+The current release version is `0.3.1`. The latest existing published tag remains `v0.3.0` until the 0.3.1 release commit is reviewed, merged, and tagged.
 
 Keep these synchronized for future releases:
 
@@ -216,16 +216,11 @@ Keep these synchronized for future releases:
 - `CHANGELOG.md`
 - current-version statements in maintained documentation
 
-`AEToolbox.hostApiVersion` is an independent host contract version and remains `1.0.0` in release 0.3.0.
+`AEToolbox.hostApiVersion` is an independent host contract version and remains `1.0.0` in release 0.3.1.
 
 ## Known issues
 
-The accepted 0.3.1 layout work includes:
-
-- narrow Vela status/action row presentation;
-- narrow experimental Settings presentation.
-
-These issues do not change execution safety. Additional deferred issues are tracked in [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md).
+The 0.3.1 narrow Vela/Settings responsive work is complete. Remaining accepted limitations are tracked in [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md).
 
 ## License and release history
 

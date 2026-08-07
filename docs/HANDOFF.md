@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document explains how to continue Lomond Cabinet development on another machine and how to preserve the current 0.3.0 architecture and release state.
+This document explains how to continue Lomond Cabinet development on another machine and how to preserve the current 0.3.1 architecture and release state.
 
 Read before coding:
 
@@ -16,12 +16,12 @@ docs/HANDOFF.md
 
 ## Current release
 
-- Product version: `0.3.0`
-- Published tag: `v0.3.0`
-- Published release status: **Vela Experimental Preview**
+- Product version: `0.3.1`
+- Latest existing published tag: `v0.3.0`
+- Release status: **0.3.1 Vela Experimental Preview release bump prepared after automated and AE P0 regression**
 - Host API version: `1.0.0`
 
-Version 0.3.0 is already merged to `main` and tagged. It is not a release candidate or release-preparation line.
+Version 0.3.1 is prepared on the release branch. This handoff does not imply that a release commit, merge, or tag has occurred.
 
 Vela remains experimental:
 
@@ -104,7 +104,7 @@ com.kevin.aetoolbox
 ## Initial setup on another machine
 
 1. Clone or copy the repository.
-2. Confirm `VERSION` is `0.3.0` for the published baseline.
+2. Confirm `VERSION` is `0.3.1` for the current release baseline.
 3. Confirm both manifest version fields match `VERSION`.
 4. Configure CEP PlayerDebugMode for the AE/CSXS version when using an unsigned development extension.
 5. Create the CEP junction/symlink or install the full extension folder.
@@ -201,7 +201,7 @@ Trusted product activation is owned by:
 client/js/vela/velaActivationPolicy.js
 ```
 
-Frozen 0.3.0 values:
+Frozen 0.3.1 values:
 
 ```text
 releaseMode = experimental-preview
@@ -216,6 +216,8 @@ formalUiD2Enabled = false
 Endpoint and Model ID may persist. Acknowledgement, readiness, enabled state and authority do not persist. Reload requires a new explicit opt-in. Readiness is not qualification.
 
 Execution authority remains separated across Parser/Profile checks, Intent Gate, Review, Router, local candidate, Confirmation, Preflight, ExecutionAdapter and Host. A model proposal never executes directly.
+
+The 0.3.1 `proposal-capable-union` profile may produce text or the single bounded `set-opacity-v1` proposal when actionable Context is available. It is a transition profile, not a delegated Agent contract, and it does not bypass any authority boundary.
 
 Do not weaken Prompt/schema/Protocol/Parser/Policy/Gate/Router/Confirmation/Preflight/Adapter/Host/qualification/activation boundaries during unrelated work.
 
@@ -261,7 +263,7 @@ task branch -> dev -> main -> version tag
 - Use AE smoke for active runtime paths.
 - Keep published tags immutable.
 
-Current published tag `v0.3.0` must not be moved.
+Existing published tag `v0.3.0` must not be moved. Create a new `v0.3.1` tag only after the reviewed release commit reaches the intended release branch.
 
 ## Version management
 
@@ -276,26 +278,41 @@ Future release changes must synchronize:
 
 `AEToolbox.hostApiVersion` changes only when the Host contract changes deliberately.
 
-## 0.3.1 and post-release work
+## Post-0.3.1 roadmap
 
-Accepted 0.3.1 work:
+### 0.3.2 — UI / Design System Foundation
 
-- narrow Vela status/action row layout;
-- narrow experimental Settings layout.
+Establish a complete semantic token hierarchy for color, surface, text, status, interaction, typography, spacing, radius, geometry, and component tokens. Progressively align Vela, Registry Renderer, Settings, and Home without redesigning the accepted Vela UI structure.
 
-These are presentation issues with no known execution-safety impact.
+### 0.3.3 — Context & Observation Foundation
 
-0.3.1 also permits a narrow semantic-token contract cleanup for explicit muted text and exact-value shared surface, on-accent, danger, and Settings-divider consumers. This is not a visual redesign or a full design-system migration. Keep Settings UI-scale isolation, Vela responsive geometry, and procedural presentation ownership unchanged.
+Build Observation API, progressive context, task context, conversation context, and typed read/analyze capabilities. Evolve Registry toward a Capability Registry consumed by both Agent and Human UI. A capability may `read`, `analyze`, `mutate`, or `create`; Human UI is not required. Analysis capabilities such as audio BPM detection belong in this registry even without a complex workflow screen.
 
-Separate future product decisions:
+### 0.3.4 — Agent Authority Foundation
 
-- new model qualification;
-- qualified/default model selection;
-- production activation;
-- legacy Vela retirement;
-- more formal signed/distribution automation.
+Define `ModelSuggestion`, `ActionCandidate`, `DelegationGrant`, and a Policy Engine returning `ALLOW`, `REVIEW_REQUIRED`, or `DENY`. Natural-language understanding/candidate generation and execution authority must be fully decoupled.
 
-Do not describe these as unfinished D-phase tasks.
+### 0.4.0 — First Delegated Agent
+
+Introduce the bounded loop `Observe → Plan → Act → Verify → Replan` only after the user grants task-scoped authority. Review should then represent missing authority, out-of-scope/high-risk actions, ambiguity, or escalation rather than an unconditional step in every delegated operation.
+
+### 0.4.x — Agent Reliability
+
+Add audit, checkpoints, undo/rollback, action/time budgets, loop detection, recovery, completion verification, authority provenance, and prompt-injection separation.
+
+### 0.5.x — Context Memory & Demonstration Learning
+
+Add preference memory, operation observation, state diffs, demonstration episodes, learned procedures, and a skill library. Prefer memory, retrieval, and demonstration learning over live model-weight modification.
+
+### 0.6+ — Visual / Creative Agent
+
+Add rendered observation, multimodal reasoning, animation evaluation, and optional fine-tuning after the prior Context, Authority, and Reliability foundations are established.
+
+### Safety migration direction
+
+Strongly retain typed capability allowlists, parameter schemas, trusted target binding, Context fingerprints, generation/replay protection, fresh Preflight, Execution Guard, Execution Adapter, Host allowlists, and lifecycle fail-closed behavior.
+
+Future reviewed contracts may migrate away from single-message lexical proposal denial, the hard text-only/proposal-only split, raw-message parameter provenance as a universal gate, and confirm-every-action as the only authority model. The 0.3.1 bounded union remains a transition architecture, not autonomous Agent behavior.
 
 ## Minimal regression checklist after moving machines
 
