@@ -68,9 +68,9 @@ async function run() {
     const h = makeHarness(); await h.runtime.initialize();
     const greeting = makeHarness(); await greeting.runtime.initialize();
     const rejectedGreeting = await greeting.runtime.sendProviderMessage({ message: "你好", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
-    check(rejectedGreeting.state === "failed" && rejectedGreeting.errorCode === "PROVIDER_RESPONSE_INVALID" && rejectedGreeting.proposalCapabilityId === null && greeting.runtime.getProviderUiState().state !== "proposal-ready" && greeting.runtime.getProviderUiState().proposalCapabilityId === null && greeting.runtime.getUiState().candidateId === null, "A text-only greeting receiving localProposal is rejected by the Adapter before Intent Gate and cannot create proposal or candidate authority.");
-    await expectCode(greeting.runtime.reviewProviderProposal(), "CANDIDATE_NOT_FOUND", "An Adapter-rejected greeting has no active proposal to review.");
-    check(greeting.calls.filter((call) => call.kind === "execution").length === 0, "A text-only Profile mismatch makes zero Host execution calls.");
+    check(rejectedGreeting.state === "intent-rejected" && rejectedGreeting.intentReason === "missing-action" && rejectedGreeting.proposalCapabilityId === null && greeting.runtime.getProviderUiState().state !== "proposal-ready" && greeting.runtime.getProviderUiState().proposalCapabilityId === null && greeting.runtime.getUiState().candidateId === null, "An actionable-context greeting receiving a mistaken union localProposal is rejected by Intent Gate and cannot create proposal or candidate authority.");
+    await expectCode(greeting.runtime.reviewProviderProposal(), "CANDIDATE_NOT_FOUND", "An Intent-Gate-rejected greeting has no active proposal to review.");
+    check(greeting.calls.filter((call) => call.kind === "execution").length === 0, "A union conversational false positive makes zero Host execution calls.");
     const ready = await sendProposal(h, 57.5);
     check(ready.state === "proposal-ready" && ready.suggestedOpacity === 57.5 && h.runtime.getUiState().candidateId === null, "A schema 1.1 localProposal reaches proposal-ready without a candidate.");
     check(h.calls.filter((call) => call.kind === "execution").length === 0, "Provider result and Review preconditions make zero Host mutation calls.");

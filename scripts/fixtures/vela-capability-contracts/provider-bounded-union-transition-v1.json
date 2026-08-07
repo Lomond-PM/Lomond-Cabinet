@@ -1,0 +1,12 @@
+{
+  "fixtureType": "vela-provider-experimental-transition",
+  "schemaRevision": "v1",
+  "profile": "proposal-capable-union",
+  "qualificationStatus": "experimental-transition",
+  "promptBuilderRevision": "vela-capability-prompt-builder-v3",
+  "requestBranchPolicyRevision": "vela-provider-request-branch-policy-v1",
+  "capabilityId": "set-opacity-v1",
+  "promptSha256": "47f3e94b1d8d7f446719d2e81ce34ec34d015fca47f581719a91ebbbb6e37609",
+  "responseFormatSha256": "85c73c951633f36b49794f4d356add7b0e5e2ab55f0261c8d8762d57e0060080",
+  "stableRequestBodySha256": "1f998ea987f1e6112dcfea4361f1e04d985c8e31d57595e70893125e457d1c05"
+}

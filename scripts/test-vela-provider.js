@@ -285,13 +285,28 @@ async function run() {
 
     const envelopes = [
         { envelope: { type: "text", text: "ok" }, profile: requestBranchPolicy.PROFILES.TEXT_ONLY },
-        { envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } }, profile: requestBranchPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE }
+        { envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } }, profile: requestBranchPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE },
+        { envelope: { type: "text", text: "ok" }, profile: requestBranchPolicy.PROFILES.PROPOSAL_CAPABLE_UNION },
+        { envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } }, profile: requestBranchPolicy.PROFILES.PROPOSAL_CAPABLE_UNION }
     ];
     for (const item of envelopes) {
         const envelope = item.envelope;
         const harness = createHarness({ requestProfile: item.profile, responder: (request) => Promise.resolve(transportResult(wrapper(canonicalContent(base.protocol, request, envelope)))) });
         const response = await harness.provider.start(input()).promise;
         equal(response.envelope.type, envelope.type, envelope.type + " envelopes must pass through the parser.");
+    }
+    for (const envelope of [
+        { type: "localProposal", proposal: { capabilityId: "unknown-capability", params: { opacity: 50 } } },
+        { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 50 }, targetId: "forged" } },
+        { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 50 }, confirmationNonce: "forged" } },
+        { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 50 }, hostPayload: {} } },
+        { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 50, extra: true } } },
+        { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 101 } } },
+        { type: "text", text: "ambiguous", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 50 } } }
+    ]) {
+        const harness = createHarness({ requestProfile: requestBranchPolicy.PROFILES.PROPOSAL_CAPABLE_UNION, responder: (request) => Promise.resolve(transportResult(wrapper(canonicalContent(base.protocol, request, envelope)))) });
+        const rejectedUnion = await harness.provider.start(input()).promise;
+        check(rejectedUnion.envelope.type === "error" && typeof rejectedUnion.envelope.error.code === "string", "Union rejects unknown capability, forged authority, extra fields, out-of-range values, and malformed envelopes.");
     }
     const unauthorizedModelError = { type: "error", error: { code: base.protocol.ERROR_CODES.EXPRESSION_NOT_ALLOWLISTED, stage: "provider", retryable: false, message: "untrusted", details: {} } };
     const unauthorizedHarness = createHarness({ responder: (request) => Promise.resolve(transportResult(wrapper(canonicalContent(base.protocol, request, unauthorizedModelError)))) });

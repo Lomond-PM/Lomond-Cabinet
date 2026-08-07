@@ -56,7 +56,7 @@ function createController(options) {
 async function run() {
     const controller = createController();
     check(Object.isFrozen(controller), "Controller is frozen.");
-    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,cancelProviderRequest,checkProviderReadiness,dispose,getConfirmationSurfaceState,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,initialize,rejectActiveCandidate,resetSession,resume,reviewProviderProposal,sendProviderMessage,suspend", "Runtime exposes only Persistent Surface lifecycle, Provider, proposal review, and active confirmation facades.");
+    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,cancelProviderRequest,checkProviderReadiness,dispose,getConfirmationSurfaceState,getProviderDiagnostics,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,initialize,rejectActiveCandidate,resetSession,resume,reviewProviderProposal,sendProviderMessage,suspend", "Runtime exposes only Persistent Surface lifecycle, bounded Provider diagnostics, proposal review, and active confirmation facades.");
     check(controller.cancelProviderRequest.length === 0, "Provider cancellation has no caller-supplied request identifier seam.");
     check(controller.approveActiveCandidate.length === 0 && controller.rejectActiveCandidate.length === 0, "Surface confirmation facades accept no caller-supplied candidate identifier.");
     check(!Object.prototype.hasOwnProperty.call(controller, "getPreflight") && !Object.prototype.hasOwnProperty.call(controller, "getBridge") && !Object.prototype.hasOwnProperty.call(controller, "executeHostRequest"), "Controller does not expose private execution objects.");
