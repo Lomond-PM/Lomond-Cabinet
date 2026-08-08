@@ -13,6 +13,18 @@
     --gold-button: rgba(214, 178, 94, 0.86);
     --selection-bg: #3b2d12;
 
+    --interaction-focus-ring: var(--gold-focus);
+    --interaction-focus-border: var(--gold-focus);
+    --interaction-hover-border: var(--gold-focus);
+    --interaction-hover-surface: var(--gold-track);
+    --interaction-selected-surface: var(--gold-track);
+    --interaction-selected-foreground: var(--gold-hot);
+    --interaction-checked-surface: var(--gold-track);
+    --action-primary-surface: var(--gold-button);
+    --action-primary-hover-surface: var(--gold-hot);
+    --action-primary-foreground: var(--text-on-accent);
+    --selection-indicator-surface: var(--selection-bg);
+
     --surface-canvas: var(--bg-main);
     --surface-card: #0f0e0b;
     --text-primary: #f6f0df;
@@ -145,7 +157,7 @@ button:focus-visible,
 select:focus-visible,
 [role="button"]:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 1px var(--gold-focus);
+    box-shadow: 0 0 0 1px var(--interaction-focus-ring);
 }
 
 button:disabled {
@@ -1196,8 +1208,8 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .palette-editor-action-bar .palette-library-action.is-primary {
-    background: var(--gold-button);
-    color: var(--text-on-accent);
+    background: var(--action-primary-surface);
+    color: var(--action-primary-foreground);
 }
 
 .palette-editor-action-bar .palette-library-action.is-danger {
@@ -1455,7 +1467,7 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .select-input:focus {
-    border-color: var(--gold-focus);
+    border-color: var(--interaction-focus-border);
 }
 
 .color-grid {
@@ -1898,7 +1910,7 @@ p {
 }
 
 .home-header-actions .panel-button:focus-visible {
-    box-shadow: 0 0 0 1px var(--gold-focus);
+    box-shadow: 0 0 0 1px var(--interaction-focus-ring);
 }
 
 .home-header-actions .panel-button:active {
@@ -2257,7 +2269,7 @@ p {
 .panel-button:hover,
 .primary-action:hover {
     transform: translateY(-1px) scale(1.01);
-    border-color: var(--gold-focus);
+    border-color: var(--interaction-hover-border);
 }
 
 .panel-button:active,
@@ -2522,7 +2534,7 @@ p {
 }
 
 .num-input:focus {
-    border-color: var(--gold-focus);
+    border-color: var(--interaction-focus-border);
 }
 
 .setting-inline-control {
@@ -2704,8 +2716,8 @@ p {
 }
 
 .select-option.is-selected {
-    background-color: var(--gold-track);
-    color: var(--gold-hot);
+    background-color: var(--interaction-selected-surface);
+    color: var(--interaction-selected-foreground);
 }
 
 .segmented-control {
@@ -2728,7 +2740,7 @@ p {
     top: calc(4px * var(--ui-scale));
     height: var(--control-height);
     border-radius: 999px;
-    background: var(--selection-bg);
+    background: var(--selection-indicator-surface);
     box-shadow: none;
     opacity: 0;
     pointer-events: none;
@@ -2773,7 +2785,7 @@ p {
 }
 
 .segmented-control button.is-active {
-    color: var(--gold-hot);
+    color: var(--interaction-selected-foreground);
 }
 
 .color-row {
@@ -2803,7 +2815,7 @@ p {
 
 .color-shell:hover {
     transform: translateY(-1px);
-    border-color: var(--gold-focus);
+    border-color: var(--interaction-hover-border);
 }
 
 .color-shell:active {
@@ -2814,7 +2826,7 @@ p {
 
 .color-shell:focus {
     outline: none;
-    border-color: var(--gold-focus);
+    border-color: var(--interaction-focus-border);
 }
 
 .native-color-input {
@@ -2888,7 +2900,7 @@ p {
 }
 
 .switch input:checked + .switch-track {
-    background-color: var(--gold-track);
+    background-color: var(--interaction-checked-surface);
 }
 
 .switch input:checked + .switch-track::after {
@@ -2924,14 +2936,14 @@ p {
     flex: 1 1 auto;
     min-width: 0;
     border: 1px solid var(--panel-border);
-    background: var(--gold-button);
-    color: var(--text-on-accent);
+    background: var(--action-primary-surface);
+    color: var(--action-primary-foreground);
     font-size: var(--font-h3);
     font-weight: 800;
 }
 
 .primary-action:hover {
-    background-color: var(--gold-hot);
+    background-color: var(--action-primary-hover-surface);
 }
 
 .status-pill {
@@ -3349,7 +3361,7 @@ p {
 .registry-textarea:focus,
 .registry-color-hex:focus,
 .registry-range-number:focus {
-    border-color: var(--gold-focus);
+    border-color: var(--interaction-focus-border);
 }
 
 .registry-range-control {
@@ -3411,7 +3423,7 @@ p {
 }
 
 .registry-color-swatch:hover {
-    border-color: var(--gold-focus);
+    border-color: var(--interaction-hover-border);
     transform: translateY(-1px);
 }
 
@@ -3610,14 +3622,14 @@ p {
 }
 
 .registry-option-card:hover {
-    border-color: var(--gold-focus);
-    background: var(--gold-track);
+    border-color: var(--interaction-hover-border);
+    background: var(--interaction-hover-surface);
     transform: translateY(calc(-1px * var(--ui-scale)));
 }
 
 .registry-option-card.is-active {
     border-color: var(--gold-soft);
-    background: var(--gold-track);
+    background: var(--interaction-selected-surface);
 }
 
 .registry-option-icon {
