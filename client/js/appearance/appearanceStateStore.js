@@ -1,11 +1,10 @@
 (function (root, factory) {
     "use strict";
     var exported = Object.freeze(factory());
-    if (typeof module === "object" && module.exports) {
-        module.exports.AppearanceStateStore = exported;
-    }
-    if (root && !Object.prototype.hasOwnProperty.call(root, "AppearanceStateStore")) {
+    if (root && root.document && !Object.prototype.hasOwnProperty.call(root, "AppearanceStateStore")) {
         Object.defineProperty(root, "AppearanceStateStore", { configurable: false, enumerable: true, value: exported, writable: false });
+    } else if ((!root || !root.document) && typeof module === "object" && module.exports) {
+        module.exports.AppearanceStateStore = exported;
     }
 }(typeof self !== "undefined" ? self : this, function () {
     "use strict";

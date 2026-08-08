@@ -1508,16 +1508,23 @@
     }
 
     function createSharedSettingsFieldRow(type, field, descriptionKey, fallbackDescription) {
-        var row = document.createElement(type === "checkbox" ? "label" : "div");
-        var copy = createSettingsFieldCopy(field.labelKey, descriptionKey || field.descriptionKey || field.hintKey, fallbackDescription || "");
         var controls = document.createElement("span");
-
-        row.className = type === "checkbox" ? "switch-row registry-switch-row settings-field settings-field--switch" : "control-row registry-field-row settings-field settings-field--" + type;
         controls.className = "control-inputs settings-field-control";
-        row.appendChild(copy);
-        row.appendChild(controls);
+        var built = window.CoreUI.createFieldRow({
+            document: document,
+            labelRow: type === "checkbox",
+            labelKey: field.labelKey,
+            labelText: tr(field.labelKey),
+            descriptionKey: descriptionKey || field.descriptionKey || field.hintKey,
+            descriptionText: descriptionKey || field.descriptionKey || field.hintKey ? tr(descriptionKey || field.descriptionKey || field.hintKey) : (fallbackDescription || ""),
+            control: controls,
+            classNames: type === "checkbox" ? "switch-row registry-switch-row settings-field settings-field--switch" : "control-row registry-field-row settings-field settings-field--" + type,
+            copyClassNames: "registry-label-column settings-field-copy",
+            labelClassNames: "control-label registry-text-body settings-field-label",
+            descriptionClassNames: "registry-field-hint registry-text-muted settings-field-description"
+        });
         return {
-            row: row,
+            row: built.row,
             controls: controls
         };
     }
@@ -1585,40 +1592,17 @@
     }
 
     function createSharedSettingsSelect(id, field, selectedValue) {
-        var select = document.createElement("select");
-
-        select.id = id;
-        select.className = "select-input settings-select";
+        var select = window.CoreUI.createSelect({ document: document, id: id, classNames: "select-input settings-select" });
         appendSettingsSelectOptions(select, field, selectedValue);
         return select;
     }
 
     function createSharedSettingsSwitch(id, checked) {
-        var switchWrap = document.createElement("span");
-        var input = document.createElement("input");
-        var track = document.createElement("span");
-
-        switchWrap.className = "switch registry-switch settings-switch";
-        input.id = id;
-        input.type = "checkbox";
-        input.checked = checked === true;
-        track.className = "switch-track";
-        switchWrap.appendChild(input);
-        switchWrap.appendChild(track);
-        return switchWrap;
+        return window.CoreUI.createSwitch({ document: document, id: id, checked: checked, classNames: "switch registry-switch settings-switch" }).root;
     }
 
     function createSharedSettingsTextInput(id, field, value) {
-        var input = document.createElement("input");
-        input.id = id;
-        input.type = "text";
-        input.className = "registry-text-input settings-text-input";
-        input.value = value === null || value === undefined ? "" : String(value);
-        if (field && typeof field.maxLength === "number") {
-            input.maxLength = field.maxLength;
-        }
-        input.setAttribute("spellcheck", field && field.spellcheck === true ? "true" : "false");
-        return input;
+        return window.CoreUI.createTextInput({ document: document, id: id, value: value, maxLength: field && field.maxLength, spellcheck: field && field.spellcheck === true, classNames: "registry-text-input settings-text-input" });
     }
 
     function dispatchSettingsControlEvent(element, type) {
@@ -1965,9 +1949,6 @@
     }
 
     function createSharedSettingsRangeNumber(field, rangeId, numberId, minValue, maxValue, rangeHookClass, numberHookClass, dragOptions) {
-        var controls = document.createElement("span");
-        var range = document.createElement("input");
-        var number = document.createElement("input");
         var defaultValue = getSettingsFieldDefaultValue(field);
         var dragField = {
             min: minValue,
@@ -1975,34 +1956,30 @@
             step: field.step,
             defaultValue: defaultValue
         };
-
-        controls.className = "control-inputs settings-field-control registry-range-control";
-        range.id = rangeId;
-        range.className = "pill-slider registry-range settings-slider" + (rangeHookClass ? " " + rangeHookClass : "");
-        range.type = "range";
-        range.min = String(minValue);
-        range.max = String(maxValue);
-        range.step = String(field.step);
-        range.value = String(defaultValue);
-
-        number.id = numberId;
-        number.className = "num-input registry-range-number settings-number" + (numberHookClass ? " " + numberHookClass : "");
-        number.type = "number";
-        number.min = String(minValue);
-        number.max = String(maxValue);
-        number.step = String(field.step);
-        number.value = String(defaultValue);
-
-        controls.appendChild(number);
-        controls.appendChild(range);
-        setupRegistryNumberDrag(number, dragField, function (value) {
-            range.value = value;
-            dispatchSettingsControlEvent(number, "input");
-            if (!dragOptions || dragOptions.dispatchChange !== false) {
-                dispatchSettingsControlEvent(number, "change");
-            }
-        }, dragOptions);
-        return controls;
+        var built = window.CoreUI.createRangeNumber({
+            document: document,
+            rangeId: rangeId,
+            numberId: numberId,
+            value: String(defaultValue),
+            min: String(minValue),
+            max: String(maxValue),
+            step: String(field.step),
+            field: dragField,
+            classNames: "control-inputs settings-field-control registry-range-control",
+            rangeClassNames: "pill-slider registry-range settings-slider" + (rangeHookClass ? " " + rangeHookClass : ""),
+            numberClassNames: "num-input registry-range-number settings-number" + (numberHookClass ? " " + numberHookClass : ""),
+            onNumberDrag: function (value) {
+                built.range.value = value;
+                dispatchSettingsControlEvent(built.number, "input");
+                if (!dragOptions || dragOptions.dispatchChange !== false) dispatchSettingsControlEvent(built.number, "change");
+            },
+            onNumberCommit: dragOptions && dragOptions.onCommit,
+            onNumberCancel: dragOptions && dragOptions.onCancel,
+            onDragStart: dragOptions && dragOptions.onDragStart,
+            onDragChange: dragOptions && dragOptions.onDragChange,
+            onDragEnd: dragOptions && dragOptions.onDragEnd
+        });
+        return built.root;
     }
 
     function createSharedSettingsColorControl(field, inputId, fallbackColor, shellClassName) {
@@ -3114,6 +3091,7 @@
             PaletteStore: window.ProceduralPaletteStore,
             ProceduralAppearance: window.ProceduralAppearance,
             ProceduralPaletteEditor: window.ProceduralPaletteEditor,
+            CoreUI: window.CoreUI,
             translate: tr,
             setStatus: setStatus,
             refreshHomeIcons: refreshProceduralHomeIcons,
@@ -4462,6 +4440,7 @@
     }
 
     function normalizeSchemaNumber(value, field, fallback) {
+        if (window.CoreUI) return window.CoreUI.normalizeNumber(value, field, fallback);
         var numeric = Number(value);
         var min = typeof field.min !== "undefined" ? Number(field.min) : null;
         var max = typeof field.max !== "undefined" ? Number(field.max) : null;
@@ -4485,6 +4464,7 @@
     }
 
     function setSchemaNumberValue(input, value, field) {
+        if (window.CoreUI) { window.CoreUI.setNumberValue(input, value, field, input.value); return; }
         var step = typeof field.step !== "undefined" ? Number(field.step) : 1;
         var numeric = normalizeSchemaNumber(value, field, input.value);
         var decimals = 0;
@@ -4500,6 +4480,7 @@
     }
 
     function isSchemaNumberDraftValue(value) {
+        if (window.CoreUI) return window.CoreUI.isNumberDraft(value);
         var text = String(value || "").trim();
         return text === "" ||
             text === "-" ||
@@ -4519,6 +4500,7 @@
     }
 
     function setupRegistryNumberDrag(input, field, onUpdate, options) {
+        if (window.CoreUI) return window.CoreUI.bindNumberDrag(input, field, onUpdate, options);
         var suppressNextClick = false;
         var editStartValue = input.value;
         var skipNextBlurCommit = false;
@@ -6278,9 +6260,7 @@
             applyVisibleWhenMetadata(row, field);
             row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
 
-            input = document.createElement("button");
-            input.type = "button";
-            input.className = field.variant === "primary" ? "primary-action registry-large-button" : "panel-button registry-large-button";
+            input = window.CoreUI.createButton({ document: document, classNames: (field.variant === "primary" ? "primary-action" : "panel-button") + " registry-large-button ui-button--large" });
             if (field.fullWidth !== false) {
                 input.className += " is-full-width";
             }
@@ -6318,7 +6298,7 @@
         }
 
         row = document.createElement("div");
-        row.className = fieldType === "checkbox" ? "switch-row registry-switch-row registry-schema-field" : "control-row registry-field-row registry-schema-field";
+        row.className = (fieldType === "checkbox" ? "switch-row registry-switch-row registry-schema-field" : "control-row registry-field-row registry-schema-field") + " ui-field-row";
         applyVisibleWhenMetadata(row, field);
         row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
         labelColumn = document.createElement("span");
@@ -6340,24 +6320,12 @@
         }
 
         if (fieldType === "checkbox") {
-            input = document.createElement("input");
-            input.type = "checkbox";
-            input.id = fieldId;
-            input.checked = !!value;
-            input.addEventListener("change", scheduleSave);
-
-            swatch = document.createElement("label");
-            swatch.className = "switch registry-switch";
-            swatch.setAttribute("for", fieldId);
-            colorValue = document.createElement("span");
-            colorValue.className = "switch-track";
-            swatch.appendChild(input);
-            swatch.appendChild(colorValue);
+            colorValue = window.CoreUI.createSwitch({ document: document, id: fieldId, checked: !!value, label: true, classNames: "switch registry-switch", onChange: scheduleSave });
+            input = colorValue.input;
+            swatch = colorValue.root;
             wrap.appendChild(swatch);
         } else if (fieldType === "select") {
-            input = document.createElement("select");
-            input.className = "select-input";
-            input.id = fieldId;
+            input = window.CoreUI.createSelect({ document: document, id: fieldId, classNames: "select-input", onChange: scheduleSave });
             for (i = 0; field.options && i < field.options.length; i++) {
                 option = document.createElement("option");
                 option.value = field.options[i].value;
@@ -6367,7 +6335,6 @@
                 }
                 input.appendChild(option);
             }
-            input.addEventListener("change", scheduleSave);
             wrap.appendChild(input);
         } else if (fieldType === "tabs") {
             input = document.createElement("input");
@@ -6377,9 +6344,7 @@
             wrap.classList.add("registry-tabs-control");
             wrap.appendChild(input);
             for (i = 0; field.options && i < field.options.length; i++) {
-                option = document.createElement("button");
-                option.type = "button";
-                option.className = "registry-option-card";
+                option = window.CoreUI.createButton({ document: document, classNames: "registry-option-card ui-choice-surface" });
                 option.setAttribute("data-tab-value", field.options[i].value);
                 option.classList.toggle("is-active", field.options[i].value === value);
                 if (field.options[i].iconText) {
@@ -6412,18 +6377,12 @@
                 wrap.appendChild(option);
             }
         } else if (fieldType === "textarea") {
-            input = document.createElement("textarea");
-            input.id = fieldId;
-            input.className = "registry-textarea";
-            input.rows = field.rows || 3;
+            input = window.CoreUI.createTextarea({ document: document, id: fieldId, classNames: "registry-textarea", rows: field.rows || 3, value: value, onInput: scheduleSave, onCommit: scheduleSave });
             if (field.placeholderKey) {
                 input.placeholder = tr(field.placeholderKey);
             } else if (field.placeholder) {
                 input.placeholder = field.placeholder;
             }
-            input.value = value;
-            input.addEventListener("input", scheduleSave);
-            input.addEventListener("change", scheduleSave);
             wrap.appendChild(input);
         } else if (fieldType === "range") {
             input = document.createElement("input");
@@ -6509,14 +6468,9 @@
             if (fieldType !== "text" && window.console && console.warn) {
                 console.warn("[AE Toolbox] Unsupported registry field type:", fieldType, field);
             }
-            input = document.createElement("input");
-            input.id = fieldId;
-            input.className = fieldType === "number" ? "num-input" : "registry-text-input";
-            input.type = "text";
+            input = fieldType === "number" ? window.CoreUI.createNumberInput({ document: document, id: fieldId, classNames: "num-input", value: value, field: field, onDragValue: scheduleSave, enableArrowKeys: false }) : window.CoreUI.createTextInput({ document: document, id: fieldId, classNames: "registry-text-input", value: value, onInput: scheduleSave, onCommit: scheduleSave });
             if (fieldType === "number") {
-                input.inputMode = "decimal";
                 applySchemaNumberAttributes(input, field);
-                setupRegistryNumberDrag(input, field, scheduleSave);
                 input.addEventListener("input", scheduleSave);
                 input.addEventListener("change", function () {
                     commitSchemaNumberInput(this, field, registryFieldValue(toolDef, field));
@@ -6531,11 +6485,6 @@
                 input.placeholder = tr(field.placeholderKey);
             } else if (field.placeholder) {
                 input.placeholder = field.placeholder;
-            }
-            input.value = value;
-            if (fieldType !== "number") {
-                input.addEventListener("input", scheduleSave);
-                input.addEventListener("change", scheduleSave);
             }
             wrap.appendChild(input);
         }
@@ -9050,7 +8999,7 @@
         var label = document.createElement("label");
         var input = document.createElement("input");
         var state = document.createElement("small");
-        var reset = document.createElement("button");
+        var reset = window.CoreUI.createButton({ document: document, classNames: "panel-button appearance-reset-button" });
         function refreshState() {
             var overridden = CoreAppearance && CoreAppearance.getOverride(parameter.id) !== null;
             var stateKey = overridden ? "settings.appearance.overridden" : "settings.appearance.inherited";
@@ -9063,12 +9012,10 @@
         label.setAttribute("data-i18n", parameter.labelKey);
         label.textContent = tr(parameter.labelKey);
         input.type = "color";
-        input.className = "appearance-color-input";
+        input.className = "appearance-color-input ui-color-input";
         input.value = CoreAppearance.getResolvedValue(parameter.id);
         input.setAttribute("data-appearance-parameter", parameter.id);
         state.className = "settings-field-description appearance-override-state";
-        reset.type = "button";
-        reset.className = "panel-button appearance-reset-button";
         reset.setAttribute("data-i18n", "settings.appearance.reset");
         reset.textContent = tr("settings.appearance.reset");
         input.addEventListener("input", function () { CoreAppearance.preview(parameter.id, input.value); });

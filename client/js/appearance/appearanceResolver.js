@@ -1,11 +1,10 @@
 (function (root, factory) {
     "use strict";
     var exported = Object.freeze(factory());
-    if (typeof module === "object" && module.exports) {
-        module.exports.AppearanceResolver = exported;
-    }
-    if (root && !Object.prototype.hasOwnProperty.call(root, "AppearanceResolver")) {
+    if (root && root.document && !Object.prototype.hasOwnProperty.call(root, "AppearanceResolver")) {
         Object.defineProperty(root, "AppearanceResolver", { configurable: false, enumerable: true, value: exported, writable: false });
+    } else if ((!root || !root.document) && typeof module === "object" && module.exports) {
+        module.exports.AppearanceResolver = exported;
     }
 }(typeof self !== "undefined" ? self : this, function () {
     "use strict";

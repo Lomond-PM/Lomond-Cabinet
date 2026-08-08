@@ -381,61 +381,44 @@
     }
 
     function createPaletteTextInput(value, onChange) {
-        var input = createElement("input");
-        input.className = "registry-text-input palette-editor-text";
-        input.type = "text";
-        input.value = value || "";
-        input.addEventListener("input", function () {
-            onChange(this.value);
-        });
-        return input;
+        var input;
+        if (options.CoreUI) return options.CoreUI.createTextInput({ document: getDocument(), value: value || "", classNames: "registry-text-input palette-editor-text", onInput: function () { onChange(this.value); } });
+        input = createElement("input"); input.className = "registry-text-input palette-editor-text"; input.type = "text"; input.value = value || "";
+        input.addEventListener("input", function () { onChange(this.value); }); return input;
     }
 
     function createPaletteNumberInput(value, field, onChange, inputOptions) {
-        var input = createElement("input");
+        var input;
         inputOptions = inputOptions || {};
-        input.className = "num-input registry-range-number settings-number palette-editor-number";
-        input.type = "text";
-        input.inputMode = "decimal";
+        input = options.CoreUI ? options.CoreUI.createNumberInput({ document: getDocument(), value: String(value), field: field, classNames: "num-input registry-range-number settings-number palette-editor-number", disabled: inputOptions.disabled, onInput: function () {
+            var isDraft = options.isSchemaNumberDraftValue ? options.isSchemaNumberDraftValue(this.value) : false;
+            if (!isDraft && !isNaN(Number(this.value))) onChange(this.value, this, "input");
+        }, onDragValue: function (nextValue) { onChange(nextValue, input, "update"); }, onCommit: function (nextValue) { onChange(nextValue, input, "commit"); }, onCancel: function (nextValue) { onChange(nextValue, input, "cancel"); } }) : createElement("input");
+        if (!options.CoreUI) { input.className = "num-input registry-range-number settings-number palette-editor-number"; input.type = "text"; input.inputMode = "decimal"; input.value = String(value); }
         if (options.applySchemaNumberAttributes) {
             options.applySchemaNumberAttributes(input, field);
         }
-        input.value = String(value);
-        input.addEventListener("input", function () {
-            var isDraft = options.isSchemaNumberDraftValue ? options.isSchemaNumberDraftValue(this.value) : false;
-            if (!isDraft && !isNaN(Number(this.value))) {
-                onChange(this.value, this, "input");
-            }
-        });
-        if (options.setupRegistryNumberDrag) {
-            options.setupRegistryNumberDrag(input, field, function (nextValue) {
-                onChange(nextValue, input, "update");
-            }, {
-                onCommit: function (nextValue) {
-                    onChange(nextValue, input, "commit");
-                },
-                onCancel: function (nextValue) {
-                    onChange(nextValue, input, "cancel");
-                }
+        if (!options.CoreUI) {
+            input.addEventListener("input", function () {
+                var isDraft = options.isSchemaNumberDraftValue ? options.isSchemaNumberDraftValue(this.value) : false;
+                if (!isDraft && !isNaN(Number(this.value))) onChange(this.value, this, "input");
+            });
+            if (options.setupRegistryNumberDrag) options.setupRegistryNumberDrag(input, field, function (nextValue) { onChange(nextValue, input, "update"); }, {
+                onCommit: function (nextValue) { onChange(nextValue, input, "commit"); },
+                onCancel: function (nextValue) { onChange(nextValue, input, "cancel"); }
             });
         }
         if (inputOptions.disabled) {
-            input.disabled = true;
             input.classList.remove("is-drag-ready");
         }
         return input;
     }
 
     function renderPaletteEditorField(labelKey, control) {
-        var row = createElement("div");
-        var label = createElement("strong");
-        row.className = "settings-field palette-editor-field";
-        label.className = "control-label registry-text-body settings-field-label";
-        label.setAttribute("data-i18n", labelKey);
-        label.textContent = tr(labelKey);
-        row.appendChild(label);
-        row.appendChild(control);
-        return row;
+        var row;
+        var label;
+        if (options.CoreUI) return options.CoreUI.createFieldRow({ document: getDocument(), labelKey: labelKey, labelText: tr(labelKey), control: control, classNames: "settings-field palette-editor-field", copyClassNames: "palette-editor-field-copy", labelClassNames: "control-label registry-text-body settings-field-label" }).row;
+        row = createElement("div"); label = createElement("strong"); row.className = "settings-field palette-editor-field"; label.className = "control-label registry-text-body settings-field-label"; label.setAttribute("data-i18n", labelKey); label.textContent = tr(labelKey); row.appendChild(label); row.appendChild(control); return row;
     }
 
     function createPalettePreviewBlock() {

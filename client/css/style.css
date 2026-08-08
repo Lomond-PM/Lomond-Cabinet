@@ -1523,6 +1523,7 @@ body:not(.i18n-ready) .app-shell {
     line-height: 1.25;
 }
 
+.ui-select,
 .select-input {
     width: min(150px, 48%);
     min-height: var(--control-height);
@@ -1547,6 +1548,7 @@ body:not(.i18n-ready) .app-shell {
     pointer-events: none !important;
 }
 
+.ui-select:focus,
 .select-input:focus {
     border-color: var(--interaction-focus-border);
 }
@@ -2953,10 +2955,12 @@ p {
     line-height: 1.3;
 }
 
+.ui-switch input,
 .switch input {
     display: none;
 }
 
+.ui-switch-track,
 .switch-track {
     position: relative;
     display: block;
@@ -2967,6 +2971,7 @@ p {
     transition: background-color var(--dur-fast) var(--ease-apple-standard);
 }
 
+.ui-switch-track::after,
 .switch-track::after {
     content: "";
     position: absolute;
@@ -2980,10 +2985,12 @@ p {
     transition: transform var(--dur-fast) var(--ease-apple-standard);
 }
 
+.ui-switch input:checked + .ui-switch-track,
 .switch input:checked + .switch-track {
     background-color: var(--interaction-checked-surface);
 }
 
+.ui-switch input:checked + .ui-switch-track::after,
 .switch input:checked + .switch-track::after {
     transform: translateX(calc(18px * var(--ui-scale)));
 }
@@ -3417,6 +3424,9 @@ p {
     width: 100%;
 }
 
+.ui-text-input,
+.ui-textarea,
+.ui-color-hex,
 .registry-text-input,
 .registry-textarea,
 .registry-color-hex {
@@ -3430,6 +3440,7 @@ p {
     padding: 0 calc(10px * var(--ui-scale));
 }
 
+.ui-textarea,
 .registry-textarea {
     min-height: calc(76px * var(--ui-scale));
     padding-top: calc(8px * var(--ui-scale));
@@ -3438,6 +3449,10 @@ p {
     line-height: 1.35;
 }
 
+.ui-text-input:focus,
+.ui-textarea:focus,
+.ui-color-hex:focus,
+.ui-number-input:focus,
 .registry-text-input:focus,
 .registry-textarea:focus,
 .registry-color-hex:focus,
@@ -3463,14 +3478,17 @@ p {
     cursor: ew-resize;
 }
 
+.ui-number-input,
 .registry-number-input {
     cursor: ew-resize;
 }
 
+.ui-number-input.is-editing-number,
 .registry-number-input.is-editing-number {
     cursor: text;
 }
 
+.ui-number-input.is-dragging-number,
 .registry-number-input.is-dragging-number {
     cursor: ew-resize;
     user-select: none;
@@ -3490,6 +3508,7 @@ p {
     gap: calc(10px * var(--ui-scale));
 }
 
+.ui-color-swatch,
 .registry-color-swatch {
     width: 100%;
     min-width: 0;
@@ -3503,11 +3522,13 @@ p {
         border-color var(--dur-fast) var(--ease-apple-standard);
 }
 
+.ui-color-swatch:hover,
 .registry-color-swatch:hover {
     border-color: var(--interaction-hover-border);
     transform: translateY(-1px);
 }
 
+.ui-color-hex,
 .registry-color-hex {
     min-width: 78px;
     text-align: center;
@@ -3609,6 +3630,7 @@ p {
     padding: calc(7px * var(--ui-scale)) 0;
 }
 
+.ui-button--large,
 .registry-large-button {
     min-height: calc(44px * var(--ui-scale));
     justify-content: center;
@@ -3684,6 +3706,7 @@ p {
     display: none;
 }
 
+.ui-choice-surface,
 .registry-option-card {
     display: flex;
     min-width: 0;
@@ -3702,12 +3725,14 @@ p {
         background-color var(--dur-fast) var(--ease-apple-standard);
 }
 
+.ui-choice-surface:hover,
 .registry-option-card:hover {
     border-color: var(--interaction-hover-border);
     background: var(--interaction-hover-surface);
     transform: translateY(calc(-1px * var(--ui-scale)));
 }
 
+.ui-choice-surface.is-active,
 .registry-option-card.is-active {
     border-color: var(--gold-soft);
     background: var(--interaction-selected-surface);
