@@ -143,6 +143,7 @@
     var ThemeSettingsStoreListener = null;
     var ProceduralAppearanceParams = null;
     var ProceduralAppearanceSourceDebounceTimer = null;
+    var CoreAppearance = null;
     var PROCEDURAL_APPEARANCE_SOURCE_DEBOUNCE_MS = 150;
     var DefaultSettings = {
         motionSpeed: 1,
@@ -7834,28 +7835,87 @@
         }
     }
 
+    function appearanceBaseInputs(settings) {
+        var data = settings || DefaultSettings;
+        return {
+            "base.accent": normalizeHex(data.themeAccent, DefaultSettings.themeAccent),
+            "base.canvas": normalizeHex(data.homeBackground, DefaultSettings.homeBackground),
+            "layout.scale": clampNumber(data.uiScale, DefaultSettings.uiScale, 0.62, 1.18),
+            "motion.speed": clampNumber(data.motionSpeed, DefaultSettings.motionSpeed, 0.75, 1.35)
+        };
+    }
+
+    function commitAppearanceBaseInput(id, value) {
+        var control;
+        var number;
+        if (id === "base.accent") {
+            setColorValue("themeAccent", value);
+        } else if (id === "base.canvas") {
+            setColorValue("homeBackground", value);
+        } else if (id === "layout.scale") {
+            control = byId("uiScale");
+            number = byId("uiScaleNumber");
+            if (control) { control.value = value; }
+            if (number) { number.value = value; }
+        } else if (id === "motion.speed") {
+            control = byId("motionSpeed");
+            number = byId("motionSpeedNumber");
+            if (control) { control.value = value; }
+            if (number) { number.value = value; }
+        } else {
+            return false;
+        }
+        saveSettings();
+        return true;
+    }
+
+    function ensureCoreAppearance(settings) {
+        var store;
+        if (CoreAppearance) { return CoreAppearance; }
+        if (!window.AppearanceParameterRegistry || !window.AppearanceStateStore || !window.AppearanceResolver) { return null; }
+        store = window.AppearanceStateStore.create({ storage: window.localStorage, registry: window.AppearanceParameterRegistry });
+        CoreAppearance = window.AppearanceResolver.create({
+            registry: window.AppearanceParameterRegistry,
+            store: store,
+            rootStyle: document.documentElement.style,
+            runtime: {
+                applyMotionSpeed: function (value) {
+                    motionScale = clampNumber(value, DefaultSettings.motionSpeed, 0.75, 1.35);
+                },
+                commitBaseInput: commitAppearanceBaseInput
+            }
+        });
+        CoreAppearance.initialize(appearanceBaseInputs(settings));
+        window.CoreAppearance = CoreAppearance;
+        return CoreAppearance;
+    }
+
     function applyThemeAccent(hex) {
         var accent = normalizeHex(hex, DefaultSettings.themeAccent);
         var root = document.documentElement;
         var hot = mixHex(accent, "#ffffff", 0.24);
         var dark = mixHex(accent, "#000000", 0.58);
 
-        root.style.setProperty("--gold", accent);
-        root.style.setProperty("--gold-hot", hot);
-        root.style.setProperty("--gold-soft", rgba(accent, 0.72));
-        root.style.setProperty("--gold-track", rgba(accent, 0.24));
-        root.style.setProperty("--gold-focus", rgba(hot, 0.62));
-        root.style.setProperty("--gold-button", rgba(accent, 0.86));
-        root.style.setProperty("--separator", rgba(accent, 0.16));
-        root.style.setProperty("--panel-border", rgba(accent, 0.22));
-        root.style.setProperty("--input-border", rgba(accent, 0.16));
-        root.style.setProperty("--selection-bg", dark);
+        if (!ensureCoreAppearance() || !CoreAppearance.setBaseInput("base.accent", accent)) {
+            root.style.setProperty("--gold", accent);
+            root.style.setProperty("--gold-hot", hot);
+            root.style.setProperty("--gold-soft", rgba(accent, 0.72));
+            root.style.setProperty("--gold-track", rgba(accent, 0.24));
+            root.style.setProperty("--gold-focus", rgba(hot, 0.62));
+            root.style.setProperty("--gold-button", rgba(accent, 0.86));
+            root.style.setProperty("--separator", rgba(accent, 0.16));
+            root.style.setProperty("--panel-border", rgba(accent, 0.22));
+            root.style.setProperty("--input-border", rgba(accent, 0.16));
+            root.style.setProperty("--selection-bg", dark);
+        }
         setColorValue("themeAccent", accent);
     }
 
     function applyHomeBackground(hex) {
         var bg = normalizeHex(hex, DefaultSettings.homeBackground);
-        document.documentElement.style.setProperty("--bg-main", bg);
+        if (!ensureCoreAppearance() || !CoreAppearance.setBaseInput("base.canvas", bg)) {
+            document.documentElement.style.setProperty("--bg-main", bg);
+        }
         setColorValue("homeBackground", bg);
     }
 
@@ -8572,9 +8632,11 @@
 
         linkPersistedRange("motionSpeed", "motionSpeedNumber", 0.75, 1.35, function () {
             motionScale = clampNumber(number.value, DefaultSettings.motionSpeed, 0.75, 1.35);
+            if (ensureCoreAppearance()) { CoreAppearance.setBaseInput("motion.speed", motionScale); }
             saveSettings();
         });
         motionScale = clampNumber(number.value, DefaultSettings.motionSpeed, 0.75, 1.35);
+        if (ensureCoreAppearance()) { CoreAppearance.setBaseInput("motion.speed", motionScale); }
     }
 
     function applyUiScale(value) {
@@ -8582,7 +8644,9 @@
         var range = byId("uiScale");
         var number = byId("uiScaleNumber");
 
-        document.documentElement.style.setProperty("--ui-scale", String(scale));
+        if (!ensureCoreAppearance() || !CoreAppearance.setBaseInput("layout.scale", scale)) {
+            document.documentElement.style.setProperty("--ui-scale", String(scale));
+        }
         if (range) {
             range.value = scale;
         }
@@ -8712,6 +8776,7 @@
         byId("motionSpeed").value = speed;
         byId("motionSpeedNumber").value = speed;
         motionScale = speed;
+        if (ensureCoreAppearance(data)) { CoreAppearance.setBaseInput("motion.speed", speed); }
         ProceduralAppearanceParams = normalizeProceduralAppearanceParams(data.proceduralParams);
         setProceduralAppearanceParamControls(ProceduralAppearanceParams);
         applyUiScale(data.uiScale || DefaultSettings.uiScale);
@@ -8986,6 +9051,7 @@
         var settingsBackdrop;
         var refreshBtn;
 
+        ensureCoreAppearance(loadStoredJson(StorageKeys.settings, DefaultSettings));
         if (window.ProceduralPaletteStore && typeof window.ProceduralPaletteStore.initialize === "function") {
             window.ProceduralPaletteStore.initialize({
                 library: window.ProceduralPaletteLibrary
