@@ -131,7 +131,7 @@ const registryDefinitions = [
     const adSchema = fs.readFileSync(path.join(root, "host/tools/adComponentKit.tool.jsx"), "utf8");
     const loadOrderSource = main.slice(main.indexOf("loadOrder: function ()"), main.indexOf("saveOrder: function ()"));
     check(!/DynamicTools|DynamicToolOrder|var ToolRegistry/.test(main), "main no longer owns parallel hard-coded and dynamic tool maps");
-    check((main.match(/registerSystemSurface\(\{ id: /g) || []).length === 2 && /registerSystemSurface\(\{ id: "velaPersistentSurface" \}\)/.test(main) && /registerSystemSurface\(\{ id: "settings" \}\)/.test(main), "production registers exactly Vela Persistent Surface and Settings as System entries");
+    check((main.match(/registerSystemSurface\(\{/g) || []).length === 2 && /id: "velaPersistentSurface"/.test(main) && /id: "settings"/.test(main), "production registers exactly Vela Persistent Surface and Settings as System entries");
     check(/getHomeEntries\(\{ developerMode:/.test(main) && !/:not\(\[data-dynamic-tool='true'\]\)/.test(main), "Home deduplication is projected by Tool Catalog instead of DOM probing");
     check((main.match(/data-home-events-bound/g) || []).length >= 2 && /getAttribute\("data-home-events-bound"\) === "true"/.test(main), "Home buttons retain one-time event binding guard");
     check(/route\.kind === "registry"/.test(main) && !/route\.kind === "legacy"|renderVelaDetail/.test(main), "production detail routing accepts Registry tools without a Vela legacy special case");

@@ -30,6 +30,12 @@
         });
     }
 
+    function isHomeVisible(entry) {
+        var home = entry && entry.definition && entry.definition.home;
+        if (entry && entry.kind === "registry") return entry.definition.hidden !== true;
+        return !!home && home.visible === true;
+    }
+
     function createCatalog() {
         var registry = {};
         var registryOrder = [];
@@ -114,6 +120,8 @@
 
         function getDisplayMetadata(id) {
             var entry = getRegistryTool(id);
+            if (entry) return entry.definition;
+            entry = getSystemSurface(id);
             return entry ? entry.definition : null;
         }
 
@@ -133,13 +141,17 @@
             var id;
 
             function append(candidate) {
-                if (!candidate || candidate.definition.hidden === true || (!developerMode && isDeveloperDefinition(candidate.definition))) return;
+                if (!candidate || !isHomeVisible(candidate) || (!developerMode && isDeveloperDefinition(candidate.definition))) return;
                 entries[entries.length] = freeze({ id: candidate.id, kind: candidate.kind, definition: candidate.definition, homeOwnership: "dynamic" });
             }
 
             for (i = 0; i < registryOrder.length; i++) {
                 id = registryOrder[i];
                 append(registry[id]);
+            }
+            for (i = 0; i < systemOrder.length; i++) {
+                id = systemOrder[i];
+                append(systems[id]);
             }
             return applyHomeOrder(entries, options.homeOrder || []);
         }

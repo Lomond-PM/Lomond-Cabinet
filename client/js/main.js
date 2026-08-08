@@ -125,7 +125,14 @@
     var toolCatalog = window.ToolCatalog && typeof window.ToolCatalog.createCatalog === "function" ? window.ToolCatalog.createCatalog() : null;
     if (toolCatalog) {
         toolCatalog.registerSystemSurface({ id: "velaPersistentSurface" });
-        toolCatalog.registerSystemSurface({ id: "settings" });
+        toolCatalog.registerSystemSurface({
+            id: "settings",
+            titleKey: "common.settings",
+            iconText: "S",
+            iconIdentity: "settings",
+            home: { visible: true, orderable: true, hideable: false },
+            route: { surfaceId: "settings", defaultPage: "root", pages: ["root", "appearance"] }
+        });
     }
     var RegistryToolState = {};
     var RegistrySaveTimers = {};
@@ -144,6 +151,13 @@
     var ProceduralAppearanceParams = null;
     var ProceduralAppearanceSourceDebounceTimer = null;
     var CoreAppearance = null;
+    var SettingsState = null;
+    var SystemRouter = null;
+    var ActiveSettingsSourceElement = null;
+    var ActiveRoute = null;
+    var SettingsPeekManipulation = null;
+    var SettingsPeekDelayTimer = null;
+    var SETTINGS_PEEK_DELAY_MS = 300;
     var PROCEDURAL_APPEARANCE_SOURCE_DEBOUNCE_MS = 150;
     var DefaultSettings = {
         motionSpeed: 1,
@@ -1329,6 +1343,8 @@
             button.type = "button";
             button.className = "tool-app app-card";
             button.setAttribute("data-tool", tool.id);
+            button.setAttribute("data-entry", entry.id);
+            button.setAttribute("data-entry-kind", entry.kind);
             button.setAttribute("data-dynamic-tool", "true");
 
             icon = document.createElement("span");
@@ -2256,9 +2272,17 @@
     function renderSettingsRangeRow(field, numberId) {
         var fieldRow;
         var controls;
+        var dragOptions = null;
 
         fieldRow = createSharedSettingsFieldRow("range", field, field.descriptionKey, "");
-        controls = createSharedSettingsRangeNumber(field, field.key, numberId, field.min, field.max, "", "");
+        if (field.key === "uiScale") {
+            dragOptions = {
+                onDragStart: function () { beginSettingsPeekManipulation("number-scrub"); },
+                onDragChange: markSettingsPeekManipulationChanged,
+                onDragEnd: function () { endSettingsPeekManipulation("number-scrub"); }
+            };
+        }
+        controls = createSharedSettingsRangeNumber(field, field.key, numberId, field.min, field.max, "", "", dragOptions);
         fieldRow.row.removeChild(fieldRow.controls);
         fieldRow.row.appendChild(controls);
 
@@ -3799,14 +3823,12 @@
     }
 
     function getSettingsTargetRect() {
-        var margin = 14;
-        var bottom = 54;
-        var width = Math.min(360, Math.max(1, window.innerWidth - margin * 2));
+        var margin = Math.round(16 * 0.92);
         return {
-            left: Math.max(margin, window.innerWidth - margin - width),
+            left: margin,
             top: margin,
-            width: width,
-            height: Math.max(1, window.innerHeight - margin - bottom)
+            width: Math.max(1, window.innerWidth - margin * 2),
+            height: Math.max(1, window.innerHeight - margin * 2)
         };
     }
 
@@ -3825,6 +3847,19 @@
         home.classList.remove("is-opening", "is-returning");
         home.offsetWidth;
         rect = getToolIcon(toolButton).getBoundingClientRect();
+        home.style.transition = previousTransition;
+        return rect;
+    }
+
+    function getSystemLaunchSourceRect(sourceElement) {
+        var home = byId("homeView");
+        var previousTransition = home.style.transition;
+        var rect;
+        home.style.transition = "none";
+        home.classList.add("is-active");
+        home.classList.remove("is-opening", "is-returning");
+        home.offsetWidth;
+        rect = sourceElement.getBoundingClientRect();
         home.style.transition = previousTransition;
         return rect;
     }
@@ -4128,6 +4163,7 @@
     function showHomeView() {
         var home = byId("homeView");
         var detail = byId("detailView");
+        ActiveRoute = null;
 
         stopRegistryStatePolling();
         setToolActionsVisible(byId("registryToolActions"), false);
@@ -4578,6 +4614,9 @@
                     return;
                 }
                 dragging = true;
+                if (options && options.onDragStart && !input.classList.contains("is-dragging-number")) {
+                    options.onDragStart();
+                }
                 input.blur();
                 input.classList.remove("is-editing-number");
                 input.classList.add("is-dragging-number");
@@ -4588,11 +4627,15 @@
                 if (onUpdate) {
                     onUpdate(input.value);
                 }
+                if (options && options.onDragChange) {
+                    options.onDragChange(input.value);
+                }
             }
 
             function up() {
                 document.removeEventListener("mousemove", move);
                 document.removeEventListener("mouseup", up);
+                window.removeEventListener("blur", up);
                 document.body.style.userSelect = previousUserSelect;
                 input.classList.remove("is-dragging-number");
                 if (dragging) {
@@ -4603,11 +4646,15 @@
                     if (onUpdate) {
                         onUpdate(input.value);
                     }
+                    if (options && options.onDragEnd) {
+                        options.onDragEnd();
+                    }
                 }
             }
 
             document.addEventListener("mousemove", move);
             document.addEventListener("mouseup", up);
+            window.addEventListener("blur", up);
         });
     }
 
@@ -7136,6 +7183,9 @@
         var previousToolId = activeToolId;
 
         activeToolId = toolId || "";
+        if (!(SystemRouter && SystemRouter.getActiveRoute())) {
+            ActiveRoute = activeToolId ? { kind: "registry", entryId: activeToolId } : null;
+        }
         if (previousToolId && previousToolId !== activeToolId) {
             clearRegistryProceduralPreviewTimer(previousToolId);
         }
@@ -7224,6 +7274,7 @@
     }
 
     function openToolWithLaunchTransition(toolButton, toolId) {
+        var catalogRoute = toolCatalog ? toolCatalog.getRoute(toolId) : null;
         var home = byId("homeView");
         var detail = byId("detailView");
         var icon = getToolIcon(toolButton);
@@ -7237,6 +7288,12 @@
             return;
         }
         if (byId("appShell").classList.contains("is-animating")) {
+            return;
+        }
+        if (catalogRoute && catalogRoute.kind === "system") {
+            if (SystemRouter) {
+                SystemRouter.open(catalogRoute.entry.id, catalogRoute.entry.definition.route.defaultPage, toolButton);
+            }
             return;
         }
 
@@ -8146,6 +8203,7 @@
 
     function cleanupTransientUiState() {
         closeCustomSelectMenus();
+        endSettingsPeekManipulation();
     }
 
     function stopSelectionPolling() {
@@ -8661,6 +8719,7 @@
     function setupUiScale() {
         var input = byId("uiScale");
         var number = byId("uiScaleNumber");
+        var rangeManipulating = false;
 
         if (!input || !number) {
             return;
@@ -8670,7 +8729,75 @@
             applyUiScale(number.value);
             saveSettings();
         });
+        input.addEventListener("pointerdown", function (event) {
+            if (event.button !== 0) return;
+            rangeManipulating = true;
+            beginSettingsPeekManipulation("range");
+            try { input.setPointerCapture(event.pointerId); } catch (ignored) {}
+        });
+        input.addEventListener("input", function () {
+            if (rangeManipulating) markSettingsPeekManipulationChanged();
+        });
+        input.addEventListener("pointerup", function () {
+            rangeManipulating = false;
+            endSettingsPeekManipulation("range");
+        });
+        input.addEventListener("pointercancel", function () {
+            rangeManipulating = false;
+            endSettingsPeekManipulation("range");
+        });
+        input.addEventListener("lostpointercapture", function () {
+            rangeManipulating = false;
+            endSettingsPeekManipulation("range");
+        });
         applyUiScale(number.value);
+    }
+
+    function beginSettingsPeekManipulation(kind) {
+        endSettingsPeekPreview();
+        SettingsPeekManipulation = { kind: kind, changed: false };
+    }
+
+    function markSettingsPeekManipulationChanged() {
+        var manipulation = SettingsPeekManipulation;
+        if (!manipulation || manipulation.changed) return;
+        manipulation.changed = true;
+        SettingsPeekDelayTimer = window.setTimeout(function () {
+            SettingsPeekDelayTimer = null;
+            if (SettingsPeekManipulation === manipulation && manipulation.changed) {
+                beginSettingsPeekPreview(byId("settingsMotionMount"));
+            }
+        }, SETTINGS_PEEK_DELAY_MS);
+    }
+
+    function beginSettingsPeekPreview(scopeElement) {
+        var view = byId("settingsView");
+        var home = byId("homeView");
+        if (!view || !home || !scopeElement || !view.classList.contains("is-open")) return false;
+        view.classList.add("is-peek-preview");
+        home.classList.add("is-active", "is-settings-peek-home");
+        return true;
+    }
+
+    function endSettingsPeekPreview() {
+        var view = byId("settingsView");
+        var home = byId("homeView");
+        var wasPreviewingHome = home && home.classList.contains("is-settings-peek-home");
+        if (SettingsPeekDelayTimer) {
+            window.clearTimeout(SettingsPeekDelayTimer);
+            SettingsPeekDelayTimer = null;
+        }
+        if (view) view.classList.remove("is-peek-preview");
+        if (home) {
+            home.classList.remove("is-settings-peek-home");
+            if (wasPreviewingHome) home.classList.remove("is-active");
+        }
+    }
+
+    function endSettingsPeekManipulation(kind) {
+        if (SettingsPeekManipulation && kind && SettingsPeekManipulation.kind !== kind) return;
+        SettingsPeekManipulation = null;
+        endSettingsPeekPreview();
     }
 
     function setBackgroundSettingsCollapsed(collapsed) {
@@ -8733,33 +8860,38 @@
     function collectSettings() {
         var autoStatus = byId("autoStatus");
         var registryDebugTools = byId("registryDebugTools");
-        return {
-            motionSpeed: clampNumber(byId("motionSpeedNumber").value, DefaultSettings.motionSpeed, 0.75, 1.35),
-            uiScale: clampNumber(byId("uiScaleNumber").value, DefaultSettings.uiScale, 0.62, 1.18),
-            themeAccent: normalizeHex(byId("themeAccent").value, DefaultSettings.themeAccent),
-            homeBackground: normalizeHex(byId("homeBackground").value, DefaultSettings.homeBackground),
-            backgroundSource: normalizeBackgroundSource(byId("backgroundSource") ? byId("backgroundSource").value : DefaultSettings.backgroundSource),
-            proceduralBackgroundSeed: normalizeProceduralBackgroundSeed(byId("proceduralBackgroundSeed") ? byId("proceduralBackgroundSeed").value : DefaultSettings.proceduralBackgroundSeed),
-            proceduralBackgroundPaletteId: normalizeProceduralBackgroundPaletteId(byId("proceduralBackgroundPaletteId") ? byId("proceduralBackgroundPaletteId").value : DefaultSettings.proceduralBackgroundPaletteId),
-            proceduralBackgroundIntensity: normalizeProceduralBackgroundIntensity(byId("proceduralBackgroundIntensityNumber") ? byId("proceduralBackgroundIntensityNumber").value : DefaultSettings.proceduralBackgroundIntensity),
-            toolIconColor: normalizeHex(byId("toolIconColor").value, DefaultSettings.toolIconColor),
-            toolIconLine: normalizeHex(byId("toolIconLine").value, DefaultSettings.toolIconLine),
-            proceduralIconMode: normalizeProceduralIconMode(byId("proceduralIconMode") ? byId("proceduralIconMode").value : DefaultSettings.proceduralIconMode),
-            toolIconDarkSourceMode: normalizeToolIconDarkSourceMode(byId("toolIconDarkSourceMode") ? byId("toolIconDarkSourceMode").value : DefaultSettings.toolIconDarkSourceMode),
-            toolIconDarkPaletteId: byId("toolIconDarkPaletteId") ? String(byId("toolIconDarkPaletteId").value || "") : DefaultSettings.toolIconDarkPaletteId,
+        var current = SettingsState ? SettingsState.snapshot() : {};
+        var values = {
+            motionSpeed: clampNumber(byId("motionSpeedNumber") ? byId("motionSpeedNumber").value : current.motionSpeed, DefaultSettings.motionSpeed, 0.75, 1.35),
+            uiScale: clampNumber(byId("uiScaleNumber") ? byId("uiScaleNumber").value : current.uiScale, DefaultSettings.uiScale, 0.62, 1.18),
+            themeAccent: normalizeHex(byId("themeAccent") ? byId("themeAccent").value : current.themeAccent, DefaultSettings.themeAccent),
+            homeBackground: normalizeHex(byId("homeBackground") ? byId("homeBackground").value : current.homeBackground, DefaultSettings.homeBackground),
+            backgroundSource: normalizeBackgroundSource(byId("backgroundSource") ? byId("backgroundSource").value : current.backgroundSource),
+            proceduralBackgroundSeed: normalizeProceduralBackgroundSeed(byId("proceduralBackgroundSeed") ? byId("proceduralBackgroundSeed").value : current.proceduralBackgroundSeed),
+            proceduralBackgroundPaletteId: normalizeProceduralBackgroundPaletteId(byId("proceduralBackgroundPaletteId") ? byId("proceduralBackgroundPaletteId").value : current.proceduralBackgroundPaletteId),
+            proceduralBackgroundIntensity: normalizeProceduralBackgroundIntensity(byId("proceduralBackgroundIntensityNumber") ? byId("proceduralBackgroundIntensityNumber").value : current.proceduralBackgroundIntensity),
+            toolIconColor: normalizeHex(byId("toolIconColor") ? byId("toolIconColor").value : current.toolIconColor, DefaultSettings.toolIconColor),
+            toolIconLine: normalizeHex(byId("toolIconLine") ? byId("toolIconLine").value : current.toolIconLine, DefaultSettings.toolIconLine),
+            proceduralIconMode: normalizeProceduralIconMode(byId("proceduralIconMode") ? byId("proceduralIconMode").value : current.proceduralIconMode),
+            toolIconDarkSourceMode: normalizeToolIconDarkSourceMode(byId("toolIconDarkSourceMode") ? byId("toolIconDarkSourceMode").value : current.toolIconDarkSourceMode),
+            toolIconDarkPaletteId: byId("toolIconDarkPaletteId") ? String(byId("toolIconDarkPaletteId").value || "") : current.toolIconDarkPaletteId,
             velaProviderModel: VelaProviderModel,
             velaProviderEndpoint: VelaProviderEndpoint,
             velaExperimentalAcknowledged: VelaExperimentalAcknowledged === true,
-            proceduralParams: collectProceduralAppearanceParamsFromControls(),
-            homeIconRadius: byId("homeIconRadiusNumber") ? clampNumber(byId("homeIconRadiusNumber").value, DefaultSettings.homeIconRadius, 18, 40) : DefaultSettings.homeIconRadius,
-            homeDragShadowIntensity: byId("homeDragShadowIntensityNumber") ? clampNumber(byId("homeDragShadowIntensityNumber").value, DefaultSettings.homeDragShadowIntensity, 0, 1.5) : DefaultSettings.homeDragShadowIntensity,
-            autoStatus: autoStatus ? !!autoStatus.checked : true,
-            registryDebugTools: registryDebugTools ? !!registryDebugTools.checked : false
+            proceduralParams: document.querySelector("[data-procedural-param]") ? collectProceduralAppearanceParamsFromControls() : current.proceduralParams,
+            homeIconRadius: byId("homeIconRadiusNumber") ? clampNumber(byId("homeIconRadiusNumber").value, DefaultSettings.homeIconRadius, 18, 40) : current.homeIconRadius,
+            homeDragShadowIntensity: byId("homeDragShadowIntensityNumber") ? clampNumber(byId("homeDragShadowIntensityNumber").value, DefaultSettings.homeDragShadowIntensity, 0, 1.5) : current.homeDragShadowIntensity,
+            autoStatus: autoStatus ? !!autoStatus.checked : current.autoStatus !== false,
+            registryDebugTools: registryDebugTools ? !!registryDebugTools.checked : current.registryDebugTools === true
         };
+        if (SettingsState) SettingsState.update(values);
+        return SettingsState ? SettingsState.snapshot() : values;
     }
 
     function saveSettings() {
-        saveStoredJson(StorageKeys.settings, collectSettings());
+        collectSettings();
+        if (SettingsState) SettingsState.save();
+        else saveStoredJson(StorageKeys.settings, collectSettings());
     }
 
     function applySettings(settings) {
@@ -8805,7 +8937,7 @@
     }
 
     function loadPersistentState() {
-        applySettings(loadStoredJson(StorageKeys.settings, DefaultSettings));
+        applySettings(SettingsState ? SettingsState.load() : loadStoredJson(StorageKeys.settings, DefaultSettings));
     }
 
     function resetSettingsMorphStyles() {
@@ -8831,7 +8963,9 @@
 
     function finishOpenSettingsTransition() {
         var view = byId("settingsView");
+        var home = byId("homeView");
 
+        home.classList.remove("is-active", "is-opening", "is-returning");
         view.classList.add("no-transition", "is-open");
         view.classList.remove("is-morphing");
         view.setAttribute("aria-hidden", "false");
@@ -8852,7 +8986,9 @@
 
     function finishCloseSettingsTransition() {
         var view = byId("settingsView");
+        var home = byId("homeView");
 
+        home.classList.add("is-active", "is-returning");
         view.classList.add("no-transition");
         pendingSettingsFocusSectionId = null;
         view.classList.remove("is-open", "is-morphing");
@@ -8864,6 +9000,7 @@
             closePaletteWorkspace({ reason: "settings-close", animate: false });
             clearSettingsContentClasses();
             nextFrame(function () {
+                home.classList.remove("is-returning");
                 view.classList.remove("no-transition");
                 endAnimation();
             });
@@ -8895,11 +9032,123 @@
         }
     }
 
-    function openVelaSettingsPanel() {
-        openSettingsPanel("vela");
+    function showSettingsPage(pageId) {
+        var root = byId("settingsRootPage");
+        var appearance = byId("settingsAppearancePage");
+        var heading = document.querySelector("#settingsView .settings-header h2");
+        if (!root || !appearance) return false;
+        endSettingsPeekManipulation();
+        root.hidden = pageId === "appearance";
+        appearance.hidden = pageId !== "appearance";
+        if (heading) heading.textContent = tr(pageId === "appearance" ? "settings.appearance.title" : "common.settings");
+        closeCustomSelectMenus();
+        return true;
     }
 
-    function openSettingsPanel(focusSectionId) {
+    function createAppearanceAdvancedField(parameter) {
+        var row = document.createElement("div");
+        var label = document.createElement("label");
+        var input = document.createElement("input");
+        var state = document.createElement("small");
+        var reset = document.createElement("button");
+        function refreshState() {
+            var overridden = CoreAppearance && CoreAppearance.getOverride(parameter.id) !== null;
+            var stateKey = overridden ? "settings.appearance.overridden" : "settings.appearance.inherited";
+            state.setAttribute("data-i18n", stateKey);
+            state.textContent = tr(stateKey);
+            reset.disabled = !overridden;
+        }
+        row.className = "settings-field appearance-advanced-field";
+        label.className = "settings-field-label";
+        label.setAttribute("data-i18n", parameter.labelKey);
+        label.textContent = tr(parameter.labelKey);
+        input.type = "color";
+        input.className = "appearance-color-input";
+        input.value = CoreAppearance.getResolvedValue(parameter.id);
+        input.setAttribute("data-appearance-parameter", parameter.id);
+        state.className = "settings-field-description appearance-override-state";
+        reset.type = "button";
+        reset.className = "panel-button appearance-reset-button";
+        reset.setAttribute("data-i18n", "settings.appearance.reset");
+        reset.textContent = tr("settings.appearance.reset");
+        input.addEventListener("input", function () { CoreAppearance.preview(parameter.id, input.value); });
+        input.addEventListener("change", function () { CoreAppearance.commit(parameter.id, input.value); refreshState(); });
+        reset.addEventListener("click", function () { CoreAppearance.reset(parameter.id); input.value = CoreAppearance.getResolvedValue(parameter.id); refreshState(); });
+        row.appendChild(label);
+        row.appendChild(input);
+        row.appendChild(state);
+        row.appendChild(reset);
+        refreshState();
+        return row;
+    }
+
+    function setupAppearanceSubpage() {
+        var content = document.querySelector(".settings-content");
+        var renderer = content && content.querySelector(".settings-renderer");
+        var root = renderer;
+        var appearance = document.createElement("div");
+        var entryCard = document.createElement("section");
+        var openButton = document.createElement("button");
+        var advanced = document.createElement("section");
+        var advancedList = window.AppearanceParameterRegistry ? window.AppearanceParameterRegistry.list() : [];
+        var i;
+        if (!content || !renderer || byId("settingsAppearancePage")) return;
+        root.id = "settingsRootPage";
+        root.className += " settings-root-page";
+        entryCard.className = "settings-section settings-interface-appearance-entry";
+        openButton.type = "button";
+        openButton.className = "settings-section-header settings-section-toggle";
+        openButton.setAttribute("data-i18n", "settings.appearance.title");
+        openButton.textContent = tr("settings.appearance.title");
+        openButton.addEventListener("click", function () { if (SystemRouter) SystemRouter.navigate("appearance"); });
+        entryCard.appendChild(openButton);
+        root.insertBefore(entryCard, byId("settingsDeveloperModeMount"));
+        appearance.id = "settingsAppearancePage";
+        appearance.className = "settings-appearance-page";
+        appearance.hidden = true;
+        advanced.className = "settings-section appearance-advanced";
+        advanced.innerHTML = "<h3 data-i18n=\"settings.appearance.title\">" + tr("settings.appearance.title") + "</h3>";
+        for (i = 0; i < advancedList.length; i++) {
+            if (advancedList[i].classification === "EXPOSE_NOW") advanced.appendChild(createAppearanceAdvancedField(advancedList[i]));
+        }
+        appearance.appendChild(advanced);
+        content.appendChild(appearance);
+    }
+
+    function initializeSystemRouter() {
+        if (SystemRouter || !window.SystemSurfaceRouter) return;
+        SystemRouter = window.SystemSurfaceRouter.create({
+            catalog: toolCatalog,
+            diagnostics: function (code, detail) { if (window.console && console.warn) console.warn("[AE Toolbox System] " + code + ": " + detail); },
+            callbacks: {
+                open: function (route) { ActiveRoute = route; ActiveSettingsSourceElement = route.sourceElement; showSettingsPage(route.pageId); openSettingsPanel(null, route.sourceElement); },
+                navigate: function (route) { ActiveRoute = route; showSettingsPage(route.pageId); },
+                close: function () { ActiveRoute = null; closeSettingsPanel(); }
+            }
+        });
+    }
+
+    function requestCloseSettings() {
+        if (SystemRouter && SystemRouter.getActiveRoute()) SystemRouter.close();
+        else closeSettingsPanel();
+    }
+
+    function requestSettingsBack() {
+        if (SystemRouter && SystemRouter.getActiveRoute()) SystemRouter.back();
+        else closeSettingsPanel();
+    }
+
+    function openVelaSettingsPanel() {
+        var source = HomeLayoutManager.getButtonByToolId("settings") || byId("velaSurfaceMount");
+        pendingSettingsFocusSectionId = "vela";
+        if (SystemRouter) {
+            SystemRouter.open("settings", "root", source);
+        } else {
+            openSettingsPanel("vela", source);
+        }
+    }
+
+    function openSettingsPanel(focusSectionId, launchSource) {
         var view = byId("settingsView");
         var panel;
         var backdrop;
@@ -8922,7 +9171,11 @@
         closeCustomSelectMenus();
         panel = view.querySelector(".settings-panel");
         backdrop = byId("settingsBackdrop");
-        source = byId("settingsBtn");
+        source = launchSource || ActiveSettingsSourceElement || HomeLayoutManager.getButtonByToolId("settings");
+        if (!source) {
+            return;
+        }
+        ActiveSettingsSourceElement = source;
         sourceRect = source.getBoundingClientRect();
         target = getSettingsTargetRect();
 
@@ -8986,6 +9239,7 @@
         var currentRect;
         var finishGate;
 
+        endSettingsPeekManipulation();
         if (!view || byId("appShell").classList.contains("is-animating") || !view.classList.contains("is-open")) {
             return;
         }
@@ -8995,8 +9249,12 @@
         exitSettingsContent(function () {
             panel = view.querySelector(".settings-panel");
             backdrop = byId("settingsBackdrop");
-            source = byId("settingsBtn");
-            sourceRect = source.getBoundingClientRect();
+            source = ActiveSettingsSourceElement || HomeLayoutManager.getButtonByToolId("settings");
+            if (!source) {
+                finishCloseSettingsTransition();
+                return;
+            }
+            sourceRect = getSystemLaunchSourceRect(source);
             currentRect = panel.getBoundingClientRect();
 
             setPanelMorphRect(panel, currentRect, "22px");
@@ -9046,12 +9304,14 @@
     }
 
     function bindEvents() {
-        var settingsBtn;
         var closeSettingsBtn;
         var settingsBackdrop;
         var refreshBtn;
 
-        ensureCoreAppearance(loadStoredJson(StorageKeys.settings, DefaultSettings));
+        SettingsState = window.SettingsStateAdapter.create({ storage: window.localStorage, storageKey: StorageKeys.settings, defaults: DefaultSettings });
+        SettingsState.initialize(loadStoredJson(StorageKeys.settings, DefaultSettings));
+        ensureCoreAppearance(SettingsState.snapshot());
+        initializeSystemRouter();
         if (window.ProceduralPaletteStore && typeof window.ProceduralPaletteStore.initialize === "function") {
             window.ProceduralPaletteStore.initialize({
                 library: window.ProceduralPaletteLibrary
@@ -9070,6 +9330,7 @@
         renderSettingsLanguage();
         renderSettingsVela();
         renderSettingsDeveloperMode();
+        setupAppearanceSubpage();
         setupHomeIconRadius();
         setupHomeDragShadowIntensity();
         loadPersistentState();
@@ -9103,19 +9364,15 @@
         byId("backBtn").addEventListener("click", function () {
             closeToolWithLaunchTransition();
         });
-        settingsBtn = byId("settingsBtn");
         closeSettingsBtn = byId("closeSettingsBtn");
         settingsBackdrop = byId("settingsBackdrop");
         refreshBtn = byId("refreshSelectionBtn");
 
-        if (settingsBtn) {
-            settingsBtn.addEventListener("click", openSettingsPanel);
-        }
         if (closeSettingsBtn) {
-            closeSettingsBtn.addEventListener("click", closeSettingsPanel);
+            closeSettingsBtn.addEventListener("click", requestSettingsBack);
         }
         if (settingsBackdrop) {
-            settingsBackdrop.addEventListener("click", closeSettingsPanel);
+            settingsBackdrop.addEventListener("click", requestCloseSettings);
         }
         if (refreshBtn) {
             refreshBtn.addEventListener("click", refreshSelection);
@@ -9139,13 +9396,16 @@
         document.addEventListener("keydown", function (event) {
             if (event.keyCode === 27) {
                 closeRegistryColorPicker();
-                closeSettingsPanel();
+                requestCloseSettings();
             }
         });
         window.addEventListener("focus", function () {
             if (!panelShuttingDown && !panelSuspended) {
                 refreshActiveTool();
             }
+        });
+        window.addEventListener("blur", function () {
+            endSettingsPeekManipulation();
         });
 
         bindPanelLifecycle();
