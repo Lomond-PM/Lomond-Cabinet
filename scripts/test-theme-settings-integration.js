@@ -54,7 +54,7 @@ function run() {
     assert(/key: "resetProceduralAppearanceParams"[\s\S]*type: "button"/.test(schemaText), "Procedural appearance controls must expose a reset action.");
     assert(/function getProceduralAppearanceDefaults[\s\S]*getDefaultParams[\s\S]*normalizeParams/.test(mainText), "Settings defaults must come from ProceduralAppearance.");
     assert(/ProceduralAppearanceParams = normalizeProceduralAppearanceParams\(data\.proceduralParams\)/.test(mainText), "Stored procedural params must be normalized through the shared engine.");
-    assert(/proceduralParams: collectProceduralAppearanceParamsFromControls/.test(mainText), "Procedural params must use the existing Settings storage object.");
+    assert(/proceduralParams: document\.querySelector\("\[data-procedural-param\]"\) \? collectProceduralAppearanceParamsFromControls\(\) : current\.proceduralParams/.test(mainText), "Procedural params must use mounted controls while preserving the Settings snapshot when unmounted.");
     assert(/function updateProceduralHomeIconAppearance[\s\S]*controller\.updateParameters\(getProceduralAppearanceSourceParams\(\)\)/.test(mainText), "Home icons must receive the shared source params.");
     assert(/controller\.updateAppearance\([\s\S]*mappingParams: getProceduralAppearanceMappingParams\(\)/.test(mainText), "Home icon theme presentation must receive the shared palette mapping params.");
     assert(/getProceduralAppearanceMappingParams\(\)/.test(mainText) && /params: getProceduralAppearanceSourceParams\(\)/g.test(mainText), "Home and background must receive shared source/mapping parameter paths.");

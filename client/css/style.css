@@ -371,21 +371,19 @@ body:not(.i18n-ready) .app-shell {
 .settings-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(5, 4, 3, 0.54);
+    background: transparent;
 }
 
 .settings-view .settings-panel {
     position: absolute;
-    top: 14px;
-    right: 14px;
-    bottom: 54px;
-    width: 360px;
-    max-width: calc(100% - 28px);
+    inset: var(--view-inset);
+    width: auto;
+    max-width: none;
     display: flex;
     flex-direction: column;
     background: var(--surface-panel);
     opacity: 0;
-    transform: translateX(14px) scale(0.985);
+    transform: scale(0.985);
     transition:
         width var(--dur-normal) var(--ease-apple-out),
         opacity var(--dur-normal) var(--ease-apple-out),
@@ -428,11 +426,38 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .settings-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
     gap: calc(12px * var(--ui-scale));
     margin-bottom: calc(16px * var(--ui-scale));
+}
+
+.settings-header .back-button {
+    justify-self: start;
+}
+
+.settings-title {
+    text-align: center;
+}
+
+#homeView.is-settings-peek-home {
+    pointer-events: none !important;
+}
+
+.settings-view.is-peek-preview .settings-panel {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.settings-view.is-peek-preview .settings-header {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.settings-view.is-peek-preview .settings-content {
+    overflow: hidden;
 }
 
 .settings-content {
@@ -441,6 +466,45 @@ body:not(.i18n-ready) .app-shell {
     overflow-x: hidden;
     overflow-y: auto;
     padding-right: 6px;
+}
+
+.settings-root-page,
+.settings-appearance-page {
+    display: block;
+}
+
+.settings-root-page[hidden],
+.settings-appearance-page[hidden] {
+    display: none;
+}
+
+.settings-interface-appearance-entry .settings-section-header {
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+.appearance-advanced-field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+}
+
+.appearance-color-input {
+    width: calc(42px * var(--ui-scale));
+    height: var(--control-height);
+    padding: 2px;
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-sm);
+    background: var(--select-trigger-surface);
+}
+
+.appearance-override-state {
+    grid-column: 1;
+}
+
+.appearance-reset-button {
+    grid-column: 2;
+    grid-row: 2;
 }
 
 .settings-renderer {
@@ -456,6 +520,17 @@ body:not(.i18n-ready) .app-shell {
     border-radius: var(--radius-lg);
     background: var(--surface-panel);
     overflow: hidden;
+}
+
+.settings-view.is-peek-preview .settings-root-page > .settings-section {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.settings-view.is-peek-preview #settingsMotionMount {
+    visibility: visible;
+    pointer-events: auto;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
 }
 
 .settings-section-header {
@@ -703,8 +778,8 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .settings-view.is-palette-workspace .settings-panel {
-    width: min(920px, calc(100% - 28px));
-    max-width: calc(100% - 28px);
+    width: auto;
+    max-width: none;
     transition:
         width var(--dur-normal) var(--ease-apple-out),
         opacity var(--dur-normal) var(--ease-apple-out),
@@ -768,6 +843,8 @@ body:not(.i18n-ready) .app-shell {
 
 .settings-view.is-palette-workspace .settings-content {
     display: flex;
+    min-width: 0;
+    min-height: 0;
     overflow: hidden;
     padding-right: 0;
 }
@@ -778,6 +855,10 @@ body:not(.i18n-ready) .app-shell {
     flex: 1 1 auto;
     min-height: 0;
     flex-direction: column;
+}
+
+.settings-view.is-palette-workspace .settings-root-page {
+    min-width: 0;
 }
 
 .settings-view.is-palette-workspace .settings-renderer > .settings-section:not(.settings-section--palette-library) {

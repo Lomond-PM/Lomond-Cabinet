@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 236 |
+| A | Core / Global; keep | 245 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -31,6 +31,11 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | key | group | en value summary | zh-CN value summary | found in runtime files | found in tool-local i18n | classification | recommendation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | app.title | app | Lomond Cabinet | Lomond Cabinet | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| appearance.select.menuSurface.label | appearance | Select Menu Surface | 选择器菜单面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.select.triggerSurface.label | appearance | Select Trigger Surface | 选择器触发面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.surface.card.label | appearance | Card Surface | 卡片表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.surface.panel.label | appearance | Panel Surface | 面板表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.text.primary.label | appearance | Primary Text | 主要文本 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | bootstrap.loadFailed | bootstrap | Tools failed to load. | 工具加载失败。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | bootstrap.loadingTools | bootstrap | Loading tools... | 正在加载工具... | client/index.html, client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | bootstrap.partialFailure | bootstrap | Some tools failed to load. | 部分工具加载失败。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -70,7 +75,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | common.right | common | Right | 右对齐 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.rowMajor | common | Row-Major | 行优先 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.saved | common | Saved | 已保存 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.settings | common | Settings | 设置 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.settings | common | Settings | 设置 | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.solid | common | Solid | 纯色 | host/tools/registryControlLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.timeline | common | Timeline | 时间线 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.unavailable | common | Unavailable | 不可用 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -320,6 +325,10 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | selection.noSelection | selection | No selection | 未选择 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | selection.noShapeTarget | selection | No shape target | 无形状目标 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | selection.shapeTarget | selection | Shape target | 形状目标 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.inherited | settings | Using default / inherited | 使用默认 / 继承 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.overridden | settings | Overridden | 已覆盖 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.reset | settings | Reset | 重置 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.title | settings | Interface Appearance | 界面外观 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPalette.algorithmDefault | settings | Current Algorithm | 当前算法配色 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.blackGold | settings | Black Gold Default | 黑金默认 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.custom | settings | Custom | 自定义 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
