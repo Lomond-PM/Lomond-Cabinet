@@ -26,6 +26,8 @@
     --separator: rgba(214, 178, 94, 0.16);
     --panel-border: rgba(214, 178, 94, 0.22);
     --input-border: rgba(214, 178, 94, 0.16);
+    --field-surface: rgba(5, 4, 3, 0.5);
+    --field-border: var(--input-border);
     --border-default: var(--panel-border);
     --border-subtle: var(--separator);
     --bg-proc-base: #050403;
@@ -2495,9 +2497,9 @@ p {
 
 .num-input {
     height: var(--control-height);
-    border: 1px solid var(--input-border);
+    border: 1px solid var(--field-border);
     border-radius: var(--radius-sm);
-    background: rgba(5, 4, 3, 0.5);
+    background: var(--field-surface);
     padding: 0 calc(8px * var(--ui-scale));
     color: var(--text-primary);
     outline: none;
@@ -3324,9 +3326,9 @@ p {
 .registry-color-hex {
     width: 100%;
     min-height: var(--control-height);
-    border: 1px solid var(--input-border);
+    border: 1px solid var(--field-border);
     border-radius: var(--radius-sm);
-    background: rgba(5, 4, 3, 0.5);
+    background: var(--field-surface);
     color: var(--text-primary);
     outline: none;
     padding: 0 calc(10px * var(--ui-scale));
