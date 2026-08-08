@@ -1,11 +1,10 @@
 (function (root, factory) {
     "use strict";
     var exported = Object.freeze(factory());
-    if (typeof module === "object" && module.exports) {
-        module.exports.AppearanceParameterRegistry = exported;
-    }
-    if (root && !Object.prototype.hasOwnProperty.call(root, "AppearanceParameterRegistry")) {
+    if (root && root.document && !Object.prototype.hasOwnProperty.call(root, "AppearanceParameterRegistry")) {
         Object.defineProperty(root, "AppearanceParameterRegistry", { configurable: false, enumerable: true, value: exported, writable: false });
+    } else if ((!root || !root.document) && typeof module === "object" && module.exports) {
+        module.exports.AppearanceParameterRegistry = exported;
     }
 }(typeof self !== "undefined" ? self : this, function () {
     "use strict";
