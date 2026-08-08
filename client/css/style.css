@@ -28,6 +28,7 @@
     --input-border: rgba(214, 178, 94, 0.16);
     --field-surface: rgba(5, 4, 3, 0.5);
     --field-border: var(--input-border);
+    --registry-option-surface: rgba(8, 7, 6, 0.68);
     --border-default: var(--panel-border);
     --border-subtle: var(--separator);
     --bg-proc-base: #050403;
@@ -3594,9 +3595,9 @@ p {
     min-height: calc(68px * var(--ui-scale));
     align-items: center;
     gap: calc(10px * var(--ui-scale));
-    border: 1px solid var(--panel-border);
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
-    background: rgba(8, 7, 6, 0.68);
+    background: var(--registry-option-surface);
     color: var(--text-primary);
     padding: calc(10px * var(--ui-scale));
     text-align: left;
