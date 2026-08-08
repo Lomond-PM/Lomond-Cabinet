@@ -13,6 +13,8 @@
     --gold-button: rgba(214, 178, 94, 0.86);
     --selection-bg: #3b2d12;
 
+    --surface-canvas: var(--bg-main);
+    --surface-card: #0f0e0b;
     --text-primary: #f6f0df;
     --text-secondary: rgba(246, 240, 223, 0.66);
     --text-tertiary: rgba(246, 240, 223, 0.42);
@@ -24,6 +26,8 @@
     --separator: rgba(214, 178, 94, 0.16);
     --panel-border: rgba(214, 178, 94, 0.22);
     --input-border: rgba(214, 178, 94, 0.16);
+    --border-default: var(--panel-border);
+    --border-subtle: var(--separator);
     --bg-proc-base: #050403;
     --bg-proc-secondary: #11100c;
     --bg-proc-accent: #d6b25e;
@@ -107,7 +111,7 @@ body {
     margin: 0;
     overflow-x: hidden;
     overflow-y: auto;
-    background: var(--bg-main);
+    background: var(--surface-canvas);
     color: var(--text-primary);
     font-family: "Segoe UI", Arial, sans-serif;
     font-size: var(--font-body);
@@ -177,7 +181,7 @@ body:not(.i18n-ready) .app-shell {
 .view-detail {
     inset: var(--view-inset);
     overflow: hidden;
-    border: 1px solid var(--panel-border);
+    border: 1px solid var(--border-default);
     border-radius: 22px;
     background: var(--surface-panel);
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
@@ -2059,8 +2063,8 @@ p {
 }
 
 .panel-card {
-    border-color: var(--separator);
-    background: #0f0e0b;
+    border-color: var(--border-subtle);
+    background: var(--surface-card);
     box-shadow: none;
     overflow: hidden;
 }
