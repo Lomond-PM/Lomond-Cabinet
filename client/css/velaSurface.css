@@ -1,18 +1,20 @@
 .vela-surface-mount {
     flex: 0 0 auto;
     min-height: 0;
-    margin-bottom: var(--tool-gap);
+    margin-bottom: var(--space-home-major-stack);
 }
 
 .vela-surface {
     --vela-composer-min-height: calc(46px * var(--ui-scale));
     --vela-controls-min-height: var(--control-height);
     --vela-inline-gap: calc(8px * var(--ui-scale));
+    --vela-controls-column-gap: calc(16px * var(--ui-scale));
+    --vela-composer-padding-inline: calc(12px * var(--ui-scale));
     --vela-resize-hit-height: calc(20px * var(--ui-scale));
     --vela-resize-grip-width: calc(28px * var(--ui-scale));
     --vela-resize-grip-height: calc(2px * var(--ui-scale));
     --vela-resize-grip-bottom: calc(4px * var(--ui-scale));
-    --vela-surface-inset: var(--card-pad);
+    --vela-surface-inset: var(--space-card-inset);
     --vela-surface-stack-gap: var(--vela-inline-gap);
     position: relative;
     display: grid;
@@ -134,7 +136,7 @@
     display: block;
     width: 100%;
     min-height: var(--vela-composer-min-height);
-    padding: var(--vela-inline-gap) var(--card-pad);
+    padding: var(--vela-inline-gap) var(--vela-composer-padding-inline);
     resize: none;
     border: 1px solid var(--input-border);
     border-radius: var(--radius-sm);
@@ -156,7 +158,7 @@
     grid-template-areas: "settings status actions";
     grid-template-columns: auto minmax(0, 1fr) minmax(0, auto);
     min-width: 0;
-    column-gap: var(--tool-gap);
+    column-gap: var(--vela-controls-column-gap);
 }
 
 .vela-settings-slot {
