@@ -2110,8 +2110,8 @@
         mount.appendChild(fieldRow.row);
         acknowledgement = document.createElement("input"); acknowledgement.type = "checkbox"; acknowledgement.id = "velaExperimentalAcknowledgement"; acknowledgement.checked = VelaExperimentalAcknowledged === true;
         acknowledgementLabel = document.createElement("label"); acknowledgementLabel.setAttribute("for", acknowledgement.id); acknowledgementLabel.textContent = tr("settings.vela.acknowledgement"); acknowledgementLabel.appendChild(acknowledgement);
-        enableButton = document.createElement("button"); enableButton.type = "button"; enableButton.id = "velaExperimentalEnable"; enableButton.className = "panel-button"; enableButton.textContent = tr("settings.vela.enableSession");
-        disableButton = document.createElement("button"); disableButton.type = "button"; disableButton.id = "velaExperimentalDisable"; disableButton.className = "panel-button"; disableButton.textContent = tr("settings.vela.disableSession");
+        enableButton = document.createElement("button"); enableButton.type = "button"; enableButton.id = "velaExperimentalEnable"; enableButton.className = "panel-button panel-local-action"; enableButton.textContent = tr("settings.vela.enableSession");
+        disableButton = document.createElement("button"); disableButton.type = "button"; disableButton.id = "velaExperimentalDisable"; disableButton.className = "panel-button panel-local-action"; disableButton.textContent = tr("settings.vela.disableSession");
         status = document.createElement("p"); status.id = "velaExperimentalStatus"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
         acknowledgement.addEventListener("change", function () { VelaExperimentalAcknowledged = acknowledgement.checked === true; saveSettings(); configureSession(); refreshSession(); });
         enableButton.addEventListener("click", function () { saveEndpoint(); saveModel(); if (velaSurfaceController && typeof velaSurfaceController.enableExperimental === "function") { velaSurfaceController.enableExperimental().then(refreshSession, refreshSession); } });
@@ -2191,7 +2191,7 @@
                     resetButton = document.createElement("button");
                     resetButton.id = proceduralField.key;
                     resetButton.type = "button";
-                    resetButton.className = "panel-button settings-action-button registry-large-button";
+                    resetButton.className = "panel-button settings-action-button registry-large-button panel-local-action";
                     resetButton.setAttribute("data-i18n", proceduralField.labelKey);
                     resetButton.textContent = tr(proceduralField.labelKey);
                     resetButton.addEventListener("click", resetProceduralAppearanceParams);
@@ -2504,7 +2504,7 @@
             swatches.appendChild(swatch);
         }
         button.type = "button";
-        button.className = "panel-button settings-source-summary-action";
+        button.className = "panel-button settings-source-summary-action panel-local-action";
         button.textContent = tr(element.getAttribute("data-settings-palette-action") || "settings.palette.manage");
         button.addEventListener("click", openPaletteWorkspaceFromSettings);
         element.appendChild(title);
@@ -3300,7 +3300,7 @@
         field = findSettingsSectionField(section, "randomize");
         if (field) {
             button = document.createElement("button");
-            button.className = "panel-button registry-large-button is-full-width settings-action-button";
+            button.className = "panel-button registry-large-button is-full-width settings-action-button panel-local-action";
             button.id = "bgRandomizeBtn";
             button.type = "button";
             button.setAttribute("data-i18n", field.labelKey);
@@ -3310,7 +3310,7 @@
         field = findSettingsSectionField(section, "reset");
         if (field) {
             button = document.createElement("button");
-            button.className = "panel-button registry-large-button is-full-width settings-action-button";
+            button.className = "panel-button registry-large-button is-full-width settings-action-button panel-local-action";
             button.id = "bgResetBtn";
             button.type = "button";
             button.setAttribute("data-i18n", field.labelKey);
@@ -3340,7 +3340,7 @@
         field = findSettingsSectionField(section, "proceduralBackgroundRegenerate");
         if (field) {
             button = document.createElement("button");
-            button.className = "panel-button registry-large-button is-full-width settings-action-button";
+            button.className = "panel-button registry-large-button is-full-width settings-action-button panel-local-action";
             button.id = "proceduralBackgroundRegenerate";
             button.type = "button";
             button.setAttribute("data-i18n", field.labelKey);
@@ -6251,7 +6251,7 @@
             applyVisibleWhenMetadata(row, field);
             row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
 
-            input = window.CoreUI.createButton({ document: document, classNames: (field.variant === "primary" ? "primary-action" : "panel-button") + " registry-large-button ui-button--large" });
+            input = window.CoreUI.createButton({ document: document, classNames: (field.variant === "primary" ? "primary-action" : "panel-button registry-secondary-action") + " registry-large-button ui-button--large" });
             if (field.fullWidth !== false) {
                 input.className += " is-full-width";
             }
@@ -9111,7 +9111,7 @@
         var description = document.createElement("small");
         var control;
         var state = document.createElement("small");
-        var reset = window.CoreUI.createButton({ document: document, variant: "neutral", classNames: "panel-button appearance-reset-button" });
+        var reset = window.CoreUI.createButton({ document: document, variant: "neutral", classNames: "panel-button appearance-reset-button panel-local-action" });
         function refreshState() {
             var overridden = CoreAppearance && CoreAppearance.getOverride(parameter.id) !== null;
             var stateKey = overridden ? "settings.appearance.overridden" : "settings.appearance.inherited";

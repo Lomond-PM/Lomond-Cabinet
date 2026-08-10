@@ -888,8 +888,8 @@
     }
 
     function createButton(labelKey, className, handler) {
-        var button = options.CoreUI ? options.CoreUI.createButton({ document: getDocument(), variant: className && className.indexOf("is-primary") >= 0 ? "primary" : (className && className.indexOf("is-danger") >= 0 ? "danger" : "neutral"), classNames: "panel-button registry-large-button " + (className || ""), onClick: handler }) : createElement("button");
-        if (!options.CoreUI) { button.type = "button"; button.className = "panel-button registry-large-button " + (className || ""); button.addEventListener("click", handler); }
+        var button = options.CoreUI ? options.CoreUI.createButton({ document: getDocument(), variant: className && className.indexOf("is-primary") >= 0 ? "primary" : (className && className.indexOf("is-danger") >= 0 ? "danger" : "neutral"), classNames: "panel-button registry-large-button panel-local-action " + (className || ""), onClick: handler }) : createElement("button");
+        if (!options.CoreUI) { button.type = "button"; button.className = "panel-button registry-large-button panel-local-action " + (className || ""); button.addEventListener("click", handler); }
         button.setAttribute("data-i18n", labelKey);
         button.textContent = tr(labelKey);
         return button;
