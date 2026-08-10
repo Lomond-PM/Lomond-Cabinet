@@ -83,6 +83,14 @@
     --radius-palette-preview: var(--radius-lg);
     --radius-md: calc(16px * var(--ui-scale));
     --radius-sm: calc(10px * var(--ui-scale));
+    --radius-section-card: var(--radius-lg);
+    --radius-nested-surface: var(--radius-md);
+    --radius-editable-control: var(--radius-sm);
+    --radius-home-tile: var(--radius-lg);
+    --radius-registry-option: var(--radius-nested-surface);
+    --radius-palette-library-item: var(--radius-nested-surface);
+    --radius-palette-json-section: var(--radius-nested-surface);
+    --radius-pill: 999px;
 
     --ease-apple-out: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-apple-standard: cubic-bezier(0.22, 1, 0.36, 1);
@@ -640,7 +648,7 @@ body:not(.i18n-ready) .app-shell {
     max-width: 100%;
     padding: var(--space-card-inset);
     border: 1px solid var(--separator);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-section-card);
     background: var(--surface-panel);
     overflow: hidden;
 }
@@ -1147,7 +1155,7 @@ body:not(.i18n-ready) .app-shell {
     gap: calc(7px * var(--ui-scale));
     padding: calc(10px * var(--ui-scale));
     border: 1px solid var(--separator);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-palette-json-section);
     background: rgba(255, 255, 255, 0.018);
 }
 
@@ -1226,7 +1234,7 @@ body:not(.i18n-ready) .app-shell {
     gap: calc(5px * var(--ui-scale));
     padding: calc(8px * var(--ui-scale));
     border: 1px solid var(--input-border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-palette-library-item);
     background: rgba(255, 255, 255, 0.02);
     color: var(--text-primary);
     text-align: left;
@@ -1350,7 +1358,7 @@ body:not(.i18n-ready) .app-shell {
     min-height: calc(160px * var(--ui-scale));
     padding: calc(8px * var(--ui-scale));
     border: 1px solid var(--input-border);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-editable-control);
     background: rgba(5, 4, 3, 0.5);
     color: var(--text-primary);
     resize: vertical;
@@ -1661,7 +1669,7 @@ body:not(.i18n-ready) .app-shell {
     width: min(150px, 48%);
     min-height: var(--control-height);
     border: 1px solid var(--panel-border);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: #0b0a08;
     color: var(--text-primary);
     padding: 0 calc(10px * var(--ui-scale));
@@ -2179,7 +2187,7 @@ p {
     width: var(--tool-card-w);
     min-height: var(--tool-card-min-h);
     padding: calc(8px * var(--ui-scale)) 0;
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-home-tile);
     background: transparent;
     display: flex;
     flex-direction: column;
@@ -2265,7 +2273,7 @@ p {
     width: var(--tool-card-w);
     min-height: var(--tool-card-min-h);
     border: 1px dashed var(--tool-icon-line-soft);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-home-tile);
     background: transparent;
     opacity: 0.36;
 }
@@ -2552,7 +2560,7 @@ p {
     max-width: calc(116px * var(--ui-scale));
     overflow: hidden;
     padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale));
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     color: var(--text-secondary);
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2560,7 +2568,7 @@ p {
 
 .info-panel,
 .panel-card {
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-section-card);
     padding: var(--space-card-inset);
 }
 
@@ -2722,7 +2730,7 @@ p {
 .ui-range::-webkit-slider-runnable-track,
 .pill-slider::-webkit-slider-runnable-track {
     height: calc(8px * var(--ui-scale));
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--gold-track);
 }
 
@@ -2742,7 +2750,7 @@ p {
 .num-input {
     height: var(--control-height);
     border: 1px solid var(--field-border);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-editable-control);
     background: var(--field-surface);
     padding: 0 calc(8px * var(--ui-scale));
     color: var(--text-primary);
@@ -2824,7 +2832,7 @@ p {
     gap: calc(10px * var(--ui-scale));
     padding: 0 calc(12px * var(--ui-scale));
     border: 1px solid var(--border-default);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--select-trigger-surface);
     color: var(--text-primary);
     transition:
@@ -2960,7 +2968,7 @@ p {
     padding: calc(4px * var(--ui-scale));
     margin-bottom: calc(10px * var(--ui-scale));
     border: 1px solid var(--separator);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: #070605;
     box-shadow: none;
     overflow: hidden;
@@ -2972,7 +2980,7 @@ p {
     left: 0;
     top: calc(4px * var(--ui-scale));
     height: var(--control-height);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--selection-indicator-surface);
     box-shadow: none;
     opacity: 0;
@@ -2991,7 +2999,7 @@ p {
     flex: 1 1 0;
     min-width: 0;
     height: var(--control-height);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: transparent;
     color: var(--text-secondary);
     font-weight: 800;
@@ -3116,7 +3124,7 @@ p {
     display: block;
     width: calc(44px * var(--ui-scale));
     height: calc(26px * var(--ui-scale));
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: rgba(120, 105, 72, 0.24);
     transition: background-color var(--dur-fast) var(--ease-apple-standard);
 }
@@ -3634,7 +3642,7 @@ p {
     width: 100%;
     min-height: var(--control-height);
     border: 1px solid var(--field-border);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-editable-control);
     background: var(--field-surface);
     color: var(--text-primary);
     outline: none;
@@ -3724,7 +3732,7 @@ p {
     min-width: 0;
     height: var(--control-height);
     border: 1px solid var(--panel-border);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--gold);
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3);
     transition:
@@ -3806,7 +3814,7 @@ p {
     margin-bottom: calc(10px * var(--ui-scale));
     padding: calc(10px * var(--ui-scale)) calc(12px * var(--ui-scale));
     border: 1px solid var(--separator);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-nested-surface);
     background: #080706;
     color: var(--text-tertiary);
     line-height: 1.35;
@@ -3981,7 +3989,7 @@ p {
     align-items: center;
     gap: calc(10px * var(--ui-scale));
     border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-registry-option);
     background: var(--registry-option-surface);
     color: var(--text-primary);
     padding: calc(10px * var(--ui-scale));
