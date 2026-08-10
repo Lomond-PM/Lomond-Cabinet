@@ -297,6 +297,16 @@ Interface Appearance rows are owned by the composed `.settings-field.appearance-
 
 Phase 2 establishes resilience seams, not unlimited typography configurability. Page, Surface and Section titles, Field Labels, Body, Supporting and Code roles may proceed to bounded Appearance design evaluation. Home Card titles, Vela status/action chrome, Vela composer geometry, and font-family choices retain narrower or preset-only boundaries. Typography Appearance Parameters and Text Scale are not implemented by this phase.
 
+## Semantic Radius Contract
+
+Radius is organized by semantic shape ownership rather than by repeated numeric values. Ordinary UI uses `--radius-section-card`, `--radius-nested-surface`, and `--radius-editable-control` for Section/passive Card surfaces, compact nested surfaces, and editable controls. Their usual visual trend is Section/Card > Nested Surface > Editable Control, but this is not a mandatory mathematical scale. Registry option surfaces use a Registry-owned alias, and Home tool tiles use `--radius-home-tile`, so either domain can evolve without borrowing ordinary Card ownership.
+
+The existing `--radius-xl`, `--radius-lg`, `--radius-md`, and `--radius-sm` variables remain implementation references and compatibility sources; they are not a public xs/sm/md/lg/xl design API. New ordinary UI should select a semantic, component, or domain alias instead of guessing ownership from one of these numeric primitives. Phase 1 keeps every migrated consumer computed-equivalent and preserves its existing UI Scale behavior, including Settings' scoped `--ui-scale: 0.92`.
+
+`--radius-pill: 999px` represents a capsule geometry invariant rather than the largest radius tier. True circles remain `50%` because their shape also depends on equal width and height. Home icon clipping remains a percentage-based procedural identity through `--radius-home-icon` and its compatibility aliases; it is independent from the Home tile and ordinary surfaces. Palette Preview keeps its domain alias and shell-owned clipping, while its canvas remains square-cornered.
+
+Fixed and specialized geometry stays outside the ordinary hierarchy: detail/settings morph endpoints, the fixed detail shell, Select menu, picker/action floating surfaces, action sheet, Vela, procedural recipes, scrollbar details, and other local component geometry retain their accepted ownership and values. Radius is not currently user-configurable. A future Corner Style direction may evaluate bounded `Sharp`, `Balanced`, and `Rounded` presets only for explicitly participating ordinary surfaces and controls; pill, circle, Home/procedural identity, morph endpoints, and frozen Vela structure must remain excluded.
+
 ## Registry Tool UI Contract
 
 Registry tools must be declarative. A `.tool.jsx` file may provide only tool metadata, i18n dictionaries, sections, fields, actions, and host action references.
