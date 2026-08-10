@@ -275,6 +275,16 @@ Typography family, size, weight, and line height remain non-user-adjustable. `te
 
 Typography Appearance Parameters are deferred until after Spacing Foundation and require stable semantic parameter IDs rather than persisted CSS variable names. Future work may consider validated UI/monospace family presets and role-specific size, weight, and line-height overrides; it must not introduce an independent Text Scale by default or treat design tokens as persistence IDs.
 
+## Semantic Spacing Contract
+
+Spacing is organized by semantic relationship rather than by repeated pixel literals. Public semantic tokens cover stable cross-surface relationships such as the top-level Surface edge inset, passive Card inset, Section stack, and Section Header-to-content separation. Core component aliases cover Field copy and generic inline-control relationships. Settings, Registry, Palette, Home, and Vela retain domain aliases where the relationship is shared but the accepted density differs.
+
+Spacing is distinct from component geometry and layout constraints. Control, button, row, card, icon, composer, slider, and preview dimensions remain geometry contracts. `--view-inset` remains the nested Surface positioning boundary and is not a spacing token. Responsive stacking and Wide / Compact / Narrow structures remain breakpoint-owned rather than being replaced by a global compact-spacing multiplier.
+
+`--space-card-inset` is the canonical passive Card/Surface edge-to-content token. Control-internal padding uses component-owned values or aliases instead. `--space-home-tool-grid` owns the Home tool grid, while Vela uses Vela-owned aliases for its internal controls; the compatibility names `--card-pad`, `--view-pad`, and `--tool-gap` remain temporarily available without defining canonical ownership.
+
+No primitive `--space-1`-style scale is established because the current values do not form a reliable semantic hierarchy. Phase 1 preserves all computed spacing values. Typography stress fixtures and content/geometry resilience work remain deferred to Spacing Foundation Phase 2 after Phase 1 AE acceptance.
+
 ## Registry Tool UI Contract
 
 Registry tools must be declarative. A `.tool.jsx` file may provide only tool metadata, i18n dictionaries, sections, fields, actions, and host action references.
