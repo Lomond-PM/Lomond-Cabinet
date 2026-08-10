@@ -285,6 +285,12 @@ Spacing is distinct from component geometry and layout constraints. Control, but
 
 No primitive `--space-1`-style scale is established because the current values do not form a reliable semantic hierarchy. Phase 1 preserves all computed spacing values. Typography stress fixtures and content/geometry resilience work remain deferred to Spacing Foundation Phase 2 after Phase 1 AE acceptance.
 
+Typography resilience uses an explicit content-growth composition seam. Default Settings and Registry Fields retain their accepted centered alignment; a renderer or consumer that semantically declares `contentGrowth: true` projects `.is-content-growth`, allowing the owning domain to align controls near the Field copy start without measuring text, counting characters, or depending on locale. Narrow Registry composition restores stretched stacking, so the wide alignment policy does not replace breakpoint behavior.
+
+Interface Appearance rows are owned by the composed `.settings-field.appearance-advanced-field` grid selector. Label, ColorField, inherited/overridden state, and Reset placement remain grid-owned even though the generic Settings Field rule occurs later in the cascade; narrow presentation explicitly becomes a single-column grid. The test-only Typography Stress Contract validates this ownership and the fixed-geometry exclusions without adding production Appearance parameters.
+
+Phase 2 establishes resilience seams, not unlimited typography configurability. Page, Surface and Section titles, Field Labels, Body, Supporting and Code roles may proceed to bounded Appearance design evaluation. Home Card titles, Vela status/action chrome, Vela composer geometry, and font-family choices retain narrower or preset-only boundaries. Typography Appearance Parameters and Text Scale are not implemented by this phase.
+
 ## Registry Tool UI Contract
 
 Registry tools must be declarative. A `.tool.jsx` file may provide only tool metadata, i18n dictionaries, sections, fields, actions, and host action references.

@@ -1517,6 +1517,7 @@
             labelText: tr(field.labelKey),
             descriptionKey: descriptionKey || field.descriptionKey || field.hintKey,
             descriptionText: descriptionKey || field.descriptionKey || field.hintKey ? tr(descriptionKey || field.descriptionKey || field.hintKey) : (fallbackDescription || ""),
+            contentGrowth: field.contentGrowth === true,
             control: controls,
             classNames: type === "checkbox" ? "switch-row registry-switch-row settings-field settings-field--switch" : "control-row registry-field-row settings-field settings-field--" + type,
             copyClassNames: "registry-label-column settings-field-copy",
@@ -6286,6 +6287,9 @@
 
         row = document.createElement("div");
         row.className = (fieldType === "checkbox" ? "switch-row registry-switch-row registry-schema-field" : "control-row registry-field-row registry-schema-field") + " ui-field-row";
+        if (field.contentGrowth === true) {
+            row.className += " is-content-growth";
+        }
         applyVisibleWhenMetadata(row, field);
         row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
         labelColumn = document.createElement("span");

@@ -559,13 +559,21 @@ body:not(.i18n-ready) .app-shell {
     cursor: pointer;
 }
 
-.appearance-advanced-field {
+.settings-field.appearance-advanced-field {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
 }
 
+.settings-field.appearance-advanced-field > .settings-field-label {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+}
+
 .appearance-color-field {
+    grid-column: 2;
+    grid-row: 1;
     width: min(calc(196px * var(--ui-scale)), 48vw);
 }
 
@@ -651,6 +659,10 @@ body:not(.i18n-ready) .app-shell {
     justify-content: space-between;
     gap: var(--space-settings-field-control);
     padding: var(--space-settings-field-block) 0;
+}
+
+.settings-field.is-content-growth {
+    align-items: flex-start;
 }
 
 .settings-field + .settings-field {
@@ -3253,6 +3265,32 @@ p {
         flex-wrap: wrap;
     }
 
+    .settings-field.appearance-advanced-field {
+        grid-template-columns: minmax(0, 1fr);
+        align-items: stretch;
+    }
+
+    .settings-field.appearance-advanced-field > .settings-field-label,
+    .settings-field.appearance-advanced-field > .appearance-color-field,
+    .settings-field.appearance-advanced-field > .appearance-override-state,
+    .settings-field.appearance-advanced-field > .appearance-reset-button {
+        grid-column: 1;
+    }
+
+    .settings-field.appearance-advanced-field > .appearance-color-field {
+        grid-row: 2;
+        width: 100%;
+    }
+
+    .settings-field.appearance-advanced-field > .appearance-override-state {
+        grid-row: 3;
+    }
+
+    .settings-field.appearance-advanced-field > .appearance-reset-button {
+        grid-row: 4;
+        width: 100%;
+    }
+
     .settings-field-control,
     .settings-field > .switch,
     .settings-field > .theme-color-shell,
@@ -3483,6 +3521,11 @@ p {
     gap: var(--space-registry-field-control);
     min-height: calc(46px * var(--ui-scale));
     padding: var(--space-registry-field-block) 0;
+}
+
+.registry-tool-panel .registry-field-row.is-content-growth,
+.registry-tool-panel .registry-switch-row.is-content-growth {
+    align-items: start;
 }
 
 .registry-field-row + .registry-field-row,
@@ -4161,6 +4204,11 @@ p {
     .registry-switch-row {
         grid-template-columns: 1fr;
         gap: calc(8px * var(--ui-scale));
+    }
+
+    .registry-tool-panel .registry-field-row.is-content-growth,
+    .registry-tool-panel .registry-switch-row.is-content-growth {
+        align-items: stretch;
     }
 
     .registry-range-control,
