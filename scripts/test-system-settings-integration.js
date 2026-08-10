@@ -16,7 +16,7 @@ check(!/themeAccent|homeBackground|uiScaleNumber|motionSpeedNumber/.test(appeara
 check(/renderSettingsTheme\(\)[\s\S]*renderSettingsMotion\(\)/.test(main), "Basic controls remain in their original Root renderers");
 check(/CoreAppearance\.setBaseInput\("base\.accent"/.test(main) && /CoreAppearance\.setBaseInput\("base\.canvas"/.test(main) && /CoreAppearance\.setBaseInput\("layout\.scale"/.test(main) && /CoreAppearance\.setBaseInput\("motion\.speed"/.test(main), "Basic values retain Core base-input targets");
 check(!/CoreAppearance\.commit\("(?:base\.accent|base\.canvas|layout\.scale|motion\.speed)"/.test(main), "Basic controls never use Appearance override commit");
-check(/classification === "EXPOSE_NOW"/.test(main), "Advanced controls are Registry metadata driven");
+check(/parameter\.classification !== "EXPOSE_NOW"/.test(main), "Advanced controls are Registry metadata driven");
 check(/CoreAppearance\.preview/.test(main) && /CoreAppearance\.commit/.test(main) && /CoreAppearance\.reset/.test(main), "Advanced controls use Core preview, commit, and reset");
 check(/openVelaSettingsPanel[\s\S]*SystemRouter\.open\("settings", "root"/.test(main), "Vela shortcut retains temporary Global Settings bridge");
 check(!/evalScript[\s\S]{0,200}SystemRouter|SystemRouter[\s\S]{0,200}runRegisteredToolAction/.test(main), "System Router has no Host or Registry action binding");

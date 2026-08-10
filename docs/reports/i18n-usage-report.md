@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 245 |
+| A | Core / Global; keep | 262 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -36,6 +36,18 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | appearance.surface.card.label | appearance | Card Surface | 卡片表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.surface.panel.label | appearance | Panel Surface | 面板表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.text.primary.label | appearance | Primary Text | 主要文本 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.bodySize.description | appearance | Adjusts Body and Control text together. | 同时调整正文与控件文字。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.bodySize.label | appearance | Body Size | 正文大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.codeSize.description | appearance | Adjusts Code text and Palette JSON independently from Supporting text. | 独立调整代码文本与 Palette JSON，不跟随辅助文本。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.codeSize.label | appearance | Code Size | 代码文本大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.fieldLabelSize.description | appearance | Adjusts semantic Field Labels while preserving each domain's weight e... | 调整语义字段标签，并保留各领域的字重强调。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.fieldLabelSize.label | appearance | Field Label Size | 字段标签大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.sectionTitleSize.description | appearance | Adjusts Section titles independently from Page and Surface titles. | 独立调整分区标题，不影响页面与表面标题。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.sectionTitleSize.label | appearance | Section Title Size | 分区标题大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.supportingSize.description | appearance | Adjusts Supporting and derived Eyebrow or category text. | 调整辅助文本与派生的分类标记文字。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.supportingSize.label | appearance | Supporting Size | 辅助文本大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.titleSize.description | appearance | Adjusts Page and Surface titles together while preserving their relat... | 同时调整页面与表面标题，并保持它们的原有层级。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.titleSize.label | appearance | Title Size | 标题大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | bootstrap.loadFailed | bootstrap | Tools failed to load. | 工具加载失败。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | bootstrap.loadingTools | bootstrap | Loading tools... | 正在加载工具... | client/index.html, client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | bootstrap.partialFailure | bootstrap | Some tools failed to load. | 部分工具加载失败。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -327,8 +339,13 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | selection.shapeTarget | selection | Shape target | 形状目标 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.appearance.inherited | settings | Using default / inherited | 使用默认 / 继承 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.appearance.overridden | settings | Overridden | 已覆盖 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.percentageUnit | settings | % | % | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.appearance.reset | settings | Reset | 重置 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.appearance.title | settings | Interface Appearance | 界面外观 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.typography.subgroup.code | settings | Code | 代码 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.typography.subgroup.content | settings | Content | 内容 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.typography.subgroup.titles | settings | Titles | 标题 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.typography.title | settings | Typography | 字体排版 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPalette.algorithmDefault | settings | Current Algorithm | 当前算法配色 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.blackGold | settings | Black Gold Default | 黑金默认 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.custom | settings | Custom | 自定义 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |

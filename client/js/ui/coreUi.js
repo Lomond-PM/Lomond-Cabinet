@@ -174,11 +174,51 @@
     function createRangeNumber(options) {
         var doc = options.document;
         var wrap = applyCommon(doc.createElement("span"), { classNames: "ui-range-number " + (options.classNames || "") });
-        var number = createNumberInput({ document: doc, id: options.numberId, type: options.numberType || "number", value: options.value, min: options.min, max: options.max, step: options.step, field: options.field || options, classNames: options.numberClassNames, onDragValue: options.onNumberDrag, onCommit: options.onNumberCommit, onCancel: options.onNumberCancel, onDragStart: options.onDragStart, onDragChange: options.onDragChange, onDragEnd: options.onDragEnd });
+        var valueToDisplay = typeof options.valueToDisplay === "function" ? options.valueToDisplay : function (value) { return value; };
+        var displayToValue = typeof options.displayToValue === "function" ? options.displayToValue : function (value) { return Number(value); };
+        var displayMin = valueToDisplay(options.min);
+        var displayMax = valueToDisplay(options.max);
+        var displayStep = typeof options.displayStep !== "undefined" ? options.displayStep : options.step;
+        var displayValue = valueToDisplay(options.value);
+        var usesPresentationAdapter = typeof options.valueToDisplay === "function" || typeof options.displayToValue === "function" || typeof options.displayStep !== "undefined" || typeof options.onPreview === "function" || typeof options.onCommit === "function";
+        var numberField = usesPresentationAdapter ? { min: displayMin, max: displayMax, step: displayStep, defaultValue: displayValue } : (options.field || options);
+        var unit;
+        var valueCluster;
+        var number;
         var range = applyCommon(doc.createElement("input"), { id: options.rangeId, classNames: "ui-range " + (options.rangeClassNames || "") });
-        range.type = "range"; range.min = options.min; range.max = options.max; range.step = options.step; range.value = options.value;
-        wrap.appendChild(number); wrap.appendChild(range);
-        return { root: wrap, range: range, number: number };
+        function syncDisplay(nextDisplay) {
+            var normalized = normalizeNumber(nextDisplay, { min: displayMin, max: displayMax }, displayValue);
+            displayValue = normalized;
+            setNumberValue(number, normalized, { min: displayMin, max: displayMax, step: displayStep }, displayValue);
+            range.value = number.value;
+            return displayToValue(Number(number.value));
+        }
+        function preview(nextDisplay) {
+            var modelValue = syncDisplay(nextDisplay);
+            if (options.onPreview) options.onPreview(modelValue);
+            return modelValue;
+        }
+        function commit(nextDisplay) {
+            var modelValue = syncDisplay(nextDisplay);
+            if (options.onCommit) options.onCommit(modelValue);
+            return modelValue;
+        }
+        number = createNumberInput({ document: doc, id: options.numberId, type: options.numberType || "number", value: displayValue, min: displayMin, max: displayMax, step: displayStep, field: numberField, classNames: options.numberClassNames, onInput: options.onPreview ? function () { if (!isNumberDraft(number.value)) preview(number.value); } : options.onNumberInput, onDragValue: options.onPreview ? preview : options.onNumberDrag, onCommit: options.onCommit ? commit : options.onNumberCommit, onCancel: options.onCancel ? function () { options.onCancel(); } : options.onNumberCancel, onDragStart: options.onDragStart, onDragChange: options.onDragChange, onDragEnd: options.onCommit ? function () { commit(number.value); if (options.onDragEnd) options.onDragEnd(); } : options.onDragEnd });
+        range.type = "range"; range.min = displayMin; range.max = displayMax; range.step = displayStep; range.value = displayValue;
+        if (options.onPreview) listen(range, "input", function () { preview(range.value); });
+        if (options.onCommit) listen(range, "change", function () { commit(range.value); });
+        if (options.unitText) {
+            valueCluster = applyCommon(doc.createElement("span"), { classNames: "ui-range-number-value " + (options.valueClassNames || "") });
+            unit = applyCommon(doc.createElement("span"), { classNames: "ui-range-number-unit " + (options.unitClassNames || "") });
+            unit.textContent = options.unitText;
+            valueCluster.appendChild(number);
+            valueCluster.appendChild(unit);
+            wrap.appendChild(valueCluster);
+        } else {
+            wrap.appendChild(number);
+        }
+        wrap.appendChild(range);
+        return { root: wrap, range: range, number: number, unit: unit || null, valueCluster: valueCluster || null, setValue: function (modelValue) { return syncDisplay(valueToDisplay(modelValue)); } };
     }
 
     function createSelect(options) {

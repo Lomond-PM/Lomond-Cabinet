@@ -1,5 +1,7 @@
 # PROJECT_STATE.md
 
+Typography Appearance Parameters now expose six bounded semantic size controls in Global Settings → Interface Appearance → Typography. Stable Parameter IDs persist numeric relative multipliers in `AEToolbox.appearance.v1`, while the UI presents percentages through Core RangeNumber. Page/Surface titles share intent; Field Label and Code sizes are independent from Body and Supporting; Control and Eyebrow retain their intentional derivations. Weight, line-height, font-family, Text Scale, and domain-specific typography controls remain deferred.
+
 ## Current project overview
 
 Lomond Cabinet is an After Effects CEP extension panel.

@@ -19,6 +19,12 @@
         "text.primary": "#f6f0df",
         "select.trigger.surface": "#0b0a08",
         "select.menu.surface": "#0b0a08",
+        "typography.title.size": 1,
+        "typography.sectionTitle.size": 1,
+        "typography.fieldLabel.size": 1,
+        "typography.body.size": 1,
+        "typography.supporting.size": 1,
+        "typography.code.size": 1,
         "action.primary.foreground": "#130f08"
     });
     var CSS_TARGETS = Object.freeze({
@@ -27,6 +33,12 @@
         "text.primary": "--text-primary",
         "select.trigger.surface": "--select-trigger-surface",
         "select.menu.surface": "--select-menu-surface",
+        "typography.title.sizeMultiplier": "--appearance-type-title-scale",
+        "typography.sectionTitle.sizeMultiplier": "--appearance-type-section-title-scale",
+        "typography.fieldLabel.sizeMultiplier": "--appearance-type-field-label-scale",
+        "typography.body.sizeMultiplier": "--appearance-type-body-scale",
+        "typography.supporting.sizeMultiplier": "--appearance-type-supporting-scale",
+        "typography.code.sizeMultiplier": "--appearance-type-code-scale",
         "interaction.focus.ring": "--interaction-focus-ring",
         "interaction.focus.border": "--interaction-focus-border",
         "interaction.hover.border": "--interaction-hover-border",
@@ -116,6 +128,10 @@
             var theme = themeDefaults();
             var values = semanticDefaults(theme);
             var overrides = store ? store.getOverrides() : {};
+            var parameters = registry ? registry.list() : [];
+            var parameter;
+            var cssTarget;
+            var i;
             var key;
             for (key in baseInputs) { if (Object.prototype.hasOwnProperty.call(baseInputs, key)) { values[key] = baseInputs[key]; } }
             for (key in overrides) { if (Object.prototype.hasOwnProperty.call(overrides, key)) { values[key] = overrides[key]; } }
@@ -133,10 +149,10 @@
             write("--selection-bg", theme.dark);
             write("--bg-main", values["base.canvas"]);
             write("--ui-scale", values["layout.scale"]);
-            for (key in CSS_TARGETS) {
-                if (Object.prototype.hasOwnProperty.call(CSS_TARGETS, key) && typeof values[key] !== "undefined") {
-                    write(CSS_TARGETS[key], values[key]);
-                }
+            for (i = 0; i < parameters.length; i++) {
+                parameter = parameters[i];
+                cssTarget = CSS_TARGETS[parameter.resolverTarget];
+                if (cssTarget && typeof values[parameter.id] !== "undefined") { write(cssTarget, values[parameter.id]); }
             }
             if (typeof runtime.applyMotionSpeed === "function") { runtime.applyMotionSpeed(values["motion.speed"]); }
             resolved = values;

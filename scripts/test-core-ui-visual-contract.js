@@ -49,6 +49,31 @@ assert.strictEqual(field.hex.value, "#69B9CC");
 assert.strictEqual(field.swatch.style.backgroundColor, "#69B9CC");
 assert.strictEqual(typeof field.input._coreColorFieldSetValue, "function", "app refresh paths need the unified Core value seam");
 
+var rangePreviews = [];
+var rangeCommits = [];
+var rangeControl = CoreUI.createRangeNumber({ document: doc, value: 1.08, min: 0.90, max: 1.20, step: 0.01, displayStep: 1, valueToDisplay: function (value) { return Math.round(value * 100); }, displayToValue: function (value) { return value / 100; }, unitText: "%", onPreview: function (value) { rangePreviews.push(value); }, onCommit: function (value) { rangeCommits.push(value); } });
+assert.strictEqual(rangeControl.range.value, 108);
+assert.strictEqual(rangeControl.number.value, "108");
+assert.strictEqual(rangeControl.unit.textContent, "%");
+assert(rangeControl.valueCluster && rangeControl.valueCluster.classList.contains("ui-range-number-value"));
+assert.strictEqual(rangeControl.valueCluster.children[0], rangeControl.number);
+assert.strictEqual(rangeControl.valueCluster.children[1], rangeControl.unit);
+assert.strictEqual(rangeControl.root.children[0], rangeControl.valueCluster, "number and unit share the first RangeNumber grid cell");
+assert.strictEqual(rangeControl.root.children[1], rangeControl.range, "slider retains the remaining RangeNumber width");
+rangeControl.range.value = "112";
+rangeControl.range.dispatch("input");
+rangeControl.range.dispatch("change");
+assert.deepStrictEqual(rangePreviews, [1.12]);
+assert.deepStrictEqual(rangeCommits, [1.12]);
+assert.strictEqual(rangeControl.number.value, "112");
+rangeControl.setValue(0.95);
+assert.strictEqual(rangeControl.range.value, "95");
+assert.strictEqual(rangeControl.number.value, "95");
+var legacyRangeControl = CoreUI.createRangeNumber({ document: doc, value: 5, min: 0, max: 10, step: 1 });
+assert.strictEqual(legacyRangeControl.valueCluster, null, "RangeNumber without unit keeps the legacy composition");
+assert.strictEqual(legacyRangeControl.root.children[0], legacyRangeControl.number);
+assert.strictEqual(legacyRangeControl.root.children[1], legacyRangeControl.range);
+
 var danger = CoreUI.createButton({ document: doc, variant: "danger", disabled: true });
 assert(danger.classList.contains("ui-button") && danger.classList.contains("ui-button--danger") && danger.disabled);
 

@@ -1,5 +1,7 @@
 # HANDOFF.md
 
+The uncommitted `refactor/0.3.2-typography-appearance` work contains Typography Appearance Phase 1 and Phase 2 together. Interface Appearance renders the six stable size parameters as percentage RangeNumber controls under Typography / Titles, Content, and Code, with transient preview, numeric v1 persistence, remove-override Reset, responsive rows, and page-exit cleanup. Automated contracts pass apart from the retained legacy `test-vela-settings-integration.js` signature failure. Complete AE smoke across locale, width, UI Scale, persistence/reset, semantic independence, Palette JSON, and Vela transcript before commit or PR.
+
 ## Purpose
 
 This document explains how to continue Lomond Cabinet development on another machine and how to preserve the current 0.3.1 architecture and release state.
