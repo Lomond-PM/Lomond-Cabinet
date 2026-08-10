@@ -151,6 +151,9 @@
     var ProceduralAppearanceParams = null;
     var ProceduralAppearanceSourceDebounceTimer = null;
     var CoreAppearance = null;
+    var AppearancePreviewFrames = {};
+    var AppearancePreviewValues = {};
+    var ActiveAppearancePreviews = {};
     var SettingsState = null;
     var SystemRouter = null;
     var ActiveSettingsSourceElement = null;
@@ -8982,6 +8985,7 @@
         var appearance = byId("settingsAppearancePage");
         var heading = document.querySelector("#settingsView .settings-header h2");
         if (!root || !appearance) return false;
+        if (pageId !== "appearance") clearAppearancePreviews();
         closeRegistryColorPicker("route-change");
         endSettingsPeekManipulation();
         root.hidden = pageId === "appearance";
@@ -9001,23 +9005,47 @@
         button.classList.toggle("is-nested-navigation", labelKey !== "common.home");
     }
 
-    function createAppearanceAdvancedField(parameter) {
-        var row = document.createElement("div");
-        var label = document.createElement("label");
-        var colorField;
-        var state = document.createElement("small");
-        var reset = window.CoreUI.createButton({ document: document, variant: "neutral", classNames: "panel-button appearance-reset-button" });
-        function refreshState() {
-            var overridden = CoreAppearance && CoreAppearance.getOverride(parameter.id) !== null;
-            var stateKey = overridden ? "settings.appearance.overridden" : "settings.appearance.inherited";
-            state.setAttribute("data-i18n", stateKey);
-            state.textContent = tr(stateKey);
-            reset.disabled = !overridden;
+    function cancelAppearancePreviewFrame(id) {
+        if (AppearancePreviewFrames[id]) {
+            window.cancelAnimationFrame(AppearancePreviewFrames[id]);
+            delete AppearancePreviewFrames[id];
         }
-        row.className = "settings-field appearance-advanced-field";
-        label.className = "settings-field-label";
-        label.setAttribute("data-i18n", parameter.labelKey);
-        label.textContent = tr(parameter.labelKey);
+        delete AppearancePreviewValues[id];
+    }
+
+    function scheduleAppearancePreview(id, value) {
+        AppearancePreviewValues[id] = value;
+        ActiveAppearancePreviews[id] = true;
+        if (AppearancePreviewFrames[id]) return;
+        AppearancePreviewFrames[id] = window.requestAnimationFrame(function () {
+            var nextValue = AppearancePreviewValues[id];
+            delete AppearancePreviewFrames[id];
+            delete AppearancePreviewValues[id];
+            if (CoreAppearance) CoreAppearance.preview(id, nextValue);
+        });
+    }
+
+    function clearAppearancePreview(id) {
+        cancelAppearancePreviewFrame(id);
+        delete ActiveAppearancePreviews[id];
+        if (CoreAppearance) CoreAppearance.clearPreview(id);
+    }
+
+    function clearAppearancePreviews() {
+        var id;
+        for (id in ActiveAppearancePreviews) {
+            if (Object.prototype.hasOwnProperty.call(ActiveAppearancePreviews, id)) clearAppearancePreview(id);
+        }
+    }
+
+    function commitAppearanceValue(parameter, value) {
+        cancelAppearancePreviewFrame(parameter.id);
+        delete ActiveAppearancePreviews[parameter.id];
+        return CoreAppearance && CoreAppearance.commit(parameter.id, value);
+    }
+
+    function createAppearanceColorControl(parameter, onStateChange) {
+        var colorField;
         colorField = window.CoreUI.createColorField({
             document: document,
             id: "appearance_" + parameter.id.replace(/\./g, "_"),
@@ -9029,23 +9057,102 @@
             classNames: "appearance-color-field",
             swatchClassNames: "appearance-color-swatch",
             hexClassNames: "appearance-color-hex",
-            onPreview: function (value) { CoreAppearance.preview(parameter.id, value); },
-            onCommit: function (value) { CoreAppearance.commit(parameter.id, value); refreshState(); },
-            onCancel: function () { CoreAppearance.clearPreview(parameter.id); colorField.setValue(CoreAppearance.getResolvedValue(parameter.id)); },
+            onPreview: function (value) { ActiveAppearancePreviews[parameter.id] = true; CoreAppearance.preview(parameter.id, value); },
+            onCommit: function (value) { commitAppearanceValue(parameter, value); if (onStateChange) onStateChange(); },
+            onCancel: function () { clearAppearancePreview(parameter.id); colorField.setValue(CoreAppearance.getResolvedValue(parameter.id)); },
             openPicker: openCoreColorPicker
         });
-        colorField.root.setAttribute("data-appearance-parameter", parameter.id);
         bindHexInputSelectBehavior(colorField.hex);
+        return colorField;
+    }
+
+    function createAppearanceRangeNumberControl(parameter, onStateChange) {
+        var validation = parameter.validation;
+        var control;
+        control = window.CoreUI.createRangeNumber({
+            document: document,
+            rangeId: "appearance_" + parameter.id.replace(/\./g, "_") + "Range",
+            numberId: "appearance_" + parameter.id.replace(/\./g, "_") + "Number",
+            value: CoreAppearance.getResolvedValue(parameter.id),
+            min: validation.min,
+            max: validation.max,
+            step: validation.step,
+            displayStep: 1,
+            valueToDisplay: function (value) { return Math.round(Number(value) * 100); },
+            displayToValue: function (value) { return Math.round(Number(value)) / 100; },
+            unitText: tr("settings.appearance.percentageUnit"),
+            classNames: "appearance-range-number settings-field-control registry-range-control",
+            rangeClassNames: "pill-slider registry-range settings-slider appearance-range",
+            numberClassNames: "num-input registry-range-number settings-number appearance-range-value",
+            unitClassNames: "appearance-range-unit",
+            onPreview: function (value) { if (window.AppearanceParameterRegistry.validate(parameter.id, value).valid) scheduleAppearancePreview(parameter.id, value); },
+            onCommit: function (value) { if (window.AppearanceParameterRegistry.validate(parameter.id, value).valid) { commitAppearanceValue(parameter, value); if (onStateChange) onStateChange(); } },
+            onCancel: function () { clearAppearancePreview(parameter.id); control.setValue(CoreAppearance.getResolvedValue(parameter.id)); }
+        });
+        return control;
+    }
+
+    function createAppearanceParameterControl(parameter, onStateChange) {
+        var renderers = {
+            color: createAppearanceColorControl,
+            "range-number": createAppearanceRangeNumberControl
+        };
+        if (!renderers[parameter.controlType]) {
+            if (window.console && console.warn) console.warn("[AE Toolbox Appearance] Unsupported controlType: " + parameter.controlType);
+            return null;
+        }
+        return renderers[parameter.controlType](parameter, onStateChange);
+    }
+
+    function createAppearanceAdvancedField(parameter) {
+        var row = document.createElement("div");
+        var copy = document.createElement("span");
+        var label = document.createElement("label");
+        var description = document.createElement("small");
+        var control;
+        var state = document.createElement("small");
+        var reset = window.CoreUI.createButton({ document: document, variant: "neutral", classNames: "panel-button appearance-reset-button" });
+        function refreshState() {
+            var overridden = CoreAppearance && CoreAppearance.getOverride(parameter.id) !== null;
+            var stateKey = overridden ? "settings.appearance.overridden" : "settings.appearance.inherited";
+            state.setAttribute("data-i18n", stateKey);
+            state.textContent = tr(stateKey);
+            reset.disabled = !overridden;
+        }
+        control = createAppearanceParameterControl(parameter, refreshState);
+        if (!control) return null;
+        row.className = "settings-field appearance-advanced-field";
+        row.setAttribute("data-appearance-control-type", parameter.controlType);
+        copy.className = "settings-field-copy appearance-parameter-copy";
+        label.className = "settings-field-label";
+        label.setAttribute("data-i18n", parameter.labelKey);
+        label.textContent = tr(parameter.labelKey);
+        description.className = "settings-field-description appearance-parameter-description";
+        description.setAttribute("data-i18n", parameter.descriptionKey);
+        description.textContent = tr(parameter.descriptionKey);
+        copy.appendChild(label);
+        if (parameter.category === "typography") copy.appendChild(description);
+        control.root.setAttribute("data-appearance-parameter", parameter.id);
         state.className = "settings-field-description appearance-override-state";
         reset.setAttribute("data-i18n", "settings.appearance.reset");
         reset.textContent = tr("settings.appearance.reset");
-        reset.addEventListener("click", function () { CoreAppearance.reset(parameter.id); colorField.setValue(CoreAppearance.getResolvedValue(parameter.id)); refreshState(); });
-        row.appendChild(label);
-        row.appendChild(colorField.root);
+        reset.addEventListener("click", function () { clearAppearancePreview(parameter.id); CoreAppearance.reset(parameter.id); control.setValue(CoreAppearance.getResolvedValue(parameter.id)); refreshState(); });
+        row.appendChild(copy);
+        row.appendChild(control.root);
         row.appendChild(state);
         row.appendChild(reset);
         refreshState();
         return row;
+    }
+
+    function createAppearanceSection(titleKey, className) {
+        var section = document.createElement("section");
+        var title = document.createElement("h3");
+        section.className = "settings-section " + className;
+        title.setAttribute("data-i18n", titleKey);
+        title.textContent = tr(titleKey);
+        section.appendChild(title);
+        return section;
     }
 
     function setupAppearanceSubpage() {
@@ -9055,8 +9162,14 @@
         var appearance = document.createElement("div");
         var entryCard = document.createElement("section");
         var openButton = document.createElement("button");
-        var advanced = document.createElement("section");
+        var advanced = createAppearanceSection("settings.appearance.title", "appearance-advanced");
+        var typography = createAppearanceSection("settings.appearance.typography.title", "appearance-typography");
         var advancedList = window.AppearanceParameterRegistry ? window.AppearanceParameterRegistry.list() : [];
+        var subgroupMounts = {};
+        var parameter;
+        var field;
+        var subgroup;
+        var subgroupHeading;
         var i;
         if (!content || !renderer || byId("settingsAppearancePage")) return;
         root.id = "settingsRootPage";
@@ -9072,12 +9185,30 @@
         appearance.id = "settingsAppearancePage";
         appearance.className = "settings-appearance-page";
         appearance.hidden = true;
-        advanced.className = "settings-section appearance-advanced";
-        advanced.innerHTML = "<h3 data-i18n=\"settings.appearance.title\">" + tr("settings.appearance.title") + "</h3>";
         for (i = 0; i < advancedList.length; i++) {
-            if (advancedList[i].classification === "EXPOSE_NOW") advanced.appendChild(createAppearanceAdvancedField(advancedList[i]));
+            parameter = advancedList[i];
+            if (parameter.classification !== "EXPOSE_NOW") continue;
+            field = createAppearanceAdvancedField(parameter);
+            if (!field) continue;
+            if (parameter.category !== "typography") {
+                advanced.appendChild(field);
+                continue;
+            }
+            subgroup = parameter.subgroup;
+            if (!subgroupMounts[subgroup]) {
+                subgroupMounts[subgroup] = document.createElement("div");
+                subgroupMounts[subgroup].className = "appearance-typography-subgroup";
+                subgroupMounts[subgroup].setAttribute("data-appearance-subgroup", subgroup);
+                subgroupHeading = document.createElement("h4");
+                subgroupHeading.setAttribute("data-i18n", "settings.appearance.typography.subgroup." + subgroup);
+                subgroupHeading.textContent = tr("settings.appearance.typography.subgroup." + subgroup);
+                subgroupMounts[subgroup].appendChild(subgroupHeading);
+                typography.appendChild(subgroupMounts[subgroup]);
+            }
+            subgroupMounts[subgroup].appendChild(field);
         }
         appearance.appendChild(advanced);
+        appearance.appendChild(typography);
         content.appendChild(appearance);
     }
 
@@ -9211,6 +9342,7 @@
         var finishGate;
 
         endSettingsPeekManipulation();
+        clearAppearancePreviews();
         if (!view || byId("appShell").classList.contains("is-animating") || !view.classList.contains("is-open")) {
             return;
         }

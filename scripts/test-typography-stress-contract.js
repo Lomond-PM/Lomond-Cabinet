@@ -9,6 +9,7 @@ var velaCss = fs.readFileSync(path.join(root, "client/css/velaSurface.css"), "ut
 var coreSource = fs.readFileSync(path.join(root, "client/js/ui/coreUi.js"), "utf8");
 var mainSource = fs.readFileSync(path.join(root, "client/js/main.js"), "utf8");
 var CoreUI = require(path.join(root, "client/js/ui/coreUi.js"));
+var AppearanceRegistry = require(path.join(root, "client/js/appearance/appearanceParameterRegistry.js")).AppearanceParameterRegistry;
 
 function element(tagName) {
     var node = {
@@ -71,14 +72,31 @@ assert(appearanceOwner >= 0 && settingsBase > appearanceOwner, "test must cover 
 assert(rule("\\.settings-field\\.appearance-advanced-field", "display:\\s*grid;[^}]*grid-template-columns:\\s*minmax\\(0, 1fr\\) auto"));
 assert(!/\.settings-field\.appearance-advanced-field\s*\{[^}]*!important/.test(css));
 assert(/row\.className = "settings-field appearance-advanced-field"/.test(mainSource));
-assert(/row\.appendChild\(label\);\s*row\.appendChild\(colorField\.root\);\s*row\.appendChild\(state\);\s*row\.appendChild\(reset\);/.test(mainSource));
+assert(/row\.appendChild\(copy\);\s*row\.appendChild\(control\.root\);\s*row\.appendChild\(state\);\s*row\.appendChild\(reset\);/.test(mainSource));
 assert(/@media \(max-width: 380px\)[\s\S]*?\.settings-field\.appearance-advanced-field\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/.test(css));
 
 assert(rule("\\.palette-editor-field", "min-height:\\s*calc\\(32px \\* var\\(--ui-scale\\)\\)"));
 assert(rule("\\.tool-app", "min-height:\\s*var\\(--tool-card-min-h\\)"));
 assert(rule("\\.vela-transcript-message", "overflow-wrap:\\s*anywhere", velaCss));
 assert(rule("\\.vela-status-text", "overflow:\\s*hidden;[^}]*text-overflow:\\s*ellipsis;[^}]*white-space:\\s*nowrap", velaCss));
-assert(/--type-field-label-size:\s*var\(--type-body-size\)/.test(css));
-assert(/--type-supporting-size:\s*calc\(10\.5px \* var\(--ui-scale\)\)/.test(css));
+assert(/--type-field-label-size:\s*calc\(12px \* var\(--appearance-type-field-label-scale\) \* var\(--ui-scale\)\)/.test(css));
+assert(/--type-supporting-size:\s*calc\(10\.5px \* var\(--appearance-type-supporting-scale\) \* var\(--ui-scale\)\)/.test(css));
+assert(/--type-code-size:\s*calc\(10\.5px \* var\(--appearance-type-code-scale\) \* var\(--ui-scale\)\)/.test(css));
+
+var scaleBounds = AppearanceRegistry.get("layout.scale").validation;
+var typographyBounds = {
+    "typography.title.size": [0.90, 1.15],
+    "typography.sectionTitle.size": [0.90, 1.15],
+    "typography.fieldLabel.size": [0.90, 1.20],
+    "typography.body.size": [0.95, 1.15],
+    "typography.supporting.size": [0.90, 1.20],
+    "typography.code.size": [0.90, 1.15]
+};
+Object.keys(typographyBounds).forEach(function (id) {
+    var bounds = AppearanceRegistry.get(id).validation;
+    assert.deepStrictEqual([bounds.min, bounds.max], typographyBounds[id], id + " keeps its stress-audited bounds");
+    assert(Number.isFinite(scaleBounds.min * bounds.min) && Number.isFinite(scaleBounds.max * bounds.max), id + " composes safely with actual UI Scale bounds");
+    assert(Number.isFinite(0.92 * bounds.min) && Number.isFinite(0.92 * bounds.max), id + " composes safely with Settings fixed scale");
+});
 
 console.log("Typography stress contract tests passed.");

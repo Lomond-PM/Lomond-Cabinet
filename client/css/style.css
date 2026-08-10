@@ -97,32 +97,39 @@
     --font-ui: "Segoe UI", Arial, sans-serif;
     --font-mono: "Consolas", "Courier New", monospace;
 
-    --type-page-title-size: calc(24px * var(--ui-scale));
+    --appearance-type-title-scale: 1;
+    --appearance-type-section-title-scale: 1;
+    --appearance-type-field-label-scale: 1;
+    --appearance-type-body-scale: 1;
+    --appearance-type-supporting-scale: 1;
+    --appearance-type-code-scale: 1;
+
+    --type-page-title-size: calc(24px * var(--appearance-type-title-scale) * var(--ui-scale));
     --type-page-title-weight: 800;
     --type-page-title-line-height: 1.04;
-    --type-surface-title-size: calc(21px * var(--ui-scale));
+    --type-surface-title-size: calc(21px * var(--appearance-type-title-scale) * var(--ui-scale));
     --type-surface-title-weight: 780;
     --type-surface-title-line-height: 1.1;
-    --type-section-title-size: calc(14px * var(--ui-scale));
+    --type-section-title-size: calc(14px * var(--appearance-type-section-title-scale) * var(--ui-scale));
     --type-section-title-weight: 700;
     --type-section-title-line-height: 1.18;
-    --type-body-size: calc(12px * var(--ui-scale));
+    --type-body-size: calc(12px * var(--appearance-type-body-scale) * var(--ui-scale));
     --type-body-weight: normal;
     --type-body-line-height: 1.42;
     --type-control-size: var(--type-body-size);
     --type-control-weight: normal;
     --type-control-line-height: normal;
-    --type-supporting-size: calc(10.5px * var(--ui-scale));
+    --type-supporting-size: calc(10.5px * var(--appearance-type-supporting-scale) * var(--ui-scale));
     --type-supporting-weight: normal;
     --type-supporting-line-height: 1.35;
     --type-eyebrow-size: var(--type-supporting-size);
     --type-eyebrow-weight: 800;
     --type-eyebrow-line-height: 1;
-    --type-code-size: var(--type-supporting-size);
+    --type-code-size: calc(10.5px * var(--appearance-type-code-scale) * var(--ui-scale));
     --type-code-weight: normal;
     --type-code-line-height: 1.45;
 
-    --type-field-label-size: var(--type-body-size);
+    --type-field-label-size: calc(12px * var(--appearance-type-field-label-scale) * var(--ui-scale));
     --type-field-label-weight: 650;
     --type-field-label-line-height: 1.35;
     --type-settings-field-label-weight: 800;
@@ -565,7 +572,7 @@ body:not(.i18n-ready) .app-shell {
     align-items: center;
 }
 
-.settings-field.appearance-advanced-field > .settings-field-label {
+.appearance-parameter-copy {
     grid-column: 1;
     grid-row: 1;
     min-width: 0;
@@ -575,6 +582,43 @@ body:not(.i18n-ready) .app-shell {
     grid-column: 2;
     grid-row: 1;
     width: min(calc(196px * var(--ui-scale)), 48vw);
+}
+
+.appearance-range-number {
+    grid-column: 2;
+    grid-row: 1;
+    width: min(calc(238px * var(--ui-scale)), 52vw);
+    min-width: 0;
+}
+
+.appearance-range-number .appearance-range {
+    min-width: calc(96px * var(--ui-scale));
+}
+
+.appearance-range-unit {
+    flex: 0 0 auto;
+    color: var(--text-tertiary);
+    font-size: var(--type-supporting-size);
+}
+
+.ui-range-number-value {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: calc(4px * var(--ui-scale));
+    white-space: nowrap;
+}
+
+.appearance-typography-subgroup {
+    margin-top: var(--space-settings-section-header-content);
+}
+
+.appearance-typography-subgroup > h4 {
+    margin: 0 0 var(--space-settings-field-copy);
+    color: var(--text-secondary);
+    font-size: var(--type-supporting-size);
+    font-weight: 700;
+    line-height: var(--type-supporting-line-height);
 }
 
 .appearance-override-state {
@@ -3270,14 +3314,20 @@ p {
         align-items: stretch;
     }
 
-    .settings-field.appearance-advanced-field > .settings-field-label,
+    .settings-field.appearance-advanced-field > .appearance-parameter-copy,
     .settings-field.appearance-advanced-field > .appearance-color-field,
+    .settings-field.appearance-advanced-field > .appearance-range-number,
     .settings-field.appearance-advanced-field > .appearance-override-state,
     .settings-field.appearance-advanced-field > .appearance-reset-button {
         grid-column: 1;
     }
 
     .settings-field.appearance-advanced-field > .appearance-color-field {
+        grid-row: 2;
+        width: 100%;
+    }
+
+    .settings-field.appearance-advanced-field > .appearance-range-number {
         grid-row: 2;
         width: 100%;
     }
