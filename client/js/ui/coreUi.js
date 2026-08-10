@@ -204,6 +204,7 @@
         var button = applyCommon(options.document.createElement("button"), options);
         button.type = options.type || "button";
         addClasses(button, "ui-button");
+        if (options.variant) addClasses(button, "ui-button--" + options.variant);
         if (options.text !== undefined) button.textContent = options.text;
         listen(button, "click", options.onClick);
         return button;
@@ -212,14 +213,41 @@
     function createColorField(options) {
         var doc = options.document;
         var rootElement = applyCommon(doc.createElement("span"), { classNames: "ui-color-field " + (options.classNames || "") });
-        var swatch = createButton({ document: doc, classNames: "ui-color-swatch " + (options.swatchClassNames || ""), ariaLabel: options.ariaLabel });
-        var valueInput = applyCommon(doc.createElement("input"), { id: options.id, classNames: options.valueClassNames });
-        var hex = createTextInput({ document: doc, id: options.hexId || options.id + "Hex", value: options.value, classNames: "ui-color-hex " + (options.hexClassNames || ""), spellcheck: false, onInput: options.onInput, onCommit: options.onCommit });
-        valueInput.type = options.valueType || "hidden"; valueInput.value = options.value;
-        swatch.style.backgroundColor = options.value;
-        listen(swatch, "click", options.onSwatchClick);
+        var normalize = options.normalize || function (value, fallback) { return value || fallback; };
+        var fallback = options.fallback || "#ffffff";
+        var value = normalize(options.value, fallback);
+        var swatch = createButton({ document: doc, disabled: options.disabled, classNames: "ui-color-swatch " + (options.swatchClassNames || ""), ariaLabel: options.ariaLabel });
+        var valueInput = applyCommon(doc.createElement("input"), { id: options.id, disabled: options.disabled, classNames: options.valueClassNames });
+        var hex = createTextInput({ document: doc, id: options.hexId || options.id + "Hex", disabled: options.disabled, value: value, classNames: "ui-color-hex " + (options.hexClassNames || ""), spellcheck: false });
+        function setValue(nextValue) {
+            var normalized = normalize(nextValue, valueInput.value || fallback);
+            valueInput.value = normalized; hex.value = normalized; swatch.style.backgroundColor = normalized;
+            return normalized;
+        }
+        function preview(nextValue) {
+            var normalized = setValue(nextValue);
+            if (options.onPreview) options.onPreview(normalized);
+            return normalized;
+        }
+        function commit(nextValue) {
+            var normalized = setValue(nextValue);
+            if (options.onCommit) options.onCommit(normalized);
+            return normalized;
+        }
+        valueInput.type = options.valueType || "hidden";
+        valueInput._coreColorFieldSetValue = setValue;
+        swatch.setAttribute("data-color-target", options.id || "");
+        hex._registryOnValueChange = function () { preview(hex.value); };
+        listen(hex, "input", function () { if (!options.isValid || options.isValid(hex.value)) preview(hex.value); });
+        listen(hex, "change", function () { commit(hex.value); });
+        listen(swatch, "click", function (event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            if (options.openPicker) options.openPicker({ input: valueInput, hexInput: hex, swatch: swatch, value: valueInput.value, fallback: fallback, onPreview: preview, onCommit: commit, onCancel: options.onCancel });
+            else if (options.onSwatchClick) options.onSwatchClick(event);
+        });
         rootElement.appendChild(swatch); rootElement.appendChild(valueInput); rootElement.appendChild(hex);
-        return { root: rootElement, swatch: swatch, input: valueInput, hex: hex };
+        setValue(value);
+        return { root: rootElement, swatch: swatch, input: valueInput, hex: hex, setValue: setValue };
     }
 
     function createFieldRow(options) {

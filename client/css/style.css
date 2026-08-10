@@ -489,13 +489,8 @@ body:not(.i18n-ready) .app-shell {
     align-items: center;
 }
 
-.appearance-color-input {
-    width: calc(42px * var(--ui-scale));
-    height: var(--control-height);
-    padding: 2px;
-    border: 1px solid var(--input-border);
-    border-radius: var(--radius-sm);
-    background: var(--select-trigger-surface);
+.appearance-color-field {
+    width: min(calc(196px * var(--ui-scale)), 48vw);
 }
 
 .appearance-override-state {
@@ -2150,6 +2145,8 @@ p {
 }
 
 .panel-card,
+.ui-button--neutral,
+.ui-button--navigation,
 .panel-button,
 .tool-icon,
 .info-panel,
@@ -2333,7 +2330,9 @@ p {
     height: calc(28px * var(--ui-scale));
 }
 
+.ui-button,
 .panel-button,
+.ui-button--primary,
 .primary-action {
     display: inline-flex;
     align-items: center;
@@ -2349,12 +2348,15 @@ p {
         opacity var(--dur-fast) var(--ease-apple-standard);
 }
 
+.ui-button:not(:disabled):hover,
 .panel-button:hover,
+.ui-button--primary:hover,
 .primary-action:hover {
     transform: translateY(-1px) scale(1.01);
     border-color: var(--interaction-hover-border);
 }
 
+.ui-button:not(:disabled):active,
 .panel-button:active,
 .primary-action:active {
     transform: translateY(1px) scale(0.96);
@@ -2566,6 +2568,7 @@ p {
     min-width: 0;
 }
 
+.ui-range,
 .pill-slider {
     width: 100%;
     min-width: 56px;
@@ -2576,12 +2579,14 @@ p {
     -webkit-appearance: none;
 }
 
+.ui-range::-webkit-slider-runnable-track,
 .pill-slider::-webkit-slider-runnable-track {
     height: calc(8px * var(--ui-scale));
     border-radius: 999px;
     background: var(--gold-track);
 }
 
+.ui-range::-webkit-slider-thumb,
 .pill-slider::-webkit-slider-thumb {
     width: calc(18px * var(--ui-scale));
     height: calc(18px * var(--ui-scale));
@@ -2593,6 +2598,7 @@ p {
     -webkit-appearance: none;
 }
 
+.ui-number-input,
 .num-input {
     height: var(--control-height);
     border: 1px solid var(--field-border);
@@ -2605,17 +2611,21 @@ p {
     font-variant-numeric: tabular-nums;
 }
 
+.ui-number-input,
 .num-input {
     width: calc(66px * var(--ui-scale));
     min-width: 56px;
 }
 
+.ui-number-input::-webkit-inner-spin-button,
+.ui-number-input::-webkit-outer-spin-button,
 .num-input::-webkit-inner-spin-button,
 .num-input::-webkit-outer-spin-button {
     margin: 0;
     -webkit-appearance: none;
 }
 
+.ui-number-input:focus,
 .num-input:focus {
     border-color: var(--interaction-focus-border);
 }
@@ -3501,6 +3511,7 @@ p {
     border-radius: 999px;
 }
 
+.ui-color-field,
 .registry-color-control {
     display: grid;
     grid-template-columns: minmax(88px, 1fr) calc(96px * var(--ui-scale));
@@ -3533,6 +3544,53 @@ p {
     min-width: 78px;
     text-align: center;
     font-variant-numeric: tabular-nums;
+}
+
+.ui-field-copy {
+    min-width: 0;
+}
+
+.ui-field-row,
+.ui-range-number {
+    min-width: 0;
+}
+
+.ui-field-label,
+.ui-field-description {
+    display: block;
+}
+
+.ui-field-description {
+    color: var(--text-tertiary);
+    font-size: var(--font-small);
+    line-height: 1.25;
+}
+
+.ui-button:disabled,
+.ui-color-field.is-disabled,
+.ui-color-field :disabled {
+    opacity: 0.48;
+    cursor: default;
+}
+
+.ui-text-input:disabled,
+.ui-textarea:disabled,
+.ui-number-input:disabled,
+.ui-select:disabled,
+.ui-range:disabled {
+    cursor: default;
+    opacity: 0.48;
+}
+
+.ui-switch input:disabled + .ui-switch-track {
+    cursor: default;
+    opacity: 0.48;
+}
+
+.ui-button--danger {
+    border-color: var(--danger-border);
+    color: var(--danger);
+    background: var(--danger-surface);
 }
 
 .registry-info-note {
@@ -3863,6 +3921,8 @@ p {
 .registry-color-channel-sliders {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(3, auto);
+    grid-auto-flow: column;
     gap: calc(5px * var(--ui-scale)) calc(8px * var(--ui-scale));
     margin: calc(8px * var(--ui-scale)) 0 calc(10px * var(--ui-scale));
 }
