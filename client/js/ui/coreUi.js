@@ -256,6 +256,7 @@
         var copy = applyCommon(doc.createElement("span"), { classNames: "ui-field-copy " + (options.copyClassNames || "") });
         var label = applyCommon(doc.createElement(options.labelTag || "strong"), { classNames: "ui-field-label " + (options.labelClassNames || "") });
         var hint;
+        if (options.contentGrowth === true) row.className += " is-content-growth";
         label.textContent = options.labelText || "";
         if (options.labelKey) label.setAttribute("data-i18n", options.labelKey);
         copy.appendChild(label);
