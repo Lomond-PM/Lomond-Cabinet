@@ -94,11 +94,52 @@
     --dur-normal: 260ms;
     --dur-close: 360ms;
     --ui-scale: 0.92;
-    --font-body: calc(12px * var(--ui-scale));
-    --font-h1: calc(24px * var(--ui-scale));
-    --font-h2: calc(21px * var(--ui-scale));
-    --font-h3: calc(14px * var(--ui-scale));
-    --font-small: calc(10.5px * var(--ui-scale));
+    --font-ui: "Segoe UI", Arial, sans-serif;
+    --font-mono: "Consolas", "Courier New", monospace;
+
+    --type-page-title-size: calc(24px * var(--ui-scale));
+    --type-page-title-weight: 800;
+    --type-page-title-line-height: 1.04;
+    --type-surface-title-size: calc(21px * var(--ui-scale));
+    --type-surface-title-weight: 780;
+    --type-surface-title-line-height: 1.1;
+    --type-section-title-size: calc(14px * var(--ui-scale));
+    --type-section-title-weight: 700;
+    --type-section-title-line-height: 1.18;
+    --type-body-size: calc(12px * var(--ui-scale));
+    --type-body-weight: normal;
+    --type-body-line-height: 1.42;
+    --type-control-size: var(--type-body-size);
+    --type-control-weight: normal;
+    --type-control-line-height: normal;
+    --type-supporting-size: calc(10.5px * var(--ui-scale));
+    --type-supporting-weight: normal;
+    --type-supporting-line-height: 1.35;
+    --type-eyebrow-size: var(--type-supporting-size);
+    --type-eyebrow-weight: 800;
+    --type-eyebrow-line-height: 1;
+    --type-code-size: var(--type-supporting-size);
+    --type-code-weight: normal;
+    --type-code-line-height: 1.45;
+
+    --type-field-label-size: var(--type-body-size);
+    --type-field-label-weight: 650;
+    --type-field-label-line-height: 1.35;
+    --type-settings-field-label-weight: 800;
+    --type-home-card-title-size: calc(13px * var(--ui-scale));
+    --type-home-card-title-weight: 800;
+    --type-home-card-title-line-height: 1.18;
+    --type-registry-field-weight: 600;
+    --type-registry-field-line-height: 1.35;
+    --type-registry-supporting-size: var(--type-supporting-size);
+    --type-registry-supporting-weight: 400;
+    --type-registry-supporting-line-height: 1.35;
+
+    --font-body: var(--type-body-size);
+    --font-h1: var(--type-page-title-size);
+    --font-h2: var(--type-surface-title-size);
+    --font-h3: var(--type-section-title-size);
+    --font-small: var(--type-supporting-size);
     --control-height: calc(30px * var(--ui-scale));
     --card-pad: calc(12px * var(--ui-scale));
     --view-pad: calc(18px * var(--ui-scale));
@@ -130,8 +171,8 @@ body {
     overflow-y: auto;
     background: var(--surface-canvas);
     color: var(--text-primary);
-    font-family: "Segoe UI", Arial, sans-serif;
-    font-size: var(--font-body);
+    font-family: var(--font-ui);
+    font-size: var(--type-body-size);
 }
 
 button,
@@ -555,7 +596,8 @@ body:not(.i18n-ready) .app-shell {
     display: block;
     margin-top: calc(2px * var(--ui-scale));
     color: var(--text-muted);
-    font-size: var(--font-small);
+    font-size: var(--type-supporting-size);
+    font-weight: var(--type-supporting-weight);
     line-height: 1.25;
 }
 
@@ -580,8 +622,8 @@ body:not(.i18n-ready) .app-shell {
 .settings-field-label {
     display: block;
     color: var(--text-primary);
-    font-size: var(--font-body);
-    font-weight: 800;
+    font-size: var(--type-field-label-size);
+    font-weight: var(--type-settings-field-label-weight);
     line-height: 1.2;
 }
 
@@ -1213,9 +1255,6 @@ body:not(.i18n-ready) .app-shell {
     background: rgba(5, 4, 3, 0.5);
     color: var(--text-primary);
     resize: vertical;
-    font-family: var(--font-mono);
-    font-size: var(--font-small);
-    line-height: 1.45;
 }
 
 .palette-json-box::placeholder {
@@ -1504,8 +1543,8 @@ body:not(.i18n-ready) .app-shell {
 .settings-subtitle {
     margin: calc(14px * var(--ui-scale)) 0 calc(8px * var(--ui-scale));
     color: var(--gold-soft);
-    font-size: var(--font-small);
-    font-weight: 800;
+    font-size: var(--type-eyebrow-size);
+    font-weight: var(--type-eyebrow-weight);
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
@@ -1513,8 +1552,8 @@ body:not(.i18n-ready) .app-shell {
 .settings-group-label {
     margin: calc(14px * var(--ui-scale)) 0 calc(6px * var(--ui-scale));
     color: var(--text-secondary);
-    font-size: var(--font-body);
-    font-weight: 800;
+    font-size: var(--type-field-label-size);
+    font-weight: var(--type-settings-field-label-weight);
     line-height: 1.25;
 }
 
@@ -1937,33 +1976,35 @@ p {
 }
 
 h1 {
-    font-size: var(--font-h1);
-    line-height: 1.04;
-    font-weight: 800;
+    font-size: var(--type-page-title-size);
+    line-height: var(--type-page-title-line-height);
+    font-weight: var(--type-page-title-weight);
 }
 
 h2 {
-    font-size: var(--font-h2);
-    line-height: 1.1;
-    font-weight: 780;
+    font-size: var(--type-surface-title-size);
+    line-height: var(--type-surface-title-line-height);
+    font-weight: var(--type-surface-title-weight);
 }
 
 h3 {
-    font-size: var(--font-h3);
-    line-height: 1.18;
-    font-weight: 700;
+    font-size: var(--type-section-title-size);
+    line-height: var(--type-section-title-line-height);
+    font-weight: var(--type-section-title-weight);
 }
 
 p {
     color: var(--text-secondary);
-    line-height: 1.42;
+    font-size: var(--type-body-size);
+    font-weight: var(--type-body-weight);
+    line-height: var(--type-body-line-height);
 }
 
 .overline {
     margin-bottom: 4px;
     color: var(--gold-soft);
-    font-size: var(--font-small);
-    font-weight: 800;
+    font-size: var(--type-eyebrow-size);
+    font-weight: var(--type-eyebrow-weight);
     letter-spacing: 0.1em;
     text-transform: uppercase;
 }
@@ -2137,9 +2178,9 @@ p {
 .app-card-title {
     margin-top: calc(11px * var(--ui-scale));
     width: calc(var(--tool-icon-size) + (10px * var(--ui-scale)));
-    font-size: calc(13px * var(--ui-scale));
-    font-weight: 800;
-    line-height: 1.18;
+    font-size: var(--type-home-card-title-size);
+    font-weight: var(--type-home-card-title-weight);
+    line-height: var(--type-home-card-title-line-height);
     overflow-wrap: anywhere;
     text-align: center;
 }
@@ -2555,9 +2596,9 @@ p {
 .control-label {
     flex: 0 1 calc(92px * var(--ui-scale));
     min-width: 58px;
-    color: var(--text-secondary);
-    font-size: var(--font-body);
-    font-weight: 650;
+    color: var(--text-primary);
+    font-size: var(--type-field-label-size);
+    font-weight: var(--type-field-label-weight);
 }
 
 .control-inputs {
@@ -3301,23 +3342,23 @@ p {
 .registry-title-primary {
     margin: 0;
     color: var(--text-primary);
-    font-size: calc(var(--font-body) * 2);
-    font-weight: 800;
+    font-size: var(--type-page-title-size);
+    font-weight: var(--type-page-title-weight);
     line-height: 1.05;
 }
 
 .registry-text-body {
     color: var(--text-secondary);
-    font-size: var(--font-body);
-    font-weight: 500;
-    line-height: 1.35;
+    font-size: var(--type-body-size);
+    font-weight: var(--type-registry-field-weight);
+    line-height: var(--type-registry-field-line-height);
 }
 
 .registry-text-muted {
     color: var(--text-tertiary);
-    font-size: var(--font-body);
-    font-weight: 500;
-    line-height: 1.35;
+    font-size: var(--type-registry-supporting-size);
+    font-weight: var(--type-registry-supporting-weight);
+    line-height: var(--type-registry-supporting-line-height);
 }
 
 .registry-tool-panel .dynamic-tool-intro {
@@ -3419,9 +3460,10 @@ p {
 .registry-label-column .control-label {
     flex: none;
     min-width: 0;
-    color: var(--text-secondary);
-    font-size: var(--font-body);
-    font-weight: 500;
+    color: var(--text-primary);
+    font-size: var(--type-field-label-size);
+    font-weight: var(--type-registry-field-weight);
+    line-height: var(--type-registry-field-line-height);
 }
 
 .registry-field-hint {
@@ -3432,6 +3474,19 @@ p {
 .registry-switch-row .control-inputs {
     justify-content: flex-start;
     width: 100%;
+}
+
+.ui-text-input,
+.ui-textarea,
+.ui-number-input,
+.ui-select,
+.ui-switch,
+.ui-color-hex,
+.ui-button {
+    font-family: var(--font-ui);
+    font-size: var(--type-control-size);
+    font-weight: var(--type-control-weight);
+    line-height: var(--type-control-line-height);
 }
 
 .ui-text-input,
@@ -3457,6 +3512,14 @@ p {
     padding-bottom: calc(8px * var(--ui-scale));
     resize: vertical;
     line-height: 1.35;
+}
+
+.ui-textarea.palette-json-box,
+.registry-textarea.palette-json-box {
+    font-family: var(--font-mono);
+    font-size: var(--type-code-size);
+    font-weight: var(--type-code-weight);
+    line-height: var(--type-code-line-height);
 }
 
 .ui-text-input:focus,
@@ -3560,9 +3623,19 @@ p {
     display: block;
 }
 
+.ui-field-label {
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    font-size: var(--type-field-label-size);
+    font-weight: var(--type-field-label-weight);
+    line-height: var(--type-field-label-line-height);
+}
+
 .ui-field-description {
     color: var(--text-tertiary);
-    font-size: var(--font-small);
+    font-family: var(--font-ui);
+    font-size: var(--type-supporting-size);
+    font-weight: var(--type-supporting-weight);
     line-height: 1.25;
 }
 
@@ -3611,7 +3684,7 @@ p {
     border-radius: 0;
     background: transparent;
     color: var(--text-secondary);
-    font-size: var(--font-body);
+    font-size: var(--type-body-size);
     font-weight: 600;
     line-height: 1.35;
 }

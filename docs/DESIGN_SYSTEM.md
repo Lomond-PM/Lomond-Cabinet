@@ -263,6 +263,18 @@ Generic editable controls use `.ui-*` selectors as their canonical visual contra
 
 Nested Settings surfaces use the left header control for parent navigation: Settings root returns to Home, while Interface Appearance and Palette Workspace return to Settings. Palette Workspace retains its own lifecycle and unsaved-change gate and is not promoted into a new System Router hierarchy.
 
+## Semantic Typography Contract
+
+Typography is organized by semantic role rather than by a primitive numeric scale. The public roles are page title, surface title, section title, body, control text, supporting copy, eyebrow/category, and code/JSON. `--font-ui` preserves the existing `"Segoe UI", Arial, sans-serif` fallback order; `--font-mono` provides the platform-safe code family used by Palette JSON. The legacy `--font-h1`, `--font-h2`, `--font-h3`, `--font-body`, and `--font-small` variables remain compatibility aliases.
+
+Component aliases retain verified emphasis differences such as Settings field labels, Registry field copy, and Home card titles. Geometry-coupled typography remains local, including Home card wrapping, icon identity glyphs, the fixed bootstrap status, Vela experimental status, transcript line height, compact action line height, and responsive ellipsis rules. Typography tokens are internal design-system contracts and are not Interface Appearance parameters.
+
+Semantic hierarchy is not a numeric level system. Section Title, Field Label, and Supporting form a semantic hierarchy through size, weight, and tone together rather than color alone. Field labels establish the object name through their component-appropriate emphasis and consume `--text-primary`; supporting copy uses a smaller semantic size, regular weight, and the existing `--text-tertiary` / `--text-muted` contract. Registry uses a 600 Field Label weight and 400 Supporting weight, remaining softer than Settings while retaining hierarchy even when configurable text tones are visually close. Generic control typography is the base contract, and domain specializations may override it when their semantic role takes precedence over compatibility styling. Palette JSON is the reference code specialization: its composed Core/Registry textarea keeps generic geometry but resolves family, size, weight, and line height from the code role after the generic textarea rules.
+
+Typography family, size, weight, and line height remain non-user-adjustable. `text.secondary` and `text.tertiary` are future Advanced Appearance candidates only; they are not parameters in the current Typography Foundation.
+
+Typography Appearance Parameters are deferred until after Spacing Foundation and require stable semantic parameter IDs rather than persisted CSS variable names. Future work may consider validated UI/monospace family presets and role-specific size, weight, and line-height overrides; it must not introduce an independent Text Scale by default or treat design tokens as persistence IDs.
+
 ## Registry Tool UI Contract
 
 Registry tools must be declarative. A `.tool.jsx` file may provide only tool metadata, i18n dictionaries, sections, fields, actions, and host action references.

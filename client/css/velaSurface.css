@@ -58,7 +58,7 @@
 .vela-transcript-intro {
     margin: 0;
     color: var(--text-secondary);
-    font-size: var(--font-small);
+    font-size: var(--type-supporting-size);
     line-height: 1.5;
 }
 
@@ -75,7 +75,7 @@
     overflow-wrap: anywhere;
     margin: 0;
     color: var(--text-primary);
-    font-size: var(--font-small);
+    font-size: var(--type-supporting-size);
     line-height: 1.5;
     white-space: pre-wrap;
     word-break: break-word;
@@ -140,7 +140,10 @@
     border-radius: var(--radius-sm);
     background: var(--bg-main);
     color: var(--text-primary);
-    font: inherit;
+    font-family: var(--font-ui);
+    font-size: var(--type-control-size);
+    font-weight: var(--type-control-weight);
+    line-height: var(--type-control-line-height);
 }
 
 .vela-composer-input::placeholder {
@@ -173,7 +176,7 @@
     border-radius: var(--radius-sm);
     background: var(--bg-main);
     box-shadow: none;
-    font-size: var(--font-small);
+    font-size: var(--type-supporting-size);
     line-height: 1;
 }
 
@@ -186,7 +189,7 @@
     min-height: var(--vela-controls-min-height);
     padding: 0 0 var(--vela-surface-inset);
     color: var(--text-secondary);
-    font-size: var(--font-small);
+    font-size: var(--type-supporting-size);
     pointer-events: none;
 }
 
@@ -239,7 +242,7 @@
     min-width: 0;
     overflow: hidden;
     color: var(--text-secondary);
-    font-size: var(--font-small);
+    font-size: var(--type-supporting-size);
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -257,7 +260,7 @@
     border-radius: var(--radius-sm);
     background: var(--bg-main);
     box-shadow: none;
-    font-size: var(--font-small);
+    font-size: var(--type-supporting-size);
     line-height: 1;
     text-overflow: ellipsis;
     white-space: nowrap;
