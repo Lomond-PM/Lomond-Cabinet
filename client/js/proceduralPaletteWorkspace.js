@@ -321,6 +321,34 @@
         var inputId = "paletteEditor" + role.charAt(0).toUpperCase() + role.slice(1);
         var normalizeHex = options.normalizeHex || function (color, fallback) { return color || fallback; };
         var normalized = normalizeHex(value, "#000000");
+        var built;
+        function applyDraft(valueToApply) {
+            var color = normalizeHex(valueToApply, normalized).toUpperCase();
+            var patch;
+            if (!/^#[0-9A-F]{6}$/.test(color)) return;
+            patch = { colors: {} };
+            patch.colors[role] = color;
+            updateEditorDraft(patch);
+        }
+        if (options.CoreUI) {
+            built = options.CoreUI.createColorField({
+                document: getDocument(),
+                id: inputId,
+                value: normalized,
+                fallback: "#000000",
+                normalize: normalizeHex,
+                isValid: function (candidate) { return /^#?[0-9a-fA-F]{6}$/.test(candidate); },
+                classNames: "control-inputs settings-field-control settings-color-control palette-editor-color-control",
+                swatchClassNames: "settings-color-pill small-color-shell",
+                valueClassNames: "native-color-input",
+                hexClassNames: "settings-color-hex",
+                onPreview: applyDraft,
+                onCommit: applyDraft,
+                openPicker: options.openCoreColorPicker
+            });
+            if (options.bindHexInputSelectBehavior) options.bindHexInputSelectBehavior(built.hex);
+            return built.root;
+        }
         if (!controls || !shell || !input || !hexInput) {
             return null;
         }
@@ -512,6 +540,7 @@
         resetOptions = resetOptions || {};
 
         workspaceOpen = false;
+        if (options.closeColorPicker) options.closeColorPicker("palette-close");
         clearTransition();
         clearWorkspaceBindings();
         clearPreviewRafs();
@@ -562,6 +591,7 @@
         if (mount && resetOptions.renderLauncher !== false) {
             renderLauncher(mount);
         }
+        if (options.setSettingsBackParent) options.setSettingsBackParent("common.home");
     }
 
     function openWorkspace() {
@@ -589,6 +619,7 @@
             content.scrollTop = 0;
         }
         view.classList.add("is-palette-workspace", "is-palette-workspace-entering");
+        if (options.setSettingsBackParent) options.setSettingsBackParent("common.settings");
         refresh();
         if (options.nextFrame) {
             options.nextFrame(function () {
@@ -857,13 +888,19 @@
     }
 
     function createButton(labelKey, className, handler) {
-        var button = createElement("button");
-        button.type = "button";
-        button.className = "panel-button registry-large-button " + (className || "");
+        var button = options.CoreUI ? options.CoreUI.createButton({ document: getDocument(), variant: className && className.indexOf("is-primary") >= 0 ? "primary" : (className && className.indexOf("is-danger") >= 0 ? "danger" : "neutral"), classNames: "panel-button registry-large-button " + (className || ""), onClick: handler }) : createElement("button");
+        if (!options.CoreUI) { button.type = "button"; button.className = "panel-button registry-large-button " + (className || ""); button.addEventListener("click", handler); }
         button.setAttribute("data-i18n", labelKey);
         button.textContent = tr(labelKey);
-        button.addEventListener("click", handler);
         return button;
+    }
+
+    function requestWorkspaceBack() {
+        if (editorState && editorState.dirty) {
+            requestTransition(function () { closeWorkspace({ reason: "back", animate: true }); });
+            return;
+        }
+        closeWorkspace({ reason: "back", animate: true });
     }
 
     function renderActionBar() {
@@ -1093,16 +1130,6 @@
         mount.innerHTML = "";
         mount.className = "settings-section settings-section--palette-library palette-workspace-section";
         heading = options.createSettingsSectionHeader ? options.createSettingsSectionHeader("section.procedural", "paletteLibrary.title", "paletteLibrary.description") : createElement("div");
-        back = createButton("paletteLibrary.backToSettings", "palette-workspace-back", function () {
-            if (editorState && editorState.dirty) {
-                requestTransition(function () {
-                    closeWorkspace({ reason: "back", animate: true });
-                });
-                return;
-            }
-            closeWorkspace({ reason: "back", animate: true });
-        });
-        heading.appendChild(back);
         mount.appendChild(heading);
 
         workspace = createElement("div");
@@ -1190,11 +1217,13 @@
         getPaletteToolRows().forEach(function (tool) {
             var row = createElement("div");
             var label = createElement("span");
-            var select = createElement("select");
+            var select = options.CoreUI ? options.CoreUI.createSelect({ document: getDocument(), id: "paletteToolMap_" + tool.toolId, classNames: "select-input settings-select", onChange: function () {
+                store.setToolPalette(tool.toolId, this.value);
+                refreshPaletteDrivenHomeIcons();
+            } }) : createElement("select");
             row.className = "palette-tool-map-row";
             label.innerHTML = escapeHtml(tr(tool.titleKey)) + "<small>" + escapeHtml(tool.toolId) + "</small>";
-            select.id = "paletteToolMap_" + tool.toolId;
-            select.className = "select-input settings-select";
+            if (!options.CoreUI) { select.id = "paletteToolMap_" + tool.toolId; select.className = "select-input settings-select"; }
             palettes.filter(function (palette) { return !palette.isHidden; }).forEach(function (palette) {
                 var option = createElement("option");
                 option.value = palette.id;
@@ -1204,10 +1233,7 @@
                 }
                 select.appendChild(option);
             });
-            select.addEventListener("change", function () {
-                store.setToolPalette(tool.toolId, this.value);
-                refreshPaletteDrivenHomeIcons();
-            });
+            if (!options.CoreUI) select.addEventListener("change", function () { store.setToolPalette(tool.toolId, this.value); refreshPaletteDrivenHomeIcons(); });
             row.appendChild(label);
             row.appendChild(select);
             section.appendChild(row);
@@ -1227,8 +1253,8 @@
         var importDescription = createElement("p");
         var exportLabel = createElement("label");
         var importLabel = createElement("label");
-        var exportTextarea = createElement("textarea");
-        var importTextarea = createElement("textarea");
+        var exportTextarea = options.CoreUI ? options.CoreUI.createTextarea({ document: getDocument(), classNames: "registry-textarea palette-json-box palette-json-export" }) : createElement("textarea");
+        var importTextarea = options.CoreUI ? options.CoreUI.createTextarea({ document: getDocument(), classNames: "registry-textarea palette-json-box palette-json-import" }) : createElement("textarea");
         var exportActions = createElement("div");
         var importActions = createElement("div");
         var validationStatus = createElement("small");
@@ -1286,7 +1312,7 @@
         exportTitle.textContent = tr("paletteLibrary.exportConfiguration");
         exportDescription.textContent = tr("paletteLibrary.exportDescription");
         exportLabel.textContent = tr("paletteLibrary.exportResult");
-        exportTextarea.className = "registry-textarea palette-json-box palette-json-export";
+        if (!options.CoreUI) exportTextarea.className = "registry-textarea palette-json-box palette-json-export";
         exportTextarea.readOnly = true;
         exportTextarea.setAttribute("aria-label", tr("paletteLibrary.exportResult"));
         exportActions.className = "settings-action-row palette-library-actions";
@@ -1315,7 +1341,7 @@
         importTitle.textContent = tr("paletteLibrary.importConfiguration");
         importDescription.textContent = tr("paletteLibrary.importDescription");
         importLabel.textContent = tr("paletteLibrary.importInput");
-        importTextarea.className = "registry-textarea palette-json-box palette-json-import";
+        if (!options.CoreUI) importTextarea.className = "registry-textarea palette-json-box palette-json-import";
         importTextarea.placeholder = tr("paletteLibrary.pasteJsonPlaceholder");
         importTextarea.setAttribute("aria-label", tr("paletteLibrary.importInput"));
         validationStatus.className = "palette-json-validation";
@@ -1433,6 +1459,10 @@
         },
         isOpen: function () {
             return workspaceOpen;
+        },
+        requestBack: function () {
+            requestWorkspaceBack();
+            return api;
         },
         refresh: function () {
             refresh();

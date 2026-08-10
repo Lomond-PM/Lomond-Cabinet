@@ -255,6 +255,14 @@ When adding a tool:
 - Add i18n keys for every label.
 - Do not create a visually separate mini-design system inside one tool.
 
+## Core UI Component Visual Contract
+
+Generic editable controls use `.ui-*` selectors as their canonical visual contract. Registry-prefixed selectors remain compatibility aliases through at least one complete AE regression cycle; Settings, Registry, and Palette continue to own their composition, layout, persistence, and domain behavior.
+
+`CoreUI.createColorField()` owns reusable swatch/value/Hex DOM and invokes the shared app-level color picker seam. The existing HSV/RGB canvas, portal, positioning, cleanup, eyedropper, and ColorSampler implementation remains shared infrastructure rather than domain policy.
+
+Nested Settings surfaces use the left header control for parent navigation: Settings root returns to Home, while Interface Appearance and Palette Workspace return to Settings. Palette Workspace retains its own lifecycle and unsaved-change gate and is not promoted into a new System Router hierarchy.
+
 ## Registry Tool UI Contract
 
 Registry tools must be declarative. A `.tool.jsx` file may provide only tool metadata, i18n dictionaries, sections, fields, actions, and host action references.

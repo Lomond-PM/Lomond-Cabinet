@@ -1983,39 +1983,11 @@
     }
 
     function createSharedSettingsColorControl(field, inputId, fallbackColor, shellClassName) {
-        var controls = document.createElement("span");
-        var shell = document.createElement("button");
-        var input = document.createElement("input");
-        var hexInput = document.createElement("input");
         var fallback = fallbackColor || "#ffffff";
-
-        controls.className = "control-inputs settings-field-control registry-color-control settings-color-control";
-        shell.className = "registry-color-swatch settings-color-pill" + (shellClassName ? " " + shellClassName : "");
-        shell.type = "button";
-        shell.setAttribute("aria-label", tr(field.labelKey));
-        shell.setAttribute("data-color-target", inputId);
-        input.id = inputId;
-        input.className = "native-color-input";
-        input.type = "hidden";
-        input.value = normalizeHex(field.defaultValue, fallback);
-        hexInput.id = inputId + "Hex";
-        hexInput.className = "registry-color-hex settings-color-hex";
-        hexInput.type = "text";
-        hexInput.value = input.value;
-        hexInput.setAttribute("spellcheck", "false");
-        bindHexInputSelectBehavior(hexInput);
-
-        function syncColorUi(value) {
-            var previous = input.value || fallback;
-            var normalized = normalizeHex(value, previous || fallback).toLowerCase();
-            input.value = normalized;
-            hexInput.value = normalized;
-            shell.style.backgroundColor = normalized;
-            return normalized;
-        }
+        var built;
 
         function applyHex(value) {
-            var normalized = syncColorUi(value);
+            var normalized = normalizeHex(value, built ? built.input.value : fallback).toLowerCase();
             if (BackgroundEngine.handleColorChange(inputId, normalized)) {
                 return;
             }
@@ -2034,42 +2006,27 @@
                 saveSettings();
             }
         }
-
-        hexInput._registryOnValueChange = function () {
-            applyHex(hexInput.value);
-        };
-        hexInput.addEventListener("input", function () {
-            if (/^#?[0-9a-fA-F]{6}$/.test(this.value)) {
-                applyHex(this.value);
+        built = window.CoreUI.createColorField({
+            document: document,
+            id: inputId,
+            value: normalizeHex(field.defaultValue, fallback),
+            fallback: fallback,
+            normalize: normalizeHex,
+            isValid: function (value) { return /^#?[0-9a-fA-F]{6}$/.test(value); },
+            ariaLabel: tr(field.labelKey),
+            classNames: "control-inputs settings-field-control settings-color-control",
+            swatchClassNames: "settings-color-pill" + (shellClassName ? " " + shellClassName : ""),
+            valueClassNames: "native-color-input",
+            hexClassNames: "settings-color-hex",
+            onPreview: applyHex,
+            onCommit: applyHex,
+            openPicker: function (pickerOptions) {
+                openCoreColorPicker(pickerOptions);
             }
         });
-        hexInput.addEventListener("change", function () {
-            applyHex(this.value);
-        });
-        hexInput.addEventListener("blur", function () {
-            applyHex(this.value);
-        });
-        hexInput.addEventListener("keydown", function (event) {
-            if (event.keyCode === 13) {
-                event.preventDefault();
-                applyHex(this.value);
-                this.blur();
-            } else if (event.keyCode === 27) {
-                event.preventDefault();
-                this.value = input.value || fallback;
-                this.blur();
-            }
-        });
-        shell.addEventListener("click", function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            openRegistryColorPicker(hexInput, shell, fallback);
-        });
-        shell.appendChild(input);
-        controls.appendChild(shell);
-        controls.appendChild(hexInput);
-        syncColorUi(input.value);
-        return controls;
+        bindHexInputSelectBehavior(built.hex);
+        built.hex.addEventListener("blur", function () { built.setValue(this.value); applyHex(this.value); });
+        return built.root;
     }
 
     function renderSettingsLanguage() {
@@ -3111,6 +3068,8 @@
             normalizeHex: normalizeHex,
             bindHexInputSelectBehavior: bindHexInputSelectBehavior,
             openRegistryColorPicker: openRegistryColorPicker,
+            openCoreColorPicker: openCoreColorPicker,
+            closeColorPicker: closeRegistryColorPicker,
             applySchemaNumberAttributes: applySchemaNumberAttributes,
             isSchemaNumberDraftValue: isSchemaNumberDraftValue,
             setupRegistryNumberDrag: setupRegistryNumberDrag,
@@ -3118,7 +3077,8 @@
             escapeHtml: escapeHtml,
             applyI18n: applyI18n,
             readStorageValue: readUiStorageValue,
-            writeStorageValue: writeUiStorageValue
+            writeStorageValue: writeUiStorageValue,
+            setSettingsBackParent: setSettingsBackParent
         });
         return PaletteWorkspaceController;
     }
@@ -5743,18 +5703,30 @@
         ctx.putImageData(image, 0, 0);
     }
 
-    function closeRegistryColorPicker() {
+    function openCoreColorPicker(options) {
+        options = options || {};
+        return openRegistryColorPicker(options.hexInput, options.swatch, options.fallback, {
+            onPreview: options.onPreview,
+            onCommit: options.onCommit,
+            onCancel: options.onCancel
+        });
+    }
+
+    function closeRegistryColorPicker(reason) {
         var picker = document.querySelector(".registry-color-picker-popover");
         if (picker && picker._cleanupColorPicker) {
-            picker._cleanupColorPicker();
+            picker._cleanupColorPicker(reason || "close");
         }
         if (picker && picker.parentNode) {
             picker.parentNode.removeChild(picker);
         }
     }
 
-    function openRegistryColorPicker(hexInput, swatch, fallback) {
+    function openRegistryColorPicker(hexInput, swatch, fallback, lifecycle) {
         var color = makeColorStateFromRgb(parseHexColor(hexInput.value || fallback || "#ffffff", fallback || "#ffffff"));
+        var initialHex = formatHexColor(color, false);
+        var committedHex = initialHex;
+        var hasUncommittedPreview = false;
         var axisMode = loadColorPickerAxisMode();
         var popover;
         var axisControls;
@@ -5790,9 +5762,18 @@
             planeHandle.style.top = (point.y * 100) + "%";
             axisHandle.style.left = (getAxisValue(color, axisMode) * 100) + "%";
             syncChannelSliders();
-            if (!skipNotify && hexInput._registryOnValueChange) {
-                hexInput._registryOnValueChange();
+            if (!skipNotify) {
+                hasUncommittedPreview = true;
+                if (lifecycle && lifecycle.onPreview) lifecycle.onPreview(hex);
+                else if (hexInput._registryOnValueChange) hexInput._registryOnValueChange();
             }
+        }
+
+        function commitColor() {
+            var hex = formatHexColor(color, false);
+            if (hasUncommittedPreview && lifecycle && lifecycle.onCommit) lifecycle.onCommit(hex);
+            committedHex = hex;
+            hasUncommittedPreview = false;
         }
 
         function syncChannelSliders() {
@@ -5879,6 +5860,7 @@
             function up() {
                 document.removeEventListener("mousemove", move);
                 document.removeEventListener("mouseup", up);
+                commitColor();
             }
             event.preventDefault();
             updateFn(event);
@@ -5933,6 +5915,7 @@
                 setEyedropperBusy(false);
                 if (result && result.ok && isCompleteHexColor(result.hex)) {
                     applyColor(makeColorStateFromRgb(parseHexColor(result.hex, formatHexColor(color, false))));
+                    commitColor();
                     setEyedropperStatus("picked", "ok");
                     return;
                 }
@@ -5957,7 +5940,7 @@
             });
         }
 
-        function cleanup() {
+        function cleanup(reason) {
             setEyedropperBusy(false);
             window.removeEventListener("resize", renderAll);
             window.removeEventListener("scroll", closeRegistryColorPicker, true);
@@ -5965,12 +5948,14 @@
                 document.removeEventListener("mousedown", outsideHandler);
                 outsideHandler = null;
             }
+            if (hasUncommittedPreview && lifecycle && lifecycle.onCancel) lifecycle.onCancel(committedHex, reason || "close");
+            hasUncommittedPreview = false;
         }
 
         function bindOutsideClose() {
             outsideHandler = function (event) {
                 if (!popover.contains(event.target) && event.target !== swatch) {
-                    closeRegistryColorPicker();
+                    closeRegistryColorPicker("outside");
                 }
             };
             if (!outsideBound) {
@@ -6063,6 +6048,7 @@
                 slider.addEventListener("input", function () {
                     applyColor(colorFromChannelValue(key, this.value));
                 });
+                slider.addEventListener("change", commitColor);
                 channelSliders[key] = slider;
                 row.appendChild(text);
                 row.appendChild(slider);
@@ -6136,6 +6122,7 @@
         hexEdit.addEventListener("change", function () {
             color = makeColorStateFromRgb(parseHexColor(this.value, fallback || "#ffffff"));
             applyColor(color);
+            commitColor();
         });
 
         outputRow = document.createElement("div");
@@ -7830,6 +7817,11 @@
             return;
         }
 
+        if (typeof input._coreColorFieldSetValue === "function") {
+            input._coreColorFieldSetValue(normalized);
+            return;
+        }
+
         shell = input.parentNode;
         hexInput = byId(inputId + "Hex");
         input.value = normalized;
@@ -8986,20 +8978,31 @@
         var appearance = byId("settingsAppearancePage");
         var heading = document.querySelector("#settingsView .settings-header h2");
         if (!root || !appearance) return false;
+        closeRegistryColorPicker("route-change");
         endSettingsPeekManipulation();
         root.hidden = pageId === "appearance";
         appearance.hidden = pageId !== "appearance";
         if (heading) heading.textContent = tr(pageId === "appearance" ? "settings.appearance.title" : "common.settings");
+        setSettingsBackParent(pageId === "appearance" ? "common.settings" : "common.home");
         closeCustomSelectMenus();
         return true;
+    }
+
+    function setSettingsBackParent(labelKey) {
+        var label = byId("settingsBackLabel");
+        var button = byId("closeSettingsBtn");
+        if (!label || !button) return;
+        label.setAttribute("data-i18n", labelKey);
+        label.textContent = tr(labelKey);
+        button.classList.toggle("is-nested-navigation", labelKey !== "common.home");
     }
 
     function createAppearanceAdvancedField(parameter) {
         var row = document.createElement("div");
         var label = document.createElement("label");
-        var input = document.createElement("input");
+        var colorField;
         var state = document.createElement("small");
-        var reset = window.CoreUI.createButton({ document: document, classNames: "panel-button appearance-reset-button" });
+        var reset = window.CoreUI.createButton({ document: document, variant: "neutral", classNames: "panel-button appearance-reset-button" });
         function refreshState() {
             var overridden = CoreAppearance && CoreAppearance.getOverride(parameter.id) !== null;
             var stateKey = overridden ? "settings.appearance.overridden" : "settings.appearance.inherited";
@@ -9011,18 +9014,30 @@
         label.className = "settings-field-label";
         label.setAttribute("data-i18n", parameter.labelKey);
         label.textContent = tr(parameter.labelKey);
-        input.type = "color";
-        input.className = "appearance-color-input ui-color-input";
-        input.value = CoreAppearance.getResolvedValue(parameter.id);
-        input.setAttribute("data-appearance-parameter", parameter.id);
+        colorField = window.CoreUI.createColorField({
+            document: document,
+            id: "appearance_" + parameter.id.replace(/\./g, "_"),
+            value: CoreAppearance.getResolvedValue(parameter.id),
+            fallback: CoreAppearance.getResolvedValue(parameter.id),
+            normalize: normalizeHex,
+            isValid: function (value) { return /^#?[0-9a-fA-F]{6}$/.test(value); },
+            ariaLabel: tr(parameter.labelKey),
+            classNames: "appearance-color-field",
+            swatchClassNames: "appearance-color-swatch",
+            hexClassNames: "appearance-color-hex",
+            onPreview: function (value) { CoreAppearance.preview(parameter.id, value); },
+            onCommit: function (value) { CoreAppearance.commit(parameter.id, value); refreshState(); },
+            onCancel: function () { CoreAppearance.clearPreview(parameter.id); colorField.setValue(CoreAppearance.getResolvedValue(parameter.id)); },
+            openPicker: openCoreColorPicker
+        });
+        colorField.root.setAttribute("data-appearance-parameter", parameter.id);
+        bindHexInputSelectBehavior(colorField.hex);
         state.className = "settings-field-description appearance-override-state";
         reset.setAttribute("data-i18n", "settings.appearance.reset");
         reset.textContent = tr("settings.appearance.reset");
-        input.addEventListener("input", function () { CoreAppearance.preview(parameter.id, input.value); });
-        input.addEventListener("change", function () { CoreAppearance.commit(parameter.id, input.value); refreshState(); });
-        reset.addEventListener("click", function () { CoreAppearance.reset(parameter.id); input.value = CoreAppearance.getResolvedValue(parameter.id); refreshState(); });
+        reset.addEventListener("click", function () { CoreAppearance.reset(parameter.id); colorField.setValue(CoreAppearance.getResolvedValue(parameter.id)); refreshState(); });
         row.appendChild(label);
-        row.appendChild(input);
+        row.appendChild(colorField.root);
         row.appendChild(state);
         row.appendChild(reset);
         refreshState();
@@ -9081,6 +9096,11 @@
     }
 
     function requestSettingsBack() {
+        var palette = getPaletteWorkspaceController();
+        if (palette && typeof palette.isOpen === "function" && palette.isOpen() && typeof palette.requestBack === "function") {
+            palette.requestBack();
+            return;
+        }
         if (SystemRouter && SystemRouter.getActiveRoute()) SystemRouter.back();
         else closeSettingsPanel();
     }

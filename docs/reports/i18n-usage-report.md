@@ -61,7 +61,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | common.fixed | common | Fixed | 固定 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.global | common | Global | 全局 | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.gradient | common | Gradient | 渐变 | host/tools/registryControlLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.home | common | Home | 主页 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.home | common | Home | 主页 | client/index.html, client/js/main.js, client/js/proceduralPaletteWorkspace.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.language | common | Language | 语言 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.left | common | Left | 左对齐 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.none | common | None | 无 | host/tools/adComponentKit.tool.jsx, host/tools/registryControlLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -75,7 +75,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | common.right | common | Right | 右对齐 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.rowMajor | common | Row-Major | 行优先 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.saved | common | Saved | 已保存 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.settings | common | Settings | 设置 | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.settings | common | Settings | 设置 | client/index.html, client/js/main.js, client/js/proceduralPaletteWorkspace.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.solid | common | Solid | 纯色 | host/tools/registryControlLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.timeline | common | Timeline | 时间线 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.unavailable | common | Unavailable | 不可用 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -228,7 +228,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | label.trimOffset | label | Trim Offset | 修剪偏移 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.trimStart | label | Trim Start | 修剪开始 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.uiScale | label | UI scale | UI 缩放 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| paletteLibrary.backToSettings | paletteLibrary | Back to Settings | 返回设置 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.backToSettings | paletteLibrary | Back to Settings | 返回设置 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.base | paletteLibrary | Base | 主色 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.builtIn | paletteLibrary | Built-in | 内置 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.cancel | paletteLibrary | Cancel | 取消 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
