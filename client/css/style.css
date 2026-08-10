@@ -23,6 +23,7 @@
     --action-primary-surface: var(--gold-button);
     --action-primary-hover-surface: var(--gold-hot);
     --action-primary-foreground: var(--text-on-accent);
+    --action-neutral-surface: var(--surface-card);
     --selection-indicator-surface: var(--selection-bg);
 
     --surface-canvas: var(--bg-main);
@@ -196,6 +197,12 @@
     --tool-icon-radius: var(--home-tool-icon-radius);
     --home-drag-shadow-primary: rgba(0, 0, 0, 0.48);
     --home-drag-shadow-secondary: rgba(0, 0, 0, 0.32);
+    --elevation-surface-shell: 0 18px 48px rgba(0, 0, 0, 0.38);
+    --elevation-primary-action: 0 4px 10px rgba(0, 0, 0, 0.18);
+    --elevation-floating-surface: 0 12px 26px rgba(0, 0, 0, 0.34);
+    --elevation-floating-picker: 0 14px 28px rgba(0, 0, 0, 0.42);
+    --elevation-action-container: 0 12px 30px rgba(0, 0, 0, 0.28);
+    --elevation-registry-preview-prominence: 0 calc(12px * var(--ui-scale)) calc(24px * var(--ui-scale)) rgba(0, 0, 0, 0.24);
     --tool-icon-small-size: calc(50px * var(--ui-scale));
     --button-height: calc(38px * var(--ui-scale));
     --button-pad-x: calc(14px * var(--ui-scale));
@@ -285,7 +292,7 @@ body:not(.i18n-ready) .app-shell {
     border: 1px solid var(--border-default);
     border-radius: 22px;
     background: var(--surface-panel);
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
+    box-shadow: var(--elevation-surface-shell);
 }
 
 .home-background {
@@ -540,6 +547,7 @@ body:not(.i18n-ready) .app-shell {
     background: transparent;
     border-color: transparent;
     box-shadow: none;
+    overflow: visible;
 }
 
 .settings-view.is-peek-preview .settings-header {
@@ -548,7 +556,7 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .settings-view.is-peek-preview .settings-content {
-    overflow: hidden;
+    overflow: visible;
 }
 
 .settings-content {
@@ -1421,7 +1429,11 @@ body:not(.i18n-ready) .app-shell {
     gap: calc(8px * var(--ui-scale));
     padding: calc(10px * var(--ui-scale)) 0 0;
     border-top: 1px solid var(--separator);
-    background: #0b0a08;
+    background: var(--surface-panel);
+}
+
+.palette-editor-action-bar .palette-library-action:not(.is-primary):not(.is-danger) {
+    background: var(--action-neutral-surface);
 }
 
 .palette-editor-action-bar .palette-library-action {
@@ -2304,7 +2316,37 @@ p {
     position: relative;
     border: 1px solid var(--panel-border);
     background: #12110e;
+}
+
+.ui-button--neutral,
+.ui-button--navigation,
+.panel-button {
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+
+.panel-local-action:not(.is-primary):not(.is-danger) {
+    background: var(--action-neutral-surface);
+    box-shadow: none;
+}
+
+.tool-icon {
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+
+.info-panel {
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+
+.status-pill {
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+
+.selection-chip {
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+
+.action-sheet {
+    box-shadow: var(--elevation-action-container);
 }
 
 .panel-card {
@@ -2891,7 +2933,7 @@ p {
     border: 1px solid var(--border-default);
     border-radius: 14px;
     background: var(--select-menu-surface);
-    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.34);
+    box-shadow: var(--elevation-floating-surface);
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
@@ -3186,6 +3228,28 @@ p {
     color: var(--action-primary-foreground);
     font-size: var(--font-h3);
     font-weight: 800;
+}
+
+.primary-action,
+.ui-button--primary {
+    box-shadow: var(--elevation-primary-action);
+}
+
+.secondary-action,
+.registry-secondary-action,
+.ui-button--danger {
+    box-shadow: none;
+}
+
+.primary-action:disabled,
+.secondary-action:disabled,
+.registry-secondary-action:disabled,
+.panel-local-action:disabled,
+.ui-button--primary:disabled,
+.ui-button--neutral:disabled,
+.ui-button--navigation:disabled,
+.ui-button--danger:disabled {
+    box-shadow: none;
 }
 
 .primary-action:hover {
@@ -3844,7 +3908,7 @@ p {
     display: flex;
     flex-direction: column;
     gap: calc(10px * var(--ui-scale));
-    box-shadow: 0 calc(12px * var(--ui-scale)) calc(24px * var(--ui-scale)) rgba(0, 0, 0, 0.24);
+    box-shadow: var(--elevation-registry-preview-prominence);
 }
 
 .registry-procedural-preview-canvas {
@@ -4051,7 +4115,7 @@ p {
     border: 1px solid var(--panel-border);
     border-radius: var(--radius-md);
     background: var(--surface-panel);
-    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.42);
+    box-shadow: var(--elevation-floating-picker);
 }
 
 .registry-color-axis-controls {
