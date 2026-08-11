@@ -593,3 +593,12 @@ Before the 0.2.3 release, the current design-system-relevant cleanup state is:
 0.3.1 performs only a narrow semantic-token consolidation: muted text has an explicit tertiary alias, and proven shared panel surfaces, on-accent text, danger presentation, and Settings dividers use named tokens without changing their audited values. Full spacing, typography, radius, shadow, and control-size tokenization remains deferred.
 
 Settings retains its fixed UI-scale isolation, Vela retains its existing Wide / Compact / Narrow responsive geometry, and procedural appearance retains its separate runtime presentation ownership.
+# Motion / Transition Foundation (0.3.2 Phase 1)
+
+Motion defaults and motion lifecycle are separate capabilities. `MotionDefaults` owns semantic duration/easing roles; `CoreMotion` owns scoped presentation transactions, cancellation, stale-callback guards, frame scheduling, and idempotent cleanup. CSS remains the owner of action feedback, focus immediacy, simple surface state, and collapse presentation. Geometry-dependent spatial surface morphs use domain-provided rects/radii and the shared transaction lifecycle.
+
+`motion.speed` is the persisted **Major View Motion Speed** multiplier. It applies only to major view content and spatial morph presentation, never action feedback, focus, pointer tracking, responsive reflow, Peek qualification, provider/runtime timers, Vela resize, or procedural drift. Business/runtime state, presentation state, and motion transactions are independent; completion of a motion transaction has no authority to commit routes, Registry state, persistence, or tool runtime state.
+
+The current `.is-animating` class remains a domain compatibility guard, not a CoreMotion singleton constraint. Different scoped keys may coexist. Future adapters may therefore provide capsule or other geometry without modifying CoreMotion; identity/content handoff stays in the adapter.
+
+Expected Phase 1 visual delta: **NONE**.

@@ -112,6 +112,8 @@
         launch: 480,
         close: 360
     };
+    var MotionDefaults = window.MotionDefaults;
+    var coreMotion = window.CoreMotion ? window.CoreMotion.create() : null;
     var StorageKeys = {
         ecommerce: "AEToolbox.ecommerceLayout.v1",
         settings: "AEToolbox.settings.v1",
@@ -353,6 +355,14 @@
 
     function duration(name) {
         return Math.max(80, Math.round(Motion[name] * motionScale));
+    }
+
+    function semanticMotionDuration(role) {
+        return MotionDefaults ? MotionDefaults.resolveDuration(role, motionScale) : duration(role === "spatialMorphExpand" ? "launch" : role === "spatialMorphContract" ? "close" : "fast");
+    }
+
+    function syncMotionCssDurations() {
+        if (MotionDefaults) { MotionDefaults.applyCss(document.documentElement, motionScale); }
     }
 
     function loadStoredJson(key, fallback) {
@@ -3796,14 +3806,46 @@
     function getSystemLaunchSourceRect(sourceElement) {
         var home = byId("homeView");
         var previousTransition = home.style.transition;
+        var previousClassName = home.className;
         var rect;
         home.style.transition = "none";
         home.classList.add("is-active");
         home.classList.remove("is-opening", "is-returning");
         home.offsetWidth;
         rect = sourceElement.getBoundingClientRect();
+        home.className = previousClassName;
         home.style.transition = previousTransition;
         return rect;
+    }
+
+    function beginSpatialSurfaceMorph(key, total, done) {
+        var transaction;
+        var gate;
+        if (!coreMotion) {
+            return { transaction: null, completePart: makeAnimationGate(total, done) };
+        }
+        transaction = coreMotion.run(key, {
+            startWhileRunning: "replace",
+            run: function (current) {
+                gate = makeAnimationGate(total, current.guard(function () {
+                    current.complete();
+                    done();
+                }));
+            }
+        });
+        return { transaction: transaction, completePart: gate };
+    }
+
+    function playSpatialAnimation(transaction, element, keyframes, options, done) {
+        var animation = playAnimation(element, keyframes, options, transaction ? transaction.guard(done) : done);
+        if (transaction && animation && typeof animation.cancel === "function") {
+            transaction.addCleanup(function () {
+                animation.onfinish = null;
+                animation.oncancel = null;
+                try { animation.cancel(); } catch (ignored) {}
+            });
+        }
+        return animation;
     }
 
     /*
@@ -3910,7 +3952,7 @@
         detail.classList.add("content-reveal");
         window.setTimeout(function () {
             detail.classList.remove("content-reveal");
-        }, Math.max(190, duration("fast")));
+        }, semanticMotionDuration("viewContentEnter") + 10);
     }
 
     function exitDetailContent(done) {
@@ -3923,7 +3965,7 @@
             if (done) {
                 done();
             }
-        }, Math.max(120, Math.min(150, duration("fast"))));
+        }, semanticMotionDuration("viewContentExit"));
     }
 
     function clearSettingsContentClasses() {
@@ -3943,7 +3985,7 @@
         view.classList.add("content-reveal");
         window.setTimeout(function () {
             view.classList.remove("content-reveal");
-        }, Math.max(190, duration("fast")));
+        }, semanticMotionDuration("viewContentEnter") + 10);
     }
 
     function exitSettingsContent(done) {
@@ -3956,7 +3998,7 @@
             if (done) {
                 done();
             }
-        }, Math.max(120, Math.min(150, duration("fast"))));
+        }, semanticMotionDuration("viewContentExit"));
     }
 
     function setDetailMorphRect(detail, rect, radius) {
@@ -7226,6 +7268,7 @@
         var targetRect;
         var overlay;
         var finishGate;
+        var spatialMotion;
 
         if (panelShuttingDown) {
             return;
@@ -7274,11 +7317,12 @@
             overlay.style.transform = "scale(1)";
             overlay.style.filter = "blur(0px)";
             home.classList.add("is-opening");
-            finishGate = makeAnimationGate(2, function () {
+            spatialMotion = beginSpatialSurfaceMorph("system:view", 2, function () {
                 finishOpenTransition(detail, toolId);
             });
+            finishGate = spatialMotion.completePart;
 
-            playAnimation(detail, [
+            playSpatialAnimation(spatialMotion.transaction, detail, [
                 {
                     left: firstRect.left + "px",
                     top: firstRect.top + "px",
@@ -7294,18 +7338,18 @@
                     borderRadius: "22px"
                 }
             ], {
-                duration: duration("launch"),
-                easing: Motion.appleOut,
+                duration: semanticMotionDuration("spatialMorphExpand"),
+                easing: MotionDefaults ? MotionDefaults.easings.spatialMorphExpand : Motion.appleOut,
                 fill: "forwards"
             }, function () {
                 finishGate();
             });
 
-            playAnimation(overlay, [
+            playSpatialAnimation(spatialMotion.transaction, overlay, [
                 { opacity: "1", transform: "scale(1)", filter: "blur(0px)" },
                 { opacity: "0", transform: "scale(1.12)", filter: "blur(4px)" }
             ], {
-                duration: duration("normal"),
+                duration: semanticMotionDuration("spatialMorphIdentity"),
                 easing: Motion.appleOut,
                 fill: "forwards"
             }, function () {
@@ -7323,6 +7367,7 @@
         var targetRect;
         var overlay;
         var finishGate;
+        var spatialMotion;
 
         if (byId("appShell").classList.contains("is-animating")) {
             return;
@@ -7345,11 +7390,12 @@
             overlay.style.transform = "scale(1.12)";
             overlay.style.filter = "blur(4px)";
             home.classList.add("is-returning");
-            finishGate = makeAnimationGate(2, function () {
+            spatialMotion = beginSpatialSurfaceMorph("system:view", 2, function () {
                 finishCloseTransition(detail, toolButton);
             });
+            finishGate = spatialMotion.completePart;
 
-            playAnimation(detail, [
+            playSpatialAnimation(spatialMotion.transaction, detail, [
                 {
                     left: targetRect.left + "px",
                     top: targetRect.top + "px",
@@ -7365,19 +7411,19 @@
                     borderRadius: "24px"
                 }
             ], {
-                duration: duration("close"),
-                easing: Motion.appleIn,
+                duration: semanticMotionDuration("spatialMorphContract"),
+                easing: MotionDefaults ? MotionDefaults.easings.spatialMorphContract : Motion.appleIn,
                 fill: "forwards"
             }, function () {
                 finishGate();
             });
 
-            playAnimation(overlay, [
+            playSpatialAnimation(spatialMotion.transaction, overlay, [
                 { opacity: "0", transform: "scale(1.12)", filter: "blur(4px)" },
                 { opacity: "1", transform: "scale(1)", filter: "blur(0px)" }
             ], {
-                duration: duration("close"),
-                easing: Motion.appleIn,
+                duration: semanticMotionDuration("spatialMorphContract"),
+                easing: MotionDefaults ? MotionDefaults.easings.spatialMorphContract : Motion.appleIn,
                 fill: "forwards"
             }, function () {
                 finishGate();
@@ -7886,6 +7932,7 @@
             runtime: {
                 applyMotionSpeed: function (value) {
                     motionScale = clampNumber(value, DefaultSettings.motionSpeed, 0.75, 1.35);
+                    syncMotionCssDurations();
                 },
                 commitBaseInput: commitAppearanceBaseInput
             }
@@ -8856,6 +8903,7 @@
         byId("motionSpeed").value = speed;
         byId("motionSpeedNumber").value = speed;
         motionScale = speed;
+        syncMotionCssDurations();
         if (ensureCoreAppearance(data)) { CoreAppearance.setBaseInput("motion.speed", speed); }
         ProceduralAppearanceParams = normalizeProceduralAppearanceParams(data.proceduralParams);
         setProceduralAppearanceParamControls(ProceduralAppearanceParams);
@@ -9258,6 +9306,7 @@
         var target;
         var sourceRect;
         var finishGate;
+        var spatialMotion;
 
         if (focusSectionId) {
             pendingSettingsFocusSectionId = focusSectionId;
@@ -9291,11 +9340,12 @@
             backdrop.style.opacity = "0";
         }
 
-        finishGate = makeAnimationGate(backdrop ? 2 : 1, function () {
+        spatialMotion = beginSpatialSurfaceMorph("system:view", backdrop ? 2 : 1, function () {
             finishOpenSettingsTransition();
         });
+        finishGate = spatialMotion.completePart;
 
-        playAnimation(panel, [
+        playSpatialAnimation(spatialMotion.transaction, panel, [
             {
                 left: sourceRect.left + "px",
                 top: sourceRect.top + "px",
@@ -9311,19 +9361,19 @@
                 borderRadius: "22px"
             }
         ], {
-            duration: duration("launch"),
-            easing: Motion.appleOut,
+            duration: semanticMotionDuration("spatialMorphExpand"),
+            easing: MotionDefaults ? MotionDefaults.easings.spatialMorphExpand : Motion.appleOut,
             fill: "forwards"
         }, function () {
             finishGate();
         });
 
         if (backdrop) {
-            playAnimation(backdrop, [
+            playSpatialAnimation(spatialMotion.transaction, backdrop, [
                 { opacity: "0" },
                 { opacity: "1" }
             ], {
-                duration: duration("normal"),
+                duration: semanticMotionDuration("spatialMorphIdentity"),
                 easing: Motion.appleOut,
                 fill: "forwards"
             }, function () {
@@ -9340,6 +9390,7 @@
         var sourceRect;
         var currentRect;
         var finishGate;
+        var spatialMotion;
 
         endSettingsPeekManipulation();
         clearAppearancePreviews();
@@ -9364,11 +9415,12 @@
             suppressSettingsContent();
             view.classList.add("is-morphing");
 
-            finishGate = makeAnimationGate(backdrop ? 2 : 1, function () {
+            spatialMotion = beginSpatialSurfaceMorph("system:view", backdrop ? 2 : 1, function () {
                 finishCloseSettingsTransition();
             });
+            finishGate = spatialMotion.completePart;
 
-            playAnimation(panel, [
+            playSpatialAnimation(spatialMotion.transaction, panel, [
                 {
                     left: currentRect.left + "px",
                     top: currentRect.top + "px",
@@ -9384,20 +9436,20 @@
                     borderRadius: "19px"
                 }
             ], {
-                duration: duration("close"),
-                easing: Motion.appleIn,
+                duration: semanticMotionDuration("spatialMorphContract"),
+                easing: MotionDefaults ? MotionDefaults.easings.spatialMorphContract : Motion.appleIn,
                 fill: "forwards"
             }, function () {
                 finishGate();
             });
 
             if (backdrop) {
-                playAnimation(backdrop, [
+                playSpatialAnimation(spatialMotion.transaction, backdrop, [
                     { opacity: "1" },
                     { opacity: "0" }
                 ], {
-                    duration: duration("close"),
-                    easing: Motion.appleIn,
+                    duration: semanticMotionDuration("spatialMorphContract"),
+                    easing: MotionDefaults ? MotionDefaults.easings.spatialMorphContract : Motion.appleIn,
                     fill: "forwards"
                 }, function () {
                     finishGate();

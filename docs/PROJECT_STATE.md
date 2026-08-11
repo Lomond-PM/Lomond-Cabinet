@@ -284,3 +284,8 @@ The next development target is **0.3.2 — UI / Design System Foundation**. It s
 Registry evolves toward a typed Capability Registry consumable by both Agent and Human UI. Capabilities may be `read`, `analyze`, `mutate`, or `create`; a dedicated Human UI is not required for a capability to exist.
 
 Long-term natural-language understanding and candidate generation must remain separate from execution authority. Preserve typed allowlists, parameter schemas, trusted target binding, Context fingerprints, generation/replay protection, fresh Preflight, Execution Guard, Execution Adapter, Host allowlists, and lifecycle fail-closed behavior. Later authority work may replace single-message lexical denial, hard text/proposal splits, universal raw-message provenance, and confirm-every-action as the only authority model, but none of those migrations are part of 0.3.1.
+# 0.3.2 Motion Architecture Foundation
+
+Phase 1 establishes semantic Motion Defaults, CSS/JS view-content duration parity, and scoped `CoreMotion` transactions for the existing spatial surface morph path. Home/Detail and Home/Settings retain their existing geometry, radii, overlay/content choreography, 480ms expand and 360ms contract curves. The Settings launch-source measurement now restores the exact pre-measurement Home class and transition state.
+
+Deferred to Phase 2: action press perceptual centering; Tool open handoff/overlap; remaining Settings close paint-order or content choreography; nested Settings and Peek presentation; deeper morph reentrancy/resize remediation; full reduced-motion coverage; collapse actual-height remediation.
