@@ -332,3 +332,8 @@ Future reviewed contracts may migrate away from single-message lexical proposal 
 - reload clears acknowledgement/readiness/enablement;
 - Vela Persistent Surface mounts without a legacy Home/detail fallback;
 - no new console/bootstrap/controller errors appear.
+# Motion Phase 1 handoff
+
+Motion architecture is CSS-first for ordinary interactions and transaction-based only for cancellation-sensitive spatial presentation. `MotionDefaults` is the semantic source; `CoreMotion` is a domain-neutral scoped lifecycle engine. Domain adapters retain geometry, routing hooks, Palette/Peek/Appearance cleanup, and content handoff. The legacy global animation lock remains only around current Home/Settings flows.
+
+AE acceptance must confirm parity for Primary/Neutral/Danger interaction, Home↔Tool, Home↔Settings, collapse, Palette, Peek, drag and Vela, plus `motion.speed` values 0.75/1/1.35 without late cleanup, ghosts, or residue. Known visual remediation remains Phase 2.

@@ -103,6 +103,15 @@
     --dur-fast: 160ms;
     --dur-normal: 260ms;
     --dur-close: 360ms;
+    --motion-action-feedback-duration: var(--dur-fast);
+    --motion-action-press-duration: var(--dur-instant);
+    --motion-surface-state-duration: var(--dur-fast);
+    --motion-collapse-duration: var(--dur-normal);
+    --motion-view-content-enter-duration: 180ms;
+    --motion-view-content-exit-duration: 120ms;
+    --motion-palette-enter-duration: var(--dur-normal);
+    --motion-palette-exit-duration: var(--dur-fast);
+    --motion-drag-settle-duration: var(--dur-normal);
     --ui-scale: 0.92;
     --font-ui: "Segoe UI", Arial, sans-serif;
     --font-mono: "Consolas", "Courier New", monospace;
@@ -518,11 +527,11 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .settings-view.content-reveal .settings-ui-layer {
-    animation: settingsContentReveal 180ms var(--ease-apple-out) both;
+    animation: settingsContentReveal var(--motion-view-content-enter-duration) var(--ease-apple-out) both;
 }
 
 .settings-view.content-exit .settings-ui-layer {
-    animation: settingsContentExit 120ms var(--ease-apple-in) both;
+    animation: settingsContentExit var(--motion-view-content-exit-duration) var(--ease-apple-in) both;
 }
 
 .settings-header {
@@ -1617,8 +1626,8 @@ body:not(.i18n-ready) .app-shell {
     max-height: 2200px;
     opacity: 1;
     transition:
-        max-height var(--dur-normal) var(--ease-apple-out),
-        opacity var(--dur-fast) var(--ease-apple-standard);
+        max-height var(--motion-collapse-duration) var(--ease-apple-out),
+        opacity var(--motion-action-feedback-duration) var(--ease-apple-standard);
 }
 
 .collapsible-card.is-collapsed .collapse-chevron {
@@ -1774,11 +1783,11 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .view-detail.content-reveal .detail-ui-layer {
-    animation: detailContentReveal 180ms var(--ease-apple-out) both;
+    animation: detailContentReveal var(--motion-view-content-enter-duration) var(--ease-apple-out) both;
 }
 
 .view-detail.content-exit .detail-ui-layer {
-    animation: detailContentExit 120ms var(--ease-apple-in) both;
+    animation: detailContentExit var(--motion-view-content-exit-duration) var(--ease-apple-in) both;
 }
 
 .app-shell.is-animating .view,
@@ -2239,7 +2248,7 @@ p {
 .tool-app:active,
 .tool-app.is-pressed {
     transform: translateY(2px) scale(0.95);
-    transition-duration: var(--dur-instant);
+    transition-duration: var(--motion-action-press-duration);
     transition-timing-function: var(--ease-press);
 }
 
@@ -2506,10 +2515,10 @@ p {
     padding: 0 var(--button-pad-x);
     border-radius: 999px;
     transition:
-        transform var(--dur-fast) var(--ease-apple-standard),
-        background-color var(--dur-fast) var(--ease-apple-standard),
-        border-color var(--dur-fast) var(--ease-apple-standard),
-        opacity var(--dur-fast) var(--ease-apple-standard);
+        transform var(--motion-action-feedback-duration) var(--ease-apple-standard),
+        background-color var(--motion-surface-state-duration) var(--ease-apple-standard),
+        border-color var(--motion-surface-state-duration) var(--ease-apple-standard),
+        opacity var(--motion-action-feedback-duration) var(--ease-apple-standard);
 }
 
 .ui-button:not(:disabled):hover,
@@ -2524,7 +2533,7 @@ p {
 .panel-button:active,
 .primary-action:active {
     transform: translateY(1px) scale(0.96);
-    transition-duration: var(--dur-instant);
+    transition-duration: var(--motion-action-press-duration);
     transition-timing-function: var(--ease-press);
 }
 
