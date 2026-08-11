@@ -5025,6 +5025,9 @@
         for (i = 0; i < elements.length; i++) {
             disabled = elementStateDisabled(elements[i], toolDef);
             elements[i].disabled = disabled;
+            if (typeof elements[i]._coreSetDisabled === "function") {
+                elements[i]._coreSetDisabled(disabled);
+            }
             elements[i].classList.toggle("is-state-disabled", disabled);
         }
         updateRegistryStateCard(toolDef);
@@ -6332,6 +6335,10 @@
             scheduleRegistryProceduralPreviewUpdate(toolDef, field && field.key);
         }
 
+        function schedulePreview() {
+            scheduleRegistryProceduralPreviewUpdate(toolDef, field && field.key);
+        }
+
         if (!field) {
             return document.createDocumentFragment();
         }
@@ -6447,6 +6454,9 @@
 
         row = document.createElement("div");
         row.className = (fieldType === "checkbox" || fieldType === "switch" ? "switch-row registry-switch-row registry-schema-field" : "control-row registry-field-row registry-schema-field") + " ui-field-row";
+        if (fieldType === "cubicBezier") {
+            row.className += " registry-bezier-row is-content-growth";
+        }
         if (field.contentGrowth === true) {
             row.className += " is-content-growth";
         }
@@ -6556,6 +6566,34 @@
             });
             input = colorValue.range;
             numberInput = colorValue.number;
+            wrap.appendChild(colorValue.root);
+        } else if (fieldType === "cubicBezier") {
+            colorValue = window.CoreUI.createBezierCurveField({
+                document: document,
+                id: fieldId,
+                value: value,
+                defaultValue: schemaDefaultValue(field),
+                disabled: field.disabled === true,
+                readonly: field.readonly === true,
+                initialView: field.initialView,
+                classNames: "registry-bezier-field",
+                progressLabel: field.progressLabelKey ? tr(field.progressLabelKey) : "Progress / Value",
+                speedLabel: field.speedLabelKey ? tr(field.speedLabelKey) : "Speed",
+                speedHint: tr("core.bezier.speedInfluenceHint"),
+                graphLabel: tr(field.graphLabelKey || field.labelKey || field.key || ""),
+                point1Label: field.point1LabelKey ? tr(field.point1LabelKey) : "Control Point 1",
+                point2Label: field.point2LabelKey ? tr(field.point2LabelKey) : "Control Point 2",
+                x1Label: field.x1LabelKey ? tr(field.x1LabelKey) : "P1 X",
+                y1Label: field.y1LabelKey ? tr(field.y1LabelKey) : "P1 Y",
+                x2Label: field.x2LabelKey ? tr(field.x2LabelKey) : "P2 X",
+                y2Label: field.y2LabelKey ? tr(field.y2LabelKey) : "P2 Y",
+                onInput: schedulePreview,
+                onChange: scheduleSave
+            });
+            input = colorValue.input;
+            if (field.disabled === true) {
+                input.setAttribute("data-core-intrinsic-disabled", "true");
+            }
             wrap.appendChild(colorValue.root);
         } else if (fieldType === "color") {
             colorValue = normalizeHex(value, "#ffffff").toLowerCase();
@@ -6885,6 +6923,9 @@
         controls = body.querySelectorAll("input, select, textarea, button");
         for (i = 0; i < controls.length; i++) {
             controls[i].disabled = !enabled || controls[i].getAttribute("data-core-intrinsic-disabled") === "true";
+            if (typeof controls[i]._coreSetDisabled === "function") {
+                controls[i]._coreSetDisabled(controls[i].disabled);
+            }
         }
         if (enabled && toolDef) {
             updateRegistryStateDependentUi(toolDef);
@@ -7034,6 +7075,8 @@
                     params[field.key] = normalizeSchemaNumber(input.value, field, registryFieldValue(toolDef, field));
                 } else if (field.type === "color") {
                     params[field.key] = normalizeHex(input.value, schemaDefaultValue(field)).toLowerCase();
+                } else if (field.type === "cubicBezier" && typeof input._coreBezierFieldGetValue === "function") {
+                    params[field.key] = input._coreBezierFieldGetValue();
                 } else {
                     params[field.key] = input.value;
                 }

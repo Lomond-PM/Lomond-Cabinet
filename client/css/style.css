@@ -4207,6 +4207,151 @@ p {
     line-height: 1.25;
 }
 
+.ui-bezier-field {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    gap: var(--space-inline-control);
+}
+
+.ui-bezier-value {
+    display: none;
+}
+
+.ui-bezier-view-selector {
+    display: inline-grid;
+    justify-self: start;
+    grid-template-columns: repeat(2, minmax(0, auto));
+    gap: calc(4px * var(--ui-scale));
+    padding: calc(3px * var(--ui-scale));
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-editable-control);
+    background: var(--surface-card);
+}
+
+.ui-bezier-view-button {
+    min-height: calc(26px * var(--ui-scale));
+    padding: 0 calc(9px * var(--ui-scale));
+    border: 0;
+    border-radius: calc(var(--radius-editable-control) - 2px);
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    cursor: pointer;
+}
+
+.ui-bezier-view-button.is-active {
+    background: var(--interaction-selected-surface);
+    color: var(--text-primary);
+}
+
+.ui-bezier-speed-hint {
+    margin: 0;
+    color: var(--text-tertiary);
+    font-size: var(--font-small);
+    line-height: 1.35;
+}
+
+.ui-bezier-viewport {
+    width: 100%;
+    min-width: 0;
+    min-height: calc(156px * var(--ui-scale));
+    overflow: hidden;
+    border: 1px solid var(--field-border);
+    border-radius: var(--radius-nested-surface);
+    background: var(--surface-card);
+}
+
+.ui-bezier-viewport svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: calc(156px * var(--ui-scale));
+    touch-action: none;
+}
+
+.ui-bezier-grid {
+    fill: none;
+    stroke: var(--border-subtle);
+    stroke-width: 1;
+}
+
+.ui-bezier-tangents {
+    fill: none;
+    stroke: var(--text-tertiary);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 4;
+}
+
+.ui-bezier-curve {
+    fill: none;
+    stroke: var(--gold-hot);
+    stroke-width: 3;
+    stroke-linecap: round;
+}
+
+.ui-bezier-endpoint {
+    fill: var(--surface-panel);
+    stroke: var(--text-secondary);
+    stroke-width: 2;
+}
+
+.ui-bezier-handle {
+    fill: var(--interaction-selected-surface);
+    stroke: var(--gold-hot);
+    stroke-width: 3;
+    cursor: grab;
+}
+
+.ui-bezier-handle:focus {
+    outline: none;
+    stroke: var(--interaction-focus-ring);
+    stroke-width: 5;
+}
+
+.ui-bezier-handle[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.ui-bezier-numeric-grid {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: repeat(2, minmax(calc(86px * var(--ui-scale)), 1fr));
+    gap: calc(8px * var(--ui-scale));
+}
+
+.ui-bezier-serialized {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+    font-size: var(--font-small);
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ui-bezier-numeric-field {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: calc(6px * var(--ui-scale));
+    color: var(--text-secondary);
+    font-size: var(--font-small);
+}
+
+.ui-bezier-numeric-field .ui-number-input {
+    width: 100%;
+    min-width: 0;
+}
+
+.ui-bezier-field[aria-disabled="true"] {
+    opacity: 0.6;
+}
+
 .registry-color-picker-popover {
     position: fixed;
     z-index: 1300;

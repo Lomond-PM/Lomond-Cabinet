@@ -227,6 +227,53 @@
                 ]
             },
             {
+                id: "bezierCurves",
+                labelKey: "tools.registryControlLab.sections.bezierCurves",
+                descriptionKey: "tools.registryControlLab.sections.bezierCurvesDescription",
+                collapsible: true,
+                fields: [
+                    {
+                        type: "cubicBezier",
+                        key: "defaultCurve",
+                        labelKey: "tools.registryControlLab.fields.defaultCurve",
+                        hintKey: "tools.registryControlLab.hints.defaultCurve",
+                        defaultValue: { x1: 0.25, y1: 0.1, x2: 0.25, y2: 1 },
+                        progressLabelKey: "tools.registryControlLab.curve.progress",
+                        speedLabelKey: "tools.registryControlLab.curve.speed",
+                        point1LabelKey: "tools.registryControlLab.curve.point1",
+                        point2LabelKey: "tools.registryControlLab.curve.point2"
+                    },
+                    {
+                        type: "cubicBezier",
+                        key: "overshootCurve",
+                        labelKey: "tools.registryControlLab.fields.overshootCurve",
+                        hintKey: "tools.registryControlLab.hints.overshootCurve",
+                        defaultValue: { x1: 0.2, y1: -0.4, x2: 0.35, y2: 1.45 },
+                        initialView: "speed",
+                        progressLabelKey: "tools.registryControlLab.curve.progress",
+                        speedLabelKey: "tools.registryControlLab.curve.speed",
+                        point1LabelKey: "tools.registryControlLab.curve.point1",
+                        point2LabelKey: "tools.registryControlLab.curve.point2"
+                    },
+                    {
+                        type: "cubicBezier",
+                        key: "readonlyCurve",
+                        labelKey: "tools.registryControlLab.fields.readonlyCurve",
+                        hintKey: "tools.registryControlLab.hints.readonlyCurve",
+                        defaultValue: { x1: 0.42, y1: 0, x2: 0.58, y2: 1 },
+                        readonly: true
+                    },
+                    {
+                        type: "cubicBezier",
+                        key: "disabledCurve",
+                        labelKey: "tools.registryControlLab.fields.disabledCurve",
+                        hintKey: "tools.registryControlLab.hints.disabledCurve",
+                        defaultValue: { x1: 0.3, y1: 0, x2: 0.7, y2: 1 },
+                        disabled: true
+                    }
+                ]
+            },
+            {
                 id: "actions",
                 labelKey: "tools.registryControlLab.sections.actions",
                 descriptionKey: "tools.registryControlLab.sections.actionsDescription",
@@ -432,6 +479,8 @@
                 "tools.registryControlLab.sections.actionsDescription": "Tests full-width registry action buttons and center-axis text layout.",
                 "tools.registryControlLab.sections.tabs": "Tabs",
                 "tools.registryControlLab.sections.tabsDescription": "Tests option cards and conditional field visibility.",
+                "tools.registryControlLab.sections.bezierCurves": "Cubic Bezier Curves",
+                "tools.registryControlLab.sections.bezierCurvesDescription": "Generic Progress and Speed editing with structured curve values.",
                 "tools.registryControlLab.sections.state": "Host State",
                 "tools.registryControlLab.sections.actionState": "Action and State",
                 "tools.registryControlLab.sections.actionStateDescription": "Action payloads, state-driven disabled buttons, and state refresh hooks.",
@@ -449,6 +498,14 @@
                 "tools.registryControlLab.fields.componentType": "Component Type",
                 "tools.registryControlLab.fields.featureOnlyGap": "Feature Gap",
                 "tools.registryControlLab.fields.gridOnlyColumns": "Grid Columns",
+                "tools.registryControlLab.fields.defaultCurve": "Default Curve",
+                "tools.registryControlLab.fields.overshootCurve": "Overshoot Curve",
+                "tools.registryControlLab.fields.readonlyCurve": "Readonly Curve",
+                "tools.registryControlLab.fields.disabledCurve": "Disabled Curve",
+                "tools.registryControlLab.curve.progress": "Progress / Value",
+                "tools.registryControlLab.curve.speed": "Speed",
+                "tools.registryControlLab.curve.point1": "Control Point 1",
+                "tools.registryControlLab.curve.point2": "Control Point 2",
                 "tools.registryControlLab.actions.previewValues": "Preview Values",
                 "tools.registryControlLab.actions.secondaryButton": "Secondary Full-width Button",
                 "tools.registryControlLab.actions.primaryButton": "Primary Full-width Button",
@@ -493,7 +550,11 @@
                 "tools.registryControlLab.hints.strokeColor": "Returns a normalized #rrggbb value.",
                 "tools.registryControlLab.hints.toggleText": "This field is muted while the section is disabled.",
                 "tools.registryControlLab.hints.toggleNumber": "The toggle value is still collected with form values.",
-                "tools.registryControlLab.hints.componentType": "Switch tabs to test visibleWhen field behavior."
+                "tools.registryControlLab.hints.componentType": "Switch tabs to test visibleWhen field behavior.",
+                "tools.registryControlLab.hints.defaultCurve": "Edit P1/P2 by graph, keyboard, numeric input, or scrub.",
+                "tools.registryControlLab.hints.overshootCurve": "Y values outside 0-1 remain valid and expand the viewport.",
+                "tools.registryControlLab.hints.readonlyCurve": "View switching remains available while curve editing is locked.",
+                "tools.registryControlLab.hints.disabledCurve": "All graph, view, and numeric interactions are disabled."
             },
             "zh-CN": {
                 "tools.registryControlLab.title": "\u63a7\u4ef6\u6d4b\u8bd5\u5b9e\u9a8c\u5ba4",
@@ -510,6 +571,8 @@
                 "tools.registryControlLab.sections.actionsDescription": "\u9a8c\u8bc1\u6a2a\u5411\u586b\u6ee1\u7684 registry action button \u548c\u4e2d\u8f74\u53cc\u6587\u672c\u5e03\u5c40\u3002",
                 "tools.registryControlLab.sections.tabs": "\u6807\u7b7e\u9875",
                 "tools.registryControlLab.sections.tabsDescription": "\u9a8c\u8bc1\u9009\u9879\u5361\u548c\u6761\u4ef6\u5b57\u6bb5\u663e\u9690\u3002",
+                "tools.registryControlLab.sections.bezierCurves": "\u4e09\u6b21\u8d1d\u585e\u5c14\u66f2\u7ebf",
+                "tools.registryControlLab.sections.bezierCurvesDescription": "\u4f7f\u7528\u7ed3\u6784\u5316\u66f2\u7ebf\u503c\u9a8c\u8bc1\u901a\u7528\u8fdb\u5ea6\u4e0e\u901f\u5ea6\u7f16\u8f91\u3002",
                 "tools.registryControlLab.sections.state": "Host \u72b6\u6001",
                 "tools.registryControlLab.sections.actionState": "\u64cd\u4f5c\u4e0e\u72b6\u6001",
                 "tools.registryControlLab.sections.actionStateDescription": "\u9a8c\u8bc1 action payload\u3001\u72b6\u6001\u9a71\u52a8\u7684\u7981\u7528\u6309\u94ae\u548c\u6267\u884c\u540e\u72b6\u6001\u5237\u65b0\u3002",
@@ -527,6 +590,14 @@
                 "tools.registryControlLab.fields.componentType": "\u7ec4\u4ef6\u7c7b\u578b",
                 "tools.registryControlLab.fields.featureOnlyGap": "\u5356\u70b9\u95f4\u8ddd",
                 "tools.registryControlLab.fields.gridOnlyColumns": "\u7f51\u683c\u5217\u6570",
+                "tools.registryControlLab.fields.defaultCurve": "\u9ed8\u8ba4\u66f2\u7ebf",
+                "tools.registryControlLab.fields.overshootCurve": "\u8d85\u8c03\u66f2\u7ebf",
+                "tools.registryControlLab.fields.readonlyCurve": "\u53ea\u8bfb\u66f2\u7ebf",
+                "tools.registryControlLab.fields.disabledCurve": "\u7981\u7528\u66f2\u7ebf",
+                "tools.registryControlLab.curve.progress": "\u8fdb\u5ea6 / \u503c",
+                "tools.registryControlLab.curve.speed": "\u901f\u5ea6",
+                "tools.registryControlLab.curve.point1": "\u63a7\u5236\u70b9 1",
+                "tools.registryControlLab.curve.point2": "\u63a7\u5236\u70b9 2",
                 "tools.registryControlLab.actions.previewValues": "\u9884\u89c8\u53c2\u6570",
                 "tools.registryControlLab.actions.secondaryButton": "\u6b21\u8981\u6a2a\u5411\u6309\u94ae",
                 "tools.registryControlLab.actions.primaryButton": "\u4e3b\u8981\u6a2a\u5411\u6309\u94ae",
@@ -571,7 +642,11 @@
                 "tools.registryControlLab.hints.strokeColor": "\u8fd4\u56de\u6807\u51c6\u5316\u7684 #rrggbb \u503c\u3002",
                 "tools.registryControlLab.hints.toggleText": "\u5206\u533a\u5173\u95ed\u65f6\u8be5\u5b57\u6bb5\u4f1a\u5f31\u5316\u663e\u793a\u3002",
                 "tools.registryControlLab.hints.toggleNumber": "\u5206\u533a\u5f00\u5173\u503c\u4f1a\u968f\u8868\u5355\u53c2\u6570\u4e00\u8d77\u6536\u96c6\u3002",
-                "tools.registryControlLab.hints.componentType": "\u5207\u6362\u6807\u7b7e\u9875\u4ee5\u6d4b\u8bd5 visibleWhen \u5b57\u6bb5\u663e\u9690\u3002"
+                "tools.registryControlLab.hints.componentType": "\u5207\u6362\u6807\u7b7e\u9875\u4ee5\u6d4b\u8bd5 visibleWhen \u5b57\u6bb5\u663e\u9690\u3002",
+                "tools.registryControlLab.hints.defaultCurve": "\u53ef\u901a\u8fc7\u56fe\u5f62\u3001\u952e\u76d8\u3001\u6570\u503c\u8f93\u5165\u6216\u62d6\u64e6\u7f16\u8f91 P1/P2\u3002",
+                "tools.registryControlLab.hints.overshootCurve": "0-1 \u4e4b\u5916\u7684 Y \u503c\u4ecd\u7136\u5408\u6cd5\uff0c\u5e76\u4f1a\u6269\u5c55\u89c6\u53e3\u3002",
+                "tools.registryControlLab.hints.readonlyCurve": "\u66f2\u7ebf\u7f16\u8f91\u9501\u5b9a\u65f6\u4ecd\u53ef\u5207\u6362\u89c6\u56fe\u3002",
+                "tools.registryControlLab.hints.disabledCurve": "\u7981\u7528\u6240\u6709\u56fe\u5f62\u3001\u89c6\u56fe\u4e0e\u6570\u503c\u4ea4\u4e92\u3002"
             }
         }
     });
