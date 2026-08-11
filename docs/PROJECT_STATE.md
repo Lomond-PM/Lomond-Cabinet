@@ -70,7 +70,9 @@ Host code must remain ExtendScript-compatible.
 
 The 0.3.2 CoreUI / Registry Contract Completion establishes the formal component taxonomy. Registry `checkbox` now means selection/acknowledgement and maps to CoreUI Checkbox, while immediate persistent boolean settings use Registry `switch` and CoreUI Switch with unchanged keys/defaults/storage shapes. Registry `tabs` remains a compatibility schema boundary but is rendered by the card-style CoreUI ChoiceGroup with radio-group keyboard and ARIA behavior. Registry Range and Color now consume CoreUI RangeNumber and ColorField through the existing preview/commit and picker-service seams. Registry section toggles consume CoreUI Switch, and collapsible Registry sections plus Settings theme groups consume the shared Disclosure behavior while retaining domain layout and persistence ownership.
 
-The Developer Control Lab covers these components through the real Registry schema path, including narrow and bilingual stress content. No storage migration, host payload change, Appearance parameter, or redesign is introduced. The next separate implementation group is **Group B — BezierCurveField**.
+The Developer Control Lab covers these components through the real Registry schema path, including narrow and bilingual stress content. No storage migration, host payload change, Appearance parameter, or redesign is introduced.
+
+Group B now adds the generic CoreUI BezierCurveField and Registry `cubicBezier` mapping. Its only authority is structured `{x1,y1,x2,y2}` data; Progress/Value, derivative Speed, Speed/Influence, numeric inputs, serialization, and SVG are synchronized projections. It supports overshoot, pointer/keyboard/numeric editing, readonly/disabled states, cancellation, and resize-safe presentation. Speed handles provide a bilingual Shift influence-only hint and use AE-inspired half-width-per-endpoint influence geometry without restricting canonical `0–1` influence. Control Lab contains default, overshoot, readonly, and disabled declarative specimens. Motion defaults and Design Tuning remain untouched; a general GraphEditor and Quick Anchor / Nine-Point Anchor remain unimplemented.
 
 Current architectural rule:
 
@@ -302,4 +304,4 @@ Canonical Action press is geometrically centered. Tool and Settings open share t
 
 CSS now owns the single canonical defaults for Enter, Exit, Standard, and Press. `MotionDefaults` owns family/property and semantic-role/family mappings and resolves the current computed curve for each WAAPI interaction; `main.js` no longer owns raw easing copies. This establishes a future Design Tuning override seam without changing any curve value, duration, choreography, or User Appearance persistence. Procedural background drift retains its accepted curve through an isolated local property, while Vela pulse and Reduced Motion boundaries remain unchanged.
 
-The deferred Curve Editor is a generic CoreUI / Registry advanced input with synchronized AE-like Progress/Value and Speed views over one `{x1, y1, x2, y2}` authority. No editor UI, storage, Promote UI, preset grid, or curve redesign is implemented by this foundation.
+The implemented BezierCurveField is the bounded generic cubic-bezier input described above. It does not add Design Tuning storage, Promote UI, Motion Settings, presets, or a general graph framework.

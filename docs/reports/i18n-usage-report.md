@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 262 |
+| A | Core / Global; keep | 263 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -96,6 +96,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | common.valuesReset | common | Values reset to defaults. | 已恢复默认值。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.xPosition | common | X Position | X 位置 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.yPosition | common | Y Position | Y 位置 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| core.bezier.speedInfluenceHint | core | Shift + horizontal drag: influence only | Shift + 水平拖动：仅调整影响范围 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | helper.accentColor | helper | Used for primary actions, focus states, and key interface accents. | 用于主要操作、焦点状态和界面重点元素。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.autoSelectionStatus | helper | Refresh selected text layer count while the panel is open. | 面板打开时刷新选中文本层数量。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.backgroundSource | helper | Classic keeps the existing Background Engine. Follow Icon Theme mirro... | 经典模式保留现有 Background Engine。跟随图标主题会复用图标的主题关系。手动程序化使用下方的背景种子和色卡。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |

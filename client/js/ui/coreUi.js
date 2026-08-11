@@ -342,6 +342,348 @@
         return { root: rootElement, input: input, options: buttons, getValue: function () { return value; }, setValue: function (nextValue) { return sync(nextValue, false); } };
     }
 
+    var BEZIER_PRECISION = 4;
+    var BEZIER_EPSILON = 0.0001;
+
+    function roundBezierNumber(value) {
+        var factor = Math.pow(10, BEZIER_PRECISION);
+        var rounded = Math.round(Number(value) * factor) / factor;
+        return Math.abs(rounded) < 1 / factor ? 0 : rounded;
+    }
+
+    function isValidBezierValue(value) {
+        return !!value && isFinite(Number(value.x1)) && isFinite(Number(value.y1)) && isFinite(Number(value.x2)) && isFinite(Number(value.y2)) && Number(value.x1) >= 0 && Number(value.x1) <= 1 && Number(value.x2) >= 0 && Number(value.x2) <= 1;
+    }
+
+    function normalizeBezierValue(value, fallback) {
+        var source = isValidBezierValue(value) ? value : (isValidBezierValue(fallback) ? fallback : { x1: 0.25, y1: 0.1, x2: 0.25, y2: 1 });
+        return { x1: roundBezierNumber(source.x1), y1: roundBezierNumber(source.y1), x2: roundBezierNumber(source.x2), y2: roundBezierNumber(source.y2) };
+    }
+
+    function parseCubicBezier(text) {
+        var match = /^\s*cubic-bezier\s*\(\s*([^,]+)\s*,\s*([^,]+)\s*,\s*([^,]+)\s*,\s*([^,]+)\s*\)\s*$/i.exec(String(text || ""));
+        var value;
+        var numericPattern = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i;
+        if (!match) return null;
+        if (!numericPattern.test(match[1].replace(/^\s+|\s+$/g, "")) || !numericPattern.test(match[2].replace(/^\s+|\s+$/g, "")) || !numericPattern.test(match[3].replace(/^\s+|\s+$/g, "")) || !numericPattern.test(match[4].replace(/^\s+|\s+$/g, ""))) return null;
+        value = { x1: Number(match[1]), y1: Number(match[2]), x2: Number(match[3]), y2: Number(match[4]) };
+        return isValidBezierValue(value) ? normalizeBezierValue(value) : null;
+    }
+
+    function serializeCubicBezier(value) {
+        var normalized = isValidBezierValue(value) ? normalizeBezierValue(value) : null;
+        return normalized ? "cubic-bezier(" + normalized.x1 + ", " + normalized.y1 + ", " + normalized.x2 + ", " + normalized.y2 + ")" : "";
+    }
+
+    function sampleBezier(value, u) {
+        var inverse = 1 - u;
+        return {
+            x: 3 * inverse * inverse * u * value.x1 + 3 * inverse * u * u * value.x2 + u * u * u,
+            y: 3 * inverse * inverse * u * value.y1 + 3 * inverse * u * u * value.y2 + u * u * u
+        };
+    }
+
+    function sampleBezierSpeed(value, u) {
+        var inverse = 1 - u;
+        var dx = 3 * inverse * inverse * value.x1 + 6 * inverse * u * (value.x2 - value.x1) + 3 * u * u * (1 - value.x2);
+        var dy = 3 * inverse * inverse * value.y1 + 6 * inverse * u * (value.y2 - value.y1) + 3 * u * u * (1 - value.y2);
+        if (Math.abs(dx) < BEZIER_EPSILON) return null;
+        return isFinite(dy / dx) ? dy / dx : null;
+    }
+
+    function bezierSpeedProjection(value) {
+        var startInfluence = value.x1;
+        var endInfluence = 1 - value.x2;
+        return {
+            startInfluence: startInfluence,
+            startSpeed: startInfluence > BEZIER_EPSILON ? value.y1 / startInfluence : null,
+            endInfluence: endInfluence,
+            endSpeed: endInfluence > BEZIER_EPSILON ? (1 - value.y2) / endInfluence : null
+        };
+    }
+
+    function createBezierCurveField(options) {
+        var doc = options.document;
+        var win = doc.defaultView || root;
+        var disabled = options.disabled === true;
+        var readonly = options.readonly === true;
+        var value = normalizeBezierValue(options.value, options.defaultValue);
+        var editSnapshot = normalizeBezierValue(value);
+        var activeDrag = null;
+        var disposed = false;
+        var view = options.initialView === "speed" ? "speed" : "progress";
+        var rootElement = applyCommon(doc.createElement("div"), { classNames: "ui-bezier-field " + (options.classNames || "") });
+        var valueInput = applyCommon(doc.createElement("input"), { id: options.id, disabled: disabled, classNames: "ui-bezier-value" });
+        var viewSelector = doc.createElement("div");
+        var progressButton = createButton({ document: doc, text: options.progressLabel || "Progress / Value", disabled: disabled, classNames: "ui-bezier-view-button" });
+        var speedButton = createButton({ document: doc, text: options.speedLabel || "Speed", disabled: disabled, classNames: "ui-bezier-view-button" });
+        var speedHint = doc.createElement("p");
+        var viewport = doc.createElement("div");
+        var serialized = doc.createElement("output");
+        var svg = doc.createElementNS ? doc.createElementNS("http://www.w3.org/2000/svg", "svg") : doc.createElement("svg");
+        var gridPath = svgElement("path", "ui-bezier-grid");
+        var tangentPath = svgElement("path", "ui-bezier-tangents");
+        var curvePath = svgElement("path", "ui-bezier-curve");
+        var startPoint = svgElement("circle", "ui-bezier-endpoint");
+        var endPoint = svgElement("circle", "ui-bezier-endpoint");
+        var handle1 = svgElement("circle", "ui-bezier-handle");
+        var handle2 = svgElement("circle", "ui-bezier-handle");
+        var numericGrid = doc.createElement("div");
+        var numeric = {};
+        var resizeHandler;
+        var resizeObserver;
+        var WIDTH = 400;
+        var HEIGHT = 220;
+        var PAD_X = 28;
+        var PAD_Y = 20;
+        var SPEED_INFLUENCE_VISUAL_SPAN = 0.5;
+
+        function svgElement(tag, className) {
+            var node = doc.createElementNS ? doc.createElementNS("http://www.w3.org/2000/svg", tag) : doc.createElement(tag);
+            node.setAttribute("class", className);
+            return node;
+        }
+        function cloneValue(source) { return { x1: source.x1, y1: source.y1, x2: source.x2, y2: source.y2 }; }
+        function emit(kind, meta) {
+            var callback = kind === "input" ? options.onInput : options.onChange;
+            if (typeof callback === "function") callback(cloneValue(value), meta || {});
+        }
+        function progressViewRange(source) {
+            var min = Math.min(0, 1, source.y1, source.y2);
+            var max = Math.max(0, 1, source.y1, source.y2);
+            var span = Math.max(1, max - min);
+            return { min: min - span * 0.15, max: max + span * 0.15 };
+        }
+        function speedViewRange(source) {
+            var min = 0;
+            var max = 1;
+            var i;
+            var speed;
+            for (i = 0; i <= 48; i++) {
+                speed = sampleBezierSpeed(source, i / 48);
+                if (speed !== null) { min = Math.min(min, Math.max(-20, speed)); max = Math.max(max, Math.min(20, speed)); }
+            }
+            if (max - min < 1) max = min + 1;
+            return { min: min - (max - min) * 0.12, max: max + (max - min) * 0.12 };
+        }
+        function mapX(x) { return PAD_X + x * (WIDTH - PAD_X * 2); }
+        function mapSpeedInfluenceX(index, influence) { return mapX(index === 1 ? influence * SPEED_INFLUENCE_VISUAL_SPAN : 1 - influence * SPEED_INFLUENCE_VISUAL_SPAN); }
+        function mapY(y, range) { return HEIGHT - PAD_Y - (y - range.min) / (range.max - range.min) * (HEIGHT - PAD_Y * 2); }
+        function clientToSvgX(clientX, rect) { return (clientX - rect.left) / Math.max(1, rect.width) * WIDTH; }
+        function unmapX(clientX, rect) { return Math.max(0, Math.min(1, (clientToSvgX(clientX, rect) - PAD_X) / (WIDTH - PAD_X * 2))); }
+        function unmapSpeedInfluence(clientX, rect, index) { var graphX = (clientToSvgX(clientX, rect) - PAD_X) / (WIDTH - PAD_X * 2); return (index === 1 ? graphX : 1 - graphX) / SPEED_INFLUENCE_VISUAL_SPAN; }
+        function unmapY(clientY, rect, range) { var svgY = (clientY - rect.top) / Math.max(1, rect.height) * HEIGHT; return range.max - (svgY - PAD_Y) / (HEIGHT - PAD_Y * 2) * (range.max - range.min); }
+        function pathFromSamples(source, range, speedMode) {
+            var path = "";
+            var i;
+            var point;
+            var speed;
+            for (i = 0; i <= 64; i++) {
+                point = sampleBezier(source, i / 64);
+                speed = speedMode ? sampleBezierSpeed(source, i / 64) : point.y;
+                if (speed === null) continue;
+                speed = Math.max(range.min, Math.min(range.max, speed));
+                path += (path ? " L " : "M ") + roundBezierNumber(mapX(point.x)) + " " + roundBezierNumber(mapY(speed, range));
+            }
+            return path;
+        }
+        function setCircle(circle, x, y) { circle.setAttribute("cx", roundBezierNumber(x)); circle.setAttribute("cy", roundBezierNumber(y)); circle.setAttribute("r", 7); }
+        function render() {
+            var range = activeDrag && activeDrag.range ? activeDrag.range : (view === "speed" ? speedViewRange(value) : progressViewRange(value));
+            var projection = bezierSpeedProjection(value);
+            var h1y = view === "speed" ? (projection.startSpeed === null ? range.max : projection.startSpeed) : value.y1;
+            var h2y = view === "speed" ? (projection.endSpeed === null ? range.max : projection.endSpeed) : value.y2;
+            valueInput.value = serializeCubicBezier(value);
+            serialized.textContent = valueInput.value;
+            curvePath.setAttribute("d", pathFromSamples(value, range, view === "speed"));
+            gridPath.setAttribute("d", "M " + PAD_X + " " + mapY(0, range) + " H " + (WIDTH - PAD_X) + " M " + PAD_X + " " + mapY(1, range) + " H " + (WIDTH - PAD_X));
+            setCircle(startPoint, mapX(0), mapY(view === "speed" ? Math.max(range.min, Math.min(range.max, h1y)) : 0, range));
+            setCircle(endPoint, mapX(1), mapY(view === "speed" ? Math.max(range.min, Math.min(range.max, h2y)) : 1, range));
+            setCircle(handle1, view === "speed" ? mapSpeedInfluenceX(1, projection.startInfluence) : mapX(value.x1), mapY(Math.max(range.min, Math.min(range.max, h1y)), range));
+            setCircle(handle2, view === "speed" ? mapSpeedInfluenceX(2, projection.endInfluence) : mapX(value.x2), mapY(Math.max(range.min, Math.min(range.max, h2y)), range));
+            tangentPath.setAttribute("d", view === "progress" ? "M " + mapX(0) + " " + mapY(0, range) + " L " + mapX(value.x1) + " " + mapY(value.y1, range) + " M " + mapX(1) + " " + mapY(1, range) + " L " + mapX(value.x2) + " " + mapY(value.y2, range) : "M " + mapX(0) + " " + mapY(Math.max(range.min, Math.min(range.max, h1y)), range) + " L " + mapSpeedInfluenceX(1, projection.startInfluence) + " " + mapY(Math.max(range.min, Math.min(range.max, h1y)), range) + " M " + mapX(1) + " " + mapY(Math.max(range.min, Math.min(range.max, h2y)), range) + " L " + mapSpeedInfluenceX(2, projection.endInfluence) + " " + mapY(Math.max(range.min, Math.min(range.max, h2y)), range));
+            handle1.setAttribute("aria-disabled", disabled || readonly || projection.startSpeed === null && view === "speed" ? "true" : "false");
+            handle2.setAttribute("aria-disabled", disabled || readonly || projection.endSpeed === null && view === "speed" ? "true" : "false");
+            handle1.setAttribute("aria-valuetext", view === "speed" ? "Influence " + value.x1 + ", Speed " + (projection.startSpeed === null ? "undefined" : roundBezierNumber(projection.startSpeed)) : "X " + value.x1 + ", Y " + value.y1);
+            handle2.setAttribute("aria-valuetext", view === "speed" ? "Influence " + roundBezierNumber(1 - value.x2) + ", Speed " + (projection.endSpeed === null ? "undefined" : roundBezierNumber(projection.endSpeed)) : "X " + value.x2 + ", Y " + value.y2);
+            progressButton.classList.toggle("is-active", view === "progress");
+            speedButton.classList.toggle("is-active", view === "speed");
+            rootElement.setAttribute("data-view", view);
+            speedHint.hidden = view !== "speed" || !speedHint.textContent;
+            if (numeric.x1) {
+                numeric.x1.value = String(value.x1); numeric.y1.value = String(value.y1); numeric.x2.value = String(value.x2); numeric.y2.value = String(value.y2);
+            }
+        }
+        function applyValue(nextValue, kind, meta) {
+            if (!isValidBezierValue(nextValue)) return false;
+            value = normalizeBezierValue(nextValue, value);
+            render();
+            if (kind) emit(kind, meta);
+            return true;
+        }
+        function setCoordinate(key, nextValue, kind, meta) {
+            var next = cloneValue(value);
+            var numericValue = Number(nextValue);
+            if (!isFinite(numericValue)) return false;
+            if (key === "x1" || key === "x2") numericValue = Math.max(0, Math.min(1, numericValue));
+            next[key] = numericValue;
+            return applyValue(next, kind, meta);
+        }
+        function buildNumeric(key, labelText, min, max) {
+            var field = doc.createElement("label");
+            var label = doc.createElement("span");
+            var input;
+            label.textContent = labelText;
+            field.className = "ui-bezier-numeric-field";
+            input = createNumberInput({ document: doc, id: (options.id || "bezier") + "-" + key, value: value[key], min: min, max: max, step: 0.01, field: { min: min, max: max, step: 0.01, defaultValue: value[key] }, disabled: disabled || readonly, ariaLabel: labelText, onInput: function () { if (!isNumberDraft(input.value)) setCoordinate(key, input.value, "input", { source: "numeric", coordinate: key }); }, onDragValue: function (next) { setCoordinate(key, next, "input", { source: "numeric-scrub", coordinate: key }); }, onCommit: function () { if (!setCoordinate(key, input.value, "change", { source: "numeric", coordinate: key })) render(); }, onCancel: function (restored) { setCoordinate(key, restored, null); render(); if (typeof options.onCancel === "function") options.onCancel(cloneValue(value), { source: "numeric", coordinate: key }); }, onDragEnd: function () { emit("change", { source: "numeric-scrub", coordinate: key }); } });
+            field.appendChild(label); field.appendChild(input); numericGrid.appendChild(field); numeric[key] = input;
+        }
+        function switchView(nextView) {
+            if (nextView !== "progress" && nextView !== "speed") return;
+            view = nextView;
+            progressButton.setAttribute("aria-pressed", view === "progress" ? "true" : "false");
+            speedButton.setAttribute("aria-pressed", view === "speed" ? "true" : "false");
+            render();
+        }
+        function setDisabled(nextDisabled) {
+            disabled = nextDisabled === true;
+            valueInput.disabled = disabled;
+            progressButton.disabled = disabled;
+            speedButton.disabled = disabled;
+            numeric.x1.disabled = disabled || readonly; numeric.y1.disabled = disabled || readonly; numeric.x2.disabled = disabled || readonly; numeric.y2.disabled = disabled || readonly;
+            handle1.setAttribute("tabindex", disabled || readonly ? "-1" : "0"); handle2.setAttribute("tabindex", disabled || readonly ? "-1" : "0");
+            rootElement.setAttribute("aria-disabled", disabled ? "true" : "false");
+            render();
+        }
+        function beginDrag(event, index) {
+            var range;
+            var projection;
+            var rect;
+            var pointerX;
+            var pointerY;
+            var influence;
+            var speed;
+            if (disabled || readonly || disposed) return;
+            range = view === "speed" ? speedViewRange(value) : progressViewRange(value);
+            projection = bezierSpeedProjection(value);
+            if (view === "speed" && (index === 1 ? projection.startSpeed === null : projection.endSpeed === null)) return;
+            editSnapshot = cloneValue(value);
+            activeDrag = { index: index, range: range, pointerId: event.pointerId, shiftConstrained: view === "speed" && event.shiftKey === true, transitionReference: null };
+            if (view === "speed") {
+                rect = svg.getBoundingClientRect();
+                pointerX = unmapSpeedInfluence(event.clientX, rect, index);
+                pointerY = unmapY(event.clientY, rect, range);
+                influence = index === 1 ? projection.startInfluence : projection.endInfluence;
+                speed = index === 1 ? projection.startSpeed : projection.endSpeed;
+                activeDrag.transitionReference = { pointerX: pointerX, pointerY: pointerY, influence: influence, speed: speed };
+            }
+            if (event.currentTarget && event.currentTarget.setPointerCapture && event.pointerId !== undefined) try { event.currentTarget.setPointerCapture(event.pointerId); } catch (ignored) {}
+            if (event.preventDefault) event.preventDefault();
+            doc.addEventListener("pointermove", dragMove); doc.addEventListener("pointerup", dragEnd); doc.addEventListener("pointercancel", dragCancel); doc.addEventListener("keydown", dragKeydown);
+        }
+        function dragMove(event) {
+            var rect;
+            var x;
+            var y;
+            var next;
+            var projection;
+            var influence;
+            var speed;
+            var shiftConstrained;
+            if (!activeDrag) return;
+            if (doc.documentElement && doc.documentElement.contains && !doc.documentElement.contains(rootElement)) { dragCancel(); return; }
+            rect = svg.getBoundingClientRect();
+            x = view === "speed" ? unmapSpeedInfluence(event.clientX, rect, activeDrag.index) : unmapX(event.clientX, rect);
+            y = unmapY(event.clientY, rect, activeDrag.range);
+            shiftConstrained = view === "speed" && event.shiftKey === true;
+            if (view === "speed" && shiftConstrained !== activeDrag.shiftConstrained) {
+                projection = bezierSpeedProjection(value);
+                influence = activeDrag.index === 1 ? projection.startInfluence : projection.endInfluence;
+                speed = activeDrag.index === 1 ? projection.startSpeed : projection.endSpeed;
+                activeDrag.shiftConstrained = shiftConstrained;
+                activeDrag.transitionReference = { pointerX: x, pointerY: y, influence: influence, speed: speed };
+                if (event.preventDefault) event.preventDefault();
+                return;
+            }
+            next = cloneValue(value);
+            if (view === "progress") {
+                next[activeDrag.index === 1 ? "x1" : "x2"] = x;
+                next[activeDrag.index === 1 ? "y1" : "y2"] = y;
+            } else {
+                if (activeDrag.transitionReference) {
+                    influence = Math.max(0, Math.min(1, activeDrag.transitionReference.influence + x - activeDrag.transitionReference.pointerX));
+                    speed = activeDrag.shiftConstrained ? activeDrag.transitionReference.speed : activeDrag.transitionReference.speed + (y - activeDrag.transitionReference.pointerY);
+                } else {
+                    influence = Math.max(0, Math.min(1, x));
+                    speed = y;
+                }
+                if (activeDrag.index === 1) { next.x1 = influence; next.y1 = speed * influence; }
+                else { next.x2 = 1 - influence; next.y2 = 1 - speed * influence; }
+            }
+            applyValue(next, "input", { source: view + "-graph", point: activeDrag.index });
+            if (event.preventDefault) event.preventDefault();
+        }
+        function dragKeydown(event) { if (activeDrag && event.keyCode === 27) { if (event.preventDefault) event.preventDefault(); dragCancel(); } }
+        function clearDrag() { doc.removeEventListener("pointermove", dragMove); doc.removeEventListener("pointerup", dragEnd); doc.removeEventListener("pointercancel", dragCancel); doc.removeEventListener("keydown", dragKeydown); activeDrag = null; }
+        function dragEnd() { if (!activeDrag) return; clearDrag(); render(); emit("change", { source: view + "-graph" }); }
+        function dragCancel() { if (!activeDrag) return; clearDrag(); applyValue(editSnapshot, null); if (typeof options.onCancel === "function") options.onCancel(cloneValue(value), { source: "pointercancel" }); }
+        function handleKey(event, index) {
+            var dx = 0;
+            var dy = 0;
+            var amount = event.shiftKey ? 0.05 : 0.01;
+            var next;
+            if (disabled || readonly) return;
+            if (event.keyCode === 37) dx = -amount; else if (event.keyCode === 39) dx = amount; else if (event.keyCode === 38) dy = amount; else if (event.keyCode === 40) dy = -amount; else return;
+            event.preventDefault();
+            next = cloneValue(value);
+            if (view === "progress") {
+                next[index === 1 ? "x1" : "x2"] = Math.max(0, Math.min(1, next[index === 1 ? "x1" : "x2"] + dx));
+                next[index === 1 ? "y1" : "y2"] += dy;
+            } else {
+                var projection = bezierSpeedProjection(value);
+                var influence = index === 1 ? projection.startInfluence : projection.endInfluence;
+                var speed = index === 1 ? projection.startSpeed : projection.endSpeed;
+                if (speed === null) return;
+                influence = Math.max(0, Math.min(1, influence + (index === 1 ? dx : -dx)));
+                speed += dy;
+                if (index === 1) { next.x1 = influence; next.y1 = speed * influence; }
+                else { next.x2 = 1 - influence; next.y2 = 1 - speed * influence; }
+            }
+            applyValue(next, "input", { source: "keyboard", point: index });
+            emit("change", { source: "keyboard", point: index });
+        }
+
+        valueInput.type = "hidden";
+        rootElement.setAttribute("aria-disabled", disabled ? "true" : "false");
+        rootElement.setAttribute("data-readonly", readonly ? "true" : "false");
+        valueInput._coreBezierFieldGetValue = function () { return cloneValue(value); };
+        valueInput._coreBezierFieldSetValue = function (next) { applyValue(next, null); };
+        viewSelector.className = "ui-bezier-view-selector"; viewSelector.setAttribute("role", "group");
+        progressButton.setAttribute("aria-pressed", view === "progress" ? "true" : "false"); speedButton.setAttribute("aria-pressed", view === "speed" ? "true" : "false");
+        progressButton.addEventListener("click", function () { switchView("progress"); });
+        speedButton.addEventListener("click", function () { switchView("speed"); });
+        viewport.className = "ui-bezier-viewport";
+        serialized.className = "ui-bezier-serialized";
+        serialized.setAttribute("aria-live", "polite");
+        speedHint.className = "ui-bezier-speed-hint"; speedHint.textContent = options.speedHint || "";
+        svg.setAttribute("viewBox", "0 0 " + WIDTH + " " + HEIGHT); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", options.graphLabel || "Cubic Bezier curve editor");
+        handle1.setAttribute("tabindex", disabled || readonly ? "-1" : "0"); handle2.setAttribute("tabindex", disabled || readonly ? "-1" : "0");
+        handle1.setAttribute("role", "slider"); handle2.setAttribute("role", "slider"); handle1.setAttribute("aria-label", options.point1Label || "Control Point 1"); handle2.setAttribute("aria-label", options.point2Label || "Control Point 2");
+        handle1.addEventListener("pointerdown", function (event) { beginDrag(event, 1); }); handle2.addEventListener("pointerdown", function (event) { beginDrag(event, 2); });
+        handle1.addEventListener("keydown", function (event) { handleKey(event, 1); }); handle2.addEventListener("keydown", function (event) { handleKey(event, 2); });
+        svg.appendChild(gridPath); svg.appendChild(tangentPath); svg.appendChild(curvePath); svg.appendChild(startPoint); svg.appendChild(endPoint); svg.appendChild(handle1); svg.appendChild(handle2); viewport.appendChild(svg);
+        numericGrid.className = "ui-bezier-numeric-grid";
+        buildNumeric("x1", options.x1Label || "P1 X", 0, 1); buildNumeric("y1", options.y1Label || "P1 Y"); buildNumeric("x2", options.x2Label || "P2 X", 0, 1); buildNumeric("y2", options.y2Label || "P2 Y");
+        rootElement.appendChild(valueInput); rootElement.appendChild(viewSelector); viewSelector.appendChild(progressButton); viewSelector.appendChild(speedButton); rootElement.appendChild(speedHint); rootElement.appendChild(viewport); rootElement.appendChild(serialized); rootElement.appendChild(numericGrid);
+        valueInput._coreSetDisabled = setDisabled;
+        rootElement._coreSetDisabled = setDisabled;
+        resizeHandler = function () { if (!disposed) render(); };
+        if (win && typeof win.ResizeObserver === "function") { resizeObserver = new win.ResizeObserver(resizeHandler); resizeObserver.observe(viewport); }
+        else if (win && win.addEventListener) win.addEventListener("resize", resizeHandler);
+        render();
+        return { root: rootElement, input: valueInput, serialized: serialized, speedHint: speedHint, svg: svg, handles: [handle1, handle2], numeric: numeric, viewButtons: { progress: progressButton, speed: speedButton }, getValue: function () { return cloneValue(value); }, setValue: function (next) { return applyValue(next, null); }, setDisabled: setDisabled, setView: switchView, getView: function () { return view; }, cancel: dragCancel, dispose: function () { disposed = true; clearDrag(); if (resizeObserver) resizeObserver.disconnect(); else if (win && win.removeEventListener) win.removeEventListener("resize", resizeHandler); } };
+    }
+
     function createDisclosureController(options) {
         var trigger = options.trigger;
         var content = options.content;
@@ -445,6 +787,7 @@
         createSwitch: createSwitch,
         createCheckbox: createCheckbox,
         createChoiceGroup: createChoiceGroup,
+        createBezierCurveField: createBezierCurveField,
         createDisclosureController: createDisclosureController,
         createButton: createButton,
         createColorField: createColorField,
@@ -452,6 +795,13 @@
         normalizeNumber: normalizeNumber,
         isNumberDraft: isNumberDraft,
         setNumberValue: setNumberValue,
-        bindNumberDrag: bindNumberDrag
+        bindNumberDrag: bindNumberDrag,
+        isValidBezierValue: isValidBezierValue,
+        normalizeBezierValue: normalizeBezierValue,
+        parseCubicBezier: parseCubicBezier,
+        serializeCubicBezier: serializeCubicBezier,
+        sampleBezier: sampleBezier,
+        sampleBezierSpeed: sampleBezierSpeed,
+        bezierSpeedProjection: bezierSpeedProjection
     };
 }));

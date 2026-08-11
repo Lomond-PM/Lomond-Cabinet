@@ -81,6 +81,7 @@
                 "common.uniformWidth": "Uniform Width",
                 "common.registry": "Registry",
                 "common.parameters": "Parameters",
+                "core.bezier.speedInfluenceHint": "Shift + horizontal drag: influence only",
 
                 "tools.moreTools.title": "More Tools",
                 "tools.quickStack.title": "Quick Stack",
@@ -545,6 +546,7 @@
                 "common.uniformWidth": "\u7edf\u4e00\u5bbd\u5ea6",
                 "common.registry": "\u6ce8\u518c\u4fe1\u606f",
                 "common.parameters": "\u53c2\u6570",
+                "core.bezier.speedInfluenceHint": "Shift + \u6c34\u5e73\u62d6\u52a8\uff1a\u4ec5\u8c03\u6574\u5f71\u54cd\u8303\u56f4",
 
                 "tools.moreTools.title": "\u66f4\u591a\u5de5\u5177",
                 "tools.quickStack.title": "\u5feb\u901f\u5806\u53e0",
