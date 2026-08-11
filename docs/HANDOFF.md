@@ -1,5 +1,7 @@
 # HANDOFF.md
 
+The uncommitted `refactor/0.3.2-action-button-foundation` work closes CoreUI Primary, Neutral, and Danger button semantics without changing elevation token values, interaction lifecycles, or domain geometry. Registry Secondary maps to Neutral and Registry danger maps to CoreUI Danger. The Developer Control Lab now provides real full-width Neutral, Primary, and Danger specimens with group-owned action-stack spacing; the Action-only Danger surface uses `rgba(255, 107, 95, 0.22)` at rest and an action hover token at `0.30`. `--space-registry-action-stack` preserves the accepted field-control spacing value through an independent action-domain lifecycle. Palette and Settings consume canonical roles while retaining local composition classes. Navigation, Home, and Vela remain separate ownership boundaries. Run the action/button and elevation contracts plus AE light/dark, wide/narrow smoke before commit or PR.
+
 The uncommitted `refactor/0.3.2-typography-appearance` work contains Typography Appearance Phase 1 and Phase 2 together. Interface Appearance renders the six stable size parameters as percentage RangeNumber controls under Typography / Titles, Content, and Code, with transient preview, numeric v1 persistence, remove-override Reset, responsive rows, and page-exit cleanup. Automated contracts pass apart from the retained legacy `test-vela-settings-integration.js` signature failure. Complete AE smoke across locale, width, UI Scale, persistence/reset, semantic independence, Palette JSON, and Vela transcript before commit or PR.
 
 ## Purpose

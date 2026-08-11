@@ -2110,8 +2110,8 @@
         mount.appendChild(fieldRow.row);
         acknowledgement = document.createElement("input"); acknowledgement.type = "checkbox"; acknowledgement.id = "velaExperimentalAcknowledgement"; acknowledgement.checked = VelaExperimentalAcknowledged === true;
         acknowledgementLabel = document.createElement("label"); acknowledgementLabel.setAttribute("for", acknowledgement.id); acknowledgementLabel.textContent = tr("settings.vela.acknowledgement"); acknowledgementLabel.appendChild(acknowledgement);
-        enableButton = document.createElement("button"); enableButton.type = "button"; enableButton.id = "velaExperimentalEnable"; enableButton.className = "panel-button panel-local-action"; enableButton.textContent = tr("settings.vela.enableSession");
-        disableButton = document.createElement("button"); disableButton.type = "button"; disableButton.id = "velaExperimentalDisable"; disableButton.className = "panel-button panel-local-action"; disableButton.textContent = tr("settings.vela.disableSession");
+        enableButton = document.createElement("button"); enableButton.type = "button"; enableButton.id = "velaExperimentalEnable"; enableButton.className = "ui-button ui-button--neutral panel-button panel-local-action"; enableButton.textContent = tr("settings.vela.enableSession");
+        disableButton = document.createElement("button"); disableButton.type = "button"; disableButton.id = "velaExperimentalDisable"; disableButton.className = "ui-button ui-button--neutral panel-button panel-local-action"; disableButton.textContent = tr("settings.vela.disableSession");
         status = document.createElement("p"); status.id = "velaExperimentalStatus"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
         acknowledgement.addEventListener("change", function () { VelaExperimentalAcknowledged = acknowledgement.checked === true; saveSettings(); configureSession(); refreshSession(); });
         enableButton.addEventListener("click", function () { saveEndpoint(); saveModel(); if (velaSurfaceController && typeof velaSurfaceController.enableExperimental === "function") { velaSurfaceController.enableExperimental().then(refreshSession, refreshSession); } });
@@ -2191,7 +2191,7 @@
                     resetButton = document.createElement("button");
                     resetButton.id = proceduralField.key;
                     resetButton.type = "button";
-                    resetButton.className = "panel-button settings-action-button registry-large-button panel-local-action";
+                    resetButton.className = "ui-button ui-button--neutral panel-button settings-action-button registry-large-button panel-local-action";
                     resetButton.setAttribute("data-i18n", proceduralField.labelKey);
                     resetButton.textContent = tr(proceduralField.labelKey);
                     resetButton.addEventListener("click", resetProceduralAppearanceParams);
@@ -2504,7 +2504,7 @@
             swatches.appendChild(swatch);
         }
         button.type = "button";
-        button.className = "panel-button settings-source-summary-action panel-local-action";
+        button.className = "ui-button ui-button--neutral panel-button settings-source-summary-action panel-local-action";
         button.textContent = tr(element.getAttribute("data-settings-palette-action") || "settings.palette.manage");
         button.addEventListener("click", openPaletteWorkspaceFromSettings);
         element.appendChild(title);
@@ -3300,7 +3300,7 @@
         field = findSettingsSectionField(section, "randomize");
         if (field) {
             button = document.createElement("button");
-            button.className = "panel-button registry-large-button is-full-width settings-action-button panel-local-action";
+            button.className = "ui-button ui-button--neutral panel-button registry-large-button is-full-width settings-action-button panel-local-action";
             button.id = "bgRandomizeBtn";
             button.type = "button";
             button.setAttribute("data-i18n", field.labelKey);
@@ -3310,7 +3310,7 @@
         field = findSettingsSectionField(section, "reset");
         if (field) {
             button = document.createElement("button");
-            button.className = "panel-button registry-large-button is-full-width settings-action-button panel-local-action";
+            button.className = "ui-button ui-button--neutral panel-button registry-large-button is-full-width settings-action-button panel-local-action";
             button.id = "bgResetBtn";
             button.type = "button";
             button.setAttribute("data-i18n", field.labelKey);
@@ -3340,7 +3340,7 @@
         field = findSettingsSectionField(section, "proceduralBackgroundRegenerate");
         if (field) {
             button = document.createElement("button");
-            button.className = "panel-button registry-large-button is-full-width settings-action-button panel-local-action";
+            button.className = "ui-button ui-button--neutral panel-button registry-large-button is-full-width settings-action-button panel-local-action";
             button.id = "proceduralBackgroundRegenerate";
             button.type = "button";
             button.setAttribute("data-i18n", field.labelKey);
@@ -6165,6 +6165,8 @@
         var hintText;
         var i;
         var controls;
+        var semanticVariant;
+        var semanticClassNames;
         var k;
         var option;
         var toolId = toolDef && toolDef.id ? toolDef.id : "";
@@ -6251,7 +6253,9 @@
             applyVisibleWhenMetadata(row, field);
             row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
 
-            input = window.CoreUI.createButton({ document: document, classNames: (field.variant === "primary" ? "primary-action" : "panel-button registry-secondary-action") + " registry-large-button ui-button--large" });
+            semanticVariant = field.variant === "primary" ? "primary" : (field.variant === "danger" ? "danger" : "neutral");
+            semanticClassNames = semanticVariant === "primary" ? "primary-action" : (semanticVariant === "danger" ? "registry-danger-action" : "panel-button registry-secondary-action");
+            input = window.CoreUI.createButton({ document: document, variant: semanticVariant, classNames: semanticClassNames + " registry-large-button ui-button--large" });
             if (field.fullWidth !== false) {
                 input.className += " is-full-width";
             }
@@ -6866,7 +6870,7 @@
         }
 
         body = document.createElement("div");
-        body.className = "registry-section-body";
+        body.className = "registry-section-body" + (section.composition === "actionStack" ? " registry-section-body--action-stack" : "");
         for (i = 0; i < fields.length; i++) {
             body.appendChild(renderSchemaField(fields[i], toolDef));
         }
@@ -6957,9 +6961,7 @@
         var button;
 
         if (visibleActions.length && (!toolDef || toolDef.hideRestoreDefaults !== true)) {
-            button = document.createElement("button");
-            button.type = "button";
-            button.className = "panel-button secondary-action";
+            button = window.CoreUI.createButton({ document: document, variant: "neutral", classNames: "panel-button secondary-action" });
             button.textContent = tr("common.restoreDefaults");
             button.addEventListener("click", function () {
                 resetRegistryToolValues(toolDef.id);
@@ -6969,9 +6971,7 @@
 
         for (i = 0; i < visibleActions.length; i++) {
             action = visibleActions[i];
-            button = document.createElement("button");
-            button.type = "button";
-            button.className = action.style === "secondary" ? "panel-button secondary-action" : "primary-action";
+            button = window.CoreUI.createButton({ document: document, variant: action.style === "secondary" ? "neutral" : "primary", classNames: action.style === "secondary" ? "panel-button secondary-action" : "primary-action" });
             button.textContent = tr(action.labelKey || action.id);
             button.setAttribute("data-dynamic-action", action.id);
             applyStateConditionMetadata(button, action, toolDef);

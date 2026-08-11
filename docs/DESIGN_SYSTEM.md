@@ -319,6 +319,20 @@ Legacy buttons, fallback Home tool icons, info panels, status pills, and selecti
 
 Elevation is not a User Appearance candidate. Future cross-system Developer Design Tuning may calibrate Surface Shell Shadow Strength, Primary Action Elevation Strength, Floating Shadow Strength, optional floating geometry, independent Border diagnostics, and preview-domain prominence after Typography, Spacing, Radius, Elevation, and Motion foundations are stable. Tuning must support canonical default -> temporary override -> AE calibration -> promote into the canonical semantic default -> remove override with unchanged computed output; no Design Tuning Store or UI is implemented by this Foundation.
 
+## Action / Button Semantic Contract
+
+CoreUI owns the closed base visual semantics for `Primary`, `Neutral`, and `Danger` actions: surface, border, foreground, elevation, and shared interaction-state consumption. Schema-level `Secondary` actions map to CoreUI `Neutral`; `Compact` changes geometry only and does not create another visual role. Disabled actions retain the existing opacity and cursor behavior and must not retain action elevation.
+
+Danger resolves to the Action-only canonical `--danger-surface` Design Default (`rgba(255, 107, 95, 0.22)`), `--danger-border`, and `--danger` foreground with no resting elevation. Hover consumes `--action-danger-hover-surface` (`rgba(255, 107, 95, 0.30)`) so its separation remains stronger than resting. No non-Action status, notice, or state surface consumes `--danger-surface`; those domains retain their independent foreground/status-tone ownership. Registry metadata maps `danger` directly to the CoreUI Danger variant, and the Developer Control Lab provides real full-width Neutral, Primary, and Danger specimens through that pipeline.
+
+Registry action stacks own their sibling rhythm through `--space-registry-action-stack`, currently aliased to the accepted `--space-registry-field-control` source for unchanged computed spacing. This separate alias prevents the action-stack lifecycle from depending on a field-internal label/control relation. The shared `--space-registry-field-block` continues to express Registry schema-block edge inset.
+
+Domains continue to own composition and geometry such as full-width placement, bilingual content, local action rows, Registry sizing, and Settings section layout. Those domain classes may not redefine the canonical role surface merely to reproduce a legacy dark button. Capsule shape remains an independent geometry choice. Existing focus, hover, pressed, keyboard, and motion behavior is preserved by this foundation rather than redesigned.
+
+Navigation is intentionally outside the action-role closure and retains its established surface/elevation boundary. Home tool tiles and Vela controls likewise retain their domain ownership; this task does not flatten them into Neutral actions. Light-surface diagnostics must confirm that Neutral follows its semantic surface instead of appearing as an isolated dark block, while Primary and Danger retain their existing computed appearance.
+
+Action/Button semantics are not User Appearance parameters. Future Developer Design Tuning candidates are Primary Action Elevation Strength, Neutral Surface Separation, Primary/Neutral Contrast, Primary/Danger Contrast, Danger Surface Separation, Action Border Strength, Disabled Opacity, and Navigation Elevation/Surface. No tuning store, promotion workflow, or new appearance parameter is introduced by this foundation.
+
 Foundation and future Design Tuning visual acceptance must include both the default dark surface and a light-surface diagnostic. The diagnostic is not a product Light Theme; it is a required inspection condition for detecting hard-coded dark colors, shadow clipping, incorrect surface ownership, and weak border hierarchy.
 
 ## Registry Tool UI Contract

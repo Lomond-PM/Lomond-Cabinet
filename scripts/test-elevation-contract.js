@@ -34,8 +34,9 @@ assert(declaration(css, "--action-neutral-surface", "var\\(--surface-card\\)"), 
 assert(!/--elevation-[0-9]+\s*:|--shadow-(?:sm|md|lg)\s*:/.test(css), "numeric elevation ladder must remain absent");
 
 assert(hasShadow(css, "\\.view-detail", "var\\(--elevation-surface-shell\\)"));
-assert(hasShadow(css, "\\.primary-action,[\\s\\S]*?\\.ui-button--primary", "var\\(--elevation-primary-action\\)"));
-assert(hasShadow(css, "\\.secondary-action,[\\s\\S]*?\\.registry-secondary-action,[\\s\\S]*?\\.ui-button--danger", "none"));
+assert(hasShadow(css, "\\.ui-button--primary", "var\\(--elevation-primary-action\\)"));
+assert(hasShadow(css, "\\.secondary-action,[\\s\\S]*?\\.registry-secondary-action", "none"));
+assert(hasShadow(css, "\\.ui-button--danger", "none"));
 assert(hasShadow(css, "\\.primary-action:disabled,[\\s\\S]*?\\.ui-button--danger:disabled", "none"));
 assert(/\.primary-action:disabled,[\s\S]*?\.secondary-action:disabled,[\s\S]*?\.registry-secondary-action:disabled,[\s\S]*?\.panel-local-action:disabled,[\s\S]*?\.ui-button--primary:disabled,[\s\S]*?\.ui-button--neutral:disabled,[\s\S]*?\.ui-button--navigation:disabled,[\s\S]*?\.ui-button--danger:disabled\s*\{[^}]*box-shadow:\s*none;/.test(css), "all Action Button disabled variants must resolve to no resting elevation");
 assert(hasShadow(css, "\\.select-menu", "var\\(--elevation-floating-surface\\)"));
@@ -52,31 +53,32 @@ assert(/\.collapsible-body\s*\{[^}]*overflow:\s*hidden;/.test(css), "collapsible
 assert(!/\.settings-source-summary\s*\{[^}]*(?:padding-bottom|margin-bottom):\s*28px;/.test(css), "source summary must not compensate for legacy shadow geometry");
 assert(!/\.background-procedural-controls\s*\{[^}]*(?:padding-bottom|margin-bottom):/.test(css), "procedural controls must not compensate for legacy shadow geometry");
 assert(/\.palette-editor-action-bar\s*\{[^}]*background:\s*var\(--surface-panel\);/.test(css), "Palette footer must follow its panel surface");
-assert(/\.palette-editor-action-bar \.palette-library-action:not\(\.is-primary\):not\(\.is-danger\)\s*\{[^}]*background:\s*var\(--action-neutral-surface\);/.test(css), "Palette footer neutral actions must retain separated semantic identity");
-assert(!/\.palette-editor-action-bar \.palette-library-action:not\(\.is-primary\):not\(\.is-danger\)\s*\{[^}]*background:\s*(?:#12110e|#0b0a08|var\(--surface-panel\));/.test(css), "Palette neutral action identity must not be a legacy dark or panel surface");
-assert(/\.palette-editor-action-bar \.palette-library-action\.is-primary\s*\{[^}]*background:\s*var\(--action-primary-surface\);/.test(css), "Palette primary action contract changed");
-assert(/\.palette-editor-action-bar \.palette-library-action\.is-danger\s*\{[^}]*background:\s*var\(--danger-surface\);/.test(css), "Palette danger action contract changed");
+assert(/\.ui-button--neutral\s*\{[^}]*background:\s*var\(--action-neutral-surface\);/.test(css), "Palette neutral actions must inherit canonical semantic identity");
+assert(/\.ui-button--primary\s*\{[^}]*background:\s*var\(--action-primary-surface\);/.test(css), "Palette primary actions must inherit the canonical Primary contract");
+assert(/\.ui-button--danger\s*\{[^}]*background:\s*var\(--danger-surface\);/.test(css), "Palette danger actions must inherit the canonical Danger contract");
+assert(!/\.palette-editor-action-bar \.palette-library-action[^}]*background:/.test(css), "Palette footer must not redefine canonical action surfaces");
 
 assert(/\.panel-local-action:not\(\.is-primary\):not\(\.is-danger\)\s*\{[^}]*background:\s*var\(--action-neutral-surface\);[^}]*box-shadow:\s*none;/.test(css), "panel-local neutral actions must use surface plus border without resting elevation");
-assert(/settings-source-summary-action panel-local-action/.test(main), "source summary must consume the shared panel-local action contract");
+assert(/ui-button--neutral panel-button settings-source-summary-action panel-local-action/.test(main), "source summary must consume canonical Neutral plus the panel-local composition contract");
 assert((main.match(/panel-local-action/g) || []).length >= 5, "Classic, Procedural, source-summary, and Settings-local actions must share the panel-local action contract");
-assert(/velaExperimentalEnable[^\n]*className = "panel-button panel-local-action"/.test(main), "Vela Settings enable must consume the Settings panel-local action contract");
-assert(/velaExperimentalDisable[^\n]*className = "panel-button panel-local-action"/.test(main), "Vela Settings disable must consume the Settings panel-local action contract");
+assert(/velaExperimentalEnable[^\n]*className = "ui-button ui-button--neutral panel-button panel-local-action"/.test(main), "Vela Settings enable must consume canonical Neutral plus the panel-local contract");
+assert(/velaExperimentalDisable[^\n]*className = "ui-button ui-button--neutral panel-button panel-local-action"/.test(main), "Vela Settings disable must consume canonical Neutral plus the panel-local contract");
 assert(/variant: "neutral", classNames: "panel-button appearance-reset-button panel-local-action"/.test(main), "Appearance Reset must consume the Settings panel-local action contract");
 assert(/panel-button registry-large-button panel-local-action/.test(paletteWorkspace), "Palette actions must expose the shared panel-local composition seam");
 assert(/variant: className && className\.indexOf\("is-primary"\) >= 0 \? "primary"/.test(paletteWorkspace), "Palette primary actions must retain explicit CoreUI primary metadata");
 assert(!/back-button[^\n]*panel-local-action|panel-local-action[^\n]*back-button/.test(main), "Settings and Detail navigation must remain outside panel-local action ownership");
-assert(/button\.className = "panel-button secondary-action"/.test(main), "Registry global secondary actions must retain their semantic composition seam");
-assert(/field\.variant === "primary" \? "primary-action" : "panel-button registry-secondary-action"/.test(main), "Registry schema secondary actions must expose an explicit semantic composition seam");
+assert(/variant: "neutral", classNames: "panel-button secondary-action"/.test(main), "Registry global secondary actions must map to canonical Neutral while retaining their composition seam");
+assert(/field\.variant === "primary" \? "primary" : \(field\.variant === "danger" \? "danger" : "neutral"\)/.test(main), "Registry schema actions must map Primary, Danger, and Secondary variants through CoreUI");
 assert(/element\.disabled = schemaStateDisabled\(item, toolDef\);[\s\S]*?element\.classList\.toggle\("is-state-disabled", element\.disabled\);/.test(main), "Registry state conditions must map to both HTML disabled and the semantic state class");
 assert(/elements\[i\]\.disabled = disabled;[\s\S]*?elements\[i\]\.classList\.toggle\("is-state-disabled", disabled\);/.test(main), "Registry state refresh must preserve both disabled representations");
 assert(/key:\s*"stateDisabledButton"[\s\S]*?variant:\s*"secondary"[\s\S]*?enabledWhen:\s*\{[\s\S]*?stateKey:\s*"hasComp"/.test(registryControlLab), "Control Lab state-gated horizontal action is a Secondary action, not a Primary action");
 assert(/\.vela-settings-button\s*\{[^}]*box-shadow:\s*none;/.test(velaCss), "Vela Surface settings action must remain independently flat");
 assert(/\.vela-surface-action\s*\{[^}]*box-shadow:\s*none;/.test(velaCss), "Vela Surface dynamic actions must remain independently flat");
 
-var mixed = block(css, "\\.panel-card,\\s*\\.ui-button--neutral,\\s*\\.ui-button--navigation,\\s*\\.panel-button,\\s*\\.tool-icon,\\s*\\.info-panel,\\s*\\.status-pill,\\s*\\.selection-chip,\\s*\\.action-sheet");
+var mixed = block(css, "\\.panel-card,\\s*\\.ui-button--navigation,\\s*\\.panel-button,\\s*\\.tool-icon,\\s*\\.info-panel,\\s*\\.status-pill,\\s*\\.selection-chip,\\s*\\.action-sheet");
 assert(mixed && !/box-shadow:/.test(mixed), "legacy mixed selector must not own elevation");
-assert(hasShadow(css, "\\.ui-button--neutral,[\\s\\S]*?\\.panel-button", "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"));
+assert(hasShadow(css, "\\.ui-button--navigation,[\\s\\S]*?\\.panel-button", "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"));
+assert(hasShadow(css, "\\.ui-button--neutral", "none"));
 assert(!/\.panel-button\s*\{[^}]*box-shadow:\s*none;/.test(css), "global panel buttons must not be flattened");
 assert(!/\.(?:secondary-action|registry-secondary-action)\s*\{[^}]*0 12px 30px rgba\(0, 0, 0, 0\.28\)/.test(css), "Registry secondary actions must not consume the legacy raised-button shadow");
 assert(!/\.(?:primary-action|secondary-action|registry-secondary-action)\s*\{[^}]*z-index:/.test(css), "action hierarchy must rely on normal sibling paint order without a resting z-index seam");

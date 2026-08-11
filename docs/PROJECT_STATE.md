@@ -1,5 +1,7 @@
 # PROJECT_STATE.md
 
+Action / Button Foundation now closes the CoreUI `Primary`, `Neutral`, and `Danger` visual roles. Registry `Secondary` maps to Neutral and Registry `danger` maps directly to CoreUI Danger; the Developer Control Lab contains real full-width specimens for all three roles under a semantic action-stack spacing owner. Disabled actions carry no elevation; Palette and Settings retain only domain layout/composition ownership. Navigation, Home tool identity, and Vela remain explicit domain boundaries, with no new User Appearance or Design Tuning parameter.
+
 Typography Appearance Parameters now expose six bounded semantic size controls in Global Settings → Interface Appearance → Typography. Stable Parameter IDs persist numeric relative multipliers in `AEToolbox.appearance.v1`, while the UI presents percentages through Core RangeNumber. Page/Surface titles share intent; Field Label and Code sizes are independent from Body and Supporting; Control and Eyebrow retain their intentional derivations. Weight, line-height, font-family, Text Scale, and domain-specific typography controls remain deferred.
 
 ## Current project overview

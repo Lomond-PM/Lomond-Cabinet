@@ -42,7 +42,7 @@ ok(/\.select-input:focus\s*\{[^}]*var\(--interaction-focus-border\)/.test(style)
 ok(/\.num-input:focus\s*\{[^}]*var\(--interaction-focus-border\)/.test(style), "number input focus uses focus-border semantic");
 ok(/\.select-option\.is-selected\s*\{[^}]*var\(--interaction-selected-surface\)[^}]*var\(--interaction-selected-foreground\)/.test(style), "selected option uses selected semantics");
 ok(/\.switch input:checked \+ \.switch-track\s*\{[^}]*var\(--interaction-checked-surface\)/.test(style), "checked switch uses checked semantic");
-ok(/\.primary-action\s*\{[^}]*var\(--action-primary-surface\)[^}]*var\(--action-primary-foreground\)/.test(style), "primary action uses action semantics");
+ok(/\.ui-button--primary\s*\{[^}]*var\(--action-primary-surface\)[^}]*var\(--action-primary-foreground\)/.test(style), "CoreUI primary action uses action semantics");
 ok(/\.segmented-thumb\s*\{[^}]*var\(--selection-indicator-surface\)/.test(style), "segmented thumb uses selection indicator semantic");
 for (const legacy of ["--gold:", "--gold-soft:", "--gold-hot:", "--gold-track:", "--gold-focus:", "--gold-button:", "--selection-bg:"]) {
     ok(style.includes(legacy), legacy + " compatibility source remains declared");
