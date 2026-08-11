@@ -289,3 +289,7 @@ Long-term natural-language understanding and candidate generation must remain se
 Phase 1 establishes semantic Motion Defaults, CSS/JS view-content duration parity, and scoped `CoreMotion` transactions for the existing spatial surface morph path. Home/Detail and Home/Settings retain their existing geometry, radii, overlay/content choreography, 480ms expand and 360ms contract curves. The Settings launch-source measurement now restores the exact pre-measurement Home class and transition state.
 
 Deferred to Phase 2: action press perceptual centering; Tool open handoff/overlap; remaining Settings close paint-order or content choreography; nested Settings and Peek presentation; deeper morph reentrancy/resize remediation; full reduced-motion coverage; collapse actual-height remediation.
+
+## Motion Phase 2 targeted remediation
+
+Canonical Action press is geometrically centered. Tool and Settings open share the existing Home recede presentation; Tool and Settings close now restore Home during the final 260ms of their 360ms contract using the same semantic derived-delay relationship. Both Home source measurement helpers restore exact pre-measurement class/transition state. Tool open identity lasts 360ms and overlaps the existing content reveal, which completes with the 480ms spatial expansion. The real detail content uses a temporary destination-layout stage, preventing continuous responsive reflow while the outer shell expands. Settings Close remains the closed-good geometry/measurement reference; only its Home restore trigger moved earlier.

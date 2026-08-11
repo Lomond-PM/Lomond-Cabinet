@@ -337,3 +337,7 @@ Future reviewed contracts may migrate away from single-message lexical proposal 
 Motion architecture is CSS-first for ordinary interactions and transaction-based only for cancellation-sensitive spatial presentation. `MotionDefaults` is the semantic source; `CoreMotion` is a domain-neutral scoped lifecycle engine. Domain adapters retain geometry, routing hooks, Palette/Peek/Appearance cleanup, and content handoff. The legacy global animation lock remains only around current Home/Settings flows.
 
 AE acceptance must confirm parity for Primary/Neutral/Danger interaction, Home↔Tool, Home↔Settings, collapse, Palette, Peek, drag and Vela, plus `motion.speed` values 0.75/1/1.35 without late cleanup, ghosts, or residue. Known visual remediation remains Phase 2.
+
+## Motion Phase 2 handoff
+
+AE must validate centered Action press across canonical and compatibility consumers; Settings-open Home recede; completion-aligned Home restore for both Tool and Settings close; and Tool-open identity/content overlap at motion speeds 0.75, 1, and 1.35. Settings Close retains its protected measurement, geometry, backdrop, and cleanup path. DOM preparation remains in the existing Tool adapter; real content is temporarily laid out at destination geometry and clipped by the expanding shell, while interaction remains locked until the spatial transaction completes. Narrow layout is the primary reflow/clip stress test.

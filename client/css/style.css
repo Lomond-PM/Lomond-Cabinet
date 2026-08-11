@@ -109,6 +109,8 @@
     --motion-collapse-duration: var(--dur-normal);
     --motion-view-content-enter-duration: 180ms;
     --motion-view-content-exit-duration: 120ms;
+    --motion-home-recede-duration: var(--dur-normal);
+    --motion-home-restore-duration: var(--dur-normal);
     --motion-palette-enter-duration: var(--dur-normal);
     --motion-palette-exit-duration: var(--dur-fast);
     --motion-drag-settle-duration: var(--dur-normal);
@@ -406,6 +408,19 @@ body:not(.i18n-ready) .app-shell {
     overflow: hidden;
 }
 
+.view-detail.has-destination-content-layout .detail-ui-layer {
+    pointer-events: none;
+}
+
+.view-detail.has-destination-content-layout .detail-content {
+    overflow: hidden;
+    scrollbar-width: none;
+}
+
+.view-detail.has-destination-content-layout .detail-content::-webkit-scrollbar {
+    display: none;
+}
+
 .view.is-active {
     visibility: visible;
     opacity: 1;
@@ -416,10 +431,12 @@ body:not(.i18n-ready) .app-shell {
 .view-home.is-opening {
     opacity: 0.42;
     transform: scale(0.972);
+    transition-duration: var(--motion-home-recede-duration);
+    transition-timing-function: var(--ease-apple-out);
 }
 
 .view-home.is-returning {
-    animation: homeReturn var(--dur-normal) var(--ease-apple-out) both;
+    animation: homeReturn var(--motion-home-restore-duration) var(--ease-apple-out) both;
 }
 
 .view-detail.is-entering {
@@ -1775,7 +1792,7 @@ body:not(.i18n-ready) .app-shell {
     transform-origin: center center;
 }
 
-.view-detail.is-morphing .detail-ui-layer,
+.view-detail.is-morphing:not(.content-handoff-visible) .detail-ui-layer,
 .view-detail.content-suppressed .detail-ui-layer {
     visibility: hidden !important;
     opacity: 0 !important;
@@ -2532,7 +2549,7 @@ p {
 .ui-button:not(:disabled):active,
 .panel-button:active,
 .primary-action:active {
-    transform: translateY(1px) scale(0.96);
+    transform: scale(0.96);
     transition-duration: var(--motion-action-press-duration);
     transition-timing-function: var(--ease-press);
 }
