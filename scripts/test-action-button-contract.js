@@ -52,7 +52,10 @@ has(css, /\.ui-button:disabled,[\s\S]*?opacity:\s*0\.48;[\s\S]*?cursor:\s*defaul
 assert(!/button:disabled\s*\{[^}]*box-shadow:/.test(css), "Action disabled elevation must not leak to all button elements");
 
 has(css, /\.ui-button:not\(:disabled\):hover,[\s\S]*?transform:\s*translateY\(-1px\) scale\(1\.01\)/, "Button hover interaction changed");
-has(css, /\.ui-button:not\(:disabled\):active,[\s\S]*?transform:\s*translateY\(1px\) scale\(0\.96\)/, "Button pressed interaction changed");
+has(css, /\.ui-button:not\(:disabled\):active,[\s\S]*?\.panel-button:active,[\s\S]*?\.primary-action:active\s*\{[^}]*transform:\s*scale\(0\.96\)/, "Shared Action press must scale around the geometric center");
+assert(!/\.ui-button:not\(:disabled\):active,[\s\S]*?\.primary-action:active\s*\{[^}]*translateY\([^)]+\)/.test(css), "Canonical Action press must not retain directional translation");
+has(css, /\.ui-button:not\(:disabled\):active,[\s\S]*?transition-duration:\s*var\(--motion-action-press-duration\)/, "Button press duration ownership changed");
+has(css, /\.ui-button:not\(:disabled\):active,[\s\S]*?transition-timing-function:\s*var\(--ease-press\)/, "Button press easing changed");
 has(css, /button:focus-visible,[\s\S]*?box-shadow:\s*0 0 0 1px var\(--interaction-focus-ring\)/, "Focus ring contract changed");
 
 has(main, /field\.variant === "primary" \? "primary" : \(field\.variant === "danger" \? "danger" : "neutral"\)/, "Registry schema variants must map Primary, Danger, and Secondary through CoreUI");

@@ -8,9 +8,12 @@
         structuralCollapse: 260,
         viewContentEnter: 180,
         viewContentExit: 120,
+        homeHandoffRecede: 260,
+        homeHandoffRestore: 260,
         spatialMorphExpand: 480,
         spatialMorphContract: 360,
         spatialMorphIdentity: 260,
+        toolIdentityOpen: 360,
         paletteEnter: 260,
         paletteExit: 160,
         dragSettle: 260
@@ -22,15 +25,20 @@
         structuralCollapse: "cubic-bezier(0.16, 1, 0.3, 1)",
         viewContentEnter: "cubic-bezier(0.16, 1, 0.3, 1)",
         viewContentExit: "cubic-bezier(0.32, 0, 0.67, 0)",
+        homeHandoffRecede: "cubic-bezier(0.16, 1, 0.3, 1)",
+        homeHandoffRestore: "cubic-bezier(0.16, 1, 0.3, 1)",
         spatialMorphExpand: "cubic-bezier(0.16, 1, 0.3, 1)",
         spatialMorphContract: "cubic-bezier(0.32, 0, 0.67, 0)"
     });
     var majorViewRoles = Object.freeze({
         viewContentEnter: true,
         viewContentExit: true,
+        homeHandoffRecede: true,
+        homeHandoffRestore: true,
         spatialMorphExpand: true,
         spatialMorphContract: true,
-        spatialMorphIdentity: true
+        spatialMorphIdentity: true,
+        toolIdentityOpen: true
     });
 
     function resolveDuration(role, majorViewScale) {
@@ -45,6 +53,8 @@
         if (!root || !root.style) { return; }
         root.style.setProperty("--motion-view-content-enter-duration", resolveDuration("viewContentEnter", majorViewScale) + "ms");
         root.style.setProperty("--motion-view-content-exit-duration", resolveDuration("viewContentExit", majorViewScale) + "ms");
+        root.style.setProperty("--motion-home-recede-duration", resolveDuration("homeHandoffRecede", majorViewScale) + "ms");
+        root.style.setProperty("--motion-home-restore-duration", resolveDuration("homeHandoffRestore", majorViewScale) + "ms");
     }
 
     global.MotionDefaults = Object.freeze({

@@ -3792,6 +3792,7 @@
     function getHomeToolIconRect(toolButton) {
         var home = byId("homeView");
         var previousTransition = home.style.transition;
+        var previousClassName = home.className;
         var rect;
 
         home.style.transition = "none";
@@ -3799,6 +3800,7 @@
         home.classList.remove("is-opening", "is-returning");
         home.offsetWidth;
         rect = getToolIcon(toolButton).getBoundingClientRect();
+        home.className = previousClassName;
         home.style.transition = previousTransition;
         return rect;
     }
@@ -3846,6 +3848,112 @@
             });
         }
         return animation;
+    }
+
+    function beginHomeRecede(home) {
+        if (!home) { return; }
+        home.classList.remove("is-returning");
+        home.classList.add("is-opening");
+    }
+
+    function prepareHomeRestore(home) {
+        var previousTransition;
+        if (!home) { return; }
+        previousTransition = home.style.transition;
+        home.style.transition = "none";
+        home.classList.remove("is-returning");
+        home.classList.add("is-active", "is-opening");
+        home.offsetWidth;
+        home.style.transition = previousTransition;
+    }
+
+    function scheduleHomeRestore(home, transaction, delay) {
+        var timer;
+        var start = function () {
+            if (!home || !document.documentElement.contains(home)) { return; }
+            home.classList.remove("is-opening");
+            home.classList.add("is-returning");
+        };
+        timer = window.setTimeout(transaction ? transaction.guard(start) : start, Math.max(0, delay));
+        if (transaction) {
+            transaction.addCleanup(function () { window.clearTimeout(timer); });
+            if (transaction.finished && typeof transaction.finished.then === "function") {
+                transaction.finished.then(function (result) {
+                    if (result && result.status === "cancelled" && !coreMotion.current(transaction.key)) {
+                        home.classList.remove("is-opening", "is-returning");
+                    }
+                });
+            }
+        }
+        return timer;
+    }
+
+    function scheduleToolContentHandoff(detail, transaction, delay) {
+        var timer;
+        var start = function () {
+            if (!detail || !document.documentElement.contains(detail)) { return; }
+            detail.classList.add("content-handoff-visible");
+            revealDetailContent();
+        };
+        timer = window.setTimeout(transaction ? transaction.guard(start) : start, Math.max(0, delay));
+        if (transaction) {
+            transaction.addCleanup(function () { window.clearTimeout(timer); });
+            if (transaction.finished && typeof transaction.finished.then === "function") {
+                transaction.finished.then(function (result) {
+                    if (result && result.status === "cancelled" && !coreMotion.current(transaction.key) && detail) {
+                        suppressDetailContent();
+                    }
+                });
+            }
+        }
+        return timer;
+    }
+
+    function clearDetailDestinationContentLayout(detail) {
+        var stage = detail ? detail.querySelector(".detail-ui-layer") : null;
+        if (!detail || !stage) { return; }
+        detail.classList.remove("has-destination-content-layout");
+        stage.style.inset = "";
+        stage.style.left = "";
+        stage.style.top = "";
+        stage.style.right = "";
+        stage.style.bottom = "";
+        stage.style.width = "";
+        stage.style.height = "";
+        stage.style.maxWidth = "";
+        stage.style.maxHeight = "";
+        stage.removeAttribute("inert");
+        stage.removeAttribute("aria-hidden");
+    }
+
+    function prepareDetailDestinationContentLayout(detail, targetRect) {
+        var stage = detail ? detail.querySelector(".detail-ui-layer") : null;
+        var layoutWidth;
+        var layoutHeight;
+        if (!detail || !stage || !targetRect) { return false; }
+        setDetailMorphRect(detail, targetRect, "22px");
+        layoutWidth = Math.max(1, detail.clientWidth);
+        layoutHeight = Math.max(1, detail.clientHeight);
+        detail.classList.add("has-destination-content-layout");
+        stage.style.inset = "auto";
+        stage.style.left = "0";
+        stage.style.top = "0";
+        stage.style.right = "auto";
+        stage.style.bottom = "auto";
+        stage.style.width = layoutWidth + "px";
+        stage.style.height = layoutHeight + "px";
+        stage.style.maxWidth = "none";
+        stage.style.maxHeight = "none";
+        stage.setAttribute("inert", "");
+        stage.setAttribute("aria-hidden", "true");
+        return true;
+    }
+
+    function bindDetailDestinationContentLayout(detail, transaction) {
+        if (!transaction) { return; }
+        transaction.addCleanup(function () {
+            clearDetailDestinationContentLayout(detail);
+        });
     }
 
     /*
@@ -3937,12 +4045,12 @@
 
     function clearDetailContentClasses() {
         var detail = byId("detailView");
-        detail.classList.remove("content-suppressed", "content-reveal", "content-exit");
+        detail.classList.remove("content-suppressed", "content-reveal", "content-exit", "content-handoff-visible");
     }
 
     function suppressDetailContent() {
         var detail = byId("detailView");
-        detail.classList.remove("content-reveal", "content-exit");
+        detail.classList.remove("content-reveal", "content-exit", "content-handoff-visible");
         detail.classList.add("content-suppressed");
     }
 
@@ -4047,6 +4155,7 @@
         detail.style.width = "";
         detail.style.height = "";
         detail.style.borderRadius = "";
+        clearDetailDestinationContentLayout(detail);
     }
 
     function finishOpenTransition(shell, toolId) {
@@ -4077,7 +4186,11 @@
                 detail.classList.remove("no-transition");
                 endAnimation();
                 nextFrame(function () {
-                    revealDetailContent();
+                    if (detail.classList.contains("content-handoff-visible")) {
+                        detail.classList.remove("content-handoff-visible");
+                    } else {
+                        revealDetailContent();
+                    }
                     refreshActiveTool();
                 });
             });
@@ -7308,6 +7421,7 @@
             targetRect = getToolDetailTargetRect();
             overlay = createMorphIconOverlay(toolButton);
 
+            prepareDetailDestinationContentLayout(detail, targetRect);
             setDetailMorphRect(detail, firstRect, "24px");
             detail.appendChild(overlay);
             suppressDetailContent();
@@ -7316,11 +7430,15 @@
             overlay.style.opacity = "1";
             overlay.style.transform = "scale(1)";
             overlay.style.filter = "blur(0px)";
-            home.classList.add("is-opening");
+            beginHomeRecede(home);
             spatialMotion = beginSpatialSurfaceMorph("system:view", 2, function () {
                 finishOpenTransition(detail, toolId);
             });
             finishGate = spatialMotion.completePart;
+            bindDetailDestinationContentLayout(detail, spatialMotion.transaction);
+            scheduleToolContentHandoff(detail, spatialMotion.transaction, Math.max(0,
+                semanticMotionDuration("spatialMorphExpand") - semanticMotionDuration("viewContentEnter")
+            ));
 
             playSpatialAnimation(spatialMotion.transaction, detail, [
                 {
@@ -7349,7 +7467,7 @@
                 { opacity: "1", transform: "scale(1)", filter: "blur(0px)" },
                 { opacity: "0", transform: "scale(1.12)", filter: "blur(4px)" }
             ], {
-                duration: semanticMotionDuration("spatialMorphIdentity"),
+                duration: semanticMotionDuration("toolIdentityOpen"),
                 easing: Motion.appleOut,
                 fill: "forwards"
             }, function () {
@@ -7389,11 +7507,14 @@
             overlay.style.opacity = "0";
             overlay.style.transform = "scale(1.12)";
             overlay.style.filter = "blur(4px)";
-            home.classList.add("is-returning");
+            prepareHomeRestore(home);
             spatialMotion = beginSpatialSurfaceMorph("system:view", 2, function () {
                 finishCloseTransition(detail, toolButton);
             });
             finishGate = spatialMotion.completePart;
+            scheduleHomeRestore(home, spatialMotion.transaction, Math.max(0,
+                semanticMotionDuration("spatialMorphContract") - semanticMotionDuration("homeHandoffRestore")
+            ));
 
             playSpatialAnimation(spatialMotion.transaction, detail, [
                 {
@@ -8984,7 +9105,8 @@
         var view = byId("settingsView");
         var home = byId("homeView");
 
-        home.classList.add("is-active", "is-returning");
+        home.classList.add("is-active");
+        home.classList.remove("is-opening");
         view.classList.add("no-transition");
         pendingSettingsFocusSectionId = null;
         view.classList.remove("is-open", "is-morphing");
@@ -9339,6 +9461,7 @@
         if (backdrop) {
             backdrop.style.opacity = "0";
         }
+        beginHomeRecede(byId("homeView"));
 
         spatialMotion = beginSpatialSurfaceMorph("system:view", backdrop ? 2 : 1, function () {
             finishOpenSettingsTransition();
@@ -9411,6 +9534,7 @@
             sourceRect = getSystemLaunchSourceRect(source);
             currentRect = panel.getBoundingClientRect();
 
+            prepareHomeRestore(byId("homeView"));
             setPanelMorphRect(panel, currentRect, "22px");
             suppressSettingsContent();
             view.classList.add("is-morphing");
@@ -9419,6 +9543,9 @@
                 finishCloseSettingsTransition();
             });
             finishGate = spatialMotion.completePart;
+            scheduleHomeRestore(byId("homeView"), spatialMotion.transaction, Math.max(0,
+                semanticMotionDuration("spatialMorphContract") - semanticMotionDuration("homeHandoffRestore")
+            ));
 
             playSpatialAnimation(spatialMotion.transaction, panel, [
                 {

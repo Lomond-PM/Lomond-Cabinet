@@ -602,3 +602,11 @@ Motion defaults and motion lifecycle are separate capabilities. `MotionDefaults`
 The current `.is-animating` class remains a domain compatibility guard, not a CoreMotion singleton constraint. Different scoped keys may coexist. Future adapters may therefore provide capsule or other geometry without modifying CoreMotion; identity/content handoff stays in the adapter.
 
 Expected Phase 1 visual delta: **NONE**.
+
+## Motion Phase 2 choreography contracts
+
+Home presentation handoff is an optional domain choreography component, separate from spatial surface morph. Recede retains opacity `0.42`, scale `0.972`, and apple-out timing; restore retains the `0.44/0.975 → 1/1` keyframes. Tool and Settings adapters choose when to trigger these states. CoreMotion does not know about Home.
+
+Tool identity and content handoff are likewise separate from geometry. Tool open uses a 360ms identity presentation and starts the existing 180ms content enter at `spatial expand - content enter`, so both content and 480ms geometry finish together. During the morph, the existing real `.detail-ui-layer` is temporarily laid out from the already-resolved destination shell geometry while the outer shell clips its presentation. Prepared, destination-laid-out, visible, and interactive are separate states; interaction remains disabled until the spatial transaction completes. Temporary sizing is transaction-bound and removed on completion or cancellation. This seam can be reused by a future Mounted Tool adapter without invoking Home handoff.
+
+Canonical Action press now uses centered `scale(0.96)` with the existing 120ms press easing. Future Design Tuning candidates are press scale/translation, Home recede scale/opacity/duration, and Tool identity/content handoff timing.
