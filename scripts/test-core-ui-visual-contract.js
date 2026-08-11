@@ -12,12 +12,15 @@ var index = fs.readFileSync(path.join(root, "client/index.html"), "utf8");
 
 function Element(tag, doc) {
     this.tagName = tag.toUpperCase(); this.ownerDocument = doc; this.children = []; this.listeners = {}; this.attributes = {}; this.style = {}; this.value = ""; this.disabled = false;
-    this.classList = { values: [], add: function (name) { if (this.values.indexOf(name) < 0) this.values.push(name); }, contains: function (name) { return this.values.indexOf(name) >= 0; }, remove: function (name) { var i = this.values.indexOf(name); if (i >= 0) this.values.splice(i, 1); } };
+    this.classList = { values: [], add: function (name) { if (this.values.indexOf(name) < 0) this.values.push(name); }, contains: function (name) { return this.values.indexOf(name) >= 0; }, remove: function (name) { var i = this.values.indexOf(name); if (i >= 0) this.values.splice(i, 1); }, toggle: function (name, force) { if (force === false) this.remove(name); else if (force === true) this.add(name); else if (this.contains(name)) this.remove(name); else this.add(name); } };
 }
 Element.prototype.setAttribute = function (name, value) { this.attributes[name] = String(value); };
+Element.prototype.getAttribute = function (name) { return this.attributes[name]; };
 Element.prototype.appendChild = function (child) { this.children.push(child); child.parentNode = this; };
 Element.prototype.addEventListener = function (name, callback) { (this.listeners[name] || (this.listeners[name] = [])).push(callback); };
+Element.prototype.removeEventListener = function (name, callback) { var list = this.listeners[name] || []; var index = list.indexOf(callback); if (index >= 0) list.splice(index, 1); };
 Element.prototype.dispatch = function (name, event) { (this.listeners[name] || []).forEach(function (callback) { callback.call(this, event || {}); }, this); };
+Element.prototype.focus = function () { this.ownerDocument.activeElement = this; };
 var doc = { createElement: function (tag) { return new Element(tag, doc); }, body: { style: {} }, activeElement: null, defaultView: { setTimeout: function (fn) { fn(); }, addEventListener: function () {}, removeEventListener: function () {} } };
 
 var opened = null;
@@ -73,6 +76,54 @@ var legacyRangeControl = CoreUI.createRangeNumber({ document: doc, value: 5, min
 assert.strictEqual(legacyRangeControl.valueCluster, null, "RangeNumber without unit keeps the legacy composition");
 assert.strictEqual(legacyRangeControl.root.children[0], legacyRangeControl.number);
 assert.strictEqual(legacyRangeControl.root.children[1], legacyRangeControl.range);
+var disabledRangeControl = CoreUI.createRangeNumber({ document: doc, value: 5, min: 0, max: 10, step: 1, disabled: true });
+assert.strictEqual(disabledRangeControl.number.disabled, true);
+assert.strictEqual(disabledRangeControl.range.disabled, true);
+
+var checkboxChanges = 0;
+var checkbox = CoreUI.createCheckbox({ document: doc, id: "ack", checked: true, disabled: true, labelText: "Acknowledge", onChange: function () { checkboxChanges += 1; } });
+assert.strictEqual(checkbox.input.type, "checkbox");
+assert.strictEqual(checkbox.input.checked, true);
+assert.strictEqual(checkbox.input.disabled, true);
+assert.strictEqual(checkbox.label.textContent, "Acknowledge");
+assert(checkbox.root.classList.contains("ui-checkbox"));
+checkbox.input.dispatch("change");
+assert.strictEqual(checkboxChanges, 1);
+
+var choiceChanges = [];
+var choice = CoreUI.createChoiceGroup({ document: doc, id: "mode", value: "a", options: [{ value: "a", label: "A" }, { value: "b", label: "B" }, { value: "c", label: "C", disabled: true }], onChange: function (value) { choiceChanges.push(value); } });
+assert.strictEqual(choice.root.attributes.role, "radiogroup");
+assert.strictEqual(choice.options[0].attributes.role, "radio");
+assert.strictEqual(choice.options[0].attributes["aria-checked"], "true");
+choice.options[1].dispatch("click");
+assert.strictEqual(choice.getValue(), "b");
+assert.strictEqual(choice.input.value, "b");
+assert.deepStrictEqual(choiceChanges, ["b"]);
+choice.options[1].dispatch("keydown", { keyCode: 36, preventDefault: function () {} });
+assert.strictEqual(choice.getValue(), "a", "Home selects the first enabled option");
+choice.options[0].dispatch("keydown", { keyCode: 35, preventDefault: function () {} });
+assert.strictEqual(choice.getValue(), "b", "End skips the disabled final option");
+choice.options[2].dispatch("click");
+assert.strictEqual(choice.getValue(), "b", "disabled options cannot be selected");
+assert.strictEqual(choice.options[2].attributes["data-core-intrinsic-disabled"], "true");
+var disabledChoice = CoreUI.createChoiceGroup({ document: doc, value: "a", disabled: true, options: [{ value: "a", label: "A" }, { value: "b", label: "B" }] });
+assert(disabledChoice.options.every(function (button) { return button.disabled === true; }), "disabled ChoiceGroup projects to every option");
+
+var disclosureChanges = [];
+var disclosureRoot = doc.createElement("section");
+var disclosureTrigger = doc.createElement("button");
+var disclosureContent = doc.createElement("div");
+disclosureContent.id = "disclosure-body";
+var disclosure = CoreUI.createDisclosureController({ trigger: disclosureTrigger, content: disclosureContent, root: disclosureRoot, expanded: false, onChange: function (expanded) { disclosureChanges.push(expanded); } });
+assert.strictEqual(disclosureTrigger.attributes["aria-controls"], "disclosure-body");
+assert.strictEqual(disclosureTrigger.attributes["aria-expanded"], "false");
+assert.strictEqual(disclosureContent.attributes["aria-hidden"], "true");
+assert(disclosureRoot.classList.contains("is-collapsed"));
+disclosureTrigger.dispatch("click");
+assert.strictEqual(disclosure.isExpanded(), true);
+assert.strictEqual(disclosureContent.attributes["aria-hidden"], "false");
+assert.deepStrictEqual(disclosureChanges, [true]);
+disclosure.dispose();
 
 var danger = CoreUI.createButton({ document: doc, variant: "danger", disabled: true });
 assert(danger.classList.contains("ui-button") && danger.classList.contains("ui-button--danger") && danger.disabled);
@@ -95,6 +146,10 @@ assert(/\.settings-field-control[\s\S]*?flex: 0 1 158px/.test(css), "Settings la
 assert(/\.palette-workspace[\s\S]*?grid-template-columns/.test(css), "Palette layout ownership must remain");
 
 assert(/function openCoreColorPicker/.test(main));
+assert(/fieldType === "range"[\s\S]*?CoreUI\.createRangeNumber/.test(main), "Registry range must consume Core RangeNumber");
+assert(/fieldType === "color"[\s\S]*?CoreUI\.createColorField/.test(main), "Registry color must consume Core ColorField");
+assert(/registry-section-disclosure-trigger/.test(main) && /CoreUI\.createDisclosureController/.test(main), "Registry sections must consume the shared Disclosure controller");
+assert(!/function syncRegistryColorField/.test(main), "obsolete Registry-only color synchronization must not survive");
 assert(/typeof input\._coreColorFieldSetValue === "function"[\s\S]*?input\._coreColorFieldSetValue\(normalized\);[\s\S]*?return;/.test(main), "Settings refresh must use the Core ColorField synchronization seam");
 assert(/onPreview:[\s\S]*onCommit:[\s\S]*onCancel:/.test(main));
 assert(/hasUncommittedPreview/.test(main) && /commitColor/.test(main));

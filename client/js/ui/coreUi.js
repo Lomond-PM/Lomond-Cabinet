@@ -203,7 +203,8 @@
             if (options.onCommit) options.onCommit(modelValue);
             return modelValue;
         }
-        number = createNumberInput({ document: doc, id: options.numberId, type: options.numberType || "number", value: displayValue, min: displayMin, max: displayMax, step: displayStep, field: numberField, classNames: options.numberClassNames, onInput: options.onPreview ? function () { if (!isNumberDraft(number.value)) preview(number.value); } : options.onNumberInput, onDragValue: options.onPreview ? preview : options.onNumberDrag, onCommit: options.onCommit ? commit : options.onNumberCommit, onCancel: options.onCancel ? function () { options.onCancel(); } : options.onNumberCancel, onDragStart: options.onDragStart, onDragChange: options.onDragChange, onDragEnd: options.onCommit ? function () { commit(number.value); if (options.onDragEnd) options.onDragEnd(); } : options.onDragEnd });
+        number = createNumberInput({ document: doc, id: options.numberId, type: options.numberType || "number", value: displayValue, min: displayMin, max: displayMax, step: displayStep, field: numberField, disabled: options.disabled, classNames: options.numberClassNames, onInput: options.onPreview ? function () { if (!isNumberDraft(number.value)) preview(number.value); } : options.onNumberInput, onDragValue: options.onPreview ? preview : options.onNumberDrag, onCommit: options.onCommit ? commit : options.onNumberCommit, onCancel: options.onCancel ? function () { options.onCancel(); } : options.onNumberCancel, onDragStart: options.onDragStart, onDragChange: options.onDragChange, onDragEnd: options.onCommit ? function () { commit(number.value); if (options.onDragEnd) options.onDragEnd(); } : options.onDragEnd });
+        range.disabled = options.disabled === true;
         range.type = "range"; range.min = displayMin; range.max = displayMax; range.step = displayStep; range.value = displayValue;
         if (options.onPreview) listen(range, "input", function () { preview(range.value); });
         if (options.onCommit) listen(range, "change", function () { commit(range.value); });
@@ -238,6 +239,129 @@
         listen(input, "change", options.onChange);
         rootElement.appendChild(input); rootElement.appendChild(track);
         return { root: rootElement, input: input, track: track };
+    }
+
+    function createCheckbox(options) {
+        var doc = options.document;
+        var rootElement = applyCommon(doc.createElement("label"), { classNames: "ui-checkbox " + (options.classNames || "") });
+        var input = applyCommon(doc.createElement("input"), { id: options.id, disabled: options.disabled, ariaLabel: options.ariaLabel });
+        var mark = doc.createElement("span");
+        var text;
+        input.type = "checkbox";
+        input.checked = options.checked === true;
+        mark.className = "ui-checkbox-mark";
+        mark.setAttribute("aria-hidden", "true");
+        listen(input, "change", options.onChange);
+        rootElement.appendChild(input);
+        rootElement.appendChild(mark);
+        if (options.labelText !== undefined) {
+            text = doc.createElement("span");
+            text.className = "ui-checkbox-label";
+            text.textContent = String(options.labelText);
+            rootElement.appendChild(text);
+        }
+        return { root: rootElement, input: input, mark: mark, label: text || null };
+    }
+
+    function createChoiceGroup(options) {
+        var doc = options.document;
+        var rootElement = applyCommon(doc.createElement("div"), { classNames: "ui-choice-group " + (options.classNames || ""), ariaLabel: options.ariaLabel });
+        var input = applyCommon(doc.createElement("input"), { id: options.id });
+        var optionSpecs = options.options || [];
+        var buttons = [];
+        var value = String(options.value === undefined || options.value === null ? "" : options.value);
+        var groupDisabled = options.disabled === true;
+        var i;
+        rootElement.setAttribute("role", "radiogroup");
+        rootElement.setAttribute("aria-disabled", groupDisabled ? "true" : "false");
+        input.type = "hidden";
+        input.value = value;
+        rootElement.appendChild(input);
+
+        function enabledIndexes() {
+            var result = [];
+            var index;
+            for (index = 0; index < buttons.length; index++) if (!buttons[index].disabled) result.push(index);
+            return result;
+        }
+        function sync(nextValue, emit) {
+            var selectedIndex = -1;
+            var index;
+            value = String(nextValue);
+            input.value = value;
+            for (index = 0; index < buttons.length; index++) {
+                if (buttons[index].getAttribute("data-choice-value") === value) selectedIndex = index;
+            }
+            for (index = 0; index < buttons.length; index++) {
+                buttons[index].setAttribute("aria-checked", index === selectedIndex ? "true" : "false");
+                buttons[index].classList.toggle("is-active", index === selectedIndex);
+                buttons[index].tabIndex = index === selectedIndex || selectedIndex < 0 && !buttons[index].disabled ? 0 : -1;
+                if (selectedIndex < 0 && buttons[index].tabIndex === 0) selectedIndex = index;
+            }
+            if (emit && typeof options.onChange === "function") options.onChange(value);
+            return value;
+        }
+        function selectButton(button, focus) {
+            if (!button || button.disabled) return;
+            sync(button.getAttribute("data-choice-value"), true);
+            if (focus && typeof button.focus === "function") button.focus();
+        }
+        function handleKey(event) {
+            var enabled = enabledIndexes();
+            var current = buttons.indexOf(this);
+            var position = enabled.indexOf(current);
+            var target = -1;
+            if (!enabled.length) return;
+            if (event.keyCode === 36) target = enabled[0];
+            else if (event.keyCode === 35) target = enabled[enabled.length - 1];
+            else if (event.keyCode === 37 || event.keyCode === 38) target = enabled[(position <= 0 ? enabled.length : position) - 1];
+            else if (event.keyCode === 39 || event.keyCode === 40) target = enabled[(position + 1) % enabled.length];
+            if (target >= 0) { event.preventDefault(); selectButton(buttons[target], true); }
+        }
+        for (i = 0; i < optionSpecs.length; i++) {
+            (function (spec) {
+                var button = createButton({ document: doc, disabled: groupDisabled || spec.disabled === true, classNames: "ui-choice-surface " + (spec.classNames || "") });
+                var label;
+                var description;
+                button.setAttribute("role", "radio");
+                button.setAttribute("data-choice-value", String(spec.value));
+                button.setAttribute("aria-disabled", groupDisabled || spec.disabled === true ? "true" : "false");
+                if (spec.disabled === true) button.setAttribute("data-core-intrinsic-disabled", "true");
+                if (typeof options.renderOption === "function") options.renderOption(button, spec);
+                else {
+                    label = doc.createElement("strong"); label.className = "ui-choice-label"; label.textContent = spec.label || String(spec.value); button.appendChild(label);
+                    if (spec.description) { description = doc.createElement("small"); description.className = "ui-choice-description"; description.textContent = spec.description; button.appendChild(description); }
+                }
+                listen(button, "click", function () { selectButton(button, false); });
+                listen(button, "keydown", handleKey);
+                buttons.push(button);
+                rootElement.appendChild(button);
+            }(optionSpecs[i]));
+        }
+        sync(value, false);
+        return { root: rootElement, input: input, options: buttons, getValue: function () { return value; }, setValue: function (nextValue) { return sync(nextValue, false); } };
+    }
+
+    function createDisclosureController(options) {
+        var trigger = options.trigger;
+        var content = options.content;
+        var rootElement = options.root || content && content.parentNode;
+        var expanded = options.expanded !== false;
+        if (!trigger || !content) throw new Error("Disclosure requires trigger and content");
+        if (!content.id) throw new Error("Disclosure content requires an id");
+        trigger.setAttribute("aria-controls", content.id);
+        function setExpanded(nextExpanded, emit) {
+            expanded = nextExpanded === true;
+            trigger.setAttribute("aria-expanded", expanded ? "true" : "false");
+            content.setAttribute("aria-hidden", expanded ? "false" : "true");
+            if (rootElement && rootElement.classList) rootElement.classList.toggle(options.collapsedClass || "is-collapsed", !expanded);
+            if (emit && typeof options.onChange === "function") options.onChange(expanded);
+            return expanded;
+        }
+        function toggle() { setExpanded(!expanded, true); }
+        trigger.addEventListener("click", toggle);
+        setExpanded(expanded, false);
+        return { trigger: trigger, content: content, isExpanded: function () { return expanded; }, setExpanded: function (nextExpanded) { return setExpanded(nextExpanded, false); }, dispose: function () { trigger.removeEventListener("click", toggle); } };
     }
 
     function createButton(options) {
@@ -319,6 +443,9 @@
         createRangeNumber: createRangeNumber,
         createSelect: createSelect,
         createSwitch: createSwitch,
+        createCheckbox: createCheckbox,
+        createChoiceGroup: createChoiceGroup,
+        createDisclosureController: createDisclosureController,
         createButton: createButton,
         createColorField: createColorField,
         createFieldRow: createFieldRow,

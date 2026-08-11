@@ -68,6 +68,10 @@ Host code must remain ExtendScript-compatible.
 
 ## Registry Renderer
 
+The 0.3.2 CoreUI / Registry Contract Completion establishes the formal component taxonomy. Registry `checkbox` now means selection/acknowledgement and maps to CoreUI Checkbox, while immediate persistent boolean settings use Registry `switch` and CoreUI Switch with unchanged keys/defaults/storage shapes. Registry `tabs` remains a compatibility schema boundary but is rendered by the card-style CoreUI ChoiceGroup with radio-group keyboard and ARIA behavior. Registry Range and Color now consume CoreUI RangeNumber and ColorField through the existing preview/commit and picker-service seams. Registry section toggles consume CoreUI Switch, and collapsible Registry sections plus Settings theme groups consume the shared Disclosure behavior while retaining domain layout and persistence ownership.
+
+The Developer Control Lab covers these components through the real Registry schema path, including narrow and bilingual stress content. No storage migration, host payload change, Appearance parameter, or redesign is introduced. The next separate implementation group is **Group B — BezierCurveField**.
+
 Current architectural rule:
 
 ```text

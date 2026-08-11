@@ -157,6 +157,10 @@ If CSS/browser JavaScript appears stale, verify the cache query in `client/index
 
 ### Registry Renderer
 
+The active 0.3.2 contract-completion work makes CoreUI the behavior owner for Checkbox, Switch, card-style ChoiceGroup, RangeNumber, ColorField, and Disclosure. Registry remains the declarative adapter and domain code retains meaning, persistence policy, business state, host actions, and payload ownership. `checkbox` and `switch` preserve the same boolean storage shape but have distinct semantics; compatibility `tabs` now consumes ChoiceGroup; Range/Color no longer own duplicate Registry compound-control behavior. Registry collapsible headings are native buttons and Settings theme groups share the same Disclosure controller without changing their layout or motion contract.
+
+AE acceptance should cover Control Lab Checkbox/Switch/ChoiceGroup/Range/Color/Disclosure, Vela acknowledgement, production Registry option cards, section toggles, Settings theme disclosure, keyboard/focus, disabled states, picker preview/commit/cancel, and wide/narrow bilingual stress. Group B — BezierCurveField remains deferred and must be handled as a separate advanced-input task.
+
 ```text
 Tool owns data and actions.
 Core owns UI and behavior.

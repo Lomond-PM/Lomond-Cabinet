@@ -3200,6 +3200,60 @@ p {
     transform: translateX(calc(18px * var(--ui-scale)));
 }
 
+.ui-checkbox {
+    display: inline-flex;
+    min-width: 0;
+    align-items: flex-start;
+    gap: calc(8px * var(--ui-scale));
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.ui-checkbox input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.ui-checkbox-mark {
+    position: relative;
+    flex: 0 0 calc(17px * var(--ui-scale));
+    width: calc(17px * var(--ui-scale));
+    height: calc(17px * var(--ui-scale));
+    border: 1px solid var(--field-border);
+    border-radius: calc(4px * var(--ui-scale));
+    background: var(--field-surface);
+}
+
+.ui-checkbox input:checked + .ui-checkbox-mark {
+    border-color: var(--gold-soft);
+    background: var(--interaction-checked-surface);
+}
+
+.ui-checkbox input:checked + .ui-checkbox-mark::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    width: calc(4px * var(--ui-scale));
+    height: calc(8px * var(--ui-scale));
+    border-right: 2px solid var(--text-primary);
+    border-bottom: 2px solid var(--text-primary);
+    transform: translate(-50%, -58%) rotate(45deg);
+}
+
+.ui-checkbox input:focus-visible + .ui-checkbox-mark {
+    box-shadow: 0 0 0 1px var(--interaction-focus-ring);
+}
+
+.ui-checkbox input:disabled + .ui-checkbox-mark,
+.ui-checkbox input:disabled ~ .ui-checkbox-label {
+    cursor: default;
+    opacity: 0.48;
+}
+
 .action-sheet {
     position: absolute;
     z-index: 4;
@@ -3607,6 +3661,27 @@ p {
     gap: calc(12px * var(--ui-scale));
 }
 
+.registry-section-disclosure-trigger {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: calc(12px * var(--ui-scale));
+    padding: 0;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.registry-section-disclosure-trigger:focus-visible {
+    outline: 1px solid var(--focus-ring);
+    outline-offset: calc(3px * var(--ui-scale));
+}
+
 .registry-section-description {
     margin: var(--space-registry-section-copy) 0 0;
 }
@@ -3648,10 +3723,6 @@ p {
 
 .registry-params-card.is-section-disabled .registry-section-heading {
     color: var(--text-tertiary);
-}
-
-.registry-params-card.is-registry-collapsible .registry-section-heading {
-    cursor: pointer;
 }
 
 .registry-section-chevron {
@@ -4061,6 +4132,7 @@ p {
     cursor: not-allowed !important;
 }
 
+.ui-choice-group,
 .registry-tabs-control {
     display: grid;
     width: 100%;
@@ -4068,6 +4140,7 @@ p {
     gap: calc(10px * var(--ui-scale));
 }
 
+.ui-choice-group > input[type="hidden"],
 .registry-tabs-control > input[type="hidden"] {
     display: none;
 }
