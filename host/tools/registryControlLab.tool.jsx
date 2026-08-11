@@ -223,6 +223,7 @@
                 id: "actions",
                 labelKey: "tools.registryControlLab.sections.actions",
                 descriptionKey: "tools.registryControlLab.sections.actionsDescription",
+                composition: "actionStack",
                 fields: [
                     {
                         type: "button",
@@ -237,6 +238,14 @@
                         key: "primaryButton",
                         labelKey: "tools.registryControlLab.actions.primaryButton",
                         variant: "primary",
+                        fullWidth: true,
+                        actionId: "previewValues"
+                    },
+                    {
+                        type: "button",
+                        key: "dangerButton",
+                        labelKey: "tools.registryControlLab.actions.dangerButton",
+                        variant: "danger",
                         fullWidth: true,
                         actionId: "previewValues"
                     },
@@ -428,6 +437,7 @@
                 "tools.registryControlLab.actions.previewValues": "Preview Values",
                 "tools.registryControlLab.actions.secondaryButton": "Secondary Full-width Button",
                 "tools.registryControlLab.actions.primaryButton": "Primary Full-width Button",
+                "tools.registryControlLab.actions.dangerButton": "Danger Action Test",
                 "tools.registryControlLab.actions.bilingualButton": "Rectangle",
                 "tools.registryControlLab.actions.payloadButton": "Send Payload",
                 "tools.registryControlLab.actions.stateDisabledButton": "Requires Active Comp",
@@ -501,6 +511,7 @@
                 "tools.registryControlLab.actions.previewValues": "\u9884\u89c8\u53c2\u6570",
                 "tools.registryControlLab.actions.secondaryButton": "\u6b21\u8981\u6a2a\u5411\u6309\u94ae",
                 "tools.registryControlLab.actions.primaryButton": "\u4e3b\u8981\u6a2a\u5411\u6309\u94ae",
+                "tools.registryControlLab.actions.dangerButton": "\u5371\u9669\u64cd\u4f5c\u6d4b\u8bd5",
                 "tools.registryControlLab.actions.bilingualButton": "\u77e9\u5f62",
                 "tools.registryControlLab.actions.payloadButton": "\u53d1\u9001 Payload",
                 "tools.registryControlLab.actions.stateDisabledButton": "\u9700\u8981\u6fc0\u6d3b\u5408\u6210",

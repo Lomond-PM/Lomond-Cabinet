@@ -70,7 +70,8 @@
     --success: #c8e08a;
     --danger: #ff6b5f;
     --danger-border: rgba(255, 107, 95, 0.34);
-    --danger-surface: rgba(255, 107, 95, 0.06);
+    --danger-surface: rgba(255, 107, 95, 0.22);
+    --action-danger-hover-surface: rgba(255, 107, 95, 0.30);
     --status-tone-idle: var(--text-secondary);
     --status-tone-processing: var(--gold-hot);
     --status-tone-success: var(--success);
@@ -180,6 +181,7 @@
     --space-registry-field-copy: calc(3px * var(--ui-scale));
     --space-registry-field-block: var(--space-field-block);
     --space-registry-field-control: calc(14px * var(--ui-scale));
+    --space-registry-action-stack: var(--space-registry-field-control);
     --space-palette-field-control: calc(10px * var(--ui-scale));
     --space-home-tool-grid: calc(16px * var(--ui-scale));
     --space-home-major-stack: calc(16px * var(--ui-scale));
@@ -1229,12 +1231,6 @@ body:not(.i18n-ready) .app-shell {
     font-size: var(--font-small);
 }
 
-.palette-library-action.is-danger {
-    border-color: var(--danger-border);
-    color: var(--danger);
-    background: var(--danger-surface);
-}
-
 .palette-library-item {
     display: grid;
     width: 100%;
@@ -1432,29 +1428,9 @@ body:not(.i18n-ready) .app-shell {
     background: var(--surface-panel);
 }
 
-.palette-editor-action-bar .palette-library-action:not(.is-primary):not(.is-danger) {
-    background: var(--action-neutral-surface);
-}
-
 .palette-editor-action-bar .palette-library-action {
     flex: 1 1 calc(33.333% - calc(8px * var(--ui-scale)));
     min-width: calc(112px * var(--ui-scale));
-}
-
-.palette-editor-action-bar .palette-library-action.is-primary {
-    background: var(--action-primary-surface);
-    color: var(--action-primary-foreground);
-}
-
-.palette-editor-action-bar .palette-library-action.is-danger {
-    border-color: var(--danger-border);
-    color: var(--danger);
-    background: var(--danger-surface);
-}
-
-.palette-editor-action-bar .palette-library-action.is-danger:hover {
-    border-color: rgba(255, 107, 95, 0.58);
-    background: rgba(255, 107, 95, 0.11);
 }
 
 .palette-editor-unsaved-notice {
@@ -2305,7 +2281,6 @@ p {
 }
 
 .panel-card,
-.ui-button--neutral,
 .ui-button--navigation,
 .panel-button,
 .tool-icon,
@@ -2318,7 +2293,6 @@ p {
     background: #12110e;
 }
 
-.ui-button--neutral,
 .ui-button--navigation,
 .panel-button {
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
@@ -3223,21 +3197,33 @@ p {
 .primary-action {
     flex: 1 1 auto;
     min-width: 0;
-    border: 1px solid var(--panel-border);
-    background: var(--action-primary-surface);
-    color: var(--action-primary-foreground);
     font-size: var(--font-h3);
     font-weight: 800;
 }
 
-.primary-action,
 .ui-button--primary {
+    border: 1px solid var(--panel-border);
+    background: var(--action-primary-surface);
+    color: var(--action-primary-foreground);
     box-shadow: var(--elevation-primary-action);
 }
 
-.secondary-action,
-.registry-secondary-action,
+.ui-button--neutral {
+    border: 1px solid var(--panel-border);
+    background: var(--action-neutral-surface);
+    color: var(--text-primary);
+    box-shadow: none;
+}
+
 .ui-button--danger {
+    border: 1px solid var(--danger-border);
+    background: var(--danger-surface);
+    color: var(--danger);
+    box-shadow: none;
+}
+
+.secondary-action,
+.registry-secondary-action {
     box-shadow: none;
 }
 
@@ -3252,8 +3238,13 @@ p {
     box-shadow: none;
 }
 
-.primary-action:hover {
+.ui-button--primary:not(:disabled):hover {
     background-color: var(--action-primary-hover-surface);
+}
+
+.ui-button--danger:not(:disabled):hover {
+    border-color: rgba(255, 107, 95, 0.58);
+    background: var(--action-danger-hover-surface);
 }
 
 .status-pill {
@@ -3605,6 +3596,17 @@ p {
     display: block;
 }
 
+.registry-section-body--action-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-registry-action-stack);
+    padding: var(--space-registry-field-block) 0;
+}
+
+.registry-section-body--action-stack > .registry-button-row {
+    padding: 0;
+}
+
 .registry-params-card.is-section-collapsed .registry-section-body {
     display: none;
 }
@@ -3866,12 +3868,6 @@ p {
 .ui-switch input:disabled + .ui-switch-track {
     cursor: default;
     opacity: 0.48;
-}
-
-.ui-button--danger {
-    border-color: var(--danger-border);
-    color: var(--danger);
-    background: var(--danger-surface);
 }
 
 .registry-info-note {
