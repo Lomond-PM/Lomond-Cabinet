@@ -144,16 +144,16 @@ The motion style is:
 - no linear motion
 - no exaggerated bounce
 
-Current JS constants live in `Motion` in `client/js/main.js`:
+The four global UI curve families have canonical CSS defaults:
 
 ```js
-appleOut: "cubic-bezier(0.16, 1, 0.3, 1)"
-appleStandard: "cubic-bezier(0.22, 1, 0.36, 1)"
-appleIn: "cubic-bezier(0.32, 0, 0.67, 0)"
-press: "cubic-bezier(0.2, 0, 0, 1)"
+--motion-curve-enter: cubic-bezier(0.16, 1, 0.3, 1)
+--motion-curve-exit: cubic-bezier(0.32, 0, 0.67, 0)
+--motion-curve-standard: cubic-bezier(0.22, 1, 0.36, 1)
+--motion-curve-press: cubic-bezier(0.2, 0, 0, 1)
 ```
 
-Duration values are scaled by Settings motion speed through `duration(name)`.
+These are Motion Philosophy assets, not domain choreography. `MotionDefaults` maps semantic roles to family identifiers and resolves WAAPI easing from the current computed CSS value when an interaction begins. Duration remains independent; Settings Motion Speed scales only the established major-view duration roles.
 
 ## App Launch Morph Rules
 
@@ -596,6 +596,18 @@ Settings retains its fixed UI-scale isolation, Vela retains its existing Wide / 
 # Motion / Transition Foundation (0.3.2 Phase 1)
 
 Motion defaults and motion lifecycle are separate capabilities. `MotionDefaults` owns semantic duration/easing roles; `CoreMotion` owns scoped presentation transactions, cancellation, stale-callback guards, frame scheduling, and idempotent cleanup. CSS remains the owner of action feedback, focus immediacy, simple surface state, and collapse presentation. Geometry-dependent spatial surface morphs use domain-provided rects/radii and the shared transaction lifecycle.
+
+## Motion Philosophy curve families
+
+CSS is the single Design Default authority for the global Enter, Exit, Standard, and Press cubic-bezier families. Compatibility names such as `--ease-apple-out` are forwarding aliases only. `MotionDefaults.curveFamilies` maps family identifiers to CSS properties, while `roleCurveFamily` maps semantic roles such as Spatial Expand, View Content Exit, Action Feedback, and Action Press to those families. WAAPI consumers call `resolveEasing(role, root)` at interaction start, so CSS and WAAPI consume the same computed family and a future Design Tuning override affects the next interaction without mutating an animation already in flight.
+
+Motion Philosophy, semantic role, and domain choreography remain separate. A semantic role may later reference a formally owned semantic-local curve asset when real design evidence requires it, but domain consumers must not introduce raw cubic-bezier literals. `motion.speed` and all role durations remain independent from curve control points. Reduced Motion policy and `CoreMotion` finalization retain final execution priority.
+
+Procedural artwork motion is isolated from UI Motion Philosophy. The 18-second Home background drift owns `--procedural-background-drift-curve`; its current computed value is preserved and an override of UI Standard cannot change it. Vela ordinary control response may inherit Standard, while processing pulse, responsive resize, and provider/runtime timing remain domain-local, No Motion, or out of scope as appropriate.
+
+Future Design Tuning may expose stable conceptual parameters such as `motion.curve.enter`, independently mapped to implementation CSS properties; CSS property names are not persistence IDs. Curve calibration remains outside User Appearance and its storage. Promote-to-Default changes the one canonical CSS family value, after which removing the temporary override must leave the computed result unchanged.
+
+The future curve editor is a generic CoreUI / Registry advanced input patterned after After Effects Graph Editor interaction. Its canonical value is `{x1, y1, x2, y2}` with `x1/x2` constrained to `0–1` and `y1/y2` allowed outside that interval. A Progress/Value graph and derivative Speed graph are synchronized views of the same control points; neither graph is a second authority. The previously referenced 3×3 UI is an Anchor Point / Nine Point Anchor candidate, not a curve preset grid.
 
 `motion.speed` is the persisted **Major View Motion Speed** multiplier. It applies only to major view content and spatial morph presentation, never action feedback, focus, pointer tracking, responsive reflow, Peek qualification, provider/runtime timers, Vela resize, or procedural drift. Business/runtime state, presentation state, and motion transactions are independent; completion of a motion transaction has no authority to commit routes, Registry state, persistence, or tool runtime state.
 

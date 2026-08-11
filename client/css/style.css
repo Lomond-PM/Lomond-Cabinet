@@ -94,10 +94,15 @@
     --radius-palette-json-section: var(--radius-nested-surface);
     --radius-pill: 999px;
 
-    --ease-apple-out: cubic-bezier(0.16, 1, 0.3, 1);
-    --ease-apple-standard: cubic-bezier(0.22, 1, 0.36, 1);
-    --ease-apple-in: cubic-bezier(0.32, 0, 0.67, 0);
-    --ease-press: cubic-bezier(0.2, 0, 0, 1);
+    --motion-curve-enter: cubic-bezier(0.16, 1, 0.3, 1);
+    --motion-curve-exit: cubic-bezier(0.32, 0, 0.67, 0);
+    --motion-curve-standard: cubic-bezier(0.22, 1, 0.36, 1);
+    --motion-curve-press: cubic-bezier(0.2, 0, 0, 1);
+    --ease-apple-out: var(--motion-curve-enter);
+    --ease-apple-standard: var(--motion-curve-standard);
+    --ease-apple-in: var(--motion-curve-exit);
+    --ease-press: var(--motion-curve-press);
+    --procedural-background-drift-curve: cubic-bezier(0.22, 1, 0.36, 1);
 
     --dur-instant: 120ms;
     --dur-fast: 160ms;
@@ -380,15 +385,15 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .app-shell.bg-motion .bg-glow {
-    animation: bgGlowDrift var(--bg-motion-speed) var(--ease-apple-standard) infinite alternate;
+    animation: bgGlowDrift var(--bg-motion-speed) var(--procedural-background-drift-curve) infinite alternate;
 }
 
 .app-shell.bg-motion .bg-rings {
-    animation: bgRingDrift calc(var(--bg-motion-speed) * 1.25) var(--ease-apple-standard) infinite alternate;
+    animation: bgRingDrift calc(var(--bg-motion-speed) * 1.25) var(--procedural-background-drift-curve) infinite alternate;
 }
 
 .app-shell.bg-motion .bg-accent {
-    animation: bgAccentDrift calc(var(--bg-motion-speed) * 1.1) var(--ease-apple-standard) infinite alternate;
+    animation: bgAccentDrift calc(var(--bg-motion-speed) * 1.1) var(--procedural-background-drift-curve) infinite alternate;
 }
 
 .app-shell.is-animating .home-background {

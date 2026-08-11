@@ -341,3 +341,9 @@ AE acceptance must confirm parity for Primary/Neutral/Danger interaction, Homeâ†
 ## Motion Phase 2 handoff
 
 AE must validate centered Action press across canonical and compatibility consumers; Settings-open Home recede; completion-aligned Home restore for both Tool and Settings close; and Tool-open identity/content overlap at motion speeds 0.75, 1, and 1.35. Settings Close retains its protected measurement, geometry, backdrop, and cleanup path. DOM preparation remains in the existing Tool adapter; real content is temporarily laid out at destination geometry and clipped by the expanding shell, while interaction remains locked until the spatial transaction completes. Narrow layout is the primary reflow/clip stress test.
+
+## Motion Curve Foundation handoff
+
+The canonical UI curve defaults now live only in CSS as Enter, Exit, Standard, and Press families. `MotionDefaults.resolveEasing()` reads their computed values at the start of each WAAPI interaction, so CSS presentation and WAAPI share one authority and a future Design Tuning override applies on the next interaction. Semantic roles reference family identifiers; domain choreography remains unchanged. Legacy CSS easing names are forwarding aliases and `main.js` no longer owns easing literals.
+
+Procedural background drift has an independent local curve with the same accepted value, preventing UI Standard calibration from altering artwork motion. `motion.speed`, Reduced Motion, Vela processing pulse, and all existing curve values remain unchanged. AE acceptance should smoke Tool and Settings open/close, Home recede/restore, Palette, Action hover/press, ordinary Vela control response, and procedural drift at the three Motion Speed settings; expected visual delta is none.

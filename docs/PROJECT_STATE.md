@@ -293,3 +293,9 @@ Deferred to Phase 2: action press perceptual centering; Tool open handoff/overla
 ## Motion Phase 2 targeted remediation
 
 Canonical Action press is geometrically centered. Tool and Settings open share the existing Home recede presentation; Tool and Settings close now restore Home during the final 260ms of their 360ms contract using the same semantic derived-delay relationship. Both Home source measurement helpers restore exact pre-measurement class/transition state. Tool open identity lasts 360ms and overlaps the existing content reveal, which completes with the 480ms spatial expansion. The real detail content uses a temporary destination-layout stage, preventing continuous responsive reflow while the outer shell expands. Settings Close remains the closed-good geometry/measurement reference; only its Home restore trigger moved earlier.
+
+## Motion Philosophy / Curve Foundation
+
+CSS now owns the single canonical defaults for Enter, Exit, Standard, and Press. `MotionDefaults` owns family/property and semantic-role/family mappings and resolves the current computed curve for each WAAPI interaction; `main.js` no longer owns raw easing copies. This establishes a future Design Tuning override seam without changing any curve value, duration, choreography, or User Appearance persistence. Procedural background drift retains its accepted curve through an isolated local property, while Vela pulse and Reduced Motion boundaries remain unchanged.
+
+The deferred Curve Editor is a generic CoreUI / Registry advanced input with synchronized AE-like Progress/Value and Speed views over one `{x1, y1, x2, y2}` authority. No editor UI, storage, Promote UI, preset grid, or curve redesign is implemented by this foundation.
