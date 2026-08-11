@@ -64,7 +64,7 @@
                         ]
                     },
                     {
-                        type: "checkbox",
+                        type: "switch",
                         key: "registryDebugTools",
                         labelKey: "label.registryDebugTools",
                         hintKey: "helper.registryDebugTools",
@@ -173,7 +173,7 @@
                         step: 1
                     },
                     {
-                        type: "checkbox",
+                        type: "switch",
                         key: "motionEnable",
                         labelKey: "label.enableMotion",
                         hintKey: "helper.enableMotion",

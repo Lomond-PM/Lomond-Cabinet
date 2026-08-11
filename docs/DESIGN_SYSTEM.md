@@ -337,6 +337,19 @@ Foundation and future Design Tuning visual acceptance must include both the defa
 
 ## Registry Tool UI Contract
 
+### CoreUI component taxonomy and ownership
+
+CoreUI owns generic DOM, native semantics, focus, keyboard behavior, events, visual contracts, and generic normalization. The Registry renderer maps declarative schema to CoreUI and owns visibility/enabled rules plus field binding. A tool/domain owns meaning, persistence policy, host actions, and business state.
+
+- `Checkbox` means selection, acknowledgement, or membership. It commits through the native checkbox `change` event.
+- `Switch` means an immediate change to a persistent on/off state. A boolean value alone does not determine which component is correct.
+- `ChoiceGroup` is the card-style single-selection component. It owns radio-group ARIA, roving focus, Arrow/Home/End behavior, group disablement, and option disablement.
+- Registry `tabs` remains the compatibility schema name and maps internally to `ChoiceGroup`; a future `choiceGroup` schema spelling may be added without changing stored values.
+- Registry `range` and `color` reuse `RangeNumber` and `ColorField`. Registry supplies schema policy and preview/commit bindings; compound input synchronization, normalization, focus, and child disabled propagation remain CoreUI responsibilities. The app-level color picker remains infrastructure injected through the ColorField picker seam.
+- `Disclosure` owns trigger/content association, native button activation, expanded state, and ARIA. Registry and Settings retain section DOM, layout, persistence, meaning, chevron styling, and the existing Structural Collapse motion contract.
+
+Developer Control Lab exercises Checkbox and Switch separately, a three-option ChoiceGroup including disabled and long bilingual content, Registry Range/Color through their real declarative paths, and a collapsible Registry section. The next component group is **Group B — BezierCurveField**; it is not part of this contract completion.
+
 Registry tools must be declarative. A `.tool.jsx` file may provide only tool metadata, i18n dictionaries, sections, fields, actions, and host action references.
 
 Registry tools must not:
@@ -438,6 +451,8 @@ Registry renderer standard controls now include:
 
 - `button` / `actionButton` fields with `variant`, `fullWidth`, `actionId`, and optional center-axis bilingual text.
 - `tabs` fields rendered as option cards with `iconText`, translated title, and translated description.
+- `checkbox` maps to CoreUI Checkbox; `switch` maps to CoreUI Switch without changing the stored boolean shape.
+- `range` maps to CoreUI RangeNumber and `color` maps to CoreUI ColorField.
 - `visibleWhen` on any field for conditional display based on another field value.
 - Developer Mode-only tools may use `debugOnly: true`, `developerOnly: true`, or `category: "debug"` and are hidden from the normal Home view.
 

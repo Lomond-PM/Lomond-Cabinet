@@ -142,11 +142,18 @@
                 descriptionKey: "tools.registryControlLab.sections.optionsDescription",
                 fields: [
                     {
-                        type: "checkbox",
+                        type: "switch",
                         key: "enabled",
                         labelKey: "tools.registryControlLab.fields.enabled",
                         hintKey: "tools.registryControlLab.hints.enabled",
                         defaultValue: true
+                    },
+                    {
+                        type: "checkbox",
+                        key: "acknowledged",
+                        labelKey: "tools.registryControlLab.fields.acknowledged",
+                        hintKey: "tools.registryControlLab.hints.acknowledged",
+                        defaultValue: false
                     },
                     {
                         type: "select",
@@ -359,6 +366,13 @@
                                 labelKey: "tools.registryControlLab.options.grid",
                                 descriptionKey: "tools.registryControlLab.options.gridDescription",
                                 iconText: "G"
+                            },
+                            {
+                                value: "longDisabled",
+                                labelKey: "tools.registryControlLab.options.longDisabled",
+                                descriptionKey: "tools.registryControlLab.options.longDisabledDescription",
+                                iconText: "L",
+                                disabled: true
                             }
                         ]
                     },
@@ -426,6 +440,7 @@
                 "tools.registryControlLab.fields.numberValue": "Number",
                 "tools.registryControlLab.fields.rangeValue": "Range",
                 "tools.registryControlLab.fields.enabled": "Enabled",
+                "tools.registryControlLab.fields.acknowledged": "Acknowledge this selection",
                 "tools.registryControlLab.fields.mode": "Mode",
                 "tools.registryControlLab.fields.fillColor": "Fill Color",
                 "tools.registryControlLab.fields.strokeColor": "Stroke Color",
@@ -445,8 +460,10 @@
                 "tools.registryControlLab.actions.refreshAfterRunButton": "Run and Refresh State",
                 "tools.registryControlLab.options.feature": "Feature",
                 "tools.registryControlLab.options.grid": "Grid",
+                "tools.registryControlLab.options.longDisabled": "Unavailable long-label option",
                 "tools.registryControlLab.options.featureDescription": "Show feature-only fields.",
                 "tools.registryControlLab.options.gridDescription": "Show grid-only fields.",
+                "tools.registryControlLab.options.longDisabledDescription": "Disabled supporting copy for narrow and typography stress.",
                 "tools.registryControlLab.status.previewed": "Received registry control values.",
                 "tools.registryControlLab.status.previewPending": "Sending registry control values...",
                 "tools.registryControlLab.status.previewFailed": "Registry control preview failed.",
@@ -470,6 +487,7 @@
                 "tools.registryControlLab.hints.numberValue": "Type a value or drag horizontally.",
                 "tools.registryControlLab.hints.rangeValue": "Number box and slider stay synchronized.",
                 "tools.registryControlLab.hints.enabled": "Keeps the existing switch visual style.",
+                "tools.registryControlLab.hints.acknowledged": "Checkboxes represent acknowledgement or selection, not an immediate feature toggle.",
                 "tools.registryControlLab.hints.mode": "Uses the existing custom select menu.",
                 "tools.registryControlLab.hints.fillColor": "Opens the custom HSV color picker.",
                 "tools.registryControlLab.hints.strokeColor": "Returns a normalized #rrggbb value.",
@@ -500,6 +518,7 @@
                 "tools.registryControlLab.fields.numberValue": "\u6570\u503c",
                 "tools.registryControlLab.fields.rangeValue": "\u6ed1\u6746",
                 "tools.registryControlLab.fields.enabled": "\u542f\u7528",
+                "tools.registryControlLab.fields.acknowledged": "\u786e\u8ba4\u6b64\u9009\u62e9",
                 "tools.registryControlLab.fields.mode": "\u6a21\u5f0f",
                 "tools.registryControlLab.fields.fillColor": "\u586b\u5145\u989c\u8272",
                 "tools.registryControlLab.fields.strokeColor": "\u63cf\u8fb9\u989c\u8272",
@@ -519,8 +538,10 @@
                 "tools.registryControlLab.actions.refreshAfterRunButton": "\u6267\u884c\u5e76\u5237\u65b0\u72b6\u6001",
                 "tools.registryControlLab.options.feature": "\u5356\u70b9",
                 "tools.registryControlLab.options.grid": "\u7f51\u683c",
+                "tools.registryControlLab.options.longDisabled": "\u4e0d\u53ef\u7528\u7684\u957f\u6807\u7b7e\u9009\u9879",
                 "tools.registryControlLab.options.featureDescription": "\u663e\u793a\u5356\u70b9\u4e13\u5c5e\u5b57\u6bb5\u3002",
                 "tools.registryControlLab.options.gridDescription": "\u663e\u793a\u7f51\u683c\u4e13\u5c5e\u5b57\u6bb5\u3002",
+                "tools.registryControlLab.options.longDisabledDescription": "\u7528\u4e8e\u7a84\u5e03\u5c40\u548c\u6392\u7248\u538b\u529b\u9a8c\u8bc1\u7684\u7981\u7528\u8bf4\u660e\u3002",
                 "tools.registryControlLab.status.previewed": "\u5df2\u63a5\u6536 registry \u63a7\u4ef6\u53c2\u6570\u3002",
                 "tools.registryControlLab.status.previewPending": "\u6b63\u5728\u53d1\u9001 registry \u63a7\u4ef6\u53c2\u6570...",
                 "tools.registryControlLab.status.previewFailed": "Registry \u63a7\u4ef6\u9884\u89c8\u5931\u8d25\u3002",
@@ -544,6 +565,7 @@
                 "tools.registryControlLab.hints.numberValue": "\u53ef\u8f93\u5165\u6570\u503c\uff0c\u4e5f\u53ef\u6a2a\u5411\u62d6\u52a8\u4fee\u6539\u3002",
                 "tools.registryControlLab.hints.rangeValue": "\u6570\u503c\u6846\u548c\u6ed1\u6746\u4fdd\u6301\u540c\u6b65\u3002",
                 "tools.registryControlLab.hints.enabled": "\u4fdd\u7559\u73b0\u6709\u5f00\u5173\u89c6\u89c9\u98ce\u683c\u3002",
+                "tools.registryControlLab.hints.acknowledged": "\u590d\u9009\u6846\u8868\u793a\u786e\u8ba4\u6216\u9009\u62e9\uff0c\u800c\u4e0d\u662f\u7acb\u5373\u529f\u80fd\u5f00\u5173\u3002",
                 "tools.registryControlLab.hints.mode": "\u4f7f\u7528\u73b0\u6709\u81ea\u5b9a\u4e49\u4e0b\u62c9\u83dc\u5355\u3002",
                 "tools.registryControlLab.hints.fillColor": "\u6253\u5f00\u81ea\u5b9a\u4e49 HSV \u53d6\u8272\u5668\u3002",
                 "tools.registryControlLab.hints.strokeColor": "\u8fd4\u56de\u6807\u51c6\u5316\u7684 #rrggbb \u503c\u3002",
