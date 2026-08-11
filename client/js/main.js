@@ -103,10 +103,6 @@
 
     installVelaRuntimeStatusView();
     var Motion = {
-        appleOut: "cubic-bezier(0.16, 1, 0.3, 1)",
-        appleStandard: "cubic-bezier(0.22, 1, 0.36, 1)",
-        appleIn: "cubic-bezier(0.32, 0, 0.67, 0)",
-        press: "cubic-bezier(0.2, 0, 0, 1)",
         fast: 160,
         normal: 260,
         launch: 480,
@@ -359,6 +355,10 @@
 
     function semanticMotionDuration(role) {
         return MotionDefaults ? MotionDefaults.resolveDuration(role, motionScale) : duration(role === "spatialMorphExpand" ? "launch" : role === "spatialMorphContract" ? "close" : "fast");
+    }
+
+    function semanticMotionEasing(role) {
+        return MotionDefaults.resolveEasing(role, document.documentElement);
     }
 
     function syncMotionCssDurations() {
@@ -1231,7 +1231,7 @@
                     { opacity: "0", transform: "translateZ(0) scale(1)" }
                 ], {
                     duration: 100,
-                    easing: Motion.appleOut,
+                    easing: semanticMotionEasing("toolIdentityOpen"),
                     fill: "none"
                 });
                 animation.onfinish = cleanup;
@@ -7457,7 +7457,7 @@
                 }
             ], {
                 duration: semanticMotionDuration("spatialMorphExpand"),
-                easing: MotionDefaults ? MotionDefaults.easings.spatialMorphExpand : Motion.appleOut,
+                easing: semanticMotionEasing("spatialMorphExpand"),
                 fill: "forwards"
             }, function () {
                 finishGate();
@@ -7468,7 +7468,7 @@
                 { opacity: "0", transform: "scale(1.12)", filter: "blur(4px)" }
             ], {
                 duration: semanticMotionDuration("toolIdentityOpen"),
-                easing: Motion.appleOut,
+                easing: semanticMotionEasing("toolIdentityOpen"),
                 fill: "forwards"
             }, function () {
                 finishGate();
@@ -7533,7 +7533,7 @@
                 }
             ], {
                 duration: semanticMotionDuration("spatialMorphContract"),
-                easing: MotionDefaults ? MotionDefaults.easings.spatialMorphContract : Motion.appleIn,
+                easing: semanticMotionEasing("spatialMorphContract"),
                 fill: "forwards"
             }, function () {
                 finishGate();
@@ -7544,7 +7544,7 @@
                 { opacity: "1", transform: "scale(1)", filter: "blur(0px)" }
             ], {
                 duration: semanticMotionDuration("spatialMorphContract"),
-                easing: MotionDefaults ? MotionDefaults.easings.spatialMorphContract : Motion.appleIn,
+                easing: semanticMotionEasing("spatialMorphContract"),
                 fill: "forwards"
             }, function () {
                 finishGate();
@@ -9485,7 +9485,7 @@
             }
         ], {
             duration: semanticMotionDuration("spatialMorphExpand"),
-            easing: MotionDefaults ? MotionDefaults.easings.spatialMorphExpand : Motion.appleOut,
+            easing: semanticMotionEasing("spatialMorphExpand"),
             fill: "forwards"
         }, function () {
             finishGate();
@@ -9497,7 +9497,7 @@
                 { opacity: "1" }
             ], {
                 duration: semanticMotionDuration("spatialMorphIdentity"),
-                easing: Motion.appleOut,
+                easing: semanticMotionEasing("spatialMorphIdentity"),
                 fill: "forwards"
             }, function () {
                 finishGate();
@@ -9564,7 +9564,7 @@
                 }
             ], {
                 duration: semanticMotionDuration("spatialMorphContract"),
-                easing: MotionDefaults ? MotionDefaults.easings.spatialMorphContract : Motion.appleIn,
+                easing: semanticMotionEasing("spatialMorphContract"),
                 fill: "forwards"
             }, function () {
                 finishGate();
@@ -9576,7 +9576,7 @@
                     { opacity: "0" }
                 ], {
                     duration: semanticMotionDuration("spatialMorphContract"),
-                    easing: MotionDefaults ? MotionDefaults.easings.spatialMorphContract : Motion.appleIn,
+                    easing: semanticMotionEasing("spatialMorphContract"),
                     fill: "forwards"
                 }, function () {
                     finishGate();

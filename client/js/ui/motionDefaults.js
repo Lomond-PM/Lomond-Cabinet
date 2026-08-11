@@ -18,17 +18,28 @@
         paletteExit: 160,
         dragSettle: 260
     });
-    var easings = Object.freeze({
-        actionFeedback: "cubic-bezier(0.22, 1, 0.36, 1)",
-        actionPress: "cubic-bezier(0.2, 0, 0, 1)",
-        surfaceState: "cubic-bezier(0.22, 1, 0.36, 1)",
-        structuralCollapse: "cubic-bezier(0.16, 1, 0.3, 1)",
-        viewContentEnter: "cubic-bezier(0.16, 1, 0.3, 1)",
-        viewContentExit: "cubic-bezier(0.32, 0, 0.67, 0)",
-        homeHandoffRecede: "cubic-bezier(0.16, 1, 0.3, 1)",
-        homeHandoffRestore: "cubic-bezier(0.16, 1, 0.3, 1)",
-        spatialMorphExpand: "cubic-bezier(0.16, 1, 0.3, 1)",
-        spatialMorphContract: "cubic-bezier(0.32, 0, 0.67, 0)"
+    var curveFamilies = Object.freeze({
+        enter: "--motion-curve-enter",
+        exit: "--motion-curve-exit",
+        standard: "--motion-curve-standard",
+        press: "--motion-curve-press"
+    });
+    var roleCurveFamily = Object.freeze({
+        actionFeedback: "standard",
+        actionPress: "press",
+        surfaceState: "standard",
+        structuralCollapse: "enter",
+        viewContentEnter: "enter",
+        viewContentExit: "exit",
+        homeHandoffRecede: "enter",
+        homeHandoffRestore: "enter",
+        spatialMorphExpand: "enter",
+        spatialMorphContract: "exit",
+        spatialMorphIdentity: "enter",
+        toolIdentityOpen: "enter",
+        paletteEnter: "enter",
+        paletteExit: "exit",
+        dragSettle: "enter"
     });
     var majorViewRoles = Object.freeze({
         viewContentEnter: true,
@@ -49,6 +60,22 @@
         return Math.max(0, Math.round(value * scale));
     }
 
+    function resolveEasing(role, root) {
+        var family = roleCurveFamily[role];
+        var propertyName = curveFamilies[family];
+        var view = root && root.ownerDocument && root.ownerDocument.defaultView || global;
+        var value;
+        var match;
+        if (!family || !propertyName) { throw new Error("UNKNOWN_MOTION_CURVE_ROLE:" + role); }
+        if (!root || !view || typeof view.getComputedStyle !== "function") { throw new Error("MOTION_CURVE_ROOT_UNAVAILABLE:" + role); }
+        value = String(view.getComputedStyle(root).getPropertyValue(propertyName) || "").replace(/^\s+|\s+$/g, "");
+        match = /^cubic-bezier\(\s*(-?(?:\d+\.?\d*|\.\d+))\s*,\s*(-?(?:\d+\.?\d*|\.\d+))\s*,\s*(-?(?:\d+\.?\d*|\.\d+))\s*,\s*(-?(?:\d+\.?\d*|\.\d+))\s*\)$/i.exec(value);
+        if (!match || Number(match[1]) < 0 || Number(match[1]) > 1 || Number(match[3]) < 0 || Number(match[3]) > 1) {
+            throw new Error("INVALID_MOTION_CURVE:" + role);
+        }
+        return value;
+    }
+
     function applyCss(root, majorViewScale) {
         if (!root || !root.style) { return; }
         root.style.setProperty("--motion-view-content-enter-duration", resolveDuration("viewContentEnter", majorViewScale) + "ms");
@@ -59,9 +86,11 @@
 
     global.MotionDefaults = Object.freeze({
         durations: durations,
-        easings: easings,
+        curveFamilies: curveFamilies,
+        roleCurveFamily: roleCurveFamily,
         majorViewRoles: majorViewRoles,
         resolveDuration: resolveDuration,
+        resolveEasing: resolveEasing,
         applyCss: applyCss
     });
 }(window));

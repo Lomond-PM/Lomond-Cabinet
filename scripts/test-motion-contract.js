@@ -23,8 +23,32 @@ assert.strictEqual(defaults.resolveDuration("actionFeedback", 1.35), 160, "actio
 assert.strictEqual(defaults.resolveDuration("viewContentEnter", 0.75), 135);
 assert.strictEqual(defaults.resolveDuration("toolIdentityOpen", 1), 360);
 assert.strictEqual(defaults.resolveDuration("homeHandoffRestore", 1), 260);
-assert.strictEqual(defaults.easings.spatialMorphExpand, "cubic-bezier(0.16, 1, 0.3, 1)");
-assert.strictEqual(defaults.easings.spatialMorphContract, "cubic-bezier(0.32, 0, 0.67, 0)");
+assert.deepStrictEqual(Object.assign({}, defaults.curveFamilies), {
+    enter: "--motion-curve-enter",
+    exit: "--motion-curve-exit",
+    standard: "--motion-curve-standard",
+    press: "--motion-curve-press"
+});
+assert.strictEqual(defaults.roleCurveFamily.spatialMorphExpand, "enter");
+assert.strictEqual(defaults.roleCurveFamily.spatialMorphContract, "exit");
+assert.strictEqual(defaults.roleCurveFamily.actionFeedback, "standard");
+assert.strictEqual(defaults.roleCurveFamily.actionPress, "press");
+
+const curveValues = {
+    "--motion-curve-enter": " cubic-bezier(0.16, 1, 0.3, 1) ",
+    "--motion-curve-exit": "cubic-bezier(0.32, 0, 0.67, 0)",
+    "--motion-curve-standard": "cubic-bezier(0.22, 1, 0.36, 1)",
+    "--motion-curve-press": "cubic-bezier(0.2, 0, 0, 1)"
+};
+const curveView = { getComputedStyle: () => ({ getPropertyValue: (name) => curveValues[name] || "" }) };
+const curveRoot = { ownerDocument: { defaultView: curveView } };
+assert.strictEqual(defaults.resolveEasing("spatialMorphExpand", curveRoot), "cubic-bezier(0.16, 1, 0.3, 1)");
+assert.strictEqual(defaults.resolveEasing("homeHandoffRestore", curveRoot), "cubic-bezier(0.16, 1, 0.3, 1)");
+curveValues["--motion-curve-enter"] = "cubic-bezier(0.25, 1.2, 0.4, 1)";
+assert.strictEqual(defaults.resolveEasing("spatialMorphExpand", curveRoot), "cubic-bezier(0.25, 1.2, 0.4, 1)", "next interaction resolves the live family override");
+assert.strictEqual(defaults.resolveEasing("homeHandoffRestore", curveRoot), "cubic-bezier(0.25, 1.2, 0.4, 1)", "roles inheriting one family update together");
+assert.strictEqual(defaults.resolveDuration("spatialMorphExpand", 1), 480, "curve override must not alter duration");
+assert.strictEqual(defaults.resolveEasing("spatialMorphExpand", curveRoot), "cubic-bezier(0.25, 1.2, 0.4, 1)", "duration resolution must not alter curve");
 
 const core = context.window.CoreMotion.create();
 let staleRan = false;
@@ -57,6 +81,27 @@ assert.strictEqual(reducedFinalized, true);
 });
 assert.ok(cssSource.includes("--motion-action-feedback-duration"));
 assert.ok(cssSource.includes("--motion-collapse-duration"));
+[
+    ["enter", "cubic-bezier(0.16, 1, 0.3, 1)"],
+    ["exit", "cubic-bezier(0.32, 0, 0.67, 0)"],
+    ["standard", "cubic-bezier(0.22, 1, 0.36, 1)"],
+    ["press", "cubic-bezier(0.2, 0, 0, 1)"]
+].forEach(([family, value]) => {
+    assert.strictEqual((cssSource.match(new RegExp("--motion-curve-" + family + ":\\s*" + value.replace(/[().]/g, "\\$&"), "g")) || []).length, 1, family + " has one canonical CSS default");
+});
+assert.ok(cssSource.includes("--ease-apple-out: var(--motion-curve-enter)"), "legacy CSS name is forwarding-only");
+assert.ok(cssSource.includes("--ease-apple-in: var(--motion-curve-exit)"), "legacy CSS name is forwarding-only");
+assert.ok(!/cubic-bezier\s*\(/.test(mainSource), "main must not own raw curve defaults");
+assert.ok(!/cubic-bezier\s*\(/.test(defaultsSource), "MotionDefaults must map families without raw curve defaults");
+assert.ok(mainSource.includes('semanticMotionEasing("spatialMorphExpand")'));
+assert.ok(mainSource.includes('semanticMotionEasing("spatialMorphContract")'));
+assert.ok(!mainSource.includes("MotionDefaults.easings"));
+assert.ok(cssSource.includes("--procedural-background-drift-curve: cubic-bezier(0.22, 1, 0.36, 1)"));
+assert.strictEqual((cssSource.match(/bg(?:Glow|Ring|Accent)Drift[^;]+var\(--procedural-background-drift-curve\)/g) || []).length, 3, "procedural drift owns its local curve");
+assert.ok(!/bg(?:Glow|Ring|Accent)Drift[^;]+var\(--motion-curve-standard\)/.test(cssSource), "UI Standard override must not affect procedural drift");
+assert.ok(cssSource.includes("statusTonePulse 1.2s ease-in-out"), "status pulse remains domain-local");
+assert.ok(cssSource.includes("@media (prefers-reduced-motion: reduce)"), "CSS reduced-motion policy remains present");
+assert.ok(coreSource.includes("finalizeReducedMotion"), "CoreMotion reduced-motion finalization remains present");
 assert.ok(cssSource.includes("var(--motion-view-content-enter-duration)"));
 assert.ok(cssSource.includes("var(--motion-view-content-exit-duration)"));
 assert.ok(mainSource.includes('semanticMotionDuration("spatialMorphExpand")'));
