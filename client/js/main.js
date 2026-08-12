@@ -109,6 +109,7 @@
         close: 360
     };
     var MotionDefaults = window.MotionDefaults;
+    var DesignTuning = null;
     var coreMotion = window.CoreMotion ? window.CoreMotion.create() : null;
     var StorageKeys = {
         ecommerce: "AEToolbox.ecommerceLayout.v1",
@@ -1201,6 +1202,28 @@
 
     function endAnimation() {
         byId("appShell").classList.remove("is-animating");
+        if (DesignTuning) DesignTuning.flushPendingProjection();
+    }
+
+    function initializeDesignTuning() {
+        var registry = window.DesignTuningParameterRegistry;
+        var store;
+        if (!registry || !window.DesignTuningStateStore || !window.DesignTuningResolver || !MotionDefaults) return null;
+        store = window.DesignTuningStateStore.create({ storage: window.localStorage, registry: registry });
+        store.load();
+        DesignTuning = window.DesignTuningResolver.create({
+            registry: registry,
+            store: store,
+            rootStyle: document.documentElement.style,
+            readComputed: function (property) { return String(window.getComputedStyle(document.documentElement).getPropertyValue(property) || "").replace(/^\s+|\s+$/g, ""); },
+            isProjectionSafe: function () { return !byId("appShell").classList.contains("is-animating"); },
+            getCanonicalDuration: function (role) { return MotionDefaults.durations[role]; },
+            onProjectionApplied: function () { MotionDefaults.applyCss(document.documentElement, motionScale); }
+        });
+        MotionDefaults.setDurationOverrideResolver(function (role, canonical) { return DesignTuning.resolveDuration(role, canonical); });
+        DesignTuning.initialize();
+        window.AEToolboxDesignTuning = DesignTuning;
+        return DesignTuning;
     }
 
     function warmUpAnimationPipeline() {
@@ -9655,6 +9678,7 @@
         var settingsBackdrop;
         var refreshBtn;
 
+        initializeDesignTuning();
         SettingsState = window.SettingsStateAdapter.create({ storage: window.localStorage, storageKey: StorageKeys.settings, defaults: DefaultSettings });
         SettingsState.initialize(loadStoredJson(StorageKeys.settings, DefaultSettings));
         ensureCoreAppearance(SettingsState.snapshot());

@@ -350,6 +350,10 @@ AE must validate centered Action press across canonical and compatibility consum
 
 ## Motion Curve Foundation handoff
 
+## Design Tuning Infrastructure handoff
+
+The active `refactor/0.3.2-design-tuning-infrastructure` work establishes the non-UI calibration authority for four Motion curve families and four semantic durations. `AEToolbox.designTuning.v1` stores only validated partial overrides; it never touches Appearance or Settings persistence. Duration overrides enter before the existing Major View Motion Speed multiplier. Structured curve overrides project onto the existing root curve properties, while raw canonical curves remain stylesheet-owned. Projection during protected Tool/Settings motion is deferred until `endAnimation()` and only the latest pending state applies. Reset removes overrides, promotion evidence is data-only, Reduced Motion remains authoritative, and the next task may add Developer → Design Tuning → Motion UI without changing these boundaries.
+
 The canonical UI curve defaults now live only in CSS as Enter, Exit, Standard, and Press families. `MotionDefaults.resolveEasing()` reads their computed values at the start of each WAAPI interaction, so CSS presentation and WAAPI share one authority and a future Design Tuning override applies on the next interaction. Semantic roles reference family identifiers; domain choreography remains unchanged. Legacy CSS easing names are forwarding aliases and `main.js` no longer owns easing literals.
 
 Procedural background drift has an independent local curve with the same accepted value, preventing UI Standard calibration from altering artwork motion. `motion.speed`, Reduced Motion, Vela processing pulse, and all existing curve values remain unchanged. AE acceptance should smoke Tool and Settings open/close, Home recede/restore, Palette, Action hover/press, ordinary Vela control response, and procedural drift at the three Motion Speed settings; expected visual delta is none.

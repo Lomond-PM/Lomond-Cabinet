@@ -298,6 +298,10 @@ Deferred to Phase 2: action press perceptual centering; Tool open handoff/overla
 
 ## Motion Phase 2 targeted remediation
 
+## Design Tuning Infrastructure
+
+The 0.3.2 Design Tuning Infrastructure adds a separate `AEToolbox.designTuning.v1` partial-override store, stable eight-parameter Motion registry, resolver, startup projection, reset APIs, and developer-readable promotion evidence. Duration canonicals remain in `MotionDefaults`; curve canonicals remain in CSS. Valid tuning resolves before the unchanged `motion.speed` major-view policy, while Reduced Motion retains final presentation authority. Protected Tool/Settings presentation defers CSS curve projection until the existing real animation cleanup boundary, with latest-value-wins behavior and no timeout or queue. No Developer Settings UI, Bezier editor, duration controls, Surface Transition work, or Vela ownership work is included.
+
 Canonical Action press is geometrically centered. Tool and Settings open share the existing Home recede presentation; Tool and Settings close now restore Home during the final 260ms of their 360ms contract using the same semantic derived-delay relationship. Both Home source measurement helpers restore exact pre-measurement class/transition state. Tool open identity lasts 360ms and overlaps the existing content reveal, which completes with the 480ms spatial expansion. The real detail content uses a temporary destination-layout stage, preventing continuous responsive reflow while the outer shell expands. Settings Close remains the closed-good geometry/measurement reference; only its Home restore trigger moved earlier.
 
 ## Motion Philosophy / Curve Foundation
