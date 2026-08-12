@@ -1,5 +1,13 @@
 # DESIGN_SYSTEM.md
 
+Design Tuning Full Coverage 中，GLOBAL / COMMON 参数必须覆盖所有适用的 canonical semantic consumers；`spacing.settings.*`、`spacing.registry.*`、`spacing.home.*` 仍是 domain-specific。该 scope 只描述消费边界，不决定最终 Settings IA。UI Scale Peek 使用 semantic visual target + structural ancestor path，祖先只保留布局与 containment。Registry Control Lab 分为 Registry Path 与补充无 schema type 的 CoreUI Direct，完整性由自动测试约束。
+
+Design Tuning 使用 real-consumer transient calibration：`onInput → resolver 内存 transient semantic override → real consumers`，`onCommit → persisted authority → clear transient`。Transient 不持久化、不进入 Promotion Evidence。active gesture 期间 Design Tuning editor root 会局部冻结对应 semantic property，避免调参控件被自身 geometry 反馈扰动；其他 Settings 与真实 consumer 继续实时变化。
+
+有意滚动区域统一使用 Core/UI-owned `.ui-scroll-region` presentation contract。Home、Detail、Settings 和 Vela transcript 共用同一 scrollbar skin；feature stylesheet 不重复拥有 scrollbar 视觉。
+
+Settings 是 specialized content surface，不是独立 UI system。Tool Detail 与 Settings 共用 memory-only Surface Presentation Session（surface identity、main scroll、surface payload）；Settings adapter 仅附加 stable semantic disclosure state。CoreUI、common semantic tokens 与 scroll presentation 属于 shared infrastructure；Settings IA、setting authorities、UI Scale Peek 和 disclosure payload 保持 Settings-specific。
+
 ## Visual Direction
 
 The panel is a Black Gold Minimal Pro UI for After Effects.
@@ -666,3 +674,10 @@ Registry Control Lab, Settings Renderer Lab, and Procedural Appearance Lab remai
 Vela settings are temporarily grouped as one dedicated domain category inside Global Settings root. Endpoint and Model ID remain persistent Vela configuration; acknowledgement, readiness, and enable/disable remain session/runtime state with no authority change. Vela is intentionally not a permanent Global Settings route in 0.3.2. A later focused task will move the whole category into a Vela-owned popup opened by the fixed lower-left Vela Settings button.
 
 Palette Library remains a specialized workspace: Settings content owns scrolling in root mode, while the Palette list/editor scroll panes own scrolling in workspace mode; closing restores the pre-entry Settings scroll position. Settings relocation does not create new parameter IDs, stores, defaults, runtime consumers, or duplicate editors. Design Tuning infrastructure and Motion tuning remain future work.
+# Design Tuning Full Coverage（0.3.2）
+
+Developer → Design Tuning 当前是完整设计校准工作区，不代表最终 Settings IA。参数在此处出现不改变 runtime authority：Design Tuning-owned 参数写入 `AEToolbox.designTuning.v1`；已有 Appearance 参数复用原 Appearance authority。
+
+Calibration editor 更新必须是增量 projection；parameter commit 不得重建 Settings composition。Existing Authority Mirrors 是同一 User Appearance authority 的同步投影。UI Scale Peek 由字段的 semantic preview anchor 拥有，不依赖 category DOM 层级。CoreUI RangeNumber 的 `.ui-range` / 正式 range class 共同拥有 slider presentation contract。
+
+稳定的 spacing、普通 radius、control geometry 与单层 semantic elevation shadow 可进行 typed runtime override；参与 Surface Transition identity handoff 的 radius 暂以只读形式展示。Elevation 使用通用结构化 shadow contract，stylesheet token 仍是 canonical authority。最终归入 Developer、Advanced 或用户 Appearance 的分类，延期到 AE 全量校准之后决定。

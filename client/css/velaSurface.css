@@ -95,30 +95,6 @@
     color: var(--text-secondary);
 }
 
-.vela-transcript-scroll::-webkit-scrollbar {
-    width: calc(7px * var(--ui-scale));
-    height: calc(7px * var(--ui-scale));
-}
-
-.vela-transcript-scroll::-webkit-scrollbar-track {
-    border-radius: var(--radius-sm);
-    background: rgba(214, 178, 94, 0.045);
-}
-
-.vela-transcript-scroll::-webkit-scrollbar-thumb {
-    border: 1px solid rgba(5, 4, 3, 0.52);
-    border-radius: var(--radius-sm);
-    background: var(--gold-soft);
-}
-
-.vela-transcript-scroll::-webkit-scrollbar-thumb:hover {
-    background: var(--gold-hot);
-}
-
-.vela-transcript-scroll::-webkit-scrollbar-corner {
-    background: transparent;
-}
-
 .vela-transcript-error,
 .vela-transcript-notice {
     color: var(--text-tertiary);

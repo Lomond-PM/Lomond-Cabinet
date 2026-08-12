@@ -173,7 +173,7 @@
             rootElement.id = "velaSurface";
             rootElement.setAttribute("data-vela-surface", "true");
             transcriptSlot = node("div", "vela-transcript-slot");
-            transcriptScroll = node("div", "vela-transcript-scroll");
+            transcriptScroll = node("div", "vela-transcript-scroll ui-scroll-region");
             transcriptScroll.setAttribute("tabindex", "0");
             transcriptMessage = node("p", "vela-transcript-intro");
             transcriptScroll.appendChild(transcriptMessage);

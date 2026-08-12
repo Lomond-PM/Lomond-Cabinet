@@ -1,5 +1,11 @@
 # PROJECT_STATE.md
 
+Design Tuning Full Coverage 已加入 GLOBAL / COMMON consumer convergence 契约、UI Scale Peek semantic target/structure-only ancestor path，以及 Registry Control Lab Registry Path / CoreUI Direct 完整性检查。Developer / Advanced / User 的最终参数安置仍等待 Full Calibration 后复核。
+
+Design Tuning 已改为 real-consumer transient calibration。Resolver precedence 为 canonical → persisted override → transient override；commit 先持久化同值再清 transient，避免闪回。Calibration editor chrome 在 gesture 内冻结自身 semantic geometry，Control Lab 与其他真实 consumer 自然接收 transient。Live Preview Stage 及其 nested scroll owner已移除。
+
+Tool Detail 与 Settings 现在通过同一 memory-only Surface Presentation Session seam 保存独立主 scroll location；Settings payload额外保存 stable-key disclosure state。Design Tuning calibration chrome baseline 在 mount 时建立一次，gesture 边界不再安装或删除 semantic freeze。
+
 Action / Button Foundation now closes the CoreUI `Primary`, `Neutral`, and `Danger` visual roles. Registry `Secondary` maps to Neutral and Registry `danger` maps directly to CoreUI Danger; the Developer Control Lab contains real full-width specimens for all three roles under a semantic action-stack spacing owner. Disabled actions carry no elevation; Palette and Settings retain only domain layout/composition ownership. Navigation, Home tool identity, and Vela remain explicit domain boundaries, with no new User Appearance or Design Tuning parameter.
 
 Typography Appearance Parameters now expose six bounded semantic size controls in Global Settings → Interface Appearance → Typography. Stable Parameter IDs persist numeric relative multipliers in `AEToolbox.appearance.v1`, while the UI presents percentages through Core RangeNumber. Page/Surface titles share intent; Field Label and Code sizes are independent from Body and Supporting; Control and Eyebrow retain their intentional derivations. Weight, line-height, font-family, Text Scale, and domain-specific typography controls remain deferred.
@@ -318,3 +324,8 @@ The 0.3.2 Settings shell is one root scroll composition containing independent C
 Vela is deliberately not registered as `settings/vela`. Its current Global Settings placement is transitional: the Vela gear opens Settings root and focuses the isolated Vela category while preserving its launch source. Future work will migrate that category to a Vela-owned popup. Acknowledgement and Provider enablement/readiness remain session/runtime-only; qualification policy remains trusted internal authority.
 
 Developer Mode remains a persistent visibility gate rather than a security boundary. Turning it off removes the Developer disclosure from the current stack without navigation, closing Settings, changing scroll ownership, or deleting calibration values. Palette Library remains a specialized workspace whose pane scrollers take ownership while open and whose exit restores the root scroll position. Existing Settings, Appearance, Background, Palette, and Vela stores retain their IDs and consumers; Design Tuning Store/Resolver, Motion tuning, and Promote-to-Default are not implemented.
+# 0.3.2 Design Tuning Full Coverage
+
+Design Tuning 已扩展为跨 Motion、Spacing、Radius、Controls/Geometry 与 Elevation 的校准工作区。五个单层 semantic elevation shadows 已通过通用 typed ShadowField 开放；现有 Appearance/Typography 参数作为原 authority 的第二编辑入口，Design Tuning reset 不影响这些用户参数。Surface Transition identity radius 保持受保护只读。
+
+Calibration UX 使用 parameter binding 增量刷新状态和 evidence，Disclosure、scroll 与无关字段 DOM 不因 commit/reset 被销毁。Appearance 原编辑器与 calibration mirror 通过共享 authority notification 同步，programmatic `setValue()` 不触发再次提交。

@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 290 |
+| A | Core / Global; keep | 325 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -357,11 +357,15 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.backgroundSource.classic | settings | Classic | 经典 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundSource.followIconTheme | settings | Follow Icon Theme | 跟随图标主题 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundSource.procedural | settings | Manual Procedural | 手动程序化 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.authority.userAppearance | settings | Authority: User Appearance. These editors do not write Design Tuning ... | 权威源：用户外观。这些编辑器不写入设计调校覆盖。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.controls.title | settings | Controls & Geometry | 控件与几何 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.curve.progress | settings | Progress / Value | 进度 / 数值 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.curve.speed | settings | Speed | 速度 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.curve.speedHint | settings | Hold Shift while dragging a Speed handle to adjust influence only. | 拖动速度手柄时按住 Shift，可仅调整影响比例。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.default | settings | Default | 默认 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.description | settings | Developer calibration overrides. Canonical defaults remain source-owned. | 开发者校准覆盖。规范默认值仍由其源头拥有。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.elevation.title | settings | Elevation | 高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.existingAppearance.title | settings | Existing Appearance / User Parameters | 现有外观 / 用户参数 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.motion.curve.enter | settings | Enter | 进入 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.motion.curve.exit | settings | Exit | 退出 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.motion.curve.press | settings | Press | 按压 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -374,8 +378,39 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.designTuning.motion.durations | settings | Motion Durations | 动效时长 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.motion.title | settings | Motion | 动效 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.overridden | settings | Overridden | 已覆盖 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.actionContainer | settings | Action Container Elevation | 操作容器高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.floatingPicker | settings | Floating Picker Elevation | 浮动选择器高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.floatingSurface | settings | Floating Surface Elevation | 浮动表面高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.primaryAction | settings | Primary Action Elevation | 主操作高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.surfaceShell | settings | Surface Shell Elevation | 表面外壳高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.geometry.button.height | settings | Button Height | 按钮高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.geometry.button.horizontalPadding | settings | Button Horizontal Padding | 按钮水平内边距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.geometry.control.height | settings | Control Height | 控件高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.radius.editableControl | settings | Editable Control Radius | 可编辑控件圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.radius.homeIcon | settings | Home Icon Radius | Home 图标圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.radius.homeTile | settings | Home Tile Radius | Home 瓦片圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.radius.nestedSurface | settings | Nested Surface Radius | 嵌套表面圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.radius.sectionCard | settings | Section Card Radius | 分区卡片圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.card.inset | settings | Card Inset | 卡片内边距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.control.inline | settings | Inline Control Gap | 行内控件间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.field.block | settings | Field Block Gap | 字段块间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.field.copy | settings | Field Copy Gap | 字段文本间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.home.majorStack | settings | Home Major Stack | Home 主堆叠间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.home.toolGrid | settings | Home Tool Grid Gap | Home 工具网格间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.registry.cardInset | settings | Registry Card Inset | Registry 卡片内边距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.registry.fieldControl | settings | Registry Field to Control | Registry 字段与控件 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.section.headerContent | settings | Section Header to Content | 分区标题与内容 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.section.stack | settings | Section Stack | 分区堆叠间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.settings.fieldControl | settings | Settings Field to Control | 设置字段与控件 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.surface.edge | settings | Surface Edge | 表面边缘 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.promotionEvidence | settings | Promotion Evidence | 提升证据 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.protected.compound-shadow | settings | Read-only compound shadow | 复合阴影暂为只读 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.protected.surface-transition | settings | Protected by Surface Transition contract | 受 Surface Transition 契约保护 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.radius.title | settings | Radius | 圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.resetAll | settings | Reset All Design Tuning | 重置全部设计调校 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.resetDomain | settings | Reset Domain | 重置当前域 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.resetMotion | settings | Reset Motion | 重置动效 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.spacing.title | settings | Spacing | 间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.title | settings | Design Tuning | 设计调校 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.developer.homeCalibration | settings | Home Calibration | 主页校准 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.developer.labs | settings | Labs | 实验室 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |

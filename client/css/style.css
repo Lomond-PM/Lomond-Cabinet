@@ -701,15 +701,30 @@ body:not(.i18n-ready) .app-shell {
     overflow: hidden;
 }
 
-.settings-view.is-peek-preview .settings-root-page > .settings-section {
+.settings-view.is-peek-preview .settings-root-page * {
     visibility: hidden;
     pointer-events: none;
 }
 
-.settings-view.is-peek-preview #settingsMotionMount {
+.settings-view.is-peek-preview .settings-root-page .is-settings-peek-structure {
     visibility: visible;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+}
+
+.settings-view.is-peek-preview .settings-root-page .is-settings-peek-anchor,
+.settings-view.is-peek-preview .settings-root-page .is-settings-peek-anchor * {
+    visibility: visible;
+}
+
+.settings-view.is-peek-preview .settings-root-page .is-settings-peek-anchor {
     pointer-events: auto;
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+}
+
+.settings-view.is-peek-preview .settings-root-page .is-settings-peek-anchor * {
+    pointer-events: auto;
 }
 
 .settings-section-header {
@@ -2176,45 +2191,33 @@ body:not(.i18n-ready) .app-shell {
     padding-bottom: calc(132px * var(--ui-scale));
 }
 
-.home-content,
-.detail-content,
-.settings-content {
+.ui-scroll-region {
     scrollbar-color: var(--gold-soft) rgba(5, 4, 3, 0.34);
     scrollbar-width: thin;
 }
 
-.home-content::-webkit-scrollbar,
-.detail-content::-webkit-scrollbar,
-.settings-content::-webkit-scrollbar {
+.ui-scroll-region::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
-.home-content::-webkit-scrollbar-track,
-.detail-content::-webkit-scrollbar-track,
-.settings-content::-webkit-scrollbar-track {
+.ui-scroll-region::-webkit-scrollbar-track {
     border-radius: 999px;
     background: rgba(5, 4, 3, 0.34);
 }
 
-.home-content::-webkit-scrollbar-thumb,
-.detail-content::-webkit-scrollbar-thumb,
-.settings-content::-webkit-scrollbar-thumb {
+.ui-scroll-region::-webkit-scrollbar-thumb {
     min-height: 42px;
     border: 2px solid rgba(5, 4, 3, 0.34);
     border-radius: 999px;
     background: var(--gold-soft);
 }
 
-.home-content::-webkit-scrollbar-thumb:hover,
-.detail-content::-webkit-scrollbar-thumb:hover,
-.settings-content::-webkit-scrollbar-thumb:hover {
+.ui-scroll-region::-webkit-scrollbar-thumb:hover {
     background: var(--gold-focus);
 }
 
-.home-content::-webkit-scrollbar-corner,
-.detail-content::-webkit-scrollbar-corner,
-.settings-content::-webkit-scrollbar-corner {
+.ui-scroll-region::-webkit-scrollbar-corner {
     background: transparent;
 }
 
@@ -2301,7 +2304,9 @@ p {
     align-content: flex-start;
     align-items: flex-start;
     user-select: none;
+    margin-top: var(--space-home-major-stack);
 }
+
 
 .tool-bootstrap-status {
     display: flex;
@@ -2882,7 +2887,7 @@ p {
 .control-inputs {
     display: flex;
     align-items: center;
-    gap: calc(8px * var(--ui-scale));
+    gap: var(--space-inline-control);
     flex: 1 1 auto;
     min-width: 0;
 }
@@ -4722,3 +4727,19 @@ p {
     }
 }
 
+.ui-shadow-field {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-inline-control);
+    min-width: 0;
+}
+
+.ui-shadow-field .ui-color-field {
+    grid-column: span 3;
+    min-width: 0;
+}
+
+@media (max-width: 380px) {
+    .ui-shadow-field { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ui-shadow-field .ui-color-field { grid-column: span 2; }
+}

@@ -22,11 +22,14 @@ check(/onDragStart[\s\S]*onDragChange[\s\S]*onDragEnd/.test(main.slice(main.inde
 check(/Math\.abs\(delta\) < 4[\s\S]*options\.onDragStart/.test(scrub), "Numeric scrub starts only after horizontal movement crosses the existing threshold");
 check(!/addEventListener\("input"[\s\S]{0,160}beginSettingsPeekManipulation\("number-scrub"\)/.test(setup), "Normal numeric text input does not start Peek");
 check(/manipulation\.changed = true[\s\S]*setTimeout[\s\S]*SettingsPeekManipulation === manipulation/.test(peek), "Delayed entry verifies the same active changed manipulation");
-check(/beginSettingsPeekPreview\(byId\("settingsMotionMount"\)\)/.test(peek), "Peek retains the real Motion section scope");
+check(/beginSettingsPeekPreview\(document\.querySelector\('\[data-settings-preview-anchor="ui-scale"\]'\)\)/.test(peek), "Peek resolves the semantic UI Scale target");
 check(/is-settings-peek-home/.test(peek) && /#homeView\.is-settings-peek-home[\s\S]*pointer-events: none !important/.test(css), "Peek reveals the real Home as non-interactive");
-check(/is-peek-preview #settingsMotionMount[\s\S]*visibility: visible[\s\S]*pointer-events: auto/.test(css), "Motion section remains visible and interactive without relocation");
-check(/is-peek-preview \.settings-root-page > \.settings-section[\s\S]*visibility: hidden/.test(css), "Other Settings sections are suppressed with geometry-preserving visibility");
+check(/is-peek-preview \.settings-root-page \.is-settings-peek-anchor,[\s\S]*visibility: visible/.test(css), "Only the semantic target is visually restored without relocation");
+check(/is-peek-preview \.settings-root-page \*[\s\S]*visibility: hidden/.test(css), "Unrelated Settings descendants are suppressed with geometry-preserving visibility");
+check(/while \(ancestor && ancestor !== root\)[\s\S]*is-settings-peek-structure/.test(peek), "Structural ancestry is discovered without fixed DOM depth");
+check(/\.is-settings-peek-structure[\s\S]*border-color: transparent[\s\S]*background: transparent[\s\S]*box-shadow: none/.test(css), "Structural ancestors do not paint an Appearance card");
 check(/function endSettingsPeekPreview[\s\S]*clearTimeout[\s\S]*classList\.remove\("is-peek-preview"/.test(peek), "Peek exit is idempotent and clears timer and presentation state");
+check(/classList\.remove\("is-settings-peek-anchor", "is-settings-peek-structure"\)/.test(peek), "Repeated exit removes all target/path classes");
 check(/wasPreviewingHome[\s\S]*classList\.remove\("is-settings-peek-home"\)[\s\S]*if \(wasPreviewingHome\) home\.classList\.remove\("is-active"\)/.test(peek), "Peek cleanup does not hide a normally active Home");
 check(/window\.addEventListener\("blur", up\)/.test(scrub) && /window\.addEventListener\("blur"[\s\S]*endSettingsPeekManipulation/.test(main), "Window blur cleans shared scrub and Peek presentation state");
 check(/function cleanupTransientUiState[\s\S]*endSettingsPeekManipulation/.test(main), "Panel lifecycle cleanup exits Peek");

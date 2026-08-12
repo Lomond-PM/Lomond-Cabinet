@@ -756,6 +756,36 @@
         return { root: rootElement, swatch: swatch, input: valueInput, hex: hex, setValue: setValue };
     }
 
+    function parseShadowValue(value) {
+        var match = /^\s*(0|-?(?:\d+\.?\d*|\.\d+)px)\s+(0|-?(?:\d+\.?\d*|\.\d+)px)\s+(0|(?:\d+\.?\d*|\.\d+)px)(?:\s+(0|-?(?:\d+\.?\d*|\.\d+)px))?\s+rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*((?:\d+\.?\d*|\.\d+))\s*\)\s*$/i.exec(String(value || ""));
+        var result;
+        if (!match) return null;
+        result = { offsetX: parseFloat(match[1]), offsetY: parseFloat(match[2]), blur: parseFloat(match[3]), spread: match[4] === undefined ? 0 : parseFloat(match[4]), color: "#" + [match[5], match[6], match[7]].map(function (part) { var hex = Number(part).toString(16); return hex.length < 2 ? "0" + hex : hex; }).join(""), alpha: Number(match[8]) };
+        return isValidShadowValue(result) ? result : null;
+    }
+
+    function isValidShadowValue(value) {
+        return !!value && ["offsetX", "offsetY", "blur", "spread", "alpha"].every(function (key) { return typeof value[key] === "number" && isFinite(value[key]); }) && value.blur >= 0 && value.alpha >= 0 && value.alpha <= 1 && /^#[0-9a-f]{6}$/i.test(value.color || "");
+    }
+
+    function serializeShadowValue(value) {
+        var rgb;
+        if (!isValidShadowValue(value)) return "";
+        rgb = [value.color.slice(1, 3), value.color.slice(3, 5), value.color.slice(5, 7)].map(function (part) { return parseInt(part, 16); });
+        return value.offsetX + "px " + value.offsetY + "px " + value.blur + "px" + (value.spread ? " " + value.spread + "px" : "") + " rgba(" + rgb.join(", ") + ", " + value.alpha + ")";
+    }
+
+    function createShadowField(options) {
+        var doc = options.document; var value = options.value; var rootElement = applyCommon(doc.createElement("div"), { classNames: "ui-shadow-field " + (options.classNames || "") }); var inputs = {}; var color;
+        function clone() { return { offsetX: value.offsetX, offsetY: value.offsetY, blur: value.blur, spread: value.spread, color: value.color, alpha: value.alpha }; }
+        function emit(kind) { if (typeof options[kind] === "function") options[kind](clone()); }
+        function addNumber(key, min, max, step) { var input = createNumberInput({ document: doc, id: options.id + "-" + key, value: value[key], field: { min: min, max: max, step: step, defaultValue: value[key] }, ariaLabel: (options.labels && options.labels[key]) || key, onInput: function () { if (!isNumberDraft(input.value)) { value[key] = normalizeNumber(input.value, { min: min, max: max }, value[key]); emit("onPreview"); } }, onCommit: function (next) { value[key] = normalizeNumber(next, { min: min, max: max }, value[key]); emit("onCommit"); } }); inputs[key] = input; rootElement.appendChild(input); }
+        addNumber("offsetX", -64, 64, 1); addNumber("offsetY", -64, 64, 1); addNumber("blur", 0, 96, 1); addNumber("spread", -32, 32, 1);
+        color = createColorField({ document: doc, id: options.id + "-color", value: value.color, fallback: "#000000", normalize: function (next, fallback) { return /^#[0-9a-f]{6}$/i.test(next || "") ? next : fallback; }, isValid: function (next) { return /^#[0-9a-f]{6}$/i.test(next || ""); }, onPreview: function (next) { value.color = next; emit("onPreview"); }, onCommit: function (next) { value.color = next; emit("onCommit"); } });
+        rootElement.appendChild(color.root); addNumber("alpha", 0, 1, 0.01);
+        return { root: rootElement, inputs: inputs, color: color, getValue: clone };
+    }
+
     function createFieldRow(options) {
         var doc = options.document;
         var row = applyCommon(doc.createElement(options.labelRow ? "label" : "div"), { classNames: "ui-field-row " + (options.classNames || "") });
@@ -791,6 +821,10 @@
         createDisclosureController: createDisclosureController,
         createButton: createButton,
         createColorField: createColorField,
+        parseShadowValue: parseShadowValue,
+        isValidShadowValue: isValidShadowValue,
+        serializeShadowValue: serializeShadowValue,
+        createShadowField: createShadowField,
         createFieldRow: createFieldRow,
         normalizeNumber: normalizeNumber,
         isNumberDraft: isNumberDraft,
