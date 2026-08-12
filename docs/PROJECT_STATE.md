@@ -122,7 +122,7 @@ Current production registry tools:
 
 ### Developer Mode labs
 
-Developer Mode retains shared renderer/Settings/procedural labs. They are hidden from normal Home mode and are not production tools.
+Developer Mode retains shared renderer/Settings/procedural labs. They are hidden from normal Home mode and are not production tools. Registry Control Lab, Settings Renderer Lab, and Procedural Appearance Lab remain registered and launch normally from Home; the newly introduced Settings quick entries and their Settings-specific handoff wiring are removed. Quick launch is deferred to an independent Surface Transition Foundation covering generic open, close, and switch protocols rather than local Settings animation patches.
 
 ## Settings
 
@@ -305,3 +305,10 @@ Canonical Action press is geometrically centered. Tool and Settings open share t
 CSS now owns the single canonical defaults for Enter, Exit, Standard, and Press. `MotionDefaults` owns family/property and semantic-role/family mappings and resolves the current computed curve for each WAAPI interaction; `main.js` no longer owns raw easing copies. This establishes a future Design Tuning override seam without changing any curve value, duration, choreography, or User Appearance persistence. Procedural background drift retains its accepted curve through an isolated local property, while Vela pulse and Reduced Motion boundaries remain unchanged.
 
 The implemented BezierCurveField is the bounded generic cubic-bezier input described above. It does not add Design Tuning storage, Promote UI, Motion Settings, presets, or a general graph framework.
+## Settings Information Architecture Foundation
+
+The 0.3.2 Settings shell is one root scroll composition containing independent CoreUI Disclosure categories for Appearance, Vela, Advanced, and Developer. It has no user-facing category destination cards or secondary category pages. Appearance owns Language, Theme, Interface UI Scale, Major View Motion Speed, semantic Appearance, Typography, Tool Icon controls, nested Background disclosure, and the Palette launcher. Background UI classification belongs to Appearance while Background runtime and persistence remain domain-owned. Developer Access, calibration, and Labs each retain one owner; saturation, brightness, and grain live with all other procedural parameters under Developer → Procedural Appearance. Registry Control Lab, Settings Renderer Lab, and Procedural Appearance Lab are real Developer Registry tools; their Settings entries launch only after the Settings close transaction completes.
+
+Vela is deliberately not registered as `settings/vela`. Its current Global Settings placement is transitional: the Vela gear opens Settings root and focuses the isolated Vela category while preserving its launch source. Future work will migrate that category to a Vela-owned popup. Acknowledgement and Provider enablement/readiness remain session/runtime-only; qualification policy remains trusted internal authority.
+
+Developer Mode remains a persistent visibility gate rather than a security boundary. Turning it off removes the Developer disclosure from the current stack without navigation, closing Settings, changing scroll ownership, or deleting calibration values. Palette Library remains a specialized workspace whose pane scrollers take ownership while open and whose exit restores the root scroll position. Existing Settings, Appearance, Background, Palette, and Vela stores retain their IDs and consumers; Design Tuning Store/Resolver, Motion tuning, and Promote-to-Default are not implemented.

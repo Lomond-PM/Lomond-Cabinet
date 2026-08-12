@@ -1446,23 +1446,75 @@
         return section;
     }
 
+    function createSettingsCategory(id, titleKey, expanded, className) {
+        var root = document.createElement("section");
+        var trigger = document.createElement("button");
+        var title = document.createElement("span");
+        var chevron = document.createElement("span");
+        var body = document.createElement("div");
+        root.id = "settingsCategory" + id.charAt(0).toUpperCase() + id.slice(1);
+        root.className = "settings-category collapsible-card" + (className ? " " + className : "");
+        root.setAttribute("data-settings-category", id);
+        trigger.type = "button";
+        trigger.className = "settings-category-header settings-section-toggle collapsible-heading";
+        title.setAttribute("data-i18n", titleKey);
+        title.textContent = tr(titleKey);
+        chevron.className = "collapse-chevron";
+        chevron.setAttribute("aria-hidden", "true");
+        trigger.appendChild(title);
+        trigger.appendChild(chevron);
+        body.id = "settingsCategoryBody-" + id;
+        body.className = "settings-category-content collapsible-body";
+        root.appendChild(trigger);
+        root.appendChild(body);
+        root._coreDisclosure = window.CoreUI.createDisclosureController({
+            trigger: trigger,
+            content: body,
+            root: root,
+            expanded: expanded === true,
+            collapsedClass: "is-collapsed",
+            onChange: function (isExpanded) {
+                if (id === "appearance" && !isExpanded) clearAppearancePreviews();
+            }
+        });
+        return { root: root, body: body };
+    }
+
     function renderSettingsContent() {
         var content = document.querySelector(".settings-content");
         var renderer;
+        var appearance;
+        var vela;
+        var advanced;
+        var developer;
         if (!content) {
             return;
         }
         content.innerHTML = "";
         content.classList.remove("settings-renderer");
         renderer = document.createElement("div");
-        renderer.className = "settings-renderer";
-        renderer.appendChild(createSettingsSectionMount("settingsLanguageMount", "settings-section"));
-        renderer.appendChild(createSettingsSectionMount("settingsVelaMount", "settings-section"));
-        renderer.appendChild(createSettingsSectionMount("settingsDeveloperModeMount", "settings-section"));
-        renderer.appendChild(createSettingsSectionMount("settingsMotionMount", "settings-section"));
-        renderer.appendChild(createSettingsSectionMount("settingsThemeMount", "settings-section"));
-        renderer.appendChild(createSettingsSectionMount("settingsPaletteLibraryMount", "settings-section settings-section--palette-library"));
-        renderer.appendChild(createSettingsSectionMount("backgroundSettingsCard", "settings-section settings-section--background settings-section--collapsible collapsible-card"));
+        renderer.id = "settingsRootPage";
+        renderer.className = "settings-renderer settings-root-page";
+        appearance = createSettingsCategory("appearance", "settings.navigation.appearance", true, "settings-category--appearance");
+        appearance.body.appendChild(createSettingsSectionMount("settingsLanguageMount", "settings-section"));
+        appearance.body.appendChild(createSettingsSectionMount("settingsCoreAppearanceMount", "settings-section"));
+        appearance.body.appendChild(createSettingsSectionMount("settingsInterfaceMount", "settings-section"));
+        appearance.body.appendChild(createSettingsSectionMount("settingsMotionMount", "settings-section"));
+        appearance.body.appendChild(createSettingsSectionMount("settingsAppearanceParametersMount", "settings-appearance-parameters"));
+        appearance.body.appendChild(createSettingsSectionMount("settingsProceduralAppearanceMount", "settings-section"));
+        appearance.body.appendChild(createSettingsSectionMount("backgroundSettingsCard", "settings-section settings-section--background settings-section--collapsible collapsible-card"));
+        appearance.body.appendChild(createSettingsSectionMount("settingsPaletteLibraryMount", "settings-section settings-section--palette-library"));
+        vela = createSettingsCategory("vela", "settings.sections.vela", false, "settings-category--vela settings-vela-transitional-category");
+        vela.body.appendChild(createSettingsSectionMount("settingsVelaMount", "settings-section"));
+        advanced = createSettingsCategory("advanced", "settings.navigation.advanced", false, "settings-category--advanced");
+        advanced.body.appendChild(createSettingsSectionMount("settingsDeveloperModeMount", "settings-section"));
+        developer = createSettingsCategory("developer", "settings.navigation.developer", false, "settings-category--developer settings-developer-only");
+        developer.body.appendChild(createSettingsSectionMount("settingsDeveloperCalibrationMount", "settings-section"));
+        developer.body.appendChild(createSettingsSectionMount("settingsDeveloperProceduralMount", "settings-section"));
+        renderer.appendChild(appearance.root);
+        renderer.appendChild(vela.root);
+        renderer.appendChild(advanced.root);
+        renderer.appendChild(developer.root);
         content.appendChild(renderer);
     }
 
@@ -2123,7 +2175,7 @@
         enableButton = document.createElement("button"); enableButton.type = "button"; enableButton.id = "velaExperimentalEnable"; enableButton.className = "ui-button ui-button--neutral panel-button panel-local-action"; enableButton.textContent = tr("settings.vela.enableSession");
         disableButton = document.createElement("button"); disableButton.type = "button"; disableButton.id = "velaExperimentalDisable"; disableButton.className = "ui-button ui-button--neutral panel-button panel-local-action"; disableButton.textContent = tr("settings.vela.disableSession");
         status = document.createElement("p"); status.id = "velaExperimentalStatus"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
-        acknowledgement.addEventListener("change", function () { VelaExperimentalAcknowledged = acknowledgement.checked === true; saveSettings(); configureSession(); refreshSession(); });
+        acknowledgement.addEventListener("change", function () { VelaExperimentalAcknowledged = acknowledgement.checked === true; configureSession(); refreshSession(); });
         enableButton.addEventListener("click", function () { saveEndpoint(); saveModel(); if (velaSurfaceController && typeof velaSurfaceController.enableExperimental === "function") { velaSurfaceController.enableExperimental().then(refreshSession, refreshSession); } });
         disableButton.addEventListener("click", function () { if (velaSurfaceController && typeof velaSurfaceController.disableExperimental === "function") { velaSurfaceController.disableExperimental(); } refreshSession(); });
         mount.appendChild(acknowledgementLabel.root); mount.appendChild(enableButton); mount.appendChild(disableButton); mount.appendChild(status);
@@ -2132,6 +2184,8 @@
 
     function renderSettingsDeveloperMode() {
         var mount = byId("settingsDeveloperModeMount");
+        var calibrationMount = byId("settingsDeveloperCalibrationMount");
+        var proceduralMount = byId("settingsDeveloperProceduralMount");
         var field = findSettingsSchemaField("registryDebugTools");
         var radiusField = findSettingsSchemaField("homeIconRadius");
         var shadowField = findSettingsSchemaField("homeDragShadowIntensity");
@@ -2150,12 +2204,16 @@
         var resetButton;
         var i;
 
-        if (!mount || !field) {
+        if (!mount || !calibrationMount || !proceduralMount || !field) {
             return;
         }
 
         mount.innerHTML = "";
         mount.className = "settings-section";
+        calibrationMount.innerHTML = "";
+        calibrationMount.className = "settings-section settings-developer-only";
+        proceduralMount.innerHTML = "";
+        proceduralMount.className = "settings-section settings-developer-only";
 
         heading = createSettingsSectionHeader("section.debug", "section.developerTools", null);
 
@@ -2165,26 +2223,26 @@
         mount.appendChild(heading);
         mount.appendChild(fieldRow.row);
 
+        calibrationMount.appendChild(createSettingsSectionHeader("section.debug", "settings.developer.homeCalibration", null));
+
         if (radiusField) {
             radiusRow = createSharedSettingsFieldRow("range", radiusField, radiusField.descriptionKey, "");
-            radiusRow.row.classList.add("settings-developer-only");
             radiusRow.controls.parentNode && radiusRow.row.removeChild(radiusRow.controls);
             radiusControls = createSharedSettingsRangeNumber(radiusField, "homeIconRadius", "homeIconRadiusNumber", radiusField.min, radiusField.max, "", "");
             radiusRow.row.appendChild(radiusControls);
-            mount.appendChild(radiusRow.row);
+            calibrationMount.appendChild(radiusRow.row);
         }
         if (shadowField) {
             shadowRow = createSharedSettingsFieldRow("range", shadowField, shadowField.descriptionKey, "");
-            shadowRow.row.classList.add("settings-developer-only");
             shadowRow.controls.parentNode && shadowRow.row.removeChild(shadowRow.controls);
             shadowControls = createSharedSettingsRangeNumber(shadowField, "homeDragShadowIntensity", "homeDragShadowIntensityNumber", shadowField.min, shadowField.max, "", "");
             shadowRow.row.appendChild(shadowControls);
-            mount.appendChild(shadowRow.row);
+            calibrationMount.appendChild(shadowRow.row);
         }
         proceduralSection = findSettingsSchemaSection("proceduralAppearance");
         if (proceduralSection) {
             proceduralGroup = createSettingsThemeGroup(proceduralSection);
-            proceduralGroup.root.classList.add("settings-developer-only", "settings-procedural-params-group");
+            proceduralGroup.root.classList.add("settings-procedural-params-group", "settings-theme-group--first");
             if (proceduralSection.descriptionKey) {
                 proceduralNote = document.createElement("p");
                 proceduralNote.className = "settings-theme-note settings-procedural-params-note";
@@ -2211,7 +2269,7 @@
                     proceduralGroup.body.appendChild(proceduralRow);
                 }
             }
-            mount.appendChild(proceduralGroup.root);
+            proceduralMount.appendChild(proceduralGroup.root);
         }
         setupProceduralAppearanceParams();
         syncSettingsDeveloperOnlyFields();
@@ -2239,27 +2297,31 @@
 
     function renderSettingsMotion() {
         var mount = byId("settingsMotionMount");
+        var interfaceMount = byId("settingsInterfaceMount");
         var section = findSettingsSchemaSection("motion");
         var heading;
         var fields;
         var i;
 
-        if (!mount || !section) {
+        if (!mount || !interfaceMount || !section) {
             return;
         }
 
         mount.innerHTML = "";
         mount.className = "settings-section";
+        interfaceMount.innerHTML = "";
+        interfaceMount.className = "settings-section";
 
         heading = createSettingsSectionHeader("section.motion", "section.animation", null);
         mount.appendChild(heading);
+        interfaceMount.appendChild(createSettingsSectionHeader("common.settings", "settings.navigation.interface", null));
 
         fields = section.fields || [];
         for (i = 0; i < fields.length; i++) {
             if (fields[i] && fields[i].key === "motionSpeed") {
                 mount.appendChild(renderSettingsRangeRow(fields[i], "motionSpeedNumber"));
             } else if (fields[i] && fields[i].key === "uiScale") {
-                mount.appendChild(renderSettingsRangeRow(fields[i], "uiScaleNumber"));
+                interfaceMount.appendChild(renderSettingsRangeRow(fields[i], "uiScaleNumber"));
             }
         }
     }
@@ -2977,7 +3039,8 @@
     }
 
     function renderSettingsTheme() {
-        var mount = byId("settingsThemeMount");
+        var coreMount = byId("settingsCoreAppearanceMount");
+        var appearanceMount = byId("settingsProceduralAppearanceMount");
         var section = findSettingsSchemaSection("theme");
         var heading;
         var fields;
@@ -2990,16 +3053,19 @@
         var presentationElement;
         var i;
         var j;
+        var appearanceGroupCount = 0;
 
-        if (!mount || !section) {
+        if (!coreMount || !appearanceMount || !section) {
             return;
         }
 
-        mount.innerHTML = "";
-        mount.className = "settings-section";
+        coreMount.innerHTML = "";
+        appearanceMount.innerHTML = "";
+        coreMount.className = "settings-section settings-core-appearance";
+        appearanceMount.className = "settings-section settings-procedural-appearance";
 
         heading = createSettingsSectionHeader("section.color", section.titleKey, null);
-        mount.appendChild(heading);
+        coreMount.appendChild(heading);
 
         fields = section.fields || [];
         for (i = 0; i < fields.length; i++) {
@@ -3022,7 +3088,14 @@
                 presentationElement = createSettingsThemePresentation(group.presentations[j]);
                 groupView.body.appendChild(presentationElement);
             }
-            mount.appendChild(groupView.root);
+            if (group.id === "interfaceAppearance") {
+                groupView.root.classList.add("settings-theme-group--first");
+                coreMount.appendChild(groupView.root);
+            } else {
+                if (appearanceGroupCount === 0) groupView.root.classList.add("settings-theme-group--first");
+                appearanceMount.appendChild(groupView.root);
+                appearanceGroupCount += 1;
+            }
         }
         refreshSettingsThemePresentation();
     }
@@ -9001,7 +9074,6 @@
             toolIconDarkPaletteId: byId("toolIconDarkPaletteId") ? String(byId("toolIconDarkPaletteId").value || "") : current.toolIconDarkPaletteId,
             velaProviderModel: VelaProviderModel,
             velaProviderEndpoint: VelaProviderEndpoint,
-            velaExperimentalAcknowledged: VelaExperimentalAcknowledged === true,
             proceduralParams: document.querySelector("[data-procedural-param]") ? collectProceduralAppearanceParamsFromControls() : current.proceduralParams,
             homeIconRadius: byId("homeIconRadiusNumber") ? clampNumber(byId("homeIconRadiusNumber").value, DefaultSettings.homeIconRadius, 18, 40) : current.homeIconRadius,
             homeDragShadowIntensity: byId("homeDragShadowIntensityNumber") ? clampNumber(byId("homeDragShadowIntensityNumber").value, DefaultSettings.homeDragShadowIntensity, 0, 1.5) : current.homeDragShadowIntensity,
@@ -9023,7 +9095,7 @@
         var speed = clampNumber(data.motionSpeed, DefaultSettings.motionSpeed, 0.75, 1.35);
         VelaProviderModel = typeof data.velaProviderModel === "string" ? normalizeVelaExperimentalModel(data.velaProviderModel) : DefaultSettings.velaProviderModel;
         VelaProviderEndpoint = typeof data.velaProviderEndpoint === "string" ? normalizeVelaProviderEndpoint(data.velaProviderEndpoint) : DefaultSettings.velaProviderEndpoint;
-        VelaExperimentalAcknowledged = data.velaExperimentalAcknowledged === true;
+        VelaExperimentalAcknowledged = false;
         if (byId("velaProviderModel")) {
             byId("velaProviderModel").value = VelaProviderModel;
         }
@@ -9135,10 +9207,12 @@
 
     function focusSettingsSection(sectionId) {
         var mount = byId(sectionId === "vela" ? "settingsVelaMount" : "");
+        var category = sectionId === "vela" ? byId("settingsCategoryVela") : null;
         var input = sectionId === "vela" ? byId("velaProviderModel") : null;
         if (!mount) {
             return false;
         }
+        if (category && category._coreDisclosure) category._coreDisclosure.setExpanded(true);
         try {
             mount.scrollIntoView({ block: "nearest" });
         } catch (error) {
@@ -9160,16 +9234,17 @@
 
     function showSettingsPage(pageId) {
         var root = byId("settingsRootPage");
-        var appearance = byId("settingsAppearancePage");
+        var appearanceCategory = byId("settingsCategoryAppearance");
         var heading = document.querySelector("#settingsView .settings-header h2");
-        if (!root || !appearance) return false;
-        if (pageId !== "appearance") clearAppearancePreviews();
+        if (!root) return false;
+        if (pageId === "appearance" && appearanceCategory && appearanceCategory._coreDisclosure) {
+            appearanceCategory._coreDisclosure.setExpanded(true);
+        }
         closeRegistryColorPicker("route-change");
         endSettingsPeekManipulation();
-        root.hidden = pageId === "appearance";
-        appearance.hidden = pageId !== "appearance";
-        if (heading) heading.textContent = tr(pageId === "appearance" ? "settings.appearance.title" : "common.settings");
-        setSettingsBackParent(pageId === "appearance" ? "common.settings" : "common.home");
+        root.hidden = false;
+        if (heading) heading.textContent = tr("common.settings");
+        setSettingsBackParent("common.home");
         closeCustomSelectMenus();
         return true;
     }
@@ -9334,12 +9409,7 @@
     }
 
     function setupAppearanceSubpage() {
-        var content = document.querySelector(".settings-content");
-        var renderer = content && content.querySelector(".settings-renderer");
-        var root = renderer;
-        var appearance = document.createElement("div");
-        var entryCard = document.createElement("section");
-        var openButton = document.createElement("button");
+        var appearance = byId("settingsAppearanceParametersMount");
         var advanced = createAppearanceSection("settings.appearance.title", "appearance-advanced");
         var typography = createAppearanceSection("settings.appearance.typography.title", "appearance-typography");
         var advancedList = window.AppearanceParameterRegistry ? window.AppearanceParameterRegistry.list() : [];
@@ -9349,20 +9419,8 @@
         var subgroup;
         var subgroupHeading;
         var i;
-        if (!content || !renderer || byId("settingsAppearancePage")) return;
-        root.id = "settingsRootPage";
-        root.className += " settings-root-page";
-        entryCard.className = "settings-section settings-interface-appearance-entry";
-        openButton.type = "button";
-        openButton.className = "settings-section-header settings-section-toggle";
-        openButton.setAttribute("data-i18n", "settings.appearance.title");
-        openButton.textContent = tr("settings.appearance.title");
-        openButton.addEventListener("click", function () { if (SystemRouter) SystemRouter.navigate("appearance"); });
-        entryCard.appendChild(openButton);
-        root.insertBefore(entryCard, byId("settingsDeveloperModeMount"));
-        appearance.id = "settingsAppearancePage";
-        appearance.className = "settings-appearance-page";
-        appearance.hidden = true;
+        if (!appearance) return;
+        appearance.innerHTML = "";
         for (i = 0; i < advancedList.length; i++) {
             parameter = advancedList[i];
             if (parameter.classification !== "EXPOSE_NOW") continue;
@@ -9387,7 +9445,6 @@
         }
         appearance.appendChild(advanced);
         appearance.appendChild(typography);
-        content.appendChild(appearance);
     }
 
     function initializeSystemRouter() {
@@ -9418,8 +9475,8 @@
         else closeSettingsPanel();
     }
 
-    function openVelaSettingsPanel() {
-        var source = HomeLayoutManager.getButtonByToolId("settings") || byId("velaSurfaceMount");
+    function openVelaSettingsPanel(launchSource) {
+        var source = launchSource || byId("velaSurfaceMount") || HomeLayoutManager.getButtonByToolId("settings");
         pendingSettingsFocusSectionId = "vela";
         if (SystemRouter) {
             SystemRouter.open("settings", "root", source);

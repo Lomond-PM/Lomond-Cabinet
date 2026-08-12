@@ -685,6 +685,13 @@ body:not(.i18n-ready) .app-shell {
     gap: var(--space-settings-section-stack);
 }
 
+.settings-appearance-parameters {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: var(--space-settings-section-stack);
+}
+
 .settings-section {
     max-width: 100%;
     padding: var(--space-card-inset);
@@ -721,6 +728,41 @@ body:not(.i18n-ready) .app-shell {
     background: transparent;
     color: inherit;
     text-align: left;
+}
+
+.settings-category {
+    min-width: 0;
+    padding: var(--space-card-inset);
+    border: 1px solid var(--separator);
+    border-radius: var(--radius-section-card);
+    background: var(--surface-panel);
+}
+
+.settings-category-header {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--text-primary);
+    font-size: var(--type-section-title-size);
+    font-weight: var(--type-section-title-weight);
+    line-height: var(--type-section-title-line-height);
+}
+
+.settings-category > .settings-category-content {
+    display: flex;
+    min-width: 0;
+    max-height: none;
+    overflow: visible;
+    flex-direction: column;
+    gap: var(--space-settings-section-stack);
+    padding-top: var(--space-settings-section-header-content);
+}
+
+.settings-category.is-collapsed > .settings-category-content {
+    max-height: 0;
+    overflow: hidden;
+    padding-top: 0;
 }
 
 .settings-section-copy {
@@ -799,6 +841,12 @@ body:not(.i18n-ready) .app-shell {
     margin-top: calc(10px * var(--ui-scale));
     padding-top: calc(9px * var(--ui-scale));
     border-top: 1px solid rgba(214, 178, 94, 0.11);
+}
+
+.settings-theme-group--first {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
 }
 
 .settings-theme-group-title {
@@ -1042,12 +1090,35 @@ body:not(.i18n-ready) .app-shell {
     flex-direction: column;
 }
 
+.settings-view.is-palette-workspace .settings-root-page,
+.settings-view.is-palette-workspace .settings-category--appearance,
+.settings-view.is-palette-workspace .settings-category--appearance > .settings-category-content {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+}
+
 .settings-view.is-palette-workspace .settings-root-page {
     min-width: 0;
 }
 
-.settings-view.is-palette-workspace .settings-renderer > .settings-section:not(.settings-section--palette-library) {
+.settings-view.is-palette-workspace .settings-category:not(.settings-category--appearance),
+.settings-view.is-palette-workspace .settings-category--appearance > .settings-category-header,
+.settings-view.is-palette-workspace .settings-category--appearance > .settings-category-content > :not(.settings-section--palette-library) {
     display: none;
+}
+
+.settings-view.is-palette-workspace .settings-category--appearance {
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.settings-view.is-palette-workspace .settings-category--appearance > .settings-category-content {
+    max-height: none;
+    padding-top: 0;
+    overflow: hidden;
 }
 
 .palette-workspace-section {

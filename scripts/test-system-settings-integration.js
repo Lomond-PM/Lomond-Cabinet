@@ -26,7 +26,9 @@ check(/\.settings-backdrop[\s\S]*background: transparent/.test(css), "Global Set
 check(/class="panel-button back-button" id="closeSettingsBtn"/.test(index), "Global Settings primary back reuses the shared back-button chrome");
 check(/\.settings-header[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto minmax\(0, 1fr\)/.test(css) && /\.settings-header \.back-button[\s\S]*justify-self: start/.test(css), "Global Settings primary back uses the left navigation geometry contract");
 check(!/id="closeSettingsBtn"[^>]*round-button/.test(index), "legacy right-side round close chrome is removed");
-check(/root = renderer/.test(appearanceSource) && /content\.appendChild\(appearance\)/.test(appearanceSource), "Settings Root remains the direct renderer and Interface Appearance is a sibling page");
+check(/createSettingsCategory/.test(main) && /settingsAppearanceParametersMount/.test(appearanceSource), "Settings uses one Disclosure composition without duplicating Appearance editors");
+check(/pages: \["root", "appearance"\]/.test(main), "Settings retains only root and the historical Appearance compatibility alias");
+check(!/data-settings-destination/.test(main), "Settings categories are not navigation destinations");
 check(/\.settings-content[\s\S]*overflow-y: auto/.test(css) && /is-palette-workspace \.settings-content[\s\S]*min-height: 0[\s\S]*overflow: hidden/.test(css), "Settings and Palette Workspace retain explicit scroll ownership");
 check(/closePaletteWorkspace/.test(main) && /ensurePaletteWorkspaceClosed/.test(main) && /closeCustomSelectMenus/.test(main), "Palette Workspace and portal cleanup hooks remain registered");
 console.log(`System Settings integration tests passed: ${assertions} assertions.`);

@@ -674,7 +674,7 @@
             if (token !== transitionToken) {
                 return;
             }
-            resetWorkspaceDomState({ discardDraft: true, renderLauncher: true });
+            resetWorkspaceDomState({ discardDraft: true, renderLauncher: true, restoreSettingsScroll: true });
             token = transitionToken;
             view.offsetWidth;
             view.classList.add("is-palette-workspace-transitioning", "is-palette-settings-reveal");

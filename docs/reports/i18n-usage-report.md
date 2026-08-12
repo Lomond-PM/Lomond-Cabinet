@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 263 |
+| A | Core / Global; keep | 270 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -357,8 +357,15 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.backgroundSource.classic | settings | Classic | 经典 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundSource.followIconTheme | settings | Follow Icon Theme | 跟随图标主题 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundSource.procedural | settings | Manual Procedural | 手动程序化 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.developer.homeCalibration | settings | Home Calibration | 主页校准 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.developer.labs | settings | Labs | 实验室 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.iconDarkSource.manualEndpoints | settings | Manual Endpoints | 手动端点 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.iconDarkSource.paletteScale | settings | Palette Scale | 色卡明度缩放 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.navigation.advanced | settings | Advanced | 高级 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.navigation.appearance | settings | Appearance | 外观 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.navigation.background | settings | Background | 背景 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.navigation.developer | settings | Developer | 开发者 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.navigation.interface | settings | Interface | 界面 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.palette.manage | settings | Manage Palettes | 管理色卡 | client/js/main.js, client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.palette.manageSource | settings | Manage Source Palettes | 管理源色卡 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.palette.none | settings | No source palette available | 没有可用源色卡 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -369,7 +376,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.proceduralIconMode.colorful | settings | Colorful | 彩色 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.proceduralIconMode.themeMapped | settings | Theme-mapped | 主题映射 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.sections.proceduralAppearance | settings | Procedural Appearance Parameters | 程序化外观参数 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.sections.vela | settings | Vela | Vela | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.sections.vela | settings | Vela | Vela | client/js/main.js, client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.colorRamp | settings | Dark endpoint to light endpoint | 暗端到亮端 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.darkEndpoint | settings | Dark | 暗端 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.fallbackIconColors | settings | Fallback Icon Colors | 回退图标颜色 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
