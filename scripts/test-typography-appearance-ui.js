@@ -34,7 +34,7 @@ assert(/CoreAppearance\.getOverride\(parameter\.id\) !== null/.test(main), "over
 assert(/clearAppearancePreview\(parameter\.id\); CoreAppearance\.reset\(parameter\.id\)/.test(main), "Reset clears preview then removes override");
 assert(/scheduleAppearancePreview/.test(main) && /requestAnimationFrame/.test(main), "range preview is frame-coalesced");
 assert(/cancelAppearancePreviewFrame\(parameter\.id\)[\s\S]*CoreAppearance && CoreAppearance\.commit/.test(main), "commit cancels pending preview before persistence");
-assert(/pageId !== "appearance"\) clearAppearancePreviews/.test(main));
+assert(/id === "appearance" && !isExpanded\) clearAppearancePreviews/.test(main));
 assert(/clearAppearancePreviews\(\);[\s\S]{0,160}if \(!view/.test(main), "Settings close clears transient previews");
 assert(/if \(!renderers\[parameter\.controlType\]\)/.test(main), "unsupported controls fail closed");
 assert(/\.appearance-range-number\s*\{[^}]*grid-column:\s*2/.test(css));

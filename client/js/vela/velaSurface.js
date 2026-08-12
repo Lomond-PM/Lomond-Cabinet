@@ -217,7 +217,7 @@
             rootElement.appendChild(handle);
             mountElement.appendChild(rootElement);
             elements = { root: rootElement, transcriptSlot: transcriptSlot, transcriptScroll: transcriptScroll, transcriptMessage: transcriptMessage, composerSlot: composerSlot, composer: composer, statusSlot: statusSlot, statusDot: statusDot, statusText: statusText, experimentalText: experimentalText, controls: controls, settingsSlot: settingsSlot, settingsButton: settingsButton, actionSlot: actionSlot, handle: handle, grip: grip };
-            settingsHandler = function () { openSettings(); };
+            settingsHandler = function () { openSettings(settingsButton); };
             settingsButton.addEventListener("click", settingsHandler);
             resizeController = ResizeController.create({ root: rootElement, handle: handle, transcript: transcriptScroll, composer: composerSlot, status: statusSlot, controls: controls, settings: settingsSlot, homeContainer: homeContainer, headerElement: headerElement, toolPoolElement: toolPoolElement, getUiScale: getUiScale, loadHeightPreference: loadHeightPreference, saveHeightPreference: saveHeightPreference, eventTarget: eventTarget });
             resizeController.start();
