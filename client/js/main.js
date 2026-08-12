@@ -1532,6 +1532,7 @@
         advanced = createSettingsCategory("advanced", "settings.navigation.advanced", false, "settings-category--advanced");
         advanced.body.appendChild(createSettingsSectionMount("settingsDeveloperModeMount", "settings-section"));
         developer = createSettingsCategory("developer", "settings.navigation.developer", false, "settings-category--developer settings-developer-only");
+        developer.body.appendChild(createSettingsSectionMount("settingsDeveloperDesignTuningMount", "settings-section settings-design-tuning"));
         developer.body.appendChild(createSettingsSectionMount("settingsDeveloperCalibrationMount", "settings-section"));
         developer.body.appendChild(createSettingsSectionMount("settingsDeveloperProceduralMount", "settings-section"));
         renderer.appendChild(appearance.root);
@@ -2246,6 +2247,8 @@
         mount.appendChild(heading);
         mount.appendChild(fieldRow.row);
 
+        renderSettingsDesignTuningMotion();
+
         calibrationMount.appendChild(createSettingsSectionHeader("section.debug", "settings.developer.homeCalibration", null));
 
         if (radiusField) {
@@ -2296,6 +2299,71 @@
         }
         setupProceduralAppearanceParams();
         syncSettingsDeveloperOnlyFields();
+    }
+
+    function parseDesignTuningCurve(value) {
+        var match = /^cubic-bezier\(\s*(-?(?:\d+\.?\d*|\.\d+))\s*,\s*(-?(?:\d+\.?\d*|\.\d+))\s*,\s*(-?(?:\d+\.?\d*|\.\d+))\s*,\s*(-?(?:\d+\.?\d*|\.\d+))\s*\)$/i.exec(String(value || ""));
+        return match ? { x1: Number(match[1]), y1: Number(match[2]), x2: Number(match[3]), y2: Number(match[4]) } : null;
+    }
+
+    function renderSettingsDesignTuningMotion() {
+        var mount = byId("settingsDeveloperDesignTuningMount");
+        var registry = window.DesignTuningParameterRegistry;
+        var evidence = DesignTuning && DesignTuning.getEvidence();
+        var curveKeys = { enter: "settings.designTuning.motion.curve.enter", exit: "settings.designTuning.motion.curve.exit", standard: "settings.designTuning.motion.curve.standard", press: "settings.designTuning.motion.curve.press" };
+        var durationMeta = {
+            "motion.duration.spatialExpand": { key: "settings.designTuning.motion.duration.spatialExpand", min: 120, max: 1200, step: 10, unit: "ms" },
+            "motion.duration.spatialContract": { key: "settings.designTuning.motion.duration.spatialContract", min: 100, max: 1000, step: 10, unit: "ms" },
+            "motion.duration.viewContentEnter": { key: "settings.designTuning.motion.duration.viewContentEnter", min: 60, max: 600, step: 10, unit: "ms" },
+            "motion.duration.viewContentExit": { key: "settings.designTuning.motion.duration.viewContentExit", min: 40, max: 500, step: 10, unit: "ms" }
+        };
+        var heading; var motionTitle; var curves; var durations; var actions; var evidenceLabel; var evidenceOutput; var resetMotion; var parameters; var i;
+        if (!mount || !registry || !evidence || !window.CoreUI) return;
+        mount.innerHTML = "";
+        heading = createSettingsSectionHeader("settings.navigation.developer", "settings.designTuning.title", "settings.designTuning.description");
+        motionTitle = createSettingsGroupLabel("settings.designTuning.motion.title");
+        curves = document.createElement("div"); curves.className = "settings-design-tuning-group";
+        durations = document.createElement("div"); durations.className = "settings-design-tuning-group";
+        curves.appendChild(createSettingsGroupLabel("settings.designTuning.motion.curves"));
+        durations.appendChild(createSettingsGroupLabel("settings.designTuning.motion.durations"));
+        parameters = registry.list();
+        for (i = 0; i < parameters.length; i++) {
+            if (parameters[i].type === "cubicBezier") curves.appendChild(createDesignTuningCurveField(parameters[i], curveKeys[parameters[i].family], evidence));
+            else if (durationMeta[parameters[i].id]) durations.appendChild(createDesignTuningDurationField(parameters[i], durationMeta[parameters[i].id], evidence));
+        }
+        actions = document.createElement("div"); actions.className = "settings-design-tuning-actions";
+        resetMotion = window.CoreUI.createButton({ document: document, variant: "neutral", text: tr("settings.designTuning.resetMotion"), classNames: "panel-button panel-local-action" });
+        resetMotion.setAttribute("data-i18n", "settings.designTuning.resetMotion");
+        resetMotion.addEventListener("click", function () { DesignTuning.resetMotion(); renderSettingsDesignTuningMotion(); });
+        actions.appendChild(resetMotion);
+        evidenceLabel = document.createElement("label"); evidenceLabel.className = "settings-field-label"; evidenceLabel.setAttribute("data-i18n", "settings.designTuning.promotionEvidence"); evidenceLabel.textContent = tr("settings.designTuning.promotionEvidence");
+        evidenceOutput = window.CoreUI.createTextarea({ document: document, classNames: "registry-textarea settings-design-tuning-evidence", rows: 8, value: JSON.stringify(evidence, null, 2) });
+        evidenceOutput.readOnly = true;
+        mount.appendChild(heading); mount.appendChild(motionTitle); mount.appendChild(curves); mount.appendChild(durations); mount.appendChild(actions); mount.appendChild(evidenceLabel); mount.appendChild(evidenceOutput);
+    }
+
+    function createDesignTuningFieldShell(parameter, labelKey, evidence) {
+        var row = document.createElement("div"); var copy = document.createElement("span"); var label = document.createElement("label"); var state = document.createElement("small"); var reset;
+        var overridden = Object.prototype.hasOwnProperty.call(evidence.overrides, parameter.id);
+        row.className = "settings-design-tuning-field"; row.setAttribute("data-design-tuning-id", parameter.id); row.setAttribute("data-design-tuning-type", parameter.type);
+        copy.className = "settings-field-copy"; label.className = "settings-field-label"; label.setAttribute("data-i18n", labelKey); label.textContent = tr(labelKey);
+        state.className = "settings-design-tuning-state"; state.setAttribute("data-i18n", overridden ? "settings.designTuning.overridden" : "settings.designTuning.default"); state.textContent = tr(overridden ? "settings.designTuning.overridden" : "settings.designTuning.default");
+        reset = window.CoreUI.createButton({ document: document, variant: "neutral", text: tr("settings.appearance.reset"), classNames: "panel-button appearance-reset-button panel-local-action" }); reset.disabled = !overridden;
+        reset.setAttribute("data-i18n", "settings.appearance.reset"); reset.addEventListener("click", function () { DesignTuning.resetParameter(parameter.id); renderSettingsDesignTuningMotion(); });
+        copy.appendChild(label); copy.appendChild(state); row.appendChild(copy);
+        return { row: row, copy: copy, reset: reset };
+    }
+
+    function createDesignTuningCurveField(parameter, labelKey, evidence) {
+        var shell = createDesignTuningFieldShell(parameter, labelKey, evidence); var value = evidence.overrides[parameter.id] || parseDesignTuningCurve(evidence.canonical[parameter.id]); var control;
+        control = window.CoreUI.createBezierCurveField({ document: document, id: "designTuning-" + parameter.id.replace(/\./g, "-"), value: value, defaultValue: value, progressLabel: tr("settings.designTuning.curve.progress"), speedLabel: tr("settings.designTuning.curve.speed"), speedHint: tr("settings.designTuning.curve.speedHint"), onInput: function () { shell.row.classList.add("has-draft"); }, onChange: function (next) { DesignTuning.setOverride(parameter.id, next); renderSettingsDesignTuningMotion(); } });
+        control.root.classList.add("settings-design-tuning-bezier"); shell.row.appendChild(control.root); shell.row.appendChild(shell.reset); return shell.row;
+    }
+
+    function createDesignTuningDurationField(parameter, meta, evidence) {
+        var shell = createDesignTuningFieldShell(parameter, meta.key, evidence); var value = evidence.resolved[parameter.id]; var control;
+        control = window.CoreUI.createRangeNumber({ document: document, rangeId: "designTuning-" + parameter.id.replace(/\./g, "-"), numberId: "designTuning-" + parameter.id.replace(/\./g, "-") + "-number", value: value, min: meta.min, max: meta.max, step: meta.step, field: { min: meta.min, max: meta.max, step: meta.step, defaultValue: value }, unitText: meta.unit, classNames: "settings-field-control settings-design-tuning-duration", rangeClassNames: "pill-slider settings-slider", numberClassNames: "num-input settings-number", onPreview: function () { shell.row.classList.add("has-draft"); }, onCommit: function (next) { DesignTuning.setOverride(parameter.id, next); renderSettingsDesignTuningMotion(); } });
+        shell.row.appendChild(control.root); shell.row.appendChild(shell.reset); return shell.row;
     }
 
     function renderSettingsRangeRow(field, numberId) {
@@ -9525,10 +9593,12 @@
             return;
         }
         if (view.classList.contains("is-open")) {
+            renderSettingsDesignTuningMotion();
             focusPendingSettingsSection();
             return;
         }
         ensurePaletteWorkspaceClosed();
+        renderSettingsDesignTuningMotion();
         closeCustomSelectMenus();
         panel = view.querySelector(".settings-panel");
         backdrop = byId("settingsBackdrop");
