@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 270 |
+| A | Core / Global; keep | 290 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -357,6 +357,26 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.backgroundSource.classic | settings | Classic | 经典 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundSource.followIconTheme | settings | Follow Icon Theme | 跟随图标主题 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundSource.procedural | settings | Manual Procedural | 手动程序化 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.curve.progress | settings | Progress / Value | 进度 / 数值 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.curve.speed | settings | Speed | 速度 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.curve.speedHint | settings | Hold Shift while dragging a Speed handle to adjust influence only. | 拖动速度手柄时按住 Shift，可仅调整影响比例。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.default | settings | Default | 默认 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.description | settings | Developer calibration overrides. Canonical defaults remain source-owned. | 开发者校准覆盖。规范默认值仍由其源头拥有。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.curve.enter | settings | Enter | 进入 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.curve.exit | settings | Exit | 退出 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.curve.press | settings | Press | 按压 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.curve.standard | settings | Standard | 标准 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.curves | settings | Motion Curves | 动效曲线 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.spatialContract | settings | Spatial Contract | 空间收缩 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.spatialExpand | settings | Spatial Expand | 空间展开 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.viewContentEnter | settings | View Content Enter | 视图内容进入 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.viewContentExit | settings | View Content Exit | 视图内容退出 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.durations | settings | Motion Durations | 动效时长 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.title | settings | Motion | 动效 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.overridden | settings | Overridden | 已覆盖 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.promotionEvidence | settings | Promotion Evidence | 提升证据 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.resetMotion | settings | Reset Motion | 重置动效 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.title | settings | Design Tuning | 设计调校 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.developer.homeCalibration | settings | Home Calibration | 主页校准 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.developer.labs | settings | Labs | 实验室 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.iconDarkSource.manualEndpoints | settings | Manual Endpoints | 手动端点 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
