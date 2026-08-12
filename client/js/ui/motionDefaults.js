@@ -52,10 +52,14 @@
         toolIdentityOpen: true
     });
 
+    var durationOverrideResolver = null;
+
     function resolveDuration(role, majorViewScale) {
         var value = durations[role];
         var scale = majorViewRoles[role] ? Number(majorViewScale) : 1;
         if (typeof value !== "number") { throw new Error("UNKNOWN_MOTION_ROLE:" + role); }
+        if (durationOverrideResolver) { value = durationOverrideResolver(role, value); }
+        if (typeof value !== "number" || !isFinite(value) || value < 0) { value = durations[role]; }
         if (!isFinite(scale)) { scale = 1; }
         return Math.max(0, Math.round(value * scale));
     }
@@ -89,6 +93,7 @@
         curveFamilies: curveFamilies,
         roleCurveFamily: roleCurveFamily,
         majorViewRoles: majorViewRoles,
+        setDurationOverrideResolver: function (resolver) { durationOverrideResolver = typeof resolver === "function" ? resolver : null; },
         resolveDuration: resolveDuration,
         resolveEasing: resolveEasing,
         applyCss: applyCss

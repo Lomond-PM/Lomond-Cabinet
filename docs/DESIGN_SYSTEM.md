@@ -640,6 +640,14 @@ Expected Phase 1 visual delta: **NONE**.
 
 ## Motion Phase 2 choreography contracts
 
+## Design Tuning Infrastructure
+
+Design Tuning is an independent developer/designer calibration authority, not User Appearance or ordinary Settings state. Its versioned partial overrides persist only under `AEToolbox.designTuning.v1`. Motion resolution follows canonical default → validated Design Tuning override → existing Major View Motion Speed policy → Reduced Motion policy → interaction snapshot → consumer. Empty or invalid tuning state preserves canonical behavior exactly.
+
+Motion duration canonicals remain exclusively in `MotionDefaults.durations`; the tuning registry maps stable parameter ids to existing semantic roles without copying numeric defaults. The four raw canonical curves remain exclusively in the stylesheet custom properties `--motion-curve-enter`, `--motion-curve-exit`, `--motion-curve-standard`, and `--motion-curve-press`; no JavaScript curve defaults are introduced. Structured curve overrides are validated and projected as root inline custom properties, preserving one computed authority for CSS and WAAPI. Reset removes the inline property so the stylesheet resumes authority.
+
+Projection is application-coordinated: changes apply immediately when no protected Tool/Settings presentation is active, otherwise only the latest pending projection is flushed by the real `endAnimation()` cleanup boundary. Current WAAPI/CSS presentation inputs remain unchanged and the next interaction consumes the new values. The infrastructure exposes reset and promotion-evidence data APIs but adds no Design Tuning Settings UI in this phase.
+
 Home presentation handoff is an optional domain choreography component, separate from spatial surface morph. Recede retains opacity `0.42`, scale `0.972`, and apple-out timing; restore retains the `0.44/0.975 → 1/1` keyframes. Tool and Settings adapters choose when to trigger these states. CoreMotion does not know about Home.
 
 Tool identity and content handoff are likewise separate from geometry. Tool open uses a 360ms identity presentation and starts the existing 180ms content enter at `spatial expand - content enter`, so both content and 480ms geometry finish together. During the morph, the existing real `.detail-ui-layer` is temporarily laid out from the already-resolved destination shell geometry while the outer shell clips its presentation. Prepared, destination-laid-out, visible, and interactive are separate states; interaction remains disabled until the spatial transaction completes. Temporary sizing is transaction-bound and removed on completion or cancellation. This seam can be reused by a future Mounted Tool adapter without invoking Home handoff.
