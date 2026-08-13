@@ -16,4 +16,6 @@ assert.ok(!/\bgetUiScale\s*\(\s*\)/.test(main), "startup path contains no call t
 assert.ok(/fieldType === "select"[\s\S]*?wrap\.appendChild\(input\);[\s\S]*?fieldType === "tabs"/.test(main), "legacy Select mounts its returned element directly");
 assert.ok(/fieldType === "textarea"[\s\S]*?wrap\.appendChild\(input\._coreFrame\)/.test(main), "Textarea alone mounts the new composition root");
 assert.ok(/bindEvents\(\);[\s\S]*loadHost\(\);/.test(main.slice(main.indexOf('document.addEventListener("DOMContentLoaded"'))), "production readiness entry follows successful synchronous prebuild");
+assert.ok(!/renderSettingsVela\(\)/.test(main.slice(main.indexOf("function bindEvents"))), "startup does not pre-render the lazy Vela Settings surface");
+assert.ok(/openSettings: openVelaSettingsSurface/.test(main), "Vela Settings remains reachable through its domain-owned lazy entry");
 console.log("Startup readiness contract tests passed.");

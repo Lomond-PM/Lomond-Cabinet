@@ -13,7 +13,6 @@
     var velaSurfaceController = null;
     var velaSurfaceBootstrapState = "idle";
     var velaSurfaceBootstrapRevision = 0;
-    var pendingSettingsFocusSectionId = null;
     var velaRuntimeStatusRevision = 0;
     var velaRuntimeLastErrorCode = null;
     var hostLoaded = false;
@@ -189,6 +188,7 @@
     var VelaProviderModel = DefaultSettings.velaProviderModel;
     var VelaProviderEndpoint = DefaultSettings.velaProviderEndpoint;
     var VelaExperimentalAcknowledged = false;
+    var VelaSettingsSurface = null;
 
     function getVelaActivationPolicy() {
         var module = window.VelaActivationPolicy;
@@ -1516,7 +1516,6 @@
         var content = document.querySelector(".settings-content");
         var renderer;
         var appearance;
-        var vela;
         var advanced;
         var developer;
         if (!content) {
@@ -1536,8 +1535,6 @@
         appearance.body.appendChild(createSettingsSectionMount("settingsProceduralAppearanceMount", "settings-section"));
         appearance.body.appendChild(createSettingsSectionMount("backgroundSettingsCard", "settings-section settings-section--background settings-section--collapsible collapsible-card"));
         appearance.body.appendChild(createSettingsSectionMount("settingsPaletteLibraryMount", "settings-section settings-section--palette-library"));
-        vela = createSettingsCategory("vela", "settings.sections.vela", false, "settings-category--vela settings-vela-transitional-category");
-        vela.body.appendChild(createSettingsSectionMount("settingsVelaMount", "settings-section"));
         advanced = createSettingsCategory("advanced", "settings.navigation.advanced", false, "settings-category--advanced");
         advanced.body.appendChild(createSettingsSectionMount("settingsDeveloperModeMount", "settings-section"));
         developer = createSettingsCategory("developer", "settings.navigation.developer", false, "settings-category--developer settings-developer-only");
@@ -1545,7 +1542,6 @@
         developer.body.appendChild(createSettingsSectionMount("settingsDeveloperCalibrationMount", "settings-section"));
         developer.body.appendChild(createSettingsSectionMount("settingsDeveloperProceduralMount", "settings-section"));
         renderer.appendChild(appearance.root);
-        renderer.appendChild(vela.root);
         renderer.appendChild(advanced.root);
         renderer.appendChild(developer.root);
         content.appendChild(renderer);
@@ -2151,8 +2147,7 @@
         mount.appendChild(fieldRow.row);
     }
 
-    function renderSettingsVela() {
-        var mount = byId("settingsVelaMount");
+    function renderVelaSettingsContent(mount) {
         var section = findSettingsSchemaSection("vela");
         var field;
         var endpointField;
@@ -2188,8 +2183,11 @@
             return;
         }
         mount.innerHTML = "";
-        mount.className = "settings-section";
-        heading = createSettingsSectionHeader("vela.surfaceLabel", section.titleKey, section.descriptionKey);
+        mount.className = "vela-settings-content ui-scroll-region";
+        heading = document.createElement("p");
+        heading.className = "settings-section-description vela-settings-introduction";
+        heading.setAttribute("data-i18n", section.descriptionKey);
+        heading.textContent = tr(section.descriptionKey);
         fieldRow = createSharedSettingsFieldRow("text", endpointField, endpointField.descriptionKey, "");
         endpointInput = createSharedSettingsTextInput(endpointField.key, endpointField, VelaProviderEndpoint);
         endpointInput.addEventListener("change", saveEndpoint);
@@ -2205,8 +2203,8 @@
         mount.appendChild(fieldRow.row);
         acknowledgementLabel = window.CoreUI.createCheckbox({ document: document, id: "velaExperimentalAcknowledgement", checked: VelaExperimentalAcknowledged === true, labelText: tr("settings.vela.acknowledgement"), classNames: "settings-vela-acknowledgement" });
         acknowledgement = acknowledgementLabel.input;
-        enableButton = document.createElement("button"); enableButton.type = "button"; enableButton.id = "velaExperimentalEnable"; enableButton.className = "ui-button ui-button--neutral panel-button panel-local-action"; enableButton.textContent = tr("settings.vela.enableSession");
-        disableButton = document.createElement("button"); disableButton.type = "button"; disableButton.id = "velaExperimentalDisable"; disableButton.className = "ui-button ui-button--neutral panel-button panel-local-action"; disableButton.textContent = tr("settings.vela.disableSession");
+        enableButton = window.CoreUI.createButton({ document: document, id: "velaExperimentalEnable", variant: "neutral", classNames: "panel-button panel-local-action", text: tr("settings.vela.enableSession") });
+        disableButton = window.CoreUI.createButton({ document: document, id: "velaExperimentalDisable", variant: "neutral", classNames: "panel-button panel-local-action", text: tr("settings.vela.disableSession") });
         status = document.createElement("p"); status.id = "velaExperimentalStatus"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
         acknowledgement.addEventListener("change", function () { VelaExperimentalAcknowledged = acknowledgement.checked === true; configureSession(); refreshSession(); });
         enableButton.addEventListener("click", function () { saveEndpoint(); saveModel(); if (velaSurfaceController && typeof velaSurfaceController.enableExperimental === "function") { velaSurfaceController.enableExperimental().then(refreshSession, refreshSession); } });
@@ -3965,7 +3963,7 @@
             homeContainer: byId("homeView"),
             headerElement: document.querySelector("#homeView .home-header"),
             toolPoolElement: byId("toolGrid"),
-            openSettings: openVelaSettingsPanel,
+            openSettings: openVelaSettingsSurface,
             t: tr,
             getUiScale: getVelaSurfaceUiScale,
             loadHeightPreference: function () {
@@ -9488,7 +9486,6 @@
                 endAnimation();
                 nextFrame(function () {
                     revealSettingsContent();
-                    focusPendingSettingsSection();
                 });
             });
         });
@@ -9501,7 +9498,6 @@
         home.classList.add("is-active");
         home.classList.remove("is-opening");
         view.classList.add("no-transition");
-        pendingSettingsFocusSectionId = null;
         view.classList.remove("is-open", "is-morphing");
         view.setAttribute("aria-hidden", "true");
         clearDesignTuningCalibrationChromeBaseline();
@@ -9517,33 +9513,6 @@
                 endAnimation();
             });
         });
-    }
-
-    function focusSettingsSection(sectionId) {
-        var mount = byId(sectionId === "vela" ? "settingsVelaMount" : "");
-        var category = sectionId === "vela" ? byId("settingsCategoryVela") : null;
-        var input = sectionId === "vela" ? byId("velaProviderModel") : null;
-        if (!mount) {
-            return false;
-        }
-        if (category && category._coreDisclosure) category._coreDisclosure.setExpanded(true);
-        try {
-            mount.scrollIntoView({ block: "nearest" });
-        } catch (error) {
-            try { mount.scrollIntoView(true); } catch (ignored) {}
-        }
-        if (input && typeof input.focus === "function") {
-            input.focus();
-        }
-        return true;
-    }
-
-    function focusPendingSettingsSection() {
-        var sectionId = pendingSettingsFocusSectionId;
-        pendingSettingsFocusSectionId = null;
-        if (sectionId) {
-            focusSettingsSection(sectionId);
-        }
     }
 
     function showSettingsPage(pageId) {
@@ -9800,14 +9769,50 @@
         else closeSettingsPanel();
     }
 
-    function openVelaSettingsPanel(launchSource) {
-        var source = launchSource || byId("velaSurfaceMount") || HomeLayoutManager.getButtonByToolId("settings");
-        pendingSettingsFocusSectionId = "vela";
-        if (SystemRouter) {
-            SystemRouter.open("settings", "root", source);
-        } else {
-            openSettingsPanel("vela", source);
-        }
+    function ensureVelaSettingsSurface() {
+        var root; var backdrop; var panel; var header; var title; var close; var content;
+        if (VelaSettingsSurface) return VelaSettingsSurface;
+        root = document.createElement("div"); root.className = "vela-settings-surface"; root.hidden = true; root.setAttribute("aria-hidden", "true");
+        backdrop = document.createElement("button"); backdrop.type = "button"; backdrop.className = "vela-settings-backdrop"; backdrop.setAttribute("aria-label", tr("common.close"));
+        panel = document.createElement("section"); panel.className = "vela-settings-panel"; panel.setAttribute("role", "dialog"); panel.setAttribute("aria-modal", "true"); panel.setAttribute("aria-labelledby", "velaSettingsTitle");
+        header = document.createElement("header"); header.className = "vela-settings-header";
+        title = document.createElement("h2"); title.id = "velaSettingsTitle"; title.setAttribute("data-i18n", "settings.vela.title"); title.textContent = tr("settings.vela.title");
+        close = window.CoreUI.createButton({ document: document, variant: "neutral", classNames: "panel-button vela-settings-close", text: tr("common.close"), ariaLabel: tr("common.close") }); close.setAttribute("data-i18n", "common.close"); close.setAttribute("data-i18n-aria-label", "common.close");
+        content = document.createElement("div"); content.id = "velaSettingsContent";
+        header.appendChild(title); header.appendChild(close); panel.appendChild(header); panel.appendChild(content); root.appendChild(backdrop); root.appendChild(panel); byId("appShell").appendChild(root);
+        backdrop.addEventListener("click", closeVelaSettingsSurface); close.addEventListener("click", closeVelaSettingsSurface);
+        backdrop.setAttribute("data-i18n-aria-label", "common.close");
+        VelaSettingsSurface = { root: root, panel: panel, content: content, close: close, title: title, backdrop: backdrop, returnFocus: null, motion: null, phase: "closed" };
+        return VelaSettingsSurface;
+    }
+
+    function openVelaSettingsSurface(launchSource) {
+        var surface = ensureVelaSettingsSurface(); var motion; var finish;
+        if (!surface) return;
+        if (surface.phase === "open" || surface.phase === "opening") return;
+        surface.returnFocus = launchSource || null;
+        renderVelaSettingsContent(surface.content);
+        applyI18n(surface.root);
+        surface.phase = "opening"; surface.root.hidden = false; surface.root.setAttribute("aria-hidden", "false"); surface.root.classList.add("is-open", "is-transitioning");
+        motion = beginSpatialSurfaceMorph("vela:settings-presentation", 2, function () { surface.phase = "open"; surface.root.classList.remove("is-transitioning"); surface.close.focus(); });
+        finish = motion.completePart;
+        playSpatialAnimation(motion.transaction, surface.backdrop, [{ opacity: "0" }, { opacity: "1" }], { duration: semanticMotionDuration("viewContentEnter"), easing: semanticMotionEasing("viewContentEnter"), fill: "forwards" }, finish);
+        playSpatialAnimation(motion.transaction, surface.panel, [{ opacity: "0", transform: "translateY(calc(6px * var(--ui-scale)))" }, { opacity: "1", transform: "translateY(0)" }], { duration: semanticMotionDuration("viewContentEnter"), easing: semanticMotionEasing("viewContentEnter"), fill: "forwards" }, finish);
+    }
+
+    function closeVelaSettingsSurface() {
+        var surface = VelaSettingsSurface; var returnFocus; var motion; var finish;
+        if (!surface || surface.root.hidden) return false;
+        if (surface.phase === "closing") return true;
+        returnFocus = surface.returnFocus; surface.phase = "closing"; surface.root.classList.add("is-transitioning");
+        motion = beginSpatialSurfaceMorph("vela:settings-presentation", 2, function () {
+            surface.phase = "closed"; surface.root.classList.remove("is-open", "is-transitioning"); surface.root.hidden = true; surface.root.setAttribute("aria-hidden", "true");
+            if (returnFocus && typeof returnFocus.focus === "function") returnFocus.focus();
+        });
+        finish = motion.completePart;
+        playSpatialAnimation(motion.transaction, surface.backdrop, [{ opacity: "1" }, { opacity: "0" }], { duration: semanticMotionDuration("viewContentExit"), easing: semanticMotionEasing("viewContentExit"), fill: "forwards" }, finish);
+        playSpatialAnimation(motion.transaction, surface.panel, [{ opacity: "1", transform: "translateY(0)" }, { opacity: "0", transform: "translateY(calc(6px * var(--ui-scale)))" }], { duration: semanticMotionDuration("viewContentExit"), easing: semanticMotionEasing("viewContentExit"), fill: "forwards" }, finish);
+        return true;
     }
 
     function openSettingsPanel(focusSectionId, launchSource) {
@@ -9820,15 +9825,11 @@
         var finishGate;
         var spatialMotion;
 
-        if (focusSectionId) {
-            pendingSettingsFocusSectionId = focusSectionId;
-        }
         if (!view || byId("appShell").classList.contains("is-animating")) {
             return;
         }
         if (view.classList.contains("is-open")) {
             renderSettingsDesignTuningMotion();
-            focusPendingSettingsSection();
             return;
         }
         ensurePaletteWorkspaceClosed();
@@ -10005,7 +10006,6 @@
         setupMotionSpeed();
         setupUiScale();
         renderSettingsLanguage();
-        renderSettingsVela();
         renderSettingsDeveloperMode();
         setupAppearanceSubpage();
         setupHomeIconRadius();
@@ -10073,6 +10073,7 @@
         document.addEventListener("keydown", function (event) {
             if (event.keyCode === 27) {
                 closeRegistryColorPicker();
+                if (closeVelaSettingsSurface()) return;
                 requestCloseSettings();
             }
         });

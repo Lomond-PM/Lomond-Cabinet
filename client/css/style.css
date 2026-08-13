@@ -2194,6 +2194,81 @@ body:not(.i18n-ready) .app-shell {
     height: 0;
 }
 
+.vela-settings-surface {
+    position: fixed;
+    z-index: 1200;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: var(--space-card-inset);
+}
+
+.vela-settings-surface[hidden] { display: none; }
+
+.vela-settings-backdrop {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    background: rgba(0, 0, 0, 0.58);
+}
+
+.vela-settings-panel {
+    position: relative;
+    display: flex;
+    width: min(calc(520px * var(--ui-scale)), 100%);
+    max-height: min(calc(620px * var(--ui-scale)), 100%);
+    min-width: 0;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-section-card);
+    background: var(--surface-panel);
+    box-shadow: var(--elevation-floating-surface);
+}
+
+.vela-settings-surface.is-transitioning .vela-settings-panel,
+.vela-settings-surface.is-transitioning .vela-settings-content,
+.vela-settings-surface.is-transitioning .vela-settings-header { pointer-events: none; }
+
+.vela-settings-header {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-inline-control);
+    padding: var(--space-card-inset);
+    border-bottom: 1px solid var(--separator);
+}
+
+.vela-settings-header h2 {
+    min-width: 0;
+    margin: 0;
+    font-size: var(--type-surface-title-size);
+    font-weight: var(--type-surface-title-weight);
+    line-height: var(--type-surface-title-line-height);
+}
+
+.vela-settings-close { flex: 0 0 auto; }
+
+.vela-settings-content {
+    display: flex;
+    min-height: 0;
+    padding: var(--space-card-inset);
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--space-settings-section-stack);
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.vela-settings-introduction { margin: 0 0 var(--space-settings-section-header-content); }
+
+.vela-settings-content .settings-field { grid-template-columns: minmax(0, 1fr) minmax(calc(150px * var(--ui-scale)), 0.8fr); }
+
+@media (max-width: 380px) {
+    .vela-settings-content .settings-field { grid-template-columns: minmax(0, 1fr); }
+}
+
 h1,
 h2,
 h3,
