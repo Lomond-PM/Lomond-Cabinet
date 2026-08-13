@@ -1,0 +1,66 @@
+#!/usr/bin/env node
+"use strict";
+
+const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
+const vm = require("vm");
+const ROOT = path.resolve(__dirname, "..");
+const source = fs.readFileSync(path.join(ROOT, "client", "js", "ui", "surfaceIdentity.js"), "utf8");
+const main = fs.readFileSync(path.join(ROOT, "client", "js", "main.js"), "utf8");
+const index = fs.readFileSync(path.join(ROOT, "client", "index.html"), "utf8");
+let assertions = 0;
+function check(value, message) { assertions += 1; assert.ok(value, message); }
+
+const sandbox = { window: {}, isFinite };
+vm.createContext(sandbox);
+vm.runInContext(source, sandbox, { filename: "surfaceIdentity.js" });
+const api = sandbox.window.SurfaceIdentity;
+let rect = { left: 1, top: 2, width: 30, height: 40 };
+const element = { getBoundingClientRect() { return rect; } };
+const view = { getComputedStyle() { return { borderRadius: "13px", backgroundColor: "rgb(1, 2, 3)", borderColor: "rgb(4, 5, 6)", boxShadow: "none" }; } };
+
+const first = api.snapshot(element, view);
+check(first.geometry.left === 1 && first.geometry.width === 30, "identity geometry snapshots the real target rect");
+check(first.radius === "13px", "identity radius comes from computed destination presentation");
+check(first.presentation.backgroundColor === "rgb(1, 2, 3)" && first.presentation.borderColor === "rgb(4, 5, 6)", "identity keeps only bounded handoff presentation");
+check(api.frame(first).borderRadius === first.radius && api.frame(first).backgroundColor === first.presentation.backgroundColor, "final shell frame equals the destination identity descriptor");
+check(api.geometryFrame(first).borderRadius === first.radius && !Object.prototype.hasOwnProperty.call(api.geometryFrame(first), "backgroundColor"), "geometry frame excludes bounded presentation properties");
+const composite = api.composite(first, element, element);
+check(composite.framePresentation === first.presentation && composite.artworkProjection === element && composite.realDestination === element, "destination identity explicitly owns frame, artwork projection, and real destination");
+check(api.compositeFrame(composite).backgroundColor === first.presentation.backgroundColor, "composite shell converges to the destination frame rather than artwork transparency");
+const choreography = api.choreography({ spatialMorphExpand: 480, spatialMorphContract: 360, viewContentEnter: 180, viewContentExit: 120, spatialMorphIdentity: 260 });
+check(choreography.closeContent.start === 0 && choreography.closeContent.end === 1 - choreography.openContent.start, "close content window is structurally reciprocal to the normalized open window");
+check(choreography.closeIdentity.recognitionEstablished < choreography.closeIdentity.handoff, "close establishes destination recognition before final handoff");
+rect = { left: 7, top: 8, width: 50, height: 60 };
+check(api.snapshot(element, view).geometry.left === 7, "every transition takes a fresh geometry snapshot");
+check(!/24px|22px|19px|HOME_.*RADIUS/.test(source), "foundation owns no Home or destination radius literal");
+check(/getToolIcon\(source\)[\s\S]*snapshotSurfaceIdentity\(sourceElement\)/.test(main), "Settings resolves the visible Home icon as its source identity");
+check(/destinationElement = getToolIcon\(source\)[\s\S]*SurfaceIdentity\.composite\(destinationIdentity, destinationElement, destinationElement\)/.test(main), "Settings close resolves frame, artwork, and real Home target as one destination composite");
+check(/snapshotSurfaceIdentity\(getToolIcon\(toolButton\), iconRect\)[\s\S]*SurfaceIdentity\.composite\(destinationIdentity, getToolIcon\(toolButton\), getToolIcon\(toolButton\)\)/.test(main), "Tool close resolves the real procedural-capable Home composite");
+check(/window\.SurfaceIdentity\.geometryFrame\(sourceIdentity\)[\s\S]*window\.SurfaceIdentity\.geometryFrame\(destinationIdentity\)/.test(main), "Tool and Settings Close shells interpolate geometry and radius without weakening the source frame");
+check(/removeSurfaceIdentityOverlay\(panel\)[\s\S]*panel\.style\.backgroundColor = ""/.test(main), "Settings cleanup removes presentation surrogate and inline identity state");
+check(/prepareDetailDestinationContentLayout[\s\S]*bindDetailDestinationContentLayout/.test(main) && !/scale\([^)]*detail-ui-layer/.test(main), "destination-layout content remains separate from shell geometry");
+check(/scheduleSurfaceContentSuppression\(detail, spatialMotion\.transaction, suppressDetailContent\)/.test(main) && /scheduleSurfaceContentSuppression\(view, spatialMotion\.transaction, suppressSettingsContent\)/.test(main), "Tool and Settings share normalized content suppression authority");
+check(!/exitDetailContent[\s\S]{0,500}setTimeout/.test(main) && !/exitSettingsContent[\s\S]{0,500}setTimeout/.test(main), "content helpers do not independently own timing or hide before the shared exit stage completes");
+check(/scheduleToolContentHandoff[\s\S]*spatialMorphExpand[\s\S]*viewContentEnter/.test(main) && /scheduleSettingsContentHandoff[\s\S]*spatialMorphExpand[\s\S]*viewContentEnter/.test(main), "Tool and Settings open overlap content reveal with spatial expansion");
+check(/SurfaceIdentity\.compositeFrame\(destinationIdentity\)/.test(main), "destination recognition uses bounded destination frame presentation independently of transparent artwork");
+check(!/SurfaceIdentity\.frame\([^)]*\)[\s\S]{0,80}opacity/.test(source), "Identity descriptors do not encode a whole-shell opacity fade mask");
+check(/closeIdentityKeyframes\(sourceIdentity, destinationIdentity\)/.test(main) && /recognitionEstablished/.test(source), "Tool and Settings share an explicit direction-aware destination-recognition phase");
+check(/mountCloseIdentityLayer\(overlay\)/.test(main) && /mountCloseIdentityLayer\(identityOverlay\)/.test(main), "Tool and Settings destination surrogates mount in the independent transition identity layer");
+check(/shell\.appendChild\(overlay\)/.test(main) && /transition-identity-layer/.test(main), "transition identity ownership is outside Home environment and shrinking consumer shells");
+check(/recognitionEstablished[\s\S]*handoff/.test(source) && /opacity: "1", offset: stage\.recognitionEstablished[\s\S]*opacity: "1", offset: stage\.handoff/.test(main), "recognized destination holds a presentation plateau until handoff");
+check(!/Math\.max\([^)]*opacity|opacity:\s*"?0\.[6789]/.test(main.slice(main.indexOf("function closeIdentityKeyframes"), main.indexOf("function createSurfaceIdentityOverlay"))), "close identity foundation has no arbitrary opacity floor");
+check(/js\/ui\/surfaceIdentity\.js/.test(index) && index.indexOf("surfaceIdentity.js") < index.indexOf("main.js"), "identity seam loads before its consumers");
+check(!/SURFACE_CLOSE_DIAGNOSTIC|surfaceCloseDiagnostic|TEMP Surface Close Diagnostic|opaqueDiagnosticColor/.test(main), "temporary Close diagnostic harness is fully removed");
+check(/exitDetailContent\(\);[\s\S]*SurfaceIdentity\.geometryFrame/.test(main) && /exitSettingsContent\(\);[\s\S]*SurfaceIdentity\.geometryFrame/.test(main), "accepted content exit remains overlapped with formal Close geometry contraction");
+const toolClose = main.slice(main.indexOf("function closeToolWithLaunchTransition"), main.indexOf("function scheduleSettingsContentHandoff"));
+const settingsClose = main.slice(main.indexOf("function closeSettingsPanel"), main.indexOf("function bindEvents"));
+check(!/sourceCarrierRelinquish|playSpatialAnimation\([^,]+,\s*detail,\s*\[[^\]]*opacity/.test(toolClose), "Tool Close has no whole-carrier opacity animation");
+check(!/sourceCarrierRelinquish|playSpatialAnimation\([^,]+,\s*panel,\s*\[[^\]]*opacity/.test(settingsClose), "Settings Close has no whole-carrier opacity animation");
+check(!/backgroundColor|borderColor|boxShadow/.test(toolClose.slice(toolClose.indexOf("SurfaceIdentity.geometryFrame"))), "Tool Close never starts a late material-presentation morph");
+check(!/backgroundColor|borderColor|boxShadow/.test(settingsClose.slice(settingsClose.indexOf("SurfaceIdentity.geometryFrame"))), "Settings Close never starts a late material-presentation morph");
+check(/beginSpatialSurfaceMorph\("system:view", 2,[\s\S]*SurfaceIdentity\.geometryFrame[\s\S]*closeIdentityKeyframes/.test(toolClose), "Tool cleanup gate waits for destination geometry and surrogate recognition without a carrier fade");
+check(/beginSpatialSurfaceMorph\("system:view", backdrop \? 3 : 2,[\s\S]*SurfaceIdentity\.geometryFrame[\s\S]*closeIdentityKeyframes[\s\S]*if \(backdrop\)/.test(settingsClose), "Settings cleanup gate waits for geometry, surrogate recognition, and optional backdrop without a carrier fade");
+check(!/sourceCarrierRelinquish|carrierExit|presentationTransferCurve/.test(main), "Surface Identity contract contains no superseded carrier-exit abstraction");
+console.log("Surface Identity contract tests passed: " + assertions + " assertions.");

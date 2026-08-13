@@ -110,9 +110,7 @@ assert(hasShadow(css, "\\.ui-range::-webkit-slider-thumb,[\\s\\S]*?\\.pill-slide
 assert(hasShadow(css, "\\.ui-color-swatch,[\\s\\S]*?\\.registry-color-swatch", "inset 0 0 0 1px rgba\\(0, 0, 0, 0\\.3\\)"));
 
 assert(/\.app-shell\.is-animating \.panel-card,[\s\S]*?\.app-shell\.is-animating \.action-sheet\s*\{[^}]*box-shadow:\s*none;/.test(css));
-["19px", "22px", "24px"].forEach(function (value) {
-    assert(new RegExp("borderRadius:\\s*\\\"" + value + "\\\"").test(main));
-});
+assert(/SurfaceIdentity\.frame\(sourceIdentity\)[\s\S]*SurfaceIdentity\.frame\(destinationIdentity\)/.test(main), "transition elevation and bounded presentation converge through identity snapshots");
 
 assert(!/--elevation-/.test(velaCss), "Vela must remain elevation-isolated");
 assert(hasShadow(velaCss, "\\.vela-settings-button", "none"));
