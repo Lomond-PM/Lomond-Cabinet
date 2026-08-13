@@ -28,13 +28,14 @@
                 var value;
                 if (parameter.cssProperty) {
                     value = readComputed(parameter.cssProperty);
-                    canonicals[parameter.id] = parameter.type === "cubicBezier" && validComputedCurve(value) ? value : (parameter.type === "shadow" ? options.parseShadow(value) : (parameter.type === "lengthPx" || parameter.type === "percentage" ? parseNumeric(value) : value));
+                    canonicals[parameter.id] = parameter.type === "cubicBezier" && validComputedCurve(value) ? value : (parameter.type === "shadow" ? options.parseShadow(value) : (parameter.type === "colorAlpha" ? options.parseColorAlpha(value) : (parameter.type === "lengthPx" || parameter.type === "percentage" ? parseNumeric(value) : value)));
                 } else if (parameter.motionRole) canonicals[parameter.id] = options.getCanonicalDuration(parameter.motionRole);
             });
         }
         function serializeCss(parameter, value) {
             if (parameter.type === "cubicBezier") return serialize(value);
             if (parameter.type === "shadow") return options.serializeShadow(value);
+            if (parameter.type === "colorAlpha") return options.serializeColorAlpha(value);
             if (parameter.type === "percentage") return value + "%";
             if (parameter.type === "lengthPx") return "calc(" + value + "px * var(--ui-scale))";
             return String(value);

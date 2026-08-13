@@ -1025,7 +1025,7 @@
             return;
         }
         scroll = createElement("div");
-        scroll.className = "palette-editor-scroll";
+        scroll.className = "palette-editor-scroll ui-scroll-region";
         scroll.appendChild(createPalettePreviewBlock());
         status = createElement("div");
         status.className = "palette-editor-draft-status";
@@ -1143,7 +1143,7 @@
             requestTransition(beginNewDraft);
         }));
         listScroll = createElement("div");
-        listScroll.className = "palette-library-list";
+        listScroll.className = "palette-library-list ui-scroll-region";
         editor = createElement("div");
         editor.className = "palette-editor-pane";
         splitter = createElement("div");
@@ -1253,8 +1253,8 @@
         var importDescription = createElement("p");
         var exportLabel = createElement("label");
         var importLabel = createElement("label");
-        var exportTextarea = options.CoreUI ? options.CoreUI.createTextarea({ document: getDocument(), classNames: "registry-textarea palette-json-box palette-json-export" }) : createElement("textarea");
-        var importTextarea = options.CoreUI ? options.CoreUI.createTextarea({ document: getDocument(), classNames: "registry-textarea palette-json-box palette-json-import" }) : createElement("textarea");
+        var exportTextarea = options.CoreUI ? options.CoreUI.createTextarea({ document: getDocument(), classNames: "registry-textarea palette-json-box palette-json-export", resizeDirection: "vertical" }) : createElement("textarea");
+        var importTextarea = options.CoreUI ? options.CoreUI.createTextarea({ document: getDocument(), classNames: "registry-textarea palette-json-box palette-json-import", resizeDirection: "vertical" }) : createElement("textarea");
         var exportActions = createElement("div");
         var importActions = createElement("div");
         var validationStatus = createElement("small");
@@ -1373,12 +1373,12 @@
         exportSection.appendChild(exportTitle);
         exportSection.appendChild(exportDescription);
         exportSection.appendChild(exportLabel);
-        exportSection.appendChild(exportTextarea);
+        exportSection.appendChild(exportTextarea._coreFrame || exportTextarea);
         exportSection.appendChild(exportActions);
         importSection.appendChild(importTitle);
         importSection.appendChild(importDescription);
         importSection.appendChild(importLabel);
-        importSection.appendChild(importTextarea);
+        importSection.appendChild(importTextarea._coreFrame || importTextarea);
         importSection.appendChild(validationStatus);
         importSection.appendChild(importActions);
         importSection.appendChild(replaceConfirm);

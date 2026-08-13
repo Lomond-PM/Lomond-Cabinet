@@ -11,7 +11,7 @@ context.self = context.window = { document: {}, CoreUI: require(path.join(root, 
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(root, "client/js/designTuning/designTuningParameterRegistry.js"), "utf8"), context);
 const parameters = Array.from(context.window.DesignTuningParameterRegistry.list()).filter(p => !p.protection);
-assert.strictEqual(parameters.length, 30, "all 30 editable parameters remain available");
+assert.strictEqual(parameters.length, 54, "all 54 editable parameters remain available");
 parameters.filter(p => p.cssProperty).forEach(parameter => {
     const uses = (css.match(new RegExp("var\\(" + parameter.cssProperty.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\)", "g")) || []).length;
     assert.ok(uses > 0, parameter.id + " has a real stylesheet consumer");
@@ -22,10 +22,16 @@ const domainSpecific = parameters.filter(p => p.consumerScope === "domain-specif
 assert.deepStrictEqual(domainSpecific, [
     "spacing.settings.fieldControl",
     "spacing.registry.cardInset",
+    "spacing.registry.introContent",
+    "spacing.registry.sectionHeaderContent",
+    "spacing.registry.sectionCopy",
+    "spacing.registry.fieldCopy",
     "spacing.registry.fieldControl",
+    "spacing.palette.fieldControl",
     "spacing.home.toolGrid",
-    "spacing.home.majorStack"
-], "only explicitly named Settings, Registry, and Home spacing parameters are domain-specific");
+    "spacing.home.majorStack",
+    "spacing.home.cardTitle"
+], "only explicitly named Settings, Registry, Palette, and Home spacing parameters are domain-specific");
 parameters.filter(p => p.consumerScope === "global-common" && p.cssProperty).forEach(parameter => {
     assert.ok((css.match(new RegExp("var\\(" + parameter.cssProperty.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\)", "g")) || []).length > 0, parameter.id + " retains common semantic authority");
 });

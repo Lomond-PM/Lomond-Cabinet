@@ -179,11 +179,12 @@
             transcriptScroll.appendChild(transcriptMessage);
             transcriptSlot.appendChild(transcriptScroll);
             composerSlot = node("div", "vela-composer-slot");
-            composer = node("textarea", "vela-composer-input");
+            var composerFrame = node("span", "ui-scroll-frame vela-composer-frame ui-resize-none");
+            composer = node("textarea", "vela-composer-input ui-editable-scroll");
             composer.readOnly = composerReadOnly;
             composer.setAttribute("aria-readonly", composerReadOnly ? "true" : "false");
             composer.setAttribute("rows", "2");
-            composerSlot.appendChild(composer);
+            composerFrame.appendChild(composer); composerSlot.appendChild(composerFrame);
             statusSlot = node("div", "vela-status-slot");
             statusSlot.setAttribute("role", "status");
             statusSlot.setAttribute("aria-live", "polite");

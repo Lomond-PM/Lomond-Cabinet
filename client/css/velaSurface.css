@@ -114,14 +114,21 @@
     min-height: var(--vela-composer-min-height);
     padding: var(--vela-inline-gap) var(--vela-composer-padding-inline);
     resize: none;
-    border: 1px solid var(--input-border);
-    border-radius: var(--radius-sm);
-    background: var(--bg-main);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     color: var(--text-primary);
     font-family: var(--font-ui);
     font-size: var(--type-control-size);
     font-weight: var(--type-control-weight);
     line-height: var(--type-control-line-height);
+}
+
+.vela-composer-frame {
+    min-height: var(--vela-composer-min-height);
+    border-color: var(--input-border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-main);
 }
 
 .vela-composer-input::placeholder {

@@ -914,7 +914,8 @@ body:not(.i18n-ready) .app-shell {
     min-height: calc(112px * var(--ui-scale));
     margin-top: var(--space-settings-field-copy);
     font-family: var(--font-mono);
-    resize: vertical;
+    overflow: auto;
+    white-space: pre;
 }
 
 .settings-theme-group-title {
@@ -1531,11 +1532,11 @@ body:not(.i18n-ready) .app-shell {
 .palette-json-box {
     min-height: calc(160px * var(--ui-scale));
     padding: calc(8px * var(--ui-scale));
-    border: 1px solid var(--input-border);
-    border-radius: var(--radius-editable-control);
-    background: rgba(5, 4, 3, 0.5);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     color: var(--text-primary);
-    resize: vertical;
+    resize: none;
 }
 
 .palette-json-box::placeholder {
@@ -1545,47 +1546,6 @@ body:not(.i18n-ready) .app-shell {
 .palette-json-box:focus {
     border-color: var(--gold-soft);
     outline: none;
-}
-
-.palette-library-list,
-.palette-editor-scroll,
-.palette-json-box {
-    scrollbar-color: var(--gold-soft) rgba(214, 178, 94, 0.06);
-    scrollbar-width: thin;
-}
-
-.palette-library-list::-webkit-scrollbar,
-.palette-editor-scroll::-webkit-scrollbar,
-.palette-json-box::-webkit-scrollbar {
-    width: var(--status-dot-size);
-    height: var(--status-dot-size);
-}
-
-.palette-library-list::-webkit-scrollbar-track,
-.palette-editor-scroll::-webkit-scrollbar-track,
-.palette-json-box::-webkit-scrollbar-track {
-    border-radius: var(--radius-sm);
-    background: rgba(214, 178, 94, 0.045);
-}
-
-.palette-library-list::-webkit-scrollbar-thumb,
-.palette-editor-scroll::-webkit-scrollbar-thumb,
-.palette-json-box::-webkit-scrollbar-thumb {
-    border: 1px solid rgba(5, 4, 3, 0.52);
-    border-radius: var(--radius-sm);
-    background: var(--gold-soft);
-}
-
-.palette-library-list::-webkit-scrollbar-thumb:hover,
-.palette-editor-scroll::-webkit-scrollbar-thumb:hover,
-.palette-json-box::-webkit-scrollbar-thumb:hover {
-    background: var(--gold-hot);
-}
-
-.palette-library-list::-webkit-scrollbar-corner,
-.palette-editor-scroll::-webkit-scrollbar-corner,
-.palette-json-box::-webkit-scrollbar-corner {
-    background: transparent;
 }
 
 .palette-editor-action-bar {
@@ -2191,34 +2151,47 @@ body:not(.i18n-ready) .app-shell {
     padding-bottom: calc(132px * var(--ui-scale));
 }
 
-.ui-scroll-region {
+.ui-scroll-region,
+.ui-editable-scroll {
     scrollbar-color: var(--gold-soft) rgba(5, 4, 3, 0.34);
     scrollbar-width: thin;
 }
 
-.ui-scroll-region::-webkit-scrollbar {
+.ui-scroll-region::-webkit-scrollbar,
+.ui-editable-scroll::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
-.ui-scroll-region::-webkit-scrollbar-track {
+.ui-scroll-region::-webkit-scrollbar-track,
+.ui-editable-scroll::-webkit-scrollbar-track {
     border-radius: 999px;
     background: rgba(5, 4, 3, 0.34);
 }
 
-.ui-scroll-region::-webkit-scrollbar-thumb {
+.ui-scroll-region::-webkit-scrollbar-thumb,
+.ui-editable-scroll::-webkit-scrollbar-thumb {
     min-height: 42px;
     border: 2px solid rgba(5, 4, 3, 0.34);
     border-radius: 999px;
     background: var(--gold-soft);
 }
 
-.ui-scroll-region::-webkit-scrollbar-thumb:hover {
+.ui-scroll-region::-webkit-scrollbar-thumb:hover,
+.ui-editable-scroll::-webkit-scrollbar-thumb:hover {
     background: var(--gold-focus);
 }
 
-.ui-scroll-region::-webkit-scrollbar-corner {
+.ui-scroll-region::-webkit-scrollbar-corner,
+.ui-editable-scroll::-webkit-scrollbar-corner {
     background: transparent;
+}
+
+.ui-scroll-region::-webkit-scrollbar-button,
+.ui-editable-scroll::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 h1,
@@ -3965,9 +3938,61 @@ p {
     min-height: calc(76px * var(--ui-scale));
     padding-top: calc(8px * var(--ui-scale));
     padding-bottom: calc(8px * var(--ui-scale));
-    resize: vertical;
+    resize: none;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overflow-wrap: anywhere;
     line-height: 1.35;
 }
+
+.ui-scroll-frame {
+    box-sizing: border-box;
+    position: relative;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--field-border);
+    border-radius: var(--radius-editable-control);
+    background: var(--field-surface);
+    overflow: hidden;
+}
+
+.ui-scroll-frame > .ui-editable-scroll {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.ui-resize-grip {
+    position: absolute;
+    right: calc(3px * var(--ui-scale));
+    bottom: calc(3px * var(--ui-scale));
+    z-index: 3;
+    width: calc(12px * var(--ui-scale));
+    height: calc(12px * var(--ui-scale));
+    cursor: ns-resize;
+    opacity: 0.42;
+}
+
+.ui-resize-grip::before {
+    content: "";
+    position: absolute;
+    right: 1px;
+    bottom: 1px;
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid var(--border-subtle);
+    border-bottom: 2px solid var(--border-subtle);
+}
+
+.ui-scroll-frame:hover .ui-resize-grip,
+.ui-scroll-frame:focus-within .ui-resize-grip { opacity: 0.78; }
+.ui-resize-horizontal .ui-resize-grip { cursor: ew-resize; }
+.ui-resize-both .ui-resize-grip { cursor: nwse-resize; }
+.is-resizing-ui-surface { user-select: none; }
 
 .ui-textarea.palette-json-box,
 .registry-textarea.palette-json-box {
@@ -3975,18 +4000,32 @@ p {
     font-size: var(--type-code-size);
     font-weight: var(--type-code-weight);
     line-height: var(--type-code-line-height);
+    overflow-x: auto;
+    overflow-wrap: normal;
+    white-space: pre;
+}
+
+.ui-color-field--alpha {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    min-width: 0;
+}
+
+.ui-color-field--alpha .ui-color-alpha {
+    grid-column: 1 / -1;
+    min-width: 0;
 }
 
 .ui-text-input:focus,
-.ui-textarea:focus,
 .ui-color-hex:focus,
 .ui-number-input:focus,
 .registry-text-input:focus,
-.registry-textarea:focus,
 .registry-color-hex:focus,
 .registry-range-number:focus {
     border-color: var(--interaction-focus-border);
 }
+
+.ui-scroll-frame:focus-within { border-color: var(--interaction-focus-border); }
 
 .registry-range-control {
     display: grid;

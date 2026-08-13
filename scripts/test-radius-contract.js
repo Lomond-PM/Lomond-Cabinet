@@ -61,7 +61,8 @@ assert(rule(css, "\\.palette-preview-shell", "border-radius:\\s*var\\(--radius-p
 assert(rule(css, "\\.palette-preview-canvas", "border-radius:\\s*0"));
 assert(rule(css, "\\.palette-library-item", "border-radius:\\s*var\\(--radius-palette-library-item\\)"));
 assert(rule(css, "\\.palette-json-section", "border-radius:\\s*var\\(--radius-palette-json-section\\)"));
-assert(rule(css, "\\.palette-json-box", "border-radius:\\s*var\\(--radius-editable-control\\)"));
+assert(rule(css, "\\.ui-scroll-frame", "border-radius:\\s*var\\(--radius-editable-control\\)"), "shared editable frame owns control radius");
+assert(rule(css, "\\.ui-scroll-frame > \\.ui-editable-scroll", "border-radius:\\s*0"), "Palette JSON inner scroll owner must not duplicate frame radius");
 
 assert(/\.settings-view\s*\{[^}]*--ui-scale:\s*0\.92;/.test(css));
 assert(rule(css, "\\.view-detail", "border-radius:\\s*22px"));
@@ -72,6 +73,7 @@ assert(rule(css, "\\.select-menu", "border-radius:\\s*14px"));
 
 assert(!/--radius-(?:section-card|nested-surface|editable-control|home-tile|registry-option|palette-library-item|palette-json-section|pill)/.test(velaCss), "Vela must remain radius-domain isolated");
 assert(/\.vela-surface\s*\{[^}]*border-radius:\s*var\(--radius-md\)/.test(velaCss));
-assert(/\.vela-composer-input\s*\{[^}]*border-radius:\s*var\(--radius-sm\)/.test(velaCss));
+assert(/\.vela-composer-frame\s*\{[^}]*border-radius:\s*var\(--radius-sm\)/.test(velaCss), "Vela composer frame owns editable radius");
+assert(/\.vela-composer-input\s*\{[^}]*border-radius:\s*0/.test(velaCss), "Vela composer inner scroll owner does not duplicate frame radius");
 
 console.log("Radius contract tests passed.");

@@ -14,6 +14,7 @@ const exempt = Array.from(lab.matchAll(/^\s{16}([A-Za-z]+):\s*"([^"]+)"/gm)).red
 rendererTypes.forEach(type => assert.ok(registryPath.includes(type) || exempt[type], "Registry renderer type lacks Lab specimen/exemption: " + type));
 registryPath.forEach(type => assert.ok(rendererTypes.includes(type), "Lab claims unsupported Registry type: " + type));
 assert.ok(exempt.proceduralPreview && exempt.proceduralPreview.length > 20, "proceduralPreview exemption is named and reasoned");
+assert.ok(/colorFieldAlphaMode:\s*true/.test(lab) && /supportsAlpha:\s*true/.test(main), "generic ColorField alpha mode has a real Control Lab specimen");
 const publicVisualFactories = Array.from(core.matchAll(/^\s{8}(create[A-Z][A-Za-z]+):\s*\1,/gm)).map(match => match[1]).filter(name => name !== "createFieldRow");
 const registryFactories = Array.from(main.matchAll(/window\.CoreUI\.(create[A-Z][A-Za-z]+)\(/g)).map(match => match[1]);
 publicVisualFactories.forEach(factory => assert.ok(registryFactories.includes(factory) || direct.includes(factory), "CoreUI visual factory lacks Registry or Direct coverage: " + factory));

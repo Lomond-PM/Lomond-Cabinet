@@ -1,0 +1,25 @@
+#!/usr/bin/env node
+"use strict";
+const assert = require("assert"); const fs = require("fs"); const path = require("path"); const root = path.resolve(__dirname, "..");
+const css = fs.readFileSync(path.join(root, "client/css/style.css"), "utf8"); const core = fs.readFileSync(path.join(root, "client/js/ui/coreUi.js"), "utf8"); const main = fs.readFileSync(path.join(root, "client/js/main.js"), "utf8"); const palette = fs.readFileSync(path.join(root, "client/js/proceduralPaletteWorkspace.js"), "utf8");
+const intentionalOwners = ["home-content ui-scroll-region", "detail-content ui-scroll-region", "settings-content ui-scroll-region", "vela-transcript-scroll ui-scroll-region", "vela-composer-input ui-editable-scroll", "palette-editor-scroll ui-scroll-region", "palette-library-list ui-scroll-region", "ui-textarea ui-editable-scroll"];
+intentionalOwners.forEach(owner => assert.ok((main + palette + core + fs.readFileSync(path.join(root, "client/index.html"), "utf8") + fs.readFileSync(path.join(root, "client/js/vela/velaSurface.js"), "utf8")).includes(owner), owner + " has an explicit presentation disposition"));
+assert.ok(/addClasses\(input, "ui-textarea ui-editable-scroll"\)/.test(core), "CoreUI Textarea owns editable scroll presentation");
+assert.ok(/\.ui-scroll-region,\s*\.ui-editable-scroll[\s\S]*scrollbar-color/.test(css), "editable and surface owners share canonical scrollbar presentation");
+assert.ok(/\.ui-editable-scroll::-webkit-scrollbar-button[\s\S]*display:\s*none/.test(css), "native scrollbar buttons hidden");
+assert.ok(/\.ui-editable-scroll::-webkit-scrollbar-corner[\s\S]*background:\s*transparent/.test(css), "native corner neutralized");
+assert.ok(/\.ui-textarea,\s*\.registry-textarea[\s\S]*resize:\s*none[\s\S]*overflow-x:\s*hidden/.test(css), "layout-owned ordinary textarea has no resize grip or accidental horizontal scroll");
+assert.ok(/\.registry-textarea\.palette-json-box[\s\S]*overflow-x:\s*auto[\s\S]*white-space:\s*pre/.test(css), "JSON retains element-owned horizontal scrolling");
+assert.ok(/settings-design-tuning-evidence[\s\S]*overflow:\s*auto[\s\S]*white-space:\s*pre/.test(css), "Promotion Evidence retains raw element-owned scrolling");
+assert.ok(/createTextarea\([\s\S]*settings-design-tuning-evidence/.test(main), "Promotion Evidence uses CoreUI Textarea");
+assert.ok(/palette-editor-scroll ui-scroll-region/.test(palette) && /palette-library-list ui-scroll-region/.test(palette), "Palette intentional owners reuse shared presentation");
+assert.ok(!/\.palette-json-box::-webkit-scrollbar|\.palette-library-list::-webkit-scrollbar|\.palette-editor-scroll::-webkit-scrollbar/.test(css), "no feature-specific duplicate scrollbar skin");
+assert.ok(/\.settings-content[\s\S]*overflow-x:\s*hidden/.test(css), "Settings main surface rejects horizontal propagation");
+assert.ok(/ui-scroll-frame ui-textarea-frame ui-resize-/.test(core) && /frame\.appendChild\(input\)/.test(core), "CoreUI Textarea composes outer clipping frame and inner scroll owner");
+assert.ok(/\.ui-scroll-frame[\s\S]*border-radius:[\s\S]*overflow:\s*hidden/.test(css), "outer frame owns radius and clipping");
+assert.ok(/\.ui-scroll-frame > \.ui-editable-scroll[\s\S]*border:\s*0[\s\S]*background:\s*transparent/.test(css), "inner scroll owner does not redraw the frame");
+assert.ok(/function bindResizeGrip[\s\S]*setPointerCapture[\s\S]*pointermove[\s\S]*pointercancel[\s\S]*releasePointerCapture/.test(core), "generic resize grip owns safe pointer lifecycle");
+assert.ok(/resizeDirection \|\| "vertical"/.test(core) && /ui-resize-horizontal/.test(css) && /ui-resize-both/.test(css), "resize direction metadata supports none, vertical, horizontal and both");
+assert.ok(!/localStorage|DesignTuningStateStore|AppearanceStateStore/.test(core.slice(core.indexOf("function bindResizeGrip"), core.indexOf("function normalizeNumber"))), "resize state is mount-local presentation only");
+assert.ok(!/resize:\s*vertical/.test(css), "native textarea resize chrome is absent");
+console.log("Editable scroll contract tests passed.");

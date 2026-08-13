@@ -1224,6 +1224,8 @@
             getCanonicalDuration: function (role) { return MotionDefaults.durations[role]; },
             parseShadow: window.CoreUI.parseShadowValue,
             serializeShadow: window.CoreUI.serializeShadowValue,
+            parseColorAlpha: window.CoreUI.parseColorAlphaValue,
+            serializeColorAlpha: window.CoreUI.serializeColorAlphaValue,
             onProjectionApplied: function () { MotionDefaults.applyCss(document.documentElement, motionScale); }
         });
         MotionDefaults.setDurationOverrideResolver(function (role, canonical) { return DesignTuning.resolveDuration(role, canonical); });
@@ -2412,14 +2414,27 @@
             "motion.duration.spatialExpand": { key: "settings.designTuning.motion.duration.spatialExpand", min: 120, max: 1200, step: 10, unit: "ms" },
             "motion.duration.spatialContract": { key: "settings.designTuning.motion.duration.spatialContract", min: 100, max: 1000, step: 10, unit: "ms" },
             "motion.duration.viewContentEnter": { key: "settings.designTuning.motion.duration.viewContentEnter", min: 60, max: 600, step: 10, unit: "ms" },
-            "motion.duration.viewContentExit": { key: "settings.designTuning.motion.duration.viewContentExit", min: 40, max: 500, step: 10, unit: "ms" }
+            "motion.duration.viewContentExit": { key: "settings.designTuning.motion.duration.viewContentExit", min: 40, max: 500, step: 10, unit: "ms" },
+            "motion.duration.actionFeedback": { key: "settings.designTuning.motion.duration.actionFeedback", min: 40, max: 1200, step: 10, unit: "ms" },
+            "motion.duration.actionPress": { key: "settings.designTuning.motion.duration.actionPress", min: 40, max: 1200, step: 10, unit: "ms" },
+            "motion.duration.surfaceState": { key: "settings.designTuning.motion.duration.surfaceState", min: 40, max: 1200, step: 10, unit: "ms" },
+            "motion.duration.structuralCollapse": { key: "settings.designTuning.motion.duration.structuralCollapse", min: 40, max: 1200, step: 10, unit: "ms" },
+            "motion.duration.homeHandoffRecede": { key: "settings.designTuning.motion.duration.homeHandoffRecede", min: 40, max: 1200, step: 10, unit: "ms" },
+            "motion.duration.homeHandoffRestore": { key: "settings.designTuning.motion.duration.homeHandoffRestore", min: 40, max: 1200, step: 10, unit: "ms" },
+            "motion.duration.spatialIdentity": { key: "settings.designTuning.motion.duration.spatialIdentity", min: 40, max: 1200, step: 10, unit: "ms" },
+            "motion.duration.toolIdentityOpen": { key: "settings.designTuning.motion.duration.toolIdentityOpen", min: 40, max: 1200, step: 10, unit: "ms" },
+            "motion.duration.paletteEnter": { key: "settings.designTuning.motion.duration.paletteEnter", min: 40, max: 1200, step: 10, unit: "ms" },
+            "motion.duration.paletteExit": { key: "settings.designTuning.motion.duration.paletteExit", min: 40, max: 1200, step: 10, unit: "ms" },
+            "motion.duration.dragSettle": { key: "settings.designTuning.motion.duration.dragSettle", min: 40, max: 1200, step: 10, unit: "ms" }
         };
-        var heading; var motionTitle; var curves; var durations; var actions; var evidenceLabel; var evidenceOutput; var resetMotion; var resetAll; var parameters; var domains; var domain; var domainRoot; var domainBody; var domainTitle; var resetDomain; var appearanceRegistry; var appearanceParameters; var appearanceRoot; var appearanceBody; var appearanceField; var authority; var i;
+        var heading; var motionRoot; var motionTitle; var motionBody; var curves; var durations; var actions; var evidenceLabel; var evidenceOutput; var resetMotion; var resetAll; var parameters; var domains; var domain; var domainRoot; var domainBody; var domainTitle; var resetDomain; var appearanceRegistry; var appearanceParameters; var appearanceRoot; var appearanceBody; var appearanceField; var authority; var i;
         if (!mount || !registry || !evidence || !window.CoreUI) return;
         mount.innerHTML = "";
         DesignTuningFieldBindings = {};
         heading = createSettingsSectionHeader("settings.navigation.developer", "settings.designTuning.title", "settings.designTuning.description");
-        motionTitle = createSettingsGroupLabel("settings.designTuning.motion.title");
+        motionRoot = document.createElement("details"); motionRoot.className = "settings-design-tuning-domain"; motionRoot.setAttribute("data-settings-disclosure-key", "settings.developer.designTuning.motion");
+        motionTitle = document.createElement("summary"); motionTitle.className = "settings-group-label"; motionTitle.setAttribute("data-i18n", "settings.designTuning.motion.title"); motionTitle.textContent = tr("settings.designTuning.motion.title");
+        motionBody = document.createElement("div"); motionBody.className = "settings-design-tuning-group";
         curves = document.createElement("div"); curves.className = "settings-design-tuning-group";
         durations = document.createElement("div"); durations.className = "settings-design-tuning-group";
         curves.appendChild(createSettingsGroupLabel("settings.designTuning.motion.curves"));
@@ -2433,16 +2448,16 @@
         resetMotion = window.CoreUI.createButton({ document: document, variant: "neutral", text: tr("settings.designTuning.resetMotion"), classNames: "panel-button panel-local-action" });
         resetMotion.setAttribute("data-i18n", "settings.designTuning.resetMotion");
         resetMotion.addEventListener("click", function () { cancelDesignTuningCalibrationGesture(); DesignTuning.resetMotion(); refreshDesignTuningFields("motion"); });
-        actions.appendChild(resetMotion);
+        motionBody.appendChild(curves); motionBody.appendChild(durations); motionBody.appendChild(resetMotion); motionRoot.appendChild(motionTitle); motionRoot.appendChild(motionBody);
         resetAll = window.CoreUI.createButton({ document: document, variant: "neutral", text: tr("settings.designTuning.resetAll"), classNames: "panel-button panel-local-action" });
         resetAll.setAttribute("data-i18n", "settings.designTuning.resetAll");
         resetAll.addEventListener("click", function () { cancelDesignTuningCalibrationGesture(); DesignTuning.resetAll(); refreshDesignTuningFields(); });
         actions.appendChild(resetAll);
         evidenceLabel = document.createElement("label"); evidenceLabel.className = "settings-field-label"; evidenceLabel.setAttribute("data-i18n", "settings.designTuning.promotionEvidence"); evidenceLabel.textContent = tr("settings.designTuning.promotionEvidence");
-        evidenceOutput = window.CoreUI.createTextarea({ document: document, classNames: "registry-textarea settings-design-tuning-evidence", rows: 8, value: JSON.stringify(evidence, null, 2) });
+        evidenceOutput = window.CoreUI.createTextarea({ document: document, classNames: "registry-textarea settings-design-tuning-evidence", rows: 8, value: JSON.stringify(evidence, null, 2), resizeDirection: "vertical" });
         evidenceOutput.readOnly = true;
-        mount.appendChild(heading); mount.appendChild(motionTitle); mount.appendChild(curves); mount.appendChild(durations);
-        domains = ["spacing", "radius", "controls", "elevation"];
+        mount.appendChild(heading); mount.appendChild(motionRoot);
+        domains = ["spacing", "radius", "controls", "elevation", "text", "surface", "border"];
         for (i = 0; i < domains.length; i++) {
             domain = domains[i];
             domainRoot = document.createElement("details"); domainRoot.className = "settings-design-tuning-domain"; domainRoot.setAttribute("data-settings-disclosure-key", "settings.developer.designTuning." + domain);
@@ -2461,12 +2476,12 @@
         appearanceBody = document.createElement("div"); appearanceBody.className = "settings-design-tuning-group";
         authority = document.createElement("p"); authority.className = "settings-field-description"; authority.setAttribute("data-i18n", "settings.designTuning.authority.userAppearance"); authority.textContent = tr("settings.designTuning.authority.userAppearance"); appearanceBody.appendChild(authority);
         for (i = 0; i < appearanceParameters.length; i++) {
-            if (appearanceParameters[i].classification !== "EXPOSE_NOW") continue;
+            if (appearanceParameters[i].classification !== "EXPOSE_NOW" && appearanceParameters[i].classification !== "ADVANCED_LATER") continue;
             appearanceField = createAppearanceAdvancedField(appearanceParameters[i], true);
             if (appearanceField) { appearanceField.setAttribute("data-calibration-authority", "user-appearance"); appearanceBody.appendChild(appearanceField); }
         }
         appearanceRoot.appendChild(domainTitle); appearanceRoot.appendChild(appearanceBody); mount.appendChild(appearanceRoot);
-        mount.appendChild(actions); mount.appendChild(evidenceLabel); mount.appendChild(evidenceOutput);
+        mount.appendChild(actions); mount.appendChild(evidenceLabel); mount.appendChild(evidenceOutput._coreFrame);
         establishDesignTuningCalibrationChromeBaseline(parameters);
     }
 
@@ -2509,6 +2524,9 @@
         }
         if (parameter.type === "shadow") {
             control = window.CoreUI.createShadowField({ document: document, id: "designTuning-" + parameter.id.replace(/\./g, "-"), value: value, labels: { offsetX: "X", offsetY: "Y", blur: "Blur", spread: "Spread", alpha: "Alpha" }, onPreview: function (next) { updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
+        } else if (parameter.type === "colorAlpha") {
+            control = window.CoreUI.createColorField({ document: document, id: "designTuning-" + parameter.id.replace(/\./g, "-"), value: value, fallback: value.color, supportsAlpha: true, classNames: "settings-field-control settings-design-tuning-color-alpha", openPicker: openCoreColorPicker, onPreview: function (next) { shell.row.classList.add("has-draft"); updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
+            bindHexInputSelectBehavior(control.hex);
         } else control = window.CoreUI.createRangeNumber({ document: document, rangeId: "designTuning-" + parameter.id.replace(/\./g, "-"), numberId: "designTuning-" + parameter.id.replace(/\./g, "-") + "-number", value: value, min: parameter.editing.min, max: parameter.editing.max, step: parameter.editing.step, field: { min: parameter.editing.min, max: parameter.editing.max, step: parameter.editing.step, defaultValue: value }, unitText: parameter.editing.unit, classNames: "settings-field-control settings-design-tuning-duration", rangeClassNames: "pill-slider registry-range settings-slider", numberClassNames: "num-input settings-number", onPreview: function (next) { updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
         shell.row.appendChild(control.root); shell.row.appendChild(shell.reset); return shell.row;
     }
@@ -6861,7 +6879,7 @@
             } else if (field.placeholder) {
                 input.placeholder = field.placeholder;
             }
-            wrap.appendChild(input);
+            wrap.appendChild(input._coreFrame);
         } else if (fieldType === "range") {
             colorValue = window.CoreUI.createRangeNumber({
                 document: document,
@@ -7599,6 +7617,16 @@
             directRow.appendChild(shadowField.root);
             directSection.appendChild(directTitle);
             directSection.appendChild(directRow);
+            if (tool.controlLabCoverage.colorFieldAlphaMode === true) {
+                var alphaRow = document.createElement("div");
+                var alphaLabel = document.createElement("span");
+                var alphaField = window.CoreUI.createColorField({ document: document, id: "registryControlLabColorAlphaField", value: { color: "#d6b25e", alpha: 0.5 }, fallback: "#d6b25e", supportsAlpha: true, openPicker: openCoreColorPicker });
+                bindHexInputSelectBehavior(alphaField.hex);
+                alphaRow.className = "control-row registry-field-row ui-field-row is-content-growth";
+                alphaLabel.className = "control-label registry-text-body";
+                alphaLabel.textContent = tr("tools.registryControlLab.fields.colorAlphaField");
+                alphaRow.appendChild(alphaLabel); alphaRow.appendChild(alphaField.root); directSection.appendChild(alphaRow);
+            }
             panel.appendChild(directSection);
         }
 

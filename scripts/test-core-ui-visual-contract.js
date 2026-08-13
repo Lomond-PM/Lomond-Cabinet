@@ -160,7 +160,10 @@ assert(/CoreUI\.createTextarea/.test(palette));
 assert(/CoreUI\.createSelect/.test(palette));
 assert(/CoreUI\.createButton/.test(palette));
 assert(/id="settingsBackLabel"/.test(index));
-assert(/pageId === "appearance" \? "common.settings" : "common.home"/.test(main));
+assert(/appearance = createSettingsCategory\("appearance", "settings\.navigation\.appearance", true, "settings-category--appearance"\)/.test(main), "Appearance remains a formal root Settings category");
+assert(/function createSettingsCategory[\s\S]*data-settings-disclosure-key", "settings\." \+ id[\s\S]*CoreUI\.createDisclosureController/.test(main), "Settings categories use shared semantic disclosure ownership");
+assert(/renderer\.appendChild\(appearance\.root\)[\s\S]*content\.appendChild\(renderer\)/.test(main), "Appearance composes inside the shared Settings root rather than a legacy independent page");
+assert(/showSettingsPage[\s\S]*settingsCategoryAppearance[\s\S]*_coreDisclosure\.setExpanded\(true\)/.test(main), "Appearance routing expands the formal root disclosure");
 assert(/requestBack:[\s\S]*requestWorkspaceBack/.test(palette));
 assert(!/heading\.appendChild\(back\)/.test(palette), "Palette back navigation must not remain in the right action slot");
 

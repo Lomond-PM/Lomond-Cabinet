@@ -69,6 +69,7 @@
         controlLabCoverage: {
             registryPath: ["text", "textarea", "number", "range", "select", "checkbox", "switch", "tabs", "color", "button", "actionButton", "divider", "separator", "info", "note", "subheading", "cubicBezier"],
             coreUiDirect: ["createShadowField"],
+            colorFieldAlphaMode: true,
             exemptions: {
                 proceduralPreview: "Domain-bound canvas specimen requires the Procedural Appearance Lab runtime."
             }
@@ -482,6 +483,7 @@
                 "tools.registryControlLab.sections.registryPath": "Registry Path",
                 "tools.registryControlLab.sections.coreUiDirect": "CoreUI Direct",
                 "tools.registryControlLab.fields.shadowField": "Shadow Field",
+                "tools.registryControlLab.fields.colorAlphaField": "Color + Alpha Field",
                 "tools.registryControlLab.sections.basicDescription": "Text, textarea, numeric entry, and slider behavior.",
                 "tools.registryControlLab.sections.colors": "Colors",
                 "tools.registryControlLab.sections.colorsDescription": "Color pills, hex values, and the HSV picker.",
@@ -577,6 +579,7 @@
                 "tools.registryControlLab.sections.registryPath": "Registry \u8def\u5f84",
                 "tools.registryControlLab.sections.coreUiDirect": "CoreUI \u76f4\u63a5\u8def\u5f84",
                 "tools.registryControlLab.fields.shadowField": "\u9634\u5f71\u5b57\u6bb5",
+                "tools.registryControlLab.fields.colorAlphaField": "\u989c\u8272 + Alpha \u5b57\u6bb5",
                 "tools.registryControlLab.sections.basicDescription": "\u9a8c\u8bc1\u6587\u672c\u3001\u591a\u884c\u6587\u672c\u3001\u6570\u503c\u8f93\u5165\u548c\u6ed1\u6746\u884c\u4e3a\u3002",
                 "tools.registryControlLab.sections.colors": "\u989c\u8272",
                 "tools.registryControlLab.sections.colorsDescription": "\u9a8c\u8bc1\u8272\u5757\u3001Hex \u503c\u548c HSV \u53d6\u8272\u5668\u3002",

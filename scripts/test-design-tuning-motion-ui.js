@@ -10,7 +10,7 @@ const i18n = fs.readFileSync(path.join(root, "client/js/i18n.js"), "utf8");
 const registry = fs.readFileSync(path.join(root, "client/js/designTuning/designTuningParameterRegistry.js"), "utf8");
 assert.ok(/developer\.body\.appendChild\(createSettingsSectionMount\("settingsDeveloperDesignTuningMount"[\s\S]*settingsDeveloperCalibrationMount[\s\S]*settingsDeveloperProceduralMount/.test(main), "Design Tuning is first in Developer");
 assert.ok(/settings-category--developer settings-developer-only/.test(main), "existing Developer gate owns Design Tuning");
-assert.strictEqual((registry.match(/id: "motion\.(?:curve|duration)\./g) || []).length, 8, "exactly eight stable parameters");
+assert.strictEqual((registry.match(/id: "motion\.(?:curve|duration)\./g) || []).length, 19, "four curves and all fifteen duration roles are registered");
 assert.ok(/parameters = registry\.list\(\)/.test(main), "UI enumerates infrastructure registry");
 assert.ok(/createBezierCurveField/.test(main) && /createRangeNumber/.test(main), "formal CoreUI controls are used");
 assert.ok(/onInput: function \(next\) \{ shell\.row\.classList\.add\("has-draft"\); updateDesignTuningCalibrationGesture\(parameter, next, control\.root\); \}, onChange: function \(next\) \{ finishDesignTuningCalibrationGesture/.test(main), "curve input uses transient runtime projection and change commits once");
@@ -19,7 +19,7 @@ assert.ok(/evidence\.overrides[\s\S]*settings\.designTuning\.overridden[\s\S]*se
 assert.ok(/DesignTuning\.resetParameter\(parameter\.id\)/.test(main), "parameter reset uses resolver");
 assert.ok(/DesignTuning\.resetMotion\(\)/.test(main) && /DesignTuning\.resetAll\(\)/.test(main) && /DesignTuning\.resetDomain\(scope\)/.test(main), "domain and global resets use resolver authority");
 assert.ok(/DesignTuning\.getEvidence\(\)[\s\S]*JSON\.stringify\(evidence, null, 2\)/.test(main), "promotion evidence uses infrastructure API");
-assert.ok(/createAppearanceAdvancedField\(appearanceParameters\[i\], true\)[\s\S]*data-calibration-authority", "user-appearance"/.test(main), "eleven mirrors reuse the existing Appearance editor authority with preview-local drafts");
+assert.ok(/classification !== "EXPOSE_NOW" && appearanceParameters\[i\]\.classification !== "ADVANCED_LATER"[\s\S]*createAppearanceAdvancedField\(appearanceParameters\[i\], true\)[\s\S]*data-calibration-authority", "user-appearance"/.test(main), "all registered visual mirrors reuse the existing Appearance editor authority with preview-local drafts");
 assert.ok(!/data-calibration-authority[\s\S]{0,300}DesignTuning\.setOverride/.test(main), "Appearance mirrors never write Design Tuning overrides");
 assert.ok(/evidenceOutput\.readOnly = true/.test(main), "evidence is manually copyable read-only output");
 assert.ok(!/navigator\.clipboard|execCommand\("copy"\)/.test(main.slice(main.indexOf("function renderSettingsDesignTuningMotion"), main.indexOf("function renderSettingsRangeRow"))), "no new clipboard helper");
@@ -28,6 +28,9 @@ assert.ok(!/0\.16,\s*1,\s*0\.3,\s*1|spatialExpand[^\n]{0,80}480|spatialContract[
 assert.ok(/min: 120, max: 1200, step: 10/.test(main) && /min: 40, max: 500, step: 10/.test(main), "UI editing bounds are consumer metadata");
 assert.ok(/editing: \{ min:/.test(registry), "typed non-motion editing metadata lives in registry");
 assert.ok(/renderSettingsDesignTuningMotion\(\);[\s\S]*focusPendingSettingsSection/.test(main), "Settings reopen refreshes external overrides");
+assert.ok(/motionRoot = document\.createElement\("details"\)[\s\S]*data-settings-disclosure-key", "settings\.developer\.designTuning\.motion"/.test(main), "Motion uses the shared Design Tuning domain disclosure with a stable semantic key");
+assert.ok(/motionBody\.appendChild\(curves\); motionBody\.appendChild\(durations\); motionBody\.appendChild\(resetMotion\); motionRoot\.appendChild\(motionTitle\); motionRoot\.appendChild\(motionBody\)/.test(main), "Motion content and Reset Motion remain inside the shared disclosure");
+assert.ok(/captureSettingsPresentationSession[\s\S]*data-settings-disclosure-key[\s\S]*restoreSettingsPresentationSession/.test(main), "Motion disclosure participates in the shared Settings session restoration mechanism");
 assert.ok(!/registryDebugTools[\s\S]{0,100}(?:resetMotion|resetParameter)/.test(main), "Developer Mode OFF never resets tuning");
 assert.ok(/@media \(max-width: 380px\)[\s\S]*\.settings-design-tuning-field[\s\S]*grid-template-columns: minmax\(0, 1fr\)/.test(css), "narrow composition is single-column");
 assert.ok(/\.settings-design-tuning-bezier,[\s\S]*min-width: 0/.test(css) && /\.settings-design-tuning-evidence[\s\S]*width: 100%/.test(css), "controls remain bounded");

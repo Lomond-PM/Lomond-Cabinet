@@ -373,3 +373,11 @@ Vela is a transitional dedicated disclosure inside Global Settings root, not a p
 # Design Tuning Full Coverage handoff
 
 AE 验收需覆盖：无 override 视觉等价；spacing/radius/control geometry 的实时重排与 reset；五个 typed elevation shadows 的预览、持久化与 reset；Motion 既有 8 项；Appearance/Typography 镜像仍使用原持久化；wide/narrow、中文/英文及 UI Scale 极值。当前工作区 placement 不是最终产品 IA，Surface Transition 相关 radius 不应尝试写 override。
+
+Coverage Completion 后 Motion 为 4 curves + 15 durations；应逐项触发真实交互并确认运行中的 animation 保持 snapshot、下一次 interaction 采用新值。Appearance mirror 共 21 项，新增 focus/hover/selected/checked/primary-action/selection visual roles，需确认与原 Appearance editor 双向同步且 Reset 沿用原 authority。新增 6 个 domain spacing 应在 Registry、Palette、Home 的真实 consumer 上慢拖检查连续性、scope 与 UI Scale 极值。Settings 中展开新增字段、滚动、关闭、重开时应恢复 disclosure 与主 scroll，且 calibration source control 无 gesture jump。
+
+AE 还需校准七个 Color + Alpha fields：重点测试 secondary text、field surface、input border 的 alpha slow drag、no-flash commit、reload 与 reset，再抽测其余四项。Promotion Evidence、Palette JSON 和 Registry Textarea 应使用项目 scrollbar、无 native arrow/corner/resize grip；JSON/raw evidence 可在 element 内水平滚动，但 Settings 主 surface 不得横向 overflow。Control Lab 包含真实 ColorField alpha-mode specimen。
+
+Scroll convergence复测需确认 Promotion Evidence、Palette JSON、Registry/Control Lab Textarea 的 scrollbar完全裁切在rounded outer frame内；原 vertical resize由右下角project grip保留，拖动不选中文字、不触发input且不越出父容器。Vela composer应使用同一 scrollbar/frame presentation、无native arrows/corner，并继续保持此前无textarea resize的行为；transcript与composer仍是独立scroll lifecycle。
+
+Startup blocker修复后必须先执行至少3次AE面板冷启动：Design Tuning Evidence预构建不得抛异常，`loadHost()`必须启动Core Bootstrap，Loading Tools应由ready/degraded snapshot正常清除并显示Home工具池。随后打开含Select与Textarea的Registry/Control Lab，确认Select仍直接mount、Textarea才使用`_coreFrame`。不要只以hot reload代替该验收。
