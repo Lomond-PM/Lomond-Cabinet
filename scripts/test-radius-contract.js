@@ -67,9 +67,8 @@ assert(rule(css, "\\.ui-scroll-frame > \\.ui-editable-scroll", "border-radius:\\
 assert(/\.settings-view\s*\{[^}]*--ui-scale:\s*0\.92;/.test(css));
 assert(rule(css, "\\.view-detail", "border-radius:\\s*22px"));
 assert(rule(css, "\\.select-menu", "border-radius:\\s*14px"));
-["19px", "22px", "24px"].forEach(function (value) {
-    assert(new RegExp("borderRadius:\\s*\\\"" + value + "\\\"").test(main), "morph endpoint " + value + " changed");
-});
+assert(/snapshotSurfaceIdentity[\s\S]*SurfaceIdentity\.snapshot/.test(main), "morph endpoints consume real computed identity radius");
+assert(!/borderRadius:\s*"(?:19|22|24)px"/.test(main), "transition code must not duplicate protected identity radii");
 
 assert(!/--radius-(?:section-card|nested-surface|editable-control|home-tile|registry-option|palette-library-item|palette-json-section|pill)/.test(velaCss), "Vela must remain radius-domain isolated");
 assert(/\.vela-surface\s*\{[^}]*border-radius:\s*var\(--radius-md\)/.test(velaCss));

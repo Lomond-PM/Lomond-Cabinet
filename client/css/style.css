@@ -541,7 +541,7 @@ body:not(.i18n-ready) .app-shell {
     flex-direction: column;
 }
 
-.settings-view.is-morphing .settings-ui-layer,
+.settings-view.is-morphing:not(.content-handoff-visible) .settings-ui-layer,
 .settings-view.content-suppressed .settings-ui-layer {
     visibility: hidden !important;
     opacity: 0 !important;
@@ -3605,6 +3605,39 @@ p {
     height: 100%;
     border: 0;
     border-radius: inherit;
+}
+
+.surface-identity-overlay {
+    position: absolute;
+    z-index: 4;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 1;
+}
+
+.surface-identity-overlay > * {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    pointer-events: none;
+}
+
+.transition-identity-layer {
+    position: fixed;
+    z-index: 90;
+    inset: auto;
+    overflow: hidden;
+    pointer-events: none;
+    isolation: isolate;
+}
+
+.transition-identity-layer.detail-morph-icon {
+    position: fixed;
+    inset: auto;
 }
 
 @media (max-width: 380px) {
