@@ -15,7 +15,7 @@ check(/pages: \["root", "appearance"\]/.test(main), "only root plus the historic
 check(!/pages: \[[^\]]*"(?:background|advanced|developer|vela)"/.test(main), "categories are not secondary routes");
 check(/function createSettingsCategory[\s\S]*createDisclosureController/.test(main), "Settings categories reuse CoreUI Disclosure");
 check(/trigger\.type = "button"[\s\S]*body\.id = "settingsCategoryBody-"/.test(main), "Disclosure uses native buttons and controlled content ids");
-["appearance", "vela", "advanced", "developer"].forEach((category) => {
+["appearance", "advanced", "developer"].forEach((category) => {
     check(new RegExp('createSettingsCategory\\("' + category + '"').test(main), "stacked category exists: " + category);
 });
 check((main.match(/className = "settings-renderer settings-root-page"/g) || []).length === 1, "one Settings root composition");
@@ -29,8 +29,8 @@ check(!/settingsProceduralPreferencesMount/.test(main), "no ordinary Appearance 
 check(/proceduralMount\.appendChild\(proceduralGroup\.root\)/.test(main), "all procedural parameters belong to Developer Procedural Appearance");
 check(/settings-theme-group--first/.test(main) && /\.settings-theme-group--first[\s\S]*border-top: 0/.test(css), "first semantic groups do not render a separator");
 check(/\.settings-appearance-parameters[\s\S]*gap: var\(--space-settings-section-stack\)/.test(css), "Interface Appearance and Typography share the semantic parent stack gap");
-check(/createSettingsCategory\("vela"[\s\S]*settingsVelaMount/.test(main), "Vela is a temporary top-level disclosure");
-check(/category\._coreDisclosure\.setExpanded\(true\)/.test(main) && /pendingSettingsFocusSectionId = "vela"/.test(main), "Vela gear expands before focusing the category");
+check(!/createSettingsCategory\("vela"|settingsVelaMount|settingsCategoryVela|settings\.vela"/.test(main), "Global Settings owns no Vela category, mount, or disclosure key");
+check(/openSettings: openVelaSettingsSurface/.test(main), "Vela gear opens the Vela-owned surface directly");
 check(!/createSettingsCategory\("background"/.test(main) && /appearance\.body\.appendChild\(createSettingsSectionMount\("backgroundSettingsCard"/.test(main), "Background is a nested Appearance disclosure rather than a root category");
 check(/createSettingsCategory\("advanced"[\s\S]*settingsDeveloperModeMount/.test(main), "Advanced owns Developer Access");
 check(/createSettingsCategory\("developer"[\s\S]*settingsDeveloperCalibrationMount[\s\S]*settingsDeveloperProceduralMount/.test(main), "gated Developer disclosure owns Home Calibration and Procedural Appearance");
@@ -45,7 +45,7 @@ check(/restoreSettingsScroll: true/.test(palette), "Palette exit restores Settin
 check(/is-palette-workspace \.settings-content[\s\S]*overflow: hidden/.test(css), "Settings content relinquishes scroll ownership in Palette mode");
 check(/\.palette-library-list[\s\S]*overflow-y: auto/.test(css) && /\.palette-editor-scroll[\s\S]*overflow-y: auto/.test(css), "Palette panes own workspace scrolling");
 check(/settings-category--appearance > \.settings-category-content[\s\S]*min-height: 0[\s\S]*flex: 1 1 auto/.test(css), "nested Palette workspace receives a bounded flex height");
-["settingsLanguageMount", "settingsCoreAppearanceMount", "settingsInterfaceMount", "settingsMotionMount", "settingsVelaMount", "backgroundSettingsCard", "settingsDeveloperModeMount", "settingsDeveloperProceduralMount"].forEach((id) => {
+["settingsLanguageMount", "settingsCoreAppearanceMount", "settingsInterfaceMount", "settingsMotionMount", "backgroundSettingsCard", "settingsDeveloperModeMount", "settingsDeveloperProceduralMount"].forEach((id) => {
     check((main.match(new RegExp('createSettingsSectionMount\\("' + id + '"', "g")) || []).length === 1, "single editor mount: " + id);
 });
 

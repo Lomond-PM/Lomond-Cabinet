@@ -27,7 +27,7 @@ assert.ok(!/style\.setProperty|style\.removeProperty|localStorage/.test(main.sli
 assert.ok(!/0\.16,\s*1,\s*0\.3,\s*1|spatialExpand[^\n]{0,80}480|spatialContract[^\n]{0,80}360/.test(main), "UI duplicates no canonical curve/duration");
 assert.ok(/min: 120, max: 1200, step: 10/.test(main) && /min: 40, max: 500, step: 10/.test(main), "UI editing bounds are consumer metadata");
 assert.ok(/editing: \{ min:/.test(registry), "typed non-motion editing metadata lives in registry");
-assert.ok(/renderSettingsDesignTuningMotion\(\);[\s\S]*focusPendingSettingsSection/.test(main), "Settings reopen refreshes external overrides");
+assert.ok(/function openSettingsPanel[\s\S]*view\.classList\.contains\("is-open"\)[\s\S]*renderSettingsDesignTuningMotion\(\);[\s\S]*return;/.test(main), "Settings reopen refreshes external overrides without a Vela-specific focus handoff");
 assert.ok(/motionRoot = document\.createElement\("details"\)[\s\S]*data-settings-disclosure-key", "settings\.developer\.designTuning\.motion"/.test(main), "Motion uses the shared Design Tuning domain disclosure with a stable semantic key");
 assert.ok(/motionBody\.appendChild\(curves\); motionBody\.appendChild\(durations\); motionBody\.appendChild\(resetMotion\); motionRoot\.appendChild\(motionTitle\); motionRoot\.appendChild\(motionBody\)/.test(main), "Motion content and Reset Motion remain inside the shared disclosure");
 assert.ok(/captureSettingsPresentationSession[\s\S]*data-settings-disclosure-key[\s\S]*restoreSettingsPresentationSession/.test(main), "Motion disclosure participates in the shared Settings session restoration mechanism");

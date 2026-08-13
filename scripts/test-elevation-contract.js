@@ -61,8 +61,8 @@ assert(!/\.palette-editor-action-bar \.palette-library-action[^}]*background:/.t
 assert(/\.panel-local-action:not\(\.is-primary\):not\(\.is-danger\)\s*\{[^}]*background:\s*var\(--action-neutral-surface\);[^}]*box-shadow:\s*none;/.test(css), "panel-local neutral actions must use surface plus border without resting elevation");
 assert(/ui-button--neutral panel-button settings-source-summary-action panel-local-action/.test(main), "source summary must consume canonical Neutral plus the panel-local composition contract");
 assert((main.match(/panel-local-action/g) || []).length >= 5, "Classic, Procedural, source-summary, and Settings-local actions must share the panel-local action contract");
-assert(/velaExperimentalEnable[^\n]*className = "ui-button ui-button--neutral panel-button panel-local-action"/.test(main), "Vela Settings enable must consume canonical Neutral plus the panel-local contract");
-assert(/velaExperimentalDisable[^\n]*className = "ui-button ui-button--neutral panel-button panel-local-action"/.test(main), "Vela Settings disable must consume canonical Neutral plus the panel-local contract");
+assert(/id: "velaExperimentalEnable", variant: "neutral", classNames: "panel-button panel-local-action"/.test(main), "Vela Settings enable must consume canonical Neutral plus the panel-local contract");
+assert(/id: "velaExperimentalDisable", variant: "neutral", classNames: "panel-button panel-local-action"/.test(main), "Vela Settings disable must consume canonical Neutral plus the panel-local contract");
 assert(/variant: "neutral", classNames: "panel-button appearance-reset-button panel-local-action"/.test(main), "Appearance Reset must consume the Settings panel-local action contract");
 assert(/panel-button registry-large-button panel-local-action/.test(paletteWorkspace), "Palette actions must expose the shared panel-local composition seam");
 assert(/variant: className && className\.indexOf\("is-primary"\) >= 0 \? "primary"/.test(paletteWorkspace), "Palette primary actions must retain explicit CoreUI primary metadata");

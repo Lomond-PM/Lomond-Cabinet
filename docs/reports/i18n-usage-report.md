@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 352 |
+| A | Core / Global; keep | 354 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -63,6 +63,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | common.back | common | Back | 返回 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.cancel | common | Cancel | 取消 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.center | common | Center | 居中 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.close | common | Close | 关闭 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.create | common | Create | 创建 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.disabled | common | Disabled | 禁用 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.done | common | Done | 完成 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -458,7 +459,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.proceduralIconMode.colorful | settings | Colorful | 彩色 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.proceduralIconMode.themeMapped | settings | Theme-mapped | 主题映射 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.sections.proceduralAppearance | settings | Procedural Appearance Parameters | 程序化外观参数 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.sections.vela | settings | Vela | Vela | client/js/main.js, client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.sections.vela | settings | Vela | Vela | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.colorRamp | settings | Dark endpoint to light endpoint | 暗端到亮端 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.darkEndpoint | settings | Dark | 暗端 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.fallbackIconColors | settings | Fallback Icon Colors | 回退图标颜色 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -485,6 +486,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.vela.networkFailed | settings | Cannot reach the local LM Studio server | 无法连接本地 LM Studio 服务器 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.vela.ready | settings | Experimental Provider ready for this session | 实验 Provider 已在本会话就绪 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.vela.responseInvalid | settings | LM Studio returned an invalid readiness response | LM Studio 返回了无效 readiness 响应 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.title | settings | Vela Settings | Vela 设置 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.vela.unavailable | settings | Configured local model is unavailable or not loaded | 配置的本地模型不可用或未加载 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.addedShape | status | Added: {label} | 已添加：{label} | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.addingShape | status | Adding {label}... | 正在添加 {label}... | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -535,7 +537,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.surfaceGenericError | vela | The local request could not be completed. Try again. | 本地请求未能完成。请重试。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceIntentRejected | vela | No explicit opacity edit was detected. Specify the target opacity for... | 未检测到明确的不透明度修改请求。请说明要将当前图层的不透明度设为多少（0–100%）。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceIntentTargetMismatch | vela | The local proposal did not match the opacity requested in this turn. ... | 本地 proposal 与本轮请求的不透明度不一致。未创建任何操作。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| vela.surfaceLabel | vela | Vela | Vela | client/index.html, client/js/main.js, client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceLabel | vela | Vela | Vela | client/index.html, client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceLocalProposalNotice | vela | A local action suggestion was received. This conversation area does n... | 已收到一个本地操作建议。 当前对话区域暂不支持查看或执行该建议。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceNoActionableTarget | vela | No actionable target is selected. Select a layer in After Effects and... | 当前没有可操作的目标。请在 AE 中选择一个图层后重新发送请求。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceProviderCancelled | vela | The local request was cancelled. | 已取消本地请求。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |

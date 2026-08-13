@@ -18,7 +18,7 @@ check(/CoreAppearance\.setBaseInput\("base\.accent"/.test(main) && /CoreAppearan
 check(!/CoreAppearance\.commit\("(?:base\.accent|base\.canvas|layout\.scale|motion\.speed)"/.test(main), "Basic controls never use Appearance override commit");
 check(/parameter\.classification !== "EXPOSE_NOW"/.test(main), "Advanced controls are Registry metadata driven");
 check(/CoreAppearance\.preview/.test(main) && /CoreAppearance\.commit/.test(main) && /CoreAppearance\.reset/.test(main), "Advanced controls use Core preview, commit, and reset");
-check(/openVelaSettingsPanel[\s\S]*SystemRouter\.open\("settings", "root"/.test(main), "Vela shortcut retains temporary Global Settings bridge");
+check(/openSettings: openVelaSettingsSurface/.test(main) && !/openVelaSettingsPanel|SystemRouter\.open\("settings", "vela"/.test(main), "Vela shortcut is independent from Global Settings routing");
 check(!/evalScript[\s\S]{0,200}SystemRouter|SystemRouter[\s\S]{0,200}runRegisteredToolAction/.test(main), "System Router has no Host or Registry action binding");
 const settingsPanelCss = css.slice(css.indexOf(".settings-view .settings-panel"), css.indexOf(".settings-view.is-open .settings-panel"));
 check(settingsPanelCss.includes("inset: var(--view-inset)") && settingsPanelCss.includes("width: auto") && settingsPanelCss.includes("max-width: none") && !settingsPanelCss.includes("width: 360px"), "Global Settings uses full-detail geometry instead of drawer width");

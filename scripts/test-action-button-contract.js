@@ -62,7 +62,7 @@ has(main, /field\.variant === "primary" \? "primary" : \(field\.variant === "dan
 has(main, /variant: "neutral", classNames: "panel-button secondary-action"/, "Registry Secondary must map to canonical Neutral");
 has(main, /variant: action\.style === "secondary" \? "neutral" : "primary"/, "Registry global actions must map Secondary to Neutral and Primary to Primary");
 has(main, /ui-button--neutral panel-button settings-source-summary-action panel-local-action/, "Settings panel-local actions must consume canonical Neutral");
-has(main, /ui-button--neutral panel-button panel-local-action/, "Vela Settings actions must remain ordinary Settings-local Neutral actions");
+has(main, /createButton\(\{ document: document, id: "velaExperimentalEnable", variant: "neutral", classNames: "panel-button panel-local-action"/, "Vela-owned Settings actions must consume canonical CoreUI Neutral");
 has(palette, /variant: className && className\.indexOf\("is-primary"\) >= 0 \? "primary" : \(className && className\.indexOf\("is-danger"\) >= 0 \? "danger" : "neutral"\)/, "Palette actions must map through CoreUI variants");
 has(css, /\.palette-editor-action-bar\s*\{[^}]*background:\s*var\(--surface-panel\)/, "Palette footer surface ownership changed");
 assert(!/\.palette-editor-action-bar \.palette-library-action[^}]*background:/.test(css), "Palette domain must not redefine canonical action surfaces");
