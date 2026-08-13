@@ -43,13 +43,52 @@
     function createTextarea(options) {
         var doc = options.document;
         var input = applyCommon(doc.createElement("textarea"), options);
+        var direction = options.resizeDirection || "vertical";
+        var frame = applyCommon(doc.createElement("span"), { classNames: "ui-scroll-frame ui-textarea-frame ui-resize-" + direction });
+        var grip = null;
+        var cleanup = null;
         input.value = options.value === null || options.value === undefined ? "" : String(options.value);
-        addClasses(input, "ui-textarea");
+        addClasses(input, "ui-textarea ui-editable-scroll");
         if (typeof options.rows === "number") input.rows = options.rows;
         if (options.placeholder) input.placeholder = options.placeholder;
         listen(input, "input", options.onInput);
         listen(input, "change", options.onCommit);
+        frame.appendChild(input);
+        if (direction !== "none") {
+            grip = applyCommon(doc.createElement("span"), { classNames: "ui-resize-grip", ariaLabel: options.resizeAriaLabel || "Resize" });
+            grip.setAttribute("role", "presentation"); frame.appendChild(grip);
+            cleanup = bindResizeGrip({ grip: grip, frame: frame, direction: direction, minWidth: options.minWidth, maxWidth: options.maxWidth, minHeight: options.minHeight, maxHeight: options.maxHeight });
+        }
+        input._coreFrame = frame; input._coreResizeGrip = grip;
+        input._coreDispose = function () { if (cleanup) cleanup(); };
         return input;
+    }
+
+    function bindResizeGrip(options) {
+        var grip = options.grip; var frame = options.frame; var direction = options.direction; var doc = grip.ownerDocument; var win = doc.defaultView || root; var activePointer = null;
+        function clamp(value, min, max) { if (typeof min === "number") value = Math.max(min, value); if (typeof max === "number") value = Math.min(max, value); return value; }
+        function down(event) {
+            var startX; var startY; var startWidth; var startHeight; var parent;
+            if (!event || event.button !== 0) return;
+            startX = event.clientX; startY = event.clientY; startWidth = frame.offsetWidth; startHeight = frame.offsetHeight; parent = frame.parentNode;
+            activePointer = event.pointerId; if (grip.setPointerCapture && activePointer !== undefined) grip.setPointerCapture(activePointer);
+            doc.body.classList.add("is-resizing-ui-surface"); event.preventDefault(); event.stopPropagation();
+            function move(moveEvent) {
+                var maxWidth = typeof options.maxWidth === "number" ? options.maxWidth : (parent && parent.clientWidth ? parent.clientWidth : null);
+                var maxHeight = typeof options.maxHeight === "number" ? options.maxHeight : null;
+                if (direction === "horizontal" || direction === "both") frame.style.width = clamp(startWidth + moveEvent.clientX - startX, options.minWidth || 0, maxWidth) + "px";
+                if (direction === "vertical" || direction === "both") frame.style.height = clamp(startHeight + moveEvent.clientY - startY, options.minHeight || 0, maxHeight) + "px";
+                moveEvent.preventDefault();
+            }
+            function end(endEvent) {
+                doc.removeEventListener("pointermove", move); doc.removeEventListener("pointerup", end); doc.removeEventListener("pointercancel", end); win.removeEventListener("blur", end);
+                if (grip.releasePointerCapture && activePointer !== null && grip.hasPointerCapture && grip.hasPointerCapture(activePointer)) grip.releasePointerCapture(activePointer);
+                activePointer = null; doc.body.classList.remove("is-resizing-ui-surface"); if (endEvent && endEvent.preventDefault) endEvent.preventDefault();
+            }
+            doc.addEventListener("pointermove", move); doc.addEventListener("pointerup", end); doc.addEventListener("pointercancel", end); win.addEventListener("blur", end);
+        }
+        grip.addEventListener("pointerdown", down);
+        return function () { grip.removeEventListener("pointerdown", down); doc.body.classList.remove("is-resizing-ui-surface"); };
     }
 
     function normalizeNumber(value, field, fallback) {
@@ -719,14 +758,25 @@
     function createColorField(options) {
         var doc = options.document;
         var rootElement = applyCommon(doc.createElement("span"), { classNames: "ui-color-field " + (options.classNames || "") });
+        var supportsAlpha = options.supportsAlpha === true;
         var normalize = options.normalize || function (value, fallback) { return value || fallback; };
         var fallback = options.fallback || "#ffffff";
-        var value = normalize(options.value, fallback);
+        var value = supportsAlpha ? normalizeColorAlphaValue(options.value, { color: fallback, alpha: 1 }) : normalize(options.value, fallback);
         var swatch = createButton({ document: doc, disabled: options.disabled, classNames: "ui-color-swatch " + (options.swatchClassNames || ""), ariaLabel: options.ariaLabel });
         var valueInput = applyCommon(doc.createElement("input"), { id: options.id, disabled: options.disabled, classNames: options.valueClassNames });
-        var hex = createTextInput({ document: doc, id: options.hexId || options.id + "Hex", disabled: options.disabled, value: value, classNames: "ui-color-hex " + (options.hexClassNames || ""), spellcheck: false });
+        var hex = createTextInput({ document: doc, id: options.hexId || options.id + "Hex", disabled: options.disabled, value: supportsAlpha ? value.color : value, classNames: "ui-color-hex " + (options.hexClassNames || ""), spellcheck: false });
+        var alpha = null;
+        function cloneColorAlpha(next) { return { color: next.color, alpha: next.alpha }; }
         function setValue(nextValue) {
-            var normalized = normalize(nextValue, valueInput.value || fallback);
+            var normalized;
+            if (supportsAlpha) {
+                normalized = normalizeColorAlphaValue(nextValue, value);
+                if (!normalized) return cloneColorAlpha(value);
+                value = normalized; valueInput.value = JSON.stringify(value); hex.value = value.color; swatch.style.backgroundColor = serializeColorAlphaValue(value);
+                if (alpha) alpha.setValue(value.alpha);
+                return cloneColorAlpha(value);
+            }
+            normalized = normalize(nextValue, valueInput.value || fallback);
             valueInput.value = normalized; hex.value = normalized; swatch.style.backgroundColor = normalized;
             return normalized;
         }
@@ -743,17 +793,76 @@
         valueInput.type = options.valueType || "hidden";
         valueInput._coreColorFieldSetValue = setValue;
         swatch.setAttribute("data-color-target", options.id || "");
-        hex._registryOnValueChange = function () { preview(hex.value); };
-        listen(hex, "input", function () { if (!options.isValid || options.isValid(hex.value)) preview(hex.value); });
-        listen(hex, "change", function () { commit(hex.value); });
+        hex._registryOnValueChange = function () { preview(supportsAlpha ? { color: hex.value, alpha: value.alpha } : hex.value); };
+        listen(hex, "input", function () { if (supportsAlpha ? /^#[0-9a-fA-F]{6}$/.test(hex.value) : (!options.isValid || options.isValid(hex.value))) preview(supportsAlpha ? { color: hex.value, alpha: value.alpha } : hex.value); });
+        listen(hex, "change", function () { commit(supportsAlpha ? { color: hex.value, alpha: value.alpha } : hex.value); });
         listen(swatch, "click", function (event) {
             if (event) { event.preventDefault(); event.stopPropagation(); }
-            if (options.openPicker) options.openPicker({ input: valueInput, hexInput: hex, swatch: swatch, value: valueInput.value, fallback: fallback, onPreview: preview, onCommit: commit, onCancel: options.onCancel });
+            if (options.openPicker) options.openPicker({ input: valueInput, hexInput: hex, swatch: swatch, value: supportsAlpha ? value.color : valueInput.value, fallback: fallback, onPreview: supportsAlpha ? function (next) { preview({ color: next, alpha: value.alpha }); } : preview, onCommit: supportsAlpha ? function (next) { commit({ color: next, alpha: value.alpha }); } : commit, onCancel: options.onCancel });
             else if (options.onSwatchClick) options.onSwatchClick(event);
         });
         rootElement.appendChild(swatch); rootElement.appendChild(valueInput); rootElement.appendChild(hex);
+        if (supportsAlpha) {
+            rootElement.className += " ui-color-field--alpha";
+            alpha = createRangeNumber({ document: doc, numberId: options.id + "AlphaNumber", rangeId: options.id + "AlphaRange", value: value.alpha, min: 0, max: 1, step: 0.01, displayStep: 1, valueToDisplay: function (next) { return Math.round(next * 100); }, displayToValue: function (next) { return next / 100; }, unitText: "%", disabled: options.disabled, classNames: "ui-color-alpha", onPreview: function (next) { preview({ color: value.color, alpha: next }); }, onCommit: function (next) { commit({ color: value.color, alpha: next }); } });
+            rootElement.appendChild(alpha.root);
+        }
         setValue(value);
-        return { root: rootElement, swatch: swatch, input: valueInput, hex: hex, setValue: setValue };
+        return { root: rootElement, swatch: swatch, input: valueInput, hex: hex, alpha: alpha, setValue: setValue, getValue: function () { return supportsAlpha ? cloneColorAlpha(value) : valueInput.value; } };
+    }
+
+    function parseColorAlphaValue(input) {
+        var match = /^\s*rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*((?:\d+\.?\d*|\.\d+))\s*\)\s*$/i.exec(String(input || ""));
+        var channels; var color; var value;
+        if (!match) return null;
+        channels = [Number(match[1]), Number(match[2]), Number(match[3])];
+        value = { color: "", alpha: Number(match[4]) };
+        if (channels.some(function (channel) { return !isFinite(channel) || channel < 0 || channel > 255; }) || !isFinite(value.alpha) || value.alpha < 0 || value.alpha > 1) return null;
+        color = channels.map(function (channel) { var hex = channel.toString(16); return hex.length < 2 ? "0" + hex : hex; }).join("");
+        value.color = "#" + color;
+        return value;
+    }
+
+    function isValidColorAlphaValue(value) { return !!value && typeof value.color === "string" && /^#[0-9a-fA-F]{6}$/.test(value.color) && typeof value.alpha === "number" && isFinite(value.alpha) && value.alpha >= 0 && value.alpha <= 1; }
+    function normalizeColorAlphaValue(value, fallback) {
+        var candidate = isValidColorAlphaValue(value) ? value : fallback;
+        return isValidColorAlphaValue(candidate) ? { color: candidate.color.toLowerCase(), alpha: Number(candidate.alpha) } : null;
+    }
+    function serializeColorAlphaValue(value) {
+        var normalized = normalizeColorAlphaValue(value, null); var channels;
+        if (!normalized) return "";
+        channels = [normalized.color.slice(1, 3), normalized.color.slice(3, 5), normalized.color.slice(5, 7)].map(function (part) { return parseInt(part, 16); });
+        return "rgba(" + channels.join(", ") + ", " + normalized.alpha + ")";
+    }
+
+    function parseShadowValue(value) {
+        var match = /^\s*(0|-?(?:\d+\.?\d*|\.\d+)px)\s+(0|-?(?:\d+\.?\d*|\.\d+)px)\s+(0|(?:\d+\.?\d*|\.\d+)px)(?:\s+(0|-?(?:\d+\.?\d*|\.\d+)px))?\s+rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*((?:\d+\.?\d*|\.\d+))\s*\)\s*$/i.exec(String(value || ""));
+        var result;
+        if (!match) return null;
+        result = { offsetX: parseFloat(match[1]), offsetY: parseFloat(match[2]), blur: parseFloat(match[3]), spread: match[4] === undefined ? 0 : parseFloat(match[4]), color: "#" + [match[5], match[6], match[7]].map(function (part) { var hex = Number(part).toString(16); return hex.length < 2 ? "0" + hex : hex; }).join(""), alpha: Number(match[8]) };
+        return isValidShadowValue(result) ? result : null;
+    }
+
+    function isValidShadowValue(value) {
+        return !!value && ["offsetX", "offsetY", "blur", "spread", "alpha"].every(function (key) { return typeof value[key] === "number" && isFinite(value[key]); }) && value.blur >= 0 && value.alpha >= 0 && value.alpha <= 1 && /^#[0-9a-f]{6}$/i.test(value.color || "");
+    }
+
+    function serializeShadowValue(value) {
+        var rgb;
+        if (!isValidShadowValue(value)) return "";
+        rgb = [value.color.slice(1, 3), value.color.slice(3, 5), value.color.slice(5, 7)].map(function (part) { return parseInt(part, 16); });
+        return value.offsetX + "px " + value.offsetY + "px " + value.blur + "px" + (value.spread ? " " + value.spread + "px" : "") + " rgba(" + rgb.join(", ") + ", " + value.alpha + ")";
+    }
+
+    function createShadowField(options) {
+        var doc = options.document; var value = options.value; var rootElement = applyCommon(doc.createElement("div"), { classNames: "ui-shadow-field " + (options.classNames || "") }); var inputs = {}; var color;
+        function clone() { return { offsetX: value.offsetX, offsetY: value.offsetY, blur: value.blur, spread: value.spread, color: value.color, alpha: value.alpha }; }
+        function emit(kind) { if (typeof options[kind] === "function") options[kind](clone()); }
+        function addNumber(key, min, max, step) { var input = createNumberInput({ document: doc, id: options.id + "-" + key, value: value[key], field: { min: min, max: max, step: step, defaultValue: value[key] }, ariaLabel: (options.labels && options.labels[key]) || key, onInput: function () { if (!isNumberDraft(input.value)) { value[key] = normalizeNumber(input.value, { min: min, max: max }, value[key]); emit("onPreview"); } }, onCommit: function (next) { value[key] = normalizeNumber(next, { min: min, max: max }, value[key]); emit("onCommit"); } }); inputs[key] = input; rootElement.appendChild(input); }
+        addNumber("offsetX", -64, 64, 1); addNumber("offsetY", -64, 64, 1); addNumber("blur", 0, 96, 1); addNumber("spread", -32, 32, 1);
+        color = createColorField({ document: doc, id: options.id + "-color", value: value.color, fallback: "#000000", normalize: function (next, fallback) { return /^#[0-9a-f]{6}$/i.test(next || "") ? next : fallback; }, isValid: function (next) { return /^#[0-9a-f]{6}$/i.test(next || ""); }, onPreview: function (next) { value.color = next; emit("onPreview"); }, onCommit: function (next) { value.color = next; emit("onCommit"); } });
+        rootElement.appendChild(color.root); addNumber("alpha", 0, 1, 0.01);
+        return { root: rootElement, inputs: inputs, color: color, getValue: clone };
     }
 
     function createFieldRow(options) {
@@ -791,6 +900,14 @@
         createDisclosureController: createDisclosureController,
         createButton: createButton,
         createColorField: createColorField,
+        parseColorAlphaValue: parseColorAlphaValue,
+        isValidColorAlphaValue: isValidColorAlphaValue,
+        normalizeColorAlphaValue: normalizeColorAlphaValue,
+        serializeColorAlphaValue: serializeColorAlphaValue,
+        parseShadowValue: parseShadowValue,
+        isValidShadowValue: isValidShadowValue,
+        serializeShadowValue: serializeShadowValue,
+        createShadowField: createShadowField,
         createFieldRow: createFieldRow,
         normalizeNumber: normalizeNumber,
         isNumberDraft: isNumberDraft,

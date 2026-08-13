@@ -1,0 +1,27 @@
+#!/usr/bin/env node
+"use strict";
+const assert = require("assert");
+const path = require("path");
+const root = path.resolve(__dirname, "..");
+const Registry = require(path.join(root, "client/js/designTuning/designTuningParameterRegistry.js"));
+const Store = require(path.join(root, "client/js/designTuning/designTuningStateStore.js"));
+const Resolver = require(path.join(root, "client/js/designTuning/designTuningResolver.js"));
+const memory = { value: null, writes: 0, getItem() { return this.value; }, setItem(key, value) { this.value = value; this.writes += 1; } };
+const store = Store.create({ storage: memory, registry: Registry }); store.load();
+const style = { values: {}, setProperty(key, value) { this.values[key] = value; }, removeProperty(key) { delete this.values[key]; } };
+const CoreUI = require(path.join(root, "client/js/ui/coreUi.js"));
+const resolver = Resolver.create({ registry: Registry, store, rootStyle: style, readComputed: p => ({ "--control-height": "30px", "--text-secondary": "rgba(246, 240, 223, .66)", "--text-tertiary": "rgba(246, 240, 223, .42)", "--field-surface": "rgba(5, 4, 3, .5)", "--registry-option-surface": "rgba(8, 7, 6, .68)", "--separator": "rgba(214, 178, 94, .16)", "--panel-border": "rgba(214, 178, 94, .22)", "--input-border": "rgba(214, 178, 94, .16)" }[p] || "12px"), getCanonicalDuration: () => 480, parseShadow: CoreUI.parseShadowValue, serializeShadow: CoreUI.serializeShadowValue, parseColorAlpha: CoreUI.parseColorAlphaValue, serializeColorAlpha: CoreUI.serializeColorAlphaValue });
+resolver.initialize(); const writes = memory.writes;
+assert.ok(resolver.setTransientOverride("geometry.control.height", 44), "valid transient accepted");
+assert.ok(style.values["--control-height"].includes("44px"), "real root/runtime projection receives transient");
+assert.strictEqual(memory.writes, writes, "transient performs no Store write");
+assert.strictEqual(store.getOverride("geometry.control.height"), null, "transient is absent from persisted overrides");
+assert.strictEqual(resolver.getEvidence().promotionPatch["geometry.control.height"], undefined, "transient is absent from Promotion Evidence");
+assert.ok(resolver.commitTransientOverride("geometry.control.height", 44), "commit succeeds");
+assert.strictEqual(store.getOverride("geometry.control.height"), 44, "commit persists final value");
+assert.strictEqual(memory.writes, writes + 1, "gesture commits exactly once");
+assert.ok(style.values["--control-height"].includes("44px"), "transient-to-persisted handoff has no old-value frame");
+assert.deepStrictEqual(resolver.getTransientOverrides(), {}, "commit clears transient");
+resolver.setTransientOverride("geometry.control.height", 36); resolver.clearTransientOverride("geometry.control.height");
+assert.ok(style.values["--control-height"].includes("44px"), "cancel restores persisted projection");
+console.log("Design Tuning transient calibration contract tests passed.");

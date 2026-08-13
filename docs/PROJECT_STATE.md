@@ -1,5 +1,11 @@
 # PROJECT_STATE.md
 
+Design Tuning Full Coverage 已加入 GLOBAL / COMMON consumer convergence 契约、UI Scale Peek semantic target/structure-only ancestor path，以及 Registry Control Lab Registry Path / CoreUI Direct 完整性检查。Developer / Advanced / User 的最终参数安置仍等待 Full Calibration 后复核。
+
+Design Tuning 已改为 real-consumer transient calibration。Resolver precedence 为 canonical → persisted override → transient override；commit 先持久化同值再清 transient，避免闪回。Calibration editor chrome 在 gesture 内冻结自身 semantic geometry，Control Lab 与其他真实 consumer 自然接收 transient。Live Preview Stage 及其 nested scroll owner已移除。
+
+Tool Detail 与 Settings 现在通过同一 memory-only Surface Presentation Session seam 保存独立主 scroll location；Settings payload额外保存 stable-key disclosure state。Design Tuning calibration chrome baseline 在 mount 时建立一次，gesture 边界不再安装或删除 semantic freeze。
+
 Action / Button Foundation now closes the CoreUI `Primary`, `Neutral`, and `Danger` visual roles. Registry `Secondary` maps to Neutral and Registry `danger` maps directly to CoreUI Danger; the Developer Control Lab contains real full-width specimens for all three roles under a semantic action-stack spacing owner. Disabled actions carry no elevation; Palette and Settings retain only domain layout/composition ownership. Navigation, Home tool identity, and Vela remain explicit domain boundaries, with no new User Appearance or Design Tuning parameter.
 
 Typography Appearance Parameters now expose six bounded semantic size controls in Global Settings → Interface Appearance → Typography. Stable Parameter IDs persist numeric relative multipliers in `AEToolbox.appearance.v1`, while the UI presents percentages through Core RangeNumber. Page/Surface titles share intent; Field Label and Code sizes are independent from Body and Supporting; Control and Eyebrow retain their intentional derivations. Weight, line-height, font-family, Text Scale, and domain-specific typography controls remain deferred.
@@ -318,3 +324,16 @@ The 0.3.2 Settings shell is one root scroll composition containing independent C
 Vela is deliberately not registered as `settings/vela`. Its current Global Settings placement is transitional: the Vela gear opens Settings root and focuses the isolated Vela category while preserving its launch source. Future work will migrate that category to a Vela-owned popup. Acknowledgement and Provider enablement/readiness remain session/runtime-only; qualification policy remains trusted internal authority.
 
 Developer Mode remains a persistent visibility gate rather than a security boundary. Turning it off removes the Developer disclosure from the current stack without navigation, closing Settings, changing scroll ownership, or deleting calibration values. Palette Library remains a specialized workspace whose pane scrollers take ownership while open and whose exit restores the root scroll position. Existing Settings, Appearance, Background, Palette, and Vela stores retain their IDs and consumers; Design Tuning Store/Resolver, Motion tuning, and Promote-to-Default are not implemented.
+# 0.3.2 Design Tuning Full Coverage
+
+Design Tuning 已扩展为跨 Motion、Spacing、Radius、Controls/Geometry 与 Elevation 的校准工作区。五个单层 semantic elevation shadows 已通过通用 typed ShadowField 开放；现有 Appearance/Typography 参数作为原 authority 的第二编辑入口，Design Tuning reset 不影响这些用户参数。Surface Transition identity radius 保持受保护只读。
+
+Coverage Completion 现在由显式 semantic authority manifest 与 focused completeness test 约束：unclassified 为零，alias 记录 `derivedFrom`，unsupported/protected/intentional exclusion 必须给出原因。Motion 已覆盖全部 15 个 duration roles；新增的 Registry intro/header/copy、Palette field-control、Home card-title spacing 继续通过既有 typed length、UI Scale composition 与 transient real-consumer projection。Appearance calibration mirror 扩展到全部 21 项 user-adjustable visual authority，包括 interaction/action state colors，但绝不进入 Design Tuning Store。
+
+七个 stylesheet-owned RGBA semantic authorities 现通过 generic CoreUI ColorField alpha mode 成为 typed Design Tuning parameters。Store 只保存 normalized structured color/alpha，canonical capture 和 projection 使用有限 RGBA parser/serializer；derived aliases 仍无独立 override。CoreUI Textarea 统一使用 shared editable-scroll presentation，Promotion Evidence、Palette JSON 与 Registry Textarea 不再显示 native resize grip，Palette list/editor intentional owners复用 `.ui-scroll-region`。
+
+Editable surfaces now use a real outer clipping frame plus inner scroll owner, so scrollbar track/thumb/corner remain inside the rounded border. Native textarea resize chrome remains disabled, while CoreUI Textarea preserves its former vertical resize capability with a generic project grip and session-local geometry. Vela composer was the missed native-scroll owner; it now uses the same framed editable-scroll presentation while retaining its prior no-resize contract and independent Vela lifecycle.
+
+The AE startup blocker after this convergence was a synchronous pre-host exception: Design Tuning Evidence construction referenced a nonexistent `getUiScale()` before `loadHost()`, leaving the initial Loading Tools placeholder untouched. The invalid call was removed because CSS already owns the scale-aware minimum height. A related Select renderer mount typo introduced while adopting `_coreFrame` was also restored to the legacy direct-element contract; only Textarea mounts its composition frame. A focused startup readiness test now executes the CoreUI Evidence prebuild and verifies that host bootstrap remains reachable.
+
+Calibration UX 使用 parameter binding 增量刷新状态和 evidence，Disclosure、scroll 与无关字段 DOM 不因 commit/reset 被销毁。Appearance 原编辑器与 calibration mirror 通过共享 authority notification 同步，programmatic `setValue()` 不触发再次提交。

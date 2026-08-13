@@ -66,6 +66,14 @@
         category: "debug",
         iconText: "C",
         debugOnly: true,
+        controlLabCoverage: {
+            registryPath: ["text", "textarea", "number", "range", "select", "checkbox", "switch", "tabs", "color", "button", "actionButton", "divider", "separator", "info", "note", "subheading", "cubicBezier"],
+            coreUiDirect: ["createShadowField"],
+            colorFieldAlphaMode: true,
+            exemptions: {
+                proceduralPreview: "Domain-bound canvas specimen requires the Procedural Appearance Lab runtime."
+            }
+        },
         stateAction: {
             hostFunction: "AEToolbox.tools.registryControlLab.getState",
             intervalMs: 1200
@@ -93,6 +101,10 @@
                 labelKey: "tools.registryControlLab.sections.basic",
                 descriptionKey: "tools.registryControlLab.sections.basicDescription",
                 fields: [
+                    {
+                        type: "subheading",
+                        labelKey: "tools.registryControlLab.sections.registryPath"
+                    },
                     {
                         type: "info",
                         labelKey: "tools.registryControlLab.notes.basic"
@@ -468,6 +480,10 @@
                 "tools.registryControlLab.title": "Registry Control Lab",
                 "tools.registryControlLab.description": "Test the shared registry renderer with every standard control type.",
                 "tools.registryControlLab.sections.basic": "Basic Controls",
+                "tools.registryControlLab.sections.registryPath": "Registry Path",
+                "tools.registryControlLab.sections.coreUiDirect": "CoreUI Direct",
+                "tools.registryControlLab.fields.shadowField": "Shadow Field",
+                "tools.registryControlLab.fields.colorAlphaField": "Color + Alpha Field",
                 "tools.registryControlLab.sections.basicDescription": "Text, textarea, numeric entry, and slider behavior.",
                 "tools.registryControlLab.sections.colors": "Colors",
                 "tools.registryControlLab.sections.colorsDescription": "Color pills, hex values, and the HSV picker.",
@@ -560,6 +576,10 @@
                 "tools.registryControlLab.title": "\u63a7\u4ef6\u6d4b\u8bd5\u5b9e\u9a8c\u5ba4",
                 "tools.registryControlLab.description": "\u7528\u4e8e\u9a8c\u8bc1\u5171\u7528 registry renderer \u7684\u6240\u6709\u6807\u51c6\u63a7\u4ef6\u7c7b\u578b\u3002",
                 "tools.registryControlLab.sections.basic": "\u57fa\u7840\u63a7\u4ef6",
+                "tools.registryControlLab.sections.registryPath": "Registry \u8def\u5f84",
+                "tools.registryControlLab.sections.coreUiDirect": "CoreUI \u76f4\u63a5\u8def\u5f84",
+                "tools.registryControlLab.fields.shadowField": "\u9634\u5f71\u5b57\u6bb5",
+                "tools.registryControlLab.fields.colorAlphaField": "\u989c\u8272 + Alpha \u5b57\u6bb5",
                 "tools.registryControlLab.sections.basicDescription": "\u9a8c\u8bc1\u6587\u672c\u3001\u591a\u884c\u6587\u672c\u3001\u6570\u503c\u8f93\u5165\u548c\u6ed1\u6746\u884c\u4e3a\u3002",
                 "tools.registryControlLab.sections.colors": "\u989c\u8272",
                 "tools.registryControlLab.sections.colorsDescription": "\u9a8c\u8bc1\u8272\u5757\u3001Hex \u503c\u548c HSV \u53d6\u8272\u5668\u3002",

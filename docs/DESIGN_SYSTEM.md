@@ -1,5 +1,13 @@
 # DESIGN_SYSTEM.md
 
+Design Tuning Full Coverage 中，GLOBAL / COMMON 参数必须覆盖所有适用的 canonical semantic consumers；`spacing.settings.*`、`spacing.registry.*`、`spacing.home.*` 仍是 domain-specific。该 scope 只描述消费边界，不决定最终 Settings IA。UI Scale Peek 使用 semantic visual target + structural ancestor path，祖先只保留布局与 containment。Registry Control Lab 分为 Registry Path 与补充无 schema type 的 CoreUI Direct，完整性由自动测试约束。
+
+Design Tuning 使用 real-consumer transient calibration：`onInput → resolver 内存 transient semantic override → real consumers`，`onCommit → persisted authority → clear transient`。Transient 不持久化、不进入 Promotion Evidence。active gesture 期间 Design Tuning editor root 会局部冻结对应 semantic property，避免调参控件被自身 geometry 反馈扰动；其他 Settings 与真实 consumer 继续实时变化。
+
+有意滚动区域统一使用 Core/UI-owned `.ui-scroll-region` presentation contract。Home、Detail、Settings 和 Vela transcript 共用同一 scrollbar skin；feature stylesheet 不重复拥有 scrollbar 视觉。
+
+Settings 是 specialized content surface，不是独立 UI system。Tool Detail 与 Settings 共用 memory-only Surface Presentation Session（surface identity、main scroll、surface payload）；Settings adapter 仅附加 stable semantic disclosure state。CoreUI、common semantic tokens 与 scroll presentation 属于 shared infrastructure；Settings IA、setting authorities、UI Scale Peek 和 disclosure payload 保持 Settings-specific。
+
 ## Visual Direction
 
 The panel is a Black Gold Minimal Pro UI for After Effects.
@@ -666,3 +674,20 @@ Registry Control Lab, Settings Renderer Lab, and Procedural Appearance Lab remai
 Vela settings are temporarily grouped as one dedicated domain category inside Global Settings root. Endpoint and Model ID remain persistent Vela configuration; acknowledgement, readiness, and enable/disable remain session/runtime state with no authority change. Vela is intentionally not a permanent Global Settings route in 0.3.2. A later focused task will move the whole category into a Vela-owned popup opened by the fixed lower-left Vela Settings button.
 
 Palette Library remains a specialized workspace: Settings content owns scrolling in root mode, while the Palette list/editor scroll panes own scrolling in workspace mode; closing restores the pre-entry Settings scroll position. Settings relocation does not create new parameter IDs, stores, defaults, runtime consumers, or duplicate editors. Design Tuning infrastructure and Motion tuning remain future work.
+# Design Tuning Full Coverage（0.3.2）
+
+Developer → Design Tuning 当前是完整设计校准工作区，不代表最终 Settings IA。参数在此处出现不改变 runtime authority：Design Tuning-owned 参数写入 `AEToolbox.designTuning.v1`；已有 Appearance 参数复用原 Appearance authority。
+
+Full Coverage 的正式含义是：coverage universe 内每个已成立、具有 canonical source 和真实 consumer 的独立 semantic authority，都明确归入 `EDITABLE`、`MIRROR_EXISTING_AUTHORITY`、`PROTECTED`、`UNSUPPORTED_WITH_REASON` 或 `INTENTIONALLY_NOT_TUNABLE`；它不等于把全部 CSS property 变成参数。Forwarding alias 必须记录 `derivedFrom`，不得建立第二套 override authority。
+
+Motion 的 15 个正式 duration roles 与 4 个 curve families 全部可编辑，duration canonical 仍仅来自 `MotionDefaults`。21 项 Appearance 视觉参数在校准区为 mirror，preview、commit、reset 和 persistence 继续由 Appearance 拥有；`base.accent`、`base.canvas`、`layout.scale`、`motion.speed` 保留专用入口。RGBA alpha authority、含 UI Scale `calc()` 的 Registry Preview elevation 与不存在独立 semantic authority 的 border width 均以具体 typed-round-trip 原因标为 unsupported。三个 Surface Transition identity radius 继续 protected。
+
+Alpha-bearing semantic colors use the generic CoreUI ColorField alpha mode and a structured `{ color: "#rrggbb", alpha: 0..1 }` value. Only the finite canonical `rgba(r, g, b, alpha)` grammar is parsed; raw CSS strings, variables and arbitrary color functions are rejected. Stylesheet tokens remain canonical, while transient and persisted Design Tuning projection serialize validated values back onto the same semantic custom property. Default six-digit ColorField behavior is unchanged.
+
+Scrollable editable surfaces created by CoreUI Textarea receive `.ui-editable-scroll`, which shares the scrollbar width, track, thumb, hover, button suppression and corner treatment of `.ui-scroll-region`. Layout-owned textareas disable the native resize grip. Ordinary text wraps and hides horizontal overflow; code, JSON and raw evidence may retain element-owned horizontal scrolling without propagating it to the Settings surface. Accidental overflow must be fixed rather than merely skinned.
+
+Rounded editable surfaces use an outer `.ui-scroll-frame` for border, radius, surface and `overflow:hidden` clipping, with the textarea as the inner scroll owner. CoreUI Textarea defaults to its historically supported vertical resize through a generic project-owned pointer grip; `none`, `horizontal` and `both` are explicit metadata alternatives. Resize geometry is mount-local, bounded by consumer minima and the parent width, and never enters Settings, Appearance or Design Tuning persistence. Vela composer shares the frame and scrollbar presentation but keeps its pre-existing no-resize behavior.
+
+Calibration editor 更新必须是增量 projection；parameter commit 不得重建 Settings composition。Existing Authority Mirrors 是同一 User Appearance authority 的同步投影。UI Scale Peek 由字段的 semantic preview anchor 拥有，不依赖 category DOM 层级。CoreUI RangeNumber 的 `.ui-range` / 正式 range class 共同拥有 slider presentation contract。
+
+稳定的 spacing、普通 radius、control geometry 与单层 semantic elevation shadow 可进行 typed runtime override；参与 Surface Transition identity handoff 的 radius 暂以只读形式展示。Elevation 使用通用结构化 shadow contract，stylesheet token 仍是 canonical authority。最终归入 Developer、Advanced 或用户 Appearance 的分类，延期到 AE 全量校准之后决定。

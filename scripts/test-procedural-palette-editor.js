@@ -145,7 +145,10 @@ function run() {
     assert(/requestAnimationFrame\(function \(\) \{[\s\S]*requestAnimationFrame\(function \(\)/.test(workspaceText), "Initial preview should wait for stable layout frames.");
     assert(/ResizeObserver[\s\S]*schedulePreview\(\)/.test(workspaceText), "Workspace resize should schedule preview raster redraw.");
     assert(/clearWorkspaceBindings[\s\S]*resizeObserver\.disconnect/.test(workspaceText), "Teardown should stop preview resize observation.");
-    assert(/\.palette-library-list,[\s\S]*\.palette-editor-scroll,[\s\S]*\.palette-json-box\s*\{[\s\S]*scrollbar-color/.test(cssText), "Palette scroll regions must share internal scrollbar styling.");
+    assert(/palette-editor-scroll ui-scroll-region/.test(workspaceText) && /palette-library-list ui-scroll-region/.test(workspaceText), "Palette list and editor declare intentional shared scroll ownership.");
+    assert(/CoreUI\.createTextarea\(\{[\s\S]*palette-json-box palette-json-export[\s\S]*resizeDirection: "vertical"/.test(workspaceText) && /CoreUI\.createTextarea\(\{[\s\S]*palette-json-box palette-json-import[\s\S]*resizeDirection: "vertical"/.test(workspaceText), "Palette JSON surfaces use the shared editable textarea/frame contract.");
+    assert(/\.ui-scroll-region,\s*\.ui-editable-scroll\s*\{[\s\S]*scrollbar-color/.test(cssText), "Shared UI owns scrollbar presentation for surface and editable scroll owners.");
+    assert(!/\.palette-(?:library-list|editor-scroll|json-box)(?:::-webkit-scrollbar[^\{]*)?\s*\{[^}]*scrollbar-(?:color|width)|\.palette-(?:library-list|editor-scroll|json-box)::-webkit-scrollbar/.test(cssText), "Palette does not duplicate feature-specific scrollbar skin.");
     assert(/createPaletteNumberInput[\s\S]*setupRegistryNumberDrag/.test(workspaceText), "Palette numeric inputs must reuse the shared number helper.");
     assert(/setupRegistryNumberDrag[\s\S]*keyCode === 13[\s\S]*keyCode === 27[\s\S]*keyCode === 38/.test(mainText), "Shared number helper must cover Enter, Escape, and arrow stepping.");
     assert(/palette-editor-number/.test(workspaceText) && /registry-range-number/.test(workspaceText), "Palette numbers must use internal number input classes.");
@@ -153,7 +156,7 @@ function run() {
     assert(/clearTransition/.test(workspaceText) && /is-palette-workspace-transitioning/.test(cssText), "Workspace transition cleanup and pointer blocking must exist.");
     assert(/palette-json-export/.test(workspaceText) && /readOnly\s*=\s*true/.test(workspaceText), "Export JSON must use a read-only output area.");
     assert(/palette-json-import/.test(workspaceText) && /pasteJsonPlaceholder/.test(workspaceText), "Import JSON must use a distinct editable input area.");
-    assertions += 25;
+    assertions += 28;
 
     const deleteCandidate = store.createPalette(Object.assign({}, factory, { displayName: "Delete Persisted" })).palette;
     const countBeforeDelete = store.listResolvedPalettes(true).length;
