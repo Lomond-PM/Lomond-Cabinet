@@ -396,10 +396,6 @@ body:not(.i18n-ready) .app-shell {
     animation: bgAccentDrift calc(var(--bg-motion-speed) * 1.1) var(--procedural-background-drift-curve) infinite alternate;
 }
 
-.app-shell.is-animating .home-background {
-    opacity: 0.55;
-}
-
 .app-shell.is-animating .bg-layer {
     animation-play-state: paused !important;
 }

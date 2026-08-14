@@ -310,11 +310,37 @@ function run() {
     assert(env.activeTimerCount() === 1, "Procedural mode should resume deferred resize handling after classic.");
     assertions += 6;
 
+    const observerCountBeforeToggles = env.observerInstances.length;
+    for (let toggle = 0; toggle < 3; toggle += 1) {
+        controller.update({ mode: "classic" });
+        controller.activate({ mode: "procedural", seed: "toggle-" + toggle });
+        env.runFrames();
+        assert(controller.getState().config.mode === "procedural" && controller.getState().rendered && env.shell.classList.contains("procedural-background-active"), "Classic to Procedural activation " + (toggle + 1) + " must reach a rendered and visible state.");
+    }
+    assert(env.observerInstances.length === observerCountBeforeToggles, "Repeated mounted activation must not duplicate observers.");
+    assertions += 4;
+
+    controller.update({ mode: "classic" });
+    env.homeView.classList.remove("is-active");
+    const hiddenSourceGeneration = controller.getState().sourceGenerationCount;
+    controller.activate({ mode: "procedural", seed: "settings-hidden-activation" });
+    env.runFrames();
+    assert(controller.getState().hasSourceField && controller.getState().sourceGenerationCount === hiddenSourceGeneration + 1 && env.canvas._pixels.length > 0 && controller.getState().rendered, "Procedural activation must produce and present a raster while Settings keeps Home content inactive.");
+    const settingsPresentationGeneration = controller.getState().presentationGenerationCount;
+    controller.update({ seed: "settings-live-parameter" });
+    env.runFrames();
+    assert(controller.getState().sourceGenerationCount === hiddenSourceGeneration + 2 && controller.getState().presentationGenerationCount === settingsPresentationGeneration + 1 && env.canvas._pixels.length > 0, "Procedural parameter changes must regenerate the persistent background immediately while Settings is open.");
+    assertions += 2;
+
     const observer = env.observerInstances[0];
     const generationBeforeTeardown = controller.getState().generation;
     controller.teardown();
     env.runFrames();
     assert(observer.disconnected && env.activeTimerCount() === 0 && !env.shell.classList.contains("procedural-background-active") && controller.getState().generation > generationBeforeTeardown && !controller.getState().hasSourceField && !controller.getState().hasSourceCanvas && !controller.getState().hasLut, "Teardown must disconnect observers, cancel deferred resize work, invalidate stale work, hide the surface, and release source references.");
+    assertions += 1;
+    controller.activate({ mode: "procedural", seed: "retry-after-teardown" });
+    env.runFrames();
+    assert(controller.getState().initialized && !controller.getState().shuttingDown && controller.getState().config.mode === "procedural" && env.shell.classList.contains("procedural-background-active"), "Explicit procedural retry must remount runtime after teardown without requiring panel restart.");
     assertions += 1;
 
     let sparseRenderCount = 0;
@@ -364,6 +390,15 @@ function run() {
     failingController.initialize({ mode: "procedural" });
     failingEnv.runFrames();
     assert(!failingEnv.shell.classList.contains("procedural-background-active") && failingController.getState().lastError === "test-render-failure", "Render failure must fall back to classic without an uncaught error.");
+    assertions += 1;
+    failingEnv.ProceduralAppearance.render = function (canvas, options) {
+        canvas.width = Math.round(options.logicalWidth * options.renderScale);
+        canvas.height = Math.round(options.logicalHeight * options.renderScale);
+        return { ok: true };
+    };
+    failingController.activate({ mode: "procedural" });
+    failingEnv.runFrames();
+    assert(failingController.getState().config.mode === "procedural" && failingController.getState().lastError === "" && failingEnv.shell.classList.contains("procedural-background-active"), "Render fallback must not mutate selected mode and explicit procedural retry must recover without restart.");
     assertions += 1;
 
     let themeRenderCount = 0;

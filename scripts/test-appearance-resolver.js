@@ -7,12 +7,12 @@ const ResolverModule = require("../client/js/appearance/appearanceResolver.js").
 let assertions = 0;
 function equal(actual, expected, message) { assertions += 1; assert.strictEqual(actual, expected, message); }
 function ok(value, message) { assertions += 1; assert.ok(value, message); }
-function createHarness(saved) {
+function createHarness(saved, runtime) {
     const values = saved ? { [StoreModule.storageKey]: JSON.stringify(saved) } : {};
     const storage = { getItem(key) { return values[key] || null; }, setItem(key, value) { values[key] = value; } };
     const css = {};
     const store = StoreModule.create({ storage, registry: Registry });
-    const resolver = ResolverModule.create({ registry: Registry, store, rootStyle: { setProperty(name, value) { css[name] = value; } }, runtime: { applyMotionSpeed(value) { css.motionSpeed = value; } } });
+    const resolver = ResolverModule.create({ registry: Registry, store, rootStyle: { setProperty(name, value) { css[name] = value; } }, runtime: runtime || { applyMotionSpeed(value) { css.motionSpeed = value; } } });
     return { resolver, store, css, values };
 }
 
@@ -45,4 +45,21 @@ harness = createHarness({ version: 1, overrides: { "surface.card": "#222222", un
 harness.resolver.initialize({ "base.accent": "#d6b25e" });
 equal(harness.css["--surface-card"], "#222222", "startup rehydrates a valid persisted override");
 equal(harness.resolver.getResolvedValue("unknown"), null, "unknown persisted target is not resolved");
+
+harness = createHarness({ version: 1, overrides: { "surface.panel": "#121212", "surface.card": "#232323" } });
+harness.resolver.initialize({ "base.accent": "#d6b25e" });
+harness.resolver.preview("surface.panel", "#343434");
+equal(harness.css["--surface-card"], "#232323", "previewing authority A preserves persisted authority B at runtime");
+harness.resolver.clearPreview("surface.panel");
+equal(harness.css["--surface-panel"], "#121212", "clearing transient A reveals persisted A rather than canonical");
+harness.resolver.commit("surface.panel", "#454545");
+equal(harness.css["--surface-card"], "#232323", "committing authority A preserves unrelated authority B");
+
+let committedCanvas = null;
+harness = createHarness(null, { commitBaseInput(id, value) { committedCanvas = { id, value }; return true; } });
+harness.resolver.initialize({ "base.canvas": "#050403" });
+harness.resolver.preview("base.canvas", "#101010");
+ok(harness.resolver.commit("base.canvas", "#202020"), "settings-backed authority commit succeeds through existing runtime authority");
+equal(harness.css["--bg-main"], "#202020", "settings-backed commit clears transient state and immediately projects committed value");
+equal(committedCanvas.id + ":" + committedCanvas.value, "base.canvas:#202020", "settings-backed persistence callback receives the committed authority value");
 console.log("test-appearance-resolver: " + assertions + " assertions passed.");
