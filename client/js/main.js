@@ -2946,12 +2946,26 @@
     function applyBackgroundSource(value) {
         var source = normalizeBackgroundSource(value);
         var select = byId("backgroundSource");
+        var controller = window.ProceduralHomeBackground;
         if (select) {
             select.value = source;
             syncCustomSelect(select);
         }
         renderProceduralBackgroundModeVisibility();
-        updateProceduralHomeBackground();
+        if (source !== "classic" && controller && typeof controller.activate === "function") {
+            controller.activate({
+                rootElement: byId("appShell"),
+                canvas: byId("proceduralHomeBackgroundCanvas"),
+                mode: source,
+                seed: normalizeProceduralBackgroundSeed(byId("proceduralBackgroundSeed") ? byId("proceduralBackgroundSeed").value : DefaultSettings.proceduralBackgroundSeed),
+                paletteId: normalizeProceduralBackgroundPaletteId(byId("proceduralBackgroundPaletteId") ? byId("proceduralBackgroundPaletteId").value : DefaultSettings.proceduralBackgroundPaletteId),
+                intensity: normalizeProceduralBackgroundIntensity(byId("proceduralBackgroundIntensityNumber") ? byId("proceduralBackgroundIntensityNumber").value : DefaultSettings.proceduralBackgroundIntensity),
+                params: getProceduralAppearanceSourceParams(),
+                iconAppearance: getProceduralHomeBackgroundIconAppearance()
+            });
+        } else {
+            updateProceduralHomeBackground();
+        }
     }
 
     function refreshSettingsBackgroundPaletteOptions() {
@@ -3202,10 +3216,11 @@
 
     function suggestThemeAccentFromPalette(paletteId) {
         var palette = getResolvedProceduralPalette(paletteId);
-        if (!palette || !palette.colors || !palette.colors.secondary) {
+        if (!palette || !palette.colors || !palette.colors.secondary || !palette.colors.shadow) {
             return;
         }
         applyThemeAccent(palette.colors.secondary);
+        applyHomeBackground(palette.colors.shadow);
         setStatus(tr("status.paletteAccentSuggested"));
     }
 
@@ -8452,7 +8467,6 @@
         } else {
             return false;
         }
-        saveSettings();
         return true;
     }
 
@@ -9539,7 +9553,6 @@
     function finishCloseSettingsTransition() {
         var view = byId("settingsView");
         var home = byId("homeView");
-
         home.classList.add("is-active");
         home.classList.remove("is-opening");
         view.classList.add("no-transition");
@@ -9624,6 +9637,7 @@
         cancelAppearancePreviewFrame(parameter.id);
         delete ActiveAppearancePreviews[parameter.id];
         changed = CoreAppearance && CoreAppearance.commit(parameter.id, value);
+        if (changed && parameter.persistence === "settings") saveSettings();
         notifyAppearanceFieldBindings(parameter.id);
         return changed;
     }
@@ -10052,8 +10066,8 @@
         setupLanguageSelector();
         setupCollapsibleSettings();
         BackgroundEngine.init();
-        if (window.ProceduralHomeBackground && typeof window.ProceduralHomeBackground.initialize === "function") {
-            window.ProceduralHomeBackground.initialize({
+        if (window.ProceduralHomeBackground && typeof window.ProceduralHomeBackground.activate === "function") {
+            window.ProceduralHomeBackground.activate({
                 rootElement: byId("appShell"),
                 canvas: byId("proceduralHomeBackgroundCanvas"),
                 mode: byId("backgroundSource") ? byId("backgroundSource").value : DefaultSettings.backgroundSource,

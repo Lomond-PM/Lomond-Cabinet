@@ -576,19 +576,16 @@
             return env.devicePixelRatio || (env.window && env.window.devicePixelRatio) || (root && root.devicePixelRatio) || 1;
         }
 
-        function getHomeView() {
+        function isEnvironmentRenderable() {
             var doc = getDocument();
-            return doc && typeof doc.getElementById === "function" ? doc.getElementById("homeView") : null;
-        }
-
-        function isVisible() {
-            var doc = getDocument();
-            var home = getHomeView();
             if (doc && doc.hidden) {
                 return false;
             }
-            if (home && home.classList && typeof home.classList.contains === "function") {
-                return home.classList.contains("is-active");
+            if (!state.shell || !state.canvas) {
+                return false;
+            }
+            if (state.shell.isConnected === false || state.canvas.isConnected === false) {
+                return false;
             }
             return true;
         }
@@ -673,7 +670,7 @@
             state.resizeSettleTimer = setTimer(function () {
                 var quietFor;
                 state.resizeSettleTimer = null;
-                if (!state.resizeSessionActive || state.shuttingDown || state.config.mode === "classic" || !isVisible()) {
+                if (!state.resizeSessionActive || state.shuttingDown || state.config.mode === "classic" || !isEnvironmentRenderable()) {
                     return;
                 }
                 quietFor = nowMs() - state.lastResizeSignalTime;
@@ -687,7 +684,7 @@
         }
 
         function scheduleResize() {
-            if (!state.initialized || state.shuttingDown || state.config.mode === "classic" || !isVisible()) {
+            if (!state.initialized || state.shuttingDown || state.config.mode === "classic" || !isEnvironmentRenderable()) {
                 return;
             }
             if (!state.rendered || !state.sourceField) {
@@ -699,7 +696,7 @@
             if (state.resizeFrameId === null) {
                 state.resizeFrameId = requestFrame(function () {
                     state.resizeFrameId = null;
-                    if (state.initialized && !state.shuttingDown && state.config.mode !== "classic" && isVisible()) {
+                    if (state.initialized && !state.shuttingDown && state.config.mode !== "classic" && isEnvironmentRenderable()) {
                         showSurface();
                     }
                 });
@@ -759,7 +756,7 @@
             if (token !== state.generation || !state.initialized || state.shuttingDown || state.config.mode === "classic") {
                 return false;
             }
-            if (!isVisible()) {
+            if (!isEnvironmentRenderable()) {
                 hideSurface();
                 return false;
             }
@@ -802,7 +799,7 @@
         }
 
         function schedule() {
-            if (!state.initialized || state.shuttingDown || state.config.mode === "classic" || !isVisible()) {
+            if (!state.initialized || state.shuttingDown || state.config.mode === "classic" || !isEnvironmentRenderable()) {
                 return;
             }
             if (state.frameId !== null) {
@@ -838,7 +835,7 @@
                 env.window.addEventListener("resize", state.resizeHandler);
             }
             state.visibilityHandler = function () {
-                if (isVisible()) {
+                if (isEnvironmentRenderable()) {
                     schedule();
                 } else {
                     state.generation += 1;
@@ -938,7 +935,7 @@
             if (!state.initialized || state.shuttingDown) {
                 return api;
             }
-            if (!isVisible()) {
+            if (!isEnvironmentRenderable()) {
                 state.generation += 1;
                 cancelFrame();
                 cancelResizeWork();
@@ -961,6 +958,39 @@
             } else if (state.canvas && state.canvas.style) {
                 state.canvas.style.opacity = String(state.config.intensity);
             }
+            return api;
+        }
+
+        function activate(options) {
+            var doc = getDocument();
+            var next = options || {};
+            var currentShell = next.rootElement || next.shell || (doc && doc.getElementById ? doc.getElementById("appShell") : null);
+            var currentCanvas = next.canvas || (doc && doc.getElementById ? doc.getElementById("proceduralHomeBackgroundCanvas") : null);
+            var config = normalizeConfig({
+                mode: typeof next.mode === "undefined" ? state.config.mode : next.mode,
+                seed: typeof next.seed === "undefined" ? state.config.seed : next.seed,
+                paletteId: typeof next.paletteId === "undefined" ? state.config.paletteId : next.paletteId,
+                intensity: typeof next.intensity === "undefined" ? state.config.intensity : next.intensity,
+                params: typeof next.params === "undefined" ? state.config.params : next.params,
+                normalizeParams: next.normalizeParams,
+                iconAppearance: typeof next.iconAppearance === "undefined" ? state.config.iconAppearance : next.iconAppearance
+            });
+            if (!state.initialized || state.shuttingDown || !state.canvas || !state.shell || state.canvas !== currentCanvas || state.shell !== currentShell) {
+                return initialize({
+                    rootElement: currentShell,
+                    canvas: currentCanvas,
+                    mode: config.mode,
+                    seed: config.seed,
+                    paletteId: config.paletteId,
+                    intensity: config.intensity,
+                    params: config.params,
+                    iconAppearance: config.iconAppearance
+                });
+            }
+            state.config = config;
+            state.lastError = "";
+            state.warnedError = "";
+            invalidateSource();
             return api;
         }
 
@@ -1058,6 +1088,8 @@
             invalidateSource: invalidateSource,
             invalidatePresentation: invalidatePresentation,
             refresh: refresh,
+            activate: activate,
+            retry: activate,
             regenerate: regenerate,
             teardown: teardown,
             getState: getState
@@ -1089,6 +1121,8 @@
         invalidateSource: singleton.invalidateSource,
         invalidatePresentation: singleton.invalidatePresentation,
         refresh: singleton.refresh,
+        activate: singleton.activate,
+        retry: singleton.retry,
         regenerate: singleton.regenerate,
         teardown: singleton.teardown,
         getState: singleton.getState

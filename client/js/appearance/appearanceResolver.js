@@ -181,8 +181,11 @@
             var checked = registry && registry.validate(id, value);
             if (!parameter || !checked || !checked.valid) { return false; }
             if (parameter.persistence === "settings") {
+                delete previewOverrides[id];
                 if (typeof runtime.commitBaseInput !== "function" || runtime.commitBaseInput(id, checked.value) !== true) { return false; }
-                return setBaseInput(id, checked.value);
+                baseInputs[id] = checked.value;
+                resolveAndApply();
+                return true;
             }
             if (!store || !store.setOverride(id, checked.value)) { return false; }
             delete previewOverrides[id];
