@@ -26,6 +26,7 @@ function rule(source, selectorPattern, declarationPattern) {
 });
 
 assert(declaration(css, "--radius-section-card", "var\\(--radius-lg\\)"));
+assert(declaration(css, "--radius-primary-work-surface", "var\\(--radius-lg\\)"));
 assert(declaration(css, "--radius-nested-surface", "var\\(--radius-md\\)"));
 assert(declaration(css, "--radius-editable-control", "var\\(--radius-sm\\)"));
 assert(declaration(css, "--radius-home-tile", "var\\(--radius-lg\\)"));
@@ -65,7 +66,8 @@ assert(rule(css, "\\.ui-scroll-frame", "border-radius:\\s*var\\(--radius-editabl
 assert(rule(css, "\\.ui-scroll-frame > \\.ui-editable-scroll", "border-radius:\\s*0"), "Palette JSON inner scroll owner must not duplicate frame radius");
 
 assert(/\.settings-view\s*\{[^}]*--ui-scale:\s*0\.92;/.test(css));
-assert(rule(css, "\\.view-detail", "border-radius:\\s*22px"));
+assert(rule(css, "\\.view-detail", "border-radius:\\s*var\\(--radius-primary-work-surface\\)"));
+assert(rule(css, "\\.settings-view \\.settings-panel", "border-radius:\\s*var\\(--radius-primary-work-surface\\)"));
 assert(rule(css, "\\.select-menu", "border-radius:\\s*14px"));
 assert(/snapshotSurfaceIdentity[\s\S]*SurfaceIdentity\.snapshot/.test(main), "morph endpoints consume real computed identity radius");
 assert(!/borderRadius:\s*"(?:19|22|24)px"/.test(main), "transition code must not duplicate protected identity radii");

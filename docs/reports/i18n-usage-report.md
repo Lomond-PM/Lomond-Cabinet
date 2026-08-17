@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 356 |
+| A | Core / Global; keep | 357 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -408,6 +408,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.designTuning.parameter.radius.homeIcon | settings | Home Icon Radius | Home 图标圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.radius.homeTile | settings | Home Tile Radius | Home 瓦片圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.radius.nestedSurface | settings | Nested Surface Radius | 嵌套表面圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.radius.primaryWorkSurface | settings | Primary Work Surface Radius | 主工作表面圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.radius.sectionCard | settings | Section Card Radius | 分区卡片圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.spacing.card.inset | settings | Card Inset | 卡片内边距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.spacing.control.inline | settings | Inline Control Gap | 行内控件间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |

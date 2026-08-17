@@ -11,12 +11,12 @@ context.self = context.window = { document: {}, CoreUI: require(path.join(root, 
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(root, "client/js/designTuning/designTuningParameterRegistry.js"), "utf8"), context);
 const parameters = Array.from(context.window.DesignTuningParameterRegistry.list()).filter(p => !p.protection);
-assert.strictEqual(parameters.length, 54, "all 54 editable parameters remain available");
+assert.strictEqual(parameters.length, 55, "all 55 editable parameters remain available");
 parameters.filter(p => p.cssProperty).forEach(parameter => {
     const uses = (css.match(new RegExp("var\\(" + parameter.cssProperty.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\)", "g")) || []).length;
     assert.ok(uses > 0, parameter.id + " has a real stylesheet consumer");
     assert.ok(parameter.projection === "root-semantic-property", parameter.id + " projects through its semantic token");
-    if (parameter.editing) assert.ok(parameter.editing.max - parameter.editing.min >= 12, parameter.id + " includes a diagnostic calibration span");
+    if (parameter.editing) assert.ok(parameter.editing.trackMax - parameter.editing.trackMin >= 12, parameter.id + " includes a practical slider navigation span");
 });
 const domainSpecific = parameters.filter(p => p.consumerScope === "domain-specific").map(p => p.id);
 assert.deepStrictEqual(domainSpecific, [
