@@ -132,7 +132,7 @@ function run() {
     assert(/className\s*=\s*"registry-textarea palette-json-box palette-json-(?:export|import)"/.test(workspaceText), "JSON must use the internal textarea class.");
     assert(/className\s*=\s*"palette-editor-action-bar"/.test(workspaceText), "Sticky action bar class must exist.");
     assert(/clearWorkspaceBindings[\s\S]*disconnect\(\)/.test(workspaceText), "Workspace teardown must disconnect resize observation.");
-    assert(/\.palette-workspace\.is-stacked\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\)/.test(cssText), "Stacked layout must not force two columns.");
+    assert(/\.palette-workspace\.is-stacked\s*\{[^}]*display:\s*flex[^}]*flex-direction:\s*column[^}]*overflow-y:\s*auto/.test(cssText), "Stacked layout must become one vertical scroll composition.");
     assert(/\.palette-editor-action-bar\s*\{[\s\S]*flex:\s*0 0 auto/.test(cssText), "Action bar must remain visible outside the editor scroller.");
     assert(!/palette-editor-text[^\{]*\{[^\}]*background:\s*white/i.test(cssText), "Palette text input must not use a browser-default white background.");
     assert(/--radius-palette-preview:\s*var\(--radius-lg\)/.test(cssText), "Palette previews must expose one shared outer radius token.");
@@ -145,9 +145,12 @@ function run() {
     assert(/requestAnimationFrame\(function \(\) \{[\s\S]*requestAnimationFrame\(function \(\)/.test(workspaceText), "Initial preview should wait for stable layout frames.");
     assert(/ResizeObserver[\s\S]*schedulePreview\(\)/.test(workspaceText), "Workspace resize should schedule preview raster redraw.");
     assert(/clearWorkspaceBindings[\s\S]*resizeObserver\.disconnect/.test(workspaceText), "Teardown should stop preview resize observation.");
-    assert(/palette-editor-scroll ui-scroll-region/.test(workspaceText) && /palette-library-list ui-scroll-region/.test(workspaceText), "Palette list and editor declare intentional shared scroll ownership.");
+    assert(/palette-editor-scroll ui-scroll-region/.test(workspaceText) && /palette-library-list ui-scroll-region/.test(workspaceText), "Wide Palette panes retain their intentional scroll declarations.");
+    assert(/\.palette-workspace\.is-stacked \.palette-library-list,\s*\.palette-workspace\.is-stacked \.palette-editor-scroll\s*\{[^}]*overflow:\s*visible/.test(cssText), "Stacked Palette removes nested pane scrolling in favor of the workspace scroll owner.");
+    assert(/workspace\.className\s*=\s*"palette-workspace"/.test(workspaceText), "Stacked workspace scroll ownership must be independent from scrollbar presentation opt-in.");
+    assert(/ui-field-row--aligned/.test(workspaceText) && /settings-field-copy palette-editor-field-copy/.test(workspaceText), "Palette rows must consume CoreUI aligned FieldRow containment.");
     assert(/CoreUI\.createTextarea\(\{[\s\S]*palette-json-box palette-json-export[\s\S]*resizeDirection: "vertical"/.test(workspaceText) && /CoreUI\.createTextarea\(\{[\s\S]*palette-json-box palette-json-import[\s\S]*resizeDirection: "vertical"/.test(workspaceText), "Palette JSON surfaces use the shared editable textarea/frame contract.");
-    assert(/\.ui-scroll-region,\s*\.ui-editable-scroll\s*\{[\s\S]*scrollbar-color/.test(cssText), "Shared UI owns scrollbar presentation for surface and editable scroll owners.");
+    assert(/html,\s*body,\s*\.app-shell,\s*\.app-shell \*\s*\{[^}]*scrollbar-color/.test(cssText), "Application scope owns native scrollbar presentation without consumer opt-in.");
     assert(!/\.palette-(?:library-list|editor-scroll|json-box)(?:::-webkit-scrollbar[^\{]*)?\s*\{[^}]*scrollbar-(?:color|width)|\.palette-(?:library-list|editor-scroll|json-box)::-webkit-scrollbar/.test(cssText), "Palette does not duplicate feature-specific scrollbar skin.");
     assert(/createPaletteNumberInput[\s\S]*setupRegistryNumberDrag/.test(workspaceText), "Palette numeric inputs must reuse the shared number helper.");
     assert(/setupRegistryNumberDrag[\s\S]*keyCode === 13[\s\S]*keyCode === 27[\s\S]*keyCode === 38/.test(mainText), "Shared number helper must cover Enter, Escape, and arrow stepping.");
@@ -156,7 +159,7 @@ function run() {
     assert(/clearTransition/.test(workspaceText) && /is-palette-workspace-transitioning/.test(cssText), "Workspace transition cleanup and pointer blocking must exist.");
     assert(/palette-json-export/.test(workspaceText) && /readOnly\s*=\s*true/.test(workspaceText), "Export JSON must use a read-only output area.");
     assert(/palette-json-import/.test(workspaceText) && /pasteJsonPlaceholder/.test(workspaceText), "Import JSON must use a distinct editable input area.");
-    assertions += 28;
+    assertions += 31;
 
     const deleteCandidate = store.createPalette(Object.assign({}, factory, { displayName: "Delete Persisted" })).palette;
     const countBeforeDelete = store.listResolvedPalettes(true).length;

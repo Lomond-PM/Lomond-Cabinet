@@ -141,6 +141,8 @@
     var RegistryRuntimeStates = {};
     var CustomSelectGlobalListenersBound = false;
     var PanelLifecycleListenersBound = false;
+    var ToolActionsResizeObserver = null;
+    var ToolActionsResizeFallback = null;
     var panelShuttingDown = false;
     var panelSuspended = false;
     var panelLifecycleGeneration = 1;
@@ -7509,7 +7511,49 @@
         }
         if (detail) {
             detail.classList.toggle("has-visible-tool-actions", visible === true);
+            detail.classList.toggle("has-floating-action-region", visible === true);
+            syncFloatingActionClearance(detail, actionsRoot, visible === true);
+            if (visible === true && window.requestAnimationFrame) {
+                window.requestAnimationFrame(function () {
+                    syncFloatingActionClearance(detail, actionsRoot, !actionsRoot.hidden && actionsRoot.getAttribute("data-empty") !== "true");
+                });
+            }
         }
+    }
+
+    function syncFloatingActionClearance(surface, actionsRoot, visible) {
+        var surfaceRect;
+        var actionsRect;
+        if (!surface) {
+            return;
+        }
+        if (!visible || !actionsRoot) {
+            surface.style.removeProperty("--floating-action-clearance");
+            return;
+        }
+        surfaceRect = surface.getBoundingClientRect();
+        actionsRect = actionsRoot.getBoundingClientRect();
+        surface.style.setProperty("--floating-action-clearance", Math.ceil(surfaceRect.bottom - actionsRect.top) + "px");
+    }
+
+    function setupFloatingActionClearance() {
+        var detail = byId("detailView");
+        var actions = byId("registryToolActions");
+        var sync = function () {
+            syncFloatingActionClearance(detail, actions, !!(actions && !actions.hidden && actions.getAttribute("data-empty") !== "true"));
+        };
+        if (!detail || !actions) {
+            return;
+        }
+        if (window.ResizeObserver) {
+            ToolActionsResizeObserver = new window.ResizeObserver(sync);
+            ToolActionsResizeObserver.observe(detail);
+            ToolActionsResizeObserver.observe(actions);
+        } else {
+            ToolActionsResizeFallback = sync;
+            window.addEventListener("resize", ToolActionsResizeFallback);
+        }
+        sync();
     }
 
     function renderToolActions(actions, toolDef) {
@@ -10057,6 +10101,7 @@
         renderSettingsMotion();
         setupMotionSpeed();
         setupUiScale();
+        setupFloatingActionClearance();
         renderSettingsLanguage();
         renderSettingsDeveloperMode();
         setupAppearanceSubpage();

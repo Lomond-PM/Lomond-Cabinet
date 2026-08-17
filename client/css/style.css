@@ -716,7 +716,15 @@ body:not(.i18n-ready) .app-shell {
 
 .settings-view.is-peek-preview .settings-root-page .is-settings-peek-anchor {
     pointer-events: auto;
+    padding-inline: var(--space-card-inset);
+    border: 1px solid var(--separator);
+    border-radius: var(--radius-section-card);
+    background: var(--surface-panel);
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+}
+
+.settings-view.is-peek-preview #settingsInterfaceMount.is-settings-peek-structure {
+    overflow: visible;
 }
 
 .settings-view.is-peek-preview .settings-root-page .is-settings-peek-anchor * {
@@ -1282,10 +1290,14 @@ body:not(.i18n-ready) .app-shell {
     min-height: 0;
     flex: 1 1 auto;
     flex-direction: column;
-    gap: calc(10px * var(--ui-scale));
+    gap: calc(6px * var(--ui-scale));
     overflow-x: hidden;
     overflow-y: auto;
     padding: 0 calc(6px * var(--ui-scale)) calc(12px * var(--ui-scale));
+}
+
+.palette-editor-scroll > * {
+    flex-shrink: 0;
 }
 
 .palette-tool-map,
@@ -1438,23 +1450,14 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .palette-editor-field {
-    display: grid;
+    --ui-field-row-control-gap: var(--space-palette-field-control);
+
     min-height: calc(32px * var(--ui-scale));
-    grid-template-columns: minmax(110px, 0.7fr) minmax(180px, 1.3fr);
-    gap: var(--space-palette-field-control);
-    align-items: center;
+    padding-block: calc(8px * var(--ui-scale));
 }
 
-.palette-editor-field > .control-label {
+.palette-editor-field .control-label {
     min-width: 0;
-}
-
-.palette-editor-field > .settings-field-control,
-.palette-editor-field > .registry-text-input,
-.palette-editor-field > .num-input {
-    width: 100%;
-    min-width: 0;
-    flex: 1 1 auto;
 }
 
 .palette-editor-draft-status {
@@ -1513,7 +1516,7 @@ body:not(.i18n-ready) .app-shell {
 
 .palette-tool-map,
 .palette-import-export {
-    margin-top: calc(12px * var(--ui-scale));
+    margin-top: 0;
     padding-top: calc(10px * var(--ui-scale));
     border-top: 1px solid var(--settings-divider-soft);
 }
@@ -1576,84 +1579,20 @@ body:not(.i18n-ready) .app-shell {
         width: auto;
         max-width: none;
     }
-
-    .palette-workspace,
-    .palette-workspace.is-stacked {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: minmax(calc(138px * var(--ui-scale)), 30%) minmax(0, 1fr);
-        overflow: hidden;
-    }
-
-    .palette-library-pane {
-        min-height: 0;
-        max-height: none;
-        padding-right: 0;
-        padding-bottom: calc(8px * var(--ui-scale));
-    }
-
-    .palette-splitter {
-        display: none;
-    }
-
-    .palette-editor-pane {
-        min-height: 0;
-    }
-
-    .palette-preview-block {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .palette-preview-shell--icon {
-        justify-self: center;
-    }
-
-    .palette-preview-shell--background {
-        width: 100%;
-    }
-
-    .palette-editor-field {
-        grid-template-columns: minmax(0, 1fr);
-        gap: calc(8px * var(--ui-scale));
-        align-items: stretch;
-        padding-bottom: calc(5px * var(--ui-scale));
-    }
-
-    .palette-editor-field > .control-label {
-        line-height: 1.25;
-    }
-
-    .palette-editor-color-control {
-        grid-template-columns: minmax(0, 1fr) minmax(calc(82px * var(--ui-scale)), 0.55fr);
-        gap: calc(8px * var(--ui-scale));
-    }
-
-    .palette-editor-field > .settings-field-control,
-    .palette-editor-field > .registry-text-input,
-    .palette-editor-field > .num-input {
-        min-width: 0;
-    }
-
-    .palette-tool-map-row {
-        grid-template-columns: minmax(0, 1fr);
-        gap: calc(5px * var(--ui-scale));
-    }
-
-    .palette-json-workspace {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .palette-editor-action-bar .palette-library-action {
-        flex-basis: calc(50% - calc(8px * var(--ui-scale)));
-    }
 }
 
 .palette-workspace.is-stacked {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(calc(138px * var(--ui-scale)), 30%) minmax(0, 1fr);
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: calc(12px * var(--ui-scale));
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-right: calc(4px * var(--ui-scale));
+    padding-bottom: var(--scroll-terminal-action-clearance, calc(16px * var(--ui-scale)));
 }
 
 .palette-workspace.is-stacked .palette-library-pane {
+    flex: 0 0 auto;
     min-height: 0;
     max-height: none;
     padding-right: 0;
@@ -1665,7 +1604,15 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .palette-workspace.is-stacked .palette-editor-pane {
+    flex: 0 0 auto;
     min-height: 0;
+    overflow: visible;
+}
+
+.palette-workspace.is-stacked .palette-library-list,
+.palette-workspace.is-stacked .palette-editor-scroll {
+    flex: 0 0 auto;
+    overflow: visible;
 }
 
 .palette-workspace.is-stacked .palette-preview-block {
@@ -1684,10 +1631,10 @@ body:not(.i18n-ready) .app-shell {
     grid-template-columns: minmax(0, 1fr);
     gap: calc(8px * var(--ui-scale));
     align-items: stretch;
-    padding-bottom: calc(5px * var(--ui-scale));
+    padding-block: calc(6px * var(--ui-scale));
 }
 
-.palette-workspace.is-stacked .palette-editor-field > .control-label {
+.palette-workspace.is-stacked .palette-editor-field .control-label {
     line-height: 1.25;
 }
 
@@ -1699,6 +1646,14 @@ body:not(.i18n-ready) .app-shell {
 .palette-workspace.is-stacked .palette-tool-map-row {
     grid-template-columns: minmax(0, 1fr);
     gap: calc(5px * var(--ui-scale));
+}
+
+.palette-workspace.is-stacked .palette-json-workspace {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.palette-workspace.is-stacked .palette-editor-action-bar .palette-library-action {
+    flex-basis: calc(50% - calc(8px * var(--ui-scale)));
 }
 
 .collapsible-card {
@@ -2143,48 +2098,62 @@ body:not(.i18n-ready) .app-shell {
     padding: calc(14px * var(--ui-scale)) var(--view-inset) calc(20px * var(--ui-scale));
 }
 
-.detail-view.has-visible-tool-actions .detail-content {
-    padding-bottom: calc(132px * var(--ui-scale));
+.has-floating-action-region .ui-floating-action-scroll {
+    padding-bottom: calc(var(--floating-action-clearance, 0px) + var(--space-card-inset));
 }
 
-.ui-scroll-region,
-.ui-editable-scroll {
+html,
+body,
+.app-shell,
+.app-shell * {
     scrollbar-color: var(--gold-soft) rgba(5, 4, 3, 0.34);
     scrollbar-width: thin;
 }
 
-.ui-scroll-region::-webkit-scrollbar,
-.ui-editable-scroll::-webkit-scrollbar {
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.app-shell::-webkit-scrollbar,
+.app-shell *::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
-.ui-scroll-region::-webkit-scrollbar-track,
-.ui-editable-scroll::-webkit-scrollbar-track {
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+.app-shell::-webkit-scrollbar-track,
+.app-shell *::-webkit-scrollbar-track {
     border-radius: 999px;
     background: rgba(5, 4, 3, 0.34);
 }
 
-.ui-scroll-region::-webkit-scrollbar-thumb,
-.ui-editable-scroll::-webkit-scrollbar-thumb {
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+.app-shell::-webkit-scrollbar-thumb,
+.app-shell *::-webkit-scrollbar-thumb {
     min-height: 42px;
     border: 2px solid rgba(5, 4, 3, 0.34);
     border-radius: 999px;
     background: var(--gold-soft);
 }
 
-.ui-scroll-region::-webkit-scrollbar-thumb:hover,
-.ui-editable-scroll::-webkit-scrollbar-thumb:hover {
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+.app-shell::-webkit-scrollbar-thumb:hover,
+.app-shell *::-webkit-scrollbar-thumb:hover {
     background: var(--gold-focus);
 }
 
-.ui-scroll-region::-webkit-scrollbar-corner,
-.ui-editable-scroll::-webkit-scrollbar-corner {
+html::-webkit-scrollbar-corner,
+body::-webkit-scrollbar-corner,
+.app-shell::-webkit-scrollbar-corner,
+.app-shell *::-webkit-scrollbar-corner {
     background: transparent;
 }
 
-.ui-scroll-region::-webkit-scrollbar-button,
-.ui-editable-scroll::-webkit-scrollbar-button {
+html::-webkit-scrollbar-button,
+body::-webkit-scrollbar-button,
+.app-shell::-webkit-scrollbar-button,
+.app-shell *::-webkit-scrollbar-button {
     display: none;
     width: 0;
     height: 0;
@@ -3124,19 +3093,6 @@ p {
 
 .select-menu.is-above {
     transform-origin: bottom center;
-}
-
-.select-menu::-webkit-scrollbar {
-    width: 6px;
-}
-
-.select-menu::-webkit-scrollbar-track {
-    background: rgba(5, 4, 3, 0.36);
-}
-
-.select-menu::-webkit-scrollbar-thumb {
-    border-radius: 999px;
-    background: var(--gold-soft);
 }
 
 .custom-select.is-open .select-menu,
@@ -4213,6 +4169,19 @@ p {
 
 .ui-field-row,
 .ui-range-number {
+    min-width: 0;
+}
+
+.ui-field-row--aligned {
+    display: grid;
+    grid-template-columns: minmax(110px, 0.7fr) minmax(180px, 1.3fr);
+    align-items: center;
+    gap: var(--ui-field-row-control-gap, var(--space-settings-field-control));
+}
+
+.ui-field-row--aligned > .ui-field-copy,
+.ui-field-row--aligned > :last-child {
+    width: 100%;
     min-width: 0;
 }
 
