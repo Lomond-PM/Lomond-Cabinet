@@ -563,12 +563,16 @@
                 "status.addingShape": "Adding {label}...",
                 "status.addedShape": "Added: {label}",
                 "status.noSelectedLayers": "No selected layers.",
+                "status.oneLayerSelected": "1 layer selected",
+                "status.multipleLayersSelected": "{count} layers selected",
                 "status.unableReadSelection": "Unable to read selection.",
 
                 "selection.noSelection": "No selection",
                 "selection.noShapeTarget": "No shape target",
                 "selection.shapeTarget": "Shape target",
-                "selection.layerCount": "{count} layer(s)"
+                "selection.layerCount": "{count} layer(s)",
+                "selection.oneLayer": "1 layer",
+                "selection.multipleLayers": "{count} layers"
             },
             "zh-CN": {
                 "app.title": "Lomond Cabinet",
@@ -617,7 +621,7 @@
                 "settings.designTuning.default": "\u9ed8\u8ba4",
                 "settings.designTuning.overridden": "\u5df2\u8986\u76d6",
                 "settings.designTuning.resetMotion": "\u91cd\u7f6e\u52a8\u6548",
-                "settings.designTuning.promotionEvidence": "\u63d0\u5347\u8bc1\u636e",
+                "settings.designTuning.promotionEvidence": "\u91c7\u7eb3\u4f9d\u636e",
                 "settings.designTuning.curve.progress": "\u8fdb\u5ea6 / \u6570\u503c",
                 "settings.designTuning.curve.speed": "\u901f\u5ea6",
                 "settings.designTuning.curve.speedHint": "\u62d6\u52a8\u901f\u5ea6\u624b\u67c4\u65f6\u6309\u4f4f Shift\uff0c\u53ef\u4ec5\u8c03\u6574\u5f71\u54cd\u6bd4\u4f8b\u3002",
@@ -1119,12 +1123,16 @@
                 "status.addingShape": "\u6b63\u5728\u6dfb\u52a0 {label}...",
                 "status.addedShape": "\u5df2\u6dfb\u52a0\uff1a{label}",
                 "status.noSelectedLayers": "\u6ca1\u6709\u9009\u4e2d\u56fe\u5c42\u3002",
+                "status.oneLayerSelected": "\u5df2\u9009\u62e9 1 \u4e2a\u56fe\u5c42",
+                "status.multipleLayersSelected": "\u5df2\u9009\u62e9 {count} \u4e2a\u56fe\u5c42",
                 "status.unableReadSelection": "\u65e0\u6cd5\u8bfb\u53d6\u9009\u62e9\u3002",
 
                 "selection.noSelection": "\u672a\u9009\u62e9",
                 "selection.noShapeTarget": "\u65e0\u5f62\u72b6\u76ee\u6807",
                 "selection.shapeTarget": "\u5f62\u72b6\u76ee\u6807",
-                "selection.layerCount": "{count} \u4e2a\u56fe\u5c42"
+                "selection.layerCount": "{count} \u4e2a\u56fe\u5c42",
+                "selection.oneLayer": "1 \u4e2a\u56fe\u5c42",
+                "selection.multipleLayers": "{count} \u4e2a\u56fe\u5c42"
             }
         },
 

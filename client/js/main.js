@@ -147,6 +147,7 @@
     var panelSuspended = false;
     var panelLifecycleGeneration = 1;
     var selectionPollTimer = null;
+    var lastSelectionSummary = null;
     var ThemeSettingsStoreListener = null;
     var ProceduralAppearanceParams = null;
     var ProceduralAppearanceSourceDebounceTimer = null;
@@ -333,8 +334,13 @@
 
     function resultMessage(result, fallbackKey, fallbackParams) {
         var inferredKey;
+        var localized;
         if (result && result.messageKey) {
-            return tr(result.messageKey, result);
+            localized = tr(result.messageKey, result);
+            if (localized !== result.messageKey) {
+                return localized;
+            }
+            return tr(fallbackKey || "status.ready", fallbackParams || result || {});
         }
         inferredKey = inferredMessageKey(result && result.message);
         if (inferredKey) {
@@ -5521,8 +5527,12 @@
     }
 
     function dynamicActionMessage(result, fallbackKey) {
+        var localized;
         if (result && result.messageKey) {
-            return tr(result.messageKey, result);
+            localized = tr(result.messageKey, result);
+            if (localized !== result.messageKey) {
+                return localized;
+            }
         }
         return tr(fallbackKey || "status.ready", result || {});
     }
@@ -7842,7 +7852,11 @@
         select.addEventListener("change", function () {
             window.I18n.setLanguage(this.value);
             refreshLanguage();
-            setStatus(tr("status.ready"));
+            if (lastSelectionSummary) {
+                renderSelectionSummary(lastSelectionSummary);
+            } else {
+                setStatus(tr("status.ready"));
+            }
         });
     }
 
@@ -8429,6 +8443,37 @@
         }
     }
 
+    function selectionSummaryPresentation(result) {
+        var count = Math.max(0, Math.round(Number(result && result.selectedCount) || 0));
+        var statusId = result && result.statusId;
+        if (statusId === "no-active-comp") {
+            return {
+                status: tr("status.openComp"),
+                label: tr("selection.noSelection")
+            };
+        }
+        if (statusId === "no-selection" || count === 0) {
+            return {
+                status: tr("status.noSelectedLayers"),
+                label: tr("selection.noSelection")
+            };
+        }
+        return {
+            status: tr(count === 1 ? "status.oneLayerSelected" : "status.multipleLayersSelected", { count: count }),
+            label: tr(count === 1 ? "selection.oneLayer" : "selection.multipleLayers", { count: count })
+        };
+    }
+
+    function renderSelectionSummary(result) {
+        var presentation = selectionSummaryPresentation(result);
+        if (presentation.label) {
+            byId("selectionPill").textContent = presentation.label;
+        }
+        if (result.ok && (!byId("autoStatus") || byId("autoStatus").checked)) {
+            setStatus(presentation.status || resultMessage(result, "status.ready"));
+        }
+    }
+
     function refreshSelection() {
         if (!hostLoaded || panelShuttingDown || panelSuspended) {
             return;
@@ -8438,12 +8483,8 @@
                 return;
             }
             var result = parseResult(raw);
-            if (result.selectionLabel) {
-                byId("selectionPill").textContent = result.selectionLabel;
-            }
-            if (result.ok && (!byId("autoStatus") || byId("autoStatus").checked)) {
-                setStatus(resultMessage(result, "status.ready"));
-            }
+            lastSelectionSummary = result;
+            renderSelectionSummary(result);
         });
     }
 
