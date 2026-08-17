@@ -82,6 +82,7 @@
 
     --radius-xl: calc(30px * var(--ui-scale));
     --radius-lg: calc(22px * var(--ui-scale));
+    --radius-primary-work-surface: var(--radius-lg);
     --radius-palette-preview: var(--radius-lg);
     --radius-md: calc(16px * var(--ui-scale));
     --radius-sm: calc(10px * var(--ui-scale));
@@ -308,7 +309,7 @@ body:not(.i18n-ready) .app-shell {
     inset: var(--view-inset);
     overflow: hidden;
     border: 1px solid var(--border-default);
-    border-radius: 22px;
+    border-radius: var(--radius-primary-work-surface);
     background: var(--surface-panel);
     box-shadow: var(--elevation-surface-shell);
 }
@@ -508,6 +509,7 @@ body:not(.i18n-ready) .app-shell {
     max-width: none;
     display: flex;
     flex-direction: column;
+    border-radius: var(--radius-primary-work-surface);
     background: var(--surface-panel);
     opacity: 0;
     transform: scale(0.985);

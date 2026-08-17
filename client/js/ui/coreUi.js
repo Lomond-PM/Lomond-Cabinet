@@ -217,6 +217,8 @@
         var displayToValue = typeof options.displayToValue === "function" ? options.displayToValue : function (value) { return Number(value); };
         var displayMin = valueToDisplay(options.min);
         var displayMax = valueToDisplay(options.max);
+        var trackMin = valueToDisplay(typeof options.trackMin !== "undefined" ? options.trackMin : options.min);
+        var trackMax = valueToDisplay(typeof options.trackMax !== "undefined" ? options.trackMax : options.max);
         var displayStep = typeof options.displayStep !== "undefined" ? options.displayStep : options.step;
         var displayValue = valueToDisplay(options.value);
         var usesPresentationAdapter = typeof options.valueToDisplay === "function" || typeof options.displayToValue === "function" || typeof options.displayStep !== "undefined" || typeof options.onPreview === "function" || typeof options.onCommit === "function";
@@ -244,7 +246,7 @@
         }
         number = createNumberInput({ document: doc, id: options.numberId, type: options.numberType || "number", value: displayValue, min: displayMin, max: displayMax, step: displayStep, field: numberField, disabled: options.disabled, classNames: options.numberClassNames, onInput: options.onPreview ? function () { if (!isNumberDraft(number.value)) preview(number.value); } : options.onNumberInput, onDragValue: options.onPreview ? preview : options.onNumberDrag, onCommit: options.onCommit ? commit : options.onNumberCommit, onCancel: options.onCancel ? function () { options.onCancel(); } : options.onNumberCancel, onDragStart: options.onDragStart, onDragChange: options.onDragChange, onDragEnd: options.onCommit ? function () { commit(number.value); if (options.onDragEnd) options.onDragEnd(); } : options.onDragEnd });
         range.disabled = options.disabled === true;
-        range.type = "range"; range.min = displayMin; range.max = displayMax; range.step = displayStep; range.value = displayValue;
+        range.type = "range"; range.min = trackMin; range.max = trackMax; range.step = displayStep; range.value = displayValue;
         if (options.onPreview) listen(range, "input", function () { preview(range.value); });
         if (options.onCommit) listen(range, "change", function () { commit(range.value); });
         if (options.unitText) {
@@ -859,7 +861,7 @@
         function clone() { return { offsetX: value.offsetX, offsetY: value.offsetY, blur: value.blur, spread: value.spread, color: value.color, alpha: value.alpha }; }
         function emit(kind) { if (typeof options[kind] === "function") options[kind](clone()); }
         function addNumber(key, min, max, step) { var input = createNumberInput({ document: doc, id: options.id + "-" + key, value: value[key], field: { min: min, max: max, step: step, defaultValue: value[key] }, ariaLabel: (options.labels && options.labels[key]) || key, onInput: function () { if (!isNumberDraft(input.value)) { value[key] = normalizeNumber(input.value, { min: min, max: max }, value[key]); emit("onPreview"); } }, onCommit: function (next) { value[key] = normalizeNumber(next, { min: min, max: max }, value[key]); emit("onCommit"); } }); inputs[key] = input; rootElement.appendChild(input); }
-        addNumber("offsetX", -64, 64, 1); addNumber("offsetY", -64, 64, 1); addNumber("blur", 0, 96, 1); addNumber("spread", -32, 32, 1);
+        addNumber("offsetX", undefined, undefined, 1); addNumber("offsetY", undefined, undefined, 1); addNumber("blur", 0, undefined, 1); addNumber("spread", undefined, undefined, 1);
         color = createColorField({ document: doc, id: options.id + "-color", value: value.color, fallback: "#000000", normalize: function (next, fallback) { return /^#[0-9a-f]{6}$/i.test(next || "") ? next : fallback; }, isValid: function (next) { return /^#[0-9a-f]{6}$/i.test(next || ""); }, onPreview: function (next) { value.color = next; emit("onPreview"); }, onCommit: function (next) { value.color = next; emit("onCommit"); } });
         rootElement.appendChild(color.root); addNumber("alpha", 0, 1, 0.01);
         return { root: rootElement, inputs: inputs, color: color, getValue: clone };

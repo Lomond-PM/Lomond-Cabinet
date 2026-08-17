@@ -25,8 +25,8 @@ assert.ok(/evidenceOutput\.readOnly = true/.test(main), "evidence is manually co
 assert.ok(!/navigator\.clipboard|execCommand\("copy"\)/.test(main.slice(main.indexOf("function renderSettingsDesignTuningMotion"), main.indexOf("function renderSettingsRangeRow"))), "no new clipboard helper");
 assert.ok(!/style\.setProperty|style\.removeProperty|localStorage/.test(main.slice(main.indexOf("function renderSettingsDesignTuningMotion"), main.indexOf("function renderSettingsRangeRow"))), "Settings UI is not runtime or persistence authority");
 assert.ok(!/0\.16,\s*1,\s*0\.3,\s*1|spatialExpand[^\n]{0,80}480|spatialContract[^\n]{0,80}360/.test(main), "UI duplicates no canonical curve/duration");
-assert.ok(/min: 120, max: 1200, step: 10/.test(main) && /min: 40, max: 500, step: 10/.test(main), "UI editing bounds are consumer metadata");
-assert.ok(/editing: \{ min:/.test(registry), "typed non-motion editing metadata lives in registry");
+assert.ok(/parameter\.validity\.min[\s\S]*parameter\.validity\.max[\s\S]*parameter\.editing\.trackMin[\s\S]*parameter\.editing\.trackMax/.test(main), "Motion controls separate accepted safety domain from practical track navigation");
+assert.ok(/validity: \{ min: 0 \}, editing: \{ trackMin:/.test(registry), "typed non-motion validity and track metadata live in registry");
 assert.ok(/function openSettingsPanel[\s\S]*view\.classList\.contains\("is-open"\)[\s\S]*renderSettingsDesignTuningMotion\(\);[\s\S]*return;/.test(main), "Settings reopen refreshes external overrides without a Vela-specific focus handoff");
 assert.ok(/motionRoot = document\.createElement\("details"\)[\s\S]*data-settings-disclosure-key", "settings\.developer\.designTuning\.motion"/.test(main), "Motion uses the shared Design Tuning domain disclosure with a stable semantic key");
 assert.ok(/motionBody\.appendChild\(curves\); motionBody\.appendChild\(durations\); motionBody\.appendChild\(resetMotion\); motionRoot\.appendChild\(motionTitle\); motionRoot\.appendChild\(motionBody\)/.test(main), "Motion content and Reset Motion remain inside the shared disclosure");

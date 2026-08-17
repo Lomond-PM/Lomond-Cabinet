@@ -25,32 +25,33 @@
         { id: "motion.duration.paletteEnter", type: "durationMs", domain: "motion", motionRole: "paletteEnter" },
         { id: "motion.duration.paletteExit", type: "durationMs", domain: "motion", motionRole: "paletteExit" },
         { id: "motion.duration.dragSettle", type: "durationMs", domain: "motion", motionRole: "dragSettle" },
-        { id: "spacing.surface.edge", type: "lengthPx", domain: "spacing", group: "surface", cssProperty: "--space-surface-edge", editing: { min: 8, max: 36, step: 1, unit: "px" } },
-        { id: "spacing.card.inset", type: "lengthPx", domain: "spacing", group: "surface", cssProperty: "--space-card-inset", editing: { min: 4, max: 28, step: 1, unit: "px" } },
-        { id: "spacing.section.stack", type: "lengthPx", domain: "spacing", group: "section", cssProperty: "--space-section-stack", editing: { min: 4, max: 28, step: 1, unit: "px" } },
-        { id: "spacing.section.headerContent", type: "lengthPx", domain: "spacing", group: "section", cssProperty: "--space-section-header-content", editing: { min: 2, max: 24, step: 1, unit: "px" } },
-        { id: "spacing.field.copy", type: "lengthPx", domain: "spacing", group: "field", cssProperty: "--space-field-copy", editing: { min: 0, max: 12, step: 1, unit: "px" } },
-        { id: "spacing.field.block", type: "lengthPx", domain: "spacing", group: "field", cssProperty: "--space-field-block", editing: { min: 0, max: 20, step: 1, unit: "px" } },
-        { id: "spacing.control.inline", type: "lengthPx", domain: "spacing", group: "control", cssProperty: "--space-inline-control", editing: { min: 2, max: 20, step: 1, unit: "px" } },
-        { id: "spacing.settings.fieldControl", type: "lengthPx", domain: "spacing", group: "settings", cssProperty: "--space-settings-field-control", editing: { min: 4, max: 28, step: 1, unit: "px" } },
-        { id: "spacing.registry.cardInset", type: "lengthPx", domain: "spacing", group: "registry", cssProperty: "--space-registry-card-inset", editing: { min: 4, max: 30, step: 1, unit: "px" } },
-        { id: "spacing.registry.introContent", type: "lengthPx", domain: "spacing", group: "registry", cssProperty: "--space-registry-intro-content", editing: { min: 4, max: 30, step: 1, unit: "px" } },
-        { id: "spacing.registry.sectionHeaderContent", type: "lengthPx", domain: "spacing", group: "registry", cssProperty: "--space-registry-section-header-content", editing: { min: 4, max: 30, step: 1, unit: "px" } },
-        { id: "spacing.registry.sectionCopy", type: "lengthPx", domain: "spacing", group: "registry", cssProperty: "--space-registry-section-copy", editing: { min: 0, max: 16, step: 1, unit: "px" } },
-        { id: "spacing.registry.fieldCopy", type: "lengthPx", domain: "spacing", group: "registry", cssProperty: "--space-registry-field-copy", editing: { min: 0, max: 16, step: 1, unit: "px" } },
-        { id: "spacing.registry.fieldControl", type: "lengthPx", domain: "spacing", group: "registry", cssProperty: "--space-registry-field-control", editing: { min: 4, max: 30, step: 1, unit: "px" } },
-        { id: "spacing.palette.fieldControl", type: "lengthPx", domain: "spacing", group: "palette", cssProperty: "--space-palette-field-control", editing: { min: 2, max: 24, step: 1, unit: "px" } },
-        { id: "spacing.home.toolGrid", type: "lengthPx", domain: "spacing", group: "home", cssProperty: "--space-home-tool-grid", editing: { min: 6, max: 32, step: 1, unit: "px" } },
-        { id: "spacing.home.majorStack", type: "lengthPx", domain: "spacing", group: "home", cssProperty: "--space-home-major-stack", editing: { min: 6, max: 32, step: 1, unit: "px" } },
-        { id: "spacing.home.cardTitle", type: "lengthPx", domain: "spacing", group: "home", cssProperty: "--space-home-card-title", editing: { min: 2, max: 24, step: 1, unit: "px" } },
-        { id: "radius.nestedSurface", type: "lengthPx", domain: "radius", group: "surface", cssProperty: "--radius-nested-surface", editing: { min: 4, max: 28, step: 1, unit: "px" } },
-        { id: "radius.editableControl", type: "lengthPx", domain: "radius", group: "control", cssProperty: "--radius-editable-control", editing: { min: 2, max: 20, step: 1, unit: "px" } },
+        { id: "spacing.surface.edge", type: "lengthPx", domain: "spacing", group: "surface", cssProperty: "--space-surface-edge", validity: { min: 0 }, editing: { trackMin: 8, trackMax: 36, step: 1, unit: "px" } },
+        { id: "spacing.card.inset", type: "lengthPx", domain: "spacing", group: "surface", cssProperty: "--space-card-inset", validity: { min: 0 }, editing: { trackMin: 4, trackMax: 28, step: 1, unit: "px" } },
+        { id: "spacing.section.stack", type: "lengthPx", domain: "spacing", group: "section", cssProperty: "--space-section-stack", validity: { min: 0 }, editing: { trackMin: 4, trackMax: 28, step: 1, unit: "px" } },
+        { id: "spacing.section.headerContent", type: "lengthPx", domain: "spacing", group: "section", cssProperty: "--space-section-header-content", validity: { min: 0 }, editing: { trackMin: 2, trackMax: 24, step: 1, unit: "px" } },
+        { id: "spacing.field.copy", type: "lengthPx", domain: "spacing", group: "field", cssProperty: "--space-field-copy", validity: { min: 0 }, editing: { trackMin: 0, trackMax: 12, step: 1, unit: "px" } },
+        { id: "spacing.field.block", type: "lengthPx", domain: "spacing", group: "field", cssProperty: "--space-field-block", validity: { min: 0 }, editing: { trackMin: 0, trackMax: 20, step: 1, unit: "px" } },
+        { id: "spacing.control.inline", type: "lengthPx", domain: "spacing", group: "control", cssProperty: "--space-inline-control", validity: { min: 0 }, editing: { trackMin: 2, trackMax: 20, step: 1, unit: "px" } },
+        { id: "spacing.settings.fieldControl", type: "lengthPx", domain: "spacing", group: "settings", cssProperty: "--space-settings-field-control", validity: { min: 0 }, editing: { trackMin: 4, trackMax: 28, step: 1, unit: "px" } },
+        { id: "spacing.registry.cardInset", type: "lengthPx", domain: "spacing", group: "registry", cssProperty: "--space-registry-card-inset", validity: { min: 0 }, editing: { trackMin: 4, trackMax: 30, step: 1, unit: "px" } },
+        { id: "spacing.registry.introContent", type: "lengthPx", domain: "spacing", group: "registry", cssProperty: "--space-registry-intro-content", validity: { min: 0 }, editing: { trackMin: 4, trackMax: 30, step: 1, unit: "px" } },
+        { id: "spacing.registry.sectionHeaderContent", type: "lengthPx", domain: "spacing", group: "registry", cssProperty: "--space-registry-section-header-content", validity: { min: 0 }, editing: { trackMin: 4, trackMax: 30, step: 1, unit: "px" } },
+        { id: "spacing.registry.sectionCopy", type: "lengthPx", domain: "spacing", group: "registry", cssProperty: "--space-registry-section-copy", validity: { min: 0 }, editing: { trackMin: 0, trackMax: 16, step: 1, unit: "px" } },
+        { id: "spacing.registry.fieldCopy", type: "lengthPx", domain: "spacing", group: "registry", cssProperty: "--space-registry-field-copy", validity: { min: 0 }, editing: { trackMin: 0, trackMax: 16, step: 1, unit: "px" } },
+        { id: "spacing.registry.fieldControl", type: "lengthPx", domain: "spacing", group: "registry", cssProperty: "--space-registry-field-control", validity: { min: 0 }, editing: { trackMin: 4, trackMax: 30, step: 1, unit: "px" } },
+        { id: "spacing.palette.fieldControl", type: "lengthPx", domain: "spacing", group: "palette", cssProperty: "--space-palette-field-control", validity: { min: 0 }, editing: { trackMin: 2, trackMax: 24, step: 1, unit: "px" } },
+        { id: "spacing.home.toolGrid", type: "lengthPx", domain: "spacing", group: "home", cssProperty: "--space-home-tool-grid", validity: { min: 0 }, editing: { trackMin: 6, trackMax: 32, step: 1, unit: "px" } },
+        { id: "spacing.home.majorStack", type: "lengthPx", domain: "spacing", group: "home", cssProperty: "--space-home-major-stack", validity: { min: 0 }, editing: { trackMin: 6, trackMax: 32, step: 1, unit: "px" } },
+        { id: "spacing.home.cardTitle", type: "lengthPx", domain: "spacing", group: "home", cssProperty: "--space-home-card-title", validity: { min: 0 }, editing: { trackMin: 2, trackMax: 24, step: 1, unit: "px" } },
+        { id: "radius.primaryWorkSurface", type: "lengthPx", domain: "radius", group: "surface", cssProperty: "--radius-primary-work-surface", validity: { min: 0 }, editing: { trackMin: 0, trackMax: 32, step: 1, unit: "px" } },
+        { id: "radius.nestedSurface", type: "lengthPx", domain: "radius", group: "surface", cssProperty: "--radius-nested-surface", validity: { min: 0 }, editing: { trackMin: 4, trackMax: 28, step: 1, unit: "px" } },
+        { id: "radius.editableControl", type: "lengthPx", domain: "radius", group: "control", cssProperty: "--radius-editable-control", validity: { min: 0 }, editing: { trackMin: 2, trackMax: 20, step: 1, unit: "px" } },
         { id: "radius.sectionCard", type: "lengthPx", domain: "radius", group: "identity", cssProperty: "--radius-section-card", protection: "surface-transition" },
         { id: "radius.homeTile", type: "lengthPx", domain: "radius", group: "identity", cssProperty: "--radius-home-tile", protection: "surface-transition" },
         { id: "radius.homeIcon", type: "percentage", domain: "radius", group: "identity", cssProperty: "--radius-home-icon", protection: "surface-transition" },
-        { id: "geometry.control.height", type: "lengthPx", domain: "controls", group: "field", cssProperty: "--control-height", editing: { min: 22, max: 48, step: 1, unit: "px" } },
-        { id: "geometry.button.height", type: "lengthPx", domain: "controls", group: "button", cssProperty: "--button-height", editing: { min: 28, max: 56, step: 1, unit: "px" } },
-        { id: "geometry.button.horizontalPadding", type: "lengthPx", domain: "controls", group: "button", cssProperty: "--button-pad-x", editing: { min: 6, max: 28, step: 1, unit: "px" } },
+        { id: "geometry.control.height", type: "lengthPx", domain: "controls", group: "field", cssProperty: "--control-height", validity: { min: 0 }, editing: { trackMin: 22, trackMax: 48, step: 1, unit: "px" } },
+        { id: "geometry.button.height", type: "lengthPx", domain: "controls", group: "button", cssProperty: "--button-height", validity: { min: 0 }, editing: { trackMin: 28, trackMax: 56, step: 1, unit: "px" } },
+        { id: "geometry.button.horizontalPadding", type: "lengthPx", domain: "controls", group: "button", cssProperty: "--button-pad-x", validity: { min: 0 }, editing: { trackMin: 6, trackMax: 28, step: 1, unit: "px" } },
         { id: "elevation.surfaceShell", type: "shadow", domain: "elevation", group: "surface", cssProperty: "--elevation-surface-shell" },
         { id: "elevation.primaryAction", type: "shadow", domain: "elevation", group: "action", cssProperty: "--elevation-primary-action" },
         { id: "elevation.floatingSurface", type: "shadow", domain: "elevation", group: "floating", cssProperty: "--elevation-floating-surface" },
@@ -103,7 +104,7 @@
         return !!value && [value.x1, value.y1, value.x2, value.y2].every(function (part) { return typeof part === "number" && isFinite(part); }) && value.x1 >= 0 && value.x1 <= 1 && value.x2 >= 0 && value.x2 <= 1;
     }
     for (i = 0; i < definitions.length; i++) {
-        if (definitions[i].type === "durationMs" && !definitions[i].editing) definitions[i].editing = { min: 40, max: 1200, step: 10, unit: "ms" };
+        if (definitions[i].type === "durationMs" && !definitions[i].editing) { definitions[i].validity = { min: 40, max: 1200 }; definitions[i].editing = { trackMin: 40, trackMax: 1200, step: 10, unit: "ms" }; }
         definitions[i].consumerScope = /^(spacing\.(settings|registry|palette|home)\.)/.test(definitions[i].id) ? "domain-specific" : "global-common";
         definitions[i].previewGroup = definitions[i].domain === "motion" ? "motion" : (/^spacing\.settings\./.test(definitions[i].id) ? "settings" : (/^spacing\.home\./.test(definitions[i].id) ? "home" : (/^spacing\.palette\./.test(definitions[i].id) ? "palette" : (definitions[i].domain === "elevation" || definitions[i].id === "radius.nestedSurface" ? "surfaces" : "controls"))));
         definitions[i].previewTargets = definitions[i].consumerScope === "domain-specific" ? [definitions[i].id.split(".")[1]] : ["settings", "registry", "controlLab"];
@@ -128,7 +129,7 @@
         if (parameter.type === "colorAlpha") return validColorAlpha(value) ? { valid: true, value: CoreUI && CoreUI.normalizeColorAlphaValue ? CoreUI.normalizeColorAlphaValue(value, null) : { color: value.color.toLowerCase(), alpha: Number(value.alpha) } } : { valid: false };
         number = Number(value);
         if (typeof value === "boolean" || !isFinite(number) || number < 0) return { valid: false };
-        if (parameter.editing && (number < parameter.editing.min || number > parameter.editing.max)) return { valid: false };
+        if (parameter.validity && ((typeof parameter.validity.min === "number" && number < parameter.validity.min) || (typeof parameter.validity.max === "number" && number > parameter.validity.max))) return { valid: false };
         return { valid: true, value: number };
     }
     return Object.freeze({ list: function () { return definitions.slice(0); }, coverage: function () { return coverage.slice(0); }, get: function (id) { return byId[id] || null; }, validate: validate, cloneValue: clone });

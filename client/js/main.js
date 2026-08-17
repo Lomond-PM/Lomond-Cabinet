@@ -2417,21 +2417,21 @@
         var evidence = DesignTuning && DesignTuning.getEvidence();
         var curveKeys = { enter: "settings.designTuning.motion.curve.enter", exit: "settings.designTuning.motion.curve.exit", standard: "settings.designTuning.motion.curve.standard", press: "settings.designTuning.motion.curve.press" };
         var durationMeta = {
-            "motion.duration.spatialExpand": { key: "settings.designTuning.motion.duration.spatialExpand", min: 120, max: 1200, step: 10, unit: "ms" },
-            "motion.duration.spatialContract": { key: "settings.designTuning.motion.duration.spatialContract", min: 100, max: 1000, step: 10, unit: "ms" },
-            "motion.duration.viewContentEnter": { key: "settings.designTuning.motion.duration.viewContentEnter", min: 60, max: 600, step: 10, unit: "ms" },
-            "motion.duration.viewContentExit": { key: "settings.designTuning.motion.duration.viewContentExit", min: 40, max: 500, step: 10, unit: "ms" },
-            "motion.duration.actionFeedback": { key: "settings.designTuning.motion.duration.actionFeedback", min: 40, max: 1200, step: 10, unit: "ms" },
-            "motion.duration.actionPress": { key: "settings.designTuning.motion.duration.actionPress", min: 40, max: 1200, step: 10, unit: "ms" },
-            "motion.duration.surfaceState": { key: "settings.designTuning.motion.duration.surfaceState", min: 40, max: 1200, step: 10, unit: "ms" },
-            "motion.duration.structuralCollapse": { key: "settings.designTuning.motion.duration.structuralCollapse", min: 40, max: 1200, step: 10, unit: "ms" },
-            "motion.duration.homeHandoffRecede": { key: "settings.designTuning.motion.duration.homeHandoffRecede", min: 40, max: 1200, step: 10, unit: "ms" },
-            "motion.duration.homeHandoffRestore": { key: "settings.designTuning.motion.duration.homeHandoffRestore", min: 40, max: 1200, step: 10, unit: "ms" },
-            "motion.duration.spatialIdentity": { key: "settings.designTuning.motion.duration.spatialIdentity", min: 40, max: 1200, step: 10, unit: "ms" },
-            "motion.duration.toolIdentityOpen": { key: "settings.designTuning.motion.duration.toolIdentityOpen", min: 40, max: 1200, step: 10, unit: "ms" },
-            "motion.duration.paletteEnter": { key: "settings.designTuning.motion.duration.paletteEnter", min: 40, max: 1200, step: 10, unit: "ms" },
-            "motion.duration.paletteExit": { key: "settings.designTuning.motion.duration.paletteExit", min: 40, max: 1200, step: 10, unit: "ms" },
-            "motion.duration.dragSettle": { key: "settings.designTuning.motion.duration.dragSettle", min: 40, max: 1200, step: 10, unit: "ms" }
+            "motion.duration.spatialExpand": { key: "settings.designTuning.motion.duration.spatialExpand" },
+            "motion.duration.spatialContract": { key: "settings.designTuning.motion.duration.spatialContract" },
+            "motion.duration.viewContentEnter": { key: "settings.designTuning.motion.duration.viewContentEnter" },
+            "motion.duration.viewContentExit": { key: "settings.designTuning.motion.duration.viewContentExit" },
+            "motion.duration.actionFeedback": { key: "settings.designTuning.motion.duration.actionFeedback" },
+            "motion.duration.actionPress": { key: "settings.designTuning.motion.duration.actionPress" },
+            "motion.duration.surfaceState": { key: "settings.designTuning.motion.duration.surfaceState" },
+            "motion.duration.structuralCollapse": { key: "settings.designTuning.motion.duration.structuralCollapse" },
+            "motion.duration.homeHandoffRecede": { key: "settings.designTuning.motion.duration.homeHandoffRecede" },
+            "motion.duration.homeHandoffRestore": { key: "settings.designTuning.motion.duration.homeHandoffRestore" },
+            "motion.duration.spatialIdentity": { key: "settings.designTuning.motion.duration.spatialIdentity" },
+            "motion.duration.toolIdentityOpen": { key: "settings.designTuning.motion.duration.toolIdentityOpen" },
+            "motion.duration.paletteEnter": { key: "settings.designTuning.motion.duration.paletteEnter" },
+            "motion.duration.paletteExit": { key: "settings.designTuning.motion.duration.paletteExit" },
+            "motion.duration.dragSettle": { key: "settings.designTuning.motion.duration.dragSettle" }
         };
         var heading; var motionRoot; var motionTitle; var motionBody; var curves; var durations; var actions; var evidenceLabel; var evidenceOutput; var resetMotion; var resetAll; var parameters; var domains; var domain; var domainRoot; var domainBody; var domainTitle; var resetDomain; var appearanceRegistry; var appearanceParameters; var appearanceRoot; var appearanceBody; var appearanceField; var authority; var i;
         if (!mount || !registry || !evidence || !window.CoreUI) return;
@@ -2518,7 +2518,7 @@
 
     function createDesignTuningDurationField(parameter, meta, evidence) {
         var shell = createDesignTuningFieldShell(parameter, meta.key, evidence); var value = evidence.resolved[parameter.id]; var control;
-        control = window.CoreUI.createRangeNumber({ document: document, rangeId: "designTuning-" + parameter.id.replace(/\./g, "-"), numberId: "designTuning-" + parameter.id.replace(/\./g, "-") + "-number", value: value, min: meta.min, max: meta.max, step: meta.step, field: { min: meta.min, max: meta.max, step: meta.step, defaultValue: value }, unitText: meta.unit, classNames: "settings-field-control settings-design-tuning-duration", rangeClassNames: "pill-slider registry-range settings-slider", numberClassNames: "num-input settings-number", onPreview: function (next) { shell.row.classList.add("has-draft"); updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
+        control = window.CoreUI.createRangeNumber({ document: document, rangeId: "designTuning-" + parameter.id.replace(/\./g, "-"), numberId: "designTuning-" + parameter.id.replace(/\./g, "-") + "-number", value: value, min: parameter.validity.min, max: parameter.validity.max, trackMin: parameter.editing.trackMin, trackMax: parameter.editing.trackMax, step: parameter.editing.step, field: { min: parameter.validity.min, max: parameter.validity.max, step: parameter.editing.step, defaultValue: value }, unitText: parameter.editing.unit, classNames: "settings-field-control settings-design-tuning-duration", rangeClassNames: "pill-slider registry-range settings-slider", numberClassNames: "num-input settings-number", onPreview: function (next) { shell.row.classList.add("has-draft"); updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
         shell.row.appendChild(control.root); shell.row.appendChild(shell.reset); return shell.row;
     }
 
@@ -2533,7 +2533,7 @@
         } else if (parameter.type === "colorAlpha") {
             control = window.CoreUI.createColorField({ document: document, id: "designTuning-" + parameter.id.replace(/\./g, "-"), value: value, fallback: value.color, supportsAlpha: true, classNames: "settings-field-control settings-design-tuning-color-alpha", openPicker: openCoreColorPicker, onPreview: function (next) { shell.row.classList.add("has-draft"); updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
             bindHexInputSelectBehavior(control.hex);
-        } else control = window.CoreUI.createRangeNumber({ document: document, rangeId: "designTuning-" + parameter.id.replace(/\./g, "-"), numberId: "designTuning-" + parameter.id.replace(/\./g, "-") + "-number", value: value, min: parameter.editing.min, max: parameter.editing.max, step: parameter.editing.step, field: { min: parameter.editing.min, max: parameter.editing.max, step: parameter.editing.step, defaultValue: value }, unitText: parameter.editing.unit, classNames: "settings-field-control settings-design-tuning-duration", rangeClassNames: "pill-slider registry-range settings-slider", numberClassNames: "num-input settings-number", onPreview: function (next) { updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
+        } else control = window.CoreUI.createRangeNumber({ document: document, rangeId: "designTuning-" + parameter.id.replace(/\./g, "-"), numberId: "designTuning-" + parameter.id.replace(/\./g, "-") + "-number", value: value, min: parameter.validity.min, max: parameter.validity.max, trackMin: parameter.editing.trackMin, trackMax: parameter.editing.trackMax, step: parameter.editing.step, field: { min: parameter.validity.min, max: parameter.validity.max, step: parameter.editing.step, defaultValue: value }, unitText: parameter.editing.unit, classNames: "settings-field-control settings-design-tuning-duration", rangeClassNames: "pill-slider registry-range settings-slider", numberClassNames: "num-input settings-number", onPreview: function (next) { updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
         shell.row.appendChild(control.root); shell.row.appendChild(shell.reset); return shell.row;
     }
 
