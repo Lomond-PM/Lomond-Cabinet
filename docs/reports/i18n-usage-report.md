@@ -8,11 +8,11 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 354 |
+| A | Core / Global; keep | 356 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
-| E | Deferred / uncertain | 193 |
+| E | Deferred / uncertain | 195 |
 
 ## Registry Tools i18n Table
 
@@ -336,8 +336,10 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | section.theme | section | Theme | 主题 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | section.trimPaths | section | Trim Paths | 修剪路径 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | selection.layerCount | selection | {count} layer(s) | {count} 个图层 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| selection.noSelection | selection | No selection | 未选择 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| selection.multipleLayers | selection | {count} layers | {count} 个图层 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| selection.noSelection | selection | No selection | 未选择 | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | selection.noShapeTarget | selection | No shape target | 无形状目标 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| selection.oneLayer | selection | 1 layer | 1 个图层 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | selection.shapeTarget | selection | Shape target | 形状目标 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.appearance.inherited | settings | Using default / inherited | 使用默认 / 继承 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.appearance.overridden | settings | Overridden | 已覆盖 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -429,7 +431,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.designTuning.parameter.surface.registryOption | settings | Registry Option Surface | Registry 选项表面 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.text.secondary | settings | Secondary Text | 次要文本 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.text.tertiary | settings | Tertiary Text | 三级文本 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.designTuning.promotionEvidence | settings | Promotion Evidence | 提升证据 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.promotionEvidence | settings | Promotion Evidence | 采纳依据 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.protected.compound-shadow | settings | Read-only compound shadow | 复合阴影暂为只读 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.protected.surface-transition | settings | Protected by Surface Transition contract | 受 Surface Transition 契约保护 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.radius.title | settings | Radius | 圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -507,11 +509,13 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | status.hostLoading | status | Host JSX is still loading... | host JSX 仍在加载... | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.loadingHost | status | Loading host JSX... | 正在加载 host JSX... | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.motionSpeedUpdated | status | Motion speed updated. | 动画速度已更新。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| status.multipleLayersSelected | status | {count} layers selected | 已选择 {count} 个图层 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.noActiveComp | status | No active composition | 没有激活的合成 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.noLayer | status | Please select at least one layer | 请至少选择一个图层 | client/js/main.js, host/tools/textBackgroundBox.jsx, host/tools/textBackgroundBox.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.noResponse | status | No response from After Effects. | After Effects 没有响应。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| status.noSelectedLayers | status | No selected layers. | 没有选中图层。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| status.noSelectedLayers | status | No selected layers. | 没有选中图层。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.noTextLayer | status | Please select at least one text layer | 请至少选择一个文本层 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| status.oneLayerSelected | status | 1 layer selected | 已选择 1 个图层 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.openComp | status | Please open a composition | 请打开合成 | client/js/main.js, host/tools/shapeAdd.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.paletteAccentSuggested | status | Palette secondary color applied to Interface Accent; it can be adjust... | 已将色卡辅色设为界面强调色，之后可独立调整。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.proceduralAppearanceDefaultsRestored | status | Procedural appearance defaults restored. | 程序化外观默认参数已恢复。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -775,11 +779,13 @@ No low-risk delete candidates found.
 | status.creatingStrokeFillLayer | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.defaultsRestored | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.hostLoading | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| status.multipleLayersSelected | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.noActiveComp | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.noLayer | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.noResponse | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.noSelectedLayers | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.noTextLayer | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| status.oneLayerSelected | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.openComp | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.paletteAccentSuggested | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.proceduralAppearanceDefaultsRestored | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
