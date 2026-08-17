@@ -28,6 +28,9 @@ check(/is-peek-preview \.settings-root-page \.is-settings-peek-anchor,[\s\S]*vis
 check(/is-peek-preview \.settings-root-page \*[\s\S]*visibility: hidden/.test(css), "Unrelated Settings descendants are suppressed with geometry-preserving visibility");
 check(/while \(ancestor && ancestor !== root\)[\s\S]*is-settings-peek-structure/.test(peek), "Structural ancestry is discovered without fixed DOM depth");
 check(/\.is-settings-peek-structure[\s\S]*border-color: transparent[\s\S]*background: transparent[\s\S]*box-shadow: none/.test(css), "Structural ancestors do not paint an Appearance card");
+check(/\.is-settings-peek-anchor\s*\{[^}]*padding-inline:\s*var\(--space-card-inset\)[^}]*border:\s*1px solid var\(--separator\)[^}]*border-radius:\s*var\(--radius-section-card\)[^}]*background:\s*var\(--surface-panel\)[^}]*box-shadow:/.test(css), "UI Scale anchor owns one complete Preview surface frame with safe content inset");
+check(/#settingsInterfaceMount\.is-settings-peek-structure\s*\{[^}]*overflow:\s*visible/.test(css), "The immediate Preview host releases only its proven shadow clipping boundary");
+check(!/\.settings-view\.is-peek-preview\s+\.settings-root-page\s*\{[^}]*background:/.test(css), "Peek does not restore the old full-root surface leak");
 check(/function endSettingsPeekPreview[\s\S]*clearTimeout[\s\S]*classList\.remove\("is-peek-preview"/.test(peek), "Peek exit is idempotent and clears timer and presentation state");
 check(/classList\.remove\("is-settings-peek-anchor", "is-settings-peek-structure"\)/.test(peek), "Repeated exit removes all target/path classes");
 check(/wasPreviewingHome[\s\S]*classList\.remove\("is-settings-peek-home"\)[\s\S]*if \(wasPreviewingHome\) home\.classList\.remove\("is-active"\)/.test(peek), "Peek cleanup does not hide a normally active Home");

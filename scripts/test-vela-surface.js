@@ -541,7 +541,7 @@ function testStaticContracts() {
     ok(/\.vela-status-text\s*\{[\s\S]*?min-width:\s*0[\s\S]*?text-overflow:\s*ellipsis/.test(cssSource), "long status text remains in its shrinkable Grid area");
     ok(/vela-compact-action/.test(composerSource) && !/primary-action|secondary-action/.test(composerSource), "Send and Cancel do not reuse Tool Detail primary or secondary action classes");
     const sharedScrollCss = fs.readFileSync(path.join(ROOT, "client", "css", "style.css"), "utf8");
-    ok(/vela-transcript-scroll ui-scroll-region/.test(surfaceSource) && /\.ui-scroll-region::-webkit-scrollbar[\s\S]*\.ui-scroll-region::-webkit-scrollbar-thumb:hover/.test(sharedScrollCss), "Transcript uses the shared visible CEP/WebKit scrollbar contract");
+    ok(/vela-transcript-scroll ui-scroll-region/.test(surfaceSource) && /\.app-shell \*::-webkit-scrollbar[\s\S]*\.app-shell \*::-webkit-scrollbar-thumb:hover/.test(sharedScrollCss), "Transcript inherits the application-global visible CEP/WebKit scrollbar contract");
     ok(/"vela\.surfaceSettings": "Settings"/.test(i18nSource) && /"vela\.surfaceSettings": "\\u8bbe\\u7f6e"/.test(i18nSource), "Surface Settings label is temporarily localized as Settings / 设置");
     ok(/\.vela-surface-mount[\s\S]*margin-bottom: var\(--space-home-major-stack\)/.test(cssSource), "Surface-to-tool-pool rhythm uses the Home-owned major stack gap");
     const handleRule = (cssSource.match(/\.vela-resize-handle\s*\{([^}]*)\}/) || [])[1] || "";

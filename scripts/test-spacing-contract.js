@@ -65,9 +65,11 @@ assert(rule(css, "\\.registry-label-column", "gap:\\s*var\\(--space-registry-fie
 assert.strictEqual(finalDeclaration(css, ".registry-label-column", "gap"), "var(--space-registry-field-copy)");
 assert(/\.registry-field-row,[\s\S]*?gap:\s*var\(--space-registry-field-control\);[\s\S]*?min-height:\s*calc\(46px \* var\(--ui-scale\)\);[\s\S]*?padding:\s*var\(--space-registry-field-block\) 0;/.test(css));
 
-assert(rule(css, "\\.palette-editor-field", "gap:\\s*var\\(--space-palette-field-control\\)"));
+assert(rule(css, "\\.palette-editor-field", "--ui-field-row-control-gap:\\s*var\\(--space-palette-field-control\\)"));
+assert(rule(css, "\\.palette-editor-field", "padding-block:\\s*calc\\([^)]*var\\(--ui-scale\\)\\)"), "Palette FieldRow internal rhythm must remain a domain-local consumer");
+assert(rule(css, "\\.ui-field-row--aligned", "gap:\\s*var\\(--ui-field-row-control-gap, var\\(--space-settings-field-control\\)\\)"));
 assert(/\.palette-library-list\s*\{[^}]*gap:\s*calc\(8px \* var\(--ui-scale\)\)/.test(css), "Palette Library spacing must remain domain-local");
-assert(/\.palette-editor-scroll\s*\{[^}]*gap:\s*calc\(10px \* var\(--ui-scale\)\)/.test(css), "Palette Editor stack must remain domain-local");
+assert(/\.palette-editor-scroll\s*\{[^}]*gap:\s*calc\([^)]*var\(--ui-scale\)\)/.test(css), "Palette Editor stack spacing must remain domain-local");
 
 assert(rule(css, "\\.tool-grid", "gap:\\s*var\\(--space-home-tool-grid\\)"));
 assert(rule(css, "\\.app-card-title", "margin-top:\\s*var\\(--space-home-card-title\\)"));

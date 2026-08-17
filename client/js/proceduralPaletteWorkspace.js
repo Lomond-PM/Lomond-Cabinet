@@ -444,9 +444,10 @@
 
     function renderPaletteEditorField(labelKey, control) {
         var row;
+        var copy;
         var label;
-        if (options.CoreUI) return options.CoreUI.createFieldRow({ document: getDocument(), labelKey: labelKey, labelText: tr(labelKey), control: control, classNames: "settings-field palette-editor-field", copyClassNames: "palette-editor-field-copy", labelClassNames: "control-label registry-text-body settings-field-label" }).row;
-        row = createElement("div"); label = createElement("strong"); row.className = "settings-field palette-editor-field"; label.className = "control-label registry-text-body settings-field-label"; label.setAttribute("data-i18n", labelKey); label.textContent = tr(labelKey); row.appendChild(label); row.appendChild(control); return row;
+        if (options.CoreUI) return options.CoreUI.createFieldRow({ document: getDocument(), labelKey: labelKey, labelText: tr(labelKey), control: control, classNames: "settings-field palette-editor-field ui-field-row--aligned", copyClassNames: "settings-field-copy palette-editor-field-copy", labelClassNames: "control-label registry-text-body settings-field-label" }).row;
+        row = createElement("div"); copy = createElement("span"); label = createElement("strong"); row.className = "settings-field palette-editor-field ui-field-row ui-field-row--aligned"; copy.className = "ui-field-copy settings-field-copy palette-editor-field-copy"; label.className = "ui-field-label control-label registry-text-body settings-field-label"; label.setAttribute("data-i18n", labelKey); label.textContent = tr(labelKey); copy.appendChild(label); row.appendChild(copy); row.appendChild(control); return row;
     }
 
     function createPalettePreviewBlock() {
