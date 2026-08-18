@@ -43,17 +43,18 @@ ok(!harness.resolver.preview("surface.panel", "calc(1px)"), "arbitrary CSS previ
 
 harness = createHarness({ version: 1, overrides: { "surface.card": "#222222", unknown: "#ffffff" } });
 harness.resolver.initialize({ "base.accent": "#d6b25e" });
-equal(harness.css["--surface-card"], "#222222", "startup rehydrates a valid persisted override");
+equal(harness.css["--surface-card"], undefined, "startup ignores the retired test-only Card Surface override");
+equal(harness.resolver.getResolvedValue("surface.card"), null, "retired Card Surface is no longer resolvable");
 equal(harness.resolver.getResolvedValue("unknown"), null, "unknown persisted target is not resolved");
 
-harness = createHarness({ version: 1, overrides: { "surface.panel": "#121212", "surface.card": "#232323" } });
+harness = createHarness({ version: 1, overrides: { "surface.panel": "#121212", "text.primary": "#eeeeee" } });
 harness.resolver.initialize({ "base.accent": "#d6b25e" });
 harness.resolver.preview("surface.panel", "#343434");
-equal(harness.css["--surface-card"], "#232323", "previewing authority A preserves persisted authority B at runtime");
+equal(harness.css["--text-primary"], "#eeeeee", "previewing authority A preserves persisted authority B at runtime");
 harness.resolver.clearPreview("surface.panel");
 equal(harness.css["--surface-panel"], "#121212", "clearing transient A reveals persisted A rather than canonical");
 harness.resolver.commit("surface.panel", "#454545");
-equal(harness.css["--surface-card"], "#232323", "committing authority A preserves unrelated authority B");
+equal(harness.css["--text-primary"], "#eeeeee", "committing authority A preserves unrelated authority B");
 
 let committedCanvas = null;
 harness = createHarness(null, { commitBaseInput(id, value) { committedCanvas = { id, value }; return true; } });

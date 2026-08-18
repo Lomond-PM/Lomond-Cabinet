@@ -15,7 +15,6 @@
         "layout.scale": 0.92,
         "motion.speed": 1,
         "surface.panel": "#0b0a08",
-        "surface.card": "#0f0e0b",
         "text.primary": "#f6f0df",
         "select.trigger.surface": "#0b0a08",
         "select.menu.surface": "#0b0a08",
@@ -29,7 +28,6 @@
     });
     var CSS_TARGETS = Object.freeze({
         "surface.panel": "--surface-panel",
-        "surface.card": "--surface-card",
         "text.primary": "--text-primary",
         "select.trigger.surface": "--select-trigger-surface",
         "select.menu.surface": "--select-menu-surface",

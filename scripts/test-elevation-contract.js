@@ -30,7 +30,7 @@ assert(declaration(css, "--elevation-floating-surface", "0 12px 26px rgba\\(0, 0
 assert(declaration(css, "--elevation-floating-picker", "0 14px 28px rgba\\(0, 0, 0, 0\\.42\\)"));
 assert(declaration(css, "--elevation-action-container", "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"));
 assert(declaration(css, "--elevation-registry-preview-prominence", "0 calc\\(12px \\* var\\(--ui-scale\\)\\) calc\\(24px \\* var\\(--ui-scale\\)\\) rgba\\(0, 0, 0, 0\\.24\\)"));
-assert(declaration(css, "--action-neutral-surface", "var\\(--surface-card\\)"), "neutral action identity must resolve through a theme-aware semantic surface");
+assert(declaration(css, "--action-neutral-surface", "rgba\\(15, 14, 11, 1\\)"), "neutral action retains its canonical surface without borrowing container ownership");
 assert(!/--elevation-[0-9]+\s*:|--shadow-(?:sm|md|lg)\s*:/.test(css), "numeric elevation ladder must remain absent");
 
 assert(hasShadow(css, "\\.view-detail", "var\\(--elevation-surface-shell\\)"));
@@ -75,7 +75,7 @@ assert(/key:\s*"stateDisabledButton"[\s\S]*?variant:\s*"secondary"[\s\S]*?enable
 assert(/\.vela-settings-button\s*\{[^}]*box-shadow:\s*none;/.test(velaCss), "Vela Surface settings action must remain independently flat");
 assert(/\.vela-surface-action\s*\{[^}]*box-shadow:\s*none;/.test(velaCss), "Vela Surface dynamic actions must remain independently flat");
 
-var mixed = block(css, "\\.panel-card,\\s*\\.ui-button--navigation,\\s*\\.panel-button,\\s*\\.tool-icon,\\s*\\.info-panel,\\s*\\.status-pill,\\s*\\.selection-chip,\\s*\\.action-sheet");
+var mixed = block(css, "\\.panel-button:not\\(\\.utility-action\\),\\s*\\.tool-icon,\\s*\\.action-sheet");
 assert(mixed && !/box-shadow:/.test(mixed), "legacy mixed selector must not own elevation");
 assert(hasShadow(css, "\\.ui-button--navigation,[\\s\\S]*?\\.panel-button", "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"));
 assert(hasShadow(css, "\\.ui-button--neutral", "none"));
@@ -88,9 +88,10 @@ assert(!/button:disabled\s*\{[^}]*box-shadow:/.test(css), "disabled Action eleva
 assert(!/\.panel-local-action:not\(\.is-primary\):not\(\.is-danger\)\s*\{[^}]*var\(--elevation-primary-action\)/.test(css), "neutral panel-local actions must not consume primary elevation");
 assert(!/\.(?:ui-color-swatch|registry-color-swatch|ui-choice-surface|registry-option-card|switch-track)[^{]*\{[^}]*var\(--elevation-primary-action\)/.test(css), "accent and selected non-action controls must not consume primary elevation");
 assert(!/--elevation-primary-action:\s*0 12px 30px rgba\(0, 0, 0, 0\.28\)/.test(css), "primary elevation must not reuse the legacy raised-button shadow");
-["tool-icon", "info-panel", "status-pill", "selection-chip"].forEach(function (name) {
+["tool-icon", "info-panel", "status-pill"].forEach(function (name) {
     assert(hasShadow(css, "\\." + name, "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"), name + " legacy visual parity changed");
 });
+assert(!/\.selection-chip/.test(css), "removed redundant selection capsule has no stale elevation selector");
 
 assert(hasShadow(css, "\\.panel-card", "none"));
 assert(hasShadow(css, "\\.control-card", "none"));

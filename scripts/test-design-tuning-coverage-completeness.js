@@ -11,7 +11,7 @@ const motionContext = { window: {} };
 vm.createContext(motionContext);
 vm.runInContext(fs.readFileSync(path.join(root, "client/js/ui/motionDefaults.js"), "utf8"), motionContext);
 const MotionDefaults = motionContext.window.MotionDefaults;
-const css = fs.readFileSync(path.join(root, "client/css/style.css"), "utf8");
+const css = fs.readFileSync(path.join(root, "client/css/style.css"), "utf8") + "\n" + fs.readFileSync(path.join(root, "client/css/velaSurface.css"), "utf8");
 const main = fs.readFileSync(path.join(root, "client/js/main.js"), "utf8");
 const coverage = registry.coverage();
 const ids = coverage.map(item => item.id);

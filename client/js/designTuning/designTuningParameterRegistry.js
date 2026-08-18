@@ -61,6 +61,11 @@
         ,{ id: "text.tertiary", type: "colorAlpha", domain: "text", group: "text", cssProperty: "--text-tertiary" }
         ,{ id: "surface.field", type: "colorAlpha", domain: "surface", group: "surface", cssProperty: "--field-surface" }
         ,{ id: "surface.registryOption", type: "colorAlpha", domain: "surface", group: "surface", cssProperty: "--registry-option-surface" }
+        ,{ id: "surface.conversation", type: "colorAlpha", domain: "surface", group: "surface", cssProperty: "--surface-conversation" }
+        ,{ id: "surface.utilityChrome", type: "colorAlpha", domain: "surface", group: "surface", cssProperty: "--surface-utility-chrome" }
+        ,{ id: "surface.utilityAction", type: "colorAlpha", domain: "surface", group: "surface", cssProperty: "--surface-utility-action" }
+        ,{ id: "surface.neutralAction", type: "colorAlpha", domain: "surface", group: "surface", cssProperty: "--action-neutral-surface" }
+        ,{ id: "surface.dangerAction", type: "colorAlpha", domain: "surface", group: "surface", cssProperty: "--danger-surface" }
         ,{ id: "border.separator", type: "colorAlpha", domain: "border", group: "border", cssProperty: "--separator" }
         ,{ id: "border.panel", type: "colorAlpha", domain: "border", group: "border", cssProperty: "--panel-border" }
         ,{ id: "border.input", type: "colorAlpha", domain: "border", group: "border", cssProperty: "--input-border" }
@@ -81,7 +86,6 @@
         { id: "border.default", disposition: "INTENTIONALLY_NOT_TUNABLE", derivedFrom: "border.panel", reason: "Forwarding alias follows panel border." },
         { id: "border.subtle", disposition: "INTENTIONALLY_NOT_TUNABLE", derivedFrom: "border.separator", reason: "Forwarding alias follows separator." },
         { id: "surface.canvas", disposition: "INTENTIONALLY_NOT_TUNABLE", derivedFrom: "appearance.base.canvas", reason: "Projection target of the existing top-level Background authority." },
-        { id: "surface.actionNeutral", disposition: "INTENTIONALLY_NOT_TUNABLE", derivedFrom: "appearance.surface.card", reason: "Forwarding alias follows card surface." },
         { id: "spacing.settings.sectionStack", disposition: "INTENTIONALLY_NOT_TUNABLE", derivedFrom: "spacing.section.stack", reason: "Settings forwarding alias." },
         { id: "spacing.settings.sectionHeaderContent", disposition: "INTENTIONALLY_NOT_TUNABLE", derivedFrom: "spacing.section.headerContent", reason: "Settings forwarding alias." },
         { id: "spacing.settings.sectionCopy", disposition: "INTENTIONALLY_NOT_TUNABLE", derivedFrom: "spacing.field.copy", reason: "Settings forwarding alias." },
@@ -93,9 +97,9 @@
         { id: "radius.pill", disposition: "INTENTIONALLY_NOT_TUNABLE", reason: "Fixed pill identity invariant rather than a calibratable radius scale role." },
         { id: "typography.nonSizeRoles", disposition: "INTENTIONALLY_NOT_TUNABLE", reason: "Font family, weight, line-height and letter-spacing remain role contracts; only registered Appearance size multipliers are calibratable." },
         { id: "procedural.appearance", disposition: "INTENTIONALLY_NOT_TUNABLE", reason: "Owned by the Procedural Appearance domain and its dedicated Lab." },
-        { id: "vela.domainPresentation", disposition: "INTENTIONALLY_NOT_TUNABLE", reason: "Vela-specific presentation remains outside shared Design System calibration." }
+        { id: "vela.domainPresentation", disposition: "INTENTIONALLY_NOT_TUNABLE", derivedFrom: "surface.conversation", reason: "Vela-specific state presentation remains outside shared calibration; its reusable conversation surface delegates to the shared authority." }
     ];
-    var appearanceMirrors = ["surface.panel", "surface.card", "text.primary", "select.trigger.surface", "select.menu.surface", "typography.title.size", "typography.sectionTitle.size", "typography.fieldLabel.size", "typography.body.size", "typography.supporting.size", "typography.code.size", "interaction.focus.ring", "interaction.focus.border", "interaction.hover.border", "interaction.hover.surface", "interaction.selected.surface", "interaction.selected.foreground", "interaction.checked.surface", "action.primary.surface", "action.primary.hoverSurface", "selection.indicator.surface"];
+    var appearanceMirrors = ["surface.panel", "text.primary", "select.trigger.surface", "select.menu.surface", "typography.title.size", "typography.sectionTitle.size", "typography.fieldLabel.size", "typography.body.size", "typography.supporting.size", "typography.code.size", "interaction.focus.ring", "interaction.focus.border", "interaction.hover.border", "interaction.hover.surface", "interaction.selected.surface", "interaction.selected.foreground", "interaction.checked.surface", "action.primary.surface", "action.primary.hoverSurface", "selection.indicator.surface"];
     var byId = {};
     var i;
     function clone(value) { return value && typeof value === "object" ? JSON.parse(JSON.stringify(value)) : value; }

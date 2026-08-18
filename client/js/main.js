@@ -8447,28 +8447,16 @@
         var count = Math.max(0, Math.round(Number(result && result.selectedCount) || 0));
         var statusId = result && result.statusId;
         if (statusId === "no-active-comp") {
-            return {
-                status: tr("status.openComp"),
-                label: tr("selection.noSelection")
-            };
+            return { status: tr("status.openComp") };
         }
         if (statusId === "no-selection" || count === 0) {
-            return {
-                status: tr("status.noSelectedLayers"),
-                label: tr("selection.noSelection")
-            };
+            return { status: tr("status.noSelectedLayers") };
         }
-        return {
-            status: tr(count === 1 ? "status.oneLayerSelected" : "status.multipleLayersSelected", { count: count }),
-            label: tr(count === 1 ? "selection.oneLayer" : "selection.multipleLayers", { count: count })
-        };
+        return { status: tr(count === 1 ? "status.oneLayerSelected" : "status.multipleLayersSelected", { count: count }) };
     }
 
     function renderSelectionSummary(result) {
         var presentation = selectionSummaryPresentation(result);
-        if (presentation.label) {
-            byId("selectionPill").textContent = presentation.label;
-        }
         if (result.ok && (!byId("autoStatus") || byId("autoStatus").checked)) {
             setStatus(presentation.status || resultMessage(result, "status.ready"));
         }

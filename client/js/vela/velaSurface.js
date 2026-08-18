@@ -198,7 +198,7 @@
             statusSlot.appendChild(experimentalText);
             controls = node("div", "vela-bottom-controls");
             settingsSlot = node("div", "vela-settings-slot");
-            settingsButton = node("button", "panel-button vela-settings-button");
+            settingsButton = node("button", "panel-button utility-action vela-settings-button");
             settingsButton.type = "button";
             settingsSlot.appendChild(settingsButton);
             actionSlot = node("div", "vela-action-slot");

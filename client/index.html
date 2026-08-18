@@ -24,7 +24,7 @@
                     <h1 data-i18n="app.title">Lomond Cabinet</h1>
                 </div>
                 <div class="home-header-actions">
-                    <button class="panel-button home-edit-button" id="editHomeBtn" type="button" data-i18n="common.editHome">Edit Home</button>
+                    <button class="panel-button utility-action home-edit-button" id="editHomeBtn" type="button" data-i18n="common.editHome">Edit Home</button>
                 </div>
             </header>
 
@@ -32,7 +32,7 @@
                 <section id="velaSurfaceMount" class="vela-surface-mount" data-i18n-aria-label="vela.surfaceLabel"></section>
                 <div class="tool-bootstrap-status" id="toolBootstrapStatus" role="status" aria-live="polite">
                     <span id="toolBootstrapStatusText" data-i18n="bootstrap.loadingTools">Loading tools...</span>
-                    <button class="panel-button tool-bootstrap-retry" id="toolBootstrapRetry" type="button" data-i18n="bootstrap.retry" hidden>Retry</button>
+                    <button class="panel-button utility-action tool-bootstrap-retry" id="toolBootstrapRetry" type="button" data-i18n="bootstrap.retry" hidden>Retry</button>
                 </div>
                 <div class="tool-grid" id="toolGrid" aria-label="Tool grid">
                     <button class="tool-app app-card is-disabled" disabled>
@@ -49,14 +49,13 @@
         <section class="view view-detail" id="detailView">
             <div class="detail-ui-layer">
             <header class="detail-header">
-                <button class="panel-button back-button" id="backBtn">
+                <button class="panel-button utility-action back-button" id="backBtn">
                     <span class="button-glyph">&lt;</span>
                     <span data-i18n="common.home">Home</span>
                 </button>
                 <div class="detail-title">
                     <h2 id="detailHeading">Background Rounded Rectangle</h2>
                 </div>
-                <span class="selection-chip" id="selectionPill" data-i18n="selection.noSelection">No selection</span>
             </header>
 
             <main class="detail-content ui-scroll-region ui-floating-action-scroll">
@@ -72,7 +71,7 @@
             <aside class="settings-panel panel-card" role="dialog" aria-label="Panel settings">
                 <div class="settings-ui-layer">
                     <header class="settings-header">
-                        <button class="panel-button back-button" id="closeSettingsBtn" title="Back" aria-label="Back" data-i18n-title="common.back" data-i18n-aria-label="common.back">
+                        <button class="panel-button utility-action back-button" id="closeSettingsBtn" title="Back" aria-label="Back" data-i18n-title="common.back" data-i18n-aria-label="common.back">
                             <span class="button-glyph">&lt;</span>
                             <span id="settingsBackLabel" data-i18n="common.home">Home</span>
                         </button>
