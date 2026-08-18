@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 357 |
+| A | Core / Global; keep | 358 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -33,7 +33,6 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | app.title | app | Lomond Cabinet | Lomond Cabinet | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | appearance.select.menuSurface.label | appearance | Select Menu Surface | 选择器菜单面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.select.triggerSurface.label | appearance | Select Trigger Surface | 选择器触发面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| appearance.surface.card.label | appearance | Card Surface | 卡片表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.surface.panel.label | appearance | Panel Surface | 面板表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.text.primary.label | appearance | Primary Text | 主要文本 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.typography.bodySize.description | appearance | Adjusts Body and Control text together. | 同时调整正文与控件文字。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -336,10 +335,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | section.theme | section | Theme | 主题 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | section.trimPaths | section | Trim Paths | 修剪路径 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | selection.layerCount | selection | {count} layer(s) | {count} 个图层 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| selection.multipleLayers | selection | {count} layers | {count} 个图层 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| selection.noSelection | selection | No selection | 未选择 | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | selection.noShapeTarget | selection | No shape target | 无形状目标 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| selection.oneLayer | selection | 1 layer | 1 个图层 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | selection.shapeTarget | selection | Shape target | 形状目标 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.appearance.inherited | settings | Using default / inherited | 使用默认 / 继承 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.appearance.overridden | settings | Overridden | 已覆盖 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -428,8 +424,13 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.designTuning.parameter.spacing.section.stack | settings | Section Stack | 分区堆叠间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.spacing.settings.fieldControl | settings | Settings Field to Control | 设置字段与控件 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.spacing.surface.edge | settings | Surface Edge | 表面边缘 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.surface.conversation | settings | Conversation Surface | 对话表面 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.surface.dangerAction | settings | Danger Action Surface | 危险操作表面 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.surface.field | settings | Field Surface | 字段表面 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.surface.neutralAction | settings | Neutral Action Surface | 中性操作表面 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.surface.registryOption | settings | Registry Option Surface | Registry 选项表面 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.surface.utilityAction | settings | Utility Action Surface | 工具操作表面 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.surface.utilityChrome | settings | Utility Chrome Surface | 工具栏表面 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.text.secondary | settings | Secondary Text | 次要文本 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.text.tertiary | settings | Tertiary Text | 三级文本 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.promotionEvidence | settings | Promotion Evidence | 采纳依据 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |

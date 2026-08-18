@@ -6,6 +6,7 @@ const path = require("path");
 const ROOT = path.resolve(__dirname, "..");
 const schemaText = fs.readFileSync(path.join(ROOT, "client", "js", "settingsSchema.js"), "utf8");
 const mainText = fs.readFileSync(path.join(ROOT, "client", "js", "main.js"), "utf8");
+const indexText = fs.readFileSync(path.join(ROOT, "client", "index.html"), "utf8");
 const cssText = fs.readFileSync(path.join(ROOT, "client", "css", "style.css"), "utf8");
 const i18nText = fs.readFileSync(path.join(ROOT, "client", "js", "i18n.js"), "utf8");
 const storeText = fs.readFileSync(path.join(ROOT, "client", "js", "proceduralPaletteStore.js"), "utf8");
@@ -136,8 +137,8 @@ function run() {
     assert(/settingsContent\.addEventListener\("scroll"[\s\S]*closeCustomSelectMenus/.test(mainText) && /function closeSettingsPanel[\s\S]*closeCustomSelectMenus/.test(mainText), "Portal menus must close on Settings scroll and close.");
     assertions += 7;
 
-    assert(/\.home-header-actions \.panel-button\s*\{[^}]*border-color: var\(--gold-soft\)[^}]*color: var\(--gold-soft\)/.test(cssText), "Home header controls must use the theme accent variables in their resting state.");
-    assert(/\.home-header-actions \.panel-button:hover,[\s\S]*\.home-header-actions \.panel-button:focus-visible[\s\S]*border-color: var\(--gold\)/.test(cssText), "Home header hover and focus states must strengthen the theme accent.");
+    assert(/class="panel-button utility-action home-edit-button" id="editHomeBtn"/.test(indexText), "Edit Home must consume the shared utility-action presentation.");
+    assert(/\.utility-action\s*\{[^}]*background: var\(--surface-utility-action\)[^}]*color: var\(--text-primary\)/.test(cssText), "Utility actions must use their semantic surface and primary text authority.");
     assert(/\.settings-glyph\s*\{[^}]*background-color: var\(--gold-soft\)/.test(cssText), "Settings glyph mask must use the theme accent, not tool icon colors.");
     assert(/\.more-icon\s*\{[^}]*border-color: var\(--gold-soft\)[^}]*background: var\(--bg-main\)/.test(cssText) && /\.plus-h,[\s\S]*background: var\(--gold-soft\)/.test(cssText), "More Tools icon and plus must use the theme accent variables.");
     assert(/\.more-icon \+ \.app-card-title\s*\{[^}]*color: var\(--gold-soft\)/.test(cssText), "More Tools text must use the theme accent variables.");

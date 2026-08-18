@@ -46,10 +46,10 @@
         }
         send = documentRef.createElement("button");
         send.type = "button";
-        send.className = "panel-button vela-surface-action vela-compact-action";
+        send.className = "panel-button utility-action vela-surface-action vela-compact-action";
         cancel = documentRef.createElement("button");
         cancel.type = "button";
-        cancel.className = "panel-button vela-surface-action vela-compact-action";
+        cancel.className = "panel-button utility-action vela-surface-action vela-compact-action";
         function sendHandler() { if (!disposed && state === "send" && enabled && /\S/.test(composer.value)) { onSend(composer.value); } }
         function cancelHandler() { if (!disposed && state === "cancel" && !cancel.disabled) { onCancel(); } }
         function inputHandler() { if (!disposed) { render(state, enabled); onDraftChange(composer.value); } }

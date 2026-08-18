@@ -32,9 +32,9 @@
             if (showSummary) { summary.textContent = t("vela.surfaceConfirmationValue", { before: state && state.beforeValue !== null ? state.beforeValue : "-", proposed: state && state.proposedValue !== null ? state.proposedValue : "-" }); }
         }
         summary = documentRef.createElement("span"); summary.className = "vela-confirmation-summary";
-        review = documentRef.createElement("button"); review.type = "button"; review.className = "panel-button vela-surface-action vela-compact-action";
-        approve = documentRef.createElement("button"); approve.type = "button"; approve.className = "panel-button vela-surface-action vela-compact-action";
-        reject = documentRef.createElement("button"); reject.type = "button"; reject.className = "panel-button vela-surface-action vela-compact-action";
+        review = documentRef.createElement("button"); review.type = "button"; review.className = "panel-button utility-action vela-surface-action vela-compact-action";
+        approve = documentRef.createElement("button"); approve.type = "button"; approve.className = "panel-button utility-action vela-surface-action vela-compact-action";
+        reject = documentRef.createElement("button"); reject.type = "button"; reject.className = "panel-button utility-action vela-surface-action vela-compact-action vela-reject-action";
         function reviewHandler() { if (!disposed && !review.disabled) { onReview(); } }
         function approveHandler() { if (!disposed && !approve.disabled) { onApprove(); } }
         function rejectHandler() { if (!disposed && !reject.disabled) { onReject(); } }

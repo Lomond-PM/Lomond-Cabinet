@@ -23,7 +23,7 @@ check(!/evalScript[\s\S]{0,200}SystemRouter|SystemRouter[\s\S]{0,200}runRegister
 const settingsPanelCss = css.slice(css.indexOf(".settings-view .settings-panel"), css.indexOf(".settings-view.is-open .settings-panel"));
 check(settingsPanelCss.includes("inset: var(--view-inset)") && settingsPanelCss.includes("width: auto") && settingsPanelCss.includes("max-width: none") && !settingsPanelCss.includes("width: 360px"), "Global Settings uses full-detail geometry instead of drawer width");
 check(/\.settings-backdrop[\s\S]*background: transparent/.test(css), "Global Settings no longer dims a visible Home backdrop");
-check(/class="panel-button back-button" id="closeSettingsBtn"/.test(index), "Global Settings primary back reuses the shared back-button chrome");
+check(/class="panel-button utility-action back-button" id="closeSettingsBtn"/.test(index), "Global Settings primary back reuses the shared utility-action and back-button contracts");
 check(/\.settings-header[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto minmax\(0, 1fr\)/.test(css) && /\.settings-header \.back-button[\s\S]*justify-self: start/.test(css), "Global Settings primary back uses the left navigation geometry contract");
 check(!/id="closeSettingsBtn"[^>]*round-button/.test(index), "legacy right-side round close chrome is removed");
 check(/createSettingsCategory/.test(main) && /settingsAppearanceParametersMount/.test(appearanceSource), "Settings uses one Disclosure composition without duplicating Appearance editors");

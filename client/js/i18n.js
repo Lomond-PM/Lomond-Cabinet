@@ -114,6 +114,11 @@
                 "settings.designTuning.parameter.text.tertiary": "Tertiary Text",
                 "settings.designTuning.parameter.surface.field": "Field Surface",
                 "settings.designTuning.parameter.surface.registryOption": "Registry Option Surface",
+                "settings.designTuning.parameter.surface.conversation": "Conversation Surface",
+                "settings.designTuning.parameter.surface.utilityChrome": "Utility Chrome Surface",
+                "settings.designTuning.parameter.surface.utilityAction": "Utility Action Surface",
+                "settings.designTuning.parameter.surface.neutralAction": "Neutral Action Surface",
+                "settings.designTuning.parameter.surface.dangerAction": "Danger Action Surface",
                 "settings.designTuning.parameter.border.separator": "Separator Border",
                 "settings.designTuning.parameter.border.panel": "Panel Border",
                 "settings.designTuning.parameter.border.input": "Input Border",
@@ -135,7 +140,6 @@
                 "appearance.typography.codeSize.label": "Code Size",
                 "appearance.typography.codeSize.description": "Adjusts Code text and Palette JSON independently from Supporting text.",
                 "appearance.surface.panel.label": "Panel Surface",
-                "appearance.surface.card.label": "Card Surface",
                 "appearance.text.primary.label": "Primary Text",
                 "appearance.select.triggerSurface.label": "Select Trigger Surface",
                 "appearance.select.menuSurface.label": "Select Menu Surface",
@@ -568,12 +572,9 @@
                 "status.multipleLayersSelected": "{count} layers selected",
                 "status.unableReadSelection": "Unable to read selection.",
 
-                "selection.noSelection": "No selection",
                 "selection.noShapeTarget": "No shape target",
                 "selection.shapeTarget": "Shape target",
                 "selection.layerCount": "{count} layer(s)",
-                "selection.oneLayer": "1 layer",
-                "selection.multipleLayers": "{count} layers"
             },
             "zh-CN": {
                 "app.title": "Lomond Cabinet",
@@ -675,6 +676,11 @@
                 "settings.designTuning.parameter.text.tertiary": "\u4e09\u7ea7\u6587\u672c",
                 "settings.designTuning.parameter.surface.field": "\u5b57\u6bb5\u8868\u9762",
                 "settings.designTuning.parameter.surface.registryOption": "Registry \u9009\u9879\u8868\u9762",
+                "settings.designTuning.parameter.surface.conversation": "\u5bf9\u8bdd\u8868\u9762",
+                "settings.designTuning.parameter.surface.utilityChrome": "\u5de5\u5177\u680f\u8868\u9762",
+                "settings.designTuning.parameter.surface.utilityAction": "\u5de5\u5177\u64cd\u4f5c\u8868\u9762",
+                "settings.designTuning.parameter.surface.neutralAction": "\u4e2d\u6027\u64cd\u4f5c\u8868\u9762",
+                "settings.designTuning.parameter.surface.dangerAction": "\u5371\u9669\u64cd\u4f5c\u8868\u9762",
                 "settings.designTuning.parameter.border.separator": "\u5206\u9694\u8fb9\u6846",
                 "settings.designTuning.parameter.border.panel": "\u9762\u677f\u8fb9\u6846",
                 "settings.designTuning.parameter.border.input": "\u8f93\u5165\u6846\u8fb9\u6846",
@@ -696,7 +702,6 @@
                 "appearance.typography.codeSize.label": "\u4ee3\u7801\u6587\u672c\u5927\u5c0f",
                 "appearance.typography.codeSize.description": "\u72ec\u7acb\u8c03\u6574\u4ee3\u7801\u6587\u672c\u4e0e Palette JSON\uff0c\u4e0d\u8ddf\u968f\u8f85\u52a9\u6587\u672c\u3002",
                 "appearance.surface.panel.label": "\u9762\u677f\u8868\u9762",
-                "appearance.surface.card.label": "\u5361\u7247\u8868\u9762",
                 "appearance.text.primary.label": "\u4e3b\u8981\u6587\u672c",
                 "appearance.select.triggerSurface.label": "\u9009\u62e9\u5668\u89e6\u53d1\u9762",
                 "appearance.select.menuSurface.label": "\u9009\u62e9\u5668\u83dc\u5355\u9762",
@@ -1129,12 +1134,9 @@
                 "status.multipleLayersSelected": "\u5df2\u9009\u62e9 {count} \u4e2a\u56fe\u5c42",
                 "status.unableReadSelection": "\u65e0\u6cd5\u8bfb\u53d6\u9009\u62e9\u3002",
 
-                "selection.noSelection": "\u672a\u9009\u62e9",
                 "selection.noShapeTarget": "\u65e0\u5f62\u72b6\u76ee\u6807",
                 "selection.shapeTarget": "\u5f62\u72b6\u76ee\u6807",
                 "selection.layerCount": "{count} \u4e2a\u56fe\u5c42",
-                "selection.oneLayer": "1 \u4e2a\u56fe\u5c42",
-                "selection.multipleLayers": "{count} \u4e2a\u56fe\u5c42"
             }
         },
 

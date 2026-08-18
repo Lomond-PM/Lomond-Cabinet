@@ -6,6 +6,7 @@
 }(typeof self !== "undefined" ? self : this, function () {
     "use strict";
     var STORAGE_KEY = "AEToolbox.designTuning.v1";
+    var LEGACY_ID_MAP = { "surface.navigationAction": "surface.utilityAction" };
     function create(options) {
         options = options || {};
         var storage = options.storage;
@@ -14,14 +15,15 @@
         function copy(source) { var out = {}; var key; for (key in source) if (Object.prototype.hasOwnProperty.call(source, key)) out[key] = registry.cloneValue(source[key]); return out; }
         function normalize(candidate) {
             var source = candidate && candidate.version === 1 && candidate.overrides && typeof candidate.overrides === "object" ? candidate.overrides : {};
-            var out = {}; var key; var checked;
-            for (key in source) if (Object.prototype.hasOwnProperty.call(source, key)) { checked = registry.validate(key, source[key]); if (checked.valid) out[key] = checked.value; }
+            var out = {}; var key; var checked; var target;
+            for (key in source) if (Object.prototype.hasOwnProperty.call(source, key) && !LEGACY_ID_MAP[key]) { checked = registry.validate(key, source[key]); if (checked.valid) out[key] = checked.value; }
+            for (key in source) if (Object.prototype.hasOwnProperty.call(source, key) && LEGACY_ID_MAP[key]) { target = LEGACY_ID_MAP[key]; if (!Object.prototype.hasOwnProperty.call(out, target)) { checked = registry.validate(target, source[key]); if (checked.valid) out[target] = checked.value; } }
             return { version: 1, overrides: out };
         }
         function save() { try { if (storage) storage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, overrides: overrides })); return true; } catch (error) { return false; } }
         return Object.freeze({
             storageKey: STORAGE_KEY,
-            load: function () { var parsed = null; try { parsed = JSON.parse(storage && storage.getItem(STORAGE_KEY) || "null"); } catch (error) {} overrides = normalize(parsed).overrides; return copy(overrides); },
+            load: function () { var parsed = null; var source; var key; var migrated = false; try { parsed = JSON.parse(storage && storage.getItem(STORAGE_KEY) || "null"); } catch (error) {} source = parsed && parsed.overrides && typeof parsed.overrides === "object" ? parsed.overrides : {}; for (key in LEGACY_ID_MAP) if (Object.prototype.hasOwnProperty.call(LEGACY_ID_MAP, key) && Object.prototype.hasOwnProperty.call(source, key)) migrated = true; overrides = normalize(parsed).overrides; if (migrated) save(); return copy(overrides); },
             normalize: normalize,
             save: save,
             getOverride: function (id) { return Object.prototype.hasOwnProperty.call(overrides, id) ? registry.cloneValue(overrides[id]) : null; },

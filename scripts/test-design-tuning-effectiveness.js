@@ -5,13 +5,13 @@ const fs = require("fs");
 const vm = require("vm");
 const path = require("path");
 const root = path.resolve(__dirname, "..");
-const css = fs.readFileSync(path.join(root, "client/css/style.css"), "utf8");
+const css = fs.readFileSync(path.join(root, "client/css/style.css"), "utf8") + "\n" + fs.readFileSync(path.join(root, "client/css/velaSurface.css"), "utf8");
 const context = { self: {}, window: {}, module: { exports: {} }, Object, Number, isFinite, JSON };
 context.self = context.window = { document: {}, CoreUI: require(path.join(root, "client/js/ui/coreUi.js")) };
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(root, "client/js/designTuning/designTuningParameterRegistry.js"), "utf8"), context);
 const parameters = Array.from(context.window.DesignTuningParameterRegistry.list()).filter(p => !p.protection);
-assert.strictEqual(parameters.length, 55, "all 55 editable parameters remain available");
+assert.strictEqual(parameters.length, 60, "all 60 editable parameters remain available");
 parameters.filter(p => p.cssProperty).forEach(parameter => {
     const uses = (css.match(new RegExp("var\\(" + parameter.cssProperty.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\)", "g")) || []).length;
     assert.ok(uses > 0, parameter.id + " has a real stylesheet consumer");
