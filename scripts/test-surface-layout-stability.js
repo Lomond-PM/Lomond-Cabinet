@@ -25,7 +25,7 @@ assert(/\.palette-workspace\.is-stacked \.palette-library-list,\s*\.palette-work
 assert(/\.palette-workspace\s*\{[^}]*grid-template-columns:\s*var\(--palette-library-width\)/.test(css), "Wide Palette must preserve master-detail columns.");
 assert(/padding-bottom:\s*var\(--scroll-terminal-action-clearance/.test(css), "Stacked Palette must preserve terminal action breathing room.");
 assert(/workspace\.className\s*=\s*"palette-workspace"/.test(palette), "Narrow workspace scroll ownership must not require a presentation opt-in class.");
-assert(/html,\s*body,\s*\.app-shell,\s*\.app-shell \*\s*\{[^}]*scrollbar-color:[^}]*scrollbar-width:\s*thin/.test(css), "Application scope must provide canonical native scrollbar presentation.");
+assert(/(?:^|\n)\*\s*\{[^}]*scrollbar-color:[^}]*scrollbar-width:\s*thin/.test(css), "Document scope must provide canonical native scrollbar presentation.");
 assert(/classNames:\s*"settings-field palette-editor-field ui-field-row--aligned"/.test(palette), "Palette fields must select the generic aligned CoreUI FieldRow composition.");
 assert(/copyClassNames:\s*"settings-field-copy palette-editor-field-copy"/.test(palette), "Palette labels must remain contained in the FieldRow copy region.");
 assert(/\.ui-field-row--aligned\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(110px, 0\.7fr\) minmax\(180px, 1\.3fr\)/.test(css), "CoreUI FieldRow must own the wide label/control columns.");

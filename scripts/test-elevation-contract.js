@@ -25,7 +25,9 @@ function hasShadow(source, selectorPattern, valuePattern) {
 }
 
 assert(declaration(css, "--elevation-surface-shell", "0 18px 48px rgba\\(0, 0, 0, 0\\.38\\)"));
+assert(declaration(css, "--elevation-information-surface", "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"));
 assert(declaration(css, "--elevation-primary-action", "0 4px 10px rgba\\(0, 0, 0, 0\\.18\\)"));
+assert(declaration(css, "--elevation-utility-action", "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"));
 assert(declaration(css, "--elevation-floating-surface", "0 12px 26px rgba\\(0, 0, 0, 0\\.34\\)"));
 assert(declaration(css, "--elevation-floating-picker", "0 14px 28px rgba\\(0, 0, 0, 0\\.42\\)"));
 assert(declaration(css, "--elevation-action-container", "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"));
@@ -34,12 +36,15 @@ assert(declaration(css, "--action-neutral-surface", "rgba\\(15, 14, 11, 1\\)"), 
 assert(!/--elevation-[0-9]+\s*:|--shadow-(?:sm|md|lg)\s*:/.test(css), "numeric elevation ladder must remain absent");
 
 assert(hasShadow(css, "\\.view-detail", "var\\(--elevation-surface-shell\\)"));
+assert(hasShadow(css, "\\.info-panel", "var\\(--elevation-information-surface\\)"));
 assert(hasShadow(css, "\\.ui-button--primary", "var\\(--elevation-primary-action\\)"));
+assert(hasShadow(css, "\\.ui-button--navigation,[\\s\\S]*?\\.utility-action", "var\\(--elevation-utility-action\\)"));
 assert(hasShadow(css, "\\.secondary-action,[\\s\\S]*?\\.registry-secondary-action", "none"));
 assert(hasShadow(css, "\\.ui-button--danger", "none"));
 assert(hasShadow(css, "\\.primary-action:disabled,[\\s\\S]*?\\.ui-button--danger:disabled", "none"));
 assert(/\.primary-action:disabled,[\s\S]*?\.secondary-action:disabled,[\s\S]*?\.registry-secondary-action:disabled,[\s\S]*?\.panel-local-action:disabled,[\s\S]*?\.ui-button--primary:disabled,[\s\S]*?\.ui-button--neutral:disabled,[\s\S]*?\.ui-button--navigation:disabled,[\s\S]*?\.ui-button--danger:disabled\s*\{[^}]*box-shadow:\s*none;/.test(css), "all Action Button disabled variants must resolve to no resting elevation");
 assert(hasShadow(css, "\\.select-menu", "var\\(--elevation-floating-surface\\)"));
+assert(hasShadow(css, "\\.settings-view\\.is-peek-preview \\.settings-root-page \\.is-settings-peek-anchor", "var\\(--elevation-floating-surface\\)"));
 assert(hasShadow(css, "\\.registry-color-picker-popover", "var\\(--elevation-floating-picker\\)"));
 assert(hasShadow(css, "\\.action-sheet", "var\\(--elevation-action-container\\)"));
 assert(hasShadow(css, "\\.registry-procedural-preview", "var\\(--elevation-registry-preview-prominence\\)"));
@@ -63,7 +68,7 @@ assert(/ui-button--neutral panel-button settings-source-summary-action panel-loc
 assert((main.match(/panel-local-action/g) || []).length >= 5, "Classic, Procedural, source-summary, and Settings-local actions must share the panel-local action contract");
 assert(/id: "velaExperimentalEnable", variant: "neutral", classNames: "panel-button panel-local-action"/.test(main), "Vela Settings enable must consume canonical Neutral plus the panel-local contract");
 assert(/id: "velaExperimentalDisable", variant: "neutral", classNames: "panel-button panel-local-action"/.test(main), "Vela Settings disable must consume canonical Neutral plus the panel-local contract");
-assert(/variant: "neutral", classNames: "panel-button appearance-reset-button panel-local-action"/.test(main), "Appearance Reset must consume the Settings panel-local action contract");
+assert(/variant: "neutral", size: "compact", classNames: "panel-button appearance-reset-button panel-local-action"/.test(main), "Appearance Reset must consume the compact Settings panel-local action contract");
 assert(/panel-button registry-large-button panel-local-action/.test(paletteWorkspace), "Palette actions must expose the shared panel-local composition seam");
 assert(/variant: className && className\.indexOf\("is-primary"\) >= 0 \? "primary"/.test(paletteWorkspace), "Palette primary actions must retain explicit CoreUI primary metadata");
 assert(!/back-button[^\n]*panel-local-action|panel-local-action[^\n]*back-button/.test(main), "Settings and Detail navigation must remain outside panel-local action ownership");
@@ -72,12 +77,12 @@ assert(/field\.variant === "primary" \? "primary" : \(field\.variant === "danger
 assert(/element\.disabled = schemaStateDisabled\(item, toolDef\);[\s\S]*?element\.classList\.toggle\("is-state-disabled", element\.disabled\);/.test(main), "Registry state conditions must map to both HTML disabled and the semantic state class");
 assert(/elements\[i\]\.disabled = disabled;[\s\S]*?elements\[i\]\.classList\.toggle\("is-state-disabled", disabled\);/.test(main), "Registry state refresh must preserve both disabled representations");
 assert(/key:\s*"stateDisabledButton"[\s\S]*?variant:\s*"secondary"[\s\S]*?enabledWhen:\s*\{[\s\S]*?stateKey:\s*"hasComp"/.test(registryControlLab), "Control Lab state-gated horizontal action is a Secondary action, not a Primary action");
-assert(/\.vela-settings-button\s*\{[^}]*box-shadow:\s*none;/.test(velaCss), "Vela Surface settings action must remain independently flat");
-assert(/\.vela-surface-action\s*\{[^}]*box-shadow:\s*none;/.test(velaCss), "Vela Surface dynamic actions must remain independently flat");
+assert(!/\.vela-settings-button\s*\{[^}]*box-shadow:/.test(velaCss), "Vela Settings must inherit Utility Action elevation");
+assert(!/\.vela-surface-action\s*\{[^}]*box-shadow:/.test(velaCss), "Vela dynamic actions must inherit Utility Action elevation");
 
 var mixed = block(css, "\\.panel-button:not\\(\\.utility-action\\),\\s*\\.tool-icon,\\s*\\.action-sheet");
 assert(mixed && !/box-shadow:/.test(mixed), "legacy mixed selector must not own elevation");
-assert(hasShadow(css, "\\.ui-button--navigation,[\\s\\S]*?\\.panel-button", "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"));
+assert(!hasShadow(css, "\\.panel-button:not\\(\\.utility-action\\)", "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"), "legacy panel-button shadow must not bypass Action elevation ownership");
 assert(hasShadow(css, "\\.ui-button--neutral", "none"));
 assert(!/\.panel-button\s*\{[^}]*box-shadow:\s*none;/.test(css), "global panel buttons must not be flattened");
 assert(!/\.(?:secondary-action|registry-secondary-action)\s*\{[^}]*0 12px 30px rgba\(0, 0, 0, 0\.28\)/.test(css), "Registry secondary actions must not consume the legacy raised-button shadow");
@@ -88,9 +93,9 @@ assert(!/button:disabled\s*\{[^}]*box-shadow:/.test(css), "disabled Action eleva
 assert(!/\.panel-local-action:not\(\.is-primary\):not\(\.is-danger\)\s*\{[^}]*var\(--elevation-primary-action\)/.test(css), "neutral panel-local actions must not consume primary elevation");
 assert(!/\.(?:ui-color-swatch|registry-color-swatch|ui-choice-surface|registry-option-card|switch-track)[^{]*\{[^}]*var\(--elevation-primary-action\)/.test(css), "accent and selected non-action controls must not consume primary elevation");
 assert(!/--elevation-primary-action:\s*0 12px 30px rgba\(0, 0, 0, 0\.28\)/.test(css), "primary elevation must not reuse the legacy raised-button shadow");
-["tool-icon", "info-panel", "status-pill"].forEach(function (name) {
-    assert(hasShadow(css, "\\." + name, "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"), name + " legacy visual parity changed");
-});
+assert(!/--elevation-utility-action:\s*var\(--elevation-(?:primary-action|action-container)\)/.test(css), "Utility elevation must not alias Primary or Action Container");
+assert(hasShadow(css, "\\.tool-icon", "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"), "Home tool identity retains its protected optical shadow");
+assert(hasShadow(css, "\\.status-pill", "none"), "status pill is an intentional flat status component");
 assert(!/\.selection-chip/.test(css), "removed redundant selection capsule has no stale elevation selector");
 
 assert(hasShadow(css, "\\.panel-card", "none"));
@@ -107,15 +112,16 @@ assert(declaration(css, "--home-drag-shadow-secondary", "rgba\\(0, 0, 0, 0\\.32\
 assert(/\.view-home\.home-editing \.tool-app\.is-dragging \.tool-icon\s*\{[^}]*var\(--home-drag-shadow-primary\)[^}]*var\(--home-drag-shadow-secondary\)/.test(css));
 
 assert(hasShadow(css, "button:focus-visible,[\\s\\S]*?\\[role=\"button\"\\]:focus-visible", "0 0 0 1px var\\(--interaction-focus-ring\\)"));
-assert(hasShadow(css, "\\.ui-range::-webkit-slider-thumb,[\\s\\S]*?\\.pill-slider::-webkit-slider-thumb", "0 2px 8px rgba\\(0, 0, 0, 0\\.32\\)"));
+assert(declaration(css, "--slider-thumb-optical-shadow", "0 2px 8px rgba\\(0, 0, 0, 0\\.32\\)"));
+assert(declaration(css, "--switch-thumb-optical-shadow", "0 2px 8px rgba\\(0, 0, 0, 0\\.28\\)"));
+assert(hasShadow(css, "\\.ui-range::-webkit-slider-thumb,[\\s\\S]*?\\.pill-slider::-webkit-slider-thumb", "var\\(--slider-thumb-optical-shadow\\)"));
+assert(hasShadow(css, "\\.ui-switch-track::after,[\\s\\S]*?\\.switch-track::after", "var\\(--switch-thumb-optical-shadow\\)"));
 assert(hasShadow(css, "\\.ui-color-swatch,[\\s\\S]*?\\.registry-color-swatch", "inset 0 0 0 1px rgba\\(0, 0, 0, 0\\.3\\)"));
 
 assert(/\.app-shell\.is-animating \.panel-card,[\s\S]*?\.app-shell\.is-animating \.action-sheet\s*\{[^}]*box-shadow:\s*none;/.test(css));
 assert(/SurfaceIdentity\.frame\(sourceIdentity\)[\s\S]*SurfaceIdentity\.frame\(destinationIdentity\)/.test(main), "transition elevation and bounded presentation converge through identity snapshots");
 
-assert(!/--elevation-/.test(velaCss), "Vela must remain elevation-isolated");
-assert(hasShadow(velaCss, "\\.vela-settings-button", "none"));
-assert(hasShadow(velaCss, "\\.vela-surface-action", "none"));
+assert(!/--elevation-/.test(velaCss), "Vela must inherit shared Utility elevation without a local elevation authority");
 assert(/palette\.colors\.shadow/.test(procedural));
 assert(!/elevation/.test(procedural), "procedural palette lighting must not consume UI elevation");
 

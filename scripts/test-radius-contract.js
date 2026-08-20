@@ -65,7 +65,7 @@ assert(rule(css, "\\.palette-json-section", "border-radius:\\s*var\\(--radius-pa
 assert(rule(css, "\\.ui-scroll-frame", "border-radius:\\s*var\\(--radius-editable-control\\)"), "shared editable frame owns control radius");
 assert(rule(css, "\\.ui-scroll-frame > \\.ui-editable-scroll", "border-radius:\\s*0"), "Palette JSON inner scroll owner must not duplicate frame radius");
 
-assert(/\.settings-view\s*\{[^}]*--ui-scale:\s*0\.92;/.test(css));
+assert(!/\.settings-view\s*\{[^}]*--ui-scale:/.test(css), "Settings radius geometry follows the application-wide UI Scale authority");
 assert(rule(css, "\\.view-detail", "border-radius:\\s*var\\(--radius-primary-work-surface\\)"));
 assert(rule(css, "\\.settings-view \\.settings-panel", "border-radius:\\s*var\\(--radius-primary-work-surface\\)"));
 assert(rule(css, "\\.select-menu", "border-radius:\\s*14px"));

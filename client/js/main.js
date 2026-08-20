@@ -2383,7 +2383,7 @@
     }
 
     function finishDesignTuningCalibrationGesture(parameter, value) {
-        var finalValue = DesignTuningCalibrationGesture && DesignTuningCalibrationGesture.parameter.id === parameter.id && DesignTuningCalibrationGesture.lastValue !== null ? DesignTuningCalibrationGesture.lastValue : value;
+        var finalValue = value !== null && value !== undefined ? window.DesignTuningParameterRegistry.cloneValue(value) : (DesignTuningCalibrationGesture && DesignTuningCalibrationGesture.parameter.id === parameter.id ? DesignTuningCalibrationGesture.lastValue : value);
         DesignTuning.commitTransientOverride(parameter.id, finalValue);
         DesignTuningCalibrationGesture = null;
     }
@@ -2492,33 +2492,37 @@
     }
 
     function createDesignTuningFieldShell(parameter, labelKey, evidence) {
-        var row = document.createElement("div"); var copy = document.createElement("span"); var label = document.createElement("label"); var state = document.createElement("small"); var reset;
-        var overridden = Object.prototype.hasOwnProperty.call(evidence.overrides, parameter.id);
+        var row = document.createElement("div"); var copy = document.createElement("span"); var label = document.createElement("label"); var description; var state = document.createElement("small"); var reset;
+        var overridden = Object.prototype.hasOwnProperty.call(evidence.overrides, parameter.id); var presentation = parameter.presentation || {};
+        labelKey = presentation.labelKey || labelKey;
         row.className = "settings-design-tuning-field"; row.setAttribute("data-design-tuning-id", parameter.id); row.setAttribute("data-design-tuning-type", parameter.type);
         copy.className = "settings-field-copy"; label.className = "settings-field-label"; label.setAttribute("data-i18n", labelKey); label.textContent = tr(labelKey);
+        if (presentation.descriptionKey) { description = document.createElement("small"); description.className = "settings-field-description"; description.setAttribute("data-i18n", presentation.descriptionKey); description.textContent = tr(presentation.descriptionKey); }
         state.className = "settings-design-tuning-state"; state.setAttribute("data-i18n", overridden ? "settings.designTuning.overridden" : "settings.designTuning.default"); state.textContent = tr(overridden ? "settings.designTuning.overridden" : "settings.designTuning.default");
-        reset = window.CoreUI.createButton({ document: document, variant: "neutral", text: tr("settings.appearance.reset"), classNames: "panel-button appearance-reset-button panel-local-action" }); reset.disabled = !overridden;
+        reset = window.CoreUI.createButton({ document: document, variant: "neutral", size: "compact", text: tr("settings.appearance.reset"), classNames: "panel-button appearance-reset-button panel-local-action" }); reset.disabled = !overridden;
         reset.setAttribute("data-i18n", "settings.appearance.reset"); reset.addEventListener("click", function () { cancelDesignTuningCalibrationGesture(); DesignTuning.resetParameter(parameter.id); refreshDesignTuningFields(parameter.domain); });
-        copy.appendChild(label); copy.appendChild(state); row.appendChild(copy);
+        copy.appendChild(label); if (description) copy.appendChild(description); copy.appendChild(state); row.appendChild(copy);
         DesignTuningFieldBindings[parameter.id] = { parameter: parameter, row: row, state: state, reset: reset };
         return { row: row, copy: copy, reset: reset };
     }
 
     function refreshDesignTuningFields(domain) {
         var evidence = DesignTuning.getEvidence(); var id; var binding; var overridden; var key; var output = document.querySelector(".settings-design-tuning-evidence");
-        for (id in DesignTuningFieldBindings) if (Object.prototype.hasOwnProperty.call(DesignTuningFieldBindings, id)) { binding = DesignTuningFieldBindings[id]; if (domain && binding.parameter.domain !== domain) continue; overridden = Object.prototype.hasOwnProperty.call(evidence.overrides, id); key = overridden ? "settings.designTuning.overridden" : "settings.designTuning.default"; binding.state.setAttribute("data-i18n", key); binding.state.textContent = tr(key); binding.reset.disabled = !overridden; binding.row.classList.remove("has-draft"); }
+        for (id in DesignTuningFieldBindings) if (Object.prototype.hasOwnProperty.call(DesignTuningFieldBindings, id)) { binding = DesignTuningFieldBindings[id]; if (domain && binding.parameter.domain !== domain) continue; if (typeof binding.update === "function") binding.update(evidence.resolved[id]); overridden = Object.prototype.hasOwnProperty.call(evidence.overrides, id); key = overridden ? "settings.designTuning.overridden" : "settings.designTuning.default"; binding.state.setAttribute("data-i18n", key); binding.state.textContent = tr(key); binding.reset.disabled = !overridden; binding.row.classList.remove("has-draft"); }
         if (output) output.value = JSON.stringify(evidence, null, 2);
     }
 
     function createDesignTuningCurveField(parameter, labelKey, evidence) {
         var shell = createDesignTuningFieldShell(parameter, labelKey, evidence); var value = evidence.overrides[parameter.id] || parseDesignTuningCurve(evidence.canonical[parameter.id]); var control;
         control = window.CoreUI.createBezierCurveField({ document: document, id: "designTuning-" + parameter.id.replace(/\./g, "-"), value: value, defaultValue: value, progressLabel: tr("settings.designTuning.curve.progress"), speedLabel: tr("settings.designTuning.curve.speed"), speedHint: tr("settings.designTuning.curve.speedHint"), onInput: function (next) { shell.row.classList.add("has-draft"); updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onChange: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
+        DesignTuningFieldBindings[parameter.id].update = function (next) { control.setValue(next); };
         control.root.classList.add("settings-design-tuning-bezier"); shell.row.appendChild(control.root); shell.row.appendChild(shell.reset); return shell.row;
     }
 
     function createDesignTuningDurationField(parameter, meta, evidence) {
         var shell = createDesignTuningFieldShell(parameter, meta.key, evidence); var value = evidence.resolved[parameter.id]; var control;
         control = window.CoreUI.createRangeNumber({ document: document, rangeId: "designTuning-" + parameter.id.replace(/\./g, "-"), numberId: "designTuning-" + parameter.id.replace(/\./g, "-") + "-number", value: value, min: parameter.validity.min, max: parameter.validity.max, trackMin: parameter.editing.trackMin, trackMax: parameter.editing.trackMax, step: parameter.editing.step, field: { min: parameter.validity.min, max: parameter.validity.max, step: parameter.editing.step, defaultValue: value }, unitText: parameter.editing.unit, classNames: "settings-field-control settings-design-tuning-duration", rangeClassNames: "pill-slider registry-range settings-slider", numberClassNames: "num-input settings-number", onPreview: function (next) { shell.row.classList.add("has-draft"); updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
+        DesignTuningFieldBindings[parameter.id].update = function (next) { control.setValue(next); };
         shell.row.appendChild(control.root); shell.row.appendChild(shell.reset); return shell.row;
     }
 
@@ -2529,11 +2533,12 @@
             shell.row.classList.add("is-protected"); shell.reset.remove(); shell.row.appendChild(note); return shell.row;
         }
         if (parameter.type === "shadow") {
-            control = window.CoreUI.createShadowField({ document: document, id: "designTuning-" + parameter.id.replace(/\./g, "-"), value: value, labels: { offsetX: "X", offsetY: "Y", blur: "Blur", spread: "Spread", alpha: "Alpha" }, onPreview: function (next) { updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
+            control = window.CoreUI.createShadowField({ document: document, id: "designTuning-" + parameter.id.replace(/\./g, "-"), value: value, labels: { offsetX: tr("settings.designTuning.shadow.offsetX"), offsetY: tr("settings.designTuning.shadow.offsetY"), blur: tr("settings.designTuning.shadow.blur"), spread: tr("settings.designTuning.shadow.spread"), color: tr("settings.designTuning.shadow.color"), alpha: tr("settings.designTuning.shadow.alpha") }, openPicker: openCoreColorPicker, onPreview: function (next) { shell.row.classList.add("has-draft"); updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); }, onCancel: function () { cancelDesignTuningCalibrationGesture(); refreshDesignTuningFields(parameter.domain); } });
         } else if (parameter.type === "colorAlpha") {
             control = window.CoreUI.createColorField({ document: document, id: "designTuning-" + parameter.id.replace(/\./g, "-"), value: value, fallback: value.color, supportsAlpha: true, classNames: "settings-field-control settings-design-tuning-color-alpha", openPicker: openCoreColorPicker, onPreview: function (next) { shell.row.classList.add("has-draft"); updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
             bindHexInputSelectBehavior(control.hex);
         } else control = window.CoreUI.createRangeNumber({ document: document, rangeId: "designTuning-" + parameter.id.replace(/\./g, "-"), numberId: "designTuning-" + parameter.id.replace(/\./g, "-") + "-number", value: value, min: parameter.validity.min, max: parameter.validity.max, trackMin: parameter.editing.trackMin, trackMax: parameter.editing.trackMax, step: parameter.editing.step, field: { min: parameter.validity.min, max: parameter.validity.max, step: parameter.editing.step, defaultValue: value }, unitText: parameter.editing.unit, classNames: "settings-field-control settings-design-tuning-duration", rangeClassNames: "pill-slider registry-range settings-slider", numberClassNames: "num-input settings-number", onPreview: function (next) { updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
+        DesignTuningFieldBindings[parameter.id].update = function (next) { control.setValue(next); };
         shell.row.appendChild(control.root); shell.row.appendChild(shell.reset); return shell.row;
     }
 
@@ -7718,11 +7723,17 @@
             var directTitle = document.createElement("h3");
             var directRow = document.createElement("div");
             var directLabel = document.createElement("span");
+            var shadowCommittedValue = { offsetX: 0, offsetY: 12, blur: 26, spread: 0, color: "#000000", alpha: 0.34 };
+            var shadowPreviewValue = shadowCommittedValue;
             var shadowField = window.CoreUI.createShadowField({
                 document: document,
                 id: "registryControlLabShadowField",
-                value: { offsetX: 0, offsetY: 12, blur: 26, spread: 0, color: "#000000", alpha: 0.34 },
-                labels: { offsetX: "X", offsetY: "Y", blur: "Blur", spread: "Spread", alpha: "Alpha" }
+                value: shadowCommittedValue,
+                labels: { offsetX: tr("settings.designTuning.shadow.offsetX"), offsetY: tr("settings.designTuning.shadow.offsetY"), blur: tr("settings.designTuning.shadow.blur"), spread: tr("settings.designTuning.shadow.spread"), color: tr("settings.designTuning.shadow.color"), alpha: tr("settings.designTuning.shadow.alpha") },
+                openPicker: openCoreColorPicker,
+                onPreview: function (next) { shadowPreviewValue = next; },
+                onCommit: function (next) { shadowCommittedValue = next; shadowPreviewValue = next; },
+                onCancel: function () { shadowPreviewValue = shadowCommittedValue; shadowField.setValue(shadowPreviewValue); }
             });
             directSection.className = "registry-section-card panel-card registry-control-lab-direct";
             directTitle.className = "registry-title-primary";
@@ -7737,7 +7748,9 @@
             if (tool.controlLabCoverage.colorFieldAlphaMode === true) {
                 var alphaRow = document.createElement("div");
                 var alphaLabel = document.createElement("span");
-                var alphaField = window.CoreUI.createColorField({ document: document, id: "registryControlLabColorAlphaField", value: { color: "#d6b25e", alpha: 0.5 }, fallback: "#d6b25e", supportsAlpha: true, openPicker: openCoreColorPicker });
+                var alphaCommittedValue = { color: "#d6b25e", alpha: 0.5 };
+                var alphaPreviewValue = alphaCommittedValue;
+                var alphaField = window.CoreUI.createColorField({ document: document, id: "registryControlLabColorAlphaField", value: alphaCommittedValue, fallback: "#d6b25e", supportsAlpha: true, openPicker: openCoreColorPicker, onPreview: function (next) { alphaPreviewValue = next; }, onCommit: function (next) { alphaCommittedValue = next; alphaPreviewValue = next; }, onCancel: function () { alphaPreviewValue = alphaCommittedValue; alphaField.setValue(alphaPreviewValue); } });
                 bindHexInputSelectBehavior(alphaField.hex);
                 alphaRow.className = "control-row registry-field-row ui-field-row is-content-growth";
                 alphaLabel.className = "control-label registry-text-body";
@@ -8990,6 +9003,7 @@
 
     function positionCustomSelectMenu(control) {
         var menu = getCustomSelectMenu(control);
+        var viewport;
         var rect;
         var viewportWidth;
         var viewportHeight;
@@ -9007,6 +9021,10 @@
         if (!control || !menu) {
             return;
         }
+        viewport = menu.querySelector(".select-menu-viewport");
+        if (!viewport) {
+            return;
+        }
 
         rect = control.getBoundingClientRect();
         viewportWidth = window.innerWidth || document.documentElement.clientWidth || 320;
@@ -9017,9 +9035,9 @@
 
         menu.style.width = width + "px";
         menu.style.left = left + "px";
-        menu.style.maxHeight = "";
+        menu.style.removeProperty("--select-menu-available-height");
 
-        desiredHeight = Math.min(menu.scrollHeight || 220, 220);
+        desiredHeight = Math.min(viewport.scrollHeight || 220, 220);
         availableBelow = viewportHeight - rect.bottom - edge - gap;
         availableAbove = rect.top - edge - gap;
         openAbove = availableBelow < desiredHeight && availableAbove > availableBelow;
@@ -9028,7 +9046,7 @@
 
         menu.classList.toggle("is-above", openAbove);
         menu.style.top = Math.max(edge, top) + "px";
-        menu.style.maxHeight = maxHeight + "px";
+        menu.style.setProperty("--select-menu-available-height", maxHeight + "px");
     }
 
     function getSelectOptionLabel(option) {
@@ -9044,6 +9062,7 @@
     function rebuildCustomSelectOptions(select) {
         var control;
         var menu;
+        var viewport;
         var optionButton;
         var options;
         var i;
@@ -9057,7 +9076,11 @@
         if (!menu) {
             return;
         }
-        menu.innerHTML = "";
+        viewport = menu.querySelector(".select-menu-viewport");
+        if (!viewport) {
+            return;
+        }
+        viewport.innerHTML = "";
         options = select.options || [];
         for (i = 0; i < options.length; i++) {
             optionButton = document.createElement("button");
@@ -9073,7 +9096,7 @@
                 setNativeSelectValue(select, this.getAttribute("data-value"), true);
                 closeCustomSelectMenus();
             });
-            menu.appendChild(optionButton);
+            viewport.appendChild(optionButton);
         }
     }
 
@@ -9139,6 +9162,7 @@
         var label;
         var chevron;
         var menu;
+        var viewport;
         var optionButton;
         var option;
         var selectId;
@@ -9180,6 +9204,9 @@
         menu.className = "select-menu";
         menu.setAttribute("role", "listbox");
         menu.setAttribute("data-select-menu-for", selectId);
+        viewport = document.createElement("span");
+        viewport.className = "select-menu-viewport";
+        menu.appendChild(viewport);
 
         document.body.appendChild(menu);
         select.parentNode.insertBefore(control, select.nextSibling);
@@ -9788,7 +9815,7 @@
         var description = document.createElement("small");
         var control;
         var state = document.createElement("small");
-        var reset = window.CoreUI.createButton({ document: document, variant: "neutral", classNames: "panel-button appearance-reset-button panel-local-action" });
+        var reset = window.CoreUI.createButton({ document: document, variant: "neutral", size: "compact", classNames: "panel-button appearance-reset-button panel-local-action" });
         function refreshState() {
             var overridden = CoreAppearance && CoreAppearance.getOverride(parameter.id) !== null;
             var stateKey = overridden ? "settings.appearance.overridden" : "settings.appearance.inherited";

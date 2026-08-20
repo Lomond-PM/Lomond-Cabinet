@@ -56,7 +56,7 @@ assert(rule(css, "\\.settings-field-description", "margin-top:\\s*var\\(--space-
 assert(rule(css, "\\.settings-field", "gap:\\s*var\\(--space-settings-field-control\\);[^}]*padding:\\s*var\\(--space-settings-field-block\\) 0"));
 assert.strictEqual(finalDeclaration(css, ".settings-field", "gap"), "var(--space-settings-field-control)");
 assert.strictEqual(finalDeclaration(css, ".settings-field", "padding"), "var(--space-settings-field-block) 0");
-assert(/\.settings-view\s*\{[^}]*--ui-scale:\s*0\.92;/.test(css), "Settings fixed scale must remain 0.92");
+assert(!/\.settings-view\s*\{[^}]*--ui-scale:/.test(css), "Settings spacing consumes the live application UI Scale");
 
 assert(rule(css, "\\.registry-tool-panel \\.dynamic-tool-intro", "margin-bottom:\\s*var\\(--space-registry-intro-content\\)"));
 assert(rule(css, "\\.registry-params-card", "padding:\\s*var\\(--space-registry-card-inset\\)"));

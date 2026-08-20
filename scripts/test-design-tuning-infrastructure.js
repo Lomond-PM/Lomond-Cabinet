@@ -42,7 +42,7 @@ assert.strictEqual(store.setOverride("motion.duration.spatialExpand", Infinity),
 let safe = true;
 let cssDurationProjectionCount = 0;
 const css = {};
-const canonicalCss = { "--motion-curve-enter": "cubic-bezier(0.16, 1, 0.3, 1)", "--motion-curve-exit": "cubic-bezier(0.32, 0, 0.67, 0)", "--motion-curve-standard": "cubic-bezier(0.22, 1, 0.36, 1)", "--motion-curve-press": "cubic-bezier(0.2, 0, 0, 1)", "--space-surface-edge": "calc(16px * var(--ui-scale))", "--radius-section-card": "calc(22px * var(--ui-scale))", "--elevation-surface-shell": "0 8px 24px rgba(0,0,0,.2)" };
+const canonicalCss = { "--motion-curve-enter": "cubic-bezier(0.16, 1, 0.3, 1)", "--motion-curve-exit": "cubic-bezier(0.32, 0, 0.67, 0)", "--motion-curve-standard": "cubic-bezier(0.22, 1, 0.36, 1)", "--motion-curve-press": "cubic-bezier(0.2, 0, 0, 1)", "--space-surface-edge": "calc(16px * var(--ui-scale))", "--radius-section-card": "calc(22px * var(--ui-scale))", "--elevation-surface-shell": "0 8px 24px rgba(0,0,0,.2)", "--elevation-utility-action": "0 12px 30px rgba(0,0,0,.28)" };
 const resolver = Resolver.create({ registry, store, rootStyle: { setProperty(k,v) { css[k]=v; }, removeProperty(k) { delete css[k]; } }, readComputed: k => css[k] || canonicalCss[k] || ({ "--text-secondary": "rgba(246, 240, 223, 0.66)", "--text-tertiary": "rgba(246, 240, 223, 0.42)", "--field-surface": "rgba(5, 4, 3, 0.5)", "--registry-option-surface": "rgba(8, 7, 6, 0.68)", "--separator": "rgba(214, 178, 94, 0.16)", "--panel-border": "rgba(214, 178, 94, 0.22)", "--input-border": "rgba(214, 178, 94, 0.16)" }[k]), isProjectionSafe: () => safe, getCanonicalDuration: role => MotionDefaults.durations[role], parseShadow: context.window.CoreUI.parseShadowValue, serializeShadow: context.window.CoreUI.serializeShadowValue, parseColorAlpha: context.window.CoreUI.parseColorAlphaValue, serializeColorAlpha: context.window.CoreUI.serializeColorAlphaValue, onProjectionApplied: () => { cssDurationProjectionCount += 1; } });
 resolver.initialize();
 const shadow = context.window.CoreUI.parseShadowValue("0 12px 26px rgba(0, 0, 0, 0.34)");
@@ -50,6 +50,11 @@ assert.deepStrictEqual(JSON.parse(JSON.stringify(shadow)), { offsetX: 0, offsetY
 assert.strictEqual(context.window.CoreUI.serializeShadowValue(shadow), "0px 12px 26px rgba(0, 0, 0, 0.34)");
 resolver.setOverride("elevation.floatingSurface", { offsetX: 1, offsetY: 13, blur: 27, spread: 0, color: "#000000", alpha: 0.35 });
 assert.strictEqual(css["--elevation-floating-surface"], "1px 13px 27px rgba(0, 0, 0, 0.35)");
+resolver.setOverride("elevation.utilityAction", { offsetX: 1, offsetY: 16, blur: 34, spread: 0, color: "#000000", alpha: 0.44 });
+assert.strictEqual(css["--elevation-utility-action"], "1px 16px 34px rgba(0, 0, 0, 0.44)", "Utility Action transient/commit projection uses the shared semantic property");
+resolver.resetParameter("elevation.utilityAction");
+assert.strictEqual(css["--elevation-utility-action"], undefined, "Utility Action reset removes inline projection so stylesheet canonical resumes");
+assert.strictEqual(resolver.getEvidence("elevation").resolved["elevation.utilityAction"].offsetY, 12, "Utility Action reset resolves the canonical structured shadow immediately");
 resolver.resetDomain("elevation");
 assert.strictEqual(css["--elevation-floating-surface"], undefined);
 resolver.setOverride("spacing.surface.edge", 20);

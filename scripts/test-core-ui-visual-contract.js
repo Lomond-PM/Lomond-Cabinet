@@ -79,6 +79,23 @@ assert.strictEqual(legacyRangeControl.root.children[1], legacyRangeControl.range
 var disabledRangeControl = CoreUI.createRangeNumber({ document: doc, value: 5, min: 0, max: 10, step: 1, disabled: true });
 assert.strictEqual(disabledRangeControl.number.disabled, true);
 assert.strictEqual(disabledRangeControl.range.disabled, true);
+var boundedTrackControl = CoreUI.createRangeNumber({ document: doc, value: 50, min: 0, max: 100, trackMin: 20, trackMax: 80, step: 1 });
+assert.strictEqual(boundedTrackControl.range.min, 20, "slider track can expose a bounded calibration window");
+assert.strictEqual(boundedTrackControl.range.max, 80, "slider track maximum is independent from accepted numeric bounds");
+assert.strictEqual(boundedTrackControl.number.min, 0, "numeric field retains the full accepted minimum");
+assert.strictEqual(boundedTrackControl.number.max, 100, "numeric field retains the full accepted maximum");
+
+var shadowLabels = { offsetX: "X Offset", offsetY: "Y Offset", blur: "Blur", spread: "Spread", color: "Color", alpha: "Opacity" };
+var shadowControl = CoreUI.createShadowField({ document: doc, id: "shadow", value: { offsetX: 0, offsetY: 4, blur: 10, spread: 0, color: "#000000", alpha: 0.18 }, labels: shadowLabels });
+assert.deepStrictEqual(shadowControl.root.children.map(function (child) { return child.children[0].textContent; }), ["X Offset", "Y Offset", "Blur", "Spread", "Color", "Opacity"], "ShadowField renders all six semantic labels in stable value order");
+assert.strictEqual(shadowControl.inputs.offsetX.attributes["aria-label"], "X Offset", "visible and accessible number labels agree");
+assert.strictEqual(shadowControl.inputs.alpha.attributes["aria-label"], "Opacity", "alpha uses the semantic Opacity name");
+assert.strictEqual(shadowControl.root.children[4].attributes["aria-label"], "Color", "composite Color subfield has a matching accessible group name");
+shadowControl.setValue({ offsetX: 1, offsetY: 12, blur: 26, spread: 2, color: "#112233", alpha: 0.34 });
+assert.deepStrictEqual(shadowControl.getValue(), { offsetX: 1, offsetY: 12, blur: 26, spread: 2, color: "#112233", alpha: 0.34 }, "ShadowField setValue replaces its structured model");
+assert.strictEqual(shadowControl.inputs.offsetY.value, "12", "ShadowField setValue synchronizes numeric children");
+assert.strictEqual(shadowControl.inputs.alpha.value, "0.34", "ShadowField setValue synchronizes alpha");
+assert.strictEqual(shadowControl.color.hex.value, "#112233", "ShadowField setValue synchronizes the nested ColorField");
 
 var checkboxChanges = 0;
 var checkbox = CoreUI.createCheckbox({ document: doc, id: "ack", checked: true, disabled: true, labelText: "Acknowledge", onChange: function () { checkboxChanges += 1; } });
@@ -127,6 +144,8 @@ disclosure.dispose();
 
 var danger = CoreUI.createButton({ document: doc, variant: "danger", disabled: true });
 assert(danger.classList.contains("ui-button") && danger.classList.contains("ui-button--danger") && danger.disabled);
+var compactNeutral = CoreUI.createButton({ document: doc, variant: "neutral", size: "compact", text: "Reset" });
+assert(compactNeutral.classList.contains("ui-button--neutral") && compactNeutral.classList.contains("ui-button--compact"), "button semantics and generic size variant compose independently");
 
 function sharedRule(left, right) {
     var pattern = new RegExp("[^{}]*\\." + left.replace(/\./g, "\\.") + "[^{}]*\\." + right.replace(/\./g, "\\.") + "[^{}]*\\{");

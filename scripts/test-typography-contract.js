@@ -106,6 +106,6 @@ assert(rule("\\.vela-surface-action", "line-height:\\s*1", velaCss));
 
 assert(/\.ui-number-input,[\s\S]*?font-variant-numeric:\s*tabular-nums;/.test(css));
 assert(rule("\\.ui-color-hex,\\s*\\n\\.registry-color-hex", "font-variant-numeric:\\s*tabular-nums"));
-assert(/\.settings-view\s*\{[^}]*--ui-scale:\s*0\.92;/.test(css));
+assert(!/\.settings-view\s*\{[^}]*--ui-scale:/.test(css), "Settings typography inherits the application-wide UI Scale");
 
 console.log("Typography contract tests passed.");

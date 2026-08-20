@@ -150,7 +150,7 @@ function run() {
     assert(/workspace\.className\s*=\s*"palette-workspace"/.test(workspaceText), "Stacked workspace scroll ownership must be independent from scrollbar presentation opt-in.");
     assert(/ui-field-row--aligned/.test(workspaceText) && /settings-field-copy palette-editor-field-copy/.test(workspaceText), "Palette rows must consume CoreUI aligned FieldRow containment.");
     assert(/CoreUI\.createTextarea\(\{[\s\S]*palette-json-box palette-json-export[\s\S]*resizeDirection: "vertical"/.test(workspaceText) && /CoreUI\.createTextarea\(\{[\s\S]*palette-json-box palette-json-import[\s\S]*resizeDirection: "vertical"/.test(workspaceText), "Palette JSON surfaces use the shared editable textarea/frame contract.");
-    assert(/html,\s*body,\s*\.app-shell,\s*\.app-shell \*\s*\{[^}]*scrollbar-color/.test(cssText), "Application scope owns native scrollbar presentation without consumer opt-in.");
+    assert(/(?:^|\n)\*\s*\{[^}]*scrollbar-color/.test(cssText), "Document scope owns native scrollbar presentation without consumer opt-in.");
     assert(!/\.palette-(?:library-list|editor-scroll|json-box)(?:::-webkit-scrollbar[^\{]*)?\s*\{[^}]*scrollbar-(?:color|width)|\.palette-(?:library-list|editor-scroll|json-box)::-webkit-scrollbar/.test(cssText), "Palette does not duplicate feature-specific scrollbar skin.");
     assert(/createPaletteNumberInput[\s\S]*setupRegistryNumberDrag/.test(workspaceText), "Palette numeric inputs must reuse the shared number helper.");
     assert(/setupRegistryNumberDrag[\s\S]*keyCode === 13[\s\S]*keyCode === 27[\s\S]*keyCode === 38/.test(mainText), "Shared number helper must cover Enter, Escape, and arrow stepping.");
