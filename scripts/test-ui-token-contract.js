@@ -41,7 +41,7 @@ try {
     assert(!/#0b0a08/.test([".view-detail", ".settings-view .settings-panel", ".settings-section", ".control-card", ".registry-color-picker-popover"].map((selector) => rule(style, selector)).join("\n")), "Contracted panel consumers must not repeat the surface literal.");
     assert(!/\.ui-button--primary\s*\{[^}]*#130f08/.test(style) && !/\.palette-editor-action-bar \.palette-library-action\.is-primary\s*\{[^}]*#130f08/.test(style), "Contracted primary actions must not repeat the foreground literal.");
 
-    assert(/\.settings-view\s*\{[\s\S]*?--ui-scale:\s*0\.92;/.test(style), "Settings must retain its fixed UI-scale isolation.");
+    assert(!/\.settings-view\s*\{[^}]*--ui-scale:/.test(style), "Settings must consume the application-wide UI-scale authority.");
     assert(/height:\s*var\(--vela-surface-height\);/.test(vela) && /data-layout="compact"/.test(vela) && /data-layout="narrow"/.test(vela), "Vela responsive and runtime geometry contracts must remain present.");
     assert(/\.registry-option-card\s*\{[\s\S]*?border:\s*1px solid var\(--border-default\)/.test(style) && /\.registry-option-card\.is-active\s*\{[\s\S]*?background:\s*var\(--interaction-selected-surface\)/.test(style), "Registry tabs must retain the established resting border and selected-state semantic contracts.");
     assert((main.match(/function applyThemeAccent\s*\(/g) || []).length === 1, "Theme Accent must retain one JS projection owner.");

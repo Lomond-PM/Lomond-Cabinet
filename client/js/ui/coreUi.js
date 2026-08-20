@@ -752,6 +752,7 @@
         button.type = options.type || "button";
         addClasses(button, "ui-button");
         if (options.variant) addClasses(button, "ui-button--" + options.variant);
+        if (options.size) addClasses(button, "ui-button--" + options.size);
         if (options.text !== undefined) button.textContent = options.text;
         listen(button, "click", options.onClick);
         return button;
@@ -857,14 +858,38 @@
     }
 
     function createShadowField(options) {
-        var doc = options.document; var value = options.value; var rootElement = applyCommon(doc.createElement("div"), { classNames: "ui-shadow-field " + (options.classNames || "") }); var inputs = {}; var color;
+        var doc = options.document; var sourceValue = options.value; var value = isValidShadowValue(sourceValue) ? { offsetX: sourceValue.offsetX, offsetY: sourceValue.offsetY, blur: sourceValue.blur, spread: sourceValue.spread, color: sourceValue.color, alpha: sourceValue.alpha } : { offsetX: 0, offsetY: 0, blur: 0, spread: 0, color: "#000000", alpha: 0 }; var labels = options.labels || {}; var rootElement = applyCommon(doc.createElement("div"), { classNames: "ui-shadow-field " + (options.classNames || "") }); var inputs = {}; var color;
         function clone() { return { offsetX: value.offsetX, offsetY: value.offsetY, blur: value.blur, spread: value.spread, color: value.color, alpha: value.alpha }; }
+        function setValue(next) {
+            var key;
+            if (!isValidShadowValue(next)) return clone();
+            value = { offsetX: next.offsetX, offsetY: next.offsetY, blur: next.blur, spread: next.spread, color: next.color, alpha: next.alpha };
+            for (key in inputs) if (Object.prototype.hasOwnProperty.call(inputs, key)) inputs[key].value = String(value[key]);
+            color.setValue(value.color);
+            return clone();
+        }
         function emit(kind) { if (typeof options[kind] === "function") options[kind](clone()); }
-        function addNumber(key, min, max, step) { var input = createNumberInput({ document: doc, id: options.id + "-" + key, value: value[key], field: { min: min, max: max, step: step, defaultValue: value[key] }, ariaLabel: (options.labels && options.labels[key]) || key, onInput: function () { if (!isNumberDraft(input.value)) { value[key] = normalizeNumber(input.value, { min: min, max: max }, value[key]); emit("onPreview"); } }, onCommit: function (next) { value[key] = normalizeNumber(next, { min: min, max: max }, value[key]); emit("onCommit"); } }); inputs[key] = input; rootElement.appendChild(input); }
+        function createSubfield(key, control, labelTag) {
+            var wrapper = applyCommon(doc.createElement("div"), { classNames: "ui-shadow-subfield ui-shadow-subfield--" + key });
+            var label = applyCommon(doc.createElement(labelTag || "label"), { classNames: "ui-shadow-subfield-label" });
+            label.textContent = labels[key] || key;
+            if (labelTag !== "span") label.setAttribute("for", control.id);
+            else { wrapper.setAttribute("role", "group"); wrapper.setAttribute("aria-label", label.textContent); }
+            wrapper.appendChild(label); wrapper.appendChild(control); rootElement.appendChild(wrapper);
+            return wrapper;
+        }
+        function addNumber(key, min, max, step) {
+            var input;
+            var field = { min: min, max: max, step: step, defaultValue: value[key] };
+            function preview(next) { value[key] = normalizeNumber(next, field, value[key]); emit("onPreview"); }
+            function commit(next) { value[key] = normalizeNumber(next, field, value[key]); emit("onCommit"); }
+            input = createNumberInput({ document: doc, id: options.id + "-" + key, value: value[key], field: field, ariaLabel: labels[key] || key, onInput: function () { if (!isNumberDraft(input.value)) preview(input.value); }, onDragValue: preview, onCommit: commit, onCancel: function (restored) { value[key] = normalizeNumber(restored, field, value[key]); if (typeof options.onCancel === "function") options.onCancel(clone()); }, onDragEnd: function () { commit(input.value); } });
+            inputs[key] = input; createSubfield(key, input);
+        }
         addNumber("offsetX", undefined, undefined, 1); addNumber("offsetY", undefined, undefined, 1); addNumber("blur", 0, undefined, 1); addNumber("spread", undefined, undefined, 1);
-        color = createColorField({ document: doc, id: options.id + "-color", value: value.color, fallback: "#000000", normalize: function (next, fallback) { return /^#[0-9a-f]{6}$/i.test(next || "") ? next : fallback; }, isValid: function (next) { return /^#[0-9a-f]{6}$/i.test(next || ""); }, onPreview: function (next) { value.color = next; emit("onPreview"); }, onCommit: function (next) { value.color = next; emit("onCommit"); } });
-        rootElement.appendChild(color.root); addNumber("alpha", 0, 1, 0.01);
-        return { root: rootElement, inputs: inputs, color: color, getValue: clone };
+        color = createColorField({ document: doc, id: options.id + "-color", value: value.color, fallback: "#000000", ariaLabel: labels.color || "color", normalize: function (next, fallback) { return /^#[0-9a-f]{6}$/i.test(next || "") ? next : fallback; }, isValid: function (next) { return /^#[0-9a-f]{6}$/i.test(next || ""); }, openPicker: options.openPicker, onPreview: function (next) { value.color = next; emit("onPreview"); }, onCommit: function (next) { value.color = next; emit("onCommit"); }, onCancel: function () { if (typeof options.onCancel === "function") options.onCancel(clone()); } });
+        createSubfield("color", color.root, "span"); addNumber("alpha", 0, 1, 0.01);
+        return { root: rootElement, inputs: inputs, color: color, getValue: clone, setValue: setValue };
     }
 
     function createFieldRow(options) {

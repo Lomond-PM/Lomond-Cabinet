@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 358 |
+| A | Core / Global; keep | 377 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -364,7 +364,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.designTuning.curve.speedHint | settings | Hold Shift while dragging a Speed handle to adjust influence only. | 拖动速度手柄时按住 Shift，可仅调整影响比例。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.default | settings | Default | 默认 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.description | settings | Developer calibration overrides. Canonical defaults remain source-owned. | 开发者校准覆盖。规范默认值仍由其源头拥有。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.designTuning.elevation.title | settings | Elevation | 高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.elevation.title | settings | Elevation | 视觉层级 / 阴影 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.existingAppearance.title | settings | Existing Appearance / User Parameters | 现有外观 / 用户参数 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.motion.curve.enter | settings | Enter | 进入 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.motion.curve.exit | settings | Exit | 退出 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -392,11 +392,24 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.designTuning.parameter.border.input | settings | Input Border | 输入框边框 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.border.panel | settings | Panel Border | 面板边框 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.border.separator | settings | Separator Border | 分隔边框 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.designTuning.parameter.elevation.actionContainer | settings | Action Container Elevation | 操作容器高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.designTuning.parameter.elevation.floatingPicker | settings | Floating Picker Elevation | 浮动选择器高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.designTuning.parameter.elevation.floatingSurface | settings | Floating Surface Elevation | 浮动表面高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.designTuning.parameter.elevation.primaryAction | settings | Primary Action Elevation | 主操作高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.designTuning.parameter.elevation.surfaceShell | settings | Surface Shell Elevation | 表面外壳高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.componentOptics.sliderThumbShadow | settings | Slider Thumb Optical Shadow | 滑块手柄光学阴影 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.componentOptics.sliderThumbShadow.description | settings | Controls the component-internal shadow that visually separates shared... | 控制共享滑块手柄与轨道或背景之间用于视觉分离的组件内部阴影。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.componentOptics.switchThumbShadow | settings | Switch Thumb Optical Shadow | 开关手柄光学阴影 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.componentOptics.switchThumbShadow.description | settings | Controls the component-internal shadow that visually separates shared... | 控制共享开关手柄与轨道或背景之间用于视觉分离的组件内部阴影。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.actionContainer | settings | Action Container Elevation | 操作容器层级 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.actionContainer.description | settings | Controls the floating container that carries Tool actions. | 控制承载工具操作按钮的浮动容器阴影。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.floatingPicker | settings | Floating Picker Elevation | 浮动选择器层级 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.floatingPicker.description | settings | Controls the shadow depth of the Registry color picker. | 控制 Registry 颜色选择器的阴影深度。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.floatingSurface | settings | Floating Surface Elevation | 浮动表面层级 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.floatingSurface.description | settings | Controls temporary floating surfaces such as Vela Settings and Select... | 控制 Vela 设置和下拉菜单等临时浮动表面的阴影。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.informationSurface | settings | Information Surface Elevation | 信息表面层级 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.informationSurface.description | settings | Controls the shared shadow depth of read-only Tool Description and Ho... | 控制只读工具说明与 Host 状态表面共享的阴影层级。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.primaryAction | settings | Primary Action Elevation | 主要操作层级 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.primaryAction.description | settings | Controls the shadow depth of primary action buttons. | 控制主要操作按钮的阴影层级。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.surfaceShell | settings | Surface Shell Elevation | 表面外壳层级 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.surfaceShell.description | settings | Controls the shadow depth of the Tool Detail primary work surface. | 控制工具详情主工作表面的阴影深度。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.utilityAction | settings | Utility Action Elevation | 实用操作层级 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.utilityAction.description | settings | Controls the resting shadow depth of Back, Edit Home, Retry, Vela Set... | 控制返回、编辑主页、重试、Vela 设置、发送、取消、批准和拒绝等实用操作的基础阴影层级。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.geometry.button.height | settings | Button Height | 按钮高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.geometry.button.horizontalPadding | settings | Button Horizontal Padding | 按钮水平内边距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.geometry.control.height | settings | Control Height | 控件高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -440,6 +453,12 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.designTuning.resetAll | settings | Reset All Design Tuning | 重置全部设计调校 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.resetDomain | settings | Reset Domain | 重置当前域 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.resetMotion | settings | Reset Motion | 重置动效 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.shadow.alpha | settings | Opacity | 不透明度 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.shadow.blur | settings | Blur | 模糊 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.shadow.color | settings | Color | 颜色 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.shadow.offsetX | settings | X Offset | X 偏移 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.shadow.offsetY | settings | Y Offset | Y 偏移 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.shadow.spread | settings | Spread | 扩散 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.spacing.title | settings | Spacing | 间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.surface.title | settings | Surface Color + Alpha | 表面颜色 + Alpha | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.text.title | settings | Text Color + Alpha | 文本颜色 + Alpha | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |

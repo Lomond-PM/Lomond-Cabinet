@@ -75,11 +75,11 @@ has(css, /\.registry-section-body--action-stack > \.registry-button-row\s*\{[^}]
 assert(!/registry-danger-action\s*\{[^}]*(?:margin|gap|padding|width|height|background|border|color):/.test(css), "Danger Registry hook must not own geometry, spacing, or color");
 assert(!/(?:dangerButton|registry-danger-action)[\s\S]{0,160}(?:#[0-9a-f]{3,8}|rgba?\()/i.test(controlLab), "Control Lab Danger specimen must not contain a local color hack");
 
-has(velaCss, /\.vela-settings-button\s*\{[^}]*box-shadow:\s*none;/, "Vela compact settings action changed");
-has(velaCss, /\.vela-surface-action\s*\{[^}]*box-shadow:\s*none;/, "Vela compact dynamic actions changed");
+assert(!/\.vela-settings-button\s*\{[^}]*box-shadow:/.test(velaCss), "Vela Settings must not suppress shared Utility elevation");
+assert(!/\.vela-surface-action\s*\{[^}]*box-shadow:/.test(velaCss), "Vela dynamic actions must not suppress shared Utility elevation");
 assert(!/ui-button--(?:primary|neutral|danger)/.test(velaCss), "Vela Surface must remain a domain composition boundary");
 
-has(css, /\.ui-button--navigation,[\s\S]*?\.panel-button\s*\{[^}]*box-shadow:\s*0 12px 30px rgba\(0, 0, 0, 0\.28\)/, "Navigation compatibility boundary changed");
+has(css, /\.ui-button--navigation,[\s\S]*?\.utility-action\s*\{[^}]*box-shadow:\s*var\(--elevation-utility-action\)/, "Utility Action elevation authority missing");
 assert(!/back-button[^\n]*ui-button--neutral|ui-button--neutral[^\n]*back-button/.test(index + "\n" + main), "Navigation must not be normalized as Neutral in this Foundation");
 assert(!/tool-app[^\n]*ui-button--(?:primary|neutral|danger)/.test(index + "\n" + main), "Home tool tiles must remain outside canonical Action variants");
 

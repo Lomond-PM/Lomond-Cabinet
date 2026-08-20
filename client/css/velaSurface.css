@@ -159,7 +159,6 @@
     min-height: calc(26px * var(--ui-scale));
     padding: 0 calc(10px * var(--ui-scale));
     border-radius: var(--radius-sm);
-    box-shadow: none;
     font-size: var(--type-supporting-size);
     line-height: 1;
 }
@@ -242,7 +241,6 @@
     min-height: calc(26px * var(--ui-scale));
     padding: 0 calc(10px * var(--ui-scale));
     border-radius: var(--radius-sm);
-    box-shadow: none;
     font-size: var(--type-supporting-size);
     line-height: 1;
     text-overflow: ellipsis;

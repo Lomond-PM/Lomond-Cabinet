@@ -5,9 +5,9 @@ const css = fs.readFileSync(path.join(root, "client/css/style.css"), "utf8"); co
 const intentionalOwners = ["home-content ui-scroll-region", "detail-content ui-scroll-region", "settings-content ui-scroll-region", "vela-transcript-scroll ui-scroll-region", "vela-composer-input ui-editable-scroll", "palette-editor-scroll ui-scroll-region", "palette-library-list ui-scroll-region", "ui-textarea ui-editable-scroll"];
 intentionalOwners.forEach(owner => assert.ok((main + palette + core + fs.readFileSync(path.join(root, "client/index.html"), "utf8") + fs.readFileSync(path.join(root, "client/js/vela/velaSurface.js"), "utf8")).includes(owner), owner + " has an explicit presentation disposition"));
 assert.ok(/addClasses\(input, "ui-textarea ui-editable-scroll"\)/.test(core), "CoreUI Textarea owns editable scroll presentation");
-assert.ok(/html,\s*body,\s*\.app-shell,\s*\.app-shell \*[\s\S]*scrollbar-color/.test(css), "scrollbar presentation is application-global rather than consumer opt-in");
-assert.ok(/\.app-shell \*::-webkit-scrollbar-button[\s\S]*display:\s*none/.test(css), "application native scrollbar buttons are hidden");
-assert.ok(/\.app-shell \*::-webkit-scrollbar-corner[\s\S]*background:\s*transparent/.test(css), "application native corners are neutralized");
+assert.ok(/(?:^|\n)\*\s*\{[^}]*scrollbar-color:[^}]*scrollbar-width:\s*thin/.test(css), "scrollbar presentation is document-global rather than consumer opt-in");
+assert.ok(/\*::-webkit-scrollbar-button[\s\S]*display:\s*none/.test(css), "application native scrollbar buttons are hidden");
+assert.ok(/\*::-webkit-scrollbar-corner[\s\S]*background:\s*transparent/.test(css), "application native corners are neutralized");
 assert.ok(/\.ui-textarea,\s*\.registry-textarea[\s\S]*resize:\s*none[\s\S]*overflow-x:\s*hidden/.test(css), "layout-owned ordinary textarea has no resize grip or accidental horizontal scroll");
 assert.ok(/\.registry-textarea\.palette-json-box[\s\S]*overflow-x:\s*auto[\s\S]*white-space:\s*pre/.test(css), "JSON retains element-owned horizontal scrolling");
 assert.ok(/settings-design-tuning-evidence[\s\S]*overflow:\s*auto[\s\S]*white-space:\s*pre/.test(css), "Promotion Evidence retains raw element-owned scrolling");

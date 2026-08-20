@@ -96,7 +96,7 @@ Object.keys(typographyBounds).forEach(function (id) {
     var bounds = AppearanceRegistry.get(id).validation;
     assert.deepStrictEqual([bounds.min, bounds.max], typographyBounds[id], id + " keeps its stress-audited bounds");
     assert(Number.isFinite(scaleBounds.min * bounds.min) && Number.isFinite(scaleBounds.max * bounds.max), id + " composes safely with actual UI Scale bounds");
-    assert(Number.isFinite(0.92 * bounds.min) && Number.isFinite(0.92 * bounds.max), id + " composes safely with Settings fixed scale");
+    assert(Number.isFinite(scaleBounds.min * bounds.min) && scaleBounds.min <= 0.62, id + " composes safely with the shared low-scale Settings boundary");
 });
 
 console.log("Typography stress contract tests passed.");
