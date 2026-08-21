@@ -139,7 +139,7 @@
     var ProceduralPreviewLastInputKeys = {};
     var PaletteWorkspaceController = null;
     var RegistryRuntimeStates = {};
-    var CustomSelectGlobalListenersBound = false;
+    var SharedSelectControllers = [];
     var PanelLifecycleListenersBound = false;
     var ToolActionsResizeObserver = null;
     var ToolActionsResizeFallback = null;
@@ -1529,6 +1529,7 @@
         if (!content) {
             return;
         }
+        disposeSharedSelectsWithin(content);
         content.innerHTML = "";
         content.classList.remove("settings-renderer");
         renderer = document.createElement("div");
@@ -2151,6 +2152,7 @@
         fieldRow = createSharedSettingsFieldRow("select", field, null, "English / \u7b80\u4f53\u4e2d\u6587");
         select = createSharedSettingsSelect("languageSelect", field, window.I18n && window.I18n.getLanguage ? window.I18n.getLanguage() : null);
         fieldRow.controls.appendChild(select);
+        enhanceSharedSelect(select);
         mount.appendChild(heading);
         mount.appendChild(fieldRow.row);
     }
@@ -2725,6 +2727,7 @@
             select = createSharedSettingsSelect(field.key, field, field.defaultValue);
             fieldRow.row.removeChild(fieldRow.controls);
             fieldRow.row.appendChild(select);
+            enhanceSharedSelect(select);
             select.addEventListener("change", function () {
                 handleSettingsFieldChange(field.key, this.value);
             });
@@ -3443,7 +3446,8 @@
             nextFrame: nextFrame,
             createSettingsSectionHeader: createSettingsSectionHeader,
             closeCustomSelectMenus: closeCustomSelectMenus,
-            setupCustomSelectInputs: setupCustomSelectInputs,
+            enhanceSelect: enhanceSharedSelect,
+            disposeSelectsWithin: disposeSharedSelectsWithin,
             normalizeHex: normalizeHex,
             bindHexInputSelectBehavior: bindHexInputSelectBehavior,
             openRegistryColorPicker: openRegistryColorPicker,
@@ -3596,6 +3600,7 @@
             select = createSharedSettingsSelect("backgroundSource", field, field.defaultValue);
             sourceRow.row.removeChild(sourceRow.controls);
             sourceRow.row.appendChild(select);
+            enhanceSharedSelect(select);
             body.appendChild(sourceRow.row);
         }
 
@@ -3607,6 +3612,7 @@
             fieldRow = createSharedSettingsFieldRow("select", field, field.descriptionKey, "");
             select = createSharedSettingsSelect("bgPreset", field, field.defaultValue);
             fieldRow.controls.appendChild(select);
+            enhanceSharedSelect(select);
             classicControls.appendChild(fieldRow.row);
         }
 
@@ -3707,6 +3713,7 @@
             select = createSharedSettingsSelect("proceduralBackgroundPaletteId", field, field.defaultValue);
             fieldRow.row.removeChild(fieldRow.controls);
             fieldRow.row.appendChild(select);
+            enhanceSharedSelect(select);
             proceduralControls.appendChild(fieldRow.row);
         }
         field = findSettingsSectionField(section, "proceduralBackgroundIntensity");
@@ -6582,10 +6589,7 @@
         axisControls.className = "registry-color-axis-controls";
 
         function addAxisButton(mode, label) {
-            var button = document.createElement("button");
-            button.type = "button";
-            button.className = "registry-color-axis-button";
-            button.textContent = label;
+            var button = window.CoreUI.createButton({ document: document, text: label, classNames: "registry-color-axis-button" });
             button.setAttribute("data-axis-mode", mode);
             button.setAttribute("title", mode.indexOf("hsv") === 0 ? "HSV " + label : "RGB " + label);
             button.addEventListener("click", function () {
@@ -6665,11 +6669,7 @@
         preview = document.createElement("span");
         preview.className = "registry-hsv-preview";
 
-        eyedropperButton = document.createElement("button");
-        eyedropperButton.type = "button";
-        eyedropperButton.className = "registry-eyedropper-button";
-        eyedropperButton.textContent = "Pick";
-        eyedropperButton.setAttribute("aria-label", "Eyedropper");
+        eyedropperButton = window.CoreUI.createButton({ document: document, text: "Pick", classNames: "registry-eyedropper-button", ariaLabel: "Eyedropper" });
         eyedropperButton.setAttribute("title", "Pick a color from the screen");
         eyedropperButton.addEventListener("click", function (event) {
             event.preventDefault();
@@ -6681,10 +6681,7 @@
         eyedropperStatus.className = "registry-eyedropper-status";
         setEyedropperStatus("idle", "idle");
 
-        hexEdit = document.createElement("input");
-        hexEdit.className = "registry-color-hex registry-hsv-hex";
-        hexEdit.type = "text";
-        hexEdit.setAttribute("spellcheck", "false");
+        hexEdit = window.CoreUI.createTextInput({ document: document, classNames: "registry-color-hex registry-hsv-hex", spellcheck: false });
         bindHexInputSelectBehavior(hexEdit);
         hexEdit.addEventListener("input", function () {
             if (isCompleteHexColor(this.value)) {
@@ -6723,6 +6720,7 @@
 
     function renderSchemaField(field, toolDef) {
         var row;
+        var builtRow;
         var labelColumn;
         var label;
         var hint;
@@ -6865,36 +6863,31 @@
             return row;
         }
 
-        row = document.createElement("div");
-        row.className = (fieldType === "checkbox" || fieldType === "switch" ? "switch-row registry-switch-row registry-schema-field" : "control-row registry-field-row registry-schema-field") + " ui-field-row";
-        if (fieldType === "cubicBezier") {
-            row.className += " registry-bezier-row is-content-growth";
-        }
-        if (field.contentGrowth === true) {
-            row.className += " is-content-growth";
-        }
+        wrap = document.createElement("span");
+        wrap.className = "control-inputs";
+        hintText = schemaHintText(field);
+        builtRow = window.CoreUI.createFieldRow({
+            document: document,
+            copyTag: fieldType === "checkbox" || fieldType === "switch" ? "label" : "span",
+            labelTag: "span",
+            labelFor: fieldType === "checkbox" || fieldType === "switch" ? fieldId : "",
+            labelKey: field.labelKey || "",
+            labelText: tr(field.labelKey || field.key || ""),
+            descriptionKey: field.descriptionKey || field.hintKey || "",
+            descriptionText: hintText,
+            contentGrowth: field.contentGrowth === true || fieldType === "cubicBezier",
+            control: wrap,
+            classNames: (fieldType === "checkbox" || fieldType === "switch" ? "switch-row registry-switch-row registry-schema-field" : "control-row registry-field-row registry-schema-field") + (fieldType === "cubicBezier" ? " registry-bezier-row" : ""),
+            copyClassNames: "registry-label-column",
+            labelClassNames: "control-label registry-text-body",
+            descriptionClassNames: "registry-field-hint registry-text-muted"
+        });
+        row = builtRow.row;
+        labelColumn = builtRow.copy;
+        label = builtRow.label;
+        hint = builtRow.description;
         applyVisibleWhenMetadata(row, field);
         row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
-        labelColumn = document.createElement(fieldType === "checkbox" || fieldType === "switch" ? "label" : "span");
-        label = document.createElement("span");
-        wrap = document.createElement("span");
-        labelColumn.className = "registry-label-column";
-        if (fieldType === "checkbox" || fieldType === "switch") {
-            labelColumn.setAttribute("for", fieldId);
-        }
-        label.className = "control-label registry-text-body";
-        label.textContent = tr(field.labelKey || field.key || "");
-        hintText = schemaHintText(field);
-        if (hintText) {
-            hint = document.createElement("small");
-            hint.className = "registry-field-hint registry-text-muted";
-            hint.textContent = hintText;
-        }
-        wrap.className = "control-inputs";
-        labelColumn.appendChild(label);
-        if (hint) {
-            labelColumn.appendChild(hint);
-        }
 
         if (fieldType === "checkbox") {
             colorValue = window.CoreUI.createCheckbox({ document: document, id: fieldId, checked: !!value, classNames: "registry-checkbox", ariaLabel: tr(field.labelKey || field.key || ""), onChange: scheduleSave });
@@ -6918,6 +6911,7 @@
                 input.appendChild(option);
             }
             wrap.appendChild(input);
+            enhanceSharedSelect(input);
         } else if (fieldType === "tabs") {
             colorValue = window.CoreUI.createChoiceGroup({
                 document: document,
@@ -7056,8 +7050,6 @@
             wrap.appendChild(input);
         }
 
-        row.appendChild(labelColumn);
-        row.appendChild(wrap);
         controls = row.querySelectorAll("input, select, textarea, button");
         for (k = 0; k < controls.length; k++) {
             applyStateConditionMetadata(controls[k], field, toolDef);
@@ -7343,7 +7335,6 @@
         if (enabled && toolDef) {
             updateRegistryStateDependentUi(toolDef);
         }
-        setupCustomSelectInputs();
     }
 
     function createRegistrySectionToggle(section, toolDef, card) {
@@ -7394,9 +7385,7 @@
             heading = document.createElement("div");
             heading.className = "card-heading registry-section-heading";
             if (section.collapsible) {
-                disclosureTrigger = document.createElement("button");
-                disclosureTrigger.type = "button";
-                disclosureTrigger.className = "registry-section-disclosure-trigger";
+                disclosureTrigger = window.CoreUI.createButton({ document: document, classNames: "registry-section-disclosure-trigger" });
             }
             headingWrap = document.createElement("div");
             headingTitle = document.createElement("h3");
@@ -7683,7 +7672,6 @@
         var stateCard;
         var sections;
         var i;
-        var oldMenus;
 
         if (!tool || !panel || !actions) {
             return;
@@ -7691,10 +7679,7 @@
 
         closeRegistryColorPicker();
         clearRegistryProceduralPreviewTimer(tool.id);
-        oldMenus = document.querySelectorAll(".select-menu[data-select-menu-for^='dynamic_']");
-        for (i = 0; i < oldMenus.length; i++) {
-            oldMenus[i].parentNode.removeChild(oldMenus[i]);
-        }
+        disposeSharedSelectsWithin(panel);
 
         panel.innerHTML = "";
         actions.innerHTML = "";
@@ -7721,8 +7706,7 @@
         if (tool.controlLabCoverage && tool.controlLabCoverage.coreUiDirect && tool.controlLabCoverage.coreUiDirect.indexOf("createShadowField") !== -1) {
             var directSection = document.createElement("section");
             var directTitle = document.createElement("h3");
-            var directRow = document.createElement("div");
-            var directLabel = document.createElement("span");
+            var directRow;
             var shadowCommittedValue = { offsetX: 0, offsetY: 12, blur: 26, spread: 0, color: "#000000", alpha: 0.34 };
             var shadowPreviewValue = shadowCommittedValue;
             var shadowField = window.CoreUI.createShadowField({
@@ -7738,24 +7722,26 @@
             directSection.className = "registry-section-card panel-card registry-control-lab-direct";
             directTitle.className = "registry-title-primary";
             directTitle.textContent = tr("tools.registryControlLab.sections.coreUiDirect");
-            directRow.className = "control-row registry-field-row ui-field-row is-content-growth";
-            directLabel.className = "control-label registry-text-body";
-            directLabel.textContent = tr("tools.registryControlLab.fields.shadowField");
-            directRow.appendChild(directLabel);
-            directRow.appendChild(shadowField.root);
+            directRow = window.CoreUI.createFieldRow({ document: document, labelKey: "tools.registryControlLab.fields.shadowField", labelText: tr("tools.registryControlLab.fields.shadowField"), control: shadowField.root, contentGrowth: true, classNames: "control-row registry-field-row", copyClassNames: "registry-label-column", labelTag: "span", labelClassNames: "control-label registry-text-body" }).row;
             directSection.appendChild(directTitle);
             directSection.appendChild(directRow);
             if (tool.controlLabCoverage.colorFieldAlphaMode === true) {
-                var alphaRow = document.createElement("div");
-                var alphaLabel = document.createElement("span");
+                var alphaRow;
                 var alphaCommittedValue = { color: "#d6b25e", alpha: 0.5 };
                 var alphaPreviewValue = alphaCommittedValue;
                 var alphaField = window.CoreUI.createColorField({ document: document, id: "registryControlLabColorAlphaField", value: alphaCommittedValue, fallback: "#d6b25e", supportsAlpha: true, openPicker: openCoreColorPicker, onPreview: function (next) { alphaPreviewValue = next; }, onCommit: function (next) { alphaCommittedValue = next; alphaPreviewValue = next; }, onCancel: function () { alphaPreviewValue = alphaCommittedValue; alphaField.setValue(alphaPreviewValue); } });
                 bindHexInputSelectBehavior(alphaField.hex);
-                alphaRow.className = "control-row registry-field-row ui-field-row is-content-growth";
-                alphaLabel.className = "control-label registry-text-body";
-                alphaLabel.textContent = tr("tools.registryControlLab.fields.colorAlphaField");
-                alphaRow.appendChild(alphaLabel); alphaRow.appendChild(alphaField.root); directSection.appendChild(alphaRow);
+                alphaRow = window.CoreUI.createFieldRow({ document: document, labelKey: "tools.registryControlLab.fields.colorAlphaField", labelText: tr("tools.registryControlLab.fields.colorAlphaField"), control: alphaField.root, contentGrowth: true, classNames: "control-row registry-field-row", copyClassNames: "registry-label-column", labelTag: "span", labelClassNames: "control-label registry-text-body" }).row;
+                directSection.appendChild(alphaRow);
+            }
+            if (tool.controlLabCoverage.buttonVariants && tool.controlLabCoverage.buttonVariants.indexOf("utility") !== -1) {
+                var buttonSpecimen = document.createElement("span");
+                var utilityButton = window.CoreUI.createButton({ document: document, variant: "utility", text: tr("common.retry") });
+                var navigationButton = window.CoreUI.createButton({ document: document, variant: "navigation", text: tr("common.back") });
+                buttonSpecimen.className = "control-inputs registry-control-lab-button-variants";
+                buttonSpecimen.appendChild(utilityButton);
+                buttonSpecimen.appendChild(navigationButton);
+                directSection.appendChild(window.CoreUI.createFieldRow({ document: document, labelText: "Utility / Navigation", control: buttonSpecimen, classNames: "control-row registry-field-row", copyClassNames: "registry-label-column", labelTag: "span", labelClassNames: "control-label registry-text-body" }).row);
             }
             panel.appendChild(directSection);
         }
@@ -7764,7 +7750,6 @@
         actions.appendChild(renderToolActions(visibleGlobalActions, tool));
         setToolActionsVisible(actions, visibleGlobalActions.length > 0);
 
-        setupCustomSelectInputs();
         updateRegistryVisibleFields(tool);
         updateRegistryStateDependentUi(tool);
         refreshRegistryProceduralPreviews(tool);
@@ -8805,31 +8790,55 @@
         }
     }
 
-    function closeCustomSelectMenus(exceptControl) {
-        var controls = document.querySelectorAll(".custom-select");
-        var trigger;
-        var menu;
-        var i;
+    function pruneSharedSelectControllers() {
+        SharedSelectControllers = SharedSelectControllers.filter(function (controller) {
+            return controller && controller.select && controller.select._coreSelectComponent === controller;
+        });
+    }
 
-        for (i = 0; i < controls.length; i++) {
-            if (exceptControl && controls[i] === exceptControl) {
-                continue;
+    function enhanceSharedSelect(select) {
+        var controller;
+        if (!select) return null;
+        if (select._coreSelectComponent) return select._coreSelectComponent;
+        controller = window.CoreUI.enhanceSelect({
+            document: document,
+            select: select,
+            controlClassNames: select.classList.contains("settings-select") ? "settings-select-control" : "",
+            getOptionLabel: function (option) {
+                return option && option.getAttribute("data-i18n") ? tr(option.getAttribute("data-i18n")) : (option ? option.textContent : "");
             }
-            controls[i].classList.remove("is-open");
-            trigger = controls[i].querySelector(".select-trigger");
-            if (trigger) {
-                trigger.setAttribute("aria-expanded", "false");
-            }
-            menu = getCustomSelectMenu(controls[i]);
-            if (menu) {
-                menu.classList.remove("is-open");
-                menu.classList.remove("is-above");
-                menu.style.left = "";
-                menu.style.top = "";
-                menu.style.width = "";
-                menu.style.maxHeight = "";
-            }
+        });
+        SharedSelectControllers.push(controller);
+        return controller;
+    }
+
+    function disposeSharedSelectsWithin(rootElement) {
+        var controllers = SharedSelectControllers.slice(0);
+        var i;
+        for (i = 0; i < controllers.length; i++) {
+            if (rootElement && controllers[i].select && rootElement.contains(controllers[i].select)) controllers[i].dispose();
         }
+        pruneSharedSelectControllers();
+    }
+
+    function closeCustomSelectMenus() {
+        window.CoreUI.closeSelectComponents();
+    }
+
+    function syncCustomSelect(select) {
+        if (select && select._coreSelectComponent) select._coreSelectComponent.sync();
+    }
+
+    function rebuildCustomSelectOptions(select) {
+        if (select && select._coreSelectComponent) select._coreSelectComponent.rebuild();
+    }
+
+    function syncAllCustomSelects() {
+        var controllers;
+        var i;
+        pruneSharedSelectControllers();
+        controllers = SharedSelectControllers.slice(0);
+        for (i = 0; i < controllers.length; i++) controllers[i].rebuild();
     }
 
     function cleanupTransientUiState() {
@@ -8989,342 +8998,6 @@
         window.addEventListener("unload", shutdownPanelRuntime);
     }
 
-    function getCustomSelectMenu(control) {
-        var selectId;
-        if (!control) {
-            return null;
-        }
-        selectId = control.getAttribute("data-select-for");
-        if (!selectId) {
-            return null;
-        }
-        return document.querySelector('.select-menu[data-select-menu-for="' + selectId + '"]');
-    }
-
-    function positionCustomSelectMenu(control) {
-        var menu = getCustomSelectMenu(control);
-        var viewport;
-        var rect;
-        var viewportWidth;
-        var viewportHeight;
-        var gap = 6;
-        var edge = 8;
-        var width;
-        var left;
-        var desiredHeight;
-        var availableBelow;
-        var availableAbove;
-        var openAbove;
-        var maxHeight;
-        var top;
-
-        if (!control || !menu) {
-            return;
-        }
-        viewport = menu.querySelector(".select-menu-viewport");
-        if (!viewport) {
-            return;
-        }
-
-        rect = control.getBoundingClientRect();
-        viewportWidth = window.innerWidth || document.documentElement.clientWidth || 320;
-        viewportHeight = window.innerHeight || document.documentElement.clientHeight || 480;
-        width = Math.max(rect.width, 220);
-        width = Math.min(width, viewportWidth - edge * 2);
-        left = Math.max(edge, Math.min(rect.left, viewportWidth - width - edge));
-
-        menu.style.width = width + "px";
-        menu.style.left = left + "px";
-        menu.style.removeProperty("--select-menu-available-height");
-
-        desiredHeight = Math.min(viewport.scrollHeight || 220, 220);
-        availableBelow = viewportHeight - rect.bottom - edge - gap;
-        availableAbove = rect.top - edge - gap;
-        openAbove = availableBelow < desiredHeight && availableAbove > availableBelow;
-        maxHeight = Math.max(72, Math.min(desiredHeight, openAbove ? availableAbove : availableBelow));
-        top = openAbove ? rect.top - maxHeight - gap : rect.bottom + gap;
-
-        menu.classList.toggle("is-above", openAbove);
-        menu.style.top = Math.max(edge, top) + "px";
-        menu.style.setProperty("--select-menu-available-height", maxHeight + "px");
-    }
-
-    function getSelectOptionLabel(option) {
-        if (!option) {
-            return "";
-        }
-        if (option.getAttribute("data-i18n")) {
-            return tr(option.getAttribute("data-i18n"));
-        }
-        return option.textContent;
-    }
-
-    function rebuildCustomSelectOptions(select) {
-        var control;
-        var menu;
-        var viewport;
-        var optionButton;
-        var options;
-        var i;
-
-        if (!select) {
-            return;
-        }
-        control = select.getAttribute("data-custom-select-id");
-        control = control ? document.querySelector('.custom-select[data-select-for="' + control + '"]') : null;
-        menu = getCustomSelectMenu(control);
-        if (!menu) {
-            return;
-        }
-        viewport = menu.querySelector(".select-menu-viewport");
-        if (!viewport) {
-            return;
-        }
-        viewport.innerHTML = "";
-        options = select.options || [];
-        for (i = 0; i < options.length; i++) {
-            optionButton = document.createElement("button");
-            optionButton.type = "button";
-            optionButton.className = "select-option";
-            optionButton.setAttribute("role", "option");
-            optionButton.setAttribute("data-value", options[i].value);
-            if (options[i].getAttribute("data-i18n")) {
-                optionButton.setAttribute("data-option-i18n", options[i].getAttribute("data-i18n"));
-            }
-            optionButton.textContent = getSelectOptionLabel(options[i]);
-            optionButton.addEventListener("click", function () {
-                setNativeSelectValue(select, this.getAttribute("data-value"), true);
-                closeCustomSelectMenus();
-            });
-            viewport.appendChild(optionButton);
-        }
-    }
-
-    function syncCustomSelect(select) {
-        var control;
-        var triggerLabel;
-        var options;
-        var i;
-        var value;
-        var option;
-
-        if (!select) {
-            return;
-        }
-        control = select.getAttribute("data-custom-select-id");
-        control = control ? document.querySelector('.custom-select[data-select-for="' + control + '"]') : null;
-        if (!control) {
-            return;
-        }
-
-        value = select.value;
-        triggerLabel = control.querySelector(".select-label");
-        option = select.options[select.selectedIndex] || select.options[0];
-        if (triggerLabel) {
-            triggerLabel.textContent = getSelectOptionLabel(option);
-        }
-
-        control = getCustomSelectMenu(control);
-        options = control ? control.querySelectorAll(".select-option") : [];
-        for (i = 0; i < options.length; i++) {
-            if (options[i].getAttribute("data-option-i18n")) {
-                options[i].textContent = tr(options[i].getAttribute("data-option-i18n"));
-            }
-            options[i].classList.toggle("is-selected", options[i].getAttribute("data-value") === value);
-            options[i].setAttribute("aria-selected", options[i].getAttribute("data-value") === value ? "true" : "false");
-        }
-    }
-
-    function syncAllCustomSelects() {
-        var selects = document.querySelectorAll("select.select-input");
-        var i;
-        for (i = 0; i < selects.length; i++) {
-            syncCustomSelect(selects[i]);
-        }
-    }
-
-    function setNativeSelectValue(select, value, notify) {
-        if (!select) {
-            return;
-        }
-        select.value = value;
-        syncCustomSelect(select);
-        if (notify) {
-            var event = document.createEvent("HTMLEvents");
-            event.initEvent("change", true, false);
-            select.dispatchEvent(event);
-        }
-    }
-
-    function createCustomSelect(select, index) {
-        var control;
-        var trigger;
-        var label;
-        var chevron;
-        var menu;
-        var viewport;
-        var optionButton;
-        var option;
-        var selectId;
-        var i;
-
-        if (!select || select.getAttribute("data-customized") === "true") {
-            return;
-        }
-
-        selectId = select.id || ("customSelect" + index);
-        select.setAttribute("data-custom-select-id", selectId);
-        select.setAttribute("data-customized", "true");
-        select.classList.add("is-native-select-hidden");
-
-        control = document.createElement("span");
-        control.className = "custom-select select-input-replacement";
-        if (select.classList && select.classList.contains("settings-select")) {
-            control.className += " settings-select-control";
-        }
-        control.setAttribute("data-select-for", selectId);
-
-        trigger = document.createElement("button");
-        trigger.type = "button";
-        trigger.className = "select-trigger";
-        trigger.setAttribute("aria-haspopup", "listbox");
-        trigger.setAttribute("aria-expanded", "false");
-
-        label = document.createElement("span");
-        label.className = "select-label";
-        chevron = document.createElement("span");
-        chevron.className = "select-chevron";
-        chevron.setAttribute("aria-hidden", "true");
-
-        trigger.appendChild(label);
-        trigger.appendChild(chevron);
-        control.appendChild(trigger);
-
-        menu = document.createElement("span");
-        menu.className = "select-menu";
-        menu.setAttribute("role", "listbox");
-        menu.setAttribute("data-select-menu-for", selectId);
-        viewport = document.createElement("span");
-        viewport.className = "select-menu-viewport";
-        menu.appendChild(viewport);
-
-        document.body.appendChild(menu);
-        select.parentNode.insertBefore(control, select.nextSibling);
-        rebuildCustomSelectOptions(select);
-
-        trigger.addEventListener("click", function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            if (control.classList.contains("is-open")) {
-                closeCustomSelectMenus();
-            } else {
-                closeCustomSelectMenus(control);
-                positionCustomSelectMenu(control);
-                control.classList.add("is-open");
-                menu.classList.add("is-open");
-                trigger.setAttribute("aria-expanded", "true");
-            }
-        });
-
-        trigger.addEventListener("keydown", function (event) {
-            var currentMenu = getCustomSelectMenu(control);
-            var options = currentMenu ? currentMenu.querySelectorAll(".select-option") : [];
-            var selected = currentMenu ? currentMenu.querySelector(".select-option.is-selected") : null;
-            var selectedIndex = 0;
-            var nextIndex;
-            for (i = 0; i < options.length; i++) {
-                if (options[i] === selected) {
-                    selectedIndex = i;
-                    break;
-                }
-            }
-            if (event.keyCode === 13 || event.keyCode === 32) {
-                event.preventDefault();
-                trigger.click();
-            } else if (event.keyCode === 27) {
-                closeCustomSelectMenus();
-            } else if (event.keyCode === 38 || event.keyCode === 40) {
-                event.preventDefault();
-                nextIndex = selectedIndex + (event.keyCode === 40 ? 1 : -1);
-                if (nextIndex < 0) {
-                    nextIndex = options.length - 1;
-                }
-                if (nextIndex >= options.length) {
-                    nextIndex = 0;
-                }
-                if (options[nextIndex]) {
-                    setNativeSelectValue(select, options[nextIndex].getAttribute("data-value"), true);
-                }
-            }
-        });
-
-        select.addEventListener("change", function () {
-            syncCustomSelect(select);
-        });
-
-        syncCustomSelect(select);
-    }
-
-    function setupCustomSelectInputs() {
-        var selects = document.querySelectorAll("select.select-input");
-        var settingsContent;
-        var i;
-        for (i = 0; i < selects.length; i++) {
-            createCustomSelect(selects[i], i);
-        }
-        if (!CustomSelectGlobalListenersBound) {
-            CustomSelectGlobalListenersBound = true;
-            document.addEventListener("click", function (event) {
-                if (!hasAncestorWithClass(event.target, "custom-select", document) && !hasAncestorWithClass(event.target, "select-menu", document)) {
-                    closeCustomSelectMenus();
-                }
-            });
-            window.addEventListener("resize", function () {
-                closeCustomSelectMenus();
-            });
-            settingsContent = document.querySelector(".settings-content");
-            if (settingsContent) {
-                settingsContent.addEventListener("scroll", function () {
-                    closeCustomSelectMenus();
-                });
-            }
-        }
-        bindPanelLifecycle();
-    }
-
-    function setCustomSelectValue(control, value, announce) {
-        var input = control.querySelector("input");
-        var label = control.querySelector("#motionSpeedLabel");
-        var options = control.querySelectorAll(".select-option");
-        var text = "";
-        var i;
-
-        for (i = 0; i < options.length; i++) {
-            if (options[i].getAttribute("data-value") === String(value)) {
-                options[i].classList.add("is-selected");
-                options[i].setAttribute("aria-selected", "true");
-                text = options[i].textContent;
-            } else {
-                options[i].classList.remove("is-selected");
-                options[i].setAttribute("aria-selected", "false");
-            }
-        }
-
-        if (input) {
-            input.value = value;
-        }
-        control.setAttribute("data-value", value);
-        if (label && text) {
-            label.textContent = text;
-        }
-
-        if (input && input.id === "motionSpeed") {
-            motionScale = clampNumber(value, 1, 0.6, 1.5);
-            if (announce) {
-                setStatus(tr("status.motionSpeedUpdated"));
-            }
-        }
-    }
 
     function setupMotionSpeed() {
         var input = byId("motionSpeed");
@@ -10179,7 +9852,6 @@
                 iconAppearance: getProceduralHomeBackgroundIconAppearance()
             });
         }
-        setupCustomSelectInputs();
         HomeLayoutManager.init();
         initializeVelaSurface();
         if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.initialize === "function") {

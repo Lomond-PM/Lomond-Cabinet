@@ -5,6 +5,10 @@
 }(typeof window !== "undefined" ? window : this, function (root) {
     "use strict";
 
+    var activeSelectComponent = null;
+    var selectComponentCounter = 0;
+    var selectComponents = [];
+
     function addClasses(element, classNames) {
         var names = String(classNames || "").split(/\s+/);
         var i;
@@ -268,6 +272,243 @@
         addClasses(select, "ui-select");
         listen(select, "change", options.onChange);
         return select;
+    }
+
+    function closeSelectComponents(exceptComponent) {
+        var components = selectComponents.slice(0);
+        var i;
+        for (i = 0; i < components.length; i++) {
+            if (components[i] !== exceptComponent) components[i].close();
+        }
+    }
+
+    function enhanceSelect(options) {
+        options = options || {};
+        var select = options.select;
+        var doc = options.document || (select && select.ownerDocument);
+        var win = doc && (doc.defaultView || root);
+        var componentId;
+        var control;
+        var trigger;
+        var label;
+        var chevron;
+        var menu;
+        var viewport;
+        var disposed = false;
+        var component;
+
+        if (!select || !doc || !select.parentNode) throw new Error("CoreUI.enhanceSelect requires a mounted native select");
+        if (select._coreSelectComponent) return select._coreSelectComponent;
+
+        selectComponentCounter += 1;
+        componentId = select.id || ("coreSelect" + selectComponentCounter);
+        componentId += "-" + selectComponentCounter;
+
+        control = applyCommon(doc.createElement("span"), { classNames: "custom-select select-input-replacement " + (options.controlClassNames || "") });
+        control.setAttribute("data-select-for", componentId);
+        trigger = applyCommon(doc.createElement("button"), { classNames: "select-trigger", disabled: select.disabled === true });
+        trigger.type = "button";
+        trigger.setAttribute("aria-haspopup", "listbox");
+        trigger.setAttribute("aria-expanded", "false");
+        trigger.setAttribute("aria-controls", componentId + "-menu");
+        label = applyCommon(doc.createElement("span"), { classNames: "select-label" });
+        chevron = applyCommon(doc.createElement("span"), { classNames: "select-chevron" });
+        chevron.setAttribute("aria-hidden", "true");
+        trigger.appendChild(label);
+        trigger.appendChild(chevron);
+        control.appendChild(trigger);
+
+        menu = applyCommon(doc.createElement("span"), { id: componentId + "-menu", classNames: "select-menu" });
+        menu.setAttribute("role", "listbox");
+        menu.setAttribute("data-select-menu-for", componentId);
+        viewport = applyCommon(doc.createElement("span"), { classNames: "select-menu-viewport" });
+        menu.appendChild(viewport);
+        doc.body.appendChild(menu);
+        select.parentNode.insertBefore(control, select.nextSibling);
+        select.classList.add("is-native-select-hidden");
+        select.setAttribute("data-custom-select-id", componentId);
+        select.setAttribute("data-customized", "true");
+
+        function optionLabel(option) {
+            if (!option) return "";
+            if (typeof options.getOptionLabel === "function") return options.getOptionLabel(option);
+            return option.textContent;
+        }
+
+        function resetMenuGeometry() {
+            menu.classList.remove("is-above");
+            menu.style.left = "";
+            menu.style.top = "";
+            menu.style.width = "";
+            menu.style.maxHeight = "";
+            menu.style.removeProperty("--select-menu-available-height");
+        }
+
+        function close(restoreFocus) {
+            if (disposed) return;
+            control.classList.remove("is-open");
+            menu.classList.remove("is-open");
+            trigger.setAttribute("aria-expanded", "false");
+            resetMenuGeometry();
+            if (activeSelectComponent === component) activeSelectComponent = null;
+            if (restoreFocus === true && trigger.focus) trigger.focus();
+        }
+
+        function position() {
+            var rect = control.getBoundingClientRect();
+            var viewportWidth = win.innerWidth || doc.documentElement.clientWidth || 320;
+            var viewportHeight = win.innerHeight || doc.documentElement.clientHeight || 480;
+            var gap = 6;
+            var edge = 8;
+            var width = Math.min(Math.max(rect.width, 220), viewportWidth - edge * 2);
+            var left = Math.max(edge, Math.min(rect.left, viewportWidth - width - edge));
+            var desiredHeight;
+            var availableBelow;
+            var availableAbove;
+            var openAbove;
+            var maxHeight;
+            var top;
+            menu.style.width = width + "px";
+            menu.style.left = left + "px";
+            menu.style.removeProperty("--select-menu-available-height");
+            desiredHeight = Math.min(viewport.scrollHeight || 220, 220);
+            availableBelow = viewportHeight - rect.bottom - edge - gap;
+            availableAbove = rect.top - edge - gap;
+            openAbove = availableBelow < desiredHeight && availableAbove > availableBelow;
+            maxHeight = Math.max(72, Math.min(desiredHeight, openAbove ? availableAbove : availableBelow));
+            top = openAbove ? rect.top - maxHeight - gap : rect.bottom + gap;
+            menu.classList.toggle("is-above", openAbove);
+            menu.style.top = Math.max(edge, top) + "px";
+            menu.style.setProperty("--select-menu-available-height", maxHeight + "px");
+        }
+
+        function sync() {
+            var option = select.options[select.selectedIndex] || select.options[0];
+            var buttons = viewport.querySelectorAll(".select-option");
+            var i;
+            label.textContent = optionLabel(option);
+            trigger.disabled = select.disabled === true;
+            control.classList.toggle("is-disabled", select.disabled === true);
+            for (i = 0; i < buttons.length; i++) {
+                buttons[i].classList.toggle("is-selected", buttons[i].getAttribute("data-value") === select.value);
+                buttons[i].setAttribute("aria-selected", buttons[i].getAttribute("data-value") === select.value ? "true" : "false");
+            }
+            if (select.disabled === true) close();
+        }
+
+        function emitChange() {
+            var event = doc.createEvent("HTMLEvents");
+            event.initEvent("change", true, false);
+            select.dispatchEvent(event);
+        }
+
+        function setValue(value, notify) {
+            select.value = value;
+            sync();
+            if (notify === true) emitChange();
+        }
+
+        function rebuild() {
+            var nativeOptions = select.options || [];
+            var optionButton;
+            var i;
+            viewport.innerHTML = "";
+            for (i = 0; i < nativeOptions.length; i++) {
+                optionButton = applyCommon(doc.createElement("button"), { classNames: "select-option", disabled: nativeOptions[i].disabled === true });
+                optionButton.type = "button";
+                optionButton.setAttribute("role", "option");
+                optionButton.setAttribute("data-value", nativeOptions[i].value);
+                optionButton.textContent = optionLabel(nativeOptions[i]);
+                optionButton.addEventListener("click", function () {
+                    if (!this.disabled) {
+                        setValue(this.getAttribute("data-value"), true);
+                        close(true);
+                    }
+                });
+                viewport.appendChild(optionButton);
+            }
+            sync();
+        }
+
+        function open() {
+            if (disposed || select.disabled === true) return;
+            closeSelectComponents(component);
+            position();
+            control.classList.add("is-open");
+            menu.classList.add("is-open");
+            trigger.setAttribute("aria-expanded", "true");
+            activeSelectComponent = component;
+        }
+
+        function triggerClick(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (control.classList.contains("is-open")) close();
+            else open();
+        }
+
+        function triggerKeydown(event) {
+            var buttons = viewport.querySelectorAll(".select-option:not(:disabled)");
+            var selected = viewport.querySelector(".select-option.is-selected");
+            var selectedIndex = 0;
+            var nextIndex;
+            var i;
+            for (i = 0; i < buttons.length; i++) if (buttons[i] === selected) selectedIndex = i;
+            if (event.keyCode === 13 || event.keyCode === 32) {
+                event.preventDefault();
+                if (control.classList.contains("is-open")) close();
+                else open();
+            } else if (event.keyCode === 27) {
+                event.preventDefault();
+                close(true);
+            } else if (event.keyCode === 38 || event.keyCode === 40) {
+                event.preventDefault();
+                if (!buttons.length) return;
+                nextIndex = selectedIndex + (event.keyCode === 40 ? 1 : -1);
+                if (nextIndex < 0) nextIndex = buttons.length - 1;
+                if (nextIndex >= buttons.length) nextIndex = 0;
+                setValue(buttons[nextIndex].getAttribute("data-value"), true);
+            }
+        }
+
+        function selectChange() { sync(); }
+        function outsideClick(event) {
+            if (!control.contains(event.target) && !menu.contains(event.target)) close();
+        }
+        function viewportChange() { close(); }
+
+        function dispose() {
+            var index;
+            if (disposed) return;
+            close();
+            disposed = true;
+            trigger.removeEventListener("click", triggerClick);
+            trigger.removeEventListener("keydown", triggerKeydown);
+            select.removeEventListener("change", selectChange);
+            doc.removeEventListener("click", outsideClick);
+            doc.removeEventListener("scroll", viewportChange, true);
+            win.removeEventListener("resize", viewportChange);
+            if (control.parentNode) control.parentNode.removeChild(control);
+            if (menu.parentNode) menu.parentNode.removeChild(menu);
+            select.classList.remove("is-native-select-hidden");
+            select.removeAttribute("data-custom-select-id");
+            select.removeAttribute("data-customized");
+            select._coreSelectComponent = null;
+            index = selectComponents.indexOf(component);
+            if (index >= 0) selectComponents.splice(index, 1);
+        }
+
+        component = { id: "select", variant: "custom-portal", select: select, root: control, trigger: trigger, menu: menu, viewport: viewport, open: open, close: close, sync: sync, rebuild: rebuild, setValue: setValue, setDisabled: function (disabled) { select.disabled = disabled === true; sync(); }, dispose: dispose };
+        select._coreSelectComponent = component;
+        selectComponents.push(component);
+        trigger.addEventListener("click", triggerClick);
+        trigger.addEventListener("keydown", triggerKeydown);
+        select.addEventListener("change", selectChange);
+        doc.addEventListener("click", outsideClick);
+        doc.addEventListener("scroll", viewportChange, true);
+        win.addEventListener("resize", viewportChange);
+        rebuild();
+        return component;
     }
 
     function createSwitch(options) {
@@ -895,12 +1136,13 @@
     function createFieldRow(options) {
         var doc = options.document;
         var row = applyCommon(doc.createElement(options.labelRow ? "label" : "div"), { classNames: "ui-field-row " + (options.classNames || "") });
-        var copy = applyCommon(doc.createElement("span"), { classNames: "ui-field-copy " + (options.copyClassNames || "") });
+        var copy = applyCommon(doc.createElement(options.copyTag || "span"), { classNames: "ui-field-copy " + (options.copyClassNames || "") });
         var label = applyCommon(doc.createElement(options.labelTag || "strong"), { classNames: "ui-field-label " + (options.labelClassNames || "") });
         var hint;
         if (options.contentGrowth === true) row.className += " is-content-growth";
         label.textContent = options.labelText || "";
         if (options.labelKey) label.setAttribute("data-i18n", options.labelKey);
+        if (options.labelFor) copy.setAttribute("for", options.labelFor);
         copy.appendChild(label);
         if (options.descriptionText || options.descriptionKey) {
             hint = applyCommon(doc.createElement("small"), { classNames: "ui-field-description " + (options.descriptionClassNames || "") });
@@ -920,6 +1162,8 @@
         createNumberInput: createNumberInput,
         createRangeNumber: createRangeNumber,
         createSelect: createSelect,
+        enhanceSelect: enhanceSelect,
+        closeSelectComponents: closeSelectComponents,
         createSwitch: createSwitch,
         createCheckbox: createCheckbox,
         createChoiceGroup: createChoiceGroup,

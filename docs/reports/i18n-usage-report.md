@@ -59,7 +59,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | button.resetProceduralAppearanceParams | button | Restore Procedural Defaults | 恢复程序化默认参数 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.apply | common | Apply | 应用 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.auto | common | Auto | 自动 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.back | common | Back | 返回 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.back | common | Back | 返回 | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.cancel | common | Cancel | 取消 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.center | common | Center | 居中 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.close | common | Close | 关闭 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -529,7 +529,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | status.hostLoadError | status | Error: host JSX did not load. Check host/index.jsx includes. | 错误：host JSX 未加载。请检查 host/index.jsx include。 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.hostLoading | status | Host JSX is still loading... | host JSX 仍在加载... | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.loadingHost | status | Loading host JSX... | 正在加载 host JSX... | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| status.motionSpeedUpdated | status | Motion speed updated. | 动画速度已更新。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| status.motionSpeedUpdated | status | Motion speed updated. | 动画速度已更新。 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.multipleLayersSelected | status | {count} layers selected | 已选择 {count} 个图层 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.noActiveComp | status | No active composition | 没有激活的合成 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.noLayer | status | Please select at least one layer | 请至少选择一个图层 | client/js/main.js, host/tools/textBackgroundBox.jsx, host/tools/textBackgroundBox.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |

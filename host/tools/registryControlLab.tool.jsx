@@ -68,7 +68,8 @@
         debugOnly: true,
         controlLabCoverage: {
             registryPath: ["text", "textarea", "number", "range", "select", "checkbox", "switch", "tabs", "color", "button", "actionButton", "divider", "separator", "info", "note", "subheading", "cubicBezier"],
-            coreUiDirect: ["createShadowField"],
+            coreUiDirect: ["createFieldRow", "enhanceSelect", "createButton", "createShadowField"],
+            buttonVariants: ["utility", "navigation"],
             colorFieldAlphaMode: true,
             exemptions: {
                 proceduralPreview: "Domain-bound canvas specimen requires the Procedural Appearance Lab runtime."

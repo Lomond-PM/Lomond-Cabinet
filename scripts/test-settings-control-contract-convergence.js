@@ -28,7 +28,7 @@ assert.ok(/trackMin[\s\S]*trackMax[\s\S]*range\.min = trackMin; range\.max = tra
 // Scrollbar skin is document-global so app-owned portals appended outside app-shell converge.
 assert.ok(/(?:^|\n)\*\s*\{[^}]*scrollbar-color:[^}]*scrollbar-width:\s*thin/.test(css), "one document-global scrollbar contract covers app-owned dynamic mounts");
 assert.ok(/\*::-webkit-scrollbar-thumb\s*\{[^}]*background:\s*var\(--gold-soft\)/.test(css), "the shared WebKit thumb uses the canonical presentation");
-assert.ok(/menu\.className = "select-menu"[\s\S]*document\.body\.appendChild\(menu\)/.test(main), "custom Select menu is an app-owned body portal");
+assert.ok(/function enhanceSelect[\s\S]*classNames: "select-menu"[\s\S]*doc\.body\.appendChild\(menu\)/.test(core), "shared Select owns its app-level body portal");
 assert.ok(/\.select-menu-viewport\s*\{[^}]*overflow-y:\s*auto/.test(css), "custom Select viewport is the real scroll owner");
 assert.ok(!/\.select-menu::-webkit-scrollbar/.test(css), "portaled Select does not duplicate the global skin");
 

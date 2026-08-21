@@ -134,20 +134,8 @@
         }
     }
 
-    function setupCustomSelectInputs() {
-        if (options.setupCustomSelectInputs) {
-            options.setupCustomSelectInputs();
-        }
-    }
-
-    function removePaletteCustomSelectMenus() {
-        var menus = queryAll(".select-menu[data-select-menu-for^='paletteToolMap_']");
-        var i;
-        for (i = 0; i < menus.length; i++) {
-            if (menus[i].parentNode) {
-                menus[i].parentNode.removeChild(menus[i]);
-            }
-        }
+    function enhanceSelect(select) {
+        if (options.enhanceSelect) options.enhanceSelect(select);
     }
 
     function clearPreviewRafs() {
@@ -545,7 +533,7 @@
         clearTransition();
         clearWorkspaceBindings();
         clearPreviewRafs();
-        removePaletteCustomSelectMenus();
+        if (options.disposeSelectsWithin && mount) options.disposeSelectsWithin(mount);
         if (resetOptions.discardDraft !== false) {
             discardTransientEditorState();
         } else {
@@ -1115,7 +1103,7 @@
             return;
         }
         closeCustomSelectMenus();
-        removePaletteCustomSelectMenus();
+        if (options.disposeSelectsWithin) options.disposeSelectsWithin(mount);
         clearWorkspaceBindings();
         clearPreviewRafs();
         clearTransientPreview();
@@ -1195,7 +1183,6 @@
         renderEditorPane(editor, palettes, store);
         setupWorkspaceResize(workspace);
         setupWorkspaceSplitter(workspace, splitter);
-        setupCustomSelectInputs();
     }
 
     function escapeHtml(value) {
@@ -1237,6 +1224,7 @@
             if (!options.CoreUI) select.addEventListener("change", function () { store.setToolPalette(tool.toolId, this.value); refreshPaletteDrivenHomeIcons(); });
             row.appendChild(label);
             row.appendChild(select);
+            enhanceSelect(select);
             section.appendChild(row);
         });
         container.appendChild(section);

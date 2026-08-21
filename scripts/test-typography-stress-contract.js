@@ -61,7 +61,7 @@ assert(/@media \(max-width: 380px\)[\s\S]*?\.settings-field\s*\{[^}]*align-items
 assert(!/(?:^|;)\s*height\s*:/.test(ruleBody("\\.registry-field-row,", css)), "Registry Field must keep 46px as min-height, not height");
 assert(/\.registry-field-row,[\s\S]*?align-items:\s*center;[\s\S]*?min-height:\s*calc\(46px \* var\(--ui-scale\)\)/.test(css));
 assert(rule("\\.registry-tool-panel \\.registry-field-row\\.is-content-growth,[\\s\\S]*?\\.registry-tool-panel \\.registry-switch-row\\.is-content-growth", "align-items:\\s*start"));
-assert(/field\.contentGrowth === true[\s\S]*?row\.className \+= " is-content-growth"/.test(mainSource), "Registry renderer must accept semantic growth ownership");
+assert(/contentGrowth:\s*field\.contentGrowth === true \|\| fieldType === "cubicBezier"/.test(mainSource) && /if \(options\.contentGrowth === true\) row\.className \+= " is-content-growth"/.test(coreSource), "Registry renderer delegates semantic growth ownership to shared FieldRow");
 var dividerBody = (css.match(/\.registry-field-row \+ \.registry-field-row,[\s\S]*?\{([^}]*)\}/) || [null, ""])[1];
 assert(/border-top:\s*1px solid var\(--separator\)/.test(dividerBody));
 assert(!/(?:^|;)\s*(?:position|top|bottom)\s*:/.test(dividerBody), "Registry divider must follow content flow");
