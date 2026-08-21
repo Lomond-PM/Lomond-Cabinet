@@ -133,8 +133,9 @@ function run() {
     assert(/\.select-trigger[\s\S]*display: grid[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto[\s\S]*max-width: 100%[\s\S]*box-sizing: border-box/.test(cssText), "Common select triggers must constrain text and preserve the chevron column.");
     assert(/\.select-label[\s\S]*overflow: hidden[\s\S]*text-overflow: ellipsis[\s\S]*white-space: nowrap/.test(cssText), "Common select labels must ellipsize long values.");
     assert(/\.select-option[\s\S]*overflow: hidden[\s\S]*text-overflow: ellipsis[\s\S]*white-space: nowrap/.test(cssText), "Common select options must ellipsize long values.");
-    assert(/function positionCustomSelectMenu[\s\S]*maxHeight[\s\S]*availableBelow[\s\S]*availableAbove/.test(mainText), "Portal menus must clamp height and position inside the viewport.");
-    assert(/settingsContent\.addEventListener\("scroll"[\s\S]*closeCustomSelectMenus/.test(mainText) && /function closeSettingsPanel[\s\S]*closeCustomSelectMenus/.test(mainText), "Portal menus must close on Settings scroll and close.");
+    const coreUiText = fs.readFileSync(path.join(ROOT, "client/js/ui/coreUi.js"), "utf8");
+    assert(/function enhanceSelect[\s\S]*function position\(\)[\s\S]*maxHeight[\s\S]*availableBelow[\s\S]*availableAbove/.test(coreUiText), "Shared Select portal must clamp height and position inside the viewport.");
+    assert(/doc\.addEventListener\("scroll", viewportChange, true\)/.test(coreUiText) && /function closeSettingsPanel[\s\S]*closeCustomSelectMenus/.test(mainText), "Shared Select owns scroll closure and Settings close retains explicit portal cleanup.");
     assertions += 7;
 
     assert(/class="panel-button utility-action home-edit-button" id="editHomeBtn"/.test(indexText), "Edit Home must consume the shared utility-action presentation.");

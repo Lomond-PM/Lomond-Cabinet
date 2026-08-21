@@ -83,7 +83,7 @@ assert(rule("\\.registry-text-body", "font-weight:\\s*var\\(--type-registry-fiel
 assert(rule("\\.registry-text-muted", "font-size:\\s*var\\(--type-registry-supporting-size\\)"));
 assert(rule("\\.registry-text-muted", "color:\\s*var\\(--text-tertiary\\)"));
 assert(/\.registry-label-column \.control-label\s*\{[^}]*color:\s*var\(--text-primary\);[^}]*font-size:\s*var\(--type-field-label-size\);[^}]*font-weight:\s*var\(--type-registry-field-weight\);[^}]*line-height:\s*var\(--type-registry-field-line-height\);/.test(css));
-assert(/label\.className\s*=\s*"control-label registry-text-body"/.test(mainSource), "test must cover the real Registry Field Label class composition");
+assert(/labelClassNames:\s*"control-label registry-text-body"/.test(mainSource), "test must cover the shared Registry Field Label composition input");
 
 var registryBodyRule = css.indexOf(".registry-text-body {");
 var registryFieldToneRule = css.indexOf(".registry-label-column .control-label {");

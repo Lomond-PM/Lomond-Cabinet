@@ -358,6 +358,16 @@ CoreUI owns generic DOM, native semantics, focus, keyboard behavior, events, vis
 
 Developer Control Lab exercises Checkbox and Switch separately, a three-option ChoiceGroup including disabled and long bilingual content, Registry Range/Color through their real declarative paths, and a collapsible Registry section. BezierCurveField is the subsequent generic advanced-input contract described below.
 
+### Registry component provenance
+
+Registry Renderer composes shared UI components; it does not create independent visual or interactive primitives. Formal schema fields use `CoreUI.createFieldRow()` for row, label, description and control-region composition, while the renderer retains schema conditions, binding and domain-specific composition. Select creation is active and explicit: `CoreUI.createSelect()` preserves native value/change authority and `CoreUI.enhanceSelect()` owns trigger, body portal, viewport, option presentation, mouse/keyboard interaction, disabled state, focus restoration, single-active coordination and dispose/remount. The former document-wide late-scan ownership is retired.
+
+Registry-specific composites such as sections, Action Fields, Tool Actions, State Cards, Subheadings, Info/Notes, Dividers and Procedural Preview remain Registry-owned, but their reusable visual or interactive primitives must come from the shared component library. Control Lab is a shared-component test consumer, not a source of truth.
+
+A Structural Wrapper is allowed only when it has no independent surface, border/chrome, focus/hover/pressed lifecycle, editable behavior or reusable visual identity and owns layout, grouping, slots, measurement or flow only. Approved Platform / Native Boundaries are limited to explicit value/accessibility/fallback roles such as native Select/options. Specialized Internal Primitives must belong to a named finite editor contract, such as Color Picker channel ranges or canvas geometry; “Registry internal” is not a general exception.
+
+The Registry Primitive Provenance Gate requires every Registry visual or interactive primitive to have an exact shared, composite, platform or specialized provenance. Exceptions are file/function/consumer-specific, documented and test-covered; directory-wide bypasses are prohibited. The accepted baseline is `LOCAL-UNREGISTERED = 0`. The authoritative inventory, maps and current coverage counts are maintained in `docs/SHARED_COMPONENT_CATALOG.md`.
+
 Registry tools must be declarative. A `.tool.jsx` file may provide only tool metadata, i18n dictionaries, sections, fields, actions, and host action references.
 
 Registry tools must not:

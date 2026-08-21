@@ -15,12 +15,14 @@ rendererTypes.forEach(type => assert.ok(registryPath.includes(type) || exempt[ty
 registryPath.forEach(type => assert.ok(rendererTypes.includes(type), "Lab claims unsupported Registry type: " + type));
 assert.ok(exempt.proceduralPreview && exempt.proceduralPreview.length > 20, "proceduralPreview exemption is named and reasoned");
 assert.ok(/colorFieldAlphaMode:\s*true/.test(lab) && /supportsAlpha:\s*true/.test(main), "generic ColorField alpha mode has a real Control Lab specimen");
-const publicVisualFactories = Array.from(core.matchAll(/^\s{8}(create[A-Z][A-Za-z]+):\s*\1,/gm)).map(match => match[1]).filter(name => name !== "createFieldRow");
+const publicVisualFactories = Array.from(core.matchAll(/^\s{8}(create[A-Z][A-Za-z]+):\s*\1,/gm)).map(match => match[1]);
+const publicAdapters = ["enhanceSelect"];
 const registryFactories = Array.from(main.matchAll(/window\.CoreUI\.(create[A-Z][A-Za-z]+)\(/g)).map(match => match[1]);
 publicVisualFactories.forEach(factory => assert.ok(registryFactories.includes(factory) || direct.includes(factory), "CoreUI visual factory lacks Registry or Direct coverage: " + factory));
 direct.forEach(factory => {
-    assert.ok(publicVisualFactories.includes(factory), "Direct specimen is not a public CoreUI visual factory: " + factory);
+    assert.ok(publicVisualFactories.includes(factory) || publicAdapters.includes(factory), "Direct specimen is not a public CoreUI factory/adapter: " + factory);
     assert.ok(main.includes("window.CoreUI." + factory + "({"), "Direct specimen does not use canonical CoreUI factory: " + factory);
 });
+assert.ok(/buttonVariants:\s*\["utility",\s*"navigation"\]/.test(lab), "Control Lab covers Utility and Navigation Button variants");
 assert.ok(/type:\s*"subheading"/.test(lab), "Registry Path includes a real subheading specimen");
 console.log("Registry Control Lab completeness contract tests passed.");

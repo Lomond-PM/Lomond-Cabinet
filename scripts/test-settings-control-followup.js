@@ -19,9 +19,9 @@ const registry = require(path.join(root, "client/js/designTuning/designTuningPar
 // Custom Select has a surface shell and a separate inset scroll viewport.
 assert.ok(/\.select-menu\s*\{[^}]*overflow:\s*hidden[^}]*border-radius:[^}]*box-shadow:\s*var\(--elevation-floating-surface\)/.test(css), "popup shell owns radius, clipping, and elevation");
 assert.ok(/\.select-menu-viewport\s*\{[^}]*max-height:[^}]*margin-block:\s*var\(--select-menu-viewport-inset\)[^}]*overflow-y:\s*auto/.test(css), "inner viewport owns scrolling with top and bottom inset");
-assert.ok(/viewport\.className = "select-menu-viewport";[\s\S]*menu\.appendChild\(viewport\)[\s\S]*document\.body\.appendChild\(menu\)/.test(main), "body portal mounts the layered popup surface");
-assert.ok(/viewport\.appendChild\(optionButton\)/.test(main), "options belong to the scroll viewport");
-assert.ok(/desiredHeight = Math\.min\(viewport\.scrollHeight/.test(main) && /--select-menu-available-height/.test(main), "placement derives available height from the real viewport content");
+assert.ok(/classNames: "select-menu-viewport"[\s\S]*menu\.appendChild\(viewport\)[\s\S]*doc\.body\.appendChild\(menu\)/.test(core), "body portal mounts the layered popup surface");
+assert.ok(/viewport\.appendChild\(optionButton\)/.test(core), "options belong to the shared scroll viewport");
+assert.ok(/desiredHeight = Math\.min\(viewport\.scrollHeight/.test(core) && /--select-menu-available-height/.test(core), "shared placement derives available height from the real viewport content");
 assert.ok(!/\.select-menu(?:::-webkit-scrollbar|\s+::-webkit-scrollbar)|\.select-menu-viewport(?:::-webkit-scrollbar|\s+::-webkit-scrollbar)/.test(css), "Select does not own a feature-local scrollbar skin");
 
 // Every elevation parameter carries generic presentation metadata and bilingual copy.

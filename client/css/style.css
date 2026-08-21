@@ -2426,11 +2426,13 @@ p {
     position: relative;
 }
 
+.ui-button--utility,
 .ui-button--navigation,
 .utility-action {
     box-shadow: var(--elevation-utility-action);
 }
 
+.ui-button--utility,
 .ui-button--navigation,
 .utility-action {
     border-color: var(--panel-border);
@@ -3434,6 +3436,7 @@ p {
 .panel-local-action:disabled,
 .ui-button--primary:disabled,
 .ui-button--neutral:disabled,
+.ui-button--utility:disabled,
 .ui-button--navigation:disabled,
 .ui-button--danger:disabled {
     box-shadow: none;
