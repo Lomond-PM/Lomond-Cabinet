@@ -28,4 +28,10 @@ assert.ok(/slider\.type\s*=\s*"range"/.test(picker) && /registry-color-channel-s
 assert.ok(!/document\.createElement\("button"\)/.test(picker), "Color Picker buttons consume the shared Button primitive");
 assert.ok(!/hexEdit\s*=\s*document\.createElement\("input"\)/.test(picker), "Color Picker HEX editing consumes shared TextInput");
 
+// `number` is a formally supported Registry field primitive. It must be handled by
+// renderSchemaField and must NEVER enter the "unsupported field type" diagnostic.
+assert.ok(/fieldType === "number" \? window\.CoreUI\.createNumberInput/.test(schema), "renderSchemaField formally supports the number primitive via CoreUI");
+assert.ok(/applySchemaNumberAttributes\(input, field\)/.test(schema), "renderSchemaField applies the shared schema number attributes");
+assert.ok(/fieldType !== "text" && fieldType !== "number" && window\.console && console\.warn/.test(schema), "unsupported field diagnostic excludes the supported number primitive");
+
 console.log("Registry Primitive Provenance Gate passed: LOCAL-UNREGISTERED = 0.");

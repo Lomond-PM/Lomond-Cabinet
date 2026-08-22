@@ -8,9 +8,9 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 437 |
+| A | Core / Global; keep | 438 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
-| C | Legacy fallback; temporarily keep | 2 |
+| C | Legacy fallback; temporarily keep | 3 |
 | D | Candidate delete; low-risk after AE test | 0 |
 | E | Deferred / uncertain | 195 |
 
@@ -118,6 +118,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | common.reset | common | Reset | 重置 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.resetDefaults | common | Reset Defaults | 恢复默认值 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.restoreDefaults | common | Restore Defaults | 恢复默认 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.retry | common | Retry | 重试 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.right | common | Right | 右对齐 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.rowMajor | common | Row-Major | 行优先 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.saved | common | Saved | 已保存 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -611,6 +612,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | tools.quickStack.title | tools.quickStack | Quick Stack | 快速堆叠 | none | no | E | Reserved or unused Home label. Confirm no planned implementation before deleting. |
 | tools.registryControlLab.fields.colorAlphaField | tools.registryControlLab | Color + Alpha | 颜色 + 透明度 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
 | tools.registryControlLab.fields.shadowField | tools.registryControlLab | Shadow | 阴影 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
+| tools.registryControlLab.sections.coreUiDirect | tools.registryControlLab | CoreUI Direct | CoreUI 直接路径 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
 | vela.surfaceApprove | vela | Approve | 批准 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceCancel | vela | Cancel | 取消 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceComposerLabel | vela | Vela message | Vela 消息 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -679,6 +681,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.language.zhCN | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
 | tools.registryControlLab.fields.colorAlphaField | client/js/i18n.js | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
 | tools.registryControlLab.fields.shadowField | client/js/i18n.js | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
+| tools.registryControlLab.sections.coreUiDirect | client/js/i18n.js | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
 
 ## Candidate Delete Table
 
@@ -889,6 +892,12 @@ No low-risk delete candidates found.
 These keys are declared as literal `labelKey` / `descriptionKey` / `titleKey` / `hintKey` in client-side registries and rendered through `tr(field.labelKey)`. They are not detected by the literal `tr("...")` scan, so any key missing from the global dictionary is a runtime missing-key warning and must be fixed.
 
 No client-registry i18n key is missing from the global dictionary.
+
+## Literal i18n Key Coverage
+
+These keys are referenced as literal `tr("...")` / `data-i18n="..."` and rendered through the global `tr()`. Any such key missing from the global dictionary is a runtime missing-key warning and must be fixed.
+
+No literal i18n key is missing from the global dictionary.
 
 ## Notes
 

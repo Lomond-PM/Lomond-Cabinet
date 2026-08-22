@@ -215,6 +215,42 @@ function missingClientDictionaryKeys(dictionaries, clientRefs) {
     return missing;
 }
 
+// Collect every literal `tr("key")` / `setAttribute("data-i18n","key")` /
+// `data-i18n="key"` reference in client JS/HTML. These are rendered through the
+// global tr(), so a key absent from the dictionary surfaces as a runtime
+// missing-key warning. Tool-local keys (`host/tools/*.tool.jsx` i18n blocks) are
+// not scanned here; a key that only exists tool-locally but is referenced via the
+// global tr() is therefore correctly reported as a global-gap.
+function collectLiteralI18nRefs() {
+    const refs = new Map();
+    const re = /(?:tr\(\s*"([^"]+)"\s*\)|setAttribute\(\s*"data-i18n",\s*"([^"]+)"\s*\)|data-i18n="([^"]+)")/g;
+    const files = listFiles(path.join(ROOT, "client"), false)
+        .filter((file) => (/\.js$/.test(file) || /\.html$/.test(file)) && !/i18n\.js$/.test(file));
+    for (const file of files) {
+        const text = readText(file);
+        const rel = path.relative(ROOT, file).replace(/\\/g, "/");
+        let m;
+        while ((m = re.exec(text))) {
+            const key = m[1] || m[2] || m[3];
+            if (!key || key.indexOf(".") < 0) continue;
+            if (!refs.has(key)) refs.set(key, []);
+            if (refs.get(key).indexOf(rel) === -1) refs.get(key).push(rel);
+        }
+    }
+    return refs;
+}
+
+function missingLiteralI18nKeys(dictionaries, literalRefs) {
+    const en = (dictionaries.en || {});
+    const zh = (dictionaries["zh-CN"] || {});
+    const missing = [];
+    Array.from(literalRefs.keys()).sort().forEach((key) => {
+        if (!en[key]) missing.push(key + " [en]");
+        if (!zh[key]) missing.push(key + " [zh-CN]");
+    });
+    return missing;
+}
+
 function summarizeValue(value) {
     if (typeof value !== "string") {
         return "";
@@ -413,6 +449,8 @@ function buildReport() {
 
     const clientKeyRefs = collectClientKeyFieldRefs();
     const missingClientKeys = missingClientDictionaryKeys(dictionaries, clientKeyRefs);
+    const literalRefs = collectLiteralI18nRefs();
+    const missingLiteralKeys = missingLiteralI18nKeys(dictionaries, literalRefs);
 
     const keyRows = [];
     const duplicateRows = [];
@@ -536,6 +574,17 @@ function buildReport() {
             }))
             : "No client-registry i18n key is missing from the global dictionary.",
         "",
+        "## Literal i18n Key Coverage",
+        "",
+        "These keys are referenced as literal `tr(\"...\")` / `data-i18n=\"...\"` and rendered through the global `tr()`. Any such key missing from the global dictionary is a runtime missing-key warning and must be fixed.",
+        "",
+        missingLiteralKeys.length
+            ? markdownTable(["missing key", "used in"], missingLiteralKeys.map((key) => {
+                const base = key.replace(" [en]", "").replace(" [zh-CN]", "");
+                return [key, (literalRefs.get(base) || []).join(", ") || "client"];
+            }))
+            : "No literal i18n key is missing from the global dictionary.",
+        "",
         "## Notes",
         "",
         "- Registry tool copy should live in each `host/tools/*.tool.jsx` file.",
@@ -548,13 +597,15 @@ function buildReport() {
     return {
         content: report,
         missingClientKeys: missingClientKeys,
+        missingLiteralKeys: missingLiteralKeys,
         summary: {
         report: path.relative(ROOT, REPORT_PATH).replace(/\\/g, "/"),
         globalKeyCount: globalKeys.length,
         candidateDeleteCount: candidateRows.length,
         deferredCount: deferredRows.length,
         duplicateToolKeyCount: duplicateRows.length,
-        clientMissingKeyCount: missingClientKeys.length
+        clientMissingKeyCount: missingClientKeys.length,
+        literalMissingKeyCount: missingLiteralKeys.length
         }
     };
 }
@@ -566,19 +617,23 @@ function normalizeLineEndings(value) {
 function checkReport(reportPath, expectedContent) {
     const target = reportPath || REPORT_PATH;
     if (!fs.existsSync(target)) {
-        return { ok: false, reason: "missing", missingClientKeys: [] };
+        return { ok: false, reason: "missing", missingClientKeys: [], missingLiteralKeys: [] };
     }
-    const built = expectedContent === undefined ? buildReport() : { content: expectedContent, missingClientKeys: [] };
+    const built = expectedContent === undefined ? buildReport() : { content: expectedContent, missingClientKeys: [], missingLiteralKeys: [] };
     const expected = built.content;
     const fresh = normalizeLineEndings(readText(target)) === normalizeLineEndings(expected);
     if (!fresh) {
-        return { ok: false, reason: "out-of-date", missingClientKeys: built.missingClientKeys || [] };
+        return { ok: false, reason: "out-of-date", missingClientKeys: built.missingClientKeys || [], missingLiteralKeys: built.missingLiteralKeys || [] };
     }
-    const missing = built.missingClientKeys || [];
-    if (missing.length) {
-        return { ok: false, reason: "client-registry-missing-keys: " + missing.slice(0, 8).join(", "), missingClientKeys: missing };
+    const missingClient = built.missingClientKeys || [];
+    const missingLiteral = built.missingLiteralKeys || [];
+    if (missingClient.length) {
+        return { ok: false, reason: "client-registry-missing-keys: " + missingClient.slice(0, 8).join(", "), missingClientKeys: missingClient, missingLiteralKeys: missingLiteral };
     }
-    return { ok: true, reason: "", missingClientKeys: missing };
+    if (missingLiteral.length) {
+        return { ok: false, reason: "literal-missing-keys: " + missingLiteral.slice(0, 8).join(", "), missingClientKeys: missingClient, missingLiteralKeys: missingLiteral };
+    }
+    return { ok: true, reason: "", missingClientKeys: missingClient, missingLiteralKeys: missingLiteral };
 }
 
 function writeReport(reportPath, expectedContent) {

@@ -41,6 +41,11 @@ equal(built.missingClientKeys.length, 0, "no client-registry i18n key is missing
 equal(built.summary.clientMissingKeyCount, 0, "summary records zero missing client-registry keys");
 ok(built.content.includes("## Client Registry i18n Key Coverage"), "report surfaces the client-registry key coverage section");
 ok(/(?:^|\n)No client-registry i18n key is missing/i.test(built.content), "coverage section is explicitly clean when no key is missing");
+ok(Array.isArray(built.missingLiteralKeys), "literal missing-key inventory is an array");
+equal(built.missingLiteralKeys.length, 0, "no literal tr()/data-i18n key is missing from the global dictionary");
+equal(built.summary.literalMissingKeyCount, 0, "summary records zero missing literal keys");
+ok(built.content.includes("## Literal i18n Key Coverage"), "report surfaces the literal i18n key coverage section");
+ok(/(?:^|\n)No literal i18n key is missing/i.test(built.content), "literal coverage section is explicitly clean when no key is missing");
 
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "aetoolbox-i18n-report-"));
 const tempReport = path.join(tempRoot, "report.md");

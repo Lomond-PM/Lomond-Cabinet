@@ -7026,7 +7026,11 @@
             bindHexInputSelectBehavior(colorValue.hex);
             wrap.appendChild(colorValue.root);
         } else {
-            if (fieldType !== "text" && window.console && console.warn) {
+            // `number` is a formally supported registry field type handled above by
+            // createNumberInput + applySchemaNumberAttributes. This diagnostic must only
+            // fire for a genuinely unsupported type that silently falls back to a text
+            // input, so `number` is excluded from the warning.
+            if (fieldType !== "text" && fieldType !== "number" && window.console && console.warn) {
                 console.warn("[AE Toolbox] Unsupported registry field type:", fieldType, field);
             }
             input = fieldType === "number" ? window.CoreUI.createNumberInput({ document: document, id: fieldId, classNames: "num-input", value: value, field: field, onDragValue: scheduleSave, enableArrowKeys: false }) : window.CoreUI.createTextInput({ document: document, id: fieldId, classNames: "registry-text-input", value: value, onInput: scheduleSave, onCommit: scheduleSave });
