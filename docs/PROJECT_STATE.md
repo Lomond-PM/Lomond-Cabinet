@@ -175,7 +175,7 @@ Detailed design: `docs/design/procedural-appearance.md`.
 
 ## Reusable Palette System Foundation (0.3.2)
 
-The 0.3.2 Reusable Palette System Foundation is implementation-complete and awaits final real AE acceptance (see `AI` in the handoff). It is intentionally bounded and does not expand into cross-palette references, Harmonies or generator UI, arbitrary derivation scripts, a node/graph editor, a global active Palette, Appearance live-link, or a semantic role-mapping editor.
+The 0.3.2 Reusable Palette System Foundation is **CLOSED / AE ACCEPTED**. The final real AE acceptance was completed by the user with no issues observed. It is intentionally bounded and does not expand into cross-palette references, Harmonies or generator UI, arbitrary derivation scripts, a node/graph editor, a global active Palette, Appearance live-link, or a semantic role-mapping editor.
 
 Final authority map (single owner per layer; no competing authority):
 
