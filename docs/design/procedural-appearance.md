@@ -8,6 +8,8 @@ Palette Workspace 现在以 Palette Store v2 返回的完整 Palette definition 
 
 `profiles.proceduralAppearance` 继续定义 shadow/base/secondary/highlight bindings、stops、weights 与 bias。四个 role 是 consumer binding，不是固定色槽 identity。Preview 直接使用 full v2 draft 建立 memory-only transient projection；Cancel 不写 Store，正式 Save 才增加 revision，并分别进入 custom Palette transaction 或 canonical-relative built-in override transaction。LegacyProceduralPaletteAdapter 继续服务 production procedural consumers；legacy facade 的 `LEGACY_READ_ONLY` 写保护不再限制 native v2 Workspace。
 
+普通 draft mutation（颜色、参数、source、label、profile binding）只走 data mutation → validation → `PaletteResolver.resolvePalette(full draft)` → in-place projection 路径：更新 resolved swatch、error/status、dirty 与 Save enabled、procedural profile preview，绝不重建 Workspace root，也不销毁 scroll owner。结构性 slot edit（Add / Delete / Move / Kind / Derivation change）只局部重建 editor scroll region，`.palette-editor-scroll` 保持 identity 与 scroll position。Derived preview 的唯一颜色 authority 仍是 `PaletteResolver`；UI 不自行做 mix 或 OKLCH 数学。draft mutation 与 full Workspace render lifecycle 分离，避免 viewport reset、focus/cursor loss 与 Select popup 破坏。
+
 本阶段不引入 cross-palette reference、Harmony/Tone generator、arbitrary derivation script、graph editor、Appearance live-link、global active Palette 或 semantic role mapping editor。
 
 The 0.2.5 procedural appearance scope is shipped on `main` and published as `v0.2.5`. The 0.2.4 feature line remains the previous stable baseline. The next development version has not been designated.

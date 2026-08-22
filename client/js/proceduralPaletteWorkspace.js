@@ -297,22 +297,29 @@
         schedulePreview();
     }
 
+    // A working Palette draft mutation is a data change followed by a projection update.
+    // It must never tear down the Workspace root, its scroll owner, or the rendered slot
+    // cards; only the affected presentation is re-projected from the freshly resolved graph.
     function mutateNativeDraft(mutator, rerender) {
         var helper = getEditorHelper();
         var store = getStore();
         var validation;
         if (!editorState || !helper || !helper.mutateNativeState) return;
         editorState = helper.mutateNativeState(editorState, mutator);
+        if (rerender) { refresh(); return; }
         validation = helper.validateNativeDraft(editorState.draft);
         if (validation.ok && store && store.setTransientV2Palette) store.setTransientV2Palette(PaletteEditorPreviewId, editorState.draft);
         else clearTransientPreview();
-        if (rerender) refresh(); else { syncDirtyUi(); schedulePreview(); }
+        refreshProjection(validation);
     }
 
     function mutateDependencySource(mutator) {
         var helper = getEditorHelper(); var trial = helper.mutateNativeState(editorState, mutator); var validation = helper.validateNativeDraft(trial.draft); var code = validation.resolution && validation.resolution.error && validation.resolution.error.code;
         if (code === "DEPENDENCY_CYCLE" || code === "SELF_REFERENCE") { setStatus(code, "error"); return; }
-        editorState = trial; refresh();
+        editorState = trial;
+        if (validation.ok && getStore() && getStore().setTransientV2Palette) getStore().setTransientV2Palette(PaletteEditorPreviewId, editorState.draft);
+        else clearTransientPreview();
+        refreshProjection(validation);
     }
 
     function createPaletteColorControl(role, value) {
@@ -1036,31 +1043,81 @@
         return createPaletteNumberInput(value, { min: contract.min, max: contract.max, step: contract.step || 0.01, defaultValue: value }, function (next) { apply(Number(next)); });
     }
 
+    // Project the resolution of a single slot card in place. This is the only authority
+    // that writes a slot's resolved swatch / error evidence; both the initial render and
+    // the live projection refresh share it, so an update never rebuilds the slot card DOM.
+    function applyResolvedSlotProjection(card, slot, validation) {
+        var header = card.querySelector(".palette-slot-card-header");
+        var resolution = validation && validation.resolution;
+        var resolved = resolution && resolution.ok ? resolution.colors[slot.id] : null;
+        var swatch = card.querySelector(".palette-slot-resolved-swatch");
+        var error = card.querySelector(".palette-slot-resolution-error");
+        var code;
+        if (resolved) {
+            if (!swatch && header) {
+                swatch = createElement("span");
+                swatch.className = "palette-slot-resolved-swatch";
+                header.insertBefore(swatch, header.children[0] ? header.children[0].nextSibling : null);
+            }
+            if (swatch) {
+                swatch.style.backgroundColor = resolved;
+                swatch.title = resolved;
+            }
+            if (error && error.parentNode) error.parentNode.removeChild(error);
+        } else {
+            code = resolution && resolution.error ? resolution.error.code : (validation && validation.errors && validation.errors[0] && validation.errors[0].code);
+            if (swatch && swatch.parentNode) swatch.parentNode.removeChild(swatch);
+            if (!error) {
+                error = createElement("small");
+                error.className = "palette-slot-resolution-error";
+                card.appendChild(error);
+            }
+            error.textContent = code || tr("paletteLibrary.invalidPalette");
+        }
+    }
+
+    // Re-resolve the current full v2 draft and project every visible slot card's resolved
+    // color / error evidence without touching the Workspace root or its scroll owner.
+    function refreshProjection(validation) {
+        var helper = getEditorHelper();
+        var draft = editorState && editorState.draft;
+        var cards;
+        var i;
+        if (!helper || !draft) return;
+        validation = validation || helper.validateNativeDraft(draft);
+        cards = queryAll(".palette-slot-card");
+        for (i = 0; i < cards.length; i++) {
+            var slotId = cards[i].getAttribute("data-slot-id");
+            var slot = draft.slots.filter(function (item) { return item.id === slotId; })[0];
+            if (slot) applyResolvedSlotProjection(cards[i], slot, validation);
+        }
+        syncDirtyUi();
+        schedulePreview();
+    }
+
     function sectionHeading(key) { var heading = createElement("h3"); heading.className = "palette-editor-section-title"; heading.textContent = tr(key); return heading; }
 
     function renderSlotCard(slot, index, draft, validation) {
         var helper = getEditorHelper(); var card = createElement("section"); var header = createElement("div"); var title = createElement("strong"); var buttons = createElement("span"); var kindChoices = ["DIRECT", "REFERENCE", "DERIVED"].map(function (kind) { return { value: kind, label: kind }; });
-        var resolution = validation && validation.resolution; var firstError = validation && validation.errors && validation.errors[0]; var resolved = resolution && resolution.ok ? resolution.colors[slot.id] : null;
-        card.className = "palette-slot-card"; header.className = "palette-slot-card-header"; title.textContent = slot.label; buttons.className = "palette-slot-order-actions"; header.appendChild(title);
-        if (resolved) { var swatch = createElement("span"); swatch.className = "palette-slot-resolved-swatch"; swatch.style.backgroundColor = resolved; swatch.title = resolved; header.appendChild(swatch); }
-        buttons.appendChild(createButton("paletteLibrary.moveUp", "palette-slot-move", function () { editorState = helper.moveNativeSlot(editorState, slot.id, -1); refresh(); }));
+        card.className = "palette-slot-card"; card.setAttribute("data-slot-id", slot.id); header.className = "palette-slot-card-header"; title.textContent = slot.label; buttons.className = "palette-slot-order-actions"; header.appendChild(title);
+        buttons.appendChild(createButton("paletteLibrary.moveUp", "palette-slot-move", function () { editorState = helper.moveNativeSlot(editorState, slot.id, -1); refreshEditorPane(); }));
         buttons.lastChild.disabled = index === 0;
-        buttons.appendChild(createButton("paletteLibrary.moveDown", "palette-slot-move", function () { editorState = helper.moveNativeSlot(editorState, slot.id, 1); refresh(); }));
+        buttons.appendChild(createButton("paletteLibrary.moveDown", "palette-slot-move", function () { editorState = helper.moveNativeSlot(editorState, slot.id, 1); refreshEditorPane(); }));
         buttons.lastChild.disabled = index === draft.slots.length - 1;
-        buttons.appendChild(createButton("paletteLibrary.delete", "palette-slot-delete is-danger", function () { var result = helper.deleteNativeSlot(editorState, slot.id); if (!result.ok) { setStatus(tr("paletteLibrary.slotDeleteBlocked") + " " + result.dependents.map(function (item) { return item.label; }).concat(result.boundRoles).join(", "), "error"); return; } editorState = result.state; refresh(); }));
+        buttons.appendChild(createButton("paletteLibrary.delete", "palette-slot-delete is-danger", function () { var result = helper.deleteNativeSlot(editorState, slot.id); if (!result.ok) { setStatus(tr("paletteLibrary.slotDeleteBlocked") + " " + result.dependents.map(function (item) { return item.label; }).concat(result.boundRoles).join(", "), "error"); return; } editorState = result.state; refreshEditorPane(); }));
         header.appendChild(buttons); card.appendChild(header);
         card.appendChild(renderPaletteEditorField("paletteLibrary.slotLabel", createPaletteTextInput(slot.label, function (value) { mutateNativeDraft(function (next) { next.slots[index].label = value; }, false); title.textContent = value; })));
-        card.appendChild(renderPaletteEditorField("paletteLibrary.slotKind", createPaletteSelect(slot.kind, kindChoices, function (kind) { editorState = helper.updateNativeSlot(editorState, slot.id, { kind: kind }); refresh(); })));
+        card.appendChild(renderPaletteEditorField("paletteLibrary.slotKind", createPaletteSelect(slot.kind, kindChoices, function (kind) { editorState = helper.updateNativeSlot(editorState, slot.id, { kind: kind }); refreshEditorPane(); })));
         if (slot.kind === "DIRECT") card.appendChild(renderPaletteEditorField("paletteLibrary.slotColor", createDynamicColorControl(slot)));
         if (slot.kind === "REFERENCE") card.appendChild(renderPaletteEditorField("paletteLibrary.sourceSlot", createPaletteSelect(slot.reference.slotId, slotChoices(draft, slot.id), function (sourceId) { mutateDependencySource(function (next) { next.slots[index].reference.slotId = sourceId; }); })));
         if (slot.kind === "DERIVED") renderDerivedFields(card, slot, index, draft);
-        if (!resolved) { var error = createElement("small"); error.className = "palette-slot-resolution-error"; error.textContent = resolution && resolution.error ? resolution.error.code : (firstError && firstError.code ? firstError.code : tr("paletteLibrary.invalidPalette")); card.appendChild(error); }
+        applyResolvedSlotProjection(card, slot, validation);
         return card;
     }
 
     function renderDerivedFields(card, slot, index, draft) {
         var helper = getEditorHelper(); var definitions = helper.derivationDefinitions(); var definition = definitions.filter(function (item) { return item.id === slot.derivation.derivationId; })[0];
-        card.appendChild(renderPaletteEditorField("paletteLibrary.derivation", createPaletteSelect(slot.derivation.derivationId, definitions.map(function (item) { return { value: item.id, label: item.id }; }), function (id) { editorState = helper.updateNativeSlot(editorState, slot.id, { derivationId: id }); refresh(); })));
+        card.appendChild(renderPaletteEditorField("paletteLibrary.derivation", createPaletteSelect(slot.derivation.derivationId, definitions.map(function (item) { return { value: item.id, label: item.id }; }), function (id) { editorState = helper.updateNativeSlot(editorState, slot.id, { derivationId: id }); refreshEditorPane(); })));
         if (!definition) return;
         slot.derivation.sourceSlotIds.forEach(function (sourceId, sourceIndex) { card.appendChild(renderPaletteEditorField("paletteLibrary.sourceSlot" + (sourceIndex + 1), createPaletteSelect(sourceId, slotChoices(draft, slot.id), function (nextId) { mutateDependencySource(function (next) { next.slots[index].derivation.sourceSlotIds[sourceIndex] = nextId; }); }))); });
         Object.keys(definition.parameterSchema).forEach(function (name) { var contract = definition.parameterSchema[name]; card.appendChild(renderPaletteEditorField("paletteLibrary.parameter." + name, createNativeNumber(slot.derivation.parameters[name], contract, function (value) { mutateNativeDraft(function (next) { next.slots[index].derivation.parameters[name] = value; }, false); }))); });
@@ -1069,27 +1126,71 @@
     function renderProfileFields(scroll, draft) {
         var profile = draft.profiles.proceduralAppearance; var roles = ["shadow", "base", "secondary", "highlight"]; var i;
         scroll.appendChild(sectionHeading("paletteLibrary.proceduralProfile"));
-        roles.forEach(function (role) { scroll.appendChild(renderPaletteEditorField("paletteLibrary." + role, createPaletteSelect(profile.bindings[role], slotChoices(draft, ""), function (slotId) { mutateNativeDraft(function (next) { next.profiles.proceduralAppearance.bindings[role] = slotId; }, true); }))); });
+        roles.forEach(function (role) { scroll.appendChild(renderPaletteEditorField("paletteLibrary." + role, createPaletteSelect(profile.bindings[role], slotChoices(draft, ""), function (slotId) { mutateNativeDraft(function (next) { next.profiles.proceduralAppearance.bindings[role] = slotId; }, false); }))); });
         for (i = 0; i < 4; i++) (function (index) { scroll.appendChild(renderPaletteEditorField("paletteLibrary.stop" + (index + 1), createNativeNumber(profile.stops[index], { min: 0, max: 1, step: 0.01 }, function (value) { mutateNativeDraft(function (next) { next.profiles.proceduralAppearance.stops[index] = value; }, false); }))); }(i));
         roles.forEach(function (role) { scroll.appendChild(renderPaletteEditorField("paletteLibrary.weight." + role, createNativeNumber(profile.weights[role], { min: 0, max: 1, step: 0.01 }, function (value) { mutateNativeDraft(function (next) { next.profiles.proceduralAppearance.weights[role] = value; }, false); }))); });
         ["saturationBias", "luminanceBias", "contrastBias"].forEach(function (name) { scroll.appendChild(renderPaletteEditorField("paletteLibrary.parameter." + name, createNativeNumber(profile[name] || 0, { step: 0.01 }, function (value) { mutateNativeDraft(function (next) { next.profiles.proceduralAppearance[name] = value; }, false); }))); });
     }
 
-    function renderEditorPane(editor, palettes, store) {
-        var state = editorState; var draft = state && state.draft; var helper = getEditorHelper(); var scroll; var status; var actions; var validation; var resolution; var addActions;
+    // Build the editor pane's scrollable content into an existing scroll container.
+    // This is the local rebuild seam for structural slot edits (add/delete/move/kind/derivation):
+    // it refreshes the slot cards and their projection but never replaces the scroll owner.
+    function buildEditorContent(scroll, palettes, store) {
+        var state = editorState; var draft = state && state.draft; var helper = getEditorHelper(); var status; var validation; var addActions;
         if (!draft) return;
-        validation = helper.validateNativeDraft(draft); resolution = validation.ok ? validation.resolution : validation.resolution;
-        scroll = createElement("div"); scroll.className = "palette-editor-scroll ui-scroll-region"; scroll.appendChild(createPalettePreviewBlock());
+        validation = helper.validateNativeDraft(draft);
+        scroll.appendChild(createPalettePreviewBlock());
         status = createElement("div"); status.className = "palette-editor-draft-status"; scroll.appendChild(status);
         scroll.appendChild(renderPaletteEditorField("paletteLibrary.displayName", createPaletteTextInput(draft.metadata.displayName, function (value) { mutateNativeDraft(function (next) { next.metadata.displayName = value; }, false); })));
         scroll.appendChild(sectionHeading("paletteLibrary.dynamicSlots"));
         draft.slots.forEach(function (slot, index) { scroll.appendChild(renderSlotCard(slot, index, draft, validation)); });
         addActions = createElement("div"); addActions.className = "palette-slot-add-actions";
-        ["DIRECT", "REFERENCE", "DERIVED"].forEach(function (kind) { addActions.appendChild(createButton("paletteLibrary.add" + kind, "palette-slot-add", function () { editorState = helper.addNativeSlot(editorState, kind); refresh(); })); }); scroll.appendChild(addActions);
-        renderProfileFields(scroll, draft); renderToolMapping(scroll, palettes, store); renderImportExport(scroll, store); editor.appendChild(scroll);
+        ["DIRECT", "REFERENCE", "DERIVED"].forEach(function (kind) { addActions.appendChild(createButton("paletteLibrary.add" + kind, "palette-slot-add", function () { editorState = helper.addNativeSlot(editorState, kind); refreshEditorPane(); })); }); scroll.appendChild(addActions);
+        renderProfileFields(scroll, draft); renderToolMapping(scroll, palettes, store); renderImportExport(scroll, store);
+    }
+
+    function syncEditorPresentation() {
+        var store = getStore();
+        var draft = editorState && editorState.draft;
+        if (!store || !draft) return;
+        if (paletteEditorDraftIsValid() && store.setTransientV2Palette) store.setTransientV2Palette(PaletteEditorPreviewId, draft);
+        else clearTransientPreview();
+        syncDirtyUi();
+        schedulePreview();
+        renderActionBar();
+    }
+
+    function disposeEditorPaneSelects(editorPane) {
+        if (options.closeCustomSelectMenus) options.closeCustomSelectMenus();
+        if (options.disposeSelectsWithin && editorPane) options.disposeSelectsWithin(editorPane);
+    }
+
+    function renderEditorPane(editor, palettes, store) {
+        var scroll; var actions;
+        if (!editorState || !editorState.draft) return;
+        scroll = createElement("div"); scroll.className = "palette-editor-scroll ui-scroll-region";
+        buildEditorContent(scroll, palettes, store);
+        editor.appendChild(scroll);
         actions = createElement("div"); actions.className = "palette-editor-action-bar"; editor.appendChild(actions);
-        if (validation.ok && store.setTransientV2Palette) store.setTransientV2Palette(PaletteEditorPreviewId, draft); else clearTransientPreview();
-        syncDirtyUi(); schedulePreview(); renderActionBar();
+        syncEditorPresentation();
+    }
+
+    function refreshEditorPane() {
+        var mount = byId("settingsPaletteLibraryMount");
+        var store = getStore();
+        var editorPane = query(".palette-editor-pane");
+        var scroll = query(".palette-editor-scroll");
+        if (!mount || !store || !editorPane) return;
+        disposeEditorPaneSelects(editorPane);
+        if (scroll) {
+            scroll.innerHTML = "";
+            buildEditorContent(scroll, store.listResolvedPalettes(true), store);
+            renderActionBar();
+            syncDirtyUi();
+            schedulePreview();
+        } else {
+            renderEditorPane(editorPane, store.listResolvedPalettes(true), store);
+        }
     }
 
     function renderLauncher(mount) {
