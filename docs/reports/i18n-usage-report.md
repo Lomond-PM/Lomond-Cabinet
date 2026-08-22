@@ -22,7 +22,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | proceduralAppearanceLab.tool.jsx | proceduralAppearanceLab | tools.proceduralAppearanceLab.title | tools.proceduralAppearanceLab.description | yes | yes | none | none | messageKey-oriented | ok |
 | registryControlLab.tool.jsx | registryControlLab | tools.registryControlLab.title | tools.registryControlLab.description | yes | yes | none | none | messageKey-oriented | ok |
 | selectionInfo.tool.jsx | selectionInfo | tools.selectionInfo.title | tools.selectionInfo.description | yes | yes | none | none | messageKey-oriented | ok |
-| settingsRendererLab.tool.jsx | settingsRendererLab | tools.settingsRendererLab.title | tools.settingsRendererLab.description | yes | yes | label.registryDebugTools, section.motion, label.motionSpeed, label.uiScale, section.theme, label.accentColor, label.homeBackground, section.backgroundEngine ... | none | messageKey-oriented | ok |
+| settingsRendererLab.tool.jsx | settingsRendererLab | tools.settingsRendererLab.title | tools.settingsRendererLab.description | yes | yes | label.registryDebugTools, section.motion, label.motionSpeed, label.uiScale, section.theme, label.accentColor, label.homeBaseColor, section.backgroundEngine ... | none | messageKey-oriented | ok |
 | shapeAdd.tool.jsx | shapeAdd | tools.shapeAdd.title | tools.shapeAdd.description | yes | yes | none | none | messageKey-oriented | ok |
 | textBackgroundBox.tool.jsx | textBackgroundBox | tools.textBackgroundBox.title | tools.textBackgroundBox.description | yes | yes | none | none | messageKey-oriented | ok |
 
@@ -137,7 +137,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | helper.backgroundSource | helper | Classic keeps the existing Background Engine. Follow Icon Theme mirro... | 经典模式保留现有 Background Engine。跟随图标主题会复用图标的主题关系。手动程序化使用下方的背景种子和色卡。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.enableMotion | helper | Uses slow opacity and transform only. | 仅使用缓慢的透明度和位移动画。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.fallbackIconColors | helper | Only used when a procedural icon cannot render and the fallback glyph... | 仅在程序化图标无法渲染并显示回退图标时使用。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| helper.homeBaseColor | helper | Sets the underlying base color of the Home surface; it does not defin... | 设置主页表面的底层基底色，不代表完整背景处理。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.homeBaseColor | helper | Sets the underlying base color of the Home surface; it does not defin... | 设置主页表面的底层基底色，不代表完整背景处理。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.homeDragShadowIntensity | helper | Developer-only intensity for the soft shadow shown under the currentl... | 仅开发者模式可见，控制主页编辑时当前拖动图标下方的柔化投影强度。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.homeIconRadius | helper | Developer-only proportional radius for Home tool icons and matching s... | 仅开发者模式可见，控制主页工具图标和同类正方形预览的比例圆角。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.iconDarkSource | helper | Choose a manual dark endpoint or use the base color from a visible so... | 选择手动暗端色，或使用可见源色卡的主体色。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -210,7 +210,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | label.gradientEnable | label | Gradient Enable | 启用渐变 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.gridOpacity | label | Grid Opacity | 网格不透明度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.gridSize | label | Grid Size | 网格尺寸 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| label.homeBaseColor | label | Home Base Color | 主页基底色 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.homeBaseColor | label | Home Base Color | 主页基底色 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.homeDragShadowIntensity | label | Home drag shadow | 主页拖动投影 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.homeIconRadius | label | Home icon radius | 主页图标圆角 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.iconDarkSource | label | Icon Dark Source | 图标暗端来源 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -898,6 +898,12 @@ No client-registry i18n key is missing from the global dictionary.
 These keys are referenced as literal `tr("...")` / `data-i18n="..."` and rendered through the global `tr()`. Any such key missing from the global dictionary is a runtime missing-key warning and must be fixed.
 
 No literal i18n key is missing from the global dictionary.
+
+## Registry Tool Schema i18n Coverage
+
+These i18n references are declared in production Registry Tool schemas (`host/tools/*.tool.jsx`). Each must resolve through the merged tool-local dictionary OR the global dictionary; a reference that resolves in neither is a runtime missing-key warning.
+
+No Registry Tool schema i18n reference is unresolvable.
 
 ## Notes
 

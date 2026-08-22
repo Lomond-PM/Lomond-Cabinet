@@ -405,6 +405,7 @@ function buildReport() {
     const toolKeyOwners = new Map();
     const toolRows = [];
 
+    const schemaUnresolvable = new Map(); // key -> { langs:Set, files:Set }
     tools.forEach((tool) => {
         const refs = new Set();
         if (tool.titleKey) refs.add(tool.titleKey);
@@ -429,6 +430,21 @@ function buildReport() {
         const hardcodedCount = countRegex(tool.raw, /\b(?:label|title|description)\s*:\s*["'][^"']+["']/g);
         const plainMessageCount = countRegex(tool.raw, /\bmessage\s*:\s*["'][^"']+["']/g);
 
+        // A Registry Tool schema i18n reference resolves either through the merged
+        // tool-local dictionary OR the global dictionary. If it resolves in neither,
+        // it is a runtime missing-key warning and must be fixed at the schema owner.
+        Array.from(refs).forEach((key) => {
+            if (key.startsWith("common.")) return;
+            const enOk = !!dictionaries.en[key] || enKeys.has(key);
+            const zhOk = !!((dictionaries["zh-CN"] || {})[key]) || zhKeys.has(key);
+            if (enOk && zhOk) return;
+            const entry = schemaUnresolvable.get(key) || { langs: new Set(), files: new Set() };
+            if (!enOk) entry.langs.add("en");
+            if (!zhOk) entry.langs.add("zh-CN");
+            entry.files.add(tool.file);
+            schemaUnresolvable.set(key, entry);
+        });
+
         toolRows.push([
             tool.file,
             tool.id,
@@ -441,6 +457,12 @@ function buildReport() {
             plainMessageCount ? "plain message present; prefer messageKey/fallback check" : "messageKey-oriented",
             tool.loadError || "ok"
         ]);
+    });
+
+    const schemaMissingKeys = [];
+    Array.from(schemaUnresolvable.keys()).sort().forEach((key) => {
+        const entry = schemaUnresolvable.get(key);
+        Array.from(entry.langs).sort().forEach((lang) => schemaMissingKeys.push(key + " [" + lang + "]"));
     });
 
     const globalKeys = Object.keys(dictionaries.en || {}).sort();
@@ -585,6 +607,17 @@ function buildReport() {
             }))
             : "No literal i18n key is missing from the global dictionary.",
         "",
+        "## Registry Tool Schema i18n Coverage",
+        "",
+        "These i18n references are declared in production Registry Tool schemas (`host/tools/*.tool.jsx`). Each must resolve through the merged tool-local dictionary OR the global dictionary; a reference that resolves in neither is a runtime missing-key warning.",
+        "",
+        schemaMissingKeys.length
+            ? markdownTable(["unresolved key", "tool schema"], schemaMissingKeys.map((key) => {
+                const base = key.replace(" [en]", "").replace(" [zh-CN]", "");
+                return [key, (schemaUnresolvable.get(base) || { files: [] }).files.join(", ") || "tool schema"];
+            }))
+            : "No Registry Tool schema i18n reference is unresolvable.",
+        "",
         "## Notes",
         "",
         "- Registry tool copy should live in each `host/tools/*.tool.jsx` file.",
@@ -598,6 +631,7 @@ function buildReport() {
         content: report,
         missingClientKeys: missingClientKeys,
         missingLiteralKeys: missingLiteralKeys,
+        schemaMissingKeys: schemaMissingKeys,
         summary: {
         report: path.relative(ROOT, REPORT_PATH).replace(/\\/g, "/"),
         globalKeyCount: globalKeys.length,
@@ -605,7 +639,8 @@ function buildReport() {
         deferredCount: deferredRows.length,
         duplicateToolKeyCount: duplicateRows.length,
         clientMissingKeyCount: missingClientKeys.length,
-        literalMissingKeyCount: missingLiteralKeys.length
+        literalMissingKeyCount: missingLiteralKeys.length,
+        schemaMissingKeyCount: schemaMissingKeys.length
         }
     };
 }
@@ -617,23 +652,27 @@ function normalizeLineEndings(value) {
 function checkReport(reportPath, expectedContent) {
     const target = reportPath || REPORT_PATH;
     if (!fs.existsSync(target)) {
-        return { ok: false, reason: "missing", missingClientKeys: [], missingLiteralKeys: [] };
+        return { ok: false, reason: "missing", missingClientKeys: [], missingLiteralKeys: [], schemaMissingKeys: [] };
     }
-    const built = expectedContent === undefined ? buildReport() : { content: expectedContent, missingClientKeys: [], missingLiteralKeys: [] };
+    const built = expectedContent === undefined ? buildReport() : { content: expectedContent, missingClientKeys: [], missingLiteralKeys: [], schemaMissingKeys: [] };
     const expected = built.content;
     const fresh = normalizeLineEndings(readText(target)) === normalizeLineEndings(expected);
     if (!fresh) {
-        return { ok: false, reason: "out-of-date", missingClientKeys: built.missingClientKeys || [], missingLiteralKeys: built.missingLiteralKeys || [] };
+        return { ok: false, reason: "out-of-date", missingClientKeys: built.missingClientKeys || [], missingLiteralKeys: built.missingLiteralKeys || [], schemaMissingKeys: built.schemaMissingKeys || [] };
     }
     const missingClient = built.missingClientKeys || [];
     const missingLiteral = built.missingLiteralKeys || [];
+    const missingSchema = built.schemaMissingKeys || [];
     if (missingClient.length) {
-        return { ok: false, reason: "client-registry-missing-keys: " + missingClient.slice(0, 8).join(", "), missingClientKeys: missingClient, missingLiteralKeys: missingLiteral };
+        return { ok: false, reason: "client-registry-missing-keys: " + missingClient.slice(0, 8).join(", "), missingClientKeys: missingClient, missingLiteralKeys: missingLiteral, schemaMissingKeys: missingSchema };
     }
     if (missingLiteral.length) {
-        return { ok: false, reason: "literal-missing-keys: " + missingLiteral.slice(0, 8).join(", "), missingClientKeys: missingClient, missingLiteralKeys: missingLiteral };
+        return { ok: false, reason: "literal-missing-keys: " + missingLiteral.slice(0, 8).join(", "), missingClientKeys: missingClient, missingLiteralKeys: missingLiteral, schemaMissingKeys: missingSchema };
     }
-    return { ok: true, reason: "", missingClientKeys: missingClient, missingLiteralKeys: missingLiteral };
+    if (missingSchema.length) {
+        return { ok: false, reason: "schema-missing-keys: " + missingSchema.slice(0, 8).join(", "), missingClientKeys: missingClient, missingLiteralKeys: missingLiteral, schemaMissingKeys: missingSchema };
+    }
+    return { ok: true, reason: "", missingClientKeys: missingClient, missingLiteralKeys: missingLiteral, schemaMissingKeys: missingSchema };
 }
 
 function writeReport(reportPath, expectedContent) {

@@ -46,6 +46,11 @@ equal(built.missingLiteralKeys.length, 0, "no literal tr()/data-i18n key is miss
 equal(built.summary.literalMissingKeyCount, 0, "summary records zero missing literal keys");
 ok(built.content.includes("## Literal i18n Key Coverage"), "report surfaces the literal i18n key coverage section");
 ok(/(?:^|\n)No literal i18n key is missing/i.test(built.content), "literal coverage section is explicitly clean when no key is missing");
+ok(Array.isArray(built.schemaMissingKeys), "tool-schema missing-key inventory is an array");
+equal(built.schemaMissingKeys.length, 0, "no Registry Tool schema i18n reference is unresolvable");
+equal(built.summary.schemaMissingKeyCount, 0, "summary records zero unresolvable schema keys");
+ok(built.content.includes("## Registry Tool Schema i18n Coverage"), "report surfaces the tool-schema i18n coverage section");
+ok(/(?:^|\n)No Registry Tool schema i18n reference is unresolvable/i.test(built.content), "schema coverage section is explicitly clean when no key is unresolved");
 
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "aetoolbox-i18n-report-"));
 const tempReport = path.join(tempRoot, "report.md");
