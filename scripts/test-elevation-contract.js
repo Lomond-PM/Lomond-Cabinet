@@ -27,12 +27,12 @@ function hasShadow(source, selectorPattern, valuePattern) {
 assert(declaration(css, "--elevation-surface-shell", "0 18px 48px rgba\\(0, 0, 0, 0\\.38\\)"));
 assert(declaration(css, "--elevation-information-surface", "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"));
 assert(declaration(css, "--elevation-primary-action", "0 4px 10px rgba\\(0, 0, 0, 0\\.18\\)"));
-assert(declaration(css, "--elevation-utility-action", "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"));
-assert(declaration(css, "--elevation-floating-surface", "0 12px 26px rgba\\(0, 0, 0, 0\\.34\\)"));
-assert(declaration(css, "--elevation-floating-picker", "0 14px 28px rgba\\(0, 0, 0, 0\\.42\\)"));
-assert(declaration(css, "--elevation-action-container", "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"));
+assert(declaration(css, "--elevation-utility-action", "0 8px 28px rgba\\(48, 196, 255, 0\\.46\\)"));
+assert(declaration(css, "--elevation-floating-surface", "0 10px 48px rgba\\(72, 146, 214, 0\\.51\\)"));
+assert(declaration(css, "--elevation-floating-picker", "0 10px 48px rgba\\(72, 146, 214, 0\\.51\\)"));
+assert(declaration(css, "--elevation-action-container", "0 8px 30px rgba\\(113, 224, 255, 0\\.32\\)"));
 assert(declaration(css, "--elevation-registry-preview-prominence", "0 calc\\(12px \\* var\\(--ui-scale\\)\\) calc\\(24px \\* var\\(--ui-scale\\)\\) rgba\\(0, 0, 0, 0\\.24\\)"));
-assert(declaration(css, "--action-neutral-surface", "rgba\\(15, 14, 11, 1\\)"), "neutral action retains its canonical surface without borrowing container ownership");
+assert(declaration(css, "--action-neutral-surface", "rgba\\(60, 82, 105, 1\\)"), "neutral action retains its canonical surface without borrowing container ownership");
 assert(!/--elevation-[0-9]+\s*:|--shadow-(?:sm|md|lg)\s*:/.test(css), "numeric elevation ladder must remain absent");
 
 assert(hasShadow(css, "\\.view-detail", "var\\(--elevation-surface-shell\\)"));
@@ -112,8 +112,8 @@ assert(declaration(css, "--home-drag-shadow-secondary", "rgba\\(0, 0, 0, 0\\.32\
 assert(/\.view-home\.home-editing \.tool-app\.is-dragging \.tool-icon\s*\{[^}]*var\(--home-drag-shadow-primary\)[^}]*var\(--home-drag-shadow-secondary\)/.test(css));
 
 assert(hasShadow(css, "button:focus-visible,[\\s\\S]*?\\[role=\"button\"\\]:focus-visible", "0 0 0 1px var\\(--interaction-focus-ring\\)"));
-assert(declaration(css, "--slider-thumb-optical-shadow", "0 2px 8px rgba\\(0, 0, 0, 0\\.32\\)"));
-assert(declaration(css, "--switch-thumb-optical-shadow", "0 2px 8px rgba\\(0, 0, 0, 0\\.28\\)"));
+assert(declaration(css, "--slider-thumb-optical-shadow", "0 4px 16px rgba\\(92, 191, 255, 0\\.79\\)"));
+assert(declaration(css, "--switch-thumb-optical-shadow", "0 4px 16px rgba\\(92, 191, 255, 0\\.79\\)"));
 assert(hasShadow(css, "\\.ui-range::-webkit-slider-thumb,[\\s\\S]*?\\.pill-slider::-webkit-slider-thumb", "var\\(--slider-thumb-optical-shadow\\)"));
 assert(hasShadow(css, "\\.ui-switch-track::after,[\\s\\S]*?\\.switch-track::after", "var\\(--switch-thumb-optical-shadow\\)"));
 assert(hasShadow(css, "\\.ui-color-swatch,[\\s\\S]*?\\.registry-color-swatch", "inset 0 0 0 1px rgba\\(0, 0, 0, 0\\.3\\)"));

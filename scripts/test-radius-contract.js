@@ -26,9 +26,9 @@ function rule(source, selectorPattern, declarationPattern) {
 });
 
 assert(declaration(css, "--radius-section-card", "var\\(--radius-lg\\)"));
-assert(declaration(css, "--radius-primary-work-surface", "var\\(--radius-lg\\)"));
-assert(declaration(css, "--radius-nested-surface", "var\\(--radius-md\\)"));
-assert(declaration(css, "--radius-editable-control", "var\\(--radius-sm\\)"));
+assert(declaration(css, "--radius-primary-work-surface", "calc\\(35px \\* var\\(--ui-scale\\)\\)"));
+assert(declaration(css, "--radius-nested-surface", "calc\\(28px \\* var\\(--ui-scale\\)\\)"));
+assert(declaration(css, "--radius-editable-control", "calc\\(20px \\* var\\(--ui-scale\\)\\)"));
 assert(declaration(css, "--radius-home-tile", "var\\(--radius-lg\\)"));
 assert(declaration(css, "--radius-registry-option", "var\\(--radius-nested-surface\\)"));
 assert(declaration(css, "--radius-palette-library-item", "var\\(--radius-nested-surface\\)"));

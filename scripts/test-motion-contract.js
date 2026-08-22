@@ -17,12 +17,12 @@ vm.runInContext(defaultsSource, context);
 vm.runInContext(coreSource, context);
 
 const defaults = context.window.MotionDefaults;
-assert.strictEqual(defaults.resolveDuration("spatialMorphExpand", 1), 480);
-assert.strictEqual(defaults.resolveDuration("spatialMorphContract", 1), 360);
+assert.strictEqual(defaults.resolveDuration("spatialMorphExpand", 1), 460);
+assert.strictEqual(defaults.resolveDuration("spatialMorphContract", 1), 400);
 assert.strictEqual(defaults.resolveDuration("actionFeedback", 1.35), 160, "action feedback must not consume major-view speed");
-assert.strictEqual(defaults.resolveDuration("viewContentEnter", 0.75), 135);
-assert.strictEqual(defaults.resolveDuration("toolIdentityOpen", 1), 360);
-assert.strictEqual(defaults.resolveDuration("homeHandoffRestore", 1), 260);
+assert.strictEqual(defaults.resolveDuration("viewContentEnter", 0.75), 300);
+assert.strictEqual(defaults.resolveDuration("toolIdentityOpen", 1), 450);
+assert.strictEqual(defaults.resolveDuration("homeHandoffRestore", 1), 300);
 assert.deepStrictEqual(Object.assign({}, defaults.curveFamilies), {
     enter: "--motion-curve-enter",
     exit: "--motion-curve-exit",
@@ -36,9 +36,9 @@ assert.strictEqual(defaults.roleCurveFamily.actionPress, "press");
 
 const curveValues = {
     "--motion-curve-enter": " cubic-bezier(0.16, 1, 0.3, 1) ",
-    "--motion-curve-exit": "cubic-bezier(0.32, 0, 0.67, 0)",
-    "--motion-curve-standard": "cubic-bezier(0.22, 1, 0.36, 1)",
-    "--motion-curve-press": "cubic-bezier(0.2, 0, 0, 1)"
+    "--motion-curve-exit": "cubic-bezier(0.0421, 0.5278, 0.1749, 0.999)",
+    "--motion-curve-standard": "cubic-bezier(0.0273, 1.0024, 0.36, 1)",
+    "--motion-curve-press": "cubic-bezier(0.2486, -0.6113, 0.3389, 1.325)"
 };
 const curveView = { getComputedStyle: () => ({ getPropertyValue: (name) => curveValues[name] || "" }) };
 const curveRoot = { ownerDocument: { defaultView: curveView } };
@@ -47,7 +47,7 @@ assert.strictEqual(defaults.resolveEasing("homeHandoffRestore", curveRoot), "cub
 curveValues["--motion-curve-enter"] = "cubic-bezier(0.25, 1.2, 0.4, 1)";
 assert.strictEqual(defaults.resolveEasing("spatialMorphExpand", curveRoot), "cubic-bezier(0.25, 1.2, 0.4, 1)", "next interaction resolves the live family override");
 assert.strictEqual(defaults.resolveEasing("homeHandoffRestore", curveRoot), "cubic-bezier(0.25, 1.2, 0.4, 1)", "roles inheriting one family update together");
-assert.strictEqual(defaults.resolveDuration("spatialMorphExpand", 1), 480, "curve override must not alter duration");
+assert.strictEqual(defaults.resolveDuration("spatialMorphExpand", 1), 460, "curve override must not alter duration");
 assert.strictEqual(defaults.resolveEasing("spatialMorphExpand", curveRoot), "cubic-bezier(0.25, 1.2, 0.4, 1)", "duration resolution must not alter curve");
 
 const core = context.window.CoreMotion.create();
@@ -83,9 +83,9 @@ assert.ok(cssSource.includes("--motion-action-feedback-duration"));
 assert.ok(cssSource.includes("--motion-collapse-duration"));
 [
     ["enter", "cubic-bezier(0.16, 1, 0.3, 1)"],
-    ["exit", "cubic-bezier(0.32, 0, 0.67, 0)"],
-    ["standard", "cubic-bezier(0.22, 1, 0.36, 1)"],
-    ["press", "cubic-bezier(0.2, 0, 0, 1)"]
+    ["exit", "cubic-bezier(0.0421, 0.5278, 0.1749, 0.999)"],
+    ["standard", "cubic-bezier(0.0273, 1.0024, 0.36, 1)"],
+    ["press", "cubic-bezier(0.2486, -0.6113, 0.3389, 1.325)"]
 ].forEach(([family, value]) => {
     assert.strictEqual((cssSource.match(new RegExp("--motion-curve-" + family + ":\\s*" + value.replace(/[().]/g, "\\$&"), "g")) || []).length, 1, family + " has one canonical CSS default");
 });
