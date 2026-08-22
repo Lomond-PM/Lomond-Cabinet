@@ -475,7 +475,10 @@
         function outsideClick(event) {
             if (!control.contains(event.target) && !menu.contains(event.target)) close();
         }
-        function viewportChange() { close(); }
+        function viewportChange(event) {
+            if (event && event.target && menu.contains(event.target)) return;
+            close();
+        }
 
         function dispose() {
             var index;

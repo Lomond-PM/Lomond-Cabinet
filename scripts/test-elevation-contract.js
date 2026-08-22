@@ -80,9 +80,9 @@ assert(/key:\s*"stateDisabledButton"[\s\S]*?variant:\s*"secondary"[\s\S]*?enable
 assert(!/\.vela-settings-button\s*\{[^}]*box-shadow:/.test(velaCss), "Vela Settings must inherit Utility Action elevation");
 assert(!/\.vela-surface-action\s*\{[^}]*box-shadow:/.test(velaCss), "Vela dynamic actions must inherit Utility Action elevation");
 
-var mixed = block(css, "\\.panel-button:not\\(\\.utility-action\\),\\s*\\.tool-icon,\\s*\\.action-sheet");
+var mixed = block(css, "\\.panel-button:not\\(\\.utility-action\\):not\\(\\.ui-button\\),\\s*\\.tool-icon,\\s*\\.action-sheet");
 assert(mixed && !/box-shadow:/.test(mixed), "legacy mixed selector must not own elevation");
-assert(!hasShadow(css, "\\.panel-button:not\\(\\.utility-action\\)", "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"), "legacy panel-button shadow must not bypass Action elevation ownership");
+assert(!hasShadow(css, "\\.panel-button:not\\(\\.utility-action\\):not\\(\\.ui-button\\)", "0 12px 30px rgba\\(0, 0, 0, 0\\.28\\)"), "legacy panel-button shadow must not bypass Action elevation ownership");
 assert(hasShadow(css, "\\.ui-button--neutral", "none"));
 assert(!/\.panel-button\s*\{[^}]*box-shadow:\s*none;/.test(css), "global panel buttons must not be flattened");
 assert(!/\.(?:secondary-action|registry-secondary-action)\s*\{[^}]*0 12px 30px rgba\(0, 0, 0, 0\.28\)/.test(css), "Registry secondary actions must not consume the legacy raised-button shadow");

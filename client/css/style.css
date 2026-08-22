@@ -2412,7 +2412,7 @@ p {
     text-align: center;
 }
 
-.panel-button:not(.utility-action),
+.panel-button:not(.utility-action):not(.ui-button),
 .tool-icon,
 .action-sheet {
     position: relative;
