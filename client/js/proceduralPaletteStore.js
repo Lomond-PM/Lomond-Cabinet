@@ -1,11 +1,12 @@
 (function (root, factory) {
     "use strict";
+    var browser = !!(root && root.document);
     var api = factory(root,
-        typeof module !== "undefined" && module.exports ? require("./palette/paletteModel.js") : root.PaletteModel,
-        typeof module !== "undefined" && module.exports ? require("./palette/colorDerivationRegistry.js") : root.ColorDerivationRegistry,
-        typeof module !== "undefined" && module.exports ? require("./palette/legacyPaletteMigration.js") : root.LegacyPaletteMigration,
-        typeof module !== "undefined" && module.exports ? require("./palette/paletteStore.js") : root.PaletteStore,
-        typeof module !== "undefined" && module.exports ? require("./palette/legacyProceduralPaletteAdapter.js") : root.LegacyProceduralPaletteAdapter);
+        browser ? root.PaletteModel : (typeof module !== "undefined" && module.exports ? require("./palette/paletteModel.js") : root.PaletteModel),
+        browser ? root.ColorDerivationRegistry : (typeof module !== "undefined" && module.exports ? require("./palette/colorDerivationRegistry.js") : root.ColorDerivationRegistry),
+        browser ? root.LegacyPaletteMigration : (typeof module !== "undefined" && module.exports ? require("./palette/legacyPaletteMigration.js") : root.LegacyPaletteMigration),
+        browser ? root.PaletteStore : (typeof module !== "undefined" && module.exports ? require("./palette/paletteStore.js") : root.PaletteStore),
+        browser ? root.LegacyProceduralPaletteAdapter : (typeof module !== "undefined" && module.exports ? require("./palette/legacyProceduralPaletteAdapter.js") : root.LegacyProceduralPaletteAdapter));
     if (typeof module !== "undefined" && module.exports) module.exports = api;
     if (root) root.ProceduralPaletteStore = api;
 }(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this), function (root, Model, Derivations, Migration, StoreV2, Adapter) {

@@ -1,7 +1,7 @@
 (function (root, factory) {
     "use strict";
 
-    var model = typeof module !== "undefined" && module.exports ? require("./paletteModel.js") : root.PaletteModel;
+    var model = root && root.document ? root.PaletteModel : (typeof module !== "undefined" && module.exports ? require("./paletteModel.js") : root.PaletteModel);
     var api = Object.freeze(factory(model));
     if (typeof module !== "undefined" && module.exports) {
         module.exports = api;

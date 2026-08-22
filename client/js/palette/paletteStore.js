@@ -1,10 +1,11 @@
 (function (root, factory) {
     "use strict";
 
-    var model = typeof module !== "undefined" && module.exports ? require("./paletteModel.js") : root.PaletteModel;
-    var resolver = typeof module !== "undefined" && module.exports ? require("./paletteResolver.js") : root.PaletteResolver;
-    var derivations = typeof module !== "undefined" && module.exports ? require("./colorDerivationRegistry.js") : root.ColorDerivationRegistry;
-    var migration = typeof module !== "undefined" && module.exports ? require("./legacyPaletteMigration.js") : root.LegacyPaletteMigration;
+    var browser = !!(root && root.document);
+    var model = browser ? root.PaletteModel : (typeof module !== "undefined" && module.exports ? require("./paletteModel.js") : root.PaletteModel);
+    var resolver = browser ? root.PaletteResolver : (typeof module !== "undefined" && module.exports ? require("./paletteResolver.js") : root.PaletteResolver);
+    var derivations = browser ? root.ColorDerivationRegistry : (typeof module !== "undefined" && module.exports ? require("./colorDerivationRegistry.js") : root.ColorDerivationRegistry);
+    var migration = browser ? root.LegacyPaletteMigration : (typeof module !== "undefined" && module.exports ? require("./legacyPaletteMigration.js") : root.LegacyPaletteMigration);
     var api = Object.freeze(factory(model, resolver, derivations, migration));
     if (typeof module !== "undefined" && module.exports) module.exports = api;
     if (root && root.document && !root.PaletteStore) root.PaletteStore = api;
