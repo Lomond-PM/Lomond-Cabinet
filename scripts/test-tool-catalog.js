@@ -144,6 +144,7 @@ const registryDefinitions = [
     check(/id:\s*"ecommerceLayout"/.test(adSchema) && /titleKey:\s*"tools\.adComponentKit\.title"/.test(adSchema) && /descriptionKey:\s*"tools\.adComponentKit\.description"/.test(adSchema) && /iconText:\s*"A"/.test(adSchema) && /storageKey:\s*"AEToolbox\.ecommerceLayout\.v1"/.test(adSchema), "Host Ad Component Kit schema remains the complete display and persistence authority");
     check(loadOrderSource.indexOf("saveStoredJson") === -1 && /commitDynamicToolCatalog[\s\S]*HomeLayoutManager\.loadOrder\(\)/.test(main), "loading filters only the in-memory order and Registry commit reapplies persisted Home order");
     check(index.indexOf("js/toolCatalog.js") < index.indexOf("js/main.js"), "Tool Catalog loads before main.js");
+    check(/route\.kind === "unknown" && toolId && toolCatalog && toolCatalog\.getSnapshot\(\)\.registryTools\.length > 0 && window\.console && console\.warn/.test(main), "unknown-route warning is gated on a populated catalog (no startup false positive)");
 }
 
 console.log(`Tool Catalog tests passed: ${assertions} assertions.`);

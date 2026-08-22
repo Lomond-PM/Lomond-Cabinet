@@ -16,7 +16,7 @@ ClassList.prototype.contains = function (name) { return this.values.indexOf(name
 ClassList.prototype.toggle = function (name, force) { if (force === true) this.add(name); else if (force === false) this.remove(name); else if (this.contains(name)) this.remove(name); else this.add(name); };
 
 function Element(tag, doc) {
-    this.tagName = tag.toUpperCase(); this.ownerDocument = doc; this.children = []; this.parentNode = null; this.listeners = {}; this.attributes = {}; this.classList = new ClassList(); this.disabled = false; this.selected = false; this.textContent = ""; this.id = ""; this.scrollHeight = 120;
+    this.tagName = tag.toUpperCase(); this.nodeType = 1; this.ownerDocument = doc; this.children = []; this.parentNode = null; this.listeners = {}; this.attributes = {}; this.classList = new ClassList(); this.disabled = false; this.selected = false; this.textContent = ""; this.id = ""; this.scrollHeight = 120;
     this.style = { values: {}, setProperty(name, value) { this.values[name] = value; }, removeProperty(name) { delete this.values[name]; } };
     this._value = "";
 }
@@ -33,7 +33,13 @@ Element.prototype.removeAttribute = function (name) { delete this.attributes[nam
 Element.prototype.appendChild = function (child) { if (child.parentNode) child.parentNode.removeChild(child); this.children.push(child); child.parentNode = this; return child; };
 Element.prototype.insertBefore = function (child, reference) { if (child.parentNode) child.parentNode.removeChild(child); const index = this.children.indexOf(reference); if (index < 0) this.children.push(child); else this.children.splice(index, 0, child); child.parentNode = this; return child; };
 Element.prototype.removeChild = function (child) { const index = this.children.indexOf(child); if (index >= 0) this.children.splice(index, 1); child.parentNode = null; return child; };
-Element.prototype.contains = function (node) { if (node === this) return true; return this.children.some(child => child.contains(node)); };
+// Real DOM Node.contains() throws if passed a non-Node (e.g. window on resize).
+// Emulate that so the non-Node guard in viewportChange / outsideClick is actually tested.
+Element.prototype.contains = function (node) {
+    if (!node || typeof node.nodeType !== "number") throw new TypeError("Failed to execute 'contains' on 'Node': parameter 1 is not of type 'Node'.");
+    if (node === this) return true;
+    return this.children.some(child => child.contains(node));
+};
 Element.prototype.addEventListener = function (name, callback) { (this.listeners[name] || (this.listeners[name] = [])).push(callback); };
 Element.prototype.removeEventListener = function (name, callback) { const list = this.listeners[name] || []; const index = list.indexOf(callback); if (index >= 0) list.splice(index, 1); };
 Element.prototype.dispatch = function (name, event) { event = event || {}; event.target = event.target || this; (this.listeners[name] || []).slice().forEach(callback => callback.call(this, event)); };

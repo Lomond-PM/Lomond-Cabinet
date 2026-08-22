@@ -31,6 +31,27 @@ equal(Report.normalizeLineEndings(before), first, "existing generated report con
 ok(Report.checkReport(REPORT_PATH, first).ok, "current report passes freshness check");
 equal(fs.readFileSync(REPORT_PATH, "utf8"), before, "freshness check does not modify the repository report");
 
+// Client-registry i18n key coverage: labelKey/descriptionKey/etc. declared in
+// client-side registries are rendered via tr(field.labelKey) and never detected by
+// the literal tr("...") scan. They must exist in the global dictionary or they leak
+// runtime missing-key warnings, so the report fails when any are absent.
+const built = Report.buildReport();
+ok(Array.isArray(built.missingClientKeys), "client-registry missing-key inventory is an array");
+equal(built.missingClientKeys.length, 0, "no client-registry i18n key is missing from the global dictionary");
+equal(built.summary.clientMissingKeyCount, 0, "summary records zero missing client-registry keys");
+ok(built.content.includes("## Client Registry i18n Key Coverage"), "report surfaces the client-registry key coverage section");
+ok(/(?:^|\n)No client-registry i18n key is missing/i.test(built.content), "coverage section is explicitly clean when no key is missing");
+ok(Array.isArray(built.missingLiteralKeys), "literal missing-key inventory is an array");
+equal(built.missingLiteralKeys.length, 0, "no literal tr()/data-i18n key is missing from the global dictionary");
+equal(built.summary.literalMissingKeyCount, 0, "summary records zero missing literal keys");
+ok(built.content.includes("## Literal i18n Key Coverage"), "report surfaces the literal i18n key coverage section");
+ok(/(?:^|\n)No literal i18n key is missing/i.test(built.content), "literal coverage section is explicitly clean when no key is missing");
+ok(Array.isArray(built.schemaMissingKeys), "tool-schema missing-key inventory is an array");
+equal(built.schemaMissingKeys.length, 0, "no Registry Tool schema i18n reference is unresolvable");
+equal(built.summary.schemaMissingKeyCount, 0, "summary records zero unresolvable schema keys");
+ok(built.content.includes("## Registry Tool Schema i18n Coverage"), "report surfaces the tool-schema i18n coverage section");
+ok(/(?:^|\n)No Registry Tool schema i18n reference is unresolvable/i.test(built.content), "schema coverage section is explicitly clean when no key is unresolved");
+
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "aetoolbox-i18n-report-"));
 const tempReport = path.join(tempRoot, "report.md");
 try {

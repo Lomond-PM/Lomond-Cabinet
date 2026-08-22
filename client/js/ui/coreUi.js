@@ -31,6 +31,12 @@
         if (typeof callback === "function") element.addEventListener(name, callback);
     }
 
+    // A DOM Node carries a numeric nodeType. `window`, CSSStyleDeclaration and other
+    // event targets are not Nodes, so Node.contains() would throw on them.
+    function isNode(value) {
+        return !!value && typeof value === "object" && typeof value.nodeType === "number";
+    }
+
     function createTextInput(options) {
         var doc = options.document;
         var input = applyCommon(doc.createElement("input"), options);
@@ -473,10 +479,15 @@
 
         function selectChange() { sync(); }
         function outsideClick(event) {
-            if (!control.contains(event.target) && !menu.contains(event.target)) close();
+            var target = event && event.target;
+            if (!isNode(target)) { close(); return; }
+            if (!control.contains(target) && !menu.contains(target)) close();
         }
         function viewportChange(event) {
-            if (event && event.target && menu.contains(event.target)) return;
+            var target = event && event.target;
+            // resize (window) and other non-Node targets are never inside the menu:
+            // guard Node.contains() and close, matching the intended lifecycle.
+            if (target && isNode(target) && menu.contains(target)) return;
             close();
         }
 

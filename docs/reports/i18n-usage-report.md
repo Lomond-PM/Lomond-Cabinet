@@ -8,9 +8,9 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 400 |
+| A | Core / Global; keep | 438 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
-| C | Legacy fallback; temporarily keep | 0 |
+| C | Legacy fallback; temporarily keep | 3 |
 | D | Candidate delete; low-risk after AE test | 0 |
 | E | Deferred / uncertain | 195 |
 
@@ -22,7 +22,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | proceduralAppearanceLab.tool.jsx | proceduralAppearanceLab | tools.proceduralAppearanceLab.title | tools.proceduralAppearanceLab.description | yes | yes | none | none | messageKey-oriented | ok |
 | registryControlLab.tool.jsx | registryControlLab | tools.registryControlLab.title | tools.registryControlLab.description | yes | yes | none | none | messageKey-oriented | ok |
 | selectionInfo.tool.jsx | selectionInfo | tools.selectionInfo.title | tools.selectionInfo.description | yes | yes | none | none | messageKey-oriented | ok |
-| settingsRendererLab.tool.jsx | settingsRendererLab | tools.settingsRendererLab.title | tools.settingsRendererLab.description | yes | yes | label.registryDebugTools, section.motion, label.motionSpeed, label.uiScale, section.theme, label.accentColor, label.homeBackground, section.backgroundEngine ... | none | messageKey-oriented | ok |
+| settingsRendererLab.tool.jsx | settingsRendererLab | tools.settingsRendererLab.title | tools.settingsRendererLab.description | yes | yes | label.registryDebugTools, section.motion, label.motionSpeed, label.uiScale, section.theme, label.accentColor, label.homeBaseColor, section.backgroundEngine ... | none | messageKey-oriented | ok |
 | shapeAdd.tool.jsx | shapeAdd | tools.shapeAdd.title | tools.shapeAdd.description | yes | yes | none | none | messageKey-oriented | ok |
 | textBackgroundBox.tool.jsx | textBackgroundBox | tools.textBackgroundBox.title | tools.textBackgroundBox.description | yes | yes | none | none | messageKey-oriented | ok |
 
@@ -31,9 +31,43 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | key | group | en value summary | zh-CN value summary | found in runtime files | found in tool-local i18n | classification | recommendation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | app.title | app | Lomond Cabinet | Lomond Cabinet | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| appearance.action.primaryForeground.description | appearance | The foreground (content) color of the primary action. | 主要操作的前景（内容）颜色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.action.primaryForeground.label | appearance | Primary Action Foreground | 主要操作前景 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.action.primaryHoverSurface.description | appearance | The hover fill of the primary action. | 主要操作的悬停填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.action.primaryHoverSurface.label | appearance | Primary Action Hover Surface | 主要操作悬停表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.action.primarySurface.description | appearance | The base fill of the primary action. | 主要操作的基础填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.action.primarySurface.label | appearance | Primary Action Surface | 主要操作表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.base.accent.description | appearance | The primary accent color used across the interface. | 贯穿界面的主强调色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.base.accent.label | appearance | Accent | 强调色 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.base.canvas.description | appearance | The base background color of the interface. | 界面的基础背景底色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.base.canvas.label | appearance | Background | 背景色 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.checkedSurface.description | appearance | The fill used for the checked control state. | 用于勾选控件状态的填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.checkedSurface.label | appearance | Checked Surface | 勾选表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.focusBorder.description | appearance | The border color applied to a focused control. | 聚焦控件应用的边框颜色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.focusBorder.label | appearance | Focus Border | 焦点边框 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.focusRing.description | appearance | The focus indicator ring color for interactive controls. | 交互控件的焦点指示环颜色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.focusRing.label | appearance | Focus Ring | 焦点圆环 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.hoverBorder.description | appearance | The border color applied while a control is hovered. | 控件悬停时应用的边框颜色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.hoverBorder.label | appearance | Hover Border | 悬停边框 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.hoverSurface.description | appearance | The fill applied while a control is hovered. | 控件悬停时应用的填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.hoverSurface.label | appearance | Hover Surface | 悬停表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.selectedForeground.description | appearance | The foreground color used for the selected item. | 用于选中条目的前景颜色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.selectedForeground.label | appearance | Selected Foreground | 选中前景 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.selectedSurface.description | appearance | The fill used for the selected option or item. | 用于选中选项或条目的填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.selectedSurface.label | appearance | Selected Surface | 选中表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.layout.scale.description | appearance | Scales interface spacing and type proportionally. | 按比例缩放界面间距与文字大小。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.layout.scale.label | appearance | Interface Scale | 界面缩放 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.motion.speed.description | appearance | Adjusts the pace of motion across the interface. | 调整界面动画的整体速度。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.motion.speed.label | appearance | Motion Speed | 动画速度 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.select.menuSurface.description | appearance | The fill used behind the Select popup menu. | 选择器弹出菜单背后的填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.select.menuSurface.label | appearance | Select Menu Surface | 选择器菜单面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.select.triggerSurface.description | appearance | The fill used behind the Select trigger. | 选择器触发器背后的填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.select.triggerSurface.label | appearance | Select Trigger Surface | 选择器触发面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.selection.indicatorSurface.description | appearance | The fill of the selection indicator. | 选择指示器的填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.selection.indicatorSurface.label | appearance | Selection Indicator Surface | 选择指示表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.surface.panel.description | appearance | The panel fill used for primary work surfaces. | 主工作表面使用的面板填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.surface.panel.label | appearance | Panel Surface | 面板表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.text.primary.description | appearance | The primary text color used for headings and emphasis. | 用于标题与强调的主要文本色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.text.primary.label | appearance | Primary Text | 主要文本 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.typography.bodySize.description | appearance | Adjusts Body and Control text together. | 同时调整正文与控件文字。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.typography.bodySize.label | appearance | Body Size | 正文大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -84,6 +118,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | common.reset | common | Reset | 重置 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.resetDefaults | common | Reset Defaults | 恢复默认值 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.restoreDefaults | common | Restore Defaults | 恢复默认 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.retry | common | Retry | 重试 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.right | common | Right | 右对齐 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.rowMajor | common | Row-Major | 行优先 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.saved | common | Saved | 已保存 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -102,7 +137,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | helper.backgroundSource | helper | Classic keeps the existing Background Engine. Follow Icon Theme mirro... | 经典模式保留现有 Background Engine。跟随图标主题会复用图标的主题关系。手动程序化使用下方的背景种子和色卡。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.enableMotion | helper | Uses slow opacity and transform only. | 仅使用缓慢的透明度和位移动画。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.fallbackIconColors | helper | Only used when a procedural icon cannot render and the fallback glyph... | 仅在程序化图标无法渲染并显示回退图标时使用。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| helper.homeBaseColor | helper | Sets the underlying base color of the Home surface; it does not defin... | 设置主页表面的底层基底色，不代表完整背景处理。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.homeBaseColor | helper | Sets the underlying base color of the Home surface; it does not defin... | 设置主页表面的底层基底色，不代表完整背景处理。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.homeDragShadowIntensity | helper | Developer-only intensity for the soft shadow shown under the currentl... | 仅开发者模式可见，控制主页编辑时当前拖动图标下方的柔化投影强度。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.homeIconRadius | helper | Developer-only proportional radius for Home tool icons and matching s... | 仅开发者模式可见，控制主页工具图标和同类正方形预览的比例圆角。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.iconDarkSource | helper | Choose a manual dark endpoint or use the base color from a visible so... | 选择手动暗端色，或使用可见源色卡的主体色。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -175,7 +210,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | label.gradientEnable | label | Gradient Enable | 启用渐变 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.gridOpacity | label | Grid Opacity | 网格不透明度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.gridSize | label | Grid Size | 网格尺寸 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| label.homeBaseColor | label | Home Base Color | 主页基底色 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.homeBaseColor | label | Home Base Color | 主页基底色 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.homeDragShadowIntensity | label | Home drag shadow | 主页拖动投影 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.homeIconRadius | label | Home icon radius | 主页图标圆角 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.iconDarkSource | label | Icon Dark Source | 图标暗端来源 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -490,6 +525,8 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.developer.labs | settings | Labs | 实验室 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.iconDarkSource.manualEndpoints | settings | Manual Endpoints | 手动端点 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.iconDarkSource.paletteScale | settings | Palette Scale | 色卡明度缩放 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.language.en | settings | English | English | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.language.zhCN | settings | 简体中文 | 简体中文 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.navigation.advanced | settings | Advanced | 高级 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.navigation.appearance | settings | Appearance | 外观 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.navigation.background | settings | Background | 背景 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -504,6 +541,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.paletteSummary.overrides | settings | tool overrides | 个工具覆盖 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.proceduralIconMode.colorful | settings | Colorful | 彩色 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.proceduralIconMode.themeMapped | settings | Theme-mapped | 主题映射 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.sections.general | settings | General | 通用 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.sections.proceduralAppearance | settings | Procedural Appearance Parameters | 程序化外观参数 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.sections.vela | settings | Vela | Vela | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.colorRamp | settings | Dark endpoint to light endpoint | 暗端到亮端 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -572,6 +610,9 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | status.unableReadSelection | status | Unable to read selection. | 无法读取选择。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | tools.moreTools.title | tools.moreTools | More Tools | 更多工具 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | tools.quickStack.title | tools.quickStack | Quick Stack | 快速堆叠 | none | no | E | Reserved or unused Home label. Confirm no planned implementation before deleting. |
+| tools.registryControlLab.fields.colorAlphaField | tools.registryControlLab | Color + Alpha | 颜色 + 透明度 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
+| tools.registryControlLab.fields.shadowField | tools.registryControlLab | Shadow | 阴影 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
+| tools.registryControlLab.sections.coreUiDirect | tools.registryControlLab | CoreUI Direct | CoreUI 直接路径 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
 | vela.surfaceApprove | vela | Approve | 批准 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceCancel | vela | Cancel | 取消 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceComposerLabel | vela | Vela message | Vela 消息 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -636,6 +677,11 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.backgroundPreset.minimalDark | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
 | settings.backgroundPreset.obsidianRings | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
 | settings.backgroundPreset.solarGrid | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
+| settings.language.en | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
+| settings.language.zhCN | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
+| tools.registryControlLab.fields.colorAlphaField | client/js/i18n.js | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
+| tools.registryControlLab.fields.shadowField | client/js/i18n.js | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
+| tools.registryControlLab.sections.coreUiDirect | client/js/i18n.js | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
 
 ## Candidate Delete Table
 
@@ -840,6 +886,24 @@ No low-risk delete candidates found.
 | status.selectionUpdated | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.unableReadSelection | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | tools.quickStack.title | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+
+## Client Registry i18n Key Coverage
+
+These keys are declared as literal `labelKey` / `descriptionKey` / `titleKey` / `hintKey` in client-side registries and rendered through `tr(field.labelKey)`. They are not detected by the literal `tr("...")` scan, so any key missing from the global dictionary is a runtime missing-key warning and must be fixed.
+
+No client-registry i18n key is missing from the global dictionary.
+
+## Literal i18n Key Coverage
+
+These keys are referenced as literal `tr("...")` / `data-i18n="..."` and rendered through the global `tr()`. Any such key missing from the global dictionary is a runtime missing-key warning and must be fixed.
+
+No literal i18n key is missing from the global dictionary.
+
+## Registry Tool Schema i18n Coverage
+
+These i18n references are declared in production Registry Tool schemas (`host/tools/*.tool.jsx`). Each must resolve through the merged tool-local dictionary OR the global dictionary; a reference that resolves in neither is a runtime missing-key warning.
+
+No Registry Tool schema i18n reference is unresolvable.
 
 ## Notes
 

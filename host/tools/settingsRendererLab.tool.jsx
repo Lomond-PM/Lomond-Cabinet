@@ -125,8 +125,8 @@
                     {
                         type: "color",
                         key: "homeBackground",
-                        labelKey: "label.homeBackground",
-                        hintKey: "helper.homeBackground",
+                        labelKey: "label.homeBaseColor",
+                        hintKey: "helper.homeBaseColor",
                         defaultValue: "#050403"
                     }
                 ]
