@@ -7784,7 +7784,10 @@
         } else {
             stopRegistryStatePolling();
             setToolActionsVisible(byId("registryToolActions"), false);
-            if (route.kind === "unknown" && toolId && window.console && console.warn) {
+            // Only report a genuine unknown route. During startup the dynamic catalog is
+            // not yet populated (host/registry load is async), so every tool appears
+            // "unknown"; warning there produces a misleading console line.
+            if (route.kind === "unknown" && toolId && toolCatalog && toolCatalog.getSnapshot().registryTools.length > 0 && window.console && console.warn) {
                 console.warn("[Tool Catalog] unknown tool route", { id: String(toolId) });
             }
         }

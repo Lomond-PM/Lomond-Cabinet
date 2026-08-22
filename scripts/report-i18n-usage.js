@@ -178,6 +178,43 @@ function flattenToolI18n(tool) {
     return out;
 }
 
+const CLIENT_KEY_FIELDS = new Set(["labelKey", "descriptionKey", "titleKey", "hintKey"]);
+
+// Collect every literal i18n-key field value declared in client-side JS (registries,
+// settings schema, design-tuning registry). The static report never indexed these
+// because they are rendered through `field.labelKey` / `tr(field.descriptionKey)`
+// rather than `tr("literal")`. Keys here that are absent from the global dictionary
+// surface as runtime "missing key" warnings, so they must be treated as an error.
+function collectClientKeyFieldRefs() {
+    const refs = new Map();
+    const fieldRe = /(labelKey|descriptionKey|titleKey|hintKey)\s*:\s*"([^"]+)"/g;
+    const files = listFiles(path.join(ROOT, "client"), false)
+        .filter((file) => path.extname(file) === ".js" && !/i18n\.js$/.test(file));
+    for (const file of files) {
+        const text = readText(file);
+        const rel = path.relative(ROOT, file).replace(/\\/g, "/");
+        let m;
+        while ((m = fieldRe.exec(text))) {
+            if (!CLIENT_KEY_FIELDS.has(m[1])) continue;
+            const key = m[2];
+            if (!refs.has(key)) refs.set(key, []);
+            if (refs.get(key).indexOf(rel) === -1) refs.get(key).push(rel);
+        }
+    }
+    return refs;
+}
+
+function missingClientDictionaryKeys(dictionaries, clientRefs) {
+    const en = (dictionaries.en || {});
+    const zh = (dictionaries["zh-CN"] || {});
+    const missing = [];
+    Array.from(clientRefs.keys()).sort().forEach((key) => {
+        if (!en[key]) missing.push(key + " [en]");
+        if (!zh[key]) missing.push(key + " [zh-CN]");
+    });
+    return missing;
+}
+
 function summarizeValue(value) {
     if (typeof value !== "string") {
         return "";
@@ -374,6 +411,9 @@ function buildReport() {
     const allFiles = listFiles(ROOT, true);
     const usage = scanKeyUsage(allFiles, globalKeys);
 
+    const clientKeyRefs = collectClientKeyFieldRefs();
+    const missingClientKeys = missingClientDictionaryKeys(dictionaries, clientKeyRefs);
+
     const keyRows = [];
     const duplicateRows = [];
     const candidateRows = [];
@@ -485,6 +525,17 @@ function buildReport() {
         "",
         deferredRows.length ? markdownTable(["key", "reason", "what must be checked before deleting"], deferredRows) : "No deferred keys found.",
         "",
+        "## Client Registry i18n Key Coverage",
+        "",
+        "These keys are declared as literal `labelKey` / `descriptionKey` / `titleKey` / `hintKey` in client-side registries and rendered through `tr(field.labelKey)`. They are not detected by the literal `tr(\"...\")` scan, so any key missing from the global dictionary is a runtime missing-key warning and must be fixed.",
+        "",
+        missingClientKeys.length
+            ? markdownTable(["missing key", "used in"], missingClientKeys.map((key) => {
+                const base = key.replace(" [en]", "").replace(" [zh-CN]", "");
+                return [key, (clientKeyRefs.get(base) || []).join(", ") || "client registry"];
+            }))
+            : "No client-registry i18n key is missing from the global dictionary.",
+        "",
         "## Notes",
         "",
         "- Registry tool copy should live in each `host/tools/*.tool.jsx` file.",
@@ -496,12 +547,14 @@ function buildReport() {
 
     return {
         content: report,
+        missingClientKeys: missingClientKeys,
         summary: {
         report: path.relative(ROOT, REPORT_PATH).replace(/\\/g, "/"),
         globalKeyCount: globalKeys.length,
         candidateDeleteCount: candidateRows.length,
         deferredCount: deferredRows.length,
-        duplicateToolKeyCount: duplicateRows.length
+        duplicateToolKeyCount: duplicateRows.length,
+        clientMissingKeyCount: missingClientKeys.length
         }
     };
 }
@@ -513,13 +566,19 @@ function normalizeLineEndings(value) {
 function checkReport(reportPath, expectedContent) {
     const target = reportPath || REPORT_PATH;
     if (!fs.existsSync(target)) {
-        return { ok: false, reason: "missing" };
+        return { ok: false, reason: "missing", missingClientKeys: [] };
     }
-    const expected = expectedContent === undefined ? buildReport().content : expectedContent;
-    return {
-        ok: normalizeLineEndings(readText(target)) === normalizeLineEndings(expected),
-        reason: "out-of-date"
-    };
+    const built = expectedContent === undefined ? buildReport() : { content: expectedContent, missingClientKeys: [] };
+    const expected = built.content;
+    const fresh = normalizeLineEndings(readText(target)) === normalizeLineEndings(expected);
+    if (!fresh) {
+        return { ok: false, reason: "out-of-date", missingClientKeys: built.missingClientKeys || [] };
+    }
+    const missing = built.missingClientKeys || [];
+    if (missing.length) {
+        return { ok: false, reason: "client-registry-missing-keys: " + missing.slice(0, 8).join(", "), missingClientKeys: missing };
+    }
+    return { ok: true, reason: "", missingClientKeys: missing };
 }
 
 function writeReport(reportPath, expectedContent) {
@@ -533,8 +592,10 @@ function writeReport(reportPath, expectedContent) {
     return true;
 }
 
-function printCheckFailure() {
-    console.error("Generated i18n report is out of date.");
+function printCheckFailure(result) {
+    const reason = (result && result.reason) ? result.reason : "";
+    console.error("Generated i18n report is out of date or has missing client-registry keys.");
+    if (reason) console.error(reason);
     console.error("Run: node scripts/report-i18n-usage.js");
     console.error("Then stage docs/reports/i18n-usage-report.md.");
 }
@@ -547,8 +608,9 @@ function runCli(args) {
     }
     const built = buildReport();
     if (options[0] === "--check") {
-        if (!checkReport(REPORT_PATH, built.content).ok) {
-            printCheckFailure();
+        const result = checkReport(REPORT_PATH, built.content);
+        if (!result.ok) {
+            printCheckFailure(result);
             return 1;
         }
         console.log("Generated i18n report is up to date.");

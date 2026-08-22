@@ -31,6 +31,17 @@ equal(Report.normalizeLineEndings(before), first, "existing generated report con
 ok(Report.checkReport(REPORT_PATH, first).ok, "current report passes freshness check");
 equal(fs.readFileSync(REPORT_PATH, "utf8"), before, "freshness check does not modify the repository report");
 
+// Client-registry i18n key coverage: labelKey/descriptionKey/etc. declared in
+// client-side registries are rendered via tr(field.labelKey) and never detected by
+// the literal tr("...") scan. They must exist in the global dictionary or they leak
+// runtime missing-key warnings, so the report fails when any are absent.
+const built = Report.buildReport();
+ok(Array.isArray(built.missingClientKeys), "client-registry missing-key inventory is an array");
+equal(built.missingClientKeys.length, 0, "no client-registry i18n key is missing from the global dictionary");
+equal(built.summary.clientMissingKeyCount, 0, "summary records zero missing client-registry keys");
+ok(built.content.includes("## Client Registry i18n Key Coverage"), "report surfaces the client-registry key coverage section");
+ok(/(?:^|\n)No client-registry i18n key is missing/i.test(built.content), "coverage section is explicitly clean when no key is missing");
+
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "aetoolbox-i18n-report-"));
 const tempReport = path.join(tempRoot, "report.md");
 try {
