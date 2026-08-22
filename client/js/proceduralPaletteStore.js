@@ -115,6 +115,43 @@
         transients[externalId] = Object.assign({}, clone(projected.palette), { id: externalId, isTransient: true, isBuiltIn: false, isCustom: false });
         return { ok: true, palette: clone(transients[externalId]) };
     }
+    function validateV2Palette(input) {
+        var checked = Model.validatePalette(input);
+        var resolved;
+        var projected;
+        if (!checked.ok) return { ok: false, errors: checked.errors };
+        resolved = root && root.PaletteResolver ? root.PaletteResolver.resolvePalette(checked.palette, { registry: Derivations }) : null;
+        if (!resolved && typeof module !== "undefined" && module.exports) resolved = require("./palette/paletteResolver.js").resolvePalette(checked.palette, { registry: Derivations });
+        if (!resolved || !resolved.ok) return { ok: false, errors: [resolved && resolved.error ? resolved.error : { code: "RESOLVER_UNAVAILABLE" }] };
+        projected = Adapter.project(checked.palette, { registry: Derivations });
+        if (!projected.ok) return { ok: false, errors: [projected.error] };
+        return { ok: true, palette: checked.palette, resolution: resolved, projection: projected.palette };
+    }
+    function setTransientV2Palette(externalId, input) {
+        var checked = validateV2Palette(input);
+        if (!externalId || !checked.ok) return checked;
+        transients[externalId] = Object.assign({}, clone(checked.projection), { id: externalId, isTransient: true, isBuiltIn: false, isCustom: false });
+        return { ok: true, palette: clone(transients[externalId]) };
+    }
+    function createV2Palette(input) {
+        var guard = blocked(); var candidate = clone(input || {}); var checked; var result; var id;
+        if (guard) return guard;
+        id = generateId(); candidate.id = id; candidate.revision = 1;
+        candidate.metadata = Object.assign({}, candidate.metadata, { origin: "custom", displayName: trim(candidate.metadata && candidate.metadata.displayName) || id });
+        checked = validateV2Palette(candidate); if (!checked.ok) return checked;
+        result = authority.createCustomPalette(checked.palette); if (!result.ok) return { ok: false, errors: errors(result, "Unable to create Palette.") };
+        notify({ type: "create", paletteId: id }); return { ok: true, palette: getResolvedPalette(id), v2Palette: find(id) };
+    }
+    function saveV2Palette(id, input) {
+        var guard = blocked(); var source = find(id); var candidate = clone(input || {}); var checked; var result;
+        if (guard) return guard; if (!source) return { ok: false, errors: ["Palette not found."] };
+        candidate.id = id; candidate.metadata = Object.assign({}, candidate.metadata, { origin: source.metadata.origin });
+        candidate.revision = source.revision + 1;
+        checked = validateV2Palette(candidate); if (!checked.ok) return checked;
+        result = isBuiltIn(id) ? authority.setBuiltInOverride(id, checked.palette) : authority.updateCustomPalette(id, checked.palette);
+        if (!result.ok) return { ok: false, errors: errors(result, "Unable to save Palette.") };
+        notify({ type: "update", paletteId: id }); return { ok: true, palette: getResolvedPalette(id), v2Palette: find(id) };
+    }
     function clearTransientPalette(id) { if (id) delete transients[id]; else transients = Object.create(null); }
     function deletePalette(id) {
         var guard = blocked(); var result; if (guard) return guard; if (isBuiltIn(id)) return { ok: false, errors: ["Built-in palettes cannot be deleted."] };
@@ -170,7 +207,8 @@
         initialize: initialize, listResolvedPalettes: listResolvedPalettes, getResolvedPalette: getResolvedPalette, getResolvedPaletteSignature: getResolvedPaletteSignature,
         createPalette: createPalette, duplicatePalette: duplicatePalette, updatePalette: updatePalette, updateBuiltInOverride: updatePalette,
         getPaletteKind: function (id) { return transients[id] ? "transient" : (find(id) ? find(id).metadata.origin : "unknown"); }, hasBuiltInOverride: hasBuiltInOverride,
-        setTransientPalette: setTransientPalette, clearTransientPalette: clearTransientPalette, deletePalette: deletePalette, getPaletteUsageCount: getPaletteUsageCount,
+        setTransientPalette: setTransientPalette, setTransientV2Palette: setTransientV2Palette, clearTransientPalette: clearTransientPalette, deletePalette: deletePalette, getPaletteUsageCount: getPaletteUsageCount,
+        createV2Palette: createV2Palette, saveV2Palette: saveV2Palette, validateV2Palette: validateV2Palette,
         resetBuiltInPalette: resetBuiltInPalette, hideBuiltInPalette: hideBuiltInPalette, setToolPalette: setToolPalette, getToolPalette: getToolPalette,
         exportData: exportData, importData: importData, validateImportData: validateImportData, clearUserData: clearUserData,
         subscribe: function (listener) { if (typeof listener === "function" && listeners.indexOf(listener) < 0) listeners.push(listener); },

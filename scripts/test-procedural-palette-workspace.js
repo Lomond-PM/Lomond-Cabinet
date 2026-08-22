@@ -199,8 +199,8 @@ function run() {
     assert(storeModule.schemaVersion === 2, "Production Palette Store schema must be v2.");
     assertions += 5;
 
-    assert(/createNewEditorState/.test(workspaceText), "Controller should preserve New transient draft workflow.");
-    assert(/createDuplicateEditorState/.test(workspaceText), "Controller should preserve Duplicate transient draft workflow.");
+    assert(/createNativeNewEditorState/.test(workspaceText), "Controller should use the native v2 New transient draft workflow.");
+    assert(/createNativeDuplicateEditorState/.test(workspaceText), "Controller should use the native v2 Duplicate transient draft workflow.");
     assert(/pendingTransition/.test(workspaceText), "Controller should preserve dirty transition guard.");
     assert(/deleteConfirmationId/.test(workspaceText), "Controller should preserve delete confirmation state.");
     assert(/importData\(importTextarea\.value,\s*\{\s*mode:\s*mode\s*\}\)/.test(workspaceText), "Controller should preserve JSON merge/replace import.");

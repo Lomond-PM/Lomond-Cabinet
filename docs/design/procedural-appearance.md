@@ -1,5 +1,15 @@
 # Procedural Appearance Plan for 0.2.5
 
+## Palette v2 native Workspace（0.3.2 Phase 4）
+
+Palette Workspace 现在以 Palette Store v2 返回的完整 Palette definition 作为 draft：`id`、`revision`、`metadata`、动态 `slots` 和 `profiles` 均被保留。Workspace 只拥有 draft、selection、dirty state 与 transient preview；Palette schema、graph resolution、derivation grammar 和 persistence 仍分别由 PaletteModel、PaletteResolver、ColorDerivationRegistry 与 Palette Store v2 持有。
+
+动态色槽支持 `DIRECT`、`REFERENCE` 和 `DERIVED`。色槽 ID 是与显示名称和数组位置分离的 palette-local identity；重命名和重排不会改变引用。REFERENCE 仅允许同 Palette 引用；删除被引用或被 procedural profile 绑定的色槽会被拒绝。DERIVED editor 从 ColorDerivationRegistry 的 input contract 与 parameter schema 投影 `mix.v1` 和 `oklchAdjust.v1` 的 Shared Select / Color / Number controls，颜色结果只由 PaletteResolver 计算。
+
+`profiles.proceduralAppearance` 继续定义 shadow/base/secondary/highlight bindings、stops、weights 与 bias。四个 role 是 consumer binding，不是固定色槽 identity。Preview 直接使用 full v2 draft 建立 memory-only transient projection；Cancel 不写 Store，正式 Save 才增加 revision，并分别进入 custom Palette transaction 或 canonical-relative built-in override transaction。LegacyProceduralPaletteAdapter 继续服务 production procedural consumers；legacy facade 的 `LEGACY_READ_ONLY` 写保护不再限制 native v2 Workspace。
+
+本阶段不引入 cross-palette reference、Harmony/Tone generator、arbitrary derivation script、graph editor、Appearance live-link、global active Palette 或 semantic role mapping editor。
+
 The 0.2.5 procedural appearance scope is shipped on `main` and published as `v0.2.5`. The 0.2.4 feature line remains the previous stable baseline. The next development version has not been designated.
 
 ## Phase 1 Lab Status

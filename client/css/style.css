@@ -1464,6 +1464,75 @@ body:not(.i18n-ready) .app-shell {
     min-width: 0;
 }
 
+.palette-editor-section-title {
+    margin: var(--space-section-stack) 0 var(--space-field-block);
+    color: var(--text-primary);
+    font-size: var(--type-section-size);
+}
+
+.palette-slot-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-field-block);
+    min-width: 0;
+    padding: var(--space-card-inset);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-nested-surface);
+    background: var(--surface-panel);
+}
+
+.palette-slot-card-header,
+.palette-slot-order-actions,
+.palette-slot-add-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-inline-control);
+    min-width: 0;
+}
+
+.palette-slot-card-header > strong {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.palette-slot-resolved-swatch {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    border: 1px solid var(--field-border);
+    border-radius: var(--radius-editable-control);
+}
+
+.palette-slot-order-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.palette-slot-add-actions {
+    flex-wrap: wrap;
+}
+
+.palette-slot-add-actions .palette-slot-add {
+    flex: 1 1 140px;
+}
+
+.palette-slot-resolution-error {
+    color: var(--text-danger, var(--text-primary));
+}
+
+.palette-editor-select {
+    min-width: 0;
+    width: 100%;
+}
+
+.palette-workspace.is-stacked .palette-slot-card-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
 .palette-editor-draft-status {
     color: var(--text-muted);
     font-size: var(--font-small);

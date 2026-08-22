@@ -40,6 +40,6 @@ assert(/\.palette-tool-map,\s*\.palette-import-export\s*\{[^}]*margin-top:\s*0[^
 assert(!/\.palette-editor-field:last-child[^}]*margin/.test(css), "Palette terminal rhythm must not rely on a last-child margin patch.");
 assert(!/\.palette-workspace\.is-stacked\s*\{[^}]*30%/.test(css), "Narrow Palette must not inherit the old percentage pane split.");
 assert(/function applyWorkspaceLayout\(workspace\)\s*\{[\s\S]*?classList\.toggle\("is-stacked", layout === "stacked"\);\s*\}/.test(palette), "Responsive switching must converge by toggling state on the existing workspace DOM.");
-assert(/createPaletteColorControl[\s\S]*CoreUI\.createColorField[\s\S]*renderPaletteEditorField\("paletteLibrary\." \+ role, createPaletteColorControl/.test(palette), "Color and HEX companions must stay inside one CoreUI control region.");
+assert(/createDynamicColorControl[\s\S]*CoreUI\.createColorField[\s\S]*renderPaletteEditorField\("paletteLibrary\.slotColor", createDynamicColorControl/.test(palette), "Dynamic DIRECT color and HEX companions must stay inside one CoreUI control region.");
 
 console.log("Surface layout stability contract tests passed.");
