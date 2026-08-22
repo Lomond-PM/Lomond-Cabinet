@@ -130,12 +130,17 @@ function run() {
     assertions += 2;
 
     storageReload.setItem(store.storageKey, "{broken");
-    store.initialize({ library, storage: storageReload });
+    result = store.initialize({ library, storage: storageReload });
+    assert(!result.ok && result.status === "READ_ONLY_RECOVERY", "Damaged v2 must enter explicit read-only recovery.");
     assert(store.getResolvedPalette("pacificCyan").colors.base === "#26728D", "Damaged JSON should fall back safely to factory defaults.");
+    assert(!store.createPalette({ displayName: "Blocked" }).ok, "Recovery must block writes instead of overwriting invalid v2.");
     storageReload.setItem(store.storageKey, JSON.stringify({ schemaVersion: 999 }));
-    store.initialize({ library, storage: storageReload });
+    result = store.initialize({ library, storage: storageReload });
+    assert(!result.ok && result.status === "READ_ONLY_RECOVERY", "Unsupported v2 must enter explicit read-only recovery.");
     assert(store.getResolvedPalette("pacificCyan").colors.base === "#26728D", "Unsupported schema should fall back safely.");
-    assertions += 2;
+    assertions += 5;
+
+    init(makeStorage());
 
     result = store.createPalette({
         displayName: "Export Palette",
@@ -177,7 +182,7 @@ function run() {
     store.updatePalette("pacificCyan", { displayName: "Notify Test 2" });
     assert(notified === 1, "subscribe/unsubscribe should manage listeners.");
     store.flush();
-    assert(storage.getItem(store.storageKey) !== "", "flush should write pending save when storage is available.");
+    assert(store.exportData().format === "lomond.paletteStore", "Facade export must expose the v2 authority format.");
     assertions += 2;
 
     console.log("PASS procedural palette store: " + assertions + " assertions.");

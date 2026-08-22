@@ -194,17 +194,43 @@ function run() {
     assert(!/localStorage/.test(workspaceText), "Controller should not directly use localStorage.");
     assert(!/ProceduralPaletteLibrary|listPalettes\(|getPalette\(/.test(workspaceText), "Controller should not modify or read factory palette library internals.");
     assert(/readStorageValue/.test(workspaceText) && /writeStorageValue/.test(workspaceText), "Controller should persist UI width only through injected storage callbacks.");
-    assert(storeModule.storageKey === "lomond.proceduralPaletteStore.v1", "Palette Store storage key must stay unchanged.");
-    assert(storeModule.schemaVersion === 1, "Palette Store schema version must stay unchanged.");
+    assert(storeModule.storageKey === "lomond.paletteStore.v2", "Production Palette Store must use the v2 authority key.");
+    assert(storeModule.legacyStorageKey === "lomond.proceduralPaletteStore.v1", "The v1 key must remain migration-only evidence.");
+    assert(storeModule.schemaVersion === 2, "Production Palette Store schema must be v2.");
     assertions += 5;
 
-    assert(/createNewEditorState/.test(workspaceText), "Controller should preserve New transient draft workflow.");
-    assert(/createDuplicateEditorState/.test(workspaceText), "Controller should preserve Duplicate transient draft workflow.");
+    assert(/createNativeNewEditorState/.test(workspaceText), "Controller should use the native v2 New transient draft workflow.");
+    assert(/createNativeDuplicateEditorState/.test(workspaceText), "Controller should use the native v2 Duplicate transient draft workflow.");
     assert(/pendingTransition/.test(workspaceText), "Controller should preserve dirty transition guard.");
     assert(/deleteConfirmationId/.test(workspaceText), "Controller should preserve delete confirmation state.");
     assert(/importData\(importTextarea\.value,\s*\{\s*mode:\s*mode\s*\}\)/.test(workspaceText), "Controller should preserve JSON merge/replace import.");
     assert(/setToolPalette/.test(workspaceText), "Controller should preserve Home tool palette mapping.");
     assertions += 6;
+
+    // ---- Phase 4 update / projection seam (Issue 1 & Issue 2 regression guards) ----
+    assert(/function applyResolvedSlotProjection/.test(workspaceText), "Controller should expose an in-place slot projection helper.");
+    assert(/function refreshProjection/.test(workspaceText), "Controller should expose a live projection seam.");
+    assert(/function refreshEditorPane/.test(workspaceText), "Controller should expose a local editor-scroll rebuild seam.");
+    assert(/refreshEditorPane\(\)\s*\{[\s\S]*scroll\.innerHTML = ""[\s\S]*buildEditorContent\(scroll/.test(workspaceText), "Structural rebuild must reuse the existing .palette-editor-scroll (not mount.innerHTML).");
+
+    // Structural slot edits must rebuild only the editor scroll region.
+    assert(/moveNativeSlot\(editorState, slot\.id, -1\); refreshEditorPane\(\)/.test(workspaceText), "Move Up must use the local editor rebuild.");
+    assert(/moveNativeSlot\(editorState, slot\.id, 1\); refreshEditorPane\(\)/.test(workspaceText), "Move Down must use the local editor rebuild.");
+    assert(/editorState = result\.state; refreshEditorPane\(\)/.test(workspaceText), "Delete Slot must use the local editor rebuild.");
+    assert(/\{ kind: kind \}\); refreshEditorPane\(\)/.test(workspaceText), "Kind change must use the local editor rebuild.");
+    assert(/\{ derivationId: id \}\); refreshEditorPane\(\)/.test(workspaceText), "Derivation change must use the local editor rebuild.");
+    assert(/addNativeSlot\(editorState, kind\); refreshEditorPane\(\)/.test(workspaceText), "Add Slot must use the local editor rebuild.");
+    assert(!/slot\.id, (-1|1)\); refresh\(\)/.test(workspaceText), "Move must not route to a full workspace rebuild.");
+
+    // Ordinary field edits must take the projection path (never a full render).
+    assert(/next\.slots\[index\]\.derivation\.parameters\[name\] = value; \}, false\)/.test(workspaceText), "DERIVED parameter edits must take the projection path.");
+    assert(/value\.color = normalized; \}, false\)/.test(workspaceText), "DIRECT color edits must take the projection path.");
+    assert(/next\.profiles\.proceduralAppearance\.bindings\[role\] = slotId; \}, false\)/.test(workspaceText), "Profile binding edits must take the projection path.");
+    assert(/refreshProjection\(validation\)/.test(workspaceText), "Draft mutations must re-project from the freshly resolved graph.");
+    assert(/function mutateNativeDraft[\s\S]*if \(rerender\) \{ refresh\(\); return; \}[\s\S]*refreshProjection\(validation\)/.test(workspaceText), "Ordinary draft mutation must project without a full workspace rebuild.");
+    assert(/function mutateDependencySource[\s\S]*refreshProjection\(validation\)/.test(workspaceText), "Source select changes must project (not rebuild) on the success path.");
+    assert(/card\.setAttribute\("data-slot-id", slot\.id\)/.test(workspaceText), "Slot cards must carry a stable data-slot-id for in-place projection.");
+    assertions += 18;
 
     console.log("PASS procedural palette workspace: " + assertions + " assertions.");
 }

@@ -9817,7 +9817,8 @@
         initializeSystemRouter();
         if (window.ProceduralPaletteStore && typeof window.ProceduralPaletteStore.initialize === "function") {
             window.ProceduralPaletteStore.initialize({
-                library: window.ProceduralPaletteLibrary
+                library: window.ProceduralPaletteLibrary,
+                storage: window.localStorage
             });
         }
         bindThemePaletteStore();

@@ -24,6 +24,8 @@ function has(source, pattern, message) {
 has(coreUi, /if \(options\.variant\) addClasses\(button, "ui-button--" \+ options\.variant\);/, "CoreUI must map variant metadata to semantic classes");
 
 var primary = block("\\.ui-button--primary");
+has(css, /\.panel-button:not\(\.utility-action\):not\(\.ui-button\),/, "Legacy panel-button surface must exclude Shared Button variants");
+has(css, /\.ui-button--primary\s*\{[^}]*background:\s*var\(--action-primary-surface\)/, "Primary enabled resting surface must come from the shared semantic authority");
 var neutral = block("\\.ui-button--neutral");
 var danger = block("\\.ui-button--danger");
 has(primary, /background:\s*var\(--action-primary-surface\)/, "Primary surface ownership missing");
