@@ -167,11 +167,28 @@ Current boundaries:
 - Home tool identity uses stable tool ids only;
 - language, Home order, Developer Mode, UI scale and theme do not change icon source identity;
 - Theme-mapped mode is a presentation mapping over a source raster;
-- Palette Store owns user overrides, custom palettes, hidden built-ins and tool mappings under `lomond.proceduralPaletteStore.v1`;
+- Palette Store v2 (`lomond.paletteStore.v2`) is the sole persisted Palette authority; the v1 key (`lomond.proceduralPaletteStore.v1`) is migration / rollback / import-only evidence and is never written by production;
 - the classic Background Engine remains an explicit fallback;
 - source and presentation invalidation remain separate.
 
 Detailed design: `docs/design/procedural-appearance.md`.
+
+## Reusable Palette System Foundation (0.3.2)
+
+The 0.3.2 Reusable Palette System Foundation is implementation-complete and awaits final real AE acceptance (see `AI` in the handoff). It is intentionally bounded and does not expand into cross-palette references, Harmonies or generator UI, arbitrary derivation scripts, a node/graph editor, a global active Palette, Appearance live-link, or a semantic role-mapping editor.
+
+Final authority map (single owner per layer; no competing authority):
+
+- **Palette Definition / Schema** — `client/js/palette/paletteModel.js` (PaletteModel): pure validation/normalization of the v2 palette (stable `paletteId`/`slotId`, `DIRECT`/`REFERENCE`/`DERIVED`).
+- **Derivation grammar / math** — `client/js/palette/colorDerivationRegistry.js` (`mix.v1`, `oklchAdjust.v1`).
+- **Resolved graph** — `client/js/palette/paletteResolver.js` (resolvePalette over the current full v2 draft; fail-closed).
+- **Palette persistence (sole authority)** — `client/js/palette/paletteStore.js` (`lomond.paletteStore.v2`): custom palettes, canonical-relative built-in overrides, hidden built-ins, `toolPaletteMap`, v1→v2 migration, v1/v2 import, export. `LegacyProceduralPaletteAdapter` and the `proceduralPaletteStore` facade are projection / delegation only and hold no persistence.
+- **Built-in factory canonical** — `client/js/proceduralPaletteLibrary.js` (unique `listPalettes()` source; Store v2 stores only canonical-relative overrides).
+- **Workspace** — `client/js/proceduralPaletteWorkspace.js`: memory-only full-v2 draft; Save is the only Store write boundary; Cancel clears transient effect. Uses the stable projection/update seam (ordinary edit → validate/resolve → in-place projection; structural edit → local editor-scroll rebuild preserving scroll owner).
+- **Procedural consumer projection** — `client/js/palette/legacyProceduralPaletteAdapter.js` produces the legacy procedural consumer shape + semantic signature; `proceduralAppearance.js`, `proceduralHomeIcons.js`, `proceduralHomeBackground.js`, `proceduralThemeMap.js` consume that projection.
+- **Application semantics** — Palette value → explicit assignment → existing Appearance authority. `themeAccent` / `homeBackground` remain Settings-backed Appearance inputs and are never implicitly rewritten by Palette edits; the Palette→Accent/Canvas flow (`suggestThemeAccentFromPalette`, gated by `suggestThemeAccent`) is an explicit user action only. Manual Appearance edits retain final authority.
+- **Design Tuning** — separate calibration authority; unrelated to Palette authority.
+- **CSS** — presentation output only; Palette core never writes semantic CSS.
 
 ## Vela architecture and safety state
 

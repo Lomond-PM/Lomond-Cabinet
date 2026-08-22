@@ -272,31 +272,6 @@
         }));
     }
 
-    function updateEditorDraft(patch) {
-        var helper = getEditorHelper();
-        var store = getStore();
-        var validation;
-        if (!editorState || !helper || !helper.updateEditorDraft) {
-            return;
-        }
-        editorState = helper.updateEditorDraft(editorState, patch);
-        if (helper.hasPositiveWeightTotal && !helper.hasPositiveWeightTotal(editorState.draft.weights)) {
-            clearTransientPreview();
-            syncDirtyUi();
-            return;
-        }
-        if (store && typeof store.setTransientPalette === "function") {
-            validation = store.setTransientPalette(PaletteEditorPreviewId, Object.assign({}, editorState.draft, { id: PaletteEditorPreviewId }));
-            if (!validation.ok) {
-                clearTransientPreview();
-                syncDirtyUi();
-                return;
-            }
-        }
-        syncDirtyUi();
-        schedulePreview();
-    }
-
     // A working Palette draft mutation is a data change followed by a projection update.
     // It must never tear down the Workspace root, its scroll owner, or the rendered slot
     // cards; only the affected presentation is re-projected from the freshly resolved graph.
@@ -320,101 +295,6 @@
         if (validation.ok && getStore() && getStore().setTransientV2Palette) getStore().setTransientV2Palette(PaletteEditorPreviewId, editorState.draft);
         else clearTransientPreview();
         refreshProjection(validation);
-    }
-
-    function createPaletteColorControl(role, value) {
-        var controls = createElement("span");
-        var shell = createElement("button");
-        var input = createElement("input");
-        var hexInput = createElement("input");
-        var inputId = "paletteEditor" + role.charAt(0).toUpperCase() + role.slice(1);
-        var normalizeHex = options.normalizeHex || function (color, fallback) { return color || fallback; };
-        var normalized = normalizeHex(value, "#000000");
-        var built;
-        function applyDraft(valueToApply) {
-            var color = normalizeHex(valueToApply, normalized).toUpperCase();
-            var patch;
-            if (!/^#[0-9A-F]{6}$/.test(color)) return;
-            patch = { colors: {} };
-            patch.colors[role] = color;
-            updateEditorDraft(patch);
-        }
-        if (options.CoreUI) {
-            built = options.CoreUI.createColorField({
-                document: getDocument(),
-                id: inputId,
-                value: normalized,
-                fallback: "#000000",
-                normalize: normalizeHex,
-                isValid: function (candidate) { return /^#?[0-9a-fA-F]{6}$/.test(candidate); },
-                classNames: "control-inputs settings-field-control settings-color-control palette-editor-color-control",
-                swatchClassNames: "settings-color-pill small-color-shell",
-                valueClassNames: "native-color-input",
-                hexClassNames: "settings-color-hex",
-                onPreview: applyDraft,
-                onCommit: applyDraft,
-                openPicker: options.openCoreColorPicker
-            });
-            if (options.bindHexInputSelectBehavior) options.bindHexInputSelectBehavior(built.hex);
-            return built.root;
-        }
-        if (!controls || !shell || !input || !hexInput) {
-            return null;
-        }
-        controls.className = "control-inputs settings-field-control registry-color-control settings-color-control palette-editor-color-control";
-        shell.className = "registry-color-swatch settings-color-pill small-color-shell";
-        shell.type = "button";
-        shell.style.backgroundColor = normalized;
-        shell.setAttribute("data-color-target", inputId);
-        input.id = inputId;
-        input.className = "native-color-input";
-        input.type = "hidden";
-        input.value = normalized;
-        hexInput.id = inputId + "Hex";
-        hexInput.className = "registry-color-hex settings-color-hex";
-        hexInput.type = "text";
-        hexInput.value = normalized;
-        hexInput.setAttribute("spellcheck", "false");
-        if (options.bindHexInputSelectBehavior) {
-            options.bindHexInputSelectBehavior(hexInput);
-        }
-
-        function apply(valueToApply) {
-            var color = normalizeHex(valueToApply, input.value || normalized).toUpperCase();
-            var patch;
-            if (!/^#[0-9A-F]{6}$/.test(color)) {
-                return;
-            }
-            input.value = color;
-            hexInput.value = color;
-            shell.style.backgroundColor = color;
-            patch = { colors: {} };
-            patch.colors[role] = color;
-            updateEditorDraft(patch);
-        }
-
-        hexInput._registryOnValueChange = function () {
-            apply(hexInput.value);
-        };
-        hexInput.addEventListener("input", function () {
-            if (/^#?[0-9a-fA-F]{6}$/.test(this.value)) {
-                apply(this.value);
-            }
-        });
-        hexInput.addEventListener("change", function () {
-            apply(this.value);
-        });
-        shell.addEventListener("click", function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            if (options.openRegistryColorPicker) {
-                options.openRegistryColorPicker(hexInput, shell, normalizeHex(hexInput.value, normalized));
-            }
-        });
-        shell.appendChild(input);
-        controls.appendChild(shell);
-        controls.appendChild(hexInput);
-        return controls;
     }
 
     function createPaletteTextInput(value, onChange) {
