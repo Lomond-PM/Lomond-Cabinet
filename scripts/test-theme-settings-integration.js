@@ -92,7 +92,7 @@ function run() {
     assert(functionSlice(mainText, "getPaletteSummaryData", "renderPaletteSummaryElement").indexOf("localStorage") === -1, "Palette summary must not read localStorage directly.");
     assert(/function bindThemePaletteStore[\s\S]*store\.subscribe/.test(mainText), "Palette Store updates must refresh the summary.");
     assert(/ThemeSettingsStoreListener[\s\S]*refreshSettingsPaletteSummary/.test(mainText), "Store summary refresh must be isolated from icon source updates.");
-    assert(/storageKey: STORAGE_KEY/.test(storeText) && /schemaVersion: SCHEMA_VERSION/.test(storeText), "Palette Store key and schema must remain owned by the Store.");
+    assert(/storageKey: StoreV2\.storageKey/.test(storeText) && /schemaVersion: StoreV2\.schemaVersion/.test(storeText), "Palette Store key and schema must come from the v2 authority.");
     assert(/function openWorkspace[\s\S]*settingsScrollTop/.test(workspaceText), "Workspace entry must preserve Settings scroll context.");
     assert(/restoreSettingsScroll: reason === "back"/.test(workspaceText), "Workspace back navigation must restore Settings scroll context.");
     assertions += 7;

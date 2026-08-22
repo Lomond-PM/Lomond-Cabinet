@@ -213,15 +213,18 @@
         var saveButton = query(".palette-editor-save");
         var dirty = !!(editorState && editorState.dirty);
         var valid = paletteEditorDraftIsValid();
+        var store = getStore();
+        var current = store && editorState && editorState.selectedPaletteId && store.getResolvedPalette ? store.getResolvedPalette(editorState.selectedPaletteId) : null;
+        var readOnly = !!(current && current.legacyEditability === "LEGACY_READ_ONLY");
         if (workspace) {
             workspace.classList.toggle("has-unsaved-palette-draft", dirty);
         }
         if (status) {
-            status.textContent = dirty ? tr("paletteLibrary.unsavedChanges") : tr("paletteLibrary.saved");
+            status.textContent = readOnly ? tr("paletteLibrary.legacyReadOnly") : (dirty ? tr("paletteLibrary.unsavedChanges") : tr("paletteLibrary.saved"));
             status.classList.toggle("is-dirty", dirty);
         }
         if (saveButton) {
-            saveButton.disabled = !dirty || !valid || !!editorState.saving;
+            saveButton.disabled = readOnly || !dirty || !valid || !!editorState.saving;
         }
     }
 
@@ -1009,10 +1012,14 @@
         var scroll;
         var status;
         var actions;
+        var current;
+        var legacyReadOnly;
         var i;
         if (!draft) {
             return;
         }
+        current = state.selectedPaletteId && store.getResolvedPalette ? store.getResolvedPalette(state.selectedPaletteId) : null;
+        legacyReadOnly = !!(current && current.legacyEditability === "LEGACY_READ_ONLY");
         scroll = createElement("div");
         scroll.className = "palette-editor-scroll ui-scroll-region";
         scroll.appendChild(createPalettePreviewBlock());
@@ -1063,6 +1070,10 @@
         renderToolMapping(scroll, palettes, store);
         renderImportExport(scroll, store);
         editor.appendChild(scroll);
+        if (legacyReadOnly && scroll.querySelectorAll) {
+            Array.prototype.forEach.call(scroll.querySelectorAll(".palette-editor-field input, .palette-editor-field button"), function (control) { control.disabled = true; });
+            scroll.classList.add("is-legacy-read-only");
+        }
         actions = createElement("div");
         actions.className = "palette-editor-action-bar";
         editor.appendChild(actions);

@@ -194,8 +194,9 @@ function run() {
     assert(!/localStorage/.test(workspaceText), "Controller should not directly use localStorage.");
     assert(!/ProceduralPaletteLibrary|listPalettes\(|getPalette\(/.test(workspaceText), "Controller should not modify or read factory palette library internals.");
     assert(/readStorageValue/.test(workspaceText) && /writeStorageValue/.test(workspaceText), "Controller should persist UI width only through injected storage callbacks.");
-    assert(storeModule.storageKey === "lomond.proceduralPaletteStore.v1", "Palette Store storage key must stay unchanged.");
-    assert(storeModule.schemaVersion === 1, "Palette Store schema version must stay unchanged.");
+    assert(storeModule.storageKey === "lomond.paletteStore.v2", "Production Palette Store must use the v2 authority key.");
+    assert(storeModule.legacyStorageKey === "lomond.proceduralPaletteStore.v1", "The v1 key must remain migration-only evidence.");
+    assert(storeModule.schemaVersion === 2, "Production Palette Store schema must be v2.");
     assertions += 5;
 
     assert(/createNewEditorState/.test(workspaceText), "Controller should preserve New transient draft workflow.");

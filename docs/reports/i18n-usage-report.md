@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 377 |
+| A | Core / Global; keep | 378 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 0 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -273,6 +273,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | paletteLibrary.invalidJson | paletteLibrary | Invalid JSON | 无效 JSON | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.invalidPalette | paletteLibrary | Invalid Palette | 无效色卡 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.jsonValid | paletteLibrary | JSON is valid | JSON 验证通过 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.legacyReadOnly | paletteLibrary | This Palette uses advanced slot relationships and is read-only in the... | 此色卡使用高级色槽关系，当前编辑器仅支持只读查看。 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.merge | paletteLibrary | Merge | 合并 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.mergeImport | paletteLibrary | Merge Import | 合并导入 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.modified | paletteLibrary | Modified | 已修改 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
