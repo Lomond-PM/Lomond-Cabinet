@@ -1,8 +1,8 @@
 # PROJECT_STATE.md
 
-## 0.3.2 release-candidate authority
+## 0.3.2 released baseline
 
-Version 0.3.2 is **READY FOR RELEASE**. The merged `dev` integration baseline has passed the complete offline regression and consistency gates, and the user has completed the final integrated After Effects 2026 pre-release acceptance. Previously completed 0.3.2 workstreams are closed and AE accepted: Registry Renderer / shared component convergence, Appearance and Design Tuning foundations, Full Design Calibration and Canonical Promotion, Palette Store v2 and dynamic Palette Workspace, Runtime Console Cleanup, Final Settings IA, and Vela presentation / spacing authority convergence.
+Version 0.3.2 is **RELEASED / PUBLISHED BASELINE**. The synchronized `main` and `dev` release baseline passed all 125 offline test files, the complete consistency gates, and the final integrated After Effects 2026 acceptance. The 0.3.2 workstreams are closed and AE accepted: Registry Renderer / shared component convergence, Appearance and Design Tuning foundations, Full Design Calibration and Canonical Promotion, Palette Store v2 and dynamic Palette Workspace, Runtime Console Cleanup, Final Settings IA, and Vela presentation / spacing authority convergence.
 
 Final integrated After Effects 2026 acceptance:
 
@@ -41,12 +41,12 @@ Lomond Cabinet is an After Effects CEP extension panel.
 - Visible product name: **Lomond Cabinet**
 - Manifest menu name: **AE Toolbox**
 - Extension id/folder: `com.kevin.aetoolbox`
-- Prepared release version: `0.3.2`
-- Latest published tag: `v0.3.1`
-- Integrated release baseline: `dev` at the release-prep branch point
+- Current published release version: `0.3.2`
+- Latest published tag: `v0.3.2`
+- Post-release development baseline: synchronized `main` and `dev`
 - Host API version: `1.0.0`
 
-`VERSION`, both version fields in `CSXS/manifest.xml`, and `AEToolbox.projectVersion` identify prepared product version `0.3.2`. The latest published release remains 0.3.1 on immutable tag `v0.3.1` until the user performs the 0.3.2 release operations.
+`VERSION`, both version fields in `CSXS/manifest.xml`, and `AEToolbox.projectVersion` identify published product version `0.3.2`. Version 0.3.2 is published from synchronized `main` and `dev`, with immutable tag `v0.3.2` and the completed GitHub Release.
 
 ## 0.3.1 release status
 
@@ -316,7 +316,7 @@ Other areas to watch:
 
 ## Release baseline
 
-Version 0.3.2 is prepared from the integrated `dev` baseline. Version 0.3.1 remains published on `main`, and `v0.3.1` remains the latest immutable published tag until the user completes the release.
+Version 0.3.2 is published from the integrated and synchronized `main` / `dev` baseline. The latest immutable published tag is `v0.3.2`.
 
 The release contains:
 
@@ -332,7 +332,7 @@ The release contains:
 
 ## Next development direction
 
-After the 0.3.2 release, the next isolated development target is **0.3.3 — Agent Runtime Foundation**. It must not be merged into the 0.3.2 release preparation or weaken the existing Vela authority boundaries.
+The next isolated development target is **0.3.3 — Agent Runtime Foundation**. It starts from the released 0.3.2 baseline and must not rewrite the published 0.3.2 state or weaken the existing Vela authority boundaries.
 
 Registry evolves toward a typed Capability Registry consumable by both Agent and Human UI. Capabilities may be `read`, `analyze`, `mutate`, or `create`; a dedicated Human UI is not required for a capability to exist.
 
