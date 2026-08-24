@@ -3,12 +3,12 @@
 Lomond Cabinet is an After Effects CEP extension that combines a registry-driven tool system, procedural Home visuals, and the experimental Vela local-assistant surface.
 
 - **Current version:** `0.3.2`
-- **Latest published tag:** `v0.3.1`
+- **Latest published tag:** `v0.3.2`
 - **Extension bundle id:** `com.kevin.aetoolbox`
 - **Manifest menu name:** `AE Toolbox`
 - **Visible panel name:** `Lomond Cabinet`
 
-Version 0.3.2 is the release candidate for the integrated UI / Design System Foundation. It adds shared component convergence, Appearance and Design Tuning authorities, Palette Store v2 and its native Workspace, the final Settings information architecture, and Vela spacing convergence. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default.
+Version 0.3.2 is the current published release for the integrated UI / Design System Foundation. It adds shared component convergence, Appearance and Design Tuning authorities, Palette Store v2 and its native Workspace, the final Settings information architecture, and Vela spacing convergence. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default. The next development line is the future 0.3.3 Agent Runtime Foundation.
 
 ## Runtime architecture
 
@@ -214,7 +214,7 @@ docs/HANDOFF.md
 
 ## Version and release status
 
-The prepared project version is `0.3.2`; until the user completes the release, the latest published tag remains immutable `v0.3.1`. Releases follow the reviewed `dev → main → version tag` flow.
+The current published release is `0.3.2`, tagged with immutable `v0.3.2`. Post-release development continues from synchronized `main` and `dev` toward the isolated 0.3.3 Agent Runtime Foundation. Releases follow the reviewed `dev → main → version tag` flow.
 
 Keep these synchronized for future releases:
 

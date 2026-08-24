@@ -2,7 +2,7 @@
 
 ## 0.3.2 release handoff
 
-The 0.3.2 integrated release candidate is prepared from the latest `dev` baseline and is **READY FOR RELEASE**. Registry/shared components, Appearance, the 67-parameter living Design Tuning Registry, Palette Store v2 and native Workspace, Final Settings IA, Runtime Console Cleanup, and Vela spacing convergence are complete. Their focused acceptances and the final integrated After Effects 2026 release smoke are closed and passed.
+Version 0.3.2 is **RELEASED** from the synchronized `main` and `dev` baseline. Registry/shared components, Appearance, the 67-parameter living Design Tuning Registry, Palette Store v2 and native Workspace, Final Settings IA, Runtime Console Cleanup, and Vela spacing convergence are complete. Their focused acceptances and the final integrated After Effects 2026 release smoke are closed and passed.
 
 The next development line is 0.3.3 Agent Runtime Foundation. Keep that work isolated from 0.3.2 and preserve the current Provider, Review, Confirmation, Preflight, ExecutionAdapter, and Host authority boundaries.
 
@@ -37,11 +37,11 @@ docs/HANDOFF.md
 ## Current release
 
 - Product version: `0.3.2`
-- Latest published tag: `v0.3.1`
-- Release status: **0.3.2 READY FOR RELEASE**
+- Latest published tag: `v0.3.2`
+- Release status: **0.3.2 RELEASED**
 - Host API version: `1.0.0`
 
-Version 0.3.2 is prepared on the release-prep branch from integrated `dev`. Version 0.3.1 remains published on `main` and tagged `v0.3.1` until the user completes the reviewed release.
+Version 0.3.2 is published from synchronized `main` and `dev` and tagged with immutable `v0.3.2`. The handoff baseline is the released 0.3.2 state; the next development line is 0.3.3 Agent Runtime Foundation.
 
 Vela remains experimental:
 
@@ -124,7 +124,7 @@ com.kevin.aetoolbox
 ## Initial setup on another machine
 
 1. Clone or copy the repository.
-2. Confirm `VERSION` is `0.3.2` for the prepared release baseline.
+2. Confirm `VERSION` is `0.3.2` for the released baseline.
 3. Confirm both manifest version fields match `VERSION`.
 4. Configure CEP PlayerDebugMode for the AE/CSXS version when using an unsigned development extension.
 5. Create the CEP junction/symlink or install the full extension folder.
@@ -306,7 +306,7 @@ Future release changes must synchronize:
 
 ## Post-0.3.2 roadmap
 
-### 0.3.2 — UI / Design System Foundation (release prepared)
+### 0.3.2 — UI / Design System Foundation (released)
 
 Establish a complete semantic token hierarchy for color, surface, text, status, interaction, typography, spacing, radius, geometry, and component tokens. Progressively align Vela, Registry Renderer, Settings, and Home without redesigning the accepted Vela UI structure.
 
