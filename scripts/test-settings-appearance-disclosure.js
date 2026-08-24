@@ -60,8 +60,11 @@ ok(/title\.className = "registry-title-primary settings-section-title"/.test(dis
 ok(!/settings-group-label/.test(disclosureFn), "Advanced header is not styled as a group label");
 const css = fs.readFileSync(path.join(root, "client/css/style.css"), "utf8");
 ok(!/\.settings-appearance-collapsible > button\s*\{[^}]*grid-template-columns/.test(css), "Advanced Appearance header is not horizontally centered");
-ok(/grid-template-columns:\s*1fr auto 1fr/.test(css) && /font-size:\s*var\(--type-surface-title-size\)/.test(css), "top-level Settings category header is truly centered and uses Level-1 typography");
-ok(/\.settings-category-header \.settings-category-title/.test(css) && /grid-column:\s*2/.test(css), "top-level category title is a real grid-center cell (not :first-child heuristics)");
+const categoryHeaderCss = css.slice(css.indexOf(".settings-category-header {"), css.indexOf(".settings-category > .settings-category-content"));
+ok(/display:\s*flex/.test(categoryHeaderCss) && /justify-content:\s*space-between/.test(categoryHeaderCss), "top-level Settings category header uses the stable left-title / right-chevron disclosure layout");
+ok(/font-size:\s*var\(--type-section-title-size\)/.test(categoryHeaderCss), "top-level category typography uses the stable section-title contract");
+ok(/\.settings-category-header \.settings-category-title[\s\S]*text-align:\s*left/.test(categoryHeaderCss), "top-level category title is explicitly left aligned");
+ok(!/grid-template-columns:\s*1fr auto 1fr|grid-column:\s*2|justify-self:\s*center|text-align:\s*center/.test(categoryHeaderCss), "rejected true-center category experiment is absent");
 
 // 4. The call site supplies a stable unique content id for Advanced Appearance.
 const subpage = main.slice(main.indexOf("function setupAppearanceSubpage"), main.indexOf("function initializeSystemRouter"));

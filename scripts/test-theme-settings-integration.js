@@ -38,10 +38,16 @@ function run() {
     assert(/palette-library-intro[\s\S]*options\.renderPaletteSummary\(summaryMount\)/.test(workspaceText), "Palette Library intro row hosts the summary region (left copy / right summary).");
     assert(/renderPaletteSummary: function \(container\)[\s\S]*renderPaletteSummaryElement\(summary\)/.test(mainText), "main.js drives the Palette summary through the shared representation.");
     assert(/renderPaletteSummaryElement\([\s\S]*settings-source-summary/.test(mainText), "Palette summary still uses the canonical .settings-source-summary element.");
+    assert((workspaceText.match(/options\.renderPaletteSummary\(summaryMount\)/g) || []).length === 1, "Palette Library must mount exactly one summary presentation instance.");
+    assert(!/wide[^\n]*(?:summary|palette)|(?:summary|palette)[^\n]*wide/i.test(workspaceText), "Palette Library must not define a bespoke wide summary renderer or markup variant.");
+    const summaryRule = cssText.match(/(?:^|\n)\.settings-source-summary\s*\{[^}]*\}/);
+    assert(summaryRule && /grid-template-columns:\s*minmax\(0, 1fr\)/.test(summaryRule[0]) && !/grid-template-columns:\s*minmax\(0, 1fr\) auto/.test(summaryRule[0]), "Canonical Palette summary keeps title, count, and chips in one vertical presentation at every width.");
+    assert(/\.palette-library-intro-summary \.settings-source-summary-swatches[\s\S]*justify-content:\s*flex-end/.test(cssText), "Wide placement right-aligns the whole canonical summary, including chips.");
+    assert(/@media \(max-width: 640px\)[\s\S]*\.palette-library-intro[\s\S]*flex-direction:\s*column[\s\S]*\.settings-source-summary-swatches[\s\S]*justify-content:\s*flex-start/.test(cssText), "Narrow placement stacks the whole summary and preserves its left-aligned canonical presentation.");
     assert(/id: "iconColors"[\s\S]*openWhen: \{ key: "proceduralIconMode", equals: "themeMapped" \}/.test(schemaText), "Theme-mapped endpoint group must open for Theme-mapped mode.");
     assert(/type: "colorRampPreview"/.test(schemaText), "Theme schema must declare the generic color ramp presentation.");
     assert(/type: "note"[\s\S]*helper\.proceduralIconSource/.test(schemaText), "Theme-mapped mode must explain the source palette relationship.");
-    assertions += 12;
+    assertions += 17;
 
     assert(/id: "proceduralAppearance"[\s\S]*developerOnly: true[\s\S]*collapsible: true[\s\S]*defaultCollapsed: true/.test(schemaText), "Procedural appearance controls must be a Developer-only collapsible Settings section.");
     [

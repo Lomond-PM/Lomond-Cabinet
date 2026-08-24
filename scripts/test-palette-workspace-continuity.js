@@ -25,6 +25,7 @@
  */
 
 const assert = require("assert");
+const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
@@ -105,7 +106,7 @@ class FakeElement {
     focus() {}
     select() {}
     contains(other) { let cur = other; while (cur) { if (cur === this) return true; cur = cur.parentNode; } return false; }
-    getBoundingClientRect() { return { width: 100, height: 100, left: 0, top: 0, right: 100, bottom: 100 }; }
+    getBoundingClientRect() { const width = this.classList.contains("palette-workspace") && this.ownerDocument.workspaceWidth ? this.ownerDocument.workspaceWidth : 100; return { width, height: 100, left: 0, top: 0, right: width, bottom: 100 }; }
     querySelector(sel) { return this._find(sel)[0] || null; }
     querySelectorAll(sel) { return this._find(sel); }
     _matches(sel) {
@@ -243,7 +244,8 @@ function makeWindow(doc) {
         addEventListener() {},
         removeEventListener() {},
         matchMedia() { return { matches: false }; },
-        flushRaf() { const q = rafs.splice(0, rafs.length); q.forEach((cb) => cb()); }
+        flushRaf() { const q = rafs.splice(0, rafs.length); q.forEach((cb) => cb()); },
+        flushTimers() { while (timers.length) { const q = timers.splice(0, timers.length); q.forEach((cb) => cb()); } }
     };
 }
 
@@ -318,20 +320,33 @@ function run() {
     const paletteId = created.v2Palette.id;
 
     const doc = new FakeDocument();
+    doc.workspaceWidth = 1000;
     const win = makeWindow(doc);
     const view = doc.createElement("div");
     view.id = "settingsView";
     const content = doc.createElement("div");
     content.className = "settings-content";
     const rootPage = doc.createElement("div");
-    rootPage.className = "settings-root-page";
+    rootPage.className = "settings-renderer settings-root-page";
+    const appearance = doc.createElement("section");
+    appearance.className = "settings-category settings-category--appearance";
+    const appearanceContent = doc.createElement("div");
+    appearanceContent.className = "settings-category-content";
+    const themeCard = doc.createElement("section");
+    themeCard.className = "settings-section settings-theme-card";
+    const themeGroups = doc.createElement("div");
+    themeGroups.className = "settings-theme-groups settings-section-inner";
     const paletteSection = doc.createElement("div");
     paletteSection.id = "settingsPaletteLibraryMount";
     paletteSection.className = "settings-section settings-section--palette-library";
     content.appendChild(rootPage);
+    rootPage.appendChild(appearance);
+    appearance.appendChild(appearanceContent);
+    appearanceContent.appendChild(themeCard);
+    themeCard.appendChild(themeGroups);
+    themeGroups.appendChild(paletteSection);
     doc.body.appendChild(view);
     view.appendChild(content);
-    doc.body.appendChild(paletteSection);
 
     let statusCalls = [];
     Workspace.teardown();
@@ -362,8 +377,40 @@ function run() {
         refreshI18n() {}
     });
 
-    Workspace.open();
+    Workspace.refresh();
+    const launcher = doc.querySelector(".palette-library-open");
+    assert(launcher && typeof launcher.__onClick === "function", "The single real Palette launcher must be rendered through the controller.");
+    launcher.__onClick();
     assert.strictEqual(Workspace.isOpen(), true, "open should enter the workspace.");
+    assert(view.classList.contains("is-palette-workspace"), "Open must project the Palette Workspace route class.");
+    assert(doc.querySelector(".palette-workspace"), "Open must render the workspace root.");
+    assert(doc.querySelector(".palette-workspace").getBoundingClientRect().width > 0, "The active workspace root must own non-zero layout dimensions.");
+    assert(!doc.querySelector(".palette-workspace").classList.contains("is-stacked"), "Wide workspace must remain visible in split layout.");
+    assert(doc.querySelector(".palette-library-pane"), "Open must render the library pane.");
+    assert(doc.querySelector(".palette-editor-pane"), "Open must render the editor pane.");
+    assert(Store.listResolvedPalettes(true).filter((palette) => palette.isBuiltIn).length > 0, "The production Store fixture must expose built-in palettes.");
+    assert(doc.querySelectorAll(".palette-library-item").length > 0, "Open must project real palette rows into the library.");
+    assert.strictEqual(paletteSection.parentNode, themeGroups, "Workspace must retain the single relocated Settings mount identity.");
+
+    const css = fs.readFileSync(path.join(ROOT, "client/css/style.css"), "utf8");
+    assert(/\.settings-view\.is-palette-workspace \.settings-theme-card[\s\S]*\.settings-view\.is-palette-workspace \.settings-theme-groups[\s\S]*display:\s*flex/.test(css), "Workspace projection must keep the relocated Theme-card ancestor chain visible.");
+    assert(/\.settings-view\.is-palette-workspace \.settings-theme-groups > :not\(\.settings-section--palette-library\)[\s\S]*display:\s*none/.test(css), "Workspace projection must hide launcher-card siblings at their actual Theme-group ownership level.");
+    assert(!/\.settings-category--appearance > \.settings-category-content > :not\(\.settings-section--palette-library\)/.test(css), "The stale direct-child Palette mount assumption must remain removed.");
+
+    Workspace.requestBack();
+    win.flushTimers();
+    assert.strictEqual(Workspace.isOpen(), false, "First Back must restore ordinary Settings.");
+    assert.strictEqual(doc.querySelectorAll(".palette-library-open").length, 1, "First Back must restore one launcher.");
+    doc.workspaceWidth = 300;
+    doc.querySelector(".palette-library-open").__onClick();
+    assert(Workspace.isOpen() && doc.querySelector(".palette-library-pane") && doc.querySelector(".palette-editor-pane"), "First reopen must render both panes again.");
+    assert(doc.querySelector(".palette-workspace").classList.contains("is-stacked"), "Narrow workspace must remain visible in stacked layout.");
+    Workspace.requestBack();
+    win.flushTimers();
+    assert.strictEqual(Workspace.isOpen(), false, "Second Back must restore ordinary Settings.");
+    assert.strictEqual(doc.querySelectorAll("#settingsPaletteLibraryMount").length, 1, "Two cycles must never duplicate the mount.");
+    assert.strictEqual(doc.querySelectorAll(".palette-library-open").length, 1, "Two cycles must restore exactly one launcher.");
+    doc.querySelector(".palette-library-open").__onClick();
     Workspace.selectPalette(paletteId);
 
     const scroll = doc.querySelector(".palette-editor-scroll");

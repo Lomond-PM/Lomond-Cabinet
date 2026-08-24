@@ -1,6 +1,6 @@
 # 0.3.2 Final Settings Information Architecture — Implementation Preview
 
-**Status: IMPLEMENTATION PREVIEW — AE REVIEW FAILED → READY FOR AE RETEST (Developer Mode → Settings → Home transition repaired). NOT CLOSED / NOT AE ACCEPTED.**
+**Final Status: CLOSED / AE ACCEPTED.**
 
 This is an internal preview/handoff artifact of the already-user-approved Final Settings IA. It is **not** a runtime authority. The live category hierarchy is owned exclusively by `client/js/main.js` `renderSettingsContent()`; `client/js/settingsSchema.js` is documentation/transitional only and is **not** the live render source.
 
@@ -212,9 +212,9 @@ No Vela order/loader/cache/global semantics were touched, so the frozen Vela for
 
 ## X. Next Step / Status
 
-**IMPLEMENTATION PREVIEW is complete and verified. Status: AE REVIEW FAILED → READY FOR AE RETEST. NOT CLOSED.**
+**Final status: CLOSED / AE ACCEPTED.**
 
-Next: the AE review of the rendered General / Appearance / Advanced / Developer hierarchy and the single-Design-Tuning entry in Developer was performed and identified a navigation blocker. The blocker has been diagnosed and repaired (see below); this preview is now **READY FOR AE RETEST**.
+The user completed the final real AE acceptance after the documented repair sequence. The historical review failures and retest states below remain as implementation history and are superseded by the final accepted status.
 
 ---
 
@@ -406,8 +406,6 @@ Real AE review found three issues. All three repaired.
 
 Status: **IMPLEMENTATION PREVIEW — AE REVIEW PENDING. NOT CLOSED / NOT AE ACCEPTED.**
 
----
-
 ## AF. Final Presentation Refinement + Shared Color Picker Popup Layout Repair
 
 Real AE review additions, all repaired:
@@ -478,4 +476,48 @@ Real AE review corrected three remaining presentation contracts:
 Status: **IMPLEMENTATION PREVIEW — AE REVIEW PENDING. NOT CLOSED / NOT AE ACCEPTED.**
 
 Status: **IMPLEMENTATION PREVIEW — AE REVIEW PENDING. NOT CLOSED / NOT AE ACCEPTED.**
+
+---
+
+## Final Codex Closeout Refinement
+
+- The user rejected the bespoke Wide Palette summary presentation. The accepted narrow summary UI is now the canonical presentation at every width: title, count, and preview chips retain one renderer, one DOM order, and one data/live-refresh seam.
+- Wide layout only repositions that same complete summary block to the right of the Palette Library copy and right-aligns it; it does not combine the title and count into a compact horizontal variant. When space is insufficient, the whole summary block stacks below the copy, while the Open Palette Library button remains on its own full-width row.
+- The user abandoned the top-level Settings category centering experiment. General, Appearance, Advanced, and Developer have been restored to the stable left-aligned disclosure presentation with the chevron at the right and the pre-experiment section-title typography.
+
+Status remains: **IMPLEMENTATION PREVIEW — AE REVIEW PENDING. NOT CLOSED / NOT AE ACCEPTED.**
+
+---
+
+## Palette Workspace Blank-View Real AE Regression
+
+Real AE review reached the Palette Workspace route (Settings shell and “< Settings” back navigation remained visible) but the main Workspace area was blank.
+
+- **First broken step:** Workspace DOM creation completed, including `.palette-workspace`, `.palette-library-pane`, `.palette-editor-pane`, built-in palette rows, and editor state. Visibility failed at the relocated mount's ancestor projection.
+- **Root cause:** Final Settings IA moved `#settingsPaletteLibraryMount` under `.settings-theme-card > .settings-theme-groups`, while the Workspace-mode CSS still assumed the Palette mount was a direct child of `.settings-category--appearance > .settings-category-content`. That stale selector hid the Theme card ancestor with `display:none`, so fully rendered Workspace children had no visible ancestor chain.
+- **Fix:** Workspace-mode projection now keeps the actual Theme card / Theme groups ancestor chain as flex layout owners, hides non-Palette siblings at the `.settings-theme-groups` ownership level, and removes Theme-card chrome while the Workspace route is active. No forced display override, duplicate mount, second Workspace, Store change, timeout, or architecture rewrite was introduced.
+- **Regression coverage:** The real controller is driven from its single launcher against the production Palette Store and the relocated DOM hierarchy. The test asserts non-zero Workspace layout, library/editor panes, built-ins and rendered palette items, Wide split and Narrow stacked visibility, plus two Open → Back cycles with one mount and one restored launcher.
+- **Console evidence:** CEP DevTools was unavailable because After Effects was not running during this repair; no Console result is claimed.
+
+Status: **IMPLEMENTATION PREVIEW — AE RETEST PENDING. NOT CLOSED / NOT AE ACCEPTED.**
+
+---
+
+## Final Real AE Acceptance
+
+The user completed the final real After Effects acceptance. Final Settings IA is **CLOSED / AE ACCEPTED**.
+
+- Palette Workspace Open / Back / Reopen: **PASS**
+- Wide / Narrow: **PASS**
+- Palette summary presentation: **PASS**
+- Advanced Appearance disclosure: **PASS**
+- Shared Color Picker: **PASS**
+- Primary Text palette one-shot assignment: **PASS**
+- Secondary / Tertiary colorAlpha: **PASS**
+- Developer Mode OFF → Back Home: **PASS**
+- Startup: **PASS**
+- Design Tuning overrides: **0**
+- Project-owned Console warnings/errors: **0**
+
+**Final Status: CLOSED / AE ACCEPTED.**
 
