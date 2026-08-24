@@ -34,6 +34,8 @@ function finalDeclaration(source, selector, property) {
 [
     ["--space-surface-edge", "calc\\(22px \\* var\\(--ui-scale\\)\\)"],
     ["--space-card-inset", "calc\\(12px \\* var\\(--ui-scale\\)\\)"],
+    ["--space-content-inline-inset", "calc\\(12px \\* var\\(--ui-scale\\)\\)"],
+    ["--space-content-block-inset", "calc\\(8px \\* var\\(--ui-scale\\)\\)"],
     ["--space-section-stack", "calc\\(28px \\* var\\(--ui-scale\\)\\)"],
     ["--space-section-header-content", "calc\\(24px \\* var\\(--ui-scale\\)\\)"],
     ["--space-field-copy", "calc\\(10px \\* var\\(--ui-scale\\)\\)"],
@@ -80,12 +82,17 @@ assert(/--tool-card-min-h:\s*calc\(124px \* var\(--ui-scale\)\);/.test(css));
 assert(!/var\(--tool-gap\)/.test(velaCss), "Vela must not consume the Home tool-grid compatibility alias");
 assert(!/var\(--card-pad\)/.test(velaCss), "Vela controls must not consume the Card inset compatibility alias");
 assert(declaration(velaCss, "--vela-controls-column-gap", "calc\\(16px \\* var\\(--ui-scale\\)\\)"));
-assert(declaration(velaCss, "--vela-composer-padding-inline", "calc\\(12px \\* var\\(--ui-scale\\)\\)"));
+assert(!/--vela-composer-padding-inline\s*:/.test(velaCss), "retired Vela-local Composer inset literal must remain absent");
 assert(rule(velaCss, "\\.vela-bottom-controls", "column-gap:\\s*var\\(--vela-controls-column-gap\\)"));
 assert.strictEqual(finalDeclaration(velaCss, ".vela-bottom-controls", "column-gap"), "var(--vela-controls-column-gap)");
 assert(/\.vela-surface\[data-layout="compact"\]/.test(velaCss));
 assert(/\.vela-surface\[data-layout="narrow"\]/.test(velaCss));
 
-assert(!/padding:\s*var\(--space-card-inset\)/.test(velaCss.match(/\.vela-composer-input\s*\{[^}]*\}/)[0]), "composer padding must remain component-owned");
+const composerRule = velaCss.match(/\.vela-composer-input\s*\{[^}]*\}/)[0];
+const transcriptRule = velaCss.match(/\.vela-transcript-scroll\s*\{[^}]*\}/)[0];
+assert(/padding-block:\s*var\(--space-content-block-inset\)/.test(composerRule), "Composer block text inset uses the formal content authority");
+assert(/padding-inline:\s*var\(--space-content-inline-inset\)/.test(composerRule), "Composer inline text inset uses the formal content authority");
+assert(/padding-block:\s*var\(--space-content-block-inset\)/.test(transcriptRule), "Conversation block content inset uses the same authority");
+assert(!/--vela-inline-gap/.test(composerRule), "Composer text padding no longer consumes the general Vela rhythm authority");
 
 console.log("Spacing contract tests passed.");

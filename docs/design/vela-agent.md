@@ -177,6 +177,39 @@ registry DOM adapter.
 
 ## 3. Provider Adapter And OpenAI-Compatible Protocol
 
+### Vela spacing authority convergence (0.3.2)
+
+**Final status: CLOSED / AE ACCEPTED**
+
+`spacing.content.inlineInset` and `spacing.content.blockInset` are **POST-CALIBRATION SEMANTIC AUTHORITY ADDITIONS**, discovered during the 0.3.2 Vela Spacing Authority Convergence. The inline authority projects through `--space-content-inline-inset` with a 12px UI-scaled canonical. The block authority projects through `--space-content-block-inset` with an 8px UI-scaled canonical. Together they give Conversation content and Composer text shared, axis-specific inset authorities.
+
+Before convergence, `spacing.card.inset` simultaneously controlled the Vela shell inset, Conversation content inset, and Vela Settings inset. After convergence, ownership is explicit:
+
+- `spacing.card.inset` owns Vela shell/card boundary-to-child-region spacing;
+- `spacing.content.inlineInset` owns Conversation and Composer inline content inset;
+- `spacing.content.blockInset` owns Conversation and Composer block content inset;
+- `spacing.surface.edge` owns Vela Settings modal surface boundary-to-header/body content inset;
+- existing section spacing authorities continue to own Settings section stacking.
+
+The existing Vela `--vela-inline-gap` contract remains the general local rhythm authority, but no longer owns Composer text block padding. Neither post-calibration addition changes the historical Full Design Calibration worksheet.
+
+The final real After Effects acceptance passed:
+
+- Default Vela presentation;
+- `spacing.card.inset` isolation;
+- `spacing.content.inlineInset` isolation;
+- `spacing.content.blockInset` isolation;
+- `spacing.surface.edge` / Vela Settings isolation;
+- shared Conversation / Composer inline authority;
+- shared Conversation / Composer block authority;
+- Wide and Narrow layouts;
+- Conversation scrolling and bottom content clearance;
+- Vela height, Composer, Provider and Settings regression;
+- Reset, leaving Design Tuning persisted overrides at `0`;
+- project-owned Console warnings/errors at `0`.
+
+The current living Design Tuning Registry contains **67 parameters**. This count must not be interpreted as restoring equality with the historical Full Design Calibration parameter set: the current and historical registries happen to have the same count but contain different parameter sets. The historical `FULL_DESIGN_CALIBRATION_WORKSHEET.md`, `FULL_DESIGN_CANONICAL_PROMOTION_REPORT.md`, `TOTAL=67`, and U/A/D/X/P classification remain unchanged and retain their original calibration-time meaning.
+
 ### Adapter boundary
 
 Provider adapters convert a provider-specific response into a canonical
