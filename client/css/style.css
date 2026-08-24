@@ -774,27 +774,23 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .settings-category-header {
+    display: flex;
     width: 100%;
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    padding-block: var(--space-settings-section-header-content);
+    justify-content: space-between;
     color: var(--text-primary);
-    font-size: var(--type-surface-title-size);
-    font-weight: var(--type-surface-title-weight);
-    line-height: var(--type-surface-title-line-height);
+    font-size: var(--type-section-title-size);
+    font-weight: var(--type-section-title-weight);
+    line-height: var(--type-section-title-line-height);
 }
 
 .settings-category-header .settings-category-title {
-    grid-column: 2;
-    justify-self: center;
-    text-align: center;
     min-width: 0;
+    text-align: left;
 }
 
 .settings-category-header .collapse-chevron {
-    grid-column: 3;
-    justify-self: end;
+    margin-left: auto;
 }
 
 /* Advanced Appearance reuses the shared Settings disclosure header contract
@@ -938,7 +934,7 @@ body:not(.i18n-ready) .app-shell {
 }
 
 .palette-library-intro-summary .settings-source-summary-swatches {
-    justify-content: flex-start;
+    justify-content: flex-end;
     flex-wrap: wrap;
 }
 
@@ -953,6 +949,9 @@ body:not(.i18n-ready) .app-shell {
     .palette-library-intro-summary .settings-source-summary {
         text-align: left;
         white-space: normal;
+    }
+    .palette-library-intro-summary .settings-source-summary-swatches {
+        justify-content: flex-start;
     }
 }
 
@@ -1106,7 +1105,7 @@ body:not(.i18n-ready) .app-shell {
 
 .settings-source-summary {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     gap: calc(4px * var(--ui-scale)) calc(9px * var(--ui-scale));
     align-items: center;
     margin-top: calc(7px * var(--ui-scale));
@@ -1133,7 +1132,6 @@ body:not(.i18n-ready) .app-shell {
     display: flex;
     min-width: 0;
     height: calc(10px * var(--ui-scale));
-    grid-column: 1;
     gap: calc(3px * var(--ui-scale));
 }
 
@@ -1255,7 +1253,9 @@ body:not(.i18n-ready) .app-shell {
 
 .settings-view.is-palette-workspace .settings-root-page,
 .settings-view.is-palette-workspace .settings-category--appearance,
-.settings-view.is-palette-workspace .settings-category--appearance > .settings-category-content {
+.settings-view.is-palette-workspace .settings-category--appearance > .settings-category-content,
+.settings-view.is-palette-workspace .settings-theme-card,
+.settings-view.is-palette-workspace .settings-theme-groups {
     display: flex;
     min-height: 0;
     flex: 1 1 auto;
@@ -1268,11 +1268,13 @@ body:not(.i18n-ready) .app-shell {
 
 .settings-view.is-palette-workspace .settings-category:not(.settings-category--appearance),
 .settings-view.is-palette-workspace .settings-category--appearance > .settings-category-header,
-.settings-view.is-palette-workspace .settings-category--appearance > .settings-category-content > :not(.settings-section--palette-library) {
+.settings-view.is-palette-workspace .settings-category--appearance > .settings-category-content > :not(.settings-theme-card),
+.settings-view.is-palette-workspace .settings-theme-groups > :not(.settings-section--palette-library) {
     display: none;
 }
 
-.settings-view.is-palette-workspace .settings-category--appearance {
+.settings-view.is-palette-workspace .settings-category--appearance,
+.settings-view.is-palette-workspace .settings-theme-card {
     padding: 0;
     border: 0;
     background: transparent;
