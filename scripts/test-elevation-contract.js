@@ -64,7 +64,7 @@ assert(/\.ui-button--danger\s*\{[^}]*background:\s*var\(--danger-surface\);/.tes
 assert(!/\.palette-editor-action-bar \.palette-library-action[^}]*background:/.test(css), "Palette footer must not redefine canonical action surfaces");
 
 assert(/\.panel-local-action:not\(\.is-primary\):not\(\.is-danger\)\s*\{[^}]*background:\s*var\(--action-neutral-surface\);[^}]*box-shadow:\s*none;/.test(css), "panel-local neutral actions must use surface plus border without resting elevation");
-assert(/ui-button--neutral panel-button settings-source-summary-action panel-local-action/.test(main), "source summary must consume canonical Neutral plus the panel-local composition contract");
+assert(/panel-button registry-large-button panel-local-action[\s\S]*palette-library-open/.test(paletteWorkspace), "Palette Library single launcher consumes canonical Neutral plus the panel-local composition contract");
 assert((main.match(/panel-local-action/g) || []).length >= 5, "Classic, Procedural, source-summary, and Settings-local actions must share the panel-local action contract");
 assert(/id: "velaExperimentalEnable", variant: "neutral", classNames: "panel-button panel-local-action"/.test(main), "Vela Settings enable must consume canonical Neutral plus the panel-local contract");
 assert(/id: "velaExperimentalDisable", variant: "neutral", classNames: "panel-button panel-local-action"/.test(main), "Vela Settings disable must consume canonical Neutral plus the panel-local contract");

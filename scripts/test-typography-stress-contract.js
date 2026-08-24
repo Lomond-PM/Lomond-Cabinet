@@ -69,7 +69,7 @@ assert(!/(?:^|;)\s*(?:position|top|bottom)\s*:/.test(dividerBody), "Registry div
 var appearanceOwner = css.indexOf(".settings-field.appearance-advanced-field {");
 var settingsBase = css.indexOf(".settings-field {", appearanceOwner);
 assert(appearanceOwner >= 0 && settingsBase > appearanceOwner, "test must cover the real cascade ordering");
-assert(rule("\\.settings-field\\.appearance-advanced-field", "display:\\s*grid;[^}]*grid-template-columns:\\s*minmax\\(0, 1fr\\) auto"));
+assert(rule("\\.settings-field\\.appearance-advanced-field", "display:\\s*grid;[^}]*grid-template-columns:\\s*minmax\\(72px, 1fr\\) minmax\\(0, 2fr\\)"));
 assert(!/\.settings-field\.appearance-advanced-field\s*\{[^}]*!important/.test(css));
 assert(/row\.className = "settings-field appearance-advanced-field"/.test(mainSource));
 assert(/row\.appendChild\(copy\);\s*row\.appendChild\(control\.root\);\s*row\.appendChild\(state\);\s*row\.appendChild\(reset\);/.test(mainSource));

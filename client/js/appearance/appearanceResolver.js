@@ -16,6 +16,8 @@
         "motion.speed": 1,
         "surface.panel": "#0b0a08",
         "text.primary": "#f6f0df",
+        "text.secondary": { color: "#f6f0df", alpha: 0.66 },
+        "text.tertiary": { color: "#f6f0df", alpha: 0.42 },
         "select.trigger.surface": "#0b0a08",
         "select.menu.surface": "#0b0a08",
         "typography.title.size": 1,
@@ -29,6 +31,8 @@
     var CSS_TARGETS = Object.freeze({
         "surface.panel": "--surface-panel",
         "text.primary": "--text-primary",
+        "text.secondary": "--text-secondary",
+        "text.tertiary": "--text-tertiary",
         "select.trigger.surface": "--select-trigger-surface",
         "select.menu.surface": "--select-menu-surface",
         "typography.title.sizeMultiplier": "--appearance-type-title-scale",
@@ -68,6 +72,18 @@
     function rgba(hex, alpha) {
         var color = hexToRgb(hex);
         return "rgba(" + color.r + ", " + color.g + ", " + color.b + ", " + alpha + ")";
+    }
+    function isValidColorAlphaValue(value) {
+        return !!value && typeof value.color === "string" && /^#[0-9a-fA-F]{6}$/.test(value.color) && typeof value.alpha === "number" && isFinite(value.alpha) && value.alpha >= 0 && value.alpha <= 1;
+    }
+    function normalizeColorAlphaValue(value, fallback) {
+        var candidate = isValidColorAlphaValue(value) ? value : fallback;
+        return isValidColorAlphaValue(candidate) ? { color: candidate.color.toLowerCase(), alpha: Number(candidate.alpha) } : null;
+    }
+    function serializeColorAlphaValue(value) {
+        var normalized = normalizeColorAlphaValue(value, null);
+        if (!normalized) return "";
+        return rgba(normalized.color, normalized.alpha);
     }
     function copy(source) {
         var result = {};
@@ -150,7 +166,9 @@
             for (i = 0; i < parameters.length; i++) {
                 parameter = parameters[i];
                 cssTarget = CSS_TARGETS[parameter.resolverTarget];
-                if (cssTarget && typeof values[parameter.id] !== "undefined") { write(cssTarget, values[parameter.id]); }
+                if (cssTarget && typeof values[parameter.id] !== "undefined") {
+                    write(cssTarget, parameter.validation && parameter.validation.type === "colorAlpha" ? serializeColorAlphaValue(values[parameter.id]) : values[parameter.id]);
+                }
             }
             if (typeof runtime.applyMotionSpeed === "function") { runtime.applyMotionSpeed(values["motion.speed"]); }
             resolved = values;

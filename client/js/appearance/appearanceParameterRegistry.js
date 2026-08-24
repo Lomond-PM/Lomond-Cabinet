@@ -17,6 +17,8 @@
 
         { id: "surface.panel", category: "surfaces", tier: "advanced", controlType: "color", labelKey: "appearance.surface.panel.label", descriptionKey: "appearance.surface.panel.description", defaultSource: "design", classification: "EXPOSE_NOW", persistence: "appearance", userAdjustable: true, resolverTarget: "surface.panel", validation: { type: "hex-color" }, livePreview: true, reset: "remove-override" },
         { id: "text.primary", category: "text", tier: "advanced", controlType: "color", labelKey: "appearance.text.primary.label", descriptionKey: "appearance.text.primary.description", defaultSource: "design", classification: "EXPOSE_NOW", persistence: "appearance", userAdjustable: true, resolverTarget: "text.primary", validation: { type: "hex-color" }, livePreview: true, reset: "remove-override" },
+        { id: "text.secondary", category: "text", tier: "advanced", controlType: "colorAlpha", labelKey: "appearance.text.secondary.label", descriptionKey: "appearance.text.secondary.description", defaultSource: "design", classification: "EXPOSE_NOW", persistence: "appearance", userAdjustable: true, resolverTarget: "text.secondary", validation: { type: "colorAlpha" }, livePreview: true, reset: "remove-override" },
+        { id: "text.tertiary", category: "text", tier: "advanced", controlType: "colorAlpha", labelKey: "appearance.text.tertiary.label", descriptionKey: "appearance.text.tertiary.description", defaultSource: "design", classification: "EXPOSE_NOW", persistence: "appearance", userAdjustable: true, resolverTarget: "text.tertiary", validation: { type: "colorAlpha" }, livePreview: true, reset: "remove-override" },
         { id: "select.trigger.surface", category: "select", tier: "advanced", controlType: "color", labelKey: "appearance.select.triggerSurface.label", descriptionKey: "appearance.select.triggerSurface.description", defaultSource: "design", classification: "EXPOSE_NOW", persistence: "appearance", userAdjustable: true, resolverTarget: "select.trigger.surface", validation: { type: "hex-color" }, livePreview: true, reset: "remove-override" },
         { id: "select.menu.surface", category: "select", tier: "advanced", controlType: "color", labelKey: "appearance.select.menuSurface.label", descriptionKey: "appearance.select.menuSurface.description", defaultSource: "design", classification: "EXPOSE_NOW", persistence: "appearance", userAdjustable: true, resolverTarget: "select.menu.surface", validation: { type: "hex-color" }, livePreview: true, reset: "remove-override" },
 
@@ -60,14 +62,28 @@
     definitions = Object.freeze(definitions);
     byId = Object.freeze(byId);
 
+    function isValidColorAlphaValue(value) {
+        return !!value && typeof value.color === "string" && /^#[0-9a-fA-F]{6}$/.test(value.color) && typeof value.alpha === "number" && isFinite(value.alpha) && value.alpha >= 0 && value.alpha <= 1;
+    }
+
+    function normalizeColorAlphaValue(value, fallback) {
+        var candidate = isValidColorAlphaValue(value) ? value : fallback;
+        return isValidColorAlphaValue(candidate) ? { color: candidate.color.toLowerCase(), alpha: Number(candidate.alpha) } : null;
+    }
+
     function validateValue(parameter, value) {
         var rule = parameter && parameter.validation;
         var numberValue;
+        var colorAlpha;
         if (!rule) { return { valid: false, value: null }; }
         if (rule.type === "hex-color") {
             return typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value)
                 ? { valid: true, value: value.toLowerCase() }
                 : { valid: false, value: null };
+        }
+        if (rule.type === "colorAlpha") {
+            colorAlpha = normalizeColorAlphaValue(value, null);
+            return colorAlpha ? { valid: true, value: colorAlpha } : { valid: false, value: null };
         }
         if (rule.type === "number") {
             numberValue = Number(value);

@@ -1078,9 +1078,18 @@
         var button = createButton("paletteLibrary.open", "palette-library-open", function () {
             openWorkspace();
         });
+        var intro = createElement("div");
+        var summaryMount = createElement("div");
+        intro.className = "palette-library-intro";
+        intro.appendChild(heading);
+        summaryMount.className = "palette-library-intro-summary";
+        intro.appendChild(summaryMount);
+        if (typeof options.renderPaletteSummary === "function") {
+            options.renderPaletteSummary(summaryMount);
+        }
         mount.className = "settings-section settings-section--palette-library";
         mount.innerHTML = "";
-        mount.appendChild(heading);
+        mount.appendChild(intro);
         mount.appendChild(button);
     }
 

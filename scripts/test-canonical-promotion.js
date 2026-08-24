@@ -119,8 +119,6 @@ assert.strictEqual(cssDeclaration("--radius-home-tile"), "var(--radius-lg)", "ho
 // 2b. U parameters must have no semantic canonical change (spot-check across domains).
 const unchanged = {
     "motion.curve.enter": "cubic-bezier(0.16, 1, 0.3, 1)",
-    "text.secondary": "rgba(246, 240, 223, 0.66)",
-    "text.tertiary": "rgba(246, 240, 223, 0.42)",
     "border.separator": "rgba(214, 178, 94, 0.16)",
     "border.panel": "rgba(214, 178, 94, 0.22)",
     "border.input": "rgba(214, 178, 94, 0.16)",

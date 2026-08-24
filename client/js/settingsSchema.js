@@ -5,6 +5,14 @@
  * The production panel uses this schema for the migrated Settings
  * sections. Production storage remains v1 for the 0.3.0 release line;
  * behavior adapters still preserve the BackgroundEngine runtime where required.
+ *
+ * NOTE (0.3.2 Final Settings IA): This file is documentation / transitional.
+ * It is NOT the live category render source. The user-facing Settings
+ * information architecture (General -> Appearance -> Advanced -> Developer)
+ * is composed at runtime in `client/js/main.js` `renderSettingsContent()`,
+ * which owns the Disclosure category hierarchy and mount order. This schema
+ * only describes the app-level data model; do not treat its section ids as
+ * the authoritative category composition.
  */
 (function (global) {
     "use strict";
@@ -268,7 +276,7 @@
                 groups: [
                     {
                         id: "interfaceAppearance",
-                        titleKey: "settings.theme.interfaceAppearance",
+                        titleKey: "settings.theme.coreAppearance",
                         fields: ["themeAccent", "homeBackground"]
                     },
                     {
@@ -287,12 +295,6 @@
                                 key: "proceduralIconModeThemeNote",
                                 textKey: "helper.proceduralIconModeThemeMapped",
                                 visibleWhen: { key: "proceduralIconMode", equals: "themeMapped" }
-                            },
-                            {
-                                type: "paletteSummary",
-                                key: "proceduralPaletteSummary",
-                                actionKey: "settings.palette.manage",
-                                visibleWhen: { key: "proceduralIconMode", equals: "colorful" }
                             }
                         ]
                     },
@@ -306,8 +308,7 @@
                         presentations: [
                             { type: "colorRampPreview", key: "proceduralIconColorRamp", visibleWhen: { key: "proceduralIconMode", equals: "themeMapped" } },
                             { type: "note", key: "proceduralFallbackNote", textKey: "helper.fallbackIconColors", visibleWhen: { key: "proceduralIconMode", equals: "colorful" } },
-                            { type: "note", key: "proceduralIconSourceNote", textKey: "helper.proceduralIconSource", visibleWhen: { key: "proceduralIconMode", equals: "themeMapped" } },
-                            { type: "paletteSummary", key: "proceduralIconSourcePalettes", actionKey: "settings.palette.manageSource", visibleWhen: { key: "proceduralIconMode", equals: "themeMapped" } }
+                            { type: "note", key: "proceduralIconSourceNote", textKey: "helper.proceduralIconSource", visibleWhen: { key: "proceduralIconMode", equals: "themeMapped" } }
                         ]
                     }
                 ]

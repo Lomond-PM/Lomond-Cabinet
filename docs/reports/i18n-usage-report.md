@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 438 |
+| A | Core / Global; keep | 445 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 3 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -69,6 +69,10 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | appearance.surface.panel.label | appearance | Panel Surface | 面板表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.text.primary.description | appearance | The primary text color used for headings and emphasis. | 用于标题与强调的主要文本色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.text.primary.label | appearance | Primary Text | 主要文本 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.text.secondary.description | appearance | The secondary text color used for supporting copy at partial opacity. | 用于支援文本的次要文本色，带部分透明度。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.text.secondary.label | appearance | Secondary Text | 次要文本 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.text.tertiary.description | appearance | The tertiary text color used for muted or less prominent copy. | 用于淡化或不太突出文本的三级文本色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.text.tertiary.label | appearance | Tertiary Text | 三级文本 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.typography.bodySize.description | appearance | Adjusts Body and Control text together. | 同时调整正文与控件文字。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.typography.bodySize.label | appearance | Body Size | 正文大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.typography.codeSize.description | appearance | Adjusts Code text and Palette JSON independently from Supporting text. | 独立调整代码文本与 Palette JSON，不跟随辅助文本。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -105,7 +109,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | common.error | common | Error | 错误 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.fitBox | common | Fit Box | 适配框 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.fixed | common | Fixed | 固定 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.global | common | Global | 全局 | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.global | common | Global | 全局 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.gradient | common | Gradient | 渐变 | host/tools/registryControlLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.home | common | Home | 主页 | client/index.html, client/js/main.js, client/js/proceduralPaletteWorkspace.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.language | common | Language | 语言 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -395,6 +399,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | selection.layerCount | selection | {count} layer(s) | {count} 个图层 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | selection.noShapeTarget | selection | No shape target | 无形状目标 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | selection.shapeTarget | selection | Shape target | 形状目标 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.advanced.title | settings | Advanced Appearance Settings | 高级外观设置 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.appearance.inherited | settings | Using default / inherited | 使用默认 / 继承 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.appearance.overridden | settings | Overridden | 已覆盖 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.appearance.percentageUnit | settings | % | % | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -403,7 +408,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.appearance.typography.subgroup.code | settings | Code | 代码 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.appearance.typography.subgroup.content | settings | Content | 内容 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.appearance.typography.subgroup.titles | settings | Titles | 标题 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.appearance.typography.title | settings | Typography | 字体排版 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.typography.title | settings | Typography | 字体排版 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPalette.algorithmDefault | settings | Current Algorithm | 当前算法配色 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.blackGold | settings | Black Gold Default | 黑金默认 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.custom | settings | Custom | 自定义 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -531,9 +536,10 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.navigation.appearance | settings | Appearance | 外观 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.navigation.background | settings | Background | 背景 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.navigation.developer | settings | Developer | 开发者 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.navigation.general | settings | General | 通用 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.navigation.interface | settings | Interface | 界面 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.palette.manage | settings | Manage Palettes | 管理色卡 | client/js/main.js, client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.palette.manageSource | settings | Manage Source Palettes | 管理源色卡 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.palette.manage | settings | Manage Palettes | 管理色卡 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.palette.manageSource | settings | Manage Source Palettes | 管理源色卡 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.palette.none | settings | No source palette available | 没有可用源色卡 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.paletteLibrary | settings | Palette Library | 色卡库 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.paletteSummary.builtIn | settings | built-in | 个内置 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -545,10 +551,11 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.sections.proceduralAppearance | settings | Procedural Appearance Parameters | 程序化外观参数 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.sections.vela | settings | Vela | Vela | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.colorRamp | settings | Dark endpoint to light endpoint | 暗端到亮端 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.theme.coreAppearance | settings | Core Appearance | 核心外观 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.darkEndpoint | settings | Dark | 暗端 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.fallbackIconColors | settings | Fallback Icon Colors | 回退图标颜色 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.iconColors | settings | Icon Theme Endpoints | 图标主题端点 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.theme.interfaceAppearance | settings | Interface Appearance | 界面外观 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.theme.interfaceAppearance | settings | Interface Appearance | 界面外观 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.lightEndpoint | settings | Light | 亮端 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.midEndpoint | settings | Mid | 中间调 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.toolIconAppearance | settings | Tool Icon Appearance | 工具图标外观 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |

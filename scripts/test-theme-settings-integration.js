@@ -35,7 +35,9 @@ function run() {
     assert(/value: "manualEndpoints"[\s\S]*value: "paletteScale"/.test(schemaText), "Dark source mode must expose manualEndpoints and paletteScale.");
     assert(/key: "toolIconDarkPaletteId"[\s\S]*optionsProvider: "proceduralPalettes"/.test(schemaText), "Dark palette selection must use the dynamic palette provider.");
     assert(/value: "colorful"/.test(schemaText) && /value: "themeMapped"/.test(schemaText), "Mode schema must contain exactly the supported values.");
-    assert(/type: "paletteSummary"[\s\S]*settings\.palette\.manage/.test(schemaText), "Colorful mode must expose a Palette Library summary presentation.");
+    assert(/palette-library-intro[\s\S]*options\.renderPaletteSummary\(summaryMount\)/.test(workspaceText), "Palette Library intro row hosts the summary region (left copy / right summary).");
+    assert(/renderPaletteSummary: function \(container\)[\s\S]*renderPaletteSummaryElement\(summary\)/.test(mainText), "main.js drives the Palette summary through the shared representation.");
+    assert(/renderPaletteSummaryElement\([\s\S]*settings-source-summary/.test(mainText), "Palette summary still uses the canonical .settings-source-summary element.");
     assert(/id: "iconColors"[\s\S]*openWhen: \{ key: "proceduralIconMode", equals: "themeMapped" \}/.test(schemaText), "Theme-mapped endpoint group must open for Theme-mapped mode.");
     assert(/type: "colorRampPreview"/.test(schemaText), "Theme schema must declare the generic color ramp presentation.");
     assert(/type: "note"[\s\S]*helper\.proceduralIconSource/.test(schemaText), "Theme-mapped mode must explain the source palette relationship.");
