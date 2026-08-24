@@ -1485,6 +1485,15 @@
         return section;
     }
 
+    function createSettingsThemeCard() {
+        var card = createSettingsSectionMount("settingsCoreAppearanceMount", "settings-section settings-theme-card");
+        var groups = createSettingsSectionMount("settingsThemeGroupsMount", "settings-theme-groups settings-section-inner");
+        var palette = createSettingsSectionMount("settingsPaletteLibraryMount", "settings-section settings-section--palette-library");
+        card.appendChild(groups);
+        card.appendChild(palette);
+        return card;
+    }
+
     function createSettingsCategory(id, titleKey, expanded, className) {
         var root = document.createElement("section");
         var trigger = document.createElement("button");
@@ -1497,9 +1506,10 @@
         root.setAttribute("data-settings-disclosure-key", "settings." + id);
         trigger.type = "button";
         trigger.className = "settings-category-header settings-section-toggle collapsible-heading";
+        title.className = "settings-category-title";
         title.setAttribute("data-i18n", titleKey);
         title.textContent = tr(titleKey);
-        chevron.className = "collapse-chevron";
+        chevron.className = "collapse-chevron settings-category-chevron";
         chevron.setAttribute("aria-hidden", "true");
         trigger.appendChild(title);
         trigger.appendChild(chevron);
@@ -1523,6 +1533,7 @@
     function renderSettingsContent() {
         var content = document.querySelector(".settings-content");
         var renderer;
+        var general;
         var appearance;
         var advanced;
         var developer;
@@ -1535,21 +1546,20 @@
         renderer = document.createElement("div");
         renderer.id = "settingsRootPage";
         renderer.className = "settings-renderer settings-root-page";
+        general = createSettingsCategory("general", "settings.navigation.general", true, "settings-category--general");
+        general.body.appendChild(createSettingsSectionMount("settingsLanguageMount", "settings-section"));
+        general.body.appendChild(createSettingsSectionMount("settingsInterfaceMount", "settings-section"));
+        general.body.appendChild(createSettingsSectionMount("settingsMotionMount", "settings-section"));
         appearance = createSettingsCategory("appearance", "settings.navigation.appearance", true, "settings-category--appearance");
-        appearance.body.appendChild(createSettingsSectionMount("settingsLanguageMount", "settings-section"));
-        appearance.body.appendChild(createSettingsSectionMount("settingsCoreAppearanceMount", "settings-section"));
-        appearance.body.appendChild(createSettingsSectionMount("settingsInterfaceMount", "settings-section"));
-        appearance.body.appendChild(createSettingsSectionMount("settingsMotionMount", "settings-section"));
+        appearance.body.appendChild(createSettingsThemeCard());
         appearance.body.appendChild(createSettingsSectionMount("settingsAppearanceParametersMount", "settings-appearance-parameters"));
-        appearance.body.appendChild(createSettingsSectionMount("settingsProceduralAppearanceMount", "settings-section"));
         appearance.body.appendChild(createSettingsSectionMount("backgroundSettingsCard", "settings-section settings-section--background settings-section--collapsible collapsible-card"));
-        appearance.body.appendChild(createSettingsSectionMount("settingsPaletteLibraryMount", "settings-section settings-section--palette-library"));
         advanced = createSettingsCategory("advanced", "settings.navigation.advanced", false, "settings-category--advanced");
         advanced.body.appendChild(createSettingsSectionMount("settingsDeveloperModeMount", "settings-section"));
         developer = createSettingsCategory("developer", "settings.navigation.developer", false, "settings-category--developer settings-developer-only");
-        developer.body.appendChild(createSettingsSectionMount("settingsDeveloperDesignTuningMount", "settings-section settings-design-tuning"));
-        developer.body.appendChild(createSettingsSectionMount("settingsDeveloperCalibrationMount", "settings-section"));
+        developer.body.appendChild(createSettingsDesignTuningSection());
         developer.body.appendChild(createSettingsSectionMount("settingsDeveloperProceduralMount", "settings-section"));
+        renderer.appendChild(general.root);
         renderer.appendChild(appearance.root);
         renderer.appendChild(advanced.root);
         renderer.appendChild(developer.root);
@@ -1577,6 +1587,16 @@
         }
         heading.appendChild(copy);
         return heading;
+    }
+
+    function createSettingsDesignTuningSection() {
+        var section = document.createElement("section");
+        section.id = "settingsDeveloperDesignTuningSection";
+        section.className = "settings-design-tuning-section";
+        section.appendChild(createSettingsSectionHeader("settings.navigation.developer", "settings.designTuning.title", "settings.designTuning.description"));
+        section.appendChild(createSettingsSectionMount("settingsDeveloperDesignTuningMount", "settings-section settings-design-tuning"));
+        section.appendChild(createSettingsSectionMount("settingsDeveloperCalibrationMount", "settings-section"));
+        return section;
     }
 
     function createSettingsFieldCopy(labelKey, descriptionKey, fallbackDescription) {
@@ -2266,7 +2286,7 @@
 
         renderSettingsDesignTuningMotion();
 
-        calibrationMount.appendChild(createSettingsSectionHeader("section.debug", "settings.developer.homeCalibration", null));
+        calibrationMount.appendChild(createSettingsGroupLabel("settings.developer.homeCalibration"));
 
         if (radiusField) {
             radiusRow = createSharedSettingsFieldRow("range", radiusField, radiusField.descriptionKey, "");
@@ -2439,7 +2459,6 @@
         if (!mount || !registry || !evidence || !window.CoreUI) return;
         mount.innerHTML = "";
         DesignTuningFieldBindings = {};
-        heading = createSettingsSectionHeader("settings.navigation.developer", "settings.designTuning.title", "settings.designTuning.description");
         motionRoot = document.createElement("details"); motionRoot.className = "settings-design-tuning-domain"; motionRoot.setAttribute("data-settings-disclosure-key", "settings.developer.designTuning.motion");
         motionTitle = document.createElement("summary"); motionTitle.className = "settings-group-label"; motionTitle.setAttribute("data-i18n", "settings.designTuning.motion.title"); motionTitle.textContent = tr("settings.designTuning.motion.title");
         motionBody = document.createElement("div"); motionBody.className = "settings-design-tuning-group";
@@ -2464,7 +2483,7 @@
         evidenceLabel = document.createElement("label"); evidenceLabel.className = "settings-field-label"; evidenceLabel.setAttribute("data-i18n", "settings.designTuning.promotionEvidence"); evidenceLabel.textContent = tr("settings.designTuning.promotionEvidence");
         evidenceOutput = window.CoreUI.createTextarea({ document: document, classNames: "registry-textarea settings-design-tuning-evidence", rows: 8, value: JSON.stringify(evidence, null, 2), resizeDirection: "vertical" });
         evidenceOutput.readOnly = true;
-        mount.appendChild(heading); mount.appendChild(motionRoot);
+        mount.appendChild(motionRoot);
         domains = ["spacing", "radius", "controls", "elevation", "text", "surface", "border"];
         for (i = 0; i < domains.length; i++) {
             domain = domains[i];
@@ -2840,7 +2859,6 @@
         var title = document.createElement("strong");
         var count = document.createElement("span");
         var swatches = document.createElement("span");
-        var button = document.createElement("button");
         var i;
         element.innerHTML = "";
         element.className = "settings-source-summary settings-theme-presentation";
@@ -2855,14 +2873,9 @@
             swatch.setAttribute("aria-hidden", "true");
             swatches.appendChild(swatch);
         }
-        button.type = "button";
-        button.className = "ui-button ui-button--neutral panel-button settings-source-summary-action panel-local-action";
-        button.textContent = tr(element.getAttribute("data-settings-palette-action") || "settings.palette.manage");
-        button.addEventListener("click", openPaletteWorkspaceFromSettings);
         element.appendChild(title);
         element.appendChild(count);
         element.appendChild(swatches);
-        element.appendChild(button);
     }
 
     function refreshSettingsPaletteSummary() {
@@ -3237,7 +3250,19 @@
         }
         applyThemeAccent(palette.colors.secondary);
         applyHomeBackground(palette.colors.shadow);
+        assignPrimaryTextFromPaletteSecondary(palette.colors.secondary);
         setStatus(tr("status.paletteAccentSuggested"));
+    }
+
+    // Explicit one-shot assignment: Primary Text <- resolved Palette secondary role.
+    // Palette secondary is the v2 proceduralAppearance role, distinct from Appearance.text.secondary.
+    // Appearance.text.primary remains the sole owner; commit flows through the Appearance authority.
+    function assignPrimaryTextFromPaletteSecondary(secondaryColor) {
+        var committed;
+        if (!secondaryColor || typeof secondaryColor !== "string") return false;
+        committed = CoreAppearance && CoreAppearance.commit("text.primary", secondaryColor);
+        if (committed) notifyAppearanceFieldBindings("text.primary");
+        return committed === true;
     }
 
     function renderSettingsColorRamp(element) {
@@ -3327,33 +3352,30 @@
     }
 
     function renderSettingsTheme() {
-        var coreMount = byId("settingsCoreAppearanceMount");
-        var appearanceMount = byId("settingsProceduralAppearanceMount");
+        var mount = byId("settingsThemeGroupsMount");
+        var paletteMount = byId("settingsPaletteLibraryMount");
         var section = findSettingsSchemaSection("theme");
         var heading;
         var fields;
         var field;
         var fieldMap = {};
         var groups;
+        var groupById = {};
+        var order;
         var groupView;
         var group;
         var fieldElement;
         var presentationElement;
         var i;
         var j;
-        var appearanceGroupCount = 0;
-
-        if (!coreMount || !appearanceMount || !section) {
+        var oi;
+        if (!mount || !section) {
             return;
         }
 
-        coreMount.innerHTML = "";
-        appearanceMount.innerHTML = "";
-        coreMount.className = "settings-section settings-core-appearance";
-        appearanceMount.className = "settings-section settings-procedural-appearance";
-
+        mount.innerHTML = "";
         heading = createSettingsSectionHeader("section.color", section.titleKey, null);
-        coreMount.appendChild(heading);
+        mount.appendChild(heading);
 
         fields = section.fields || [];
         for (i = 0; i < fields.length; i++) {
@@ -3361,9 +3383,19 @@
                 fieldMap[fields[i].key] = fields[i];
             }
         }
-        groups = section.groups || [{ id: "theme", fields: fields.map(function (item) { return item.key; }) }];
+        groups = section.groups || [];
         for (i = 0; i < groups.length; i++) {
-            group = groups[i];
+            if (groups[i] && groups[i].id) {
+                groupById[groups[i].id] = groups[i];
+            }
+        }
+        // Single Theme card: Tool Icon Appearance first, Palette Library launcher, Core Appearance last.
+        order = ["toolIconAppearance", "iconColors", "interfaceAppearance"];
+        for (oi = 0; oi < order.length; oi++) {
+            group = groupById[order[oi]];
+            if (!group) {
+                continue;
+            }
             groupView = createSettingsThemeGroup(group);
             for (j = 0; j < (group.fields || []).length; j++) {
                 field = fieldMap[group.fields[j]] || group.fields[j];
@@ -3376,13 +3408,12 @@
                 presentationElement = createSettingsThemePresentation(group.presentations[j]);
                 groupView.body.appendChild(presentationElement);
             }
-            if (group.id === "interfaceAppearance") {
+            if (oi === 0) {
                 groupView.root.classList.add("settings-theme-group--first");
-                coreMount.appendChild(groupView.root);
-            } else {
-                if (appearanceGroupCount === 0) groupView.root.classList.add("settings-theme-group--first");
-                appearanceMount.appendChild(groupView.root);
-                appearanceGroupCount += 1;
+            }
+            mount.appendChild(groupView.root);
+            if (order[oi] === "iconColors" && paletteMount) {
+                mount.appendChild(paletteMount);
             }
         }
         refreshSettingsThemePresentation();
@@ -3445,6 +3476,13 @@
             duration: duration,
             nextFrame: nextFrame,
             createSettingsSectionHeader: createSettingsSectionHeader,
+            renderPaletteSummary: function (container) {
+                var summary;
+                if (!container) return;
+                summary = document.createElement("div");
+                renderPaletteSummaryElement(summary);
+                container.appendChild(summary);
+            },
             closeCustomSelectMenus: closeCustomSelectMenus,
             enhanceSelect: enhanceSharedSelect,
             disposeSelectsWithin: disposeSharedSelectsWithin,
@@ -9450,6 +9488,27 @@
         return colorField;
     }
 
+    function createAppearanceColorAlphaControl(parameter, onStateChange, previewOnly) {
+        var colorField;
+        colorField = window.CoreUI.createColorField({
+            document: document,
+            id: "appearance_" + parameter.id.replace(/\./g, "_"),
+            value: CoreAppearance.getResolvedValue(parameter.id),
+            fallback: (function () { var v = CoreAppearance.getResolvedValue(parameter.id); return v && v.color ? v.color : "#f6f0df"; }()),
+            supportsAlpha: true,
+            ariaLabel: tr(parameter.labelKey),
+            classNames: "appearance-color-field appearance-color-alpha-field",
+            swatchClassNames: "appearance-color-swatch",
+            hexClassNames: "appearance-color-hex",
+            onPreview: function (value) { ActiveAppearancePreviews[parameter.id] = true; CoreAppearance.preview(parameter.id, value); },
+            onCommit: function (value) { commitAppearanceValue(parameter, value); if (onStateChange) onStateChange(); },
+            onCancel: function () { clearAppearancePreview(parameter.id); colorField.setValue(CoreAppearance.getResolvedValue(parameter.id)); },
+            openPicker: openCoreColorPicker
+        });
+        bindHexInputSelectBehavior(colorField.hex);
+        return colorField;
+    }
+
     function createAppearanceRangeNumberControl(parameter, onStateChange, previewOnly) {
         var validation = parameter.validation;
         var control;
@@ -9479,6 +9538,7 @@
     function createAppearanceParameterControl(parameter, onStateChange, previewOnly) {
         var renderers = {
             color: createAppearanceColorControl,
+            colorAlpha: createAppearanceColorAlphaControl,
             "range-number": createAppearanceRangeNumberControl
         };
         if (!renderers[parameter.controlType]) {
@@ -9541,10 +9601,44 @@
         return section;
     }
 
+    function createAppearanceDisclosureSection(titleKey, className, contentId) {
+        var root = document.createElement("section");
+        var trigger = document.createElement("button");
+        var titleWrap = document.createElement("span");
+        var title = document.createElement("h3");
+        var chevron = document.createElement("span");
+        var body = document.createElement("div");
+        root.className = "settings-section settings-appearance-collapsible collapsible-card " + (className || "");
+        trigger.type = "button";
+        // Reuse the shared Settings disclosure header contract (same as Background Engine / settings-section).
+        trigger.className = "settings-section-header settings-section-toggle collapsible-heading";
+        title.className = "registry-title-primary settings-section-title";
+        title.setAttribute("data-i18n", titleKey);
+        title.textContent = tr(titleKey);
+        titleWrap.appendChild(title);
+        chevron.className = "collapse-chevron";
+        chevron.setAttribute("aria-hidden", "true");
+        trigger.appendChild(titleWrap);
+        trigger.appendChild(chevron);
+        body.className = "settings-appearance-collapsible-content collapsible-body";
+        // CoreUI.createDisclosureController requires a stable, deterministic content id.
+        body.id = contentId || "settingsAppearance" + (className || "Section") + "Body";
+        root.appendChild(trigger);
+        root.appendChild(body);
+        root._coreDisclosure = window.CoreUI.createDisclosureController({
+            trigger: trigger,
+            content: body,
+            root: root,
+            expanded: false,
+            collapsedClass: "is-collapsed"
+        });
+        return { root: root, body: body };
+    }
+
     function setupAppearanceSubpage() {
         var appearance = byId("settingsAppearanceParametersMount");
-        var advanced = createAppearanceSection("settings.appearance.title", "appearance-advanced");
-        var typography = createAppearanceSection("settings.appearance.typography.title", "appearance-typography");
+        var interfaceAppearance = createAppearanceSection("settings.appearance.title", "appearance-advanced");
+        var advancedAppearance = createAppearanceDisclosureSection("settings.appearance.advanced.title", "appearance-advanced-settings", "settingsAppearanceAdvancedBody");
         var advancedList = window.AppearanceParameterRegistry ? window.AppearanceParameterRegistry.list() : [];
         var subgroupMounts = {};
         var parameter;
@@ -9559,25 +9653,31 @@
             if (parameter.classification !== "EXPOSE_NOW") continue;
             field = createAppearanceAdvancedField(parameter);
             if (!field) continue;
-            if (parameter.category !== "typography") {
-                advanced.appendChild(field);
+            // Purposeful user-facing items live in Interface Appearance.
+            if (parameter.category === "surfaces" || parameter.category === "text") {
+                interfaceAppearance.appendChild(field);
                 continue;
             }
-            subgroup = parameter.subgroup;
-            if (!subgroupMounts[subgroup]) {
-                subgroupMounts[subgroup] = document.createElement("div");
-                subgroupMounts[subgroup].className = "appearance-typography-subgroup";
-                subgroupMounts[subgroup].setAttribute("data-appearance-subgroup", subgroup);
-                subgroupHeading = document.createElement("h4");
-                subgroupHeading.setAttribute("data-i18n", "settings.appearance.typography.subgroup." + subgroup);
-                subgroupHeading.textContent = tr("settings.appearance.typography.subgroup." + subgroup);
-                subgroupMounts[subgroup].appendChild(subgroupHeading);
-                typography.appendChild(subgroupMounts[subgroup]);
+            // Low-frequency advanced appearance (Selector surfaces + Typography) folds to Advanced Appearance Settings.
+            if (parameter.category === "typography") {
+                subgroup = parameter.subgroup;
+                if (!subgroupMounts[subgroup]) {
+                    subgroupMounts[subgroup] = document.createElement("div");
+                    subgroupMounts[subgroup].className = "appearance-typography-subgroup";
+                    subgroupMounts[subgroup].setAttribute("data-appearance-subgroup", subgroup);
+                    subgroupHeading = document.createElement("h4");
+                    subgroupHeading.setAttribute("data-i18n", "settings.appearance.typography.subgroup." + subgroup);
+                    subgroupHeading.textContent = tr("settings.appearance.typography.subgroup." + subgroup);
+                    subgroupMounts[subgroup].appendChild(subgroupHeading);
+                    advancedAppearance.body.appendChild(subgroupMounts[subgroup]);
+                }
+                subgroupMounts[subgroup].appendChild(field);
+                continue;
             }
-            subgroupMounts[subgroup].appendChild(field);
+            advancedAppearance.body.appendChild(field);
         }
-        appearance.appendChild(advanced);
-        appearance.appendChild(typography);
+        appearance.appendChild(interfaceAppearance);
+        appearance.appendChild(advancedAppearance.root);
     }
 
     function initializeSystemRouter() {
@@ -9762,22 +9862,34 @@
         exitSettingsContent();
             panel = view.querySelector(".settings-panel");
             backdrop = byId("settingsBackdrop");
-            source = ActiveSettingsSourceElement || HomeLayoutManager.getButtonByToolId("settings");
+            source = ActiveSettingsSourceElement;
+            if (!source || !document.documentElement.contains(source)) {
+                source = HomeLayoutManager.getButtonByToolId("settings");
+            }
             if (!source) {
                 finishCloseSettingsTransition();
                 return;
             }
+            ActiveSettingsSourceElement = source;
             destinationElement = getToolIcon(source);
             sourceRect = getHomeToolIconRect(source);
             currentRect = panel.getBoundingClientRect();
             sourceIdentity = snapshotSurfaceIdentity(panel, currentRect);
             destinationIdentity = snapshotSurfaceIdentity(destinationElement, sourceRect);
-            destinationIdentity = window.SurfaceIdentity.composite(destinationIdentity, destinationElement, destinationElement);
+            if (destinationIdentity) {
+                destinationIdentity = window.SurfaceIdentity.composite(destinationIdentity, destinationElement, destinationElement);
+            }
+            if (!sourceIdentity || !destinationIdentity) {
+                finishCloseSettingsTransition();
+                return;
+            }
             identityOverlay = createSurfaceIdentityOverlay(destinationIdentity, "surface-identity-overlay--settings");
 
             prepareHomeRestore(byId("homeView"));
             setPanelMorphRect(panel, currentRect, sourceIdentity.radius);
-            mountCloseIdentityLayer(identityOverlay); identityOverlay.style.opacity = "0";
+            if (identityOverlay) {
+                mountCloseIdentityLayer(identityOverlay); identityOverlay.style.opacity = "0";
+            }
             view.classList.add("is-morphing");
 
             spatialMotion = beginSpatialSurfaceMorph("system:view", backdrop ? 3 : 2, function () {

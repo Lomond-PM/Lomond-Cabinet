@@ -63,7 +63,7 @@ has(css, /button:focus-visible,[\s\S]*?box-shadow:\s*0 0 0 1px var\(--interactio
 has(main, /field\.variant === "primary" \? "primary" : \(field\.variant === "danger" \? "danger" : "neutral"\)/, "Registry schema variants must map Primary, Danger, and Secondary through CoreUI");
 has(main, /variant: "neutral", classNames: "panel-button secondary-action"/, "Registry Secondary must map to canonical Neutral");
 has(main, /variant: action\.style === "secondary" \? "neutral" : "primary"/, "Registry global actions must map Secondary to Neutral and Primary to Primary");
-has(main, /ui-button--neutral panel-button settings-source-summary-action panel-local-action/, "Settings panel-local actions must consume canonical Neutral");
+has(palette, /panel-button registry-large-button panel-local-action[\s\S]*palette-library-open/, "Palette Library single launcher consumes canonical Neutral plus panel-local composition");
 has(main, /createButton\(\{ document: document, id: "velaExperimentalEnable", variant: "neutral", classNames: "panel-button panel-local-action"/, "Vela-owned Settings actions must consume canonical CoreUI Neutral");
 has(palette, /variant: className && className\.indexOf\("is-primary"\) >= 0 \? "primary" : \(className && className\.indexOf\("is-danger"\) >= 0 \? "danger" : "neutral"\)/, "Palette actions must map through CoreUI variants");
 has(css, /\.palette-editor-action-bar\s*\{[^}]*background:\s*var\(--surface-panel\)/, "Palette footer surface ownership changed");

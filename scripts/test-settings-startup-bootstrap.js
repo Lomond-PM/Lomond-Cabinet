@@ -23,7 +23,7 @@ const commitCatalog = sliceFunction("commitDynamicToolCatalog", "updateCoreBoots
 check(/id="toolBootstrapStatus"/.test(html) && /bootstrap\.loadingTools/.test(html), "production HTML owns the startup loading placeholder");
 check(/settingsRootPage/.test(renderContent) && !/settingsAppearancePage|settingsBackgroundPage|settingsAdvancedPage|settingsDeveloperPage/.test(renderContent), "single-surface Settings mounts without deleted secondary pages");
 check(/createSettingsCategory\("appearance"/.test(renderContent) && /createSettingsCategory\("developer"/.test(renderContent), "Settings Disclosure creation is part of the real startup composition");
-check(/var appearanceGroupCount = 0;/.test(renderTheme), "renderSettingsTheme declares its semantic group counter in local scope");
+check(/order = \["toolIconAppearance", "iconColors", "interfaceAppearance"\]/.test(renderTheme), "renderSettingsTheme renders the consolidating Theme card in the approved order");
 check(!/appearanceGroupCount/.test(sliceFunction("findSettingsSchemaField", "findSettingsSchemaSection")), "the Theme renderer counter is not leaked into an unrelated function scope");
 check(/renderSettingsContent\(\);[\s\S]*renderSettingsTheme\(\);[\s\S]*HomeLayoutManager\.init\(\)/.test(bindEvents), "real startup initializes Settings before Home without skipping Home initialization");
 check(/bindEvents\(\);[\s\S]*loadHost\(\);/.test(domReady), "production DOMContentLoaded starts Registry bootstrap after synchronous UI initialization");

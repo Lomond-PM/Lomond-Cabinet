@@ -11,7 +11,7 @@ context.self = context.window = { document: {}, CoreUI: require(path.join(root, 
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(root, "client/js/designTuning/designTuningParameterRegistry.js"), "utf8"), context);
 const parameters = Array.from(context.window.DesignTuningParameterRegistry.list()).filter(p => !p.protection);
-assert.strictEqual(parameters.length, 64, "all 64 editable parameters remain available");
+assert.strictEqual(parameters.length, 62, "all 62 editable parameters remain available (text.secondary/tertiary migrated to the Appearance authority)");
 parameters.filter(p => p.cssProperty).forEach(parameter => {
     const uses = (css.match(new RegExp("var\\(" + parameter.cssProperty.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\)", "g")) || []).length;
     assert.ok(uses > 0, parameter.id + " has a real stylesheet consumer");

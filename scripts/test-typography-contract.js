@@ -92,8 +92,10 @@ assert(registryBodyRule >= 0 && registryFieldToneRule > registryBodyRule, "Field
 assert(!/(?:\.control-label|\.registry-text-body)[^{]*\{[^}]*color:\s*var\(--text-secondary\)/.test(css.slice(registryFieldToneRuleEnd)), "no later matching label/body rule may restore secondary tone");
 
 assert(/id:\s*"text\.primary"[\s\S]*?classification:\s*"EXPOSE_NOW"[\s\S]*?persistence:\s*"appearance"[\s\S]*?userAdjustable:\s*true[\s\S]*?resolverTarget:\s*"text\.primary"/.test(appearanceRegistrySource));
-assert(!/id:\s*"text\.(?:secondary|tertiary)"/.test(appearanceRegistrySource), "secondary and tertiary text must remain future candidates, not Appearance parameters");
+assert(/id:\s*"text\.secondary"[\s\S]*controlType:\s*"colorAlpha"[\s\S]*classification:\s*"EXPOSE_NOW"[\s\S]*persistence:\s*"appearance"[\s\S]*userAdjustable:\s*true[\s\S]*resolverTarget:\s*"text\.secondary"/.test(appearanceRegistrySource), "secondary text is promoted to a colorAlpha Appearance parameter (user-approved Final Settings IA scope adjustment)");
+assert(/id:\s*"text\.tertiary"[\s\S]*controlType:\s*"colorAlpha"[\s\S]*classification:\s*"EXPOSE_NOW"[\s\S]*persistence:\s*"appearance"[\s\S]*userAdjustable:\s*true[\s\S]*resolverTarget:\s*"text\.tertiary"/.test(appearanceRegistrySource), "tertiary text is promoted to a colorAlpha Appearance parameter (user-approved Final Settings IA scope adjustment)");
 assert(/"text\.primary"[\s\S]*?"--text-primary"/.test(appearanceResolverSource), "Field Labels must remain downstream of the existing text.primary resolver output");
+assert(/"text\.secondary"[\s\S]*?"--text-secondary"/.test(appearanceResolverSource) && /"text\.tertiary"[\s\S]*?"--text-tertiary"/.test(appearanceResolverSource), "secondary/tertiary text project through the Appearance resolver to their semantic tokens");
 
 assert(declaration("--type-home-card-title-size", "calc\\(13px \\* var\\(--ui-scale\\)\\)"));
 assert(rule("\\.app-card-title", "font-size:\\s*var\\(--type-home-card-title-size\\)"));

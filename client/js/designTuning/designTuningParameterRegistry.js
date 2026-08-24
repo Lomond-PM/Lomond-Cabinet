@@ -61,8 +61,6 @@
         { id: "elevation.floatingSurface", type: "shadow", domain: "elevation", group: "floating", cssProperty: "--elevation-floating-surface", presentation: { labelKey: "settings.designTuning.parameter.elevation.floatingSurface", descriptionKey: "settings.designTuning.parameter.elevation.floatingSurface.description" } },
         { id: "elevation.floatingPicker", type: "shadow", domain: "elevation", group: "floating", cssProperty: "--elevation-floating-picker", presentation: { labelKey: "settings.designTuning.parameter.elevation.floatingPicker", descriptionKey: "settings.designTuning.parameter.elevation.floatingPicker.description" } },
         { id: "elevation.actionContainer", type: "shadow", domain: "elevation", group: "action", cssProperty: "--elevation-action-container", presentation: { labelKey: "settings.designTuning.parameter.elevation.actionContainer", descriptionKey: "settings.designTuning.parameter.elevation.actionContainer.description" } }
-        ,{ id: "text.secondary", type: "colorAlpha", domain: "text", group: "text", cssProperty: "--text-secondary" }
-        ,{ id: "text.tertiary", type: "colorAlpha", domain: "text", group: "text", cssProperty: "--text-tertiary" }
         ,{ id: "surface.field", type: "colorAlpha", domain: "surface", group: "surface", cssProperty: "--field-surface" }
         ,{ id: "surface.registryOption", type: "colorAlpha", domain: "surface", group: "surface", cssProperty: "--registry-option-surface" }
         ,{ id: "surface.conversation", type: "colorAlpha", domain: "surface", group: "surface", cssProperty: "--surface-conversation" }
@@ -103,7 +101,7 @@
         { id: "procedural.appearance", disposition: "INTENTIONALLY_NOT_TUNABLE", reason: "Owned by the Procedural Appearance domain and its dedicated Lab." },
         { id: "vela.domainPresentation", disposition: "INTENTIONALLY_NOT_TUNABLE", derivedFrom: "surface.conversation", reason: "Vela-specific state presentation remains outside shared calibration; its reusable conversation surface delegates to the shared authority." }
     ];
-    var appearanceMirrors = ["surface.panel", "text.primary", "select.trigger.surface", "select.menu.surface", "typography.title.size", "typography.sectionTitle.size", "typography.fieldLabel.size", "typography.body.size", "typography.supporting.size", "typography.code.size", "interaction.focus.ring", "interaction.focus.border", "interaction.hover.border", "interaction.hover.surface", "interaction.selected.surface", "interaction.selected.foreground", "interaction.checked.surface", "action.primary.surface", "action.primary.hoverSurface", "selection.indicator.surface"];
+    var appearanceMirrors = ["surface.panel", "text.primary", "text.secondary", "text.tertiary", "select.trigger.surface", "select.menu.surface", "typography.title.size", "typography.sectionTitle.size", "typography.fieldLabel.size", "typography.body.size", "typography.supporting.size", "typography.code.size", "interaction.focus.ring", "interaction.focus.border", "interaction.hover.border", "interaction.hover.surface", "interaction.selected.surface", "interaction.selected.foreground", "interaction.checked.surface", "action.primary.surface", "action.primary.hoverSurface", "selection.indicator.surface"];
     var byId = {};
     var i;
     function clone(value) { return value && typeof value === "object" ? JSON.parse(JSON.stringify(value)) : value; }
