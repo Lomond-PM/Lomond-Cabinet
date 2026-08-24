@@ -182,6 +182,8 @@
 
     --space-surface-edge: calc(22px * var(--ui-scale));
     --space-card-inset: calc(12px * var(--ui-scale));
+    --space-content-inline-inset: calc(12px * var(--ui-scale));
+    --space-content-block-inset: calc(8px * var(--ui-scale));
     --space-section-stack: calc(28px * var(--ui-scale));
     --space-section-header-content: calc(24px * var(--ui-scale));
     --space-field-copy: calc(10px * var(--ui-scale));
@@ -464,6 +466,8 @@ body:not(.i18n-ready) .app-shell {
     --control-height: calc(22px * var(--ui-scale));
     --space-surface-edge: calc(22px * var(--ui-scale));
     --space-card-inset: calc(12px * var(--ui-scale));
+    --space-content-inline-inset: calc(12px * var(--ui-scale));
+    --space-content-block-inset: calc(8px * var(--ui-scale));
     --space-section-stack: calc(28px * var(--ui-scale));
     --space-section-header-content: calc(24px * var(--ui-scale));
     --space-field-copy: calc(10px * var(--ui-scale));
@@ -2310,7 +2314,7 @@ body:not(.i18n-ready) .app-shell {
     inset: 0;
     display: grid;
     place-items: center;
-    padding: var(--space-card-inset);
+    padding: var(--space-surface-edge);
 }
 
 .vela-settings-surface[hidden] { display: none; }
@@ -2346,7 +2350,7 @@ body:not(.i18n-ready) .app-shell {
     align-items: center;
     justify-content: space-between;
     gap: var(--space-inline-control);
-    padding: var(--space-card-inset);
+    padding: var(--space-surface-edge);
     border-bottom: 1px solid var(--separator);
 }
 
@@ -2363,7 +2367,7 @@ body:not(.i18n-ready) .app-shell {
 .vela-settings-content {
     display: flex;
     min-height: 0;
-    padding: var(--space-card-inset);
+    padding: var(--space-surface-edge);
     flex: 1 1 auto;
     flex-direction: column;
     gap: var(--space-settings-section-stack);

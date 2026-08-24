@@ -9,7 +9,6 @@
     --vela-controls-min-height: var(--control-height);
     --vela-inline-gap: calc(8px * var(--ui-scale));
     --vela-controls-column-gap: calc(16px * var(--ui-scale));
-    --vela-composer-padding-inline: calc(12px * var(--ui-scale));
     --vela-resize-hit-height: calc(20px * var(--ui-scale));
     --vela-resize-grip-width: calc(28px * var(--ui-scale));
     --vela-resize-grip-height: calc(2px * var(--ui-scale));
@@ -49,7 +48,8 @@
     min-width: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: var(--vela-surface-inset);
+    padding-block: var(--space-content-block-inset);
+    padding-inline: var(--space-content-inline-inset);
     border: 1px solid var(--separator);
     border-radius: var(--radius-sm);
     background: var(--bg-main);
@@ -112,7 +112,8 @@
     display: block;
     width: 100%;
     min-height: var(--vela-composer-min-height);
-    padding: var(--vela-inline-gap) var(--vela-composer-padding-inline);
+    padding-block: var(--space-content-block-inset);
+    padding-inline: var(--space-content-inline-inset);
     resize: none;
     border: 0;
     border-radius: 0;

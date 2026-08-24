@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 445 |
+| A | Core / Global; keep | 448 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 3 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -483,6 +483,9 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.designTuning.parameter.radius.primaryWorkSurface | settings | Primary Work Surface Radius | 主工作表面圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.radius.sectionCard | settings | Section Card Radius | 分区卡片圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.spacing.card.inset | settings | Card Inset | 卡片内边距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.content.blockInset | settings | Content Block Inset | 内容块轴内边距 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.content.blockInset.description | settings | The top and bottom inset between a content boundary and its text. | 内容边界与文本之间的上下内边距。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.content.inlineInset | settings | Content Inline Inset | 内容行内边距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.spacing.control.inline | settings | Inline Control Gap | 行内控件间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.spacing.field.block | settings | Field Block Gap | 字段块间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.designTuning.parameter.spacing.field.copy | settings | Field Copy Gap | 字段文本间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
