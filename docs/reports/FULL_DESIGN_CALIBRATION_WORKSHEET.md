@@ -8,6 +8,7 @@
 - `Current Canonical` 记录当前 source-owned 默认值；长度记录独立于 UI Scale 的基准 px 值；`Calibrated Value` 记录最终采纳值（A 默认采用当前校准值，U/P 采用 canonical）。
 - `Issue / Observation` 只记录观察。只有证据明确属于 hardcode、duplicate authority、missing consumer 或 broken lifecycle 时，才标记 `STRUCTURAL ISSUE`。
 - 本工作表不修改 canonical，不代表 canonical promotion 已执行；仅提供 promotion-ready 分类与采纳结论（真实 Canonical Promotion 为下一独立阶段）。
+- **Promotion Status：CLOSED / AE ACCEPTED**。37 个 A 已全部提升到正式 canonical authority（MotionDefaults + canonical CSS），`scripts/test-canonical-promotion.js` 验证 typed parity（37 A / 27 U 无 semantic 变化 / 3 P 未变 / reset parity）。`docs/reports/FULL_DESIGN_CANONICAL_PROMOTION_REPORT.md` 记录审计。真实 AE 已确认：promoted build 在原 39 overrides 存在时视觉正常；Design Tuning Reset All 后 39 overrides → 0；Reset 前后视觉无异常变化；完整重启 AE 后 overrides 仍为 0，UI 保持已接受结果；project-owned Console warnings/errors = 0。**Override-clear acceptance = 完成（39 → 0 为用户 calibration lifecycle action，非代码 migration）。**
 
 ## Motion（19）
 

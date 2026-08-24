@@ -20,12 +20,12 @@
     --interaction-selected-surface: var(--gold-track);
     --interaction-selected-foreground: var(--gold-hot);
     --interaction-checked-surface: var(--gold-track);
-    --slider-thumb-optical-shadow: 0 2px 8px rgba(0, 0, 0, 0.32);
-    --switch-thumb-optical-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+    --slider-thumb-optical-shadow: 0 4px 16px rgba(92, 191, 255, 0.79);
+    --switch-thumb-optical-shadow: 0 4px 16px rgba(92, 191, 255, 0.79);
     --action-primary-surface: var(--gold-button);
     --action-primary-hover-surface: var(--gold-hot);
     --action-primary-foreground: var(--text-on-accent);
-    --action-neutral-surface: rgba(15, 14, 11, 1);
+    --action-neutral-surface: rgba(60, 82, 105, 1);
     --selection-indicator-surface: var(--selection-bg);
 
     --surface-canvas: var(--bg-main);
@@ -37,7 +37,7 @@
     --surface-panel: #0b0a08;
     --surface-conversation: rgba(17, 16, 12, 1);
     --surface-utility-chrome: rgba(18, 17, 14, 1);
-    --surface-utility-action: rgba(18, 17, 14, 1);
+    --surface-utility-action: rgba(16, 63, 103, 1);
     --text-on-accent: #130f08;
 
     --separator: rgba(214, 178, 94, 0.16);
@@ -86,13 +86,13 @@
 
     --radius-xl: calc(30px * var(--ui-scale));
     --radius-lg: calc(22px * var(--ui-scale));
-    --radius-primary-work-surface: var(--radius-lg);
+    --radius-primary-work-surface: calc(35px * var(--ui-scale));
     --radius-palette-preview: var(--radius-lg);
     --radius-md: calc(16px * var(--ui-scale));
     --radius-sm: calc(10px * var(--ui-scale));
     --radius-section-card: var(--radius-lg);
-    --radius-nested-surface: var(--radius-md);
-    --radius-editable-control: var(--radius-sm);
+    --radius-nested-surface: calc(28px * var(--ui-scale));
+    --radius-editable-control: calc(20px * var(--ui-scale));
     --radius-home-tile: var(--radius-lg);
     --radius-registry-option: var(--radius-nested-surface);
     --radius-palette-library-item: var(--radius-nested-surface);
@@ -100,9 +100,9 @@
     --radius-pill: 999px;
 
     --motion-curve-enter: cubic-bezier(0.16, 1, 0.3, 1);
-    --motion-curve-exit: cubic-bezier(0.32, 0, 0.67, 0);
-    --motion-curve-standard: cubic-bezier(0.22, 1, 0.36, 1);
-    --motion-curve-press: cubic-bezier(0.2, 0, 0, 1);
+    --motion-curve-exit: cubic-bezier(0.0421, 0.5278, 0.1749, 0.999);
+    --motion-curve-standard: cubic-bezier(0.0273, 1.0024, 0.36, 1);
+    --motion-curve-press: cubic-bezier(0.2486, -0.6113, 0.3389, 1.325);
     --ease-apple-out: var(--motion-curve-enter);
     --ease-apple-standard: var(--motion-curve-standard);
     --ease-apple-in: var(--motion-curve-exit);
@@ -178,15 +178,15 @@
     --font-h2: var(--type-surface-title-size);
     --font-h3: var(--type-section-title-size);
     --font-small: var(--type-supporting-size);
-    --control-height: calc(30px * var(--ui-scale));
+    --control-height: calc(22px * var(--ui-scale));
 
-    --space-surface-edge: calc(18px * var(--ui-scale));
+    --space-surface-edge: calc(22px * var(--ui-scale));
     --space-card-inset: calc(12px * var(--ui-scale));
-    --space-section-stack: calc(12px * var(--ui-scale));
-    --space-section-header-content: calc(11px * var(--ui-scale));
-    --space-field-copy: calc(2px * var(--ui-scale));
-    --space-field-block: calc(7px * var(--ui-scale));
-    --space-inline-control: calc(8px * var(--ui-scale));
+    --space-section-stack: calc(28px * var(--ui-scale));
+    --space-section-header-content: calc(24px * var(--ui-scale));
+    --space-field-copy: calc(10px * var(--ui-scale));
+    --space-field-block: calc(14px * var(--ui-scale));
+    --space-inline-control: calc(10px * var(--ui-scale));
 
     --space-settings-section-stack: var(--space-section-stack);
     --space-settings-section-header-content: var(--space-section-header-content);
@@ -195,18 +195,18 @@
     --space-settings-field-block: var(--space-field-block);
     --space-settings-field-control: calc(12px * var(--ui-scale));
     --space-registry-panel-stack: var(--space-section-stack);
-    --space-registry-intro-content: calc(14px * var(--ui-scale));
-    --space-registry-card-inset: calc(14px * var(--ui-scale));
-    --space-registry-section-header-content: calc(14px * var(--ui-scale));
-    --space-registry-section-copy: calc(5px * var(--ui-scale));
-    --space-registry-field-copy: calc(3px * var(--ui-scale));
+    --space-registry-intro-content: calc(22px * var(--ui-scale));
+    --space-registry-card-inset: calc(30px * var(--ui-scale));
+    --space-registry-section-header-content: calc(12px * var(--ui-scale));
+    --space-registry-section-copy: calc(4px * var(--ui-scale));
+    --space-registry-field-copy: calc(4px * var(--ui-scale));
     --space-registry-field-block: var(--space-field-block);
     --space-registry-field-control: calc(14px * var(--ui-scale));
     --space-registry-action-stack: var(--space-registry-field-control);
     --space-palette-field-control: calc(10px * var(--ui-scale));
     --space-home-tool-grid: calc(16px * var(--ui-scale));
-    --space-home-major-stack: calc(16px * var(--ui-scale));
-    --space-home-card-title: calc(11px * var(--ui-scale));
+    --space-home-major-stack: calc(30px * var(--ui-scale));
+    --space-home-card-title: calc(14px * var(--ui-scale));
 
     --card-pad: var(--space-card-inset);
     --view-pad: var(--space-surface-edge);
@@ -223,13 +223,13 @@
     --elevation-surface-shell: 0 18px 48px rgba(0, 0, 0, 0.38);
     --elevation-information-surface: 0 12px 30px rgba(0, 0, 0, 0.28);
     --elevation-primary-action: 0 4px 10px rgba(0, 0, 0, 0.18);
-    --elevation-utility-action: 0 12px 30px rgba(0, 0, 0, 0.28);
-    --elevation-floating-surface: 0 12px 26px rgba(0, 0, 0, 0.34);
-    --elevation-floating-picker: 0 14px 28px rgba(0, 0, 0, 0.42);
-    --elevation-action-container: 0 12px 30px rgba(0, 0, 0, 0.28);
+    --elevation-utility-action: 0 8px 28px rgba(48, 196, 255, 0.46);
+    --elevation-floating-surface: 0 10px 48px rgba(72, 146, 214, 0.51);
+    --elevation-floating-picker: 0 10px 48px rgba(72, 146, 214, 0.51);
+    --elevation-action-container: 0 8px 30px rgba(113, 224, 255, 0.32);
     --elevation-registry-preview-prominence: 0 calc(12px * var(--ui-scale)) calc(24px * var(--ui-scale)) rgba(0, 0, 0, 0.24);
     --tool-icon-small-size: calc(50px * var(--ui-scale));
-    --button-height: calc(38px * var(--ui-scale));
+    --button-height: calc(40px * var(--ui-scale));
     --button-pad-x: calc(14px * var(--ui-scale));
 }
 
@@ -461,21 +461,21 @@ body:not(.i18n-ready) .app-shell {
     --font-h2: calc(21px * var(--ui-scale));
     --font-h3: calc(14px * var(--ui-scale));
     --font-small: calc(10.5px * var(--ui-scale));
-    --control-height: calc(30px * var(--ui-scale));
-    --space-surface-edge: calc(18px * var(--ui-scale));
+    --control-height: calc(22px * var(--ui-scale));
+    --space-surface-edge: calc(22px * var(--ui-scale));
     --space-card-inset: calc(12px * var(--ui-scale));
-    --space-section-stack: calc(12px * var(--ui-scale));
-    --space-section-header-content: calc(11px * var(--ui-scale));
-    --space-field-copy: calc(2px * var(--ui-scale));
-    --space-field-block: calc(7px * var(--ui-scale));
-    --space-inline-control: calc(8px * var(--ui-scale));
+    --space-section-stack: calc(28px * var(--ui-scale));
+    --space-section-header-content: calc(24px * var(--ui-scale));
+    --space-field-copy: calc(10px * var(--ui-scale));
+    --space-field-block: calc(14px * var(--ui-scale));
+    --space-inline-control: calc(10px * var(--ui-scale));
     --card-pad: var(--space-card-inset);
     --view-pad: var(--space-surface-edge);
     --view-inset: calc(16px * var(--ui-scale));
     --radius-xl: calc(30px * var(--ui-scale));
     --radius-lg: calc(22px * var(--ui-scale));
     --radius-sm: calc(10px * var(--ui-scale));
-    --button-height: calc(38px * var(--ui-scale));
+    --button-height: calc(40px * var(--ui-scale));
     --button-pad-x: calc(14px * var(--ui-scale));
     --settings-divider-soft: rgba(214, 178, 94, 0.085);
 

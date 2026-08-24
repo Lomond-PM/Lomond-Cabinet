@@ -17,8 +17,8 @@ const main = fs.readFileSync(path.join(root, "client/js/main.js"), "utf8");
 const roles = {
     "surface.conversation": { property: "--surface-conversation", canonical: "rgba(17, 16, 12, 1)", structured: { color: "#11100c", alpha: 1 } },
     "surface.utilityChrome": { property: "--surface-utility-chrome", canonical: "rgba(18, 17, 14, 1)", structured: { color: "#12110e", alpha: 1 } },
-    "surface.utilityAction": { property: "--surface-utility-action", canonical: "rgba(18, 17, 14, 1)", structured: { color: "#12110e", alpha: 1 } },
-    "surface.neutralAction": { property: "--action-neutral-surface", canonical: "rgba(15, 14, 11, 1)", structured: { color: "#0f0e0b", alpha: 1 } },
+    "surface.utilityAction": { property: "--surface-utility-action", canonical: "rgba(16, 63, 103, 1)", structured: { color: "#103f67", alpha: 1 } },
+    "surface.neutralAction": { property: "--action-neutral-surface", canonical: "rgba(60, 82, 105, 1)", structured: { color: "#3c5269", alpha: 1 } },
     "surface.dangerAction": { property: "--danger-surface", canonical: "rgba(255, 107, 95, 0.22)", structured: { color: "#ff6b5f", alpha: 0.22 } }
 };
 Object.keys(roles).forEach(id => {
@@ -61,7 +61,7 @@ assert.ok(!/(?:surface|color)\.(?:description|helper|registryDescription|registr
 assert.strictEqual(Registry.get("surface.card"), null, "Control-Lab-only Card Surface is not exposed as a Design Tuning mirror");
 assert.ok(!/--surface-card\s*:|var\(--surface-card\)/.test(css), "retired Card Surface property has no orphan declaration or consumer");
 assert.ok(/\.panel-card\s*\{[^}]*background:\s*var\(--surface-panel\)/.test(css), "Control Lab direct card consumes the production Panel Surface contract");
-assert.ok(/--action-neutral-surface:\s*rgba\(15, 14, 11, 1\)/.test(css) && /\.ui-button--neutral\s*\{[^}]*background:\s*var\(--action-neutral-surface\)/.test(css), "neutral buttons consume their independently calibratable action surface");
+assert.ok(/--action-neutral-surface:\s*rgba\(60, 82, 105, 1\)/.test(css) && /\.ui-button--neutral\s*\{[^}]*background:\s*var\(--action-neutral-surface\)/.test(css), "neutral buttons consume their independently calibratable action surface");
 assert.ok(/\.ui-button--danger\s*\{[^}]*background:\s*var\(--danger-surface\)/.test(css), "danger buttons consume their independently calibratable base surface");
 assert.ok(/\.ui-button--danger:not\(:disabled\):hover\s*\{[^}]*background:\s*var\(--action-danger-hover-surface\)/.test(css), "Danger hover remains independent from the calibrated base surface");
 assert.ok(/\.vela-reject-action\s*\{[^}]*var\(--danger-surface\)/.test(velaCss) && !/\.vela-reject-action\s*\{[^}]*var\(--surface-utility-action\)/.test(velaCss), "Reject fill follows Danger calibration rather than Utility Action Surface");

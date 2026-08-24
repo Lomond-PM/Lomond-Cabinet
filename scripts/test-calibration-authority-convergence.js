@@ -15,7 +15,7 @@ const core = fs.readFileSync(path.join(root, "client/js/ui/coreUi.js"), "utf8");
 
 const primary = registry.get("radius.primaryWorkSurface");
 assert.ok(primary && primary.cssProperty === "--radius-primary-work-surface" && primary.disposition === "EDITABLE", "Primary Work Surface owns one editable authority");
-assert.ok(/--radius-primary-work-surface:\s*var\(--radius-lg\)/.test(css), "canonical Primary Work Surface value remains the existing radius-lg value");
+assert.ok(/--radius-primary-work-surface:\s*calc\(35px \* var\(--ui-scale\)\)/.test(css), "Primary Work Surface canonical is the promoted calibrated 35px value (separate from Protected radius-lg)");
 assert.ok(/\.view-detail\s*\{[^}]*border-radius:\s*var\(--radius-primary-work-surface\)/.test(css), "Tool Detail consumes Primary Work Surface radius");
 assert.ok(/\.settings-view \.settings-panel\s*\{[^}]*border-radius:\s*var\(--radius-primary-work-surface\)/.test(css), "Global Settings consumes Primary Work Surface radius");
 assert.ok(!/--radius-settings-(?:surface|panel)|--settings-(?:surface|panel)-radius/.test(css + main), "no Settings-only duplicate radius authority exists");

@@ -79,7 +79,7 @@ assert.strictEqual(cssDurationProjectionCount, projectionCountBeforeUnsafeEdits 
 resolver.resetParameter("motion.curve.enter");
 assert.strictEqual(css["--motion-curve-enter"], undefined, "curve reset removes inline projection");
 resolver.resetMotion();
-assert.strictEqual(MotionDefaults.resolveDuration("spatialMorphExpand", 1), 480, "duration reset restores canonical");
+assert.strictEqual(MotionDefaults.resolveDuration("spatialMorphExpand", 1), 460, "duration reset restores canonical");
 resolver.setOverride("motion.duration.spatialExpand", 540);
 assert.strictEqual(resolver.resolveDuration("spatialMorphExpand", 480), 540);
 resolver.resetParameter("motion.duration.spatialExpand");

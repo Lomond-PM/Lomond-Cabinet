@@ -32,13 +32,13 @@ function finalDeclaration(source, selector, property) {
 }
 
 [
-    ["--space-surface-edge", "calc\\(18px \\* var\\(--ui-scale\\)\\)"],
+    ["--space-surface-edge", "calc\\(22px \\* var\\(--ui-scale\\)\\)"],
     ["--space-card-inset", "calc\\(12px \\* var\\(--ui-scale\\)\\)"],
-    ["--space-section-stack", "calc\\(12px \\* var\\(--ui-scale\\)\\)"],
-    ["--space-section-header-content", "calc\\(11px \\* var\\(--ui-scale\\)\\)"],
-    ["--space-field-copy", "calc\\(2px \\* var\\(--ui-scale\\)\\)"],
-    ["--space-field-block", "calc\\(7px \\* var\\(--ui-scale\\)\\)"],
-    ["--space-inline-control", "calc\\(8px \\* var\\(--ui-scale\\)\\)"]
+    ["--space-section-stack", "calc\\(28px \\* var\\(--ui-scale\\)\\)"],
+    ["--space-section-header-content", "calc\\(24px \\* var\\(--ui-scale\\)\\)"],
+    ["--space-field-copy", "calc\\(10px \\* var\\(--ui-scale\\)\\)"],
+    ["--space-field-block", "calc\\(14px \\* var\\(--ui-scale\\)\\)"],
+    ["--space-inline-control", "calc\\(10px \\* var\\(--ui-scale\\)\\)"]
 ].forEach(function (entry) {
     assert(declaration(css, entry[0], entry[1]), entry[0] + " public/component contract missing");
 });

@@ -72,8 +72,8 @@ assert(/id: "elevation\.registryPreviewProminence", disposition: "UNSUPPORTED_WI
 assert(/\.ui-button--neutral\s*\{[^}]*box-shadow:\s*none;/.test(css), "Neutral Action is intentionally flat");
 assert(/\.ui-button--danger\s*\{[^}]*box-shadow:\s*none;/.test(css), "Danger Action is intentionally flat");
 assert(!/\.panel-button:not\(\.utility-action\)\s*\{[^}]*box-shadow:/.test(css), "legacy panel-button literal cannot silently create a fifth Action elevation family");
-assert(/--slider-thumb-optical-shadow:\s*0 2px 8px rgba\(0, 0, 0, 0\.32\)/.test(css), "Slider thumb has an explicit component optical authority");
-assert(/--switch-thumb-optical-shadow:\s*0 2px 8px rgba\(0, 0, 0, 0\.28\)/.test(css), "Switch thumb has an explicit component optical authority");
+assert(/--slider-thumb-optical-shadow:\s*0 4px 16px rgba\(92, 191, 255, 0\.79\)/.test(css), "Slider thumb has an explicit component optical authority");
+assert(/--switch-thumb-optical-shadow:\s*0 4px 16px rgba\(92, 191, 255, 0\.79\)/.test(css), "Switch thumb has an explicit component optical authority");
 assert(/id: "componentOptics\.sliderThumbShadow", type: "shadow", domain: "controls", group: "optics", cssProperty: "--slider-thumb-optical-shadow"/.test(registry), "Slider optical authority is editable in Controls without entering Elevation");
 assert(/id: "componentOptics\.switchThumbShadow", type: "shadow", domain: "controls", group: "optics", cssProperty: "--switch-thumb-optical-shadow"/.test(registry), "Switch optical authority is editable in Controls without entering Elevation");
 assert(!/id: "elevation\.(?:slider|switch)Thumb/.test(registry), "component optical editability must not create Slider/Switch Elevation roles");

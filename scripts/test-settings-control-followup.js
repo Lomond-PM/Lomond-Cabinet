@@ -77,7 +77,7 @@ const utilityElevation = registry.get("elevation.utilityAction");
 assert.ok(utilityElevation && utilityElevation.cssProperty === "--elevation-utility-action", "Utility Action elevation is a registered typed authority");
 assert.ok(utilityElevation.presentation && utilityElevation.presentation.labelKey && utilityElevation.presentation.descriptionKey, "Utility Action elevation has complete presentation metadata");
 assert.ok(i18n.split(utilityElevation.presentation.descriptionKey).length >= 3, "Utility Action elevation description is bilingual");
-assert.ok(/--elevation-utility-action:\s*0 12px 30px rgba\(0, 0, 0, 0\.28\)/.test(css), "canonical Utility shadow preserves the existing computed value");
+assert.ok(/--elevation-utility-action:\s*0 8px 28px rgba\(48, 196, 255, 0\.46\)/.test(css), "canonical Utility shadow preserves the existing computed value");
 assert.ok(/\.ui-button--navigation,[\s\S]*?\.utility-action\s*\{[^}]*box-shadow:\s*var\(--elevation-utility-action\)/.test(css), "shared Utility structure consumes the authority");
 ["backBtn", "closeSettingsBtn", "editHomeBtn", "toolBootstrapRetry"].forEach(function (id) { assert.ok(new RegExp('id="' + id + '"[^>]*class="[^"]*utility-action|class="[^"]*utility-action[^"]*"[^>]*id="' + id + '"').test(index), id + " is an intended Utility consumer"); });
 assert.ok(/panel-button utility-action vela-settings-button/.test(fs.readFileSync(path.join(root, "client/js/vela/velaSurface.js"), "utf8")), "Vela Settings is an intended Utility consumer");
