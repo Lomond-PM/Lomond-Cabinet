@@ -1,5 +1,29 @@
 # PROJECT_STATE.md
 
+## 0.3.2 release-candidate authority
+
+Version 0.3.2 is **READY FOR RELEASE**. The merged `dev` integration baseline has passed the complete offline regression and consistency gates, and the user has completed the final integrated After Effects 2026 pre-release acceptance. Previously completed 0.3.2 workstreams are closed and AE accepted: Registry Renderer / shared component convergence, Appearance and Design Tuning foundations, Full Design Calibration and Canonical Promotion, Palette Store v2 and dynamic Palette Workspace, Runtime Console Cleanup, Final Settings IA, and Vela presentation / spacing authority convergence.
+
+Final integrated After Effects 2026 acceptance:
+
+- integrated smoke: **PASS**;
+- startup and Tool Catalog: **PASS**;
+- Registry tools: **PASS**;
+- Final Settings IA: **PASS**;
+- Palette Workspace: **PASS**;
+- Appearance, ColorAlpha and shared Color Picker: **PASS**;
+- living Design Tuning Registry: **67 parameters**;
+- persisted Design Tuning overrides: **0**;
+- Vela integrated smoke: **PASS**;
+- Developer Mode OFF → Back Home: **PASS**;
+- project-owned Console warnings/errors: **0**.
+
+Global Settings is ordered **General, Appearance, Advanced, Developer**. Final Settings IA is **CLOSED / AE ACCEPTED**. The living Design Tuning Registry contains **67 parameters**. It is not the same parameter set as the historical calibration-time 67: `spacing.content.inlineInset` and `spacing.content.blockInset` are post-calibration semantic authority additions, while `text.secondary` and `text.tertiary` moved to Appearance authority with Design Tuning mirrors. Historical Full Design Calibration totals and U/A/D/X/P classifications remain frozen facts.
+
+Palette Store v2 remains the sole production Palette persistence authority, with dynamic `DIRECT`, same-palette `REFERENCE`, and registered `DERIVED` slots, `profiles.proceduralAppearance`, native Workspace Save/Cancel, and the legacy compatibility boundary. Cross-palette references, Harmony generation, node editing, global active Palette, and Appearance live-link remain deferred.
+
+Vela spacing ownership is closed and AE accepted: Card Inset owns shell/card placement; Content Inline and Content Block Insets are shared by Conversation and Composer on their respective axes; Surface Edge owns Vela Settings. The 0.3.3 Agent Runtime Foundation is future scope and is not part of 0.3.2.
+
 Design Tuning Full Coverage 已加入 GLOBAL / COMMON consumer convergence 契约、UI Scale Peek semantic target/structure-only ancestor path，以及 Registry Control Lab Registry Path / CoreUI Direct 完整性检查。Developer / Advanced / User 的最终参数安置仍等待 Full Calibration 后复核。
 
 Design Tuning 已改为 real-consumer transient calibration。Resolver precedence 为 canonical → persisted override → transient override；commit 先持久化同值再清 transient，避免闪回。Calibration editor chrome 在 gesture 内冻结自身 semantic geometry，Control Lab 与其他真实 consumer 自然接收 transient。Live Preview Stage 及其 nested scroll owner已移除。
@@ -17,12 +41,12 @@ Lomond Cabinet is an After Effects CEP extension panel.
 - Visible product name: **Lomond Cabinet**
 - Manifest menu name: **AE Toolbox**
 - Extension id/folder: `com.kevin.aetoolbox`
-- Current release version: `0.3.1`
+- Prepared release version: `0.3.2`
 - Latest published tag: `v0.3.1`
-- Post-release development baseline: `dev`
+- Integrated release baseline: `dev` at the release-prep branch point
 - Host API version: `1.0.0`
 
-`VERSION`, both version fields in `CSXS/manifest.xml`, and `AEToolbox.projectVersion` identify product version `0.3.1`. The complete automated suite and AE P0 Release Regression passed before release. Version 0.3.1 is now published on `main` and tagged `v0.3.1`; `dev` is the post-release development baseline.
+`VERSION`, both version fields in `CSXS/manifest.xml`, and `AEToolbox.projectVersion` identify prepared product version `0.3.2`. The latest published release remains 0.3.1 on immutable tag `v0.3.1` until the user performs the 0.3.2 release operations.
 
 ## 0.3.1 release status
 
@@ -278,7 +302,7 @@ Lifecycle and large core-file refactors require focused AE regression because `c
 
 Source of truth: `docs/KNOWN_ISSUES.md`.
 
-The 0.3.1 Vela responsive/status work and narrow semantic-token pass are complete. The token pass covers explicit muted text and proven shared surface, on-accent, danger, and Settings-divider values while preserving established layout and computed visual behavior. Full design-system tokenization is deferred to 0.3.2; Settings scale isolation, Vela responsive structure, and procedural presentation remain unchanged.
+The 0.3.1 Vela responsive/status work was the baseline for the now-complete 0.3.2 semantic authority and shared-component convergence. Remaining accepted limitations—not completed 0.3.2 work—are tracked in `docs/KNOWN_ISSUES.md`.
 
 The generated i18n report guard is line-ending tolerant and checks working-tree, Git-index, and CI snapshots through their existing boundaries. Grid strict visual bounds, fail-closed input handling, current fixed-cell sizing, and Refresh scale idempotence are closed for 0.3.1.
 
@@ -292,7 +316,7 @@ Other areas to watch:
 
 ## Release baseline
 
-Version 0.3.1 is published on `main` and the latest immutable published tag is `v0.3.1`. Post-release development continues from `dev` toward 0.3.2.
+Version 0.3.2 is prepared from the integrated `dev` baseline. Version 0.3.1 remains published on `main`, and `v0.3.1` remains the latest immutable published tag until the user completes the release.
 
 The release contains:
 
@@ -304,11 +328,11 @@ The release contains:
 - retained 0.2.5 procedural appearance production paths;
 - expanded offline, browser VM, loader and production E2E coverage.
 
-`CHANGELOG.md` contains the formal 0.3.1 release section. Existing published tags must not be moved.
+`CHANGELOG.md` contains the formal 0.3.2 release notes and historical release sections. Existing published tags must not be moved.
 
 ## Next development direction
 
-The next development target is **0.3.2 — UI / Design System Foundation**. It should establish a complete semantic token hierarchy and progressively align Vela, Registry Renderer, Settings, and Home without redesigning the accepted Vela structure.
+After the 0.3.2 release, the next isolated development target is **0.3.3 — Agent Runtime Foundation**. It must not be merged into the 0.3.2 release preparation or weaken the existing Vela authority boundaries.
 
 Registry evolves toward a typed Capability Registry consumable by both Agent and Human UI. Capabilities may be `read`, `analyze`, `mutate`, or `create`; a dedicated Human UI is not required for a capability to exist.
 
@@ -336,7 +360,7 @@ CSS now owns the single canonical defaults for Enter, Exit, Standard, and Press.
 The implemented BezierCurveField is the bounded generic cubic-bezier input described above. It does not add Design Tuning storage, Promote UI, Motion Settings, presets, or a general graph framework.
 ## Settings Information Architecture Foundation
 
-The 0.3.2 Settings shell is one root scroll composition containing independent CoreUI Disclosure categories for Appearance, Advanced, and Developer. It has no user-facing category destination cards or secondary category pages. Appearance owns Language, Theme, Interface UI Scale, Major View Motion Speed, semantic Appearance, Typography, Tool Icon controls, nested Background disclosure, and the Palette launcher. Background UI classification belongs to Appearance while Background runtime and persistence remain domain-owned. Developer Access, calibration, and Labs each retain one owner; saturation, brightness, and grain live with all other procedural parameters under Developer → Procedural Appearance. Registry Control Lab, Settings Renderer Lab, and Procedural Appearance Lab are real Developer Registry tools; their Settings entries launch only after the Settings close transaction completes.
+The final 0.3.2 Settings shell is one root scroll composition containing independent CoreUI Disclosure categories for General, Appearance, Advanced, and Developer. It has no user-facing category destination cards or secondary category pages. General owns Language, Interface UI Scale, and Major View Motion Speed. Appearance owns Theme, Interface Appearance, Advanced Appearance Settings, Background, and the single Palette Library launcher. Advanced owns advanced application controls. Developer Access, Design Tuning, procedural calibration, and Labs each retain one owner behind Developer Mode. Background runtime and persistence remain domain-owned; Registry Control Lab, Settings Renderer Lab, and Procedural Appearance Lab remain real Developer Registry tools.
 
 Vela is deliberately not registered as `settings/vela`. Its fixed gear opens a lazy Vela-owned modal and closing restores focus to that launch source. Global Settings owns no Vela category, mount, or route. Acknowledgement and Provider enablement/readiness remain session/runtime-only; qualification policy remains trusted internal authority.
 

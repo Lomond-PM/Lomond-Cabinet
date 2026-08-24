@@ -1,8 +1,8 @@
-# 0.3.2 Final Settings Information Architecture — Implementation Preview
+# 0.3.2 Final Settings Information Architecture — Final Acceptance Record
 
 **Final Status: CLOSED / AE ACCEPTED.**
 
-This is an internal preview/handoff artifact of the already-user-approved Final Settings IA. It is **not** a runtime authority. The live category hierarchy is owned exclusively by `client/js/main.js` `renderSettingsContent()`; `client/js/settingsSchema.js` is documentation/transitional only and is **not** the live render source.
+This is the final acceptance record for the user-approved Final Settings IA. Its chronological implementation sections intentionally retain their interim preview/retest statuses as historical evidence; they do not describe the final state. This report is **not** a runtime authority. The live category hierarchy is owned exclusively by `client/js/main.js` `renderSettingsContent()`; `client/js/settingsSchema.js` is documentation/transitional only and is **not** the live render source.
 
 ---
 
