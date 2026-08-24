@@ -64,7 +64,7 @@
                         ]
                     },
                     {
-                        type: "checkbox",
+                        type: "switch",
                         key: "registryDebugTools",
                         labelKey: "label.registryDebugTools",
                         hintKey: "helper.registryDebugTools",
@@ -125,8 +125,8 @@
                     {
                         type: "color",
                         key: "homeBackground",
-                        labelKey: "label.homeBackground",
-                        hintKey: "helper.homeBackground",
+                        labelKey: "label.homeBaseColor",
+                        hintKey: "helper.homeBaseColor",
                         defaultValue: "#050403"
                     }
                 ]
@@ -173,7 +173,7 @@
                         step: 1
                     },
                     {
-                        type: "checkbox",
+                        type: "switch",
                         key: "motionEnable",
                         labelKey: "label.enableMotion",
                         hintKey: "helper.enableMotion",

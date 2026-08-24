@@ -540,9 +540,10 @@ function testStaticContracts() {
     ok(/\.vela-surface-action\s*\{[\s\S]*?min-width:\s*0[\s\S]*?text-overflow:\s*ellipsis/.test(cssSource), "long action labels cannot force horizontal overflow");
     ok(/\.vela-status-text\s*\{[\s\S]*?min-width:\s*0[\s\S]*?text-overflow:\s*ellipsis/.test(cssSource), "long status text remains in its shrinkable Grid area");
     ok(/vela-compact-action/.test(composerSource) && !/primary-action|secondary-action/.test(composerSource), "Send and Cancel do not reuse Tool Detail primary or secondary action classes");
-    ok(/\.vela-transcript-scroll::-webkit-scrollbar\s*\{[\s\S]*width: calc\(7px \* var\(--ui-scale\)\)/.test(cssSource) && /\.vela-transcript-scroll::-webkit-scrollbar-thumb:hover/.test(cssSource), "Transcript has visible CEP/WebKit scrollbar and hover selectors");
+    const sharedScrollCss = fs.readFileSync(path.join(ROOT, "client", "css", "style.css"), "utf8");
+    ok(/vela-transcript-scroll ui-scroll-region/.test(surfaceSource) && /\*::-webkit-scrollbar[\s\S]*\*::-webkit-scrollbar-thumb:hover/.test(sharedScrollCss), "Transcript inherits the document-global visible CEP/WebKit scrollbar contract");
     ok(/"vela\.surfaceSettings": "Settings"/.test(i18nSource) && /"vela\.surfaceSettings": "\\u8bbe\\u7f6e"/.test(i18nSource), "Surface Settings label is temporarily localized as Settings / 设置");
-    ok(/\.vela-surface-mount[\s\S]*margin-bottom: var\(--tool-gap\)/.test(cssSource), "Surface-to-tool-pool rhythm uses the established tool gap");
+    ok(/\.vela-surface-mount[\s\S]*margin-bottom: var\(--space-home-major-stack\)/.test(cssSource), "Surface-to-tool-pool rhythm uses the Home-owned major stack gap");
     const handleRule = (cssSource.match(/\.vela-resize-handle\s*\{([^}]*)\}/) || [])[1] || "";
     const gripRule = (cssSource.match(/\.vela-resize-grip\s*\{([^}]*)\}/) || [])[1] || "";
     const settingsRule = (cssSource.match(/\.vela-settings-slot\s*\{([^}]*)\}/) || [])[1] || "";

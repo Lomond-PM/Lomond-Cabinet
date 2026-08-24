@@ -131,7 +131,7 @@ const registryDefinitions = [
     const adSchema = fs.readFileSync(path.join(root, "host/tools/adComponentKit.tool.jsx"), "utf8");
     const loadOrderSource = main.slice(main.indexOf("loadOrder: function ()"), main.indexOf("saveOrder: function ()"));
     check(!/DynamicTools|DynamicToolOrder|var ToolRegistry/.test(main), "main no longer owns parallel hard-coded and dynamic tool maps");
-    check((main.match(/registerSystemSurface\(\{ id: /g) || []).length === 2 && /registerSystemSurface\(\{ id: "velaPersistentSurface" \}\)/.test(main) && /registerSystemSurface\(\{ id: "settings" \}\)/.test(main), "production registers exactly Vela Persistent Surface and Settings as System entries");
+    check((main.match(/registerSystemSurface\(\{/g) || []).length === 2 && /id: "velaPersistentSurface"/.test(main) && /id: "settings"/.test(main), "production registers exactly Vela Persistent Surface and Settings as System entries");
     check(/getHomeEntries\(\{ developerMode:/.test(main) && !/:not\(\[data-dynamic-tool='true'\]\)/.test(main), "Home deduplication is projected by Tool Catalog instead of DOM probing");
     check((main.match(/data-home-events-bound/g) || []).length >= 2 && /getAttribute\("data-home-events-bound"\) === "true"/.test(main), "Home buttons retain one-time event binding guard");
     check(/route\.kind === "registry"/.test(main) && !/route\.kind === "legacy"|renderVelaDetail/.test(main), "production detail routing accepts Registry tools without a Vela legacy special case");
@@ -144,6 +144,7 @@ const registryDefinitions = [
     check(/id:\s*"ecommerceLayout"/.test(adSchema) && /titleKey:\s*"tools\.adComponentKit\.title"/.test(adSchema) && /descriptionKey:\s*"tools\.adComponentKit\.description"/.test(adSchema) && /iconText:\s*"A"/.test(adSchema) && /storageKey:\s*"AEToolbox\.ecommerceLayout\.v1"/.test(adSchema), "Host Ad Component Kit schema remains the complete display and persistence authority");
     check(loadOrderSource.indexOf("saveStoredJson") === -1 && /commitDynamicToolCatalog[\s\S]*HomeLayoutManager\.loadOrder\(\)/.test(main), "loading filters only the in-memory order and Registry commit reapplies persisted Home order");
     check(index.indexOf("js/toolCatalog.js") < index.indexOf("js/main.js"), "Tool Catalog loads before main.js");
+    check(/route\.kind === "unknown" && toolId && toolCatalog && toolCatalog\.getSnapshot\(\)\.registryTools\.length > 0 && window\.console && console\.warn/.test(main), "unknown-route warning is gated on a populated catalog (no startup false positive)");
 }
 
 console.log(`Tool Catalog tests passed: ${assertions} assertions.`);

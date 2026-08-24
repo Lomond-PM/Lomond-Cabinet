@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html>
 <head>
     <meta charset="utf-8">
@@ -24,18 +24,15 @@
                     <h1 data-i18n="app.title">Lomond Cabinet</h1>
                 </div>
                 <div class="home-header-actions">
-                    <button class="panel-button home-edit-button" id="editHomeBtn" type="button" data-i18n="common.editHome">Edit Home</button>
-                    <button class="panel-button round-button settings-entry" id="settingsBtn" title="Panel settings" aria-label="Panel settings" data-i18n-title="common.settings" data-i18n-aria-label="common.settings">
-                        <span class="settings-glyph" aria-hidden="true"></span>
-                    </button>
+                    <button class="panel-button utility-action home-edit-button" id="editHomeBtn" type="button" data-i18n="common.editHome">Edit Home</button>
                 </div>
             </header>
 
-            <main class="home-content">
+            <main class="home-content ui-scroll-region">
                 <section id="velaSurfaceMount" class="vela-surface-mount" data-i18n-aria-label="vela.surfaceLabel"></section>
                 <div class="tool-bootstrap-status" id="toolBootstrapStatus" role="status" aria-live="polite">
                     <span id="toolBootstrapStatusText" data-i18n="bootstrap.loadingTools">Loading tools...</span>
-                    <button class="panel-button tool-bootstrap-retry" id="toolBootstrapRetry" type="button" data-i18n="bootstrap.retry" hidden>Retry</button>
+                    <button class="panel-button utility-action tool-bootstrap-retry" id="toolBootstrapRetry" type="button" data-i18n="bootstrap.retry" hidden>Retry</button>
                 </div>
                 <div class="tool-grid" id="toolGrid" aria-label="Tool grid">
                     <button class="tool-app app-card is-disabled" disabled>
@@ -52,21 +49,20 @@
         <section class="view view-detail" id="detailView">
             <div class="detail-ui-layer">
             <header class="detail-header">
-                <button class="panel-button back-button" id="backBtn">
+                <button class="panel-button utility-action back-button" id="backBtn">
                     <span class="button-glyph">&lt;</span>
                     <span data-i18n="common.home">Home</span>
                 </button>
                 <div class="detail-title">
                     <h2 id="detailHeading">Background Rounded Rectangle</h2>
                 </div>
-                <span class="selection-chip" id="selectionPill" data-i18n="selection.noSelection">No selection</span>
             </header>
 
-            <main class="detail-content">
+            <main class="detail-content ui-scroll-region ui-floating-action-scroll">
                 <section class="registry-tool-panel tool-panel" id="registryToolPanel" data-tool-panel="__dynamic"></section>
             </main>
 
-            <footer class="action-sheet tool-actions" id="registryToolActions" data-tool-actions="__dynamic"></footer>
+            <footer class="action-sheet tool-actions ui-floating-action-region" id="registryToolActions" data-tool-actions="__dynamic"></footer>
             </div>
         </section>
 
@@ -75,16 +71,17 @@
             <aside class="settings-panel panel-card" role="dialog" aria-label="Panel settings">
                 <div class="settings-ui-layer">
                     <header class="settings-header">
-                        <div>
-                    <p class="overline" data-i18n="common.global">Global</p>
-                    <h2 data-i18n="common.settings">Settings</h2>
-                        </div>
-                        <button class="panel-button round-button" id="closeSettingsBtn" title="Close settings" aria-label="Close settings" data-i18n-title="common.back" data-i18n-aria-label="common.back">
+                        <button class="panel-button utility-action back-button" id="closeSettingsBtn" title="Back" aria-label="Back" data-i18n-title="common.back" data-i18n-aria-label="common.back">
                             <span class="button-glyph">&lt;</span>
+                            <span id="settingsBackLabel" data-i18n="common.home">Home</span>
                         </button>
+                        <div class="settings-title">
+                            <h2 data-i18n="common.settings">Settings</h2>
+                        </div>
+                        <span aria-hidden="true"></span>
                     </header>
 
-                    <div class="settings-content"></div>
+                    <div class="settings-content ui-scroll-region"></div>
                 </div>
             </aside>
         </section>
@@ -101,6 +98,12 @@
     <script src="js/settingsSchema.js?v=20260803-vela-0.3.0-release-1"></script>
     <script src="js/proceduralCache.js?v=20260803-vela-0.3.0-release-1"></script>
     <script src="js/proceduralPaletteLibrary.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/palette/paletteModel.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/palette/colorDerivationRegistry.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/palette/paletteResolver.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/palette/legacyPaletteMigration.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/palette/paletteStore.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/palette/legacyProceduralPaletteAdapter.js?v=20260803-vela-0.3.0-release-1"></script>
     <script src="js/proceduralPaletteStore.js?v=20260803-vela-0.3.0-release-1"></script>
     <script src="js/proceduralPaletteEditor.js?v=20260803-vela-0.3.0-release-1"></script>
     <script src="js/proceduralPaletteWorkspace.js?v=20260803-vela-0.3.0-release-1"></script>
@@ -120,6 +123,18 @@
     <script src="js/vela/velaCepModuleLoader.js?v=20260803-vela-0.3.0-release-1"></script>
     <script src="js/toolCatalog.js?v=20260803-vela-0.3.0-release-1"></script>
     <script src="js/coreBootstrap.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/ui/coreUi.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/ui/motionDefaults.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/ui/coreMotion.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/ui/surfaceIdentity.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/designTuning/designTuningParameterRegistry.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/designTuning/designTuningStateStore.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/designTuning/designTuningResolver.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/system/systemSurfaceRouter.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/settings/settingsStateAdapter.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/appearance/appearanceParameterRegistry.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/appearance/appearanceStateStore.js?v=20260803-vela-0.3.0-release-1"></script>
+    <script src="js/appearance/appearanceResolver.js?v=20260803-vela-0.3.0-release-1"></script>
     <script src="js/main.js?v=20260803-vela-0.3.0-release-1"></script>
 </body>
 </html>

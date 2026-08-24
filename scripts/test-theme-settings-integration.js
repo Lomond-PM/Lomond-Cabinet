@@ -6,6 +6,7 @@ const path = require("path");
 const ROOT = path.resolve(__dirname, "..");
 const schemaText = fs.readFileSync(path.join(ROOT, "client", "js", "settingsSchema.js"), "utf8");
 const mainText = fs.readFileSync(path.join(ROOT, "client", "js", "main.js"), "utf8");
+const indexText = fs.readFileSync(path.join(ROOT, "client", "index.html"), "utf8");
 const cssText = fs.readFileSync(path.join(ROOT, "client", "css", "style.css"), "utf8");
 const i18nText = fs.readFileSync(path.join(ROOT, "client", "js", "i18n.js"), "utf8");
 const storeText = fs.readFileSync(path.join(ROOT, "client", "js", "proceduralPaletteStore.js"), "utf8");
@@ -34,11 +35,19 @@ function run() {
     assert(/value: "manualEndpoints"[\s\S]*value: "paletteScale"/.test(schemaText), "Dark source mode must expose manualEndpoints and paletteScale.");
     assert(/key: "toolIconDarkPaletteId"[\s\S]*optionsProvider: "proceduralPalettes"/.test(schemaText), "Dark palette selection must use the dynamic palette provider.");
     assert(/value: "colorful"/.test(schemaText) && /value: "themeMapped"/.test(schemaText), "Mode schema must contain exactly the supported values.");
-    assert(/type: "paletteSummary"[\s\S]*settings\.palette\.manage/.test(schemaText), "Colorful mode must expose a Palette Library summary presentation.");
+    assert(/palette-library-intro[\s\S]*options\.renderPaletteSummary\(summaryMount\)/.test(workspaceText), "Palette Library intro row hosts the summary region (left copy / right summary).");
+    assert(/renderPaletteSummary: function \(container\)[\s\S]*renderPaletteSummaryElement\(summary\)/.test(mainText), "main.js drives the Palette summary through the shared representation.");
+    assert(/renderPaletteSummaryElement\([\s\S]*settings-source-summary/.test(mainText), "Palette summary still uses the canonical .settings-source-summary element.");
+    assert((workspaceText.match(/options\.renderPaletteSummary\(summaryMount\)/g) || []).length === 1, "Palette Library must mount exactly one summary presentation instance.");
+    assert(!/wide[^\n]*(?:summary|palette)|(?:summary|palette)[^\n]*wide/i.test(workspaceText), "Palette Library must not define a bespoke wide summary renderer or markup variant.");
+    const summaryRule = cssText.match(/(?:^|\n)\.settings-source-summary\s*\{[^}]*\}/);
+    assert(summaryRule && /grid-template-columns:\s*minmax\(0, 1fr\)/.test(summaryRule[0]) && !/grid-template-columns:\s*minmax\(0, 1fr\) auto/.test(summaryRule[0]), "Canonical Palette summary keeps title, count, and chips in one vertical presentation at every width.");
+    assert(/\.palette-library-intro-summary \.settings-source-summary-swatches[\s\S]*justify-content:\s*flex-end/.test(cssText), "Wide placement right-aligns the whole canonical summary, including chips.");
+    assert(/@media \(max-width: 640px\)[\s\S]*\.palette-library-intro[\s\S]*flex-direction:\s*column[\s\S]*\.settings-source-summary-swatches[\s\S]*justify-content:\s*flex-start/.test(cssText), "Narrow placement stacks the whole summary and preserves its left-aligned canonical presentation.");
     assert(/id: "iconColors"[\s\S]*openWhen: \{ key: "proceduralIconMode", equals: "themeMapped" \}/.test(schemaText), "Theme-mapped endpoint group must open for Theme-mapped mode.");
     assert(/type: "colorRampPreview"/.test(schemaText), "Theme schema must declare the generic color ramp presentation.");
     assert(/type: "note"[\s\S]*helper\.proceduralIconSource/.test(schemaText), "Theme-mapped mode must explain the source palette relationship.");
-    assertions += 12;
+    assertions += 17;
 
     assert(/id: "proceduralAppearance"[\s\S]*developerOnly: true[\s\S]*collapsible: true[\s\S]*defaultCollapsed: true/.test(schemaText), "Procedural appearance controls must be a Developer-only collapsible Settings section.");
     [
@@ -54,7 +63,7 @@ function run() {
     assert(/key: "resetProceduralAppearanceParams"[\s\S]*type: "button"/.test(schemaText), "Procedural appearance controls must expose a reset action.");
     assert(/function getProceduralAppearanceDefaults[\s\S]*getDefaultParams[\s\S]*normalizeParams/.test(mainText), "Settings defaults must come from ProceduralAppearance.");
     assert(/ProceduralAppearanceParams = normalizeProceduralAppearanceParams\(data\.proceduralParams\)/.test(mainText), "Stored procedural params must be normalized through the shared engine.");
-    assert(/proceduralParams: collectProceduralAppearanceParamsFromControls/.test(mainText), "Procedural params must use the existing Settings storage object.");
+    assert(/proceduralParams: document\.querySelector\("\[data-procedural-param\]"\) \? collectProceduralAppearanceParamsFromControls\(\) : current\.proceduralParams/.test(mainText), "Procedural params must use mounted controls while preserving the Settings snapshot when unmounted.");
     assert(/function updateProceduralHomeIconAppearance[\s\S]*controller\.updateParameters\(getProceduralAppearanceSourceParams\(\)\)/.test(mainText), "Home icons must receive the shared source params.");
     assert(/controller\.updateAppearance\([\s\S]*mappingParams: getProceduralAppearanceMappingParams\(\)/.test(mainText), "Home icon theme presentation must receive the shared palette mapping params.");
     assert(/getProceduralAppearanceMappingParams\(\)/.test(mainText) && /params: getProceduralAppearanceSourceParams\(\)/g.test(mainText), "Home and background must receive shared source/mapping parameter paths.");
@@ -91,7 +100,7 @@ function run() {
     assert(functionSlice(mainText, "getPaletteSummaryData", "renderPaletteSummaryElement").indexOf("localStorage") === -1, "Palette summary must not read localStorage directly.");
     assert(/function bindThemePaletteStore[\s\S]*store\.subscribe/.test(mainText), "Palette Store updates must refresh the summary.");
     assert(/ThemeSettingsStoreListener[\s\S]*refreshSettingsPaletteSummary/.test(mainText), "Store summary refresh must be isolated from icon source updates.");
-    assert(/storageKey: STORAGE_KEY/.test(storeText) && /schemaVersion: SCHEMA_VERSION/.test(storeText), "Palette Store key and schema must remain owned by the Store.");
+    assert(/storageKey: StoreV2\.storageKey/.test(storeText) && /schemaVersion: StoreV2\.schemaVersion/.test(storeText), "Palette Store key and schema must come from the v2 authority.");
     assert(/function openWorkspace[\s\S]*settingsScrollTop/.test(workspaceText), "Workspace entry must preserve Settings scroll context.");
     assert(/restoreSettingsScroll: reason === "back"/.test(workspaceText), "Workspace back navigation must restore Settings scroll context.");
     assertions += 7;
@@ -132,12 +141,13 @@ function run() {
     assert(/\.select-trigger[\s\S]*display: grid[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto[\s\S]*max-width: 100%[\s\S]*box-sizing: border-box/.test(cssText), "Common select triggers must constrain text and preserve the chevron column.");
     assert(/\.select-label[\s\S]*overflow: hidden[\s\S]*text-overflow: ellipsis[\s\S]*white-space: nowrap/.test(cssText), "Common select labels must ellipsize long values.");
     assert(/\.select-option[\s\S]*overflow: hidden[\s\S]*text-overflow: ellipsis[\s\S]*white-space: nowrap/.test(cssText), "Common select options must ellipsize long values.");
-    assert(/function positionCustomSelectMenu[\s\S]*maxHeight[\s\S]*availableBelow[\s\S]*availableAbove/.test(mainText), "Portal menus must clamp height and position inside the viewport.");
-    assert(/settingsContent\.addEventListener\("scroll"[\s\S]*closeCustomSelectMenus/.test(mainText) && /function closeSettingsPanel[\s\S]*closeCustomSelectMenus/.test(mainText), "Portal menus must close on Settings scroll and close.");
+    const coreUiText = fs.readFileSync(path.join(ROOT, "client/js/ui/coreUi.js"), "utf8");
+    assert(/function enhanceSelect[\s\S]*function position\(\)[\s\S]*maxHeight[\s\S]*availableBelow[\s\S]*availableAbove/.test(coreUiText), "Shared Select portal must clamp height and position inside the viewport.");
+    assert(/doc\.addEventListener\("scroll", viewportChange, true\)/.test(coreUiText) && /function closeSettingsPanel[\s\S]*closeCustomSelectMenus/.test(mainText), "Shared Select owns scroll closure and Settings close retains explicit portal cleanup.");
     assertions += 7;
 
-    assert(/\.home-header-actions \.panel-button\s*\{[^}]*border-color: var\(--gold-soft\)[^}]*color: var\(--gold-soft\)/.test(cssText), "Home header controls must use the theme accent variables in their resting state.");
-    assert(/\.home-header-actions \.panel-button:hover,[\s\S]*\.home-header-actions \.panel-button:focus-visible[\s\S]*border-color: var\(--gold\)/.test(cssText), "Home header hover and focus states must strengthen the theme accent.");
+    assert(/class="panel-button utility-action home-edit-button" id="editHomeBtn"/.test(indexText), "Edit Home must consume the shared utility-action presentation.");
+    assert(/\.utility-action\s*\{[^}]*background: var\(--surface-utility-action\)[^}]*color: var\(--text-primary\)/.test(cssText), "Utility actions must use their semantic surface and primary text authority.");
     assert(/\.settings-glyph\s*\{[^}]*background-color: var\(--gold-soft\)/.test(cssText), "Settings glyph mask must use the theme accent, not tool icon colors.");
     assert(/\.more-icon\s*\{[^}]*border-color: var\(--gold-soft\)[^}]*background: var\(--bg-main\)/.test(cssText) && /\.plus-h,[\s\S]*background: var\(--gold-soft\)/.test(cssText), "More Tools icon and plus must use the theme accent variables.");
     assert(/\.more-icon \+ \.app-card-title\s*\{[^}]*color: var\(--gold-soft\)/.test(cssText), "More Tools text must use the theme accent variables.");

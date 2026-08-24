@@ -13,7 +13,6 @@
     var velaSurfaceController = null;
     var velaSurfaceBootstrapState = "idle";
     var velaSurfaceBootstrapRevision = 0;
-    var pendingSettingsFocusSectionId = null;
     var velaRuntimeStatusRevision = 0;
     var velaRuntimeLastErrorCode = null;
     var hostLoaded = false;
@@ -103,15 +102,14 @@
 
     installVelaRuntimeStatusView();
     var Motion = {
-        appleOut: "cubic-bezier(0.16, 1, 0.3, 1)",
-        appleStandard: "cubic-bezier(0.22, 1, 0.36, 1)",
-        appleIn: "cubic-bezier(0.32, 0, 0.67, 0)",
-        press: "cubic-bezier(0.2, 0, 0, 1)",
         fast: 160,
         normal: 260,
         launch: 480,
         close: 360
     };
+    var MotionDefaults = window.MotionDefaults;
+    var DesignTuning = null;
+    var coreMotion = window.CoreMotion ? window.CoreMotion.create() : null;
     var StorageKeys = {
         ecommerce: "AEToolbox.ecommerceLayout.v1",
         settings: "AEToolbox.settings.v1",
@@ -125,7 +123,14 @@
     var toolCatalog = window.ToolCatalog && typeof window.ToolCatalog.createCatalog === "function" ? window.ToolCatalog.createCatalog() : null;
     if (toolCatalog) {
         toolCatalog.registerSystemSurface({ id: "velaPersistentSurface" });
-        toolCatalog.registerSystemSurface({ id: "settings" });
+        toolCatalog.registerSystemSurface({
+            id: "settings",
+            titleKey: "common.settings",
+            iconText: "S",
+            iconIdentity: "settings",
+            home: { visible: true, orderable: true, hideable: false },
+            route: { surfaceId: "settings", defaultPage: "root", pages: ["root", "appearance"] }
+        });
     }
     var RegistryToolState = {};
     var RegistrySaveTimers = {};
@@ -134,15 +139,33 @@
     var ProceduralPreviewLastInputKeys = {};
     var PaletteWorkspaceController = null;
     var RegistryRuntimeStates = {};
-    var CustomSelectGlobalListenersBound = false;
+    var SharedSelectControllers = [];
     var PanelLifecycleListenersBound = false;
+    var ToolActionsResizeObserver = null;
+    var ToolActionsResizeFallback = null;
     var panelShuttingDown = false;
     var panelSuspended = false;
     var panelLifecycleGeneration = 1;
     var selectionPollTimer = null;
+    var lastSelectionSummary = null;
     var ThemeSettingsStoreListener = null;
     var ProceduralAppearanceParams = null;
     var ProceduralAppearanceSourceDebounceTimer = null;
+    var CoreAppearance = null;
+    var AppearancePreviewFrames = {};
+    var AppearancePreviewValues = {};
+    var ActiveAppearancePreviews = {};
+    var DesignTuningFieldBindings = {};
+    var DesignTuningCalibrationGesture = null;
+    var SurfacePresentationSessions = {};
+    var AppearanceFieldBindings = {};
+    var SettingsState = null;
+    var SystemRouter = null;
+    var ActiveSettingsSourceElement = null;
+    var ActiveRoute = null;
+    var SettingsPeekManipulation = null;
+    var SettingsPeekDelayTimer = null;
+    var SETTINGS_PEEK_DELAY_MS = 300;
     var PROCEDURAL_APPEARANCE_SOURCE_DEBOUNCE_MS = 150;
     var DefaultSettings = {
         motionSpeed: 1,
@@ -168,6 +191,7 @@
     var VelaProviderModel = DefaultSettings.velaProviderModel;
     var VelaProviderEndpoint = DefaultSettings.velaProviderEndpoint;
     var VelaExperimentalAcknowledged = false;
+    var VelaSettingsSurface = null;
 
     function getVelaActivationPolicy() {
         var module = window.VelaActivationPolicy;
@@ -310,8 +334,13 @@
 
     function resultMessage(result, fallbackKey, fallbackParams) {
         var inferredKey;
+        var localized;
         if (result && result.messageKey) {
-            return tr(result.messageKey, result);
+            localized = tr(result.messageKey, result);
+            if (localized !== result.messageKey) {
+                return localized;
+            }
+            return tr(fallbackKey || "status.ready", fallbackParams || result || {});
         }
         inferredKey = inferredMessageKey(result && result.message);
         if (inferredKey) {
@@ -335,6 +364,18 @@
 
     function duration(name) {
         return Math.max(80, Math.round(Motion[name] * motionScale));
+    }
+
+    function semanticMotionDuration(role) {
+        return MotionDefaults ? MotionDefaults.resolveDuration(role, motionScale) : duration(role === "spatialMorphExpand" ? "launch" : role === "spatialMorphContract" ? "close" : "fast");
+    }
+
+    function semanticMotionEasing(role) {
+        return MotionDefaults.resolveEasing(role, document.documentElement);
+    }
+
+    function syncMotionCssDurations() {
+        if (MotionDefaults) { MotionDefaults.applyCss(document.documentElement, motionScale); }
     }
 
     function loadStoredJson(key, fallback) {
@@ -1173,6 +1214,32 @@
 
     function endAnimation() {
         byId("appShell").classList.remove("is-animating");
+        if (DesignTuning) DesignTuning.flushPendingProjection();
+    }
+
+    function initializeDesignTuning() {
+        var registry = window.DesignTuningParameterRegistry;
+        var store;
+        if (!registry || !window.DesignTuningStateStore || !window.DesignTuningResolver || !MotionDefaults) return null;
+        store = window.DesignTuningStateStore.create({ storage: window.localStorage, registry: registry });
+        store.load();
+        DesignTuning = window.DesignTuningResolver.create({
+            registry: registry,
+            store: store,
+            rootStyle: document.documentElement.style,
+            readComputed: function (property) { return String(window.getComputedStyle(document.documentElement).getPropertyValue(property) || "").replace(/^\s+|\s+$/g, ""); },
+            isProjectionSafe: function () { return !byId("appShell").classList.contains("is-animating"); },
+            getCanonicalDuration: function (role) { return MotionDefaults.durations[role]; },
+            parseShadow: window.CoreUI.parseShadowValue,
+            serializeShadow: window.CoreUI.serializeShadowValue,
+            parseColorAlpha: window.CoreUI.parseColorAlphaValue,
+            serializeColorAlpha: window.CoreUI.serializeColorAlphaValue,
+            onProjectionApplied: function () { MotionDefaults.applyCss(document.documentElement, motionScale); }
+        });
+        MotionDefaults.setDurationOverrideResolver(function (role, canonical) { return DesignTuning.resolveDuration(role, canonical); });
+        DesignTuning.initialize();
+        window.AEToolboxDesignTuning = DesignTuning;
+        return DesignTuning;
     }
 
     function warmUpAnimationPipeline() {
@@ -1203,7 +1270,7 @@
                     { opacity: "0", transform: "translateZ(0) scale(1)" }
                 ], {
                     duration: 100,
-                    easing: Motion.appleOut,
+                    easing: semanticMotionEasing("toolIdentityOpen"),
                     fill: "none"
                 });
                 animation.onfinish = cleanup;
@@ -1328,6 +1395,8 @@
             button.type = "button";
             button.className = "tool-app app-card";
             button.setAttribute("data-tool", tool.id);
+            button.setAttribute("data-entry", entry.id);
+            button.setAttribute("data-entry-kind", entry.kind);
             button.setAttribute("data-dynamic-tool", "true");
 
             icon = document.createElement("span");
@@ -1416,23 +1485,84 @@
         return section;
     }
 
+    function createSettingsThemeCard() {
+        var card = createSettingsSectionMount("settingsCoreAppearanceMount", "settings-section settings-theme-card");
+        var groups = createSettingsSectionMount("settingsThemeGroupsMount", "settings-theme-groups settings-section-inner");
+        var palette = createSettingsSectionMount("settingsPaletteLibraryMount", "settings-section settings-section--palette-library");
+        card.appendChild(groups);
+        card.appendChild(palette);
+        return card;
+    }
+
+    function createSettingsCategory(id, titleKey, expanded, className) {
+        var root = document.createElement("section");
+        var trigger = document.createElement("button");
+        var title = document.createElement("span");
+        var chevron = document.createElement("span");
+        var body = document.createElement("div");
+        root.id = "settingsCategory" + id.charAt(0).toUpperCase() + id.slice(1);
+        root.className = "settings-category collapsible-card" + (className ? " " + className : "");
+        root.setAttribute("data-settings-category", id);
+        root.setAttribute("data-settings-disclosure-key", "settings." + id);
+        trigger.type = "button";
+        trigger.className = "settings-category-header settings-section-toggle collapsible-heading";
+        title.className = "settings-category-title";
+        title.setAttribute("data-i18n", titleKey);
+        title.textContent = tr(titleKey);
+        chevron.className = "collapse-chevron settings-category-chevron";
+        chevron.setAttribute("aria-hidden", "true");
+        trigger.appendChild(title);
+        trigger.appendChild(chevron);
+        body.id = "settingsCategoryBody-" + id;
+        body.className = "settings-category-content collapsible-body";
+        root.appendChild(trigger);
+        root.appendChild(body);
+        root._coreDisclosure = window.CoreUI.createDisclosureController({
+            trigger: trigger,
+            content: body,
+            root: root,
+            expanded: expanded === true,
+            collapsedClass: "is-collapsed",
+            onChange: function (isExpanded) {
+                if (id === "appearance" && !isExpanded) clearAppearancePreviews();
+            }
+        });
+        return { root: root, body: body };
+    }
+
     function renderSettingsContent() {
         var content = document.querySelector(".settings-content");
         var renderer;
+        var general;
+        var appearance;
+        var advanced;
+        var developer;
         if (!content) {
             return;
         }
+        disposeSharedSelectsWithin(content);
         content.innerHTML = "";
         content.classList.remove("settings-renderer");
         renderer = document.createElement("div");
-        renderer.className = "settings-renderer";
-        renderer.appendChild(createSettingsSectionMount("settingsLanguageMount", "settings-section"));
-        renderer.appendChild(createSettingsSectionMount("settingsVelaMount", "settings-section"));
-        renderer.appendChild(createSettingsSectionMount("settingsDeveloperModeMount", "settings-section"));
-        renderer.appendChild(createSettingsSectionMount("settingsMotionMount", "settings-section"));
-        renderer.appendChild(createSettingsSectionMount("settingsThemeMount", "settings-section"));
-        renderer.appendChild(createSettingsSectionMount("settingsPaletteLibraryMount", "settings-section settings-section--palette-library"));
-        renderer.appendChild(createSettingsSectionMount("backgroundSettingsCard", "settings-section settings-section--background settings-section--collapsible collapsible-card"));
+        renderer.id = "settingsRootPage";
+        renderer.className = "settings-renderer settings-root-page";
+        general = createSettingsCategory("general", "settings.navigation.general", true, "settings-category--general");
+        general.body.appendChild(createSettingsSectionMount("settingsLanguageMount", "settings-section"));
+        general.body.appendChild(createSettingsSectionMount("settingsInterfaceMount", "settings-section"));
+        general.body.appendChild(createSettingsSectionMount("settingsMotionMount", "settings-section"));
+        appearance = createSettingsCategory("appearance", "settings.navigation.appearance", true, "settings-category--appearance");
+        appearance.body.appendChild(createSettingsThemeCard());
+        appearance.body.appendChild(createSettingsSectionMount("settingsAppearanceParametersMount", "settings-appearance-parameters"));
+        appearance.body.appendChild(createSettingsSectionMount("backgroundSettingsCard", "settings-section settings-section--background settings-section--collapsible collapsible-card"));
+        advanced = createSettingsCategory("advanced", "settings.navigation.advanced", false, "settings-category--advanced");
+        advanced.body.appendChild(createSettingsSectionMount("settingsDeveloperModeMount", "settings-section"));
+        developer = createSettingsCategory("developer", "settings.navigation.developer", false, "settings-category--developer settings-developer-only");
+        developer.body.appendChild(createSettingsDesignTuningSection());
+        developer.body.appendChild(createSettingsSectionMount("settingsDeveloperProceduralMount", "settings-section"));
+        renderer.appendChild(general.root);
+        renderer.appendChild(appearance.root);
+        renderer.appendChild(advanced.root);
+        renderer.appendChild(developer.root);
         content.appendChild(renderer);
     }
 
@@ -1457,6 +1587,16 @@
         }
         heading.appendChild(copy);
         return heading;
+    }
+
+    function createSettingsDesignTuningSection() {
+        var section = document.createElement("section");
+        section.id = "settingsDeveloperDesignTuningSection";
+        section.className = "settings-design-tuning-section";
+        section.appendChild(createSettingsSectionHeader("settings.navigation.developer", "settings.designTuning.title", "settings.designTuning.description"));
+        section.appendChild(createSettingsSectionMount("settingsDeveloperDesignTuningMount", "settings-section settings-design-tuning"));
+        section.appendChild(createSettingsSectionMount("settingsDeveloperCalibrationMount", "settings-section"));
+        return section;
     }
 
     function createSettingsFieldCopy(labelKey, descriptionKey, fallbackDescription) {
@@ -1491,16 +1631,24 @@
     }
 
     function createSharedSettingsFieldRow(type, field, descriptionKey, fallbackDescription) {
-        var row = document.createElement(type === "checkbox" ? "label" : "div");
-        var copy = createSettingsFieldCopy(field.labelKey, descriptionKey || field.descriptionKey || field.hintKey, fallbackDescription || "");
         var controls = document.createElement("span");
-
-        row.className = type === "checkbox" ? "switch-row registry-switch-row settings-field settings-field--switch" : "control-row registry-field-row settings-field settings-field--" + type;
         controls.className = "control-inputs settings-field-control";
-        row.appendChild(copy);
-        row.appendChild(controls);
+        var built = window.CoreUI.createFieldRow({
+            document: document,
+            labelRow: type === "checkbox",
+            labelKey: field.labelKey,
+            labelText: tr(field.labelKey),
+            descriptionKey: descriptionKey || field.descriptionKey || field.hintKey,
+            descriptionText: descriptionKey || field.descriptionKey || field.hintKey ? tr(descriptionKey || field.descriptionKey || field.hintKey) : (fallbackDescription || ""),
+            contentGrowth: field.contentGrowth === true,
+            control: controls,
+            classNames: type === "checkbox" ? "switch-row registry-switch-row settings-field settings-field--switch" : "control-row registry-field-row settings-field settings-field--" + type,
+            copyClassNames: "registry-label-column settings-field-copy",
+            labelClassNames: "control-label registry-text-body settings-field-label",
+            descriptionClassNames: "registry-field-hint registry-text-muted settings-field-description"
+        });
         return {
-            row: row,
+            row: built.row,
             controls: controls
         };
     }
@@ -1568,40 +1716,17 @@
     }
 
     function createSharedSettingsSelect(id, field, selectedValue) {
-        var select = document.createElement("select");
-
-        select.id = id;
-        select.className = "select-input settings-select";
+        var select = window.CoreUI.createSelect({ document: document, id: id, classNames: "select-input settings-select" });
         appendSettingsSelectOptions(select, field, selectedValue);
         return select;
     }
 
     function createSharedSettingsSwitch(id, checked) {
-        var switchWrap = document.createElement("span");
-        var input = document.createElement("input");
-        var track = document.createElement("span");
-
-        switchWrap.className = "switch registry-switch settings-switch";
-        input.id = id;
-        input.type = "checkbox";
-        input.checked = checked === true;
-        track.className = "switch-track";
-        switchWrap.appendChild(input);
-        switchWrap.appendChild(track);
-        return switchWrap;
+        return window.CoreUI.createSwitch({ document: document, id: id, checked: checked, classNames: "switch registry-switch settings-switch" }).root;
     }
 
     function createSharedSettingsTextInput(id, field, value) {
-        var input = document.createElement("input");
-        input.id = id;
-        input.type = "text";
-        input.className = "registry-text-input settings-text-input";
-        input.value = value === null || value === undefined ? "" : String(value);
-        if (field && typeof field.maxLength === "number") {
-            input.maxLength = field.maxLength;
-        }
-        input.setAttribute("spellcheck", field && field.spellcheck === true ? "true" : "false");
-        return input;
+        return window.CoreUI.createTextInput({ document: document, id: id, value: value, maxLength: field && field.maxLength, spellcheck: field && field.spellcheck === true, classNames: "registry-text-input settings-text-input" });
     }
 
     function dispatchSettingsControlEvent(element, type) {
@@ -1948,9 +2073,6 @@
     }
 
     function createSharedSettingsRangeNumber(field, rangeId, numberId, minValue, maxValue, rangeHookClass, numberHookClass, dragOptions) {
-        var controls = document.createElement("span");
-        var range = document.createElement("input");
-        var number = document.createElement("input");
         var defaultValue = getSettingsFieldDefaultValue(field);
         var dragField = {
             min: minValue,
@@ -1958,70 +2080,38 @@
             step: field.step,
             defaultValue: defaultValue
         };
-
-        controls.className = "control-inputs settings-field-control registry-range-control";
-        range.id = rangeId;
-        range.className = "pill-slider registry-range settings-slider" + (rangeHookClass ? " " + rangeHookClass : "");
-        range.type = "range";
-        range.min = String(minValue);
-        range.max = String(maxValue);
-        range.step = String(field.step);
-        range.value = String(defaultValue);
-
-        number.id = numberId;
-        number.className = "num-input registry-range-number settings-number" + (numberHookClass ? " " + numberHookClass : "");
-        number.type = "number";
-        number.min = String(minValue);
-        number.max = String(maxValue);
-        number.step = String(field.step);
-        number.value = String(defaultValue);
-
-        controls.appendChild(number);
-        controls.appendChild(range);
-        setupRegistryNumberDrag(number, dragField, function (value) {
-            range.value = value;
-            dispatchSettingsControlEvent(number, "input");
-            if (!dragOptions || dragOptions.dispatchChange !== false) {
-                dispatchSettingsControlEvent(number, "change");
-            }
-        }, dragOptions);
-        return controls;
+        var built = window.CoreUI.createRangeNumber({
+            document: document,
+            rangeId: rangeId,
+            numberId: numberId,
+            value: String(defaultValue),
+            min: String(minValue),
+            max: String(maxValue),
+            step: String(field.step),
+            field: dragField,
+            classNames: "control-inputs settings-field-control registry-range-control",
+            rangeClassNames: "pill-slider registry-range settings-slider" + (rangeHookClass ? " " + rangeHookClass : ""),
+            numberClassNames: "num-input registry-range-number settings-number" + (numberHookClass ? " " + numberHookClass : ""),
+            onNumberDrag: function (value) {
+                built.range.value = value;
+                dispatchSettingsControlEvent(built.number, "input");
+                if (!dragOptions || dragOptions.dispatchChange !== false) dispatchSettingsControlEvent(built.number, "change");
+            },
+            onNumberCommit: dragOptions && dragOptions.onCommit,
+            onNumberCancel: dragOptions && dragOptions.onCancel,
+            onDragStart: dragOptions && dragOptions.onDragStart,
+            onDragChange: dragOptions && dragOptions.onDragChange,
+            onDragEnd: dragOptions && dragOptions.onDragEnd
+        });
+        return built.root;
     }
 
     function createSharedSettingsColorControl(field, inputId, fallbackColor, shellClassName) {
-        var controls = document.createElement("span");
-        var shell = document.createElement("button");
-        var input = document.createElement("input");
-        var hexInput = document.createElement("input");
         var fallback = fallbackColor || "#ffffff";
-
-        controls.className = "control-inputs settings-field-control registry-color-control settings-color-control";
-        shell.className = "registry-color-swatch settings-color-pill" + (shellClassName ? " " + shellClassName : "");
-        shell.type = "button";
-        shell.setAttribute("aria-label", tr(field.labelKey));
-        shell.setAttribute("data-color-target", inputId);
-        input.id = inputId;
-        input.className = "native-color-input";
-        input.type = "hidden";
-        input.value = normalizeHex(field.defaultValue, fallback);
-        hexInput.id = inputId + "Hex";
-        hexInput.className = "registry-color-hex settings-color-hex";
-        hexInput.type = "text";
-        hexInput.value = input.value;
-        hexInput.setAttribute("spellcheck", "false");
-        bindHexInputSelectBehavior(hexInput);
-
-        function syncColorUi(value) {
-            var previous = input.value || fallback;
-            var normalized = normalizeHex(value, previous || fallback).toLowerCase();
-            input.value = normalized;
-            hexInput.value = normalized;
-            shell.style.backgroundColor = normalized;
-            return normalized;
-        }
+        var built;
 
         function applyHex(value) {
-            var normalized = syncColorUi(value);
+            var normalized = normalizeHex(value, built ? built.input.value : fallback).toLowerCase();
             if (BackgroundEngine.handleColorChange(inputId, normalized)) {
                 return;
             }
@@ -2040,42 +2130,27 @@
                 saveSettings();
             }
         }
-
-        hexInput._registryOnValueChange = function () {
-            applyHex(hexInput.value);
-        };
-        hexInput.addEventListener("input", function () {
-            if (/^#?[0-9a-fA-F]{6}$/.test(this.value)) {
-                applyHex(this.value);
+        built = window.CoreUI.createColorField({
+            document: document,
+            id: inputId,
+            value: normalizeHex(field.defaultValue, fallback),
+            fallback: fallback,
+            normalize: normalizeHex,
+            isValid: function (value) { return /^#?[0-9a-fA-F]{6}$/.test(value); },
+            ariaLabel: tr(field.labelKey),
+            classNames: "control-inputs settings-field-control settings-color-control",
+            swatchClassNames: "settings-color-pill" + (shellClassName ? " " + shellClassName : ""),
+            valueClassNames: "native-color-input",
+            hexClassNames: "settings-color-hex",
+            onPreview: applyHex,
+            onCommit: applyHex,
+            openPicker: function (pickerOptions) {
+                openCoreColorPicker(pickerOptions);
             }
         });
-        hexInput.addEventListener("change", function () {
-            applyHex(this.value);
-        });
-        hexInput.addEventListener("blur", function () {
-            applyHex(this.value);
-        });
-        hexInput.addEventListener("keydown", function (event) {
-            if (event.keyCode === 13) {
-                event.preventDefault();
-                applyHex(this.value);
-                this.blur();
-            } else if (event.keyCode === 27) {
-                event.preventDefault();
-                this.value = input.value || fallback;
-                this.blur();
-            }
-        });
-        shell.addEventListener("click", function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            openRegistryColorPicker(hexInput, shell, fallback);
-        });
-        shell.appendChild(input);
-        controls.appendChild(shell);
-        controls.appendChild(hexInput);
-        syncColorUi(input.value);
-        return controls;
+        bindHexInputSelectBehavior(built.hex);
+        built.hex.addEventListener("blur", function () { built.setValue(this.value); applyHex(this.value); });
+        return built.root;
     }
 
     function renderSettingsLanguage() {
@@ -2097,12 +2172,12 @@
         fieldRow = createSharedSettingsFieldRow("select", field, null, "English / \u7b80\u4f53\u4e2d\u6587");
         select = createSharedSettingsSelect("languageSelect", field, window.I18n && window.I18n.getLanguage ? window.I18n.getLanguage() : null);
         fieldRow.controls.appendChild(select);
+        enhanceSharedSelect(select);
         mount.appendChild(heading);
         mount.appendChild(fieldRow.row);
     }
 
-    function renderSettingsVela() {
-        var mount = byId("settingsVelaMount");
+    function renderVelaSettingsContent(mount) {
         var section = findSettingsSchemaSection("vela");
         var field;
         var endpointField;
@@ -2138,8 +2213,11 @@
             return;
         }
         mount.innerHTML = "";
-        mount.className = "settings-section";
-        heading = createSettingsSectionHeader("vela.surfaceLabel", section.titleKey, section.descriptionKey);
+        mount.className = "vela-settings-content ui-scroll-region";
+        heading = document.createElement("p");
+        heading.className = "settings-section-description vela-settings-introduction";
+        heading.setAttribute("data-i18n", section.descriptionKey);
+        heading.textContent = tr(section.descriptionKey);
         fieldRow = createSharedSettingsFieldRow("text", endpointField, endpointField.descriptionKey, "");
         endpointInput = createSharedSettingsTextInput(endpointField.key, endpointField, VelaProviderEndpoint);
         endpointInput.addEventListener("change", saveEndpoint);
@@ -2153,20 +2231,22 @@
         input.addEventListener("blur", saveModel);
         fieldRow.controls.appendChild(input);
         mount.appendChild(fieldRow.row);
-        acknowledgement = document.createElement("input"); acknowledgement.type = "checkbox"; acknowledgement.id = "velaExperimentalAcknowledgement"; acknowledgement.checked = VelaExperimentalAcknowledged === true;
-        acknowledgementLabel = document.createElement("label"); acknowledgementLabel.setAttribute("for", acknowledgement.id); acknowledgementLabel.textContent = tr("settings.vela.acknowledgement"); acknowledgementLabel.appendChild(acknowledgement);
-        enableButton = document.createElement("button"); enableButton.type = "button"; enableButton.id = "velaExperimentalEnable"; enableButton.className = "panel-button"; enableButton.textContent = tr("settings.vela.enableSession");
-        disableButton = document.createElement("button"); disableButton.type = "button"; disableButton.id = "velaExperimentalDisable"; disableButton.className = "panel-button"; disableButton.textContent = tr("settings.vela.disableSession");
+        acknowledgementLabel = window.CoreUI.createCheckbox({ document: document, id: "velaExperimentalAcknowledgement", checked: VelaExperimentalAcknowledged === true, labelText: tr("settings.vela.acknowledgement"), classNames: "settings-vela-acknowledgement" });
+        acknowledgement = acknowledgementLabel.input;
+        enableButton = window.CoreUI.createButton({ document: document, id: "velaExperimentalEnable", variant: "neutral", classNames: "panel-button panel-local-action", text: tr("settings.vela.enableSession") });
+        disableButton = window.CoreUI.createButton({ document: document, id: "velaExperimentalDisable", variant: "neutral", classNames: "panel-button panel-local-action", text: tr("settings.vela.disableSession") });
         status = document.createElement("p"); status.id = "velaExperimentalStatus"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
-        acknowledgement.addEventListener("change", function () { VelaExperimentalAcknowledged = acknowledgement.checked === true; saveSettings(); configureSession(); refreshSession(); });
+        acknowledgement.addEventListener("change", function () { VelaExperimentalAcknowledged = acknowledgement.checked === true; configureSession(); refreshSession(); });
         enableButton.addEventListener("click", function () { saveEndpoint(); saveModel(); if (velaSurfaceController && typeof velaSurfaceController.enableExperimental === "function") { velaSurfaceController.enableExperimental().then(refreshSession, refreshSession); } });
         disableButton.addEventListener("click", function () { if (velaSurfaceController && typeof velaSurfaceController.disableExperimental === "function") { velaSurfaceController.disableExperimental(); } refreshSession(); });
-        mount.appendChild(acknowledgementLabel); mount.appendChild(enableButton); mount.appendChild(disableButton); mount.appendChild(status);
+        mount.appendChild(acknowledgementLabel.root); mount.appendChild(enableButton); mount.appendChild(disableButton); mount.appendChild(status);
         configureSession(); refreshSession();
     }
 
     function renderSettingsDeveloperMode() {
         var mount = byId("settingsDeveloperModeMount");
+        var calibrationMount = byId("settingsDeveloperCalibrationMount");
+        var proceduralMount = byId("settingsDeveloperProceduralMount");
         var field = findSettingsSchemaField("registryDebugTools");
         var radiusField = findSettingsSchemaField("homeIconRadius");
         var shadowField = findSettingsSchemaField("homeDragShadowIntensity");
@@ -2185,12 +2265,16 @@
         var resetButton;
         var i;
 
-        if (!mount || !field) {
+        if (!mount || !calibrationMount || !proceduralMount || !field) {
             return;
         }
 
         mount.innerHTML = "";
         mount.className = "settings-section";
+        calibrationMount.innerHTML = "";
+        calibrationMount.className = "settings-section settings-developer-only";
+        proceduralMount.innerHTML = "";
+        proceduralMount.className = "settings-section settings-developer-only";
 
         heading = createSettingsSectionHeader("section.debug", "section.developerTools", null);
 
@@ -2200,26 +2284,28 @@
         mount.appendChild(heading);
         mount.appendChild(fieldRow.row);
 
+        renderSettingsDesignTuningMotion();
+
+        calibrationMount.appendChild(createSettingsGroupLabel("settings.developer.homeCalibration"));
+
         if (radiusField) {
             radiusRow = createSharedSettingsFieldRow("range", radiusField, radiusField.descriptionKey, "");
-            radiusRow.row.classList.add("settings-developer-only");
             radiusRow.controls.parentNode && radiusRow.row.removeChild(radiusRow.controls);
             radiusControls = createSharedSettingsRangeNumber(radiusField, "homeIconRadius", "homeIconRadiusNumber", radiusField.min, radiusField.max, "", "");
             radiusRow.row.appendChild(radiusControls);
-            mount.appendChild(radiusRow.row);
+            calibrationMount.appendChild(radiusRow.row);
         }
         if (shadowField) {
             shadowRow = createSharedSettingsFieldRow("range", shadowField, shadowField.descriptionKey, "");
-            shadowRow.row.classList.add("settings-developer-only");
             shadowRow.controls.parentNode && shadowRow.row.removeChild(shadowRow.controls);
             shadowControls = createSharedSettingsRangeNumber(shadowField, "homeDragShadowIntensity", "homeDragShadowIntensityNumber", shadowField.min, shadowField.max, "", "");
             shadowRow.row.appendChild(shadowControls);
-            mount.appendChild(shadowRow.row);
+            calibrationMount.appendChild(shadowRow.row);
         }
         proceduralSection = findSettingsSchemaSection("proceduralAppearance");
         if (proceduralSection) {
             proceduralGroup = createSettingsThemeGroup(proceduralSection);
-            proceduralGroup.root.classList.add("settings-developer-only", "settings-procedural-params-group");
+            proceduralGroup.root.classList.add("settings-procedural-params-group", "settings-theme-group--first");
             if (proceduralSection.descriptionKey) {
                 proceduralNote = document.createElement("p");
                 proceduralNote.className = "settings-theme-note settings-procedural-params-note";
@@ -2236,7 +2322,7 @@
                     resetButton = document.createElement("button");
                     resetButton.id = proceduralField.key;
                     resetButton.type = "button";
-                    resetButton.className = "panel-button settings-action-button registry-large-button";
+                    resetButton.className = "ui-button ui-button--neutral panel-button settings-action-button registry-large-button panel-local-action";
                     resetButton.setAttribute("data-i18n", proceduralField.labelKey);
                     resetButton.textContent = tr(proceduralField.labelKey);
                     resetButton.addEventListener("click", resetProceduralAppearanceParams);
@@ -2246,18 +2332,251 @@
                     proceduralGroup.body.appendChild(proceduralRow);
                 }
             }
-            mount.appendChild(proceduralGroup.root);
+            proceduralMount.appendChild(proceduralGroup.root);
         }
         setupProceduralAppearanceParams();
         syncSettingsDeveloperOnlyFields();
     }
 
+    function parseDesignTuningCurve(value) {
+        var match = /^cubic-bezier\(\s*(-?(?:\d+\.?\d*|\.\d+))\s*,\s*(-?(?:\d+\.?\d*|\.\d+))\s*,\s*(-?(?:\d+\.?\d*|\.\d+))\s*,\s*(-?(?:\d+\.?\d*|\.\d+))\s*\)$/i.exec(String(value || ""));
+        return match ? { x1: Number(match[1]), y1: Number(match[2]), x2: Number(match[3]), y2: Number(match[4]) } : null;
+    }
+
+    function settingsDisclosureExpanded(element) {
+        if (element._coreDisclosure) return element._coreDisclosure.isExpanded();
+        if (element.tagName && element.tagName.toLowerCase() === "details") return element.open === true;
+        var trigger = element.querySelector("[aria-expanded]");
+        return trigger ? trigger.getAttribute("aria-expanded") === "true" : !element.classList.contains("is-collapsed");
+    }
+
+    function setSettingsDisclosureExpanded(element, expanded) {
+        var trigger; var content;
+        if (element._coreDisclosure) { element._coreDisclosure.setExpanded(expanded); return; }
+        if (element.tagName && element.tagName.toLowerCase() === "details") { element.open = expanded; return; }
+        trigger = element.querySelector("[aria-expanded]"); content = trigger && trigger.getAttribute("aria-controls") ? byId(trigger.getAttribute("aria-controls")) : null;
+        if (trigger) trigger.setAttribute("aria-expanded", expanded ? "true" : "false");
+        if (content) content.setAttribute("aria-hidden", expanded ? "false" : "true");
+        element.classList.toggle("is-collapsed", !expanded);
+    }
+
+    function captureSurfacePresentationSession(surfaceId, scrollElement, payload) {
+        SurfacePresentationSessions[surfaceId] = { scrollTop: scrollElement ? scrollElement.scrollTop : 0, payload: payload || {} };
+    }
+
+    function restoreSurfacePresentationSession(surfaceId, scrollElement, restorePayload) {
+        var snapshot = SurfacePresentationSessions[surfaceId]; var target;
+        if (!snapshot || !scrollElement) return false;
+        if (typeof restorePayload === "function") restorePayload(snapshot.payload || {});
+        target = Math.max(0, Math.min(snapshot.scrollTop || 0, Math.max(0, scrollElement.scrollHeight - scrollElement.clientHeight)));
+        scrollElement.scrollTop = target;
+        return true;
+    }
+
+    function captureSettingsPresentationSession() {
+        var content = document.querySelector(".settings-content"); var disclosures = document.querySelectorAll("#settingsRootPage [data-settings-disclosure-key]"); var states = {}; var i; var key;
+        for (i = 0; i < disclosures.length; i++) { key = disclosures[i].getAttribute("data-settings-disclosure-key"); if (key) states[key] = settingsDisclosureExpanded(disclosures[i]); }
+        captureSurfacePresentationSession("settings", content, { disclosures: states });
+    }
+
+    function restoreSettingsPresentationSession() {
+        var content = document.querySelector(".settings-content");
+        restoreSurfacePresentationSession("settings", content, function (payload) { var disclosures = document.querySelectorAll("#settingsRootPage [data-settings-disclosure-key]"); var states = payload.disclosures || {}; var i; var key;
+            for (i = 0; i < disclosures.length; i++) { key = disclosures[i].getAttribute("data-settings-disclosure-key"); if (Object.prototype.hasOwnProperty.call(states, key)) setSettingsDisclosureExpanded(disclosures[i], states[key]); }
+        });
+    }
+
+    function designTuningFreezeValue(parameter) {
+        var evidence = DesignTuning.getEvidence(); var value = evidence.resolved[parameter.id];
+        if (parameter.type === "shadow") return window.CoreUI.serializeShadowValue(value);
+        if (parameter.type === "cubicBezier") return "cubic" + "-bezier(" + [value.x1, value.y1, value.x2, value.y2].join(", ") + ")";
+        return parameter.type === "lengthPx" ? "calc(" + value + "px * var(--ui-scale))" : String(value);
+    }
+
+    function beginDesignTuningCalibrationGesture(parameter, source) {
+        if (DesignTuningCalibrationGesture && DesignTuningCalibrationGesture.parameter.id !== parameter.id) cancelDesignTuningCalibrationGesture();
+        if (!DesignTuningCalibrationGesture) DesignTuningCalibrationGesture = { parameter: parameter, source: source || null, lastValue: null };
+    }
+
+    function updateDesignTuningCalibrationGesture(parameter, value, source) {
+        beginDesignTuningCalibrationGesture(parameter, source);
+        DesignTuningCalibrationGesture.lastValue = window.DesignTuningParameterRegistry.cloneValue(value);
+        DesignTuning.setTransientOverride(parameter.id, value);
+    }
+
+    function finishDesignTuningCalibrationGesture(parameter, value) {
+        var finalValue = value !== null && value !== undefined ? window.DesignTuningParameterRegistry.cloneValue(value) : (DesignTuningCalibrationGesture && DesignTuningCalibrationGesture.parameter.id === parameter.id ? DesignTuningCalibrationGesture.lastValue : value);
+        DesignTuning.commitTransientOverride(parameter.id, finalValue);
+        DesignTuningCalibrationGesture = null;
+    }
+
+    function cancelDesignTuningCalibrationGesture() {
+        var gesture = DesignTuningCalibrationGesture;
+        if (!gesture) { if (DesignTuning) DesignTuning.clearTransientOverrides(); return; }
+        DesignTuning.clearTransientOverride(gesture.parameter.id);
+        DesignTuningCalibrationGesture = null;
+    }
+
+    function establishDesignTuningCalibrationChromeBaseline(parameters) {
+        var mount = byId("settingsDeveloperDesignTuningMount"); var i; var parameter;
+        if (!mount) return;
+        for (i = 0; i < parameters.length; i++) {
+            parameter = parameters[i];
+            if (parameter.cssProperty && parameter.calibrationChromeIsolation) mount.style.setProperty(parameter.cssProperty, designTuningFreezeValue(parameter));
+        }
+    }
+
+    function clearDesignTuningCalibrationChromeBaseline() {
+        var mount = byId("settingsDeveloperDesignTuningMount"); var registry = window.DesignTuningParameterRegistry; var parameters; var i;
+        if (!mount || !registry) return;
+        parameters = registry.list();
+        for (i = 0; i < parameters.length; i++) if (parameters[i].cssProperty && parameters[i].calibrationChromeIsolation) mount.style.removeProperty(parameters[i].cssProperty);
+    }
+
+    function renderSettingsDesignTuningMotion() {
+        var mount = byId("settingsDeveloperDesignTuningMount");
+        var registry = window.DesignTuningParameterRegistry;
+        var evidence = DesignTuning && DesignTuning.getEvidence();
+        var curveKeys = { enter: "settings.designTuning.motion.curve.enter", exit: "settings.designTuning.motion.curve.exit", standard: "settings.designTuning.motion.curve.standard", press: "settings.designTuning.motion.curve.press" };
+        var durationMeta = {
+            "motion.duration.spatialExpand": { key: "settings.designTuning.motion.duration.spatialExpand" },
+            "motion.duration.spatialContract": { key: "settings.designTuning.motion.duration.spatialContract" },
+            "motion.duration.viewContentEnter": { key: "settings.designTuning.motion.duration.viewContentEnter" },
+            "motion.duration.viewContentExit": { key: "settings.designTuning.motion.duration.viewContentExit" },
+            "motion.duration.actionFeedback": { key: "settings.designTuning.motion.duration.actionFeedback" },
+            "motion.duration.actionPress": { key: "settings.designTuning.motion.duration.actionPress" },
+            "motion.duration.surfaceState": { key: "settings.designTuning.motion.duration.surfaceState" },
+            "motion.duration.structuralCollapse": { key: "settings.designTuning.motion.duration.structuralCollapse" },
+            "motion.duration.homeHandoffRecede": { key: "settings.designTuning.motion.duration.homeHandoffRecede" },
+            "motion.duration.homeHandoffRestore": { key: "settings.designTuning.motion.duration.homeHandoffRestore" },
+            "motion.duration.spatialIdentity": { key: "settings.designTuning.motion.duration.spatialIdentity" },
+            "motion.duration.toolIdentityOpen": { key: "settings.designTuning.motion.duration.toolIdentityOpen" },
+            "motion.duration.paletteEnter": { key: "settings.designTuning.motion.duration.paletteEnter" },
+            "motion.duration.paletteExit": { key: "settings.designTuning.motion.duration.paletteExit" },
+            "motion.duration.dragSettle": { key: "settings.designTuning.motion.duration.dragSettle" }
+        };
+        var heading; var motionRoot; var motionTitle; var motionBody; var curves; var durations; var actions; var evidenceLabel; var evidenceOutput; var resetMotion; var resetAll; var parameters; var domains; var domain; var domainRoot; var domainBody; var domainTitle; var resetDomain; var appearanceRegistry; var appearanceParameters; var appearanceRoot; var appearanceBody; var appearanceField; var authority; var i;
+        if (!mount || !registry || !evidence || !window.CoreUI) return;
+        mount.innerHTML = "";
+        DesignTuningFieldBindings = {};
+        motionRoot = document.createElement("details"); motionRoot.className = "settings-design-tuning-domain"; motionRoot.setAttribute("data-settings-disclosure-key", "settings.developer.designTuning.motion");
+        motionTitle = document.createElement("summary"); motionTitle.className = "settings-group-label"; motionTitle.setAttribute("data-i18n", "settings.designTuning.motion.title"); motionTitle.textContent = tr("settings.designTuning.motion.title");
+        motionBody = document.createElement("div"); motionBody.className = "settings-design-tuning-group";
+        curves = document.createElement("div"); curves.className = "settings-design-tuning-group";
+        durations = document.createElement("div"); durations.className = "settings-design-tuning-group";
+        curves.appendChild(createSettingsGroupLabel("settings.designTuning.motion.curves"));
+        durations.appendChild(createSettingsGroupLabel("settings.designTuning.motion.durations"));
+        parameters = registry.list();
+        for (i = 0; i < parameters.length; i++) {
+            if (parameters[i].type === "cubicBezier") curves.appendChild(createDesignTuningCurveField(parameters[i], curveKeys[parameters[i].family], evidence));
+            else if (durationMeta[parameters[i].id]) durations.appendChild(createDesignTuningDurationField(parameters[i], durationMeta[parameters[i].id], evidence));
+        }
+        actions = document.createElement("div"); actions.className = "settings-design-tuning-actions";
+        resetMotion = window.CoreUI.createButton({ document: document, variant: "neutral", text: tr("settings.designTuning.resetMotion"), classNames: "panel-button panel-local-action" });
+        resetMotion.setAttribute("data-i18n", "settings.designTuning.resetMotion");
+        resetMotion.addEventListener("click", function () { cancelDesignTuningCalibrationGesture(); DesignTuning.resetMotion(); refreshDesignTuningFields("motion"); });
+        motionBody.appendChild(curves); motionBody.appendChild(durations); motionBody.appendChild(resetMotion); motionRoot.appendChild(motionTitle); motionRoot.appendChild(motionBody);
+        resetAll = window.CoreUI.createButton({ document: document, variant: "neutral", text: tr("settings.designTuning.resetAll"), classNames: "panel-button panel-local-action" });
+        resetAll.setAttribute("data-i18n", "settings.designTuning.resetAll");
+        resetAll.addEventListener("click", function () { cancelDesignTuningCalibrationGesture(); DesignTuning.resetAll(); refreshDesignTuningFields(); });
+        actions.appendChild(resetAll);
+        evidenceLabel = document.createElement("label"); evidenceLabel.className = "settings-field-label"; evidenceLabel.setAttribute("data-i18n", "settings.designTuning.promotionEvidence"); evidenceLabel.textContent = tr("settings.designTuning.promotionEvidence");
+        evidenceOutput = window.CoreUI.createTextarea({ document: document, classNames: "registry-textarea settings-design-tuning-evidence", rows: 8, value: JSON.stringify(evidence, null, 2), resizeDirection: "vertical" });
+        evidenceOutput.readOnly = true;
+        mount.appendChild(motionRoot);
+        domains = ["spacing", "radius", "controls", "elevation", "text", "surface", "border"];
+        for (i = 0; i < domains.length; i++) {
+            domain = domains[i];
+            domainRoot = document.createElement("details"); domainRoot.className = "settings-design-tuning-domain"; domainRoot.setAttribute("data-settings-disclosure-key", "settings.developer.designTuning." + domain);
+            domainTitle = document.createElement("summary"); domainTitle.className = "settings-group-label"; domainTitle.setAttribute("data-i18n", "settings.designTuning." + domain + ".title"); domainTitle.textContent = tr("settings.designTuning." + domain + ".title");
+            domainBody = document.createElement("div"); domainBody.className = "settings-design-tuning-group";
+            parameters.forEach(function (parameter) { if (parameter.domain === domain) domainBody.appendChild(createDesignTuningScalarField(parameter, evidence)); });
+            resetDomain = window.CoreUI.createButton({ document: document, variant: "neutral", text: tr("settings.designTuning.resetDomain"), classNames: "panel-button panel-local-action" });
+            resetDomain.setAttribute("data-design-tuning-reset-domain", domain);
+            resetDomain.addEventListener("click", (function (scope) { return function () { cancelDesignTuningCalibrationGesture(); DesignTuning.resetDomain(scope); refreshDesignTuningFields(scope); }; }(domain)));
+            domainBody.appendChild(resetDomain); domainRoot.appendChild(domainTitle); domainRoot.appendChild(domainBody); mount.appendChild(domainRoot);
+        }
+        appearanceRegistry = window.AppearanceParameterRegistry;
+        appearanceParameters = appearanceRegistry && appearanceRegistry.list ? appearanceRegistry.list() : [];
+        appearanceRoot = document.createElement("details"); appearanceRoot.className = "settings-design-tuning-domain"; appearanceRoot.setAttribute("data-settings-disclosure-key", "settings.developer.designTuning.existingAppearance");
+        domainTitle = document.createElement("summary"); domainTitle.className = "settings-group-label"; domainTitle.setAttribute("data-i18n", "settings.designTuning.existingAppearance.title"); domainTitle.textContent = tr("settings.designTuning.existingAppearance.title");
+        appearanceBody = document.createElement("div"); appearanceBody.className = "settings-design-tuning-group";
+        authority = document.createElement("p"); authority.className = "settings-field-description"; authority.setAttribute("data-i18n", "settings.designTuning.authority.userAppearance"); authority.textContent = tr("settings.designTuning.authority.userAppearance"); appearanceBody.appendChild(authority);
+        for (i = 0; i < appearanceParameters.length; i++) {
+            if (appearanceParameters[i].classification !== "EXPOSE_NOW" && appearanceParameters[i].classification !== "ADVANCED_LATER") continue;
+            appearanceField = createAppearanceAdvancedField(appearanceParameters[i], true);
+            if (appearanceField) { appearanceField.setAttribute("data-calibration-authority", "user-appearance"); appearanceBody.appendChild(appearanceField); }
+        }
+        appearanceRoot.appendChild(domainTitle); appearanceRoot.appendChild(appearanceBody); mount.appendChild(appearanceRoot);
+        mount.appendChild(actions); mount.appendChild(evidenceLabel); mount.appendChild(evidenceOutput._coreFrame);
+        establishDesignTuningCalibrationChromeBaseline(parameters);
+    }
+
+    function createDesignTuningFieldShell(parameter, labelKey, evidence) {
+        var row = document.createElement("div"); var copy = document.createElement("span"); var label = document.createElement("label"); var description; var state = document.createElement("small"); var reset;
+        var overridden = Object.prototype.hasOwnProperty.call(evidence.overrides, parameter.id); var presentation = parameter.presentation || {};
+        labelKey = presentation.labelKey || labelKey;
+        row.className = "settings-design-tuning-field"; row.setAttribute("data-design-tuning-id", parameter.id); row.setAttribute("data-design-tuning-type", parameter.type);
+        copy.className = "settings-field-copy"; label.className = "settings-field-label"; label.setAttribute("data-i18n", labelKey); label.textContent = tr(labelKey);
+        if (presentation.descriptionKey) { description = document.createElement("small"); description.className = "settings-field-description"; description.setAttribute("data-i18n", presentation.descriptionKey); description.textContent = tr(presentation.descriptionKey); }
+        state.className = "settings-design-tuning-state"; state.setAttribute("data-i18n", overridden ? "settings.designTuning.overridden" : "settings.designTuning.default"); state.textContent = tr(overridden ? "settings.designTuning.overridden" : "settings.designTuning.default");
+        reset = window.CoreUI.createButton({ document: document, variant: "neutral", size: "compact", text: tr("settings.appearance.reset"), classNames: "panel-button appearance-reset-button panel-local-action" }); reset.disabled = !overridden;
+        reset.setAttribute("data-i18n", "settings.appearance.reset"); reset.addEventListener("click", function () { cancelDesignTuningCalibrationGesture(); DesignTuning.resetParameter(parameter.id); refreshDesignTuningFields(parameter.domain); });
+        copy.appendChild(label); if (description) copy.appendChild(description); copy.appendChild(state); row.appendChild(copy);
+        DesignTuningFieldBindings[parameter.id] = { parameter: parameter, row: row, state: state, reset: reset };
+        return { row: row, copy: copy, reset: reset };
+    }
+
+    function refreshDesignTuningFields(domain) {
+        var evidence = DesignTuning.getEvidence(); var id; var binding; var overridden; var key; var output = document.querySelector(".settings-design-tuning-evidence");
+        for (id in DesignTuningFieldBindings) if (Object.prototype.hasOwnProperty.call(DesignTuningFieldBindings, id)) { binding = DesignTuningFieldBindings[id]; if (domain && binding.parameter.domain !== domain) continue; if (typeof binding.update === "function") binding.update(evidence.resolved[id]); overridden = Object.prototype.hasOwnProperty.call(evidence.overrides, id); key = overridden ? "settings.designTuning.overridden" : "settings.designTuning.default"; binding.state.setAttribute("data-i18n", key); binding.state.textContent = tr(key); binding.reset.disabled = !overridden; binding.row.classList.remove("has-draft"); }
+        if (output) output.value = JSON.stringify(evidence, null, 2);
+    }
+
+    function createDesignTuningCurveField(parameter, labelKey, evidence) {
+        var shell = createDesignTuningFieldShell(parameter, labelKey, evidence); var value = evidence.overrides[parameter.id] || parseDesignTuningCurve(evidence.canonical[parameter.id]); var control;
+        control = window.CoreUI.createBezierCurveField({ document: document, id: "designTuning-" + parameter.id.replace(/\./g, "-"), value: value, defaultValue: value, progressLabel: tr("settings.designTuning.curve.progress"), speedLabel: tr("settings.designTuning.curve.speed"), speedHint: tr("settings.designTuning.curve.speedHint"), onInput: function (next) { shell.row.classList.add("has-draft"); updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onChange: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
+        DesignTuningFieldBindings[parameter.id].update = function (next) { control.setValue(next); };
+        control.root.classList.add("settings-design-tuning-bezier"); shell.row.appendChild(control.root); shell.row.appendChild(shell.reset); return shell.row;
+    }
+
+    function createDesignTuningDurationField(parameter, meta, evidence) {
+        var shell = createDesignTuningFieldShell(parameter, meta.key, evidence); var value = evidence.resolved[parameter.id]; var control;
+        control = window.CoreUI.createRangeNumber({ document: document, rangeId: "designTuning-" + parameter.id.replace(/\./g, "-"), numberId: "designTuning-" + parameter.id.replace(/\./g, "-") + "-number", value: value, min: parameter.validity.min, max: parameter.validity.max, trackMin: parameter.editing.trackMin, trackMax: parameter.editing.trackMax, step: parameter.editing.step, field: { min: parameter.validity.min, max: parameter.validity.max, step: parameter.editing.step, defaultValue: value }, unitText: parameter.editing.unit, classNames: "settings-field-control settings-design-tuning-duration", rangeClassNames: "pill-slider registry-range settings-slider", numberClassNames: "num-input settings-number", onPreview: function (next) { shell.row.classList.add("has-draft"); updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
+        DesignTuningFieldBindings[parameter.id].update = function (next) { control.setValue(next); };
+        shell.row.appendChild(control.root); shell.row.appendChild(shell.reset); return shell.row;
+    }
+
+    function createDesignTuningScalarField(parameter, evidence) {
+        var key = "settings.designTuning.parameter." + parameter.id; var shell = createDesignTuningFieldShell(parameter, key, evidence); var control; var note; var value = evidence.resolved[parameter.id];
+        if (parameter.protection) {
+            note = document.createElement("code"); note.className = "settings-design-tuning-protected"; note.textContent = String(value) + " · " + tr("settings.designTuning.protected." + parameter.protection);
+            shell.row.classList.add("is-protected"); shell.reset.remove(); shell.row.appendChild(note); return shell.row;
+        }
+        if (parameter.type === "shadow") {
+            control = window.CoreUI.createShadowField({ document: document, id: "designTuning-" + parameter.id.replace(/\./g, "-"), value: value, labels: { offsetX: tr("settings.designTuning.shadow.offsetX"), offsetY: tr("settings.designTuning.shadow.offsetY"), blur: tr("settings.designTuning.shadow.blur"), spread: tr("settings.designTuning.shadow.spread"), color: tr("settings.designTuning.shadow.color"), alpha: tr("settings.designTuning.shadow.alpha") }, openPicker: openCoreColorPicker, onPreview: function (next) { shell.row.classList.add("has-draft"); updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); }, onCancel: function () { cancelDesignTuningCalibrationGesture(); refreshDesignTuningFields(parameter.domain); } });
+        } else if (parameter.type === "colorAlpha") {
+            control = window.CoreUI.createColorField({ document: document, id: "designTuning-" + parameter.id.replace(/\./g, "-"), value: value, fallback: value.color, supportsAlpha: true, classNames: "settings-field-control settings-design-tuning-color-alpha", openPicker: openCoreColorPicker, onPreview: function (next) { shell.row.classList.add("has-draft"); updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
+            bindHexInputSelectBehavior(control.hex);
+        } else control = window.CoreUI.createRangeNumber({ document: document, rangeId: "designTuning-" + parameter.id.replace(/\./g, "-"), numberId: "designTuning-" + parameter.id.replace(/\./g, "-") + "-number", value: value, min: parameter.validity.min, max: parameter.validity.max, trackMin: parameter.editing.trackMin, trackMax: parameter.editing.trackMax, step: parameter.editing.step, field: { min: parameter.validity.min, max: parameter.validity.max, step: parameter.editing.step, defaultValue: value }, unitText: parameter.editing.unit, classNames: "settings-field-control settings-design-tuning-duration", rangeClassNames: "pill-slider registry-range settings-slider", numberClassNames: "num-input settings-number", onPreview: function (next) { updateDesignTuningCalibrationGesture(parameter, next, control.root); }, onCommit: function (next) { finishDesignTuningCalibrationGesture(parameter, next); refreshDesignTuningFields(parameter.domain); } });
+        DesignTuningFieldBindings[parameter.id].update = function (next) { control.setValue(next); };
+        shell.row.appendChild(control.root); shell.row.appendChild(shell.reset); return shell.row;
+    }
+
     function renderSettingsRangeRow(field, numberId) {
         var fieldRow;
         var controls;
+        var dragOptions = null;
 
         fieldRow = createSharedSettingsFieldRow("range", field, field.descriptionKey, "");
-        controls = createSharedSettingsRangeNumber(field, field.key, numberId, field.min, field.max, "", "");
+        if (field.key === "uiScale") {
+            dragOptions = {
+                onDragStart: function () { beginSettingsPeekManipulation("number-scrub"); },
+                onDragChange: markSettingsPeekManipulationChanged,
+                onDragEnd: function () { endSettingsPeekManipulation("number-scrub"); }
+            };
+        }
+        controls = createSharedSettingsRangeNumber(field, field.key, numberId, field.min, field.max, "", "", dragOptions);
         fieldRow.row.removeChild(fieldRow.controls);
         fieldRow.row.appendChild(controls);
 
@@ -2266,27 +2585,33 @@
 
     function renderSettingsMotion() {
         var mount = byId("settingsMotionMount");
+        var interfaceMount = byId("settingsInterfaceMount");
         var section = findSettingsSchemaSection("motion");
         var heading;
         var fields;
         var i;
 
-        if (!mount || !section) {
+        if (!mount || !interfaceMount || !section) {
             return;
         }
 
         mount.innerHTML = "";
         mount.className = "settings-section";
+        interfaceMount.innerHTML = "";
+        interfaceMount.className = "settings-section";
 
         heading = createSettingsSectionHeader("section.motion", "section.animation", null);
         mount.appendChild(heading);
+        interfaceMount.appendChild(createSettingsSectionHeader("common.settings", "settings.navigation.interface", null));
 
         fields = section.fields || [];
         for (i = 0; i < fields.length; i++) {
             if (fields[i] && fields[i].key === "motionSpeed") {
                 mount.appendChild(renderSettingsRangeRow(fields[i], "motionSpeedNumber"));
             } else if (fields[i] && fields[i].key === "uiScale") {
-                mount.appendChild(renderSettingsRangeRow(fields[i], "uiScaleNumber"));
+                var uiScaleRow = renderSettingsRangeRow(fields[i], "uiScaleNumber");
+                uiScaleRow.setAttribute("data-settings-preview-anchor", "ui-scale");
+                interfaceMount.appendChild(uiScaleRow);
             }
         }
     }
@@ -2421,6 +2746,7 @@
             select = createSharedSettingsSelect(field.key, field, field.defaultValue);
             fieldRow.row.removeChild(fieldRow.controls);
             fieldRow.row.appendChild(select);
+            enhanceSharedSelect(select);
             select.addEventListener("change", function () {
                 handleSettingsFieldChange(field.key, this.value);
             });
@@ -2442,6 +2768,10 @@
         if (!root) {
             return;
         }
+        if (root._coreDisclosure) {
+            root._coreDisclosure.setExpanded(open === true);
+            return;
+        }
         root.classList.toggle("is-collapsed", !open);
         toggle = root.querySelector(".settings-theme-group-title");
         if (toggle) {
@@ -2460,6 +2790,7 @@
             root.className += " collapsible-card";
         }
         root.setAttribute("data-settings-theme-group", group.id || "");
+        if (group.collapsible) root.setAttribute("data-settings-disclosure-key", "settings.appearance.group." + (group.id || "group"));
         applySettingsVisibilityMetadata(root, group.visibleWhen);
         applySettingsOpenMetadata(root, group.openWhen);
         if (group.collapsible) {
@@ -2482,10 +2813,13 @@
             body.classList.add("collapsible-body");
             body.id = "settingsThemeGroupBody-" + (group.id || "group");
             root.appendChild(body);
-            title.addEventListener("click", function () {
-                setSettingsThemeGroupOpen(root, root.classList.contains("is-collapsed"));
+            root._coreDisclosure = window.CoreUI.createDisclosureController({
+                trigger: title,
+                content: body,
+                root: root,
+                expanded: group.defaultCollapsed !== true,
+                collapsedClass: "is-collapsed"
             });
-            setSettingsThemeGroupOpen(root, group.defaultCollapsed !== true);
         } else if (group.titleKey) {
             title = document.createElement("h4");
             title.className = "settings-theme-group-title";
@@ -2525,7 +2859,6 @@
         var title = document.createElement("strong");
         var count = document.createElement("span");
         var swatches = document.createElement("span");
-        var button = document.createElement("button");
         var i;
         element.innerHTML = "";
         element.className = "settings-source-summary settings-theme-presentation";
@@ -2540,14 +2873,9 @@
             swatch.setAttribute("aria-hidden", "true");
             swatches.appendChild(swatch);
         }
-        button.type = "button";
-        button.className = "panel-button settings-source-summary-action";
-        button.textContent = tr(element.getAttribute("data-settings-palette-action") || "settings.palette.manage");
-        button.addEventListener("click", openPaletteWorkspaceFromSettings);
         element.appendChild(title);
         element.appendChild(count);
         element.appendChild(swatches);
-        element.appendChild(button);
     }
 
     function refreshSettingsPaletteSummary() {
@@ -2647,12 +2975,26 @@
     function applyBackgroundSource(value) {
         var source = normalizeBackgroundSource(value);
         var select = byId("backgroundSource");
+        var controller = window.ProceduralHomeBackground;
         if (select) {
             select.value = source;
             syncCustomSelect(select);
         }
         renderProceduralBackgroundModeVisibility();
-        updateProceduralHomeBackground();
+        if (source !== "classic" && controller && typeof controller.activate === "function") {
+            controller.activate({
+                rootElement: byId("appShell"),
+                canvas: byId("proceduralHomeBackgroundCanvas"),
+                mode: source,
+                seed: normalizeProceduralBackgroundSeed(byId("proceduralBackgroundSeed") ? byId("proceduralBackgroundSeed").value : DefaultSettings.proceduralBackgroundSeed),
+                paletteId: normalizeProceduralBackgroundPaletteId(byId("proceduralBackgroundPaletteId") ? byId("proceduralBackgroundPaletteId").value : DefaultSettings.proceduralBackgroundPaletteId),
+                intensity: normalizeProceduralBackgroundIntensity(byId("proceduralBackgroundIntensityNumber") ? byId("proceduralBackgroundIntensityNumber").value : DefaultSettings.proceduralBackgroundIntensity),
+                params: getProceduralAppearanceSourceParams(),
+                iconAppearance: getProceduralHomeBackgroundIconAppearance()
+            });
+        } else {
+            updateProceduralHomeBackground();
+        }
     }
 
     function refreshSettingsBackgroundPaletteOptions() {
@@ -2903,11 +3245,24 @@
 
     function suggestThemeAccentFromPalette(paletteId) {
         var palette = getResolvedProceduralPalette(paletteId);
-        if (!palette || !palette.colors || !palette.colors.secondary) {
+        if (!palette || !palette.colors || !palette.colors.secondary || !palette.colors.shadow) {
             return;
         }
         applyThemeAccent(palette.colors.secondary);
+        applyHomeBackground(palette.colors.shadow);
+        assignPrimaryTextFromPaletteSecondary(palette.colors.secondary);
         setStatus(tr("status.paletteAccentSuggested"));
+    }
+
+    // Explicit one-shot assignment: Primary Text <- resolved Palette secondary role.
+    // Palette secondary is the v2 proceduralAppearance role, distinct from Appearance.text.secondary.
+    // Appearance.text.primary remains the sole owner; commit flows through the Appearance authority.
+    function assignPrimaryTextFromPaletteSecondary(secondaryColor) {
+        var committed;
+        if (!secondaryColor || typeof secondaryColor !== "string") return false;
+        committed = CoreAppearance && CoreAppearance.commit("text.primary", secondaryColor);
+        if (committed) notifyAppearanceFieldBindings("text.primary");
+        return committed === true;
     }
 
     function renderSettingsColorRamp(element) {
@@ -2997,27 +3352,28 @@
     }
 
     function renderSettingsTheme() {
-        var mount = byId("settingsThemeMount");
+        var mount = byId("settingsThemeGroupsMount");
+        var paletteMount = byId("settingsPaletteLibraryMount");
         var section = findSettingsSchemaSection("theme");
         var heading;
         var fields;
         var field;
         var fieldMap = {};
         var groups;
+        var groupById = {};
+        var order;
         var groupView;
         var group;
         var fieldElement;
         var presentationElement;
         var i;
         var j;
-
+        var oi;
         if (!mount || !section) {
             return;
         }
 
         mount.innerHTML = "";
-        mount.className = "settings-section";
-
         heading = createSettingsSectionHeader("section.color", section.titleKey, null);
         mount.appendChild(heading);
 
@@ -3027,9 +3383,19 @@
                 fieldMap[fields[i].key] = fields[i];
             }
         }
-        groups = section.groups || [{ id: "theme", fields: fields.map(function (item) { return item.key; }) }];
+        groups = section.groups || [];
         for (i = 0; i < groups.length; i++) {
-            group = groups[i];
+            if (groups[i] && groups[i].id) {
+                groupById[groups[i].id] = groups[i];
+            }
+        }
+        // Single Theme card: Tool Icon Appearance first, Palette Library launcher, Core Appearance last.
+        order = ["toolIconAppearance", "iconColors", "interfaceAppearance"];
+        for (oi = 0; oi < order.length; oi++) {
+            group = groupById[order[oi]];
+            if (!group) {
+                continue;
+            }
             groupView = createSettingsThemeGroup(group);
             for (j = 0; j < (group.fields || []).length; j++) {
                 field = fieldMap[group.fields[j]] || group.fields[j];
@@ -3042,7 +3408,13 @@
                 presentationElement = createSettingsThemePresentation(group.presentations[j]);
                 groupView.body.appendChild(presentationElement);
             }
+            if (oi === 0) {
+                groupView.root.classList.add("settings-theme-group--first");
+            }
             mount.appendChild(groupView.root);
+            if (order[oi] === "iconColors" && paletteMount) {
+                mount.appendChild(paletteMount);
+            }
         }
         refreshSettingsThemePresentation();
     }
@@ -3089,6 +3461,7 @@
             PaletteStore: window.ProceduralPaletteStore,
             ProceduralAppearance: window.ProceduralAppearance,
             ProceduralPaletteEditor: window.ProceduralPaletteEditor,
+            CoreUI: window.CoreUI,
             translate: tr,
             setStatus: setStatus,
             refreshHomeIcons: refreshProceduralHomeIcons,
@@ -3103,11 +3476,21 @@
             duration: duration,
             nextFrame: nextFrame,
             createSettingsSectionHeader: createSettingsSectionHeader,
+            renderPaletteSummary: function (container) {
+                var summary;
+                if (!container) return;
+                summary = document.createElement("div");
+                renderPaletteSummaryElement(summary);
+                container.appendChild(summary);
+            },
             closeCustomSelectMenus: closeCustomSelectMenus,
-            setupCustomSelectInputs: setupCustomSelectInputs,
+            enhanceSelect: enhanceSharedSelect,
+            disposeSelectsWithin: disposeSharedSelectsWithin,
             normalizeHex: normalizeHex,
             bindHexInputSelectBehavior: bindHexInputSelectBehavior,
             openRegistryColorPicker: openRegistryColorPicker,
+            openCoreColorPicker: openCoreColorPicker,
+            closeColorPicker: closeRegistryColorPicker,
             applySchemaNumberAttributes: applySchemaNumberAttributes,
             isSchemaNumberDraftValue: isSchemaNumberDraftValue,
             setupRegistryNumberDrag: setupRegistryNumberDrag,
@@ -3115,7 +3498,8 @@
             escapeHtml: escapeHtml,
             applyI18n: applyI18n,
             readStorageValue: readUiStorageValue,
-            writeStorageValue: writeUiStorageValue
+            writeStorageValue: writeUiStorageValue,
+            setSettingsBackParent: setSettingsBackParent
         });
         return PaletteWorkspaceController;
     }
@@ -3225,6 +3609,7 @@
 
         mount.innerHTML = "";
         mount.className = "settings-section settings-section--background settings-section--collapsible collapsible-card";
+        mount.setAttribute("data-settings-disclosure-key", "settings.appearance.background");
 
         toggle = document.createElement("button");
         toggle.className = "settings-section-header settings-section-toggle collapsible-heading";
@@ -3253,6 +3638,7 @@
             select = createSharedSettingsSelect("backgroundSource", field, field.defaultValue);
             sourceRow.row.removeChild(sourceRow.controls);
             sourceRow.row.appendChild(select);
+            enhanceSharedSelect(select);
             body.appendChild(sourceRow.row);
         }
 
@@ -3264,6 +3650,7 @@
             fieldRow = createSharedSettingsFieldRow("select", field, field.descriptionKey, "");
             select = createSharedSettingsSelect("bgPreset", field, field.defaultValue);
             fieldRow.controls.appendChild(select);
+            enhanceSharedSelect(select);
             classicControls.appendChild(fieldRow.row);
         }
 
@@ -3333,7 +3720,7 @@
         field = findSettingsSectionField(section, "randomize");
         if (field) {
             button = document.createElement("button");
-            button.className = "panel-button registry-large-button is-full-width settings-action-button";
+            button.className = "ui-button ui-button--neutral panel-button registry-large-button is-full-width settings-action-button panel-local-action";
             button.id = "bgRandomizeBtn";
             button.type = "button";
             button.setAttribute("data-i18n", field.labelKey);
@@ -3343,7 +3730,7 @@
         field = findSettingsSectionField(section, "reset");
         if (field) {
             button = document.createElement("button");
-            button.className = "panel-button registry-large-button is-full-width settings-action-button";
+            button.className = "ui-button ui-button--neutral panel-button registry-large-button is-full-width settings-action-button panel-local-action";
             button.id = "bgResetBtn";
             button.type = "button";
             button.setAttribute("data-i18n", field.labelKey);
@@ -3364,6 +3751,7 @@
             select = createSharedSettingsSelect("proceduralBackgroundPaletteId", field, field.defaultValue);
             fieldRow.row.removeChild(fieldRow.controls);
             fieldRow.row.appendChild(select);
+            enhanceSharedSelect(select);
             proceduralControls.appendChild(fieldRow.row);
         }
         field = findSettingsSectionField(section, "proceduralBackgroundIntensity");
@@ -3373,7 +3761,7 @@
         field = findSettingsSectionField(section, "proceduralBackgroundRegenerate");
         if (field) {
             button = document.createElement("button");
-            button.className = "panel-button registry-large-button is-full-width settings-action-button";
+            button.className = "ui-button ui-button--neutral panel-button registry-large-button is-full-width settings-action-button panel-local-action";
             button.id = "proceduralBackgroundRegenerate";
             button.type = "button";
             button.setAttribute("data-i18n", field.labelKey);
@@ -3648,7 +4036,7 @@
             homeContainer: byId("homeView"),
             headerElement: document.querySelector("#homeView .home-header"),
             toolPoolElement: byId("toolGrid"),
-            openSettings: openVelaSettingsPanel,
+            openSettings: openVelaSettingsSurface,
             t: tr,
             getUiScale: getVelaSurfaceUiScale,
             loadHeightPreference: function () {
@@ -3798,14 +4186,12 @@
     }
 
     function getSettingsTargetRect() {
-        var margin = 14;
-        var bottom = 54;
-        var width = Math.min(360, Math.max(1, window.innerWidth - margin * 2));
+        var margin = Math.round(16 * 0.92);
         return {
-            left: Math.max(margin, window.innerWidth - margin - width),
+            left: margin,
             top: margin,
-            width: width,
-            height: Math.max(1, window.innerHeight - margin - bottom)
+            width: Math.max(1, window.innerWidth - margin * 2),
+            height: Math.max(1, window.innerHeight - margin * 2)
         };
     }
 
@@ -3817,6 +4203,7 @@
     function getHomeToolIconRect(toolButton) {
         var home = byId("homeView");
         var previousTransition = home.style.transition;
+        var previousClassName = home.className;
         var rect;
 
         home.style.transition = "none";
@@ -3824,8 +4211,218 @@
         home.classList.remove("is-opening", "is-returning");
         home.offsetWidth;
         rect = getToolIcon(toolButton).getBoundingClientRect();
+        home.className = previousClassName;
         home.style.transition = previousTransition;
         return rect;
+    }
+
+    function getSystemLaunchSourceRect(sourceElement) {
+        var home = byId("homeView");
+        var previousTransition = home.style.transition;
+        var previousClassName = home.className;
+        var rect;
+        home.style.transition = "none";
+        home.classList.add("is-active");
+        home.classList.remove("is-opening", "is-returning");
+        home.offsetWidth;
+        rect = sourceElement.getBoundingClientRect();
+        home.className = previousClassName;
+        home.style.transition = previousTransition;
+        return rect;
+    }
+
+    function snapshotSurfaceIdentity(element, geometry) {
+        return window.SurfaceIdentity ? window.SurfaceIdentity.snapshot(element, window, geometry) : null;
+    }
+
+    function surfaceTransitionChoreography() {
+        return window.SurfaceIdentity.choreography({
+            spatialMorphExpand: semanticMotionDuration("spatialMorphExpand"),
+            spatialMorphContract: semanticMotionDuration("spatialMorphContract"),
+            viewContentEnter: semanticMotionDuration("viewContentEnter"),
+            viewContentExit: semanticMotionDuration("viewContentExit"),
+            spatialMorphIdentity: semanticMotionDuration("spatialMorphIdentity")
+        });
+    }
+
+    function scheduleSurfaceContentSuppression(view, transaction, suppress) {
+        var stage = surfaceTransitionChoreography().closeContent;
+        var timer = window.setTimeout(transaction.guard(function () {
+            if (view && document.documentElement.contains(view)) suppress();
+        }), Math.round(semanticMotionDuration("spatialMorphContract") * stage.end));
+        transaction.addCleanup(function () { window.clearTimeout(timer); });
+        return timer;
+    }
+
+    function closeIdentityKeyframes(sourceIdentity, destinationIdentity) {
+        var stage = surfaceTransitionChoreography().closeIdentity;
+        var source = window.SurfaceIdentity.frame(sourceIdentity);
+        var destination = window.SurfaceIdentity.compositeFrame(destinationIdentity);
+        return [
+            { left: source.left, top: source.top, width: source.width, height: source.height, borderRadius: source.borderRadius, opacity: "0", offset: stage.recognitionStart },
+            { left: destination.left, top: destination.top, width: destination.width, height: destination.height, borderRadius: destination.borderRadius, opacity: "1", offset: stage.recognitionEstablished },
+            { left: destination.left, top: destination.top, width: destination.width, height: destination.height, borderRadius: destination.borderRadius, opacity: "1", offset: stage.handoff }
+        ];
+    }
+
+    function createSurfaceIdentityOverlay(identity, className) {
+        var overlay; var clone;
+        if (!identity || !identity.element) return null;
+        overlay = document.createElement("div"); overlay.className = "surface-identity-overlay " + (className || "");
+        clone = identity.element.cloneNode(true); clone.removeAttribute("id"); clone.setAttribute("aria-hidden", "true"); clone.removeAttribute("tabindex");
+        overlay.appendChild(clone);
+        return overlay;
+    }
+
+    function mountCloseIdentityLayer(overlay) {
+        var shell = byId("appShell");
+        if (!overlay || !shell) return overlay;
+        overlay.classList.add("transition-identity-layer", "is-close-identity-owner");
+        shell.appendChild(overlay);
+        return overlay;
+    }
+
+    function removeSurfaceIdentityOverlay(shell) {
+        var overlay = shell ? shell.querySelector(".surface-identity-overlay") : null;
+        if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        overlay = byId("appShell") ? byId("appShell").querySelector(".is-close-identity-owner") : null;
+        if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    }
+
+    function beginSpatialSurfaceMorph(key, total, done) {
+        var transaction;
+        var gate;
+        if (!coreMotion) {
+            return { transaction: null, completePart: makeAnimationGate(total, done) };
+        }
+        transaction = coreMotion.run(key, {
+            startWhileRunning: "replace",
+            run: function (current) {
+                gate = makeAnimationGate(total, current.guard(function () {
+                    current.complete();
+                    done();
+                }));
+            }
+        });
+        return { transaction: transaction, completePart: gate };
+    }
+
+    function playSpatialAnimation(transaction, element, keyframes, options, done) {
+        var animation = playAnimation(element, keyframes, options, transaction ? transaction.guard(done) : done);
+        if (transaction && animation && typeof animation.cancel === "function") {
+            transaction.addCleanup(function () {
+                animation.onfinish = null;
+                animation.oncancel = null;
+                try { animation.cancel(); } catch (ignored) {}
+            });
+        }
+        return animation;
+    }
+
+    function beginHomeRecede(home) {
+        if (!home) { return; }
+        home.classList.remove("is-returning");
+        home.classList.add("is-opening");
+    }
+
+    function prepareHomeRestore(home) {
+        var previousTransition;
+        if (!home) { return; }
+        previousTransition = home.style.transition;
+        home.style.transition = "none";
+        home.classList.remove("is-returning");
+        home.classList.add("is-active", "is-opening");
+        home.offsetWidth;
+        home.style.transition = previousTransition;
+    }
+
+    function scheduleHomeRestore(home, transaction, delay) {
+        var timer;
+        var start = function () {
+            if (!home || !document.documentElement.contains(home)) { return; }
+            home.classList.remove("is-opening");
+            home.classList.add("is-returning");
+        };
+        timer = window.setTimeout(transaction ? transaction.guard(start) : start, Math.max(0, delay));
+        if (transaction) {
+            transaction.addCleanup(function () { window.clearTimeout(timer); });
+            if (transaction.finished && typeof transaction.finished.then === "function") {
+                transaction.finished.then(function (result) {
+                    if (result && result.status === "cancelled" && !coreMotion.current(transaction.key)) {
+                        home.classList.remove("is-opening", "is-returning");
+                    }
+                });
+            }
+        }
+        return timer;
+    }
+
+    function scheduleToolContentHandoff(detail, transaction, delay) {
+        var timer;
+        var start = function () {
+            if (!detail || !document.documentElement.contains(detail)) { return; }
+            detail.classList.add("content-handoff-visible");
+            revealDetailContent();
+        };
+        timer = window.setTimeout(transaction ? transaction.guard(start) : start, Math.max(0, delay));
+        if (transaction) {
+            transaction.addCleanup(function () { window.clearTimeout(timer); });
+            if (transaction.finished && typeof transaction.finished.then === "function") {
+                transaction.finished.then(function (result) {
+                    if (result && result.status === "cancelled" && !coreMotion.current(transaction.key) && detail) {
+                        suppressDetailContent();
+                    }
+                });
+            }
+        }
+        return timer;
+    }
+
+    function clearDetailDestinationContentLayout(detail) {
+        var stage = detail ? detail.querySelector(".detail-ui-layer") : null;
+        if (!detail || !stage) { return; }
+        detail.classList.remove("has-destination-content-layout");
+        stage.style.inset = "";
+        stage.style.left = "";
+        stage.style.top = "";
+        stage.style.right = "";
+        stage.style.bottom = "";
+        stage.style.width = "";
+        stage.style.height = "";
+        stage.style.maxWidth = "";
+        stage.style.maxHeight = "";
+        stage.removeAttribute("inert");
+        stage.removeAttribute("aria-hidden");
+    }
+
+    function prepareDetailDestinationContentLayout(detail, targetRect) {
+        var stage = detail ? detail.querySelector(".detail-ui-layer") : null;
+        var layoutWidth;
+        var layoutHeight;
+        if (!detail || !stage || !targetRect) { return false; }
+        setDetailMorphRect(detail, targetRect, "22px");
+        layoutWidth = Math.max(1, detail.clientWidth);
+        layoutHeight = Math.max(1, detail.clientHeight);
+        detail.classList.add("has-destination-content-layout");
+        stage.style.inset = "auto";
+        stage.style.left = "0";
+        stage.style.top = "0";
+        stage.style.right = "auto";
+        stage.style.bottom = "auto";
+        stage.style.width = layoutWidth + "px";
+        stage.style.height = layoutHeight + "px";
+        stage.style.maxWidth = "none";
+        stage.style.maxHeight = "none";
+        stage.setAttribute("inert", "");
+        stage.setAttribute("aria-hidden", "true");
+        return true;
+    }
+
+    function bindDetailDestinationContentLayout(detail, transaction) {
+        if (!transaction) { return; }
+        transaction.addCleanup(function () {
+            clearDetailDestinationContentLayout(detail);
+        });
     }
 
     /*
@@ -3917,12 +4514,12 @@
 
     function clearDetailContentClasses() {
         var detail = byId("detailView");
-        detail.classList.remove("content-suppressed", "content-reveal", "content-exit");
+        detail.classList.remove("content-suppressed", "content-reveal", "content-exit", "content-handoff-visible");
     }
 
     function suppressDetailContent() {
         var detail = byId("detailView");
-        detail.classList.remove("content-reveal", "content-exit");
+        detail.classList.remove("content-reveal", "content-exit", "content-handoff-visible");
         detail.classList.add("content-suppressed");
     }
 
@@ -3932,53 +4529,41 @@
         detail.classList.add("content-reveal");
         window.setTimeout(function () {
             detail.classList.remove("content-reveal");
-        }, Math.max(190, duration("fast")));
+        }, semanticMotionDuration("viewContentEnter") + 10);
     }
 
     function exitDetailContent(done) {
         var detail = byId("detailView");
         detail.classList.remove("content-suppressed", "content-reveal");
-        detail.classList.add("content-exit");
-        window.setTimeout(function () {
-            detail.classList.remove("content-exit");
-            detail.classList.add("content-suppressed");
-            if (done) {
-                done();
-            }
-        }, Math.max(120, Math.min(150, duration("fast"))));
+        detail.classList.add("content-exit", "content-handoff-visible");
+        if (done) done();
     }
 
     function clearSettingsContentClasses() {
         var view = byId("settingsView");
-        view.classList.remove("content-suppressed", "content-reveal", "content-exit");
+        view.classList.remove("content-suppressed", "content-reveal", "content-exit", "content-handoff-visible");
     }
 
     function suppressSettingsContent() {
         var view = byId("settingsView");
-        view.classList.remove("content-reveal", "content-exit");
+        view.classList.remove("content-reveal", "content-exit", "content-handoff-visible");
         view.classList.add("content-suppressed");
     }
 
     function revealSettingsContent() {
         var view = byId("settingsView");
         view.classList.remove("content-suppressed", "content-exit");
-        view.classList.add("content-reveal");
+        view.classList.add("content-reveal", "content-handoff-visible");
         window.setTimeout(function () {
             view.classList.remove("content-reveal");
-        }, Math.max(190, duration("fast")));
+        }, semanticMotionDuration("viewContentEnter") + 10);
     }
 
     function exitSettingsContent(done) {
         var view = byId("settingsView");
         view.classList.remove("content-suppressed", "content-reveal");
-        view.classList.add("content-exit");
-        window.setTimeout(function () {
-            view.classList.remove("content-exit");
-            view.classList.add("content-suppressed");
-            if (done) {
-                done();
-            }
-        }, Math.max(120, Math.min(150, duration("fast"))));
+        view.classList.add("content-exit", "content-handoff-visible");
+        if (done) done();
     }
 
     function setDetailMorphRect(detail, rect, radius) {
@@ -4027,6 +4612,10 @@
         detail.style.width = "";
         detail.style.height = "";
         detail.style.borderRadius = "";
+        detail.style.backgroundColor = "";
+        detail.style.borderColor = "";
+        detail.style.boxShadow = "";
+        clearDetailDestinationContentLayout(detail);
     }
 
     function finishOpenTransition(shell, toolId) {
@@ -4057,7 +4646,11 @@
                 detail.classList.remove("no-transition");
                 endAnimation();
                 nextFrame(function () {
-                    revealDetailContent();
+                    if (detail.classList.contains("content-handoff-visible")) {
+                        detail.classList.remove("content-handoff-visible");
+                    } else {
+                        revealDetailContent();
+                    }
                     refreshActiveTool();
                 });
             });
@@ -4078,6 +4671,7 @@
         detail.offsetWidth;
 
         nextFrame(function () {
+            removeSurfaceIdentityOverlay(detail);
             resetDetailMorphStyles();
             detail.classList.remove("is-active", "is-closing", "is-entering", "is-morphing");
             clearDetailContentClasses();
@@ -4127,6 +4721,7 @@
     function showHomeView() {
         var home = byId("homeView");
         var detail = byId("detailView");
+        ActiveRoute = null;
 
         stopRegistryStatePolling();
         setToolActionsVisible(byId("registryToolActions"), false);
@@ -4169,7 +4764,7 @@
         if (field && typeof field.defaultValue !== "undefined") {
             return field.defaultValue;
         }
-        if (field && field.type === "checkbox") {
+        if (field && (field.type === "checkbox" || field.type === "switch")) {
             return false;
         }
         if (field && (field.type === "number" || field.type === "range")) {
@@ -4425,6 +5020,7 @@
     }
 
     function normalizeSchemaNumber(value, field, fallback) {
+        if (window.CoreUI) return window.CoreUI.normalizeNumber(value, field, fallback);
         var numeric = Number(value);
         var min = typeof field.min !== "undefined" ? Number(field.min) : null;
         var max = typeof field.max !== "undefined" ? Number(field.max) : null;
@@ -4448,6 +5044,7 @@
     }
 
     function setSchemaNumberValue(input, value, field) {
+        if (window.CoreUI) { window.CoreUI.setNumberValue(input, value, field, input.value); return; }
         var step = typeof field.step !== "undefined" ? Number(field.step) : 1;
         var numeric = normalizeSchemaNumber(value, field, input.value);
         var decimals = 0;
@@ -4463,6 +5060,7 @@
     }
 
     function isSchemaNumberDraftValue(value) {
+        if (window.CoreUI) return window.CoreUI.isNumberDraft(value);
         var text = String(value || "").trim();
         return text === "" ||
             text === "-" ||
@@ -4482,6 +5080,7 @@
     }
 
     function setupRegistryNumberDrag(input, field, onUpdate, options) {
+        if (window.CoreUI) return window.CoreUI.bindNumberDrag(input, field, onUpdate, options);
         var suppressNextClick = false;
         var editStartValue = input.value;
         var skipNextBlurCommit = false;
@@ -4577,6 +5176,9 @@
                     return;
                 }
                 dragging = true;
+                if (options && options.onDragStart && !input.classList.contains("is-dragging-number")) {
+                    options.onDragStart();
+                }
                 input.blur();
                 input.classList.remove("is-editing-number");
                 input.classList.add("is-dragging-number");
@@ -4587,11 +5189,15 @@
                 if (onUpdate) {
                     onUpdate(input.value);
                 }
+                if (options && options.onDragChange) {
+                    options.onDragChange(input.value);
+                }
             }
 
             function up() {
                 document.removeEventListener("mousemove", move);
                 document.removeEventListener("mouseup", up);
+                window.removeEventListener("blur", up);
                 document.body.style.userSelect = previousUserSelect;
                 input.classList.remove("is-dragging-number");
                 if (dragging) {
@@ -4602,25 +5208,16 @@
                     if (onUpdate) {
                         onUpdate(input.value);
                     }
+                    if (options && options.onDragEnd) {
+                        options.onDragEnd();
+                    }
                 }
             }
 
             document.addEventListener("mousemove", move);
             document.addEventListener("mouseup", up);
+            window.addEventListener("blur", up);
         });
-    }
-
-    function syncRegistryColorField(hexInput, swatch, fallback) {
-        var normalized = normalizeHex(hexInput.value, fallback || "#ffffff").toLowerCase();
-        hexInput.value = normalized;
-        swatch.style.backgroundColor = normalized;
-        return normalized;
-    }
-
-    function syncRegistryRangeField(rangeInput, numberInput) {
-        if (numberInput) {
-            numberInput.value = rangeInput.value;
-        }
     }
 
     function currentSchemaValue(toolDef, key) {
@@ -4821,6 +5418,10 @@
         var value;
         var section = element.closest ? element.closest(".is-section-disabled") : null;
 
+        if (element.getAttribute("data-core-intrinsic-disabled") === "true") {
+            return true;
+        }
+
         if (section) {
             return true;
         }
@@ -4878,6 +5479,9 @@
         for (i = 0; i < elements.length; i++) {
             disabled = elementStateDisabled(elements[i], toolDef);
             elements[i].disabled = disabled;
+            if (typeof elements[i]._coreSetDisabled === "function") {
+                elements[i]._coreSetDisabled(disabled);
+            }
             elements[i].classList.toggle("is-state-disabled", disabled);
         }
         updateRegistryStateCard(toolDef);
@@ -4973,8 +5577,12 @@
     }
 
     function dynamicActionMessage(result, fallbackKey) {
+        var localized;
         if (result && result.messageKey) {
-            return tr(result.messageKey, result);
+            localized = tr(result.messageKey, result);
+            if (localized !== result.messageKey) {
+                return localized;
+            }
         }
         return tr(fallbackKey || "status.ready", result || {});
     }
@@ -5713,18 +6321,30 @@
         ctx.putImageData(image, 0, 0);
     }
 
-    function closeRegistryColorPicker() {
+    function openCoreColorPicker(options) {
+        options = options || {};
+        return openRegistryColorPicker(options.hexInput, options.swatch, options.fallback, {
+            onPreview: options.onPreview,
+            onCommit: options.onCommit,
+            onCancel: options.onCancel
+        });
+    }
+
+    function closeRegistryColorPicker(reason) {
         var picker = document.querySelector(".registry-color-picker-popover");
         if (picker && picker._cleanupColorPicker) {
-            picker._cleanupColorPicker();
+            picker._cleanupColorPicker(reason || "close");
         }
         if (picker && picker.parentNode) {
             picker.parentNode.removeChild(picker);
         }
     }
 
-    function openRegistryColorPicker(hexInput, swatch, fallback) {
+    function openRegistryColorPicker(hexInput, swatch, fallback, lifecycle) {
         var color = makeColorStateFromRgb(parseHexColor(hexInput.value || fallback || "#ffffff", fallback || "#ffffff"));
+        var initialHex = formatHexColor(color, false);
+        var committedHex = initialHex;
+        var hasUncommittedPreview = false;
         var axisMode = loadColorPickerAxisMode();
         var popover;
         var axisControls;
@@ -5760,9 +6380,18 @@
             planeHandle.style.top = (point.y * 100) + "%";
             axisHandle.style.left = (getAxisValue(color, axisMode) * 100) + "%";
             syncChannelSliders();
-            if (!skipNotify && hexInput._registryOnValueChange) {
-                hexInput._registryOnValueChange();
+            if (!skipNotify) {
+                hasUncommittedPreview = true;
+                if (lifecycle && lifecycle.onPreview) lifecycle.onPreview(hex);
+                else if (hexInput._registryOnValueChange) hexInput._registryOnValueChange();
             }
+        }
+
+        function commitColor() {
+            var hex = formatHexColor(color, false);
+            if (hasUncommittedPreview && lifecycle && lifecycle.onCommit) lifecycle.onCommit(hex);
+            committedHex = hex;
+            hasUncommittedPreview = false;
         }
 
         function syncChannelSliders() {
@@ -5849,6 +6478,7 @@
             function up() {
                 document.removeEventListener("mousemove", move);
                 document.removeEventListener("mouseup", up);
+                commitColor();
             }
             event.preventDefault();
             updateFn(event);
@@ -5903,6 +6533,7 @@
                 setEyedropperBusy(false);
                 if (result && result.ok && isCompleteHexColor(result.hex)) {
                     applyColor(makeColorStateFromRgb(parseHexColor(result.hex, formatHexColor(color, false))));
+                    commitColor();
                     setEyedropperStatus("picked", "ok");
                     return;
                 }
@@ -5927,7 +6558,7 @@
             });
         }
 
-        function cleanup() {
+        function cleanup(reason) {
             setEyedropperBusy(false);
             window.removeEventListener("resize", renderAll);
             window.removeEventListener("scroll", closeRegistryColorPicker, true);
@@ -5935,12 +6566,14 @@
                 document.removeEventListener("mousedown", outsideHandler);
                 outsideHandler = null;
             }
+            if (hasUncommittedPreview && lifecycle && lifecycle.onCancel) lifecycle.onCancel(committedHex, reason || "close");
+            hasUncommittedPreview = false;
         }
 
         function bindOutsideClose() {
             outsideHandler = function (event) {
                 if (!popover.contains(event.target) && event.target !== swatch) {
-                    closeRegistryColorPicker();
+                    closeRegistryColorPicker("outside");
                 }
             };
             if (!outsideBound) {
@@ -5994,10 +6627,7 @@
         axisControls.className = "registry-color-axis-controls";
 
         function addAxisButton(mode, label) {
-            var button = document.createElement("button");
-            button.type = "button";
-            button.className = "registry-color-axis-button";
-            button.textContent = label;
+            var button = window.CoreUI.createButton({ document: document, text: label, classNames: "registry-color-axis-button" });
             button.setAttribute("data-axis-mode", mode);
             button.setAttribute("title", mode.indexOf("hsv") === 0 ? "HSV " + label : "RGB " + label);
             button.addEventListener("click", function () {
@@ -6033,6 +6663,7 @@
                 slider.addEventListener("input", function () {
                     applyColor(colorFromChannelValue(key, this.value));
                 });
+                slider.addEventListener("change", commitColor);
                 channelSliders[key] = slider;
                 row.appendChild(text);
                 row.appendChild(slider);
@@ -6076,11 +6707,7 @@
         preview = document.createElement("span");
         preview.className = "registry-hsv-preview";
 
-        eyedropperButton = document.createElement("button");
-        eyedropperButton.type = "button";
-        eyedropperButton.className = "registry-eyedropper-button";
-        eyedropperButton.textContent = "Pick";
-        eyedropperButton.setAttribute("aria-label", "Eyedropper");
+        eyedropperButton = window.CoreUI.createButton({ document: document, text: "Pick", classNames: "registry-eyedropper-button", ariaLabel: "Eyedropper" });
         eyedropperButton.setAttribute("title", "Pick a color from the screen");
         eyedropperButton.addEventListener("click", function (event) {
             event.preventDefault();
@@ -6092,10 +6719,7 @@
         eyedropperStatus.className = "registry-eyedropper-status";
         setEyedropperStatus("idle", "idle");
 
-        hexEdit = document.createElement("input");
-        hexEdit.className = "registry-color-hex registry-hsv-hex";
-        hexEdit.type = "text";
-        hexEdit.setAttribute("spellcheck", "false");
+        hexEdit = window.CoreUI.createTextInput({ document: document, classNames: "registry-color-hex registry-hsv-hex", spellcheck: false });
         bindHexInputSelectBehavior(hexEdit);
         hexEdit.addEventListener("input", function () {
             if (isCompleteHexColor(this.value)) {
@@ -6106,6 +6730,7 @@
         hexEdit.addEventListener("change", function () {
             color = makeColorStateFromRgb(parseHexColor(this.value, fallback || "#ffffff"));
             applyColor(color);
+            commitColor();
         });
 
         outputRow = document.createElement("div");
@@ -6133,6 +6758,7 @@
 
     function renderSchemaField(field, toolDef) {
         var row;
+        var builtRow;
         var labelColumn;
         var label;
         var hint;
@@ -6144,6 +6770,8 @@
         var hintText;
         var i;
         var controls;
+        var semanticVariant;
+        var semanticClassNames;
         var k;
         var option;
         var toolId = toolDef && toolDef.id ? toolDef.id : "";
@@ -6153,6 +6781,10 @@
 
         function scheduleSave() {
             scheduleRegistryToolSave(toolDef);
+            scheduleRegistryProceduralPreviewUpdate(toolDef, field && field.key);
+        }
+
+        function schedulePreview() {
             scheduleRegistryProceduralPreviewUpdate(toolDef, field && field.key);
         }
 
@@ -6230,9 +6862,9 @@
             applyVisibleWhenMetadata(row, field);
             row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
 
-            input = document.createElement("button");
-            input.type = "button";
-            input.className = field.variant === "primary" ? "primary-action registry-large-button" : "panel-button registry-large-button";
+            semanticVariant = field.variant === "primary" ? "primary" : (field.variant === "danger" ? "danger" : "neutral");
+            semanticClassNames = semanticVariant === "primary" ? "primary-action" : (semanticVariant === "danger" ? "registry-danger-action" : "panel-button registry-secondary-action");
+            input = window.CoreUI.createButton({ document: document, variant: semanticVariant, classNames: semanticClassNames + " registry-large-button ui-button--large" });
             if (field.fullWidth !== false) {
                 input.className += " is-full-width";
             }
@@ -6269,47 +6901,44 @@
             return row;
         }
 
-        row = document.createElement("div");
-        row.className = fieldType === "checkbox" ? "switch-row registry-switch-row registry-schema-field" : "control-row registry-field-row registry-schema-field";
+        wrap = document.createElement("span");
+        wrap.className = "control-inputs";
+        hintText = schemaHintText(field);
+        builtRow = window.CoreUI.createFieldRow({
+            document: document,
+            copyTag: fieldType === "checkbox" || fieldType === "switch" ? "label" : "span",
+            labelTag: "span",
+            labelFor: fieldType === "checkbox" || fieldType === "switch" ? fieldId : "",
+            labelKey: field.labelKey || "",
+            labelText: tr(field.labelKey || field.key || ""),
+            descriptionKey: field.descriptionKey || field.hintKey || "",
+            descriptionText: hintText,
+            contentGrowth: field.contentGrowth === true || fieldType === "cubicBezier",
+            control: wrap,
+            classNames: (fieldType === "checkbox" || fieldType === "switch" ? "switch-row registry-switch-row registry-schema-field" : "control-row registry-field-row registry-schema-field") + (fieldType === "cubicBezier" ? " registry-bezier-row" : ""),
+            copyClassNames: "registry-label-column",
+            labelClassNames: "control-label registry-text-body",
+            descriptionClassNames: "registry-field-hint registry-text-muted"
+        });
+        row = builtRow.row;
+        labelColumn = builtRow.copy;
+        label = builtRow.label;
+        hint = builtRow.description;
         applyVisibleWhenMetadata(row, field);
         row.classList.toggle("is-registry-hidden", !visibleWhenMatches(field, toolDef));
-        labelColumn = document.createElement("span");
-        label = document.createElement("span");
-        wrap = document.createElement("span");
-        labelColumn.className = "registry-label-column";
-        label.className = "control-label registry-text-body";
-        label.textContent = tr(field.labelKey || field.key || "");
-        hintText = schemaHintText(field);
-        if (hintText) {
-            hint = document.createElement("small");
-            hint.className = "registry-field-hint registry-text-muted";
-            hint.textContent = hintText;
-        }
-        wrap.className = "control-inputs";
-        labelColumn.appendChild(label);
-        if (hint) {
-            labelColumn.appendChild(hint);
-        }
 
         if (fieldType === "checkbox") {
-            input = document.createElement("input");
-            input.type = "checkbox";
-            input.id = fieldId;
-            input.checked = !!value;
-            input.addEventListener("change", scheduleSave);
-
-            swatch = document.createElement("label");
-            swatch.className = "switch registry-switch";
-            swatch.setAttribute("for", fieldId);
-            colorValue = document.createElement("span");
-            colorValue.className = "switch-track";
-            swatch.appendChild(input);
-            swatch.appendChild(colorValue);
+            colorValue = window.CoreUI.createCheckbox({ document: document, id: fieldId, checked: !!value, classNames: "registry-checkbox", ariaLabel: tr(field.labelKey || field.key || ""), onChange: scheduleSave });
+            input = colorValue.input;
+            swatch = colorValue.root;
+            wrap.appendChild(swatch);
+        } else if (fieldType === "switch") {
+            colorValue = window.CoreUI.createSwitch({ document: document, id: fieldId, checked: !!value, label: true, classNames: "switch registry-switch", onChange: scheduleSave });
+            input = colorValue.input;
+            swatch = colorValue.root;
             wrap.appendChild(swatch);
         } else if (fieldType === "select") {
-            input = document.createElement("select");
-            input.className = "select-input";
-            input.id = fieldId;
+            input = window.CoreUI.createSelect({ document: document, id: fieldId, classNames: "select-input", onChange: scheduleSave });
             for (i = 0; field.options && i < field.options.length; i++) {
                 option = document.createElement("option");
                 option.value = field.options[i].value;
@@ -6319,156 +6948,132 @@
                 }
                 input.appendChild(option);
             }
-            input.addEventListener("change", scheduleSave);
             wrap.appendChild(input);
+            enhanceSharedSelect(input);
         } else if (fieldType === "tabs") {
-            input = document.createElement("input");
-            input.type = "hidden";
-            input.id = fieldId;
-            input.value = value;
-            wrap.classList.add("registry-tabs-control");
-            wrap.appendChild(input);
-            for (i = 0; field.options && i < field.options.length; i++) {
-                option = document.createElement("button");
-                option.type = "button";
-                option.className = "registry-option-card";
-                option.setAttribute("data-tab-value", field.options[i].value);
-                option.classList.toggle("is-active", field.options[i].value === value);
-                if (field.options[i].iconText) {
-                    swatch = document.createElement("span");
-                    swatch.className = "registry-option-icon";
-                    swatch.textContent = field.options[i].iconText;
-                    option.appendChild(swatch);
-                }
-                colorValue = document.createElement("span");
-                colorValue.className = "registry-option-copy";
-                label = document.createElement("strong");
-                label.textContent = tr(field.options[i].labelKey || field.options[i].value);
-                colorValue.appendChild(label);
-                if (field.options[i].descriptionKey || field.options[i].description) {
-                    hint = document.createElement("small");
-                    hint.textContent = tr(field.options[i].descriptionKey || field.options[i].description);
-                    colorValue.appendChild(hint);
-                }
-                option.appendChild(colorValue);
-                option.addEventListener("click", function () {
-                    var buttons = wrap.querySelectorAll(".registry-option-card");
-                    var k;
-                    input.value = this.getAttribute("data-tab-value");
-                    for (k = 0; k < buttons.length; k++) {
-                        buttons[k].classList.toggle("is-active", buttons[k] === this);
+            colorValue = window.CoreUI.createChoiceGroup({
+                document: document,
+                id: fieldId,
+                value: value,
+                options: field.options || [],
+                classNames: "registry-tabs-control",
+                ariaLabel: tr(field.labelKey || field.key || ""),
+                renderOption: function (button, spec) {
+                    var copy = document.createElement("span");
+                    var optionLabel = document.createElement("strong");
+                    var optionHint;
+                    button.classList.add("registry-option-card");
+                    button.setAttribute("data-tab-value", spec.value);
+                    if (spec.iconText) {
+                        var optionIcon = document.createElement("span");
+                        optionIcon.className = "registry-option-icon";
+                        optionIcon.textContent = spec.iconText;
+                        button.appendChild(optionIcon);
                     }
-                    scheduleSave();
-                    updateRegistryVisibleFields(toolDef);
-                });
-                wrap.appendChild(option);
-            }
+                    copy.className = "registry-option-copy";
+                    optionLabel.textContent = tr(spec.labelKey || spec.value);
+                    copy.appendChild(optionLabel);
+                    if (spec.descriptionKey || spec.description) {
+                        optionHint = document.createElement("small");
+                        optionHint.textContent = tr(spec.descriptionKey || spec.description);
+                        copy.appendChild(optionHint);
+                    }
+                    button.appendChild(copy);
+                },
+                onChange: function () { scheduleSave(); updateRegistryVisibleFields(toolDef); }
+            });
+            input = colorValue.input;
+            wrap.appendChild(colorValue.root);
         } else if (fieldType === "textarea") {
-            input = document.createElement("textarea");
-            input.id = fieldId;
-            input.className = "registry-textarea";
-            input.rows = field.rows || 3;
+            input = window.CoreUI.createTextarea({ document: document, id: fieldId, classNames: "registry-textarea", rows: field.rows || 3, value: value, onInput: scheduleSave, onCommit: scheduleSave });
             if (field.placeholderKey) {
                 input.placeholder = tr(field.placeholderKey);
             } else if (field.placeholder) {
                 input.placeholder = field.placeholder;
             }
-            input.value = value;
-            input.addEventListener("input", scheduleSave);
-            input.addEventListener("change", scheduleSave);
-            wrap.appendChild(input);
+            wrap.appendChild(input._coreFrame);
         } else if (fieldType === "range") {
-            input = document.createElement("input");
-            input.id = fieldId;
-            input.className = "pill-slider registry-range";
-            input.type = "range";
-            numberInput = document.createElement("input");
-            numberInput.className = "num-input registry-range-number";
-            numberInput.type = "text";
-            numberInput.inputMode = "decimal";
-            numberInput.id = fieldId + "_number";
-            applySchemaNumberAttributes(input, field);
-            applySchemaNumberAttributes(numberInput, field);
-            input.value = value;
-            numberInput.value = input.value;
-            input.addEventListener("input", function () {
-                syncRegistryRangeField(this, byId(this.id + "_number"));
-                scheduleSave();
+            colorValue = window.CoreUI.createRangeNumber({
+                document: document,
+                rangeId: fieldId,
+                numberId: fieldId + "_number",
+                value: value,
+                min: field.min,
+                max: field.max,
+                step: field.step,
+                field: field,
+                unitText: field.unitText || field.unit || "",
+                classNames: "registry-range-control",
+                rangeClassNames: "pill-slider registry-range",
+                numberClassNames: "num-input registry-range-number",
+                onPreview: function () { scheduleSave(); },
+                onCommit: function () { scheduleSave(); }
             });
-            input.addEventListener("change", scheduleSave);
-            numberInput.addEventListener("input", function () {
-                var range = byId(this.id.replace(/_number$/, ""));
-                if (range && !isSchemaNumberDraftValue(this.value) && !isNaN(Number(this.value))) {
-                    range.value = normalizeSchemaNumber(this.value, field, range.value);
-                }
-                scheduleSave();
+            input = colorValue.range;
+            numberInput = colorValue.number;
+            wrap.appendChild(colorValue.root);
+        } else if (fieldType === "cubicBezier") {
+            colorValue = window.CoreUI.createBezierCurveField({
+                document: document,
+                id: fieldId,
+                value: value,
+                defaultValue: schemaDefaultValue(field),
+                disabled: field.disabled === true,
+                readonly: field.readonly === true,
+                initialView: field.initialView,
+                classNames: "registry-bezier-field",
+                progressLabel: field.progressLabelKey ? tr(field.progressLabelKey) : "Progress / Value",
+                speedLabel: field.speedLabelKey ? tr(field.speedLabelKey) : "Speed",
+                speedHint: tr("core.bezier.speedInfluenceHint"),
+                graphLabel: tr(field.graphLabelKey || field.labelKey || field.key || ""),
+                point1Label: field.point1LabelKey ? tr(field.point1LabelKey) : "Control Point 1",
+                point2Label: field.point2LabelKey ? tr(field.point2LabelKey) : "Control Point 2",
+                x1Label: field.x1LabelKey ? tr(field.x1LabelKey) : "P1 X",
+                y1Label: field.y1LabelKey ? tr(field.y1LabelKey) : "P1 Y",
+                x2Label: field.x2LabelKey ? tr(field.x2LabelKey) : "P2 X",
+                y2Label: field.y2LabelKey ? tr(field.y2LabelKey) : "P2 Y",
+                onInput: schedulePreview,
+                onChange: scheduleSave
             });
-            numberInput.addEventListener("change", function () {
-                var range = byId(this.id.replace(/_number$/, ""));
-                commitSchemaNumberInput(this, field, range ? range.value : schemaDefaultValue(field), function (value) {
-                    if (range) {
-                        range.value = value;
-                    }
-                });
-                scheduleSave();
-            });
-            numberInput.addEventListener("blur", function () {
-                var range = byId(this.id.replace(/_number$/, ""));
-                commitSchemaNumberInput(this, field, range ? range.value : schemaDefaultValue(field), function (value) {
-                    if (range) {
-                        range.value = value;
-                    }
-                });
-                scheduleSave();
-            });
-            setupRegistryNumberDrag(numberInput, field, function (value) {
-                input.value = value;
-                scheduleSave();
-            });
-            wrap.classList.add("registry-range-control");
-            wrap.appendChild(numberInput);
-            wrap.appendChild(input);
+            input = colorValue.input;
+            if (field.disabled === true) {
+                input.setAttribute("data-core-intrinsic-disabled", "true");
+            }
+            wrap.appendChild(colorValue.root);
         } else if (fieldType === "color") {
             colorValue = normalizeHex(value, "#ffffff").toLowerCase();
-            input = document.createElement("input");
-            input.id = fieldId;
-            input.className = "registry-color-hex";
-            input.type = "text";
-            input.value = colorValue;
-            input.setAttribute("spellcheck", "false");
-            bindHexInputSelectBehavior(input);
-
-            swatch = document.createElement("button");
-            swatch.type = "button";
-            swatch.className = "registry-color-swatch";
-            swatch.style.backgroundColor = colorValue;
-            swatch.setAttribute("aria-label", tr(field.labelKey || field.key || ""));
-            swatch.addEventListener("click", function () {
-                var hex = this.parentNode.querySelector(".registry-color-hex");
-                openRegistryColorPicker(hex, this, colorValue);
+            colorValue = window.CoreUI.createColorField({
+                document: document,
+                id: fieldId,
+                hexId: fieldId + "Hex",
+                value: colorValue,
+                fallback: "#ffffff",
+                classNames: "registry-color-control",
+                swatchClassNames: "registry-color-swatch",
+                hexClassNames: "registry-color-hex",
+                ariaLabel: tr(field.labelKey || field.key || ""),
+                normalize: function (nextValue, fallback) { return normalizeHex(nextValue, fallback).toLowerCase(); },
+                isValid: function (nextValue) { return /^#?[0-9a-fA-F]{6}$/.test(nextValue || ""); },
+                onPreview: function () { scheduleSave(); },
+                onCommit: function () { scheduleSave(); },
+                openPicker: function (pickerOptions) { openCoreColorPicker(pickerOptions); }
             });
-            input._registryOnValueChange = scheduleSave;
-            input.addEventListener("input", scheduleSave);
-            input.addEventListener("change", function () {
-                var parent = this.parentNode;
-                syncRegistryColorField(this, parent.querySelector(".registry-color-swatch"), colorValue);
-                scheduleSave();
-            });
-            wrap.classList.add("registry-color-control");
-            wrap.appendChild(swatch);
-            wrap.appendChild(input);
+            input = colorValue.input;
+            swatch = colorValue.swatch;
+            colorValue.hex._registryOnValueChange = scheduleSave;
+            bindHexInputSelectBehavior(colorValue.hex);
+            wrap.appendChild(colorValue.root);
         } else {
-            if (fieldType !== "text" && window.console && console.warn) {
+            // `number` is a formally supported registry field type handled above by
+            // createNumberInput + applySchemaNumberAttributes. This diagnostic must only
+            // fire for a genuinely unsupported type that silently falls back to a text
+            // input, so `number` is excluded from the warning.
+            if (fieldType !== "text" && fieldType !== "number" && window.console && console.warn) {
                 console.warn("[AE Toolbox] Unsupported registry field type:", fieldType, field);
             }
-            input = document.createElement("input");
-            input.id = fieldId;
-            input.className = fieldType === "number" ? "num-input" : "registry-text-input";
-            input.type = "text";
+            input = fieldType === "number" ? window.CoreUI.createNumberInput({ document: document, id: fieldId, classNames: "num-input", value: value, field: field, onDragValue: scheduleSave, enableArrowKeys: false }) : window.CoreUI.createTextInput({ document: document, id: fieldId, classNames: "registry-text-input", value: value, onInput: scheduleSave, onCommit: scheduleSave });
             if (fieldType === "number") {
-                input.inputMode = "decimal";
                 applySchemaNumberAttributes(input, field);
-                setupRegistryNumberDrag(input, field, scheduleSave);
                 input.addEventListener("input", scheduleSave);
                 input.addEventListener("change", function () {
                     commitSchemaNumberInput(this, field, registryFieldValue(toolDef, field));
@@ -6484,16 +7089,9 @@
             } else if (field.placeholder) {
                 input.placeholder = field.placeholder;
             }
-            input.value = value;
-            if (fieldType !== "number") {
-                input.addEventListener("input", scheduleSave);
-                input.addEventListener("change", scheduleSave);
-            }
             wrap.appendChild(input);
         }
 
-        row.appendChild(labelColumn);
-        row.appendChild(wrap);
         controls = row.querySelectorAll("input, select, textarea, button");
         for (k = 0; k < controls.length; k++) {
             applyStateConditionMetadata(controls[k], field, toolDef);
@@ -6765,50 +7363,48 @@
         card.classList.toggle("is-section-disabled", !enabled);
         card.classList.toggle("is-section-collapsed", !!collapsed);
         body.setAttribute("aria-hidden", collapsed ? "true" : "false");
+        if (card._coreDisclosure) {
+            card._coreDisclosure.setExpanded(!collapsed);
+        }
 
         controls = body.querySelectorAll("input, select, textarea, button");
         for (i = 0; i < controls.length; i++) {
-            controls[i].disabled = !enabled;
+            controls[i].disabled = !enabled || controls[i].getAttribute("data-core-intrinsic-disabled") === "true";
+            if (typeof controls[i]._coreSetDisabled === "function") {
+                controls[i]._coreSetDisabled(controls[i].disabled);
+            }
         }
         if (enabled && toolDef) {
             updateRegistryStateDependentUi(toolDef);
         }
-        setupCustomSelectInputs();
     }
 
     function createRegistrySectionToggle(section, toolDef, card) {
         var fieldId = dynamicFieldId(toolDef.id, section.toggleKey);
-        var wrap = document.createElement("label");
-        var input = document.createElement("input");
-        var track = document.createElement("span");
-
-        wrap.className = "switch registry-section-toggle";
-        wrap.setAttribute("for", fieldId);
-        input.type = "checkbox";
-        input.id = fieldId;
-        input.checked = registrySectionToggleValue(toolDef, section);
-        input.setAttribute("data-section-toggle", section.id || section.toggleKey);
-        track.className = "switch-track";
-
-        input.addEventListener("change", function (event) {
-            var enabled = !!this.checked;
-            event.stopPropagation();
-            setRegistrySectionState(card, enabled, section.collapsible && !enabled, toolDef);
-            scheduleRegistryToolSave(toolDef);
+        var control = window.CoreUI.createSwitch({
+            document: document,
+            id: fieldId,
+            checked: registrySectionToggleValue(toolDef, section),
+            label: true,
+            classNames: "switch registry-section-toggle",
+            onChange: function (event) {
+                var enabled = !!control.input.checked;
+                event.stopPropagation();
+                setRegistrySectionState(card, enabled, section.collapsible && !enabled, toolDef);
+                scheduleRegistryToolSave(toolDef);
+            }
         });
-
-        wrap.addEventListener("click", function (event) {
+        control.input.setAttribute("data-section-toggle", section.id || section.toggleKey);
+        control.root.addEventListener("click", function (event) {
             event.stopPropagation();
         });
-
-        wrap.appendChild(input);
-        wrap.appendChild(track);
-        return wrap;
+        return control.root;
     }
 
     function renderToolSection(section, toolDef) {
         var card = document.createElement("section");
         var heading;
+        var disclosureTrigger;
         var headingWrap;
         var headingTitle;
         var headingDesc;
@@ -6831,19 +7427,7 @@
             heading = document.createElement("div");
             heading.className = "card-heading registry-section-heading";
             if (section.collapsible) {
-                heading.setAttribute("role", "button");
-                heading.setAttribute("tabindex", "0");
-                heading.addEventListener("click", function () {
-                    setRegistrySectionState(card, card.classList.contains("is-section-disabled") ? false : true, !card.classList.contains("is-section-collapsed"), toolDef);
-                    scheduleRegistryToolSave(toolDef);
-                });
-                heading.addEventListener("keydown", function (event) {
-                    if (event.keyCode === 13 || event.keyCode === 32) {
-                        event.preventDefault();
-                        setRegistrySectionState(card, card.classList.contains("is-section-disabled") ? false : true, !card.classList.contains("is-section-collapsed"), toolDef);
-                        scheduleRegistryToolSave(toolDef);
-                    }
-                });
+                disclosureTrigger = window.CoreUI.createButton({ document: document, classNames: "registry-section-disclosure-trigger" });
             }
             headingWrap = document.createElement("div");
             headingTitle = document.createElement("h3");
@@ -6856,7 +7440,7 @@
                 headingDesc.textContent = tr(section.descriptionKey || section.hintKey || section.description);
                 headingWrap.appendChild(headingDesc);
             }
-            heading.appendChild(headingWrap);
+            (disclosureTrigger || heading).appendChild(headingWrap);
             headingActions = document.createElement("div");
             headingActions.className = "registry-section-actions";
             if (section.toggleKey) {
@@ -6866,7 +7450,10 @@
                 var collapseIcon = document.createElement("span");
                 collapseIcon.className = "collapse-chevron registry-section-chevron";
                 collapseIcon.setAttribute("aria-hidden", "true");
-                headingActions.appendChild(collapseIcon);
+                disclosureTrigger.appendChild(collapseIcon);
+            }
+            if (disclosureTrigger) {
+                heading.appendChild(disclosureTrigger);
             }
             if (headingActions.childNodes.length) {
                 heading.appendChild(headingActions);
@@ -6875,12 +7462,25 @@
         }
 
         body = document.createElement("div");
-        body.className = "registry-section-body";
+        body.className = "registry-section-body" + (section.composition === "actionStack" ? " registry-section-body--action-stack" : "");
+        body.id = "registrySectionBody-" + dynamicFieldId(toolDef.id, section.id || section.toggleKey || "section");
         for (i = 0; i < fields.length; i++) {
             body.appendChild(renderSchemaField(fields[i], toolDef));
         }
         card.appendChild(body);
         setRegistrySectionState(card, enabled, collapsed, toolDef);
+        if (disclosureTrigger) {
+            card._coreDisclosure = window.CoreUI.createDisclosureController({
+                trigger: disclosureTrigger,
+                content: body,
+                root: card,
+                expanded: !collapsed,
+                collapsedClass: "is-section-collapsed",
+                onChange: function () {
+                    scheduleRegistryToolSave(toolDef);
+                }
+            });
+        }
 
         return card;
     }
@@ -6913,12 +7513,14 @@
                     params[field.key] = registryFieldValue(toolDef, field);
                     continue;
                 }
-                if (field.type === "checkbox") {
+                if (field.type === "checkbox" || field.type === "switch") {
                     params[field.key] = !!input.checked;
                 } else if (field.type === "number" || field.type === "range") {
                     params[field.key] = normalizeSchemaNumber(input.value, field, registryFieldValue(toolDef, field));
                 } else if (field.type === "color") {
                     params[field.key] = normalizeHex(input.value, schemaDefaultValue(field)).toLowerCase();
+                } else if (field.type === "cubicBezier" && typeof input._coreBezierFieldGetValue === "function") {
+                    params[field.key] = input._coreBezierFieldGetValue();
                 } else {
                     params[field.key] = input.value;
                 }
@@ -6955,7 +7557,49 @@
         }
         if (detail) {
             detail.classList.toggle("has-visible-tool-actions", visible === true);
+            detail.classList.toggle("has-floating-action-region", visible === true);
+            syncFloatingActionClearance(detail, actionsRoot, visible === true);
+            if (visible === true && window.requestAnimationFrame) {
+                window.requestAnimationFrame(function () {
+                    syncFloatingActionClearance(detail, actionsRoot, !actionsRoot.hidden && actionsRoot.getAttribute("data-empty") !== "true");
+                });
+            }
         }
+    }
+
+    function syncFloatingActionClearance(surface, actionsRoot, visible) {
+        var surfaceRect;
+        var actionsRect;
+        if (!surface) {
+            return;
+        }
+        if (!visible || !actionsRoot) {
+            surface.style.removeProperty("--floating-action-clearance");
+            return;
+        }
+        surfaceRect = surface.getBoundingClientRect();
+        actionsRect = actionsRoot.getBoundingClientRect();
+        surface.style.setProperty("--floating-action-clearance", Math.ceil(surfaceRect.bottom - actionsRect.top) + "px");
+    }
+
+    function setupFloatingActionClearance() {
+        var detail = byId("detailView");
+        var actions = byId("registryToolActions");
+        var sync = function () {
+            syncFloatingActionClearance(detail, actions, !!(actions && !actions.hidden && actions.getAttribute("data-empty") !== "true"));
+        };
+        if (!detail || !actions) {
+            return;
+        }
+        if (window.ResizeObserver) {
+            ToolActionsResizeObserver = new window.ResizeObserver(sync);
+            ToolActionsResizeObserver.observe(detail);
+            ToolActionsResizeObserver.observe(actions);
+        } else {
+            ToolActionsResizeFallback = sync;
+            window.addEventListener("resize", ToolActionsResizeFallback);
+        }
+        sync();
     }
 
     function renderToolActions(actions, toolDef) {
@@ -6966,9 +7610,7 @@
         var button;
 
         if (visibleActions.length && (!toolDef || toolDef.hideRestoreDefaults !== true)) {
-            button = document.createElement("button");
-            button.type = "button";
-            button.className = "panel-button secondary-action";
+            button = window.CoreUI.createButton({ document: document, variant: "neutral", classNames: "panel-button secondary-action" });
             button.textContent = tr("common.restoreDefaults");
             button.addEventListener("click", function () {
                 resetRegistryToolValues(toolDef.id);
@@ -6978,9 +7620,7 @@
 
         for (i = 0; i < visibleActions.length; i++) {
             action = visibleActions[i];
-            button = document.createElement("button");
-            button.type = "button";
-            button.className = action.style === "secondary" ? "panel-button secondary-action" : "primary-action";
+            button = window.CoreUI.createButton({ document: document, variant: action.style === "secondary" ? "neutral" : "primary", classNames: action.style === "secondary" ? "panel-button secondary-action" : "primary-action" });
             button.textContent = tr(action.labelKey || action.id);
             button.setAttribute("data-dynamic-action", action.id);
             applyStateConditionMetadata(button, action, toolDef);
@@ -7074,7 +7714,6 @@
         var stateCard;
         var sections;
         var i;
-        var oldMenus;
 
         if (!tool || !panel || !actions) {
             return;
@@ -7082,10 +7721,7 @@
 
         closeRegistryColorPicker();
         clearRegistryProceduralPreviewTimer(tool.id);
-        oldMenus = document.querySelectorAll(".select-menu[data-select-menu-for^='dynamic_']");
-        for (i = 0; i < oldMenus.length; i++) {
-            oldMenus[i].parentNode.removeChild(oldMenus[i]);
-        }
+        disposeSharedSelectsWithin(panel);
 
         panel.innerHTML = "";
         actions.innerHTML = "";
@@ -7109,11 +7745,53 @@
             panel.appendChild(renderToolSection(sections[i], tool));
         }
 
+        if (tool.controlLabCoverage && tool.controlLabCoverage.coreUiDirect && tool.controlLabCoverage.coreUiDirect.indexOf("createShadowField") !== -1) {
+            var directSection = document.createElement("section");
+            var directTitle = document.createElement("h3");
+            var directRow;
+            var shadowCommittedValue = { offsetX: 0, offsetY: 12, blur: 26, spread: 0, color: "#000000", alpha: 0.34 };
+            var shadowPreviewValue = shadowCommittedValue;
+            var shadowField = window.CoreUI.createShadowField({
+                document: document,
+                id: "registryControlLabShadowField",
+                value: shadowCommittedValue,
+                labels: { offsetX: tr("settings.designTuning.shadow.offsetX"), offsetY: tr("settings.designTuning.shadow.offsetY"), blur: tr("settings.designTuning.shadow.blur"), spread: tr("settings.designTuning.shadow.spread"), color: tr("settings.designTuning.shadow.color"), alpha: tr("settings.designTuning.shadow.alpha") },
+                openPicker: openCoreColorPicker,
+                onPreview: function (next) { shadowPreviewValue = next; },
+                onCommit: function (next) { shadowCommittedValue = next; shadowPreviewValue = next; },
+                onCancel: function () { shadowPreviewValue = shadowCommittedValue; shadowField.setValue(shadowPreviewValue); }
+            });
+            directSection.className = "registry-section-card panel-card registry-control-lab-direct";
+            directTitle.className = "registry-title-primary";
+            directTitle.textContent = tr("tools.registryControlLab.sections.coreUiDirect");
+            directRow = window.CoreUI.createFieldRow({ document: document, labelKey: "tools.registryControlLab.fields.shadowField", labelText: tr("tools.registryControlLab.fields.shadowField"), control: shadowField.root, contentGrowth: true, classNames: "control-row registry-field-row", copyClassNames: "registry-label-column", labelTag: "span", labelClassNames: "control-label registry-text-body" }).row;
+            directSection.appendChild(directTitle);
+            directSection.appendChild(directRow);
+            if (tool.controlLabCoverage.colorFieldAlphaMode === true) {
+                var alphaRow;
+                var alphaCommittedValue = { color: "#d6b25e", alpha: 0.5 };
+                var alphaPreviewValue = alphaCommittedValue;
+                var alphaField = window.CoreUI.createColorField({ document: document, id: "registryControlLabColorAlphaField", value: alphaCommittedValue, fallback: "#d6b25e", supportsAlpha: true, openPicker: openCoreColorPicker, onPreview: function (next) { alphaPreviewValue = next; }, onCommit: function (next) { alphaCommittedValue = next; alphaPreviewValue = next; }, onCancel: function () { alphaPreviewValue = alphaCommittedValue; alphaField.setValue(alphaPreviewValue); } });
+                bindHexInputSelectBehavior(alphaField.hex);
+                alphaRow = window.CoreUI.createFieldRow({ document: document, labelKey: "tools.registryControlLab.fields.colorAlphaField", labelText: tr("tools.registryControlLab.fields.colorAlphaField"), control: alphaField.root, contentGrowth: true, classNames: "control-row registry-field-row", copyClassNames: "registry-label-column", labelTag: "span", labelClassNames: "control-label registry-text-body" }).row;
+                directSection.appendChild(alphaRow);
+            }
+            if (tool.controlLabCoverage.buttonVariants && tool.controlLabCoverage.buttonVariants.indexOf("utility") !== -1) {
+                var buttonSpecimen = document.createElement("span");
+                var utilityButton = window.CoreUI.createButton({ document: document, variant: "utility", text: tr("common.retry") });
+                var navigationButton = window.CoreUI.createButton({ document: document, variant: "navigation", text: tr("common.back") });
+                buttonSpecimen.className = "control-inputs registry-control-lab-button-variants";
+                buttonSpecimen.appendChild(utilityButton);
+                buttonSpecimen.appendChild(navigationButton);
+                directSection.appendChild(window.CoreUI.createFieldRow({ document: document, labelText: "Utility / Navigation", control: buttonSpecimen, classNames: "control-row registry-field-row", copyClassNames: "registry-label-column", labelTag: "span", labelClassNames: "control-label registry-text-body" }).row);
+            }
+            panel.appendChild(directSection);
+        }
+
         var visibleGlobalActions = getVisibleGlobalActions(tool.actions || []);
         actions.appendChild(renderToolActions(visibleGlobalActions, tool));
         setToolActionsVisible(actions, visibleGlobalActions.length > 0);
 
-        setupCustomSelectInputs();
         updateRegistryVisibleFields(tool);
         updateRegistryStateDependentUi(tool);
         refreshRegistryProceduralPreviews(tool);
@@ -7135,6 +7813,9 @@
         var previousToolId = activeToolId;
 
         activeToolId = toolId || "";
+        if (!(SystemRouter && SystemRouter.getActiveRoute())) {
+            ActiveRoute = activeToolId ? { kind: "registry", entryId: activeToolId } : null;
+        }
         if (previousToolId && previousToolId !== activeToolId) {
             clearRegistryProceduralPreviewTimer(previousToolId);
         }
@@ -7145,7 +7826,10 @@
         } else {
             stopRegistryStatePolling();
             setToolActionsVisible(byId("registryToolActions"), false);
-            if (route.kind === "unknown" && toolId && window.console && console.warn) {
+            // Only report a genuine unknown route. During startup the dynamic catalog is
+            // not yet populated (host/registry load is async), so every tool appears
+            // "unknown"; warning there produces a misleading console line.
+            if (route.kind === "unknown" && toolId && toolCatalog && toolCatalog.getSnapshot().registryTools.length > 0 && window.console && console.warn) {
                 console.warn("[Tool Catalog] unknown tool route", { id: String(toolId) });
             }
         }
@@ -7211,7 +7895,11 @@
         select.addEventListener("change", function () {
             window.I18n.setLanguage(this.value);
             refreshLanguage();
-            setStatus(tr("status.ready"));
+            if (lastSelectionSummary) {
+                renderSelectionSummary(lastSelectionSummary);
+            } else {
+                setStatus(tr("status.ready"));
+            }
         });
     }
 
@@ -7223,6 +7911,7 @@
     }
 
     function openToolWithLaunchTransition(toolButton, toolId) {
+        var catalogRoute = toolCatalog ? toolCatalog.getRoute(toolId) : null;
         var home = byId("homeView");
         var detail = byId("detailView");
         var icon = getToolIcon(toolButton);
@@ -7231,11 +7920,20 @@
         var targetRect;
         var overlay;
         var finishGate;
+        var spatialMotion;
+        var sourceIdentity;
+        var destinationIdentity;
 
         if (panelShuttingDown) {
             return;
         }
         if (byId("appShell").classList.contains("is-animating")) {
+            return;
+        }
+        if (catalogRoute && catalogRoute.kind === "system") {
+            if (SystemRouter) {
+                SystemRouter.open(catalogRoute.entry.id, catalogRoute.entry.definition.route.defaultPage, toolButton);
+            }
             return;
         }
 
@@ -7258,13 +7956,17 @@
             }
             toolButton.classList.remove("is-pressed");
             configureToolDetail(toolId);
+            restoreSurfacePresentationSession("tool:" + toolId, document.querySelector(".detail-content"));
             beginAnimation();
             resetDetailMorphStyles();
             firstRect = icon.getBoundingClientRect();
             targetRect = getToolDetailTargetRect();
+            sourceIdentity = snapshotSurfaceIdentity(icon);
+            destinationIdentity = snapshotSurfaceIdentity(detail, targetRect);
             overlay = createMorphIconOverlay(toolButton);
 
-            setDetailMorphRect(detail, firstRect, "24px");
+            prepareDetailDestinationContentLayout(detail, targetRect);
+            setDetailMorphRect(detail, firstRect, sourceIdentity.radius);
             detail.appendChild(overlay);
             suppressDetailContent();
             detail.classList.add("is-active", "is-morphing");
@@ -7272,40 +7974,30 @@
             overlay.style.opacity = "1";
             overlay.style.transform = "scale(1)";
             overlay.style.filter = "blur(0px)";
-            home.classList.add("is-opening");
-            finishGate = makeAnimationGate(2, function () {
+            beginHomeRecede(home);
+            spatialMotion = beginSpatialSurfaceMorph("system:view", 2, function () {
                 finishOpenTransition(detail, toolId);
             });
+            finishGate = spatialMotion.completePart;
+            bindDetailDestinationContentLayout(detail, spatialMotion.transaction);
+            scheduleToolContentHandoff(detail, spatialMotion.transaction, Math.max(0,
+                semanticMotionDuration("spatialMorphExpand") - semanticMotionDuration("viewContentEnter")
+            ));
 
-            playAnimation(detail, [
-                {
-                    left: firstRect.left + "px",
-                    top: firstRect.top + "px",
-                    width: firstRect.width + "px",
-                    height: firstRect.height + "px",
-                    borderRadius: "24px"
-                },
-                {
-                    left: targetRect.left + "px",
-                    top: targetRect.top + "px",
-                    width: targetRect.width + "px",
-                    height: targetRect.height + "px",
-                    borderRadius: "22px"
-                }
-            ], {
-                duration: duration("launch"),
-                easing: Motion.appleOut,
+            playSpatialAnimation(spatialMotion.transaction, detail, [window.SurfaceIdentity.frame(sourceIdentity), window.SurfaceIdentity.frame(destinationIdentity)], {
+                duration: semanticMotionDuration("spatialMorphExpand"),
+                easing: semanticMotionEasing("spatialMorphExpand"),
                 fill: "forwards"
             }, function () {
                 finishGate();
             });
 
-            playAnimation(overlay, [
+            playSpatialAnimation(spatialMotion.transaction, overlay, [
                 { opacity: "1", transform: "scale(1)", filter: "blur(0px)" },
                 { opacity: "0", transform: "scale(1.12)", filter: "blur(4px)" }
             ], {
-                duration: duration("normal"),
-                easing: Motion.appleOut,
+                duration: semanticMotionDuration("toolIdentityOpen"),
+                easing: semanticMotionEasing("toolIdentityOpen"),
                 fill: "forwards"
             }, function () {
                 finishGate();
@@ -7322,67 +8014,74 @@
         var targetRect;
         var overlay;
         var finishGate;
+        var spatialMotion;
+        var sourceIdentity;
+        var destinationIdentity;
 
         if (byId("appShell").classList.contains("is-animating")) {
             return;
         }
 
         clearRegistryProceduralPreviewTimer(activeToolId);
+        captureSurfacePresentationSession("tool:" + activeToolId, document.querySelector(".detail-content"));
         beginAnimation();
-        exitDetailContent(function () {
+        exitDetailContent();
             iconRect = getHomeToolIconRect(toolButton);
             targetRect = getToolDetailTargetRect();
             overlay = createMorphIconOverlay(toolButton);
+            sourceIdentity = snapshotSurfaceIdentity(detail, targetRect);
+            destinationIdentity = snapshotSurfaceIdentity(getToolIcon(toolButton), iconRect);
+            destinationIdentity = window.SurfaceIdentity.composite(destinationIdentity, getToolIcon(toolButton), getToolIcon(toolButton));
 
             resetDetailMorphStyles();
-            suppressDetailContent();
-            setDetailMorphRect(detail, targetRect, "22px");
-            detail.appendChild(overlay);
+            setDetailMorphRect(detail, targetRect, sourceIdentity.radius);
+            mountCloseIdentityLayer(overlay);
             detail.classList.add("is-active", "is-morphing");
             detail.classList.remove("is-closing", "is-entering");
             overlay.style.opacity = "0";
             overlay.style.transform = "scale(1.12)";
             overlay.style.filter = "blur(4px)";
-            home.classList.add("is-returning");
-            finishGate = makeAnimationGate(2, function () {
+            prepareHomeRestore(home);
+            spatialMotion = beginSpatialSurfaceMorph("system:view", 2, function () {
                 finishCloseTransition(detail, toolButton);
             });
+            finishGate = spatialMotion.completePart;
+            scheduleSurfaceContentSuppression(detail, spatialMotion.transaction, suppressDetailContent);
+            scheduleHomeRestore(home, spatialMotion.transaction, Math.max(0,
+                semanticMotionDuration("spatialMorphContract") - semanticMotionDuration("homeHandoffRestore")
+            ));
 
-            playAnimation(detail, [
-                {
-                    left: targetRect.left + "px",
-                    top: targetRect.top + "px",
-                    width: targetRect.width + "px",
-                    height: targetRect.height + "px",
-                    borderRadius: "22px"
-                },
-                {
-                    left: iconRect.left + "px",
-                    top: iconRect.top + "px",
-                    width: iconRect.width + "px",
-                    height: iconRect.height + "px",
-                    borderRadius: "24px"
-                }
-            ], {
-                duration: duration("close"),
-                easing: Motion.appleIn,
+            playSpatialAnimation(spatialMotion.transaction, detail, [window.SurfaceIdentity.geometryFrame(sourceIdentity), window.SurfaceIdentity.geometryFrame(destinationIdentity)], {
+                duration: semanticMotionDuration("spatialMorphContract"),
+                easing: semanticMotionEasing("spatialMorphContract"),
                 fill: "forwards"
             }, function () {
                 finishGate();
             });
 
-            playAnimation(overlay, [
-                { opacity: "0", transform: "scale(1.12)", filter: "blur(4px)" },
-                { opacity: "1", transform: "scale(1)", filter: "blur(0px)" }
-            ], {
-                duration: duration("close"),
-                easing: Motion.appleIn,
+            playSpatialAnimation(spatialMotion.transaction, overlay, closeIdentityKeyframes(sourceIdentity, destinationIdentity).map(function (frame, index) {
+                frame.transform = index ? "scale(1)" : "scale(1.12)";
+                frame.filter = index ? "blur(0px)" : "blur(4px)";
+                return frame;
+            }), {
+                duration: semanticMotionDuration("spatialMorphContract"),
+                easing: semanticMotionEasing("spatialMorphContract"),
                 fill: "forwards"
             }, function () {
                 finishGate();
             });
 
-        });
+    }
+
+    function scheduleSettingsContentHandoff(view, transaction, delay) {
+        var timer;
+        var start = function () {
+            if (!view || !document.documentElement.contains(view)) return;
+            revealSettingsContent();
+        };
+        timer = window.setTimeout(transaction ? transaction.guard(start) : start, Math.max(0, delay));
+        if (transaction) transaction.addCleanup(function () { window.clearTimeout(timer); });
+        return timer;
     }
 
     function clampNumber(value, fallback, min, max) {
@@ -7787,6 +8486,25 @@
         }
     }
 
+    function selectionSummaryPresentation(result) {
+        var count = Math.max(0, Math.round(Number(result && result.selectedCount) || 0));
+        var statusId = result && result.statusId;
+        if (statusId === "no-active-comp") {
+            return { status: tr("status.openComp") };
+        }
+        if (statusId === "no-selection" || count === 0) {
+            return { status: tr("status.noSelectedLayers") };
+        }
+        return { status: tr(count === 1 ? "status.oneLayerSelected" : "status.multipleLayersSelected", { count: count }) };
+    }
+
+    function renderSelectionSummary(result) {
+        var presentation = selectionSummaryPresentation(result);
+        if (result.ok && (!byId("autoStatus") || byId("autoStatus").checked)) {
+            setStatus(presentation.status || resultMessage(result, "status.ready"));
+        }
+    }
+
     function refreshSelection() {
         if (!hostLoaded || panelShuttingDown || panelSuspended) {
             return;
@@ -7796,12 +8514,8 @@
                 return;
             }
             var result = parseResult(raw);
-            if (result.selectionLabel) {
-                byId("selectionPill").textContent = result.selectionLabel;
-            }
-            if (result.ok && (!byId("autoStatus") || byId("autoStatus").checked)) {
-                setStatus(resultMessage(result, "status.ready"));
-            }
+            lastSelectionSummary = result;
+            renderSelectionSummary(result);
         });
     }
 
@@ -7823,6 +8537,11 @@
             return;
         }
 
+        if (typeof input._coreColorFieldSetValue === "function") {
+            input._coreColorFieldSetValue(normalized);
+            return;
+        }
+
         shell = input.parentNode;
         hexInput = byId(inputId + "Hex");
         input.value = normalized;
@@ -7834,28 +8553,87 @@
         }
     }
 
+    function appearanceBaseInputs(settings) {
+        var data = settings || DefaultSettings;
+        return {
+            "base.accent": normalizeHex(data.themeAccent, DefaultSettings.themeAccent),
+            "base.canvas": normalizeHex(data.homeBackground, DefaultSettings.homeBackground),
+            "layout.scale": clampNumber(data.uiScale, DefaultSettings.uiScale, 0.62, 1.18),
+            "motion.speed": clampNumber(data.motionSpeed, DefaultSettings.motionSpeed, 0.75, 1.35)
+        };
+    }
+
+    function commitAppearanceBaseInput(id, value) {
+        var control;
+        var number;
+        if (id === "base.accent") {
+            setColorValue("themeAccent", value);
+        } else if (id === "base.canvas") {
+            setColorValue("homeBackground", value);
+        } else if (id === "layout.scale") {
+            control = byId("uiScale");
+            number = byId("uiScaleNumber");
+            if (control) { control.value = value; }
+            if (number) { number.value = value; }
+        } else if (id === "motion.speed") {
+            control = byId("motionSpeed");
+            number = byId("motionSpeedNumber");
+            if (control) { control.value = value; }
+            if (number) { number.value = value; }
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    function ensureCoreAppearance(settings) {
+        var store;
+        if (CoreAppearance) { return CoreAppearance; }
+        if (!window.AppearanceParameterRegistry || !window.AppearanceStateStore || !window.AppearanceResolver) { return null; }
+        store = window.AppearanceStateStore.create({ storage: window.localStorage, registry: window.AppearanceParameterRegistry });
+        CoreAppearance = window.AppearanceResolver.create({
+            registry: window.AppearanceParameterRegistry,
+            store: store,
+            rootStyle: document.documentElement.style,
+            runtime: {
+                applyMotionSpeed: function (value) {
+                    motionScale = clampNumber(value, DefaultSettings.motionSpeed, 0.75, 1.35);
+                    syncMotionCssDurations();
+                },
+                commitBaseInput: commitAppearanceBaseInput
+            }
+        });
+        CoreAppearance.initialize(appearanceBaseInputs(settings));
+        window.CoreAppearance = CoreAppearance;
+        return CoreAppearance;
+    }
+
     function applyThemeAccent(hex) {
         var accent = normalizeHex(hex, DefaultSettings.themeAccent);
         var root = document.documentElement;
         var hot = mixHex(accent, "#ffffff", 0.24);
         var dark = mixHex(accent, "#000000", 0.58);
 
-        root.style.setProperty("--gold", accent);
-        root.style.setProperty("--gold-hot", hot);
-        root.style.setProperty("--gold-soft", rgba(accent, 0.72));
-        root.style.setProperty("--gold-track", rgba(accent, 0.24));
-        root.style.setProperty("--gold-focus", rgba(hot, 0.62));
-        root.style.setProperty("--gold-button", rgba(accent, 0.86));
-        root.style.setProperty("--separator", rgba(accent, 0.16));
-        root.style.setProperty("--panel-border", rgba(accent, 0.22));
-        root.style.setProperty("--input-border", rgba(accent, 0.16));
-        root.style.setProperty("--selection-bg", dark);
+        if (!ensureCoreAppearance() || !CoreAppearance.setBaseInput("base.accent", accent)) {
+            root.style.setProperty("--gold", accent);
+            root.style.setProperty("--gold-hot", hot);
+            root.style.setProperty("--gold-soft", rgba(accent, 0.72));
+            root.style.setProperty("--gold-track", rgba(accent, 0.24));
+            root.style.setProperty("--gold-focus", rgba(hot, 0.62));
+            root.style.setProperty("--gold-button", rgba(accent, 0.86));
+            root.style.setProperty("--separator", rgba(accent, 0.16));
+            root.style.setProperty("--panel-border", rgba(accent, 0.22));
+            root.style.setProperty("--input-border", rgba(accent, 0.16));
+            root.style.setProperty("--selection-bg", dark);
+        }
         setColorValue("themeAccent", accent);
     }
 
     function applyHomeBackground(hex) {
         var bg = normalizeHex(hex, DefaultSettings.homeBackground);
-        document.documentElement.style.setProperty("--bg-main", bg);
+        if (!ensureCoreAppearance() || !CoreAppearance.setBaseInput("base.canvas", bg)) {
+            document.documentElement.style.setProperty("--bg-main", bg);
+        }
         setColorValue("homeBackground", bg);
     }
 
@@ -8057,35 +8835,61 @@
         }
     }
 
-    function closeCustomSelectMenus(exceptControl) {
-        var controls = document.querySelectorAll(".custom-select");
-        var trigger;
-        var menu;
-        var i;
+    function pruneSharedSelectControllers() {
+        SharedSelectControllers = SharedSelectControllers.filter(function (controller) {
+            return controller && controller.select && controller.select._coreSelectComponent === controller;
+        });
+    }
 
-        for (i = 0; i < controls.length; i++) {
-            if (exceptControl && controls[i] === exceptControl) {
-                continue;
+    function enhanceSharedSelect(select) {
+        var controller;
+        if (!select) return null;
+        if (select._coreSelectComponent) return select._coreSelectComponent;
+        controller = window.CoreUI.enhanceSelect({
+            document: document,
+            select: select,
+            controlClassNames: select.classList.contains("settings-select") ? "settings-select-control" : "",
+            getOptionLabel: function (option) {
+                return option && option.getAttribute("data-i18n") ? tr(option.getAttribute("data-i18n")) : (option ? option.textContent : "");
             }
-            controls[i].classList.remove("is-open");
-            trigger = controls[i].querySelector(".select-trigger");
-            if (trigger) {
-                trigger.setAttribute("aria-expanded", "false");
-            }
-            menu = getCustomSelectMenu(controls[i]);
-            if (menu) {
-                menu.classList.remove("is-open");
-                menu.classList.remove("is-above");
-                menu.style.left = "";
-                menu.style.top = "";
-                menu.style.width = "";
-                menu.style.maxHeight = "";
-            }
+        });
+        SharedSelectControllers.push(controller);
+        return controller;
+    }
+
+    function disposeSharedSelectsWithin(rootElement) {
+        var controllers = SharedSelectControllers.slice(0);
+        var i;
+        for (i = 0; i < controllers.length; i++) {
+            if (rootElement && controllers[i].select && rootElement.contains(controllers[i].select)) controllers[i].dispose();
         }
+        pruneSharedSelectControllers();
+    }
+
+    function closeCustomSelectMenus() {
+        window.CoreUI.closeSelectComponents();
+    }
+
+    function syncCustomSelect(select) {
+        if (select && select._coreSelectComponent) select._coreSelectComponent.sync();
+    }
+
+    function rebuildCustomSelectOptions(select) {
+        if (select && select._coreSelectComponent) select._coreSelectComponent.rebuild();
+    }
+
+    function syncAllCustomSelects() {
+        var controllers;
+        var i;
+        pruneSharedSelectControllers();
+        controllers = SharedSelectControllers.slice(0);
+        for (i = 0; i < controllers.length; i++) controllers[i].rebuild();
     }
 
     function cleanupTransientUiState() {
         closeCustomSelectMenus();
+        endSettingsPeekManipulation();
+        cancelDesignTuningCalibrationGesture();
     }
 
     function stopSelectionPolling() {
@@ -8239,328 +9043,6 @@
         window.addEventListener("unload", shutdownPanelRuntime);
     }
 
-    function getCustomSelectMenu(control) {
-        var selectId;
-        if (!control) {
-            return null;
-        }
-        selectId = control.getAttribute("data-select-for");
-        if (!selectId) {
-            return null;
-        }
-        return document.querySelector('.select-menu[data-select-menu-for="' + selectId + '"]');
-    }
-
-    function positionCustomSelectMenu(control) {
-        var menu = getCustomSelectMenu(control);
-        var rect;
-        var viewportWidth;
-        var viewportHeight;
-        var gap = 6;
-        var edge = 8;
-        var width;
-        var left;
-        var desiredHeight;
-        var availableBelow;
-        var availableAbove;
-        var openAbove;
-        var maxHeight;
-        var top;
-
-        if (!control || !menu) {
-            return;
-        }
-
-        rect = control.getBoundingClientRect();
-        viewportWidth = window.innerWidth || document.documentElement.clientWidth || 320;
-        viewportHeight = window.innerHeight || document.documentElement.clientHeight || 480;
-        width = Math.max(rect.width, 220);
-        width = Math.min(width, viewportWidth - edge * 2);
-        left = Math.max(edge, Math.min(rect.left, viewportWidth - width - edge));
-
-        menu.style.width = width + "px";
-        menu.style.left = left + "px";
-        menu.style.maxHeight = "";
-
-        desiredHeight = Math.min(menu.scrollHeight || 220, 220);
-        availableBelow = viewportHeight - rect.bottom - edge - gap;
-        availableAbove = rect.top - edge - gap;
-        openAbove = availableBelow < desiredHeight && availableAbove > availableBelow;
-        maxHeight = Math.max(72, Math.min(desiredHeight, openAbove ? availableAbove : availableBelow));
-        top = openAbove ? rect.top - maxHeight - gap : rect.bottom + gap;
-
-        menu.classList.toggle("is-above", openAbove);
-        menu.style.top = Math.max(edge, top) + "px";
-        menu.style.maxHeight = maxHeight + "px";
-    }
-
-    function getSelectOptionLabel(option) {
-        if (!option) {
-            return "";
-        }
-        if (option.getAttribute("data-i18n")) {
-            return tr(option.getAttribute("data-i18n"));
-        }
-        return option.textContent;
-    }
-
-    function rebuildCustomSelectOptions(select) {
-        var control;
-        var menu;
-        var optionButton;
-        var options;
-        var i;
-
-        if (!select) {
-            return;
-        }
-        control = select.getAttribute("data-custom-select-id");
-        control = control ? document.querySelector('.custom-select[data-select-for="' + control + '"]') : null;
-        menu = getCustomSelectMenu(control);
-        if (!menu) {
-            return;
-        }
-        menu.innerHTML = "";
-        options = select.options || [];
-        for (i = 0; i < options.length; i++) {
-            optionButton = document.createElement("button");
-            optionButton.type = "button";
-            optionButton.className = "select-option";
-            optionButton.setAttribute("role", "option");
-            optionButton.setAttribute("data-value", options[i].value);
-            if (options[i].getAttribute("data-i18n")) {
-                optionButton.setAttribute("data-option-i18n", options[i].getAttribute("data-i18n"));
-            }
-            optionButton.textContent = getSelectOptionLabel(options[i]);
-            optionButton.addEventListener("click", function () {
-                setNativeSelectValue(select, this.getAttribute("data-value"), true);
-                closeCustomSelectMenus();
-            });
-            menu.appendChild(optionButton);
-        }
-    }
-
-    function syncCustomSelect(select) {
-        var control;
-        var triggerLabel;
-        var options;
-        var i;
-        var value;
-        var option;
-
-        if (!select) {
-            return;
-        }
-        control = select.getAttribute("data-custom-select-id");
-        control = control ? document.querySelector('.custom-select[data-select-for="' + control + '"]') : null;
-        if (!control) {
-            return;
-        }
-
-        value = select.value;
-        triggerLabel = control.querySelector(".select-label");
-        option = select.options[select.selectedIndex] || select.options[0];
-        if (triggerLabel) {
-            triggerLabel.textContent = getSelectOptionLabel(option);
-        }
-
-        control = getCustomSelectMenu(control);
-        options = control ? control.querySelectorAll(".select-option") : [];
-        for (i = 0; i < options.length; i++) {
-            if (options[i].getAttribute("data-option-i18n")) {
-                options[i].textContent = tr(options[i].getAttribute("data-option-i18n"));
-            }
-            options[i].classList.toggle("is-selected", options[i].getAttribute("data-value") === value);
-            options[i].setAttribute("aria-selected", options[i].getAttribute("data-value") === value ? "true" : "false");
-        }
-    }
-
-    function syncAllCustomSelects() {
-        var selects = document.querySelectorAll("select.select-input");
-        var i;
-        for (i = 0; i < selects.length; i++) {
-            syncCustomSelect(selects[i]);
-        }
-    }
-
-    function setNativeSelectValue(select, value, notify) {
-        if (!select) {
-            return;
-        }
-        select.value = value;
-        syncCustomSelect(select);
-        if (notify) {
-            var event = document.createEvent("HTMLEvents");
-            event.initEvent("change", true, false);
-            select.dispatchEvent(event);
-        }
-    }
-
-    function createCustomSelect(select, index) {
-        var control;
-        var trigger;
-        var label;
-        var chevron;
-        var menu;
-        var optionButton;
-        var option;
-        var selectId;
-        var i;
-
-        if (!select || select.getAttribute("data-customized") === "true") {
-            return;
-        }
-
-        selectId = select.id || ("customSelect" + index);
-        select.setAttribute("data-custom-select-id", selectId);
-        select.setAttribute("data-customized", "true");
-        select.classList.add("is-native-select-hidden");
-
-        control = document.createElement("span");
-        control.className = "custom-select select-input-replacement";
-        if (select.classList && select.classList.contains("settings-select")) {
-            control.className += " settings-select-control";
-        }
-        control.setAttribute("data-select-for", selectId);
-
-        trigger = document.createElement("button");
-        trigger.type = "button";
-        trigger.className = "select-trigger";
-        trigger.setAttribute("aria-haspopup", "listbox");
-        trigger.setAttribute("aria-expanded", "false");
-
-        label = document.createElement("span");
-        label.className = "select-label";
-        chevron = document.createElement("span");
-        chevron.className = "select-chevron";
-        chevron.setAttribute("aria-hidden", "true");
-
-        trigger.appendChild(label);
-        trigger.appendChild(chevron);
-        control.appendChild(trigger);
-
-        menu = document.createElement("span");
-        menu.className = "select-menu";
-        menu.setAttribute("role", "listbox");
-        menu.setAttribute("data-select-menu-for", selectId);
-
-        document.body.appendChild(menu);
-        select.parentNode.insertBefore(control, select.nextSibling);
-        rebuildCustomSelectOptions(select);
-
-        trigger.addEventListener("click", function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            if (control.classList.contains("is-open")) {
-                closeCustomSelectMenus();
-            } else {
-                closeCustomSelectMenus(control);
-                positionCustomSelectMenu(control);
-                control.classList.add("is-open");
-                menu.classList.add("is-open");
-                trigger.setAttribute("aria-expanded", "true");
-            }
-        });
-
-        trigger.addEventListener("keydown", function (event) {
-            var currentMenu = getCustomSelectMenu(control);
-            var options = currentMenu ? currentMenu.querySelectorAll(".select-option") : [];
-            var selected = currentMenu ? currentMenu.querySelector(".select-option.is-selected") : null;
-            var selectedIndex = 0;
-            var nextIndex;
-            for (i = 0; i < options.length; i++) {
-                if (options[i] === selected) {
-                    selectedIndex = i;
-                    break;
-                }
-            }
-            if (event.keyCode === 13 || event.keyCode === 32) {
-                event.preventDefault();
-                trigger.click();
-            } else if (event.keyCode === 27) {
-                closeCustomSelectMenus();
-            } else if (event.keyCode === 38 || event.keyCode === 40) {
-                event.preventDefault();
-                nextIndex = selectedIndex + (event.keyCode === 40 ? 1 : -1);
-                if (nextIndex < 0) {
-                    nextIndex = options.length - 1;
-                }
-                if (nextIndex >= options.length) {
-                    nextIndex = 0;
-                }
-                if (options[nextIndex]) {
-                    setNativeSelectValue(select, options[nextIndex].getAttribute("data-value"), true);
-                }
-            }
-        });
-
-        select.addEventListener("change", function () {
-            syncCustomSelect(select);
-        });
-
-        syncCustomSelect(select);
-    }
-
-    function setupCustomSelectInputs() {
-        var selects = document.querySelectorAll("select.select-input");
-        var settingsContent;
-        var i;
-        for (i = 0; i < selects.length; i++) {
-            createCustomSelect(selects[i], i);
-        }
-        if (!CustomSelectGlobalListenersBound) {
-            CustomSelectGlobalListenersBound = true;
-            document.addEventListener("click", function (event) {
-                if (!hasAncestorWithClass(event.target, "custom-select", document) && !hasAncestorWithClass(event.target, "select-menu", document)) {
-                    closeCustomSelectMenus();
-                }
-            });
-            window.addEventListener("resize", function () {
-                closeCustomSelectMenus();
-            });
-            settingsContent = document.querySelector(".settings-content");
-            if (settingsContent) {
-                settingsContent.addEventListener("scroll", function () {
-                    closeCustomSelectMenus();
-                });
-            }
-        }
-        bindPanelLifecycle();
-    }
-
-    function setCustomSelectValue(control, value, announce) {
-        var input = control.querySelector("input");
-        var label = control.querySelector("#motionSpeedLabel");
-        var options = control.querySelectorAll(".select-option");
-        var text = "";
-        var i;
-
-        for (i = 0; i < options.length; i++) {
-            if (options[i].getAttribute("data-value") === String(value)) {
-                options[i].classList.add("is-selected");
-                options[i].setAttribute("aria-selected", "true");
-                text = options[i].textContent;
-            } else {
-                options[i].classList.remove("is-selected");
-                options[i].setAttribute("aria-selected", "false");
-            }
-        }
-
-        if (input) {
-            input.value = value;
-        }
-        control.setAttribute("data-value", value);
-        if (label && text) {
-            label.textContent = text;
-        }
-
-        if (input && input.id === "motionSpeed") {
-            motionScale = clampNumber(value, 1, 0.6, 1.5);
-            if (announce) {
-                setStatus(tr("status.motionSpeedUpdated"));
-            }
-        }
-    }
 
     function setupMotionSpeed() {
         var input = byId("motionSpeed");
@@ -8572,9 +9054,11 @@
 
         linkPersistedRange("motionSpeed", "motionSpeedNumber", 0.75, 1.35, function () {
             motionScale = clampNumber(number.value, DefaultSettings.motionSpeed, 0.75, 1.35);
+            if (ensureCoreAppearance()) { CoreAppearance.setBaseInput("motion.speed", motionScale); }
             saveSettings();
         });
         motionScale = clampNumber(number.value, DefaultSettings.motionSpeed, 0.75, 1.35);
+        if (ensureCoreAppearance()) { CoreAppearance.setBaseInput("motion.speed", motionScale); }
     }
 
     function applyUiScale(value) {
@@ -8582,7 +9066,9 @@
         var range = byId("uiScale");
         var number = byId("uiScaleNumber");
 
-        document.documentElement.style.setProperty("--ui-scale", String(scale));
+        if (!ensureCoreAppearance() || !CoreAppearance.setBaseInput("layout.scale", scale)) {
+            document.documentElement.style.setProperty("--ui-scale", String(scale));
+        }
         if (range) {
             range.value = scale;
         }
@@ -8597,6 +9083,7 @@
     function setupUiScale() {
         var input = byId("uiScale");
         var number = byId("uiScaleNumber");
+        var rangeManipulating = false;
 
         if (!input || !number) {
             return;
@@ -8606,7 +9093,89 @@
             applyUiScale(number.value);
             saveSettings();
         });
+        input.addEventListener("pointerdown", function (event) {
+            if (event.button !== 0) return;
+            rangeManipulating = true;
+            beginSettingsPeekManipulation("range");
+            try { input.setPointerCapture(event.pointerId); } catch (ignored) {}
+        });
+        input.addEventListener("input", function () {
+            if (rangeManipulating) markSettingsPeekManipulationChanged();
+        });
+        input.addEventListener("pointerup", function () {
+            rangeManipulating = false;
+            endSettingsPeekManipulation("range");
+        });
+        input.addEventListener("pointercancel", function () {
+            rangeManipulating = false;
+            endSettingsPeekManipulation("range");
+        });
+        input.addEventListener("lostpointercapture", function () {
+            rangeManipulating = false;
+            endSettingsPeekManipulation("range");
+        });
         applyUiScale(number.value);
+    }
+
+    function beginSettingsPeekManipulation(kind) {
+        endSettingsPeekPreview();
+        SettingsPeekManipulation = { kind: kind, changed: false };
+    }
+
+    function markSettingsPeekManipulationChanged() {
+        var manipulation = SettingsPeekManipulation;
+        if (!manipulation || manipulation.changed) return;
+        manipulation.changed = true;
+        SettingsPeekDelayTimer = window.setTimeout(function () {
+            SettingsPeekDelayTimer = null;
+            if (SettingsPeekManipulation === manipulation && manipulation.changed) {
+                beginSettingsPeekPreview(document.querySelector('[data-settings-preview-anchor="ui-scale"]'));
+            }
+        }, SETTINGS_PEEK_DELAY_MS);
+    }
+
+    function beginSettingsPeekPreview(scopeElement) {
+        var view = byId("settingsView");
+        var home = byId("homeView");
+        var root = byId("settingsRootPage");
+        var ancestor;
+        if (!view || !home || !root || !scopeElement || !root.contains(scopeElement) || !view.classList.contains("is-open")) return false;
+        endSettingsPeekPreview();
+        scopeElement.classList.add("is-settings-peek-anchor");
+        ancestor = scopeElement.parentElement;
+        while (ancestor && ancestor !== root) {
+            ancestor.classList.add("is-settings-peek-structure");
+            ancestor = ancestor.parentElement;
+        }
+        view.classList.add("is-peek-preview");
+        home.classList.add("is-active", "is-settings-peek-home");
+        return true;
+    }
+
+    function endSettingsPeekPreview() {
+        var view = byId("settingsView");
+        var home = byId("homeView");
+        var wasPreviewingHome = home && home.classList.contains("is-settings-peek-home");
+        if (SettingsPeekDelayTimer) {
+            window.clearTimeout(SettingsPeekDelayTimer);
+            SettingsPeekDelayTimer = null;
+        }
+        if (view) {
+            view.classList.remove("is-peek-preview");
+            Array.prototype.forEach.call(view.querySelectorAll(".is-settings-peek-anchor, .is-settings-peek-structure"), function (element) {
+                element.classList.remove("is-settings-peek-anchor", "is-settings-peek-structure");
+            });
+        }
+        if (home) {
+            home.classList.remove("is-settings-peek-home");
+            if (wasPreviewingHome) home.classList.remove("is-active");
+        }
+    }
+
+    function endSettingsPeekManipulation(kind) {
+        if (SettingsPeekManipulation && kind && SettingsPeekManipulation.kind !== kind) return;
+        SettingsPeekManipulation = null;
+        endSettingsPeekPreview();
     }
 
     function setBackgroundSettingsCollapsed(collapsed) {
@@ -8669,33 +9238,37 @@
     function collectSettings() {
         var autoStatus = byId("autoStatus");
         var registryDebugTools = byId("registryDebugTools");
-        return {
-            motionSpeed: clampNumber(byId("motionSpeedNumber").value, DefaultSettings.motionSpeed, 0.75, 1.35),
-            uiScale: clampNumber(byId("uiScaleNumber").value, DefaultSettings.uiScale, 0.62, 1.18),
-            themeAccent: normalizeHex(byId("themeAccent").value, DefaultSettings.themeAccent),
-            homeBackground: normalizeHex(byId("homeBackground").value, DefaultSettings.homeBackground),
-            backgroundSource: normalizeBackgroundSource(byId("backgroundSource") ? byId("backgroundSource").value : DefaultSettings.backgroundSource),
-            proceduralBackgroundSeed: normalizeProceduralBackgroundSeed(byId("proceduralBackgroundSeed") ? byId("proceduralBackgroundSeed").value : DefaultSettings.proceduralBackgroundSeed),
-            proceduralBackgroundPaletteId: normalizeProceduralBackgroundPaletteId(byId("proceduralBackgroundPaletteId") ? byId("proceduralBackgroundPaletteId").value : DefaultSettings.proceduralBackgroundPaletteId),
-            proceduralBackgroundIntensity: normalizeProceduralBackgroundIntensity(byId("proceduralBackgroundIntensityNumber") ? byId("proceduralBackgroundIntensityNumber").value : DefaultSettings.proceduralBackgroundIntensity),
-            toolIconColor: normalizeHex(byId("toolIconColor").value, DefaultSettings.toolIconColor),
-            toolIconLine: normalizeHex(byId("toolIconLine").value, DefaultSettings.toolIconLine),
-            proceduralIconMode: normalizeProceduralIconMode(byId("proceduralIconMode") ? byId("proceduralIconMode").value : DefaultSettings.proceduralIconMode),
-            toolIconDarkSourceMode: normalizeToolIconDarkSourceMode(byId("toolIconDarkSourceMode") ? byId("toolIconDarkSourceMode").value : DefaultSettings.toolIconDarkSourceMode),
-            toolIconDarkPaletteId: byId("toolIconDarkPaletteId") ? String(byId("toolIconDarkPaletteId").value || "") : DefaultSettings.toolIconDarkPaletteId,
+        var current = SettingsState ? SettingsState.snapshot() : {};
+        var values = {
+            motionSpeed: clampNumber(byId("motionSpeedNumber") ? byId("motionSpeedNumber").value : current.motionSpeed, DefaultSettings.motionSpeed, 0.75, 1.35),
+            uiScale: clampNumber(byId("uiScaleNumber") ? byId("uiScaleNumber").value : current.uiScale, DefaultSettings.uiScale, 0.62, 1.18),
+            themeAccent: normalizeHex(byId("themeAccent") ? byId("themeAccent").value : current.themeAccent, DefaultSettings.themeAccent),
+            homeBackground: normalizeHex(byId("homeBackground") ? byId("homeBackground").value : current.homeBackground, DefaultSettings.homeBackground),
+            backgroundSource: normalizeBackgroundSource(byId("backgroundSource") ? byId("backgroundSource").value : current.backgroundSource),
+            proceduralBackgroundSeed: normalizeProceduralBackgroundSeed(byId("proceduralBackgroundSeed") ? byId("proceduralBackgroundSeed").value : current.proceduralBackgroundSeed),
+            proceduralBackgroundPaletteId: normalizeProceduralBackgroundPaletteId(byId("proceduralBackgroundPaletteId") ? byId("proceduralBackgroundPaletteId").value : current.proceduralBackgroundPaletteId),
+            proceduralBackgroundIntensity: normalizeProceduralBackgroundIntensity(byId("proceduralBackgroundIntensityNumber") ? byId("proceduralBackgroundIntensityNumber").value : current.proceduralBackgroundIntensity),
+            toolIconColor: normalizeHex(byId("toolIconColor") ? byId("toolIconColor").value : current.toolIconColor, DefaultSettings.toolIconColor),
+            toolIconLine: normalizeHex(byId("toolIconLine") ? byId("toolIconLine").value : current.toolIconLine, DefaultSettings.toolIconLine),
+            proceduralIconMode: normalizeProceduralIconMode(byId("proceduralIconMode") ? byId("proceduralIconMode").value : current.proceduralIconMode),
+            toolIconDarkSourceMode: normalizeToolIconDarkSourceMode(byId("toolIconDarkSourceMode") ? byId("toolIconDarkSourceMode").value : current.toolIconDarkSourceMode),
+            toolIconDarkPaletteId: byId("toolIconDarkPaletteId") ? String(byId("toolIconDarkPaletteId").value || "") : current.toolIconDarkPaletteId,
             velaProviderModel: VelaProviderModel,
             velaProviderEndpoint: VelaProviderEndpoint,
-            velaExperimentalAcknowledged: VelaExperimentalAcknowledged === true,
-            proceduralParams: collectProceduralAppearanceParamsFromControls(),
-            homeIconRadius: byId("homeIconRadiusNumber") ? clampNumber(byId("homeIconRadiusNumber").value, DefaultSettings.homeIconRadius, 18, 40) : DefaultSettings.homeIconRadius,
-            homeDragShadowIntensity: byId("homeDragShadowIntensityNumber") ? clampNumber(byId("homeDragShadowIntensityNumber").value, DefaultSettings.homeDragShadowIntensity, 0, 1.5) : DefaultSettings.homeDragShadowIntensity,
-            autoStatus: autoStatus ? !!autoStatus.checked : true,
-            registryDebugTools: registryDebugTools ? !!registryDebugTools.checked : false
+            proceduralParams: document.querySelector("[data-procedural-param]") ? collectProceduralAppearanceParamsFromControls() : current.proceduralParams,
+            homeIconRadius: byId("homeIconRadiusNumber") ? clampNumber(byId("homeIconRadiusNumber").value, DefaultSettings.homeIconRadius, 18, 40) : current.homeIconRadius,
+            homeDragShadowIntensity: byId("homeDragShadowIntensityNumber") ? clampNumber(byId("homeDragShadowIntensityNumber").value, DefaultSettings.homeDragShadowIntensity, 0, 1.5) : current.homeDragShadowIntensity,
+            autoStatus: autoStatus ? !!autoStatus.checked : current.autoStatus !== false,
+            registryDebugTools: registryDebugTools ? !!registryDebugTools.checked : current.registryDebugTools === true
         };
+        if (SettingsState) SettingsState.update(values);
+        return SettingsState ? SettingsState.snapshot() : values;
     }
 
     function saveSettings() {
-        saveStoredJson(StorageKeys.settings, collectSettings());
+        collectSettings();
+        if (SettingsState) SettingsState.save();
+        else saveStoredJson(StorageKeys.settings, collectSettings());
     }
 
     function applySettings(settings) {
@@ -8703,7 +9276,7 @@
         var speed = clampNumber(data.motionSpeed, DefaultSettings.motionSpeed, 0.75, 1.35);
         VelaProviderModel = typeof data.velaProviderModel === "string" ? normalizeVelaExperimentalModel(data.velaProviderModel) : DefaultSettings.velaProviderModel;
         VelaProviderEndpoint = typeof data.velaProviderEndpoint === "string" ? normalizeVelaProviderEndpoint(data.velaProviderEndpoint) : DefaultSettings.velaProviderEndpoint;
-        VelaExperimentalAcknowledged = data.velaExperimentalAcknowledged === true;
+        VelaExperimentalAcknowledged = false;
         if (byId("velaProviderModel")) {
             byId("velaProviderModel").value = VelaProviderModel;
         }
@@ -8712,6 +9285,8 @@
         byId("motionSpeed").value = speed;
         byId("motionSpeedNumber").value = speed;
         motionScale = speed;
+        syncMotionCssDurations();
+        if (ensureCoreAppearance(data)) { CoreAppearance.setBaseInput("motion.speed", speed); }
         ProceduralAppearanceParams = normalizeProceduralAppearanceParams(data.proceduralParams);
         setProceduralAppearanceParamControls(ProceduralAppearanceParams);
         applyUiScale(data.uiScale || DefaultSettings.uiScale);
@@ -8740,7 +9315,7 @@
     }
 
     function loadPersistentState() {
-        applySettings(loadStoredJson(StorageKeys.settings, DefaultSettings));
+        applySettings(SettingsState ? SettingsState.load() : loadStoredJson(StorageKeys.settings, DefaultSettings));
     }
 
     function resetSettingsMorphStyles() {
@@ -8749,6 +9324,7 @@
         var backdrop = byId("settingsBackdrop");
 
         if (panel) {
+            removeSurfaceIdentityOverlay(panel);
             panel.style.position = "";
             panel.style.inset = "";
             panel.style.left = "";
@@ -8758,6 +9334,9 @@
             panel.style.borderRadius = "";
             panel.style.opacity = "";
             panel.style.transform = "";
+            panel.style.backgroundColor = "";
+            panel.style.borderColor = "";
+            panel.style.boxShadow = "";
         }
         if (backdrop) {
             backdrop.style.opacity = "";
@@ -8766,20 +9345,24 @@
 
     function finishOpenSettingsTransition() {
         var view = byId("settingsView");
+        var home = byId("homeView");
 
+        home.classList.remove("is-active", "is-opening", "is-returning");
         view.classList.add("no-transition", "is-open");
         view.classList.remove("is-morphing");
         view.setAttribute("aria-hidden", "false");
         view.offsetWidth;
+        restoreSettingsPresentationSession();
 
         nextFrame(function () {
             resetSettingsMorphStyles();
             nextFrame(function () {
+                restoreSettingsPresentationSession();
                 view.classList.remove("no-transition");
                 endAnimation();
                 nextFrame(function () {
-                    revealSettingsContent();
-                    focusPendingSettingsSection();
+                    if (view.classList.contains("content-handoff-visible")) view.classList.remove("content-handoff-visible");
+                    else revealSettingsContent();
                 });
             });
         });
@@ -8787,11 +9370,13 @@
 
     function finishCloseSettingsTransition() {
         var view = byId("settingsView");
-
+        var home = byId("homeView");
+        home.classList.add("is-active");
+        home.classList.remove("is-opening");
         view.classList.add("no-transition");
-        pendingSettingsFocusSectionId = null;
         view.classList.remove("is-open", "is-morphing");
         view.setAttribute("aria-hidden", "true");
+        clearDesignTuningCalibrationChromeBaseline();
         view.offsetWidth;
 
         nextFrame(function () {
@@ -8799,42 +9384,377 @@
             closePaletteWorkspace({ reason: "settings-close", animate: false });
             clearSettingsContentClasses();
             nextFrame(function () {
+                home.classList.remove("is-returning");
                 view.classList.remove("no-transition");
                 endAnimation();
             });
         });
     }
 
-    function focusSettingsSection(sectionId) {
-        var mount = byId(sectionId === "vela" ? "settingsVelaMount" : "");
-        var input = sectionId === "vela" ? byId("velaProviderModel") : null;
-        if (!mount) {
-            return false;
+    function showSettingsPage(pageId) {
+        var root = byId("settingsRootPage");
+        var appearanceCategory = byId("settingsCategoryAppearance");
+        var heading = document.querySelector("#settingsView .settings-header h2");
+        if (!root) return false;
+        if (pageId === "appearance" && appearanceCategory && appearanceCategory._coreDisclosure) {
+            appearanceCategory._coreDisclosure.setExpanded(true);
         }
-        try {
-            mount.scrollIntoView({ block: "nearest" });
-        } catch (error) {
-            try { mount.scrollIntoView(true); } catch (ignored) {}
-        }
-        if (input && typeof input.focus === "function") {
-            input.focus();
-        }
+        closeRegistryColorPicker("route-change");
+        endSettingsPeekManipulation();
+        root.hidden = false;
+        if (heading) heading.textContent = tr("common.settings");
+        setSettingsBackParent("common.home");
+        closeCustomSelectMenus();
         return true;
     }
 
-    function focusPendingSettingsSection() {
-        var sectionId = pendingSettingsFocusSectionId;
-        pendingSettingsFocusSectionId = null;
-        if (sectionId) {
-            focusSettingsSection(sectionId);
+    function setSettingsBackParent(labelKey) {
+        var label = byId("settingsBackLabel");
+        var button = byId("closeSettingsBtn");
+        if (!label || !button) return;
+        label.setAttribute("data-i18n", labelKey);
+        label.textContent = tr(labelKey);
+        button.classList.toggle("is-nested-navigation", labelKey !== "common.home");
+    }
+
+    function cancelAppearancePreviewFrame(id) {
+        if (AppearancePreviewFrames[id]) {
+            window.cancelAnimationFrame(AppearancePreviewFrames[id]);
+            delete AppearancePreviewFrames[id];
+        }
+        delete AppearancePreviewValues[id];
+    }
+
+    function scheduleAppearancePreview(id, value) {
+        AppearancePreviewValues[id] = value;
+        ActiveAppearancePreviews[id] = true;
+        if (AppearancePreviewFrames[id]) return;
+        AppearancePreviewFrames[id] = window.requestAnimationFrame(function () {
+            var nextValue = AppearancePreviewValues[id];
+            delete AppearancePreviewFrames[id];
+            delete AppearancePreviewValues[id];
+            if (CoreAppearance) CoreAppearance.preview(id, nextValue);
+        });
+    }
+
+    function clearAppearancePreview(id) {
+        cancelAppearancePreviewFrame(id);
+        delete ActiveAppearancePreviews[id];
+        if (CoreAppearance) CoreAppearance.clearPreview(id);
+    }
+
+    function clearAppearancePreviews() {
+        var id;
+        for (id in ActiveAppearancePreviews) {
+            if (Object.prototype.hasOwnProperty.call(ActiveAppearancePreviews, id)) clearAppearancePreview(id);
         }
     }
 
-    function openVelaSettingsPanel() {
-        openSettingsPanel("vela");
+    function commitAppearanceValue(parameter, value) {
+        var changed;
+        cancelAppearancePreviewFrame(parameter.id);
+        delete ActiveAppearancePreviews[parameter.id];
+        changed = CoreAppearance && CoreAppearance.commit(parameter.id, value);
+        if (changed && parameter.persistence === "settings") saveSettings();
+        notifyAppearanceFieldBindings(parameter.id);
+        return changed;
     }
 
-    function openSettingsPanel(focusSectionId) {
+    function notifyAppearanceFieldBindings(id) {
+        var bindings = AppearanceFieldBindings[id] || []; var active = []; var value = CoreAppearance && CoreAppearance.getResolvedValue(id); var i;
+        for (i = 0; i < bindings.length; i++) if (document.documentElement.contains(bindings[i].row)) { bindings[i].update(value); active.push(bindings[i]); }
+        AppearanceFieldBindings[id] = active;
+    }
+
+    function createAppearanceColorControl(parameter, onStateChange, previewOnly) {
+        var colorField;
+        colorField = window.CoreUI.createColorField({
+            document: document,
+            id: "appearance_" + parameter.id.replace(/\./g, "_"),
+            value: CoreAppearance.getResolvedValue(parameter.id),
+            fallback: CoreAppearance.getResolvedValue(parameter.id),
+            normalize: normalizeHex,
+            isValid: function (value) { return /^#?[0-9a-fA-F]{6}$/.test(value); },
+            ariaLabel: tr(parameter.labelKey),
+            classNames: "appearance-color-field",
+            swatchClassNames: "appearance-color-swatch",
+            hexClassNames: "appearance-color-hex",
+            onPreview: function (value) { ActiveAppearancePreviews[parameter.id] = true; CoreAppearance.preview(parameter.id, value); },
+            onCommit: function (value) { commitAppearanceValue(parameter, value); if (onStateChange) onStateChange(); },
+            onCancel: function () { clearAppearancePreview(parameter.id); colorField.setValue(CoreAppearance.getResolvedValue(parameter.id)); },
+            openPicker: openCoreColorPicker
+        });
+        bindHexInputSelectBehavior(colorField.hex);
+        return colorField;
+    }
+
+    function createAppearanceColorAlphaControl(parameter, onStateChange, previewOnly) {
+        var colorField;
+        colorField = window.CoreUI.createColorField({
+            document: document,
+            id: "appearance_" + parameter.id.replace(/\./g, "_"),
+            value: CoreAppearance.getResolvedValue(parameter.id),
+            fallback: (function () { var v = CoreAppearance.getResolvedValue(parameter.id); return v && v.color ? v.color : "#f6f0df"; }()),
+            supportsAlpha: true,
+            ariaLabel: tr(parameter.labelKey),
+            classNames: "appearance-color-field appearance-color-alpha-field",
+            swatchClassNames: "appearance-color-swatch",
+            hexClassNames: "appearance-color-hex",
+            onPreview: function (value) { ActiveAppearancePreviews[parameter.id] = true; CoreAppearance.preview(parameter.id, value); },
+            onCommit: function (value) { commitAppearanceValue(parameter, value); if (onStateChange) onStateChange(); },
+            onCancel: function () { clearAppearancePreview(parameter.id); colorField.setValue(CoreAppearance.getResolvedValue(parameter.id)); },
+            openPicker: openCoreColorPicker
+        });
+        bindHexInputSelectBehavior(colorField.hex);
+        return colorField;
+    }
+
+    function createAppearanceRangeNumberControl(parameter, onStateChange, previewOnly) {
+        var validation = parameter.validation;
+        var control;
+        control = window.CoreUI.createRangeNumber({
+            document: document,
+            rangeId: "appearance_" + parameter.id.replace(/\./g, "_") + "Range",
+            numberId: "appearance_" + parameter.id.replace(/\./g, "_") + "Number",
+            value: CoreAppearance.getResolvedValue(parameter.id),
+            min: validation.min,
+            max: validation.max,
+            step: validation.step,
+            displayStep: 1,
+            valueToDisplay: function (value) { return Math.round(Number(value) * 100); },
+            displayToValue: function (value) { return Math.round(Number(value)) / 100; },
+            unitText: tr("settings.appearance.percentageUnit"),
+            classNames: "appearance-range-number settings-field-control registry-range-control",
+            rangeClassNames: "pill-slider registry-range settings-slider appearance-range",
+            numberClassNames: "num-input registry-range-number settings-number appearance-range-value",
+            unitClassNames: "appearance-range-unit",
+            onPreview: function (value) { if (window.AppearanceParameterRegistry.validate(parameter.id, value).valid) scheduleAppearancePreview(parameter.id, value); },
+            onCommit: function (value) { if (window.AppearanceParameterRegistry.validate(parameter.id, value).valid) { commitAppearanceValue(parameter, value); if (onStateChange) onStateChange(); } },
+            onCancel: function () { clearAppearancePreview(parameter.id); control.setValue(CoreAppearance.getResolvedValue(parameter.id)); }
+        });
+        return control;
+    }
+
+    function createAppearanceParameterControl(parameter, onStateChange, previewOnly) {
+        var renderers = {
+            color: createAppearanceColorControl,
+            colorAlpha: createAppearanceColorAlphaControl,
+            "range-number": createAppearanceRangeNumberControl
+        };
+        if (!renderers[parameter.controlType]) {
+            if (window.console && console.warn) console.warn("[AE Toolbox Appearance] Unsupported controlType: " + parameter.controlType);
+            return null;
+        }
+        return renderers[parameter.controlType](parameter, onStateChange, previewOnly);
+    }
+
+    function createAppearanceAdvancedField(parameter, previewOnly) {
+        var row = document.createElement("div");
+        var copy = document.createElement("span");
+        var label = document.createElement("label");
+        var description = document.createElement("small");
+        var control;
+        var state = document.createElement("small");
+        var reset = window.CoreUI.createButton({ document: document, variant: "neutral", size: "compact", classNames: "panel-button appearance-reset-button panel-local-action" });
+        function refreshState() {
+            var overridden = CoreAppearance && CoreAppearance.getOverride(parameter.id) !== null;
+            var stateKey = overridden ? "settings.appearance.overridden" : "settings.appearance.inherited";
+            state.setAttribute("data-i18n", stateKey);
+            state.textContent = tr(stateKey);
+            reset.disabled = !overridden;
+        }
+        control = createAppearanceParameterControl(parameter, refreshState, previewOnly);
+        if (!control) return null;
+        row.className = "settings-field appearance-advanced-field";
+        row.setAttribute("data-appearance-control-type", parameter.controlType);
+        copy.className = "settings-field-copy appearance-parameter-copy";
+        label.className = "settings-field-label";
+        label.setAttribute("data-i18n", parameter.labelKey);
+        label.textContent = tr(parameter.labelKey);
+        description.className = "settings-field-description appearance-parameter-description";
+        description.setAttribute("data-i18n", parameter.descriptionKey);
+        description.textContent = tr(parameter.descriptionKey);
+        copy.appendChild(label);
+        if (parameter.category === "typography") copy.appendChild(description);
+        control.root.setAttribute("data-appearance-parameter", parameter.id);
+        state.className = "settings-field-description appearance-override-state";
+        reset.setAttribute("data-i18n", "settings.appearance.reset");
+        reset.textContent = tr("settings.appearance.reset");
+        reset.addEventListener("click", function () { clearAppearancePreview(parameter.id); CoreAppearance.reset(parameter.id); notifyAppearanceFieldBindings(parameter.id); });
+        row.appendChild(copy);
+        row.appendChild(control.root);
+        row.appendChild(state);
+        row.appendChild(reset);
+        refreshState();
+        if (!AppearanceFieldBindings[parameter.id]) AppearanceFieldBindings[parameter.id] = [];
+        AppearanceFieldBindings[parameter.id].push({ row: row, update: function (value) { control.setValue(value); refreshState(); } });
+        return row;
+    }
+
+    function createAppearanceSection(titleKey, className) {
+        var section = document.createElement("section");
+        var title = document.createElement("h3");
+        section.className = "settings-section " + className;
+        title.setAttribute("data-i18n", titleKey);
+        title.textContent = tr(titleKey);
+        section.appendChild(title);
+        return section;
+    }
+
+    function createAppearanceDisclosureSection(titleKey, className, contentId) {
+        var root = document.createElement("section");
+        var trigger = document.createElement("button");
+        var titleWrap = document.createElement("span");
+        var title = document.createElement("h3");
+        var chevron = document.createElement("span");
+        var body = document.createElement("div");
+        root.className = "settings-section settings-appearance-collapsible collapsible-card " + (className || "");
+        trigger.type = "button";
+        // Reuse the shared Settings disclosure header contract (same as Background Engine / settings-section).
+        trigger.className = "settings-section-header settings-section-toggle collapsible-heading";
+        title.className = "registry-title-primary settings-section-title";
+        title.setAttribute("data-i18n", titleKey);
+        title.textContent = tr(titleKey);
+        titleWrap.appendChild(title);
+        chevron.className = "collapse-chevron";
+        chevron.setAttribute("aria-hidden", "true");
+        trigger.appendChild(titleWrap);
+        trigger.appendChild(chevron);
+        body.className = "settings-appearance-collapsible-content collapsible-body";
+        // CoreUI.createDisclosureController requires a stable, deterministic content id.
+        body.id = contentId || "settingsAppearance" + (className || "Section") + "Body";
+        root.appendChild(trigger);
+        root.appendChild(body);
+        root._coreDisclosure = window.CoreUI.createDisclosureController({
+            trigger: trigger,
+            content: body,
+            root: root,
+            expanded: false,
+            collapsedClass: "is-collapsed"
+        });
+        return { root: root, body: body };
+    }
+
+    function setupAppearanceSubpage() {
+        var appearance = byId("settingsAppearanceParametersMount");
+        var interfaceAppearance = createAppearanceSection("settings.appearance.title", "appearance-advanced");
+        var advancedAppearance = createAppearanceDisclosureSection("settings.appearance.advanced.title", "appearance-advanced-settings", "settingsAppearanceAdvancedBody");
+        var advancedList = window.AppearanceParameterRegistry ? window.AppearanceParameterRegistry.list() : [];
+        var subgroupMounts = {};
+        var parameter;
+        var field;
+        var subgroup;
+        var subgroupHeading;
+        var i;
+        if (!appearance) return;
+        appearance.innerHTML = "";
+        for (i = 0; i < advancedList.length; i++) {
+            parameter = advancedList[i];
+            if (parameter.classification !== "EXPOSE_NOW") continue;
+            field = createAppearanceAdvancedField(parameter);
+            if (!field) continue;
+            // Purposeful user-facing items live in Interface Appearance.
+            if (parameter.category === "surfaces" || parameter.category === "text") {
+                interfaceAppearance.appendChild(field);
+                continue;
+            }
+            // Low-frequency advanced appearance (Selector surfaces + Typography) folds to Advanced Appearance Settings.
+            if (parameter.category === "typography") {
+                subgroup = parameter.subgroup;
+                if (!subgroupMounts[subgroup]) {
+                    subgroupMounts[subgroup] = document.createElement("div");
+                    subgroupMounts[subgroup].className = "appearance-typography-subgroup";
+                    subgroupMounts[subgroup].setAttribute("data-appearance-subgroup", subgroup);
+                    subgroupHeading = document.createElement("h4");
+                    subgroupHeading.setAttribute("data-i18n", "settings.appearance.typography.subgroup." + subgroup);
+                    subgroupHeading.textContent = tr("settings.appearance.typography.subgroup." + subgroup);
+                    subgroupMounts[subgroup].appendChild(subgroupHeading);
+                    advancedAppearance.body.appendChild(subgroupMounts[subgroup]);
+                }
+                subgroupMounts[subgroup].appendChild(field);
+                continue;
+            }
+            advancedAppearance.body.appendChild(field);
+        }
+        appearance.appendChild(interfaceAppearance);
+        appearance.appendChild(advancedAppearance.root);
+    }
+
+    function initializeSystemRouter() {
+        if (SystemRouter || !window.SystemSurfaceRouter) return;
+        SystemRouter = window.SystemSurfaceRouter.create({
+            catalog: toolCatalog,
+            diagnostics: function (code, detail) { if (window.console && console.warn) console.warn("[AE Toolbox System] " + code + ": " + detail); },
+            callbacks: {
+                open: function (route) { ActiveRoute = route; ActiveSettingsSourceElement = route.sourceElement; showSettingsPage(route.pageId); openSettingsPanel(null, route.sourceElement); },
+                navigate: function (route) { ActiveRoute = route; showSettingsPage(route.pageId); },
+                close: function () { ActiveRoute = null; closeSettingsPanel(); }
+            }
+        });
+    }
+
+    function requestCloseSettings() {
+        if (SystemRouter && SystemRouter.getActiveRoute()) SystemRouter.close();
+        else closeSettingsPanel();
+    }
+
+    function requestSettingsBack() {
+        var palette = getPaletteWorkspaceController();
+        if (palette && typeof palette.isOpen === "function" && palette.isOpen() && typeof palette.requestBack === "function") {
+            palette.requestBack();
+            return;
+        }
+        if (SystemRouter && SystemRouter.getActiveRoute()) SystemRouter.back();
+        else closeSettingsPanel();
+    }
+
+    function ensureVelaSettingsSurface() {
+        var root; var backdrop; var panel; var header; var title; var close; var content;
+        if (VelaSettingsSurface) return VelaSettingsSurface;
+        root = document.createElement("div"); root.className = "vela-settings-surface"; root.hidden = true; root.setAttribute("aria-hidden", "true");
+        backdrop = document.createElement("button"); backdrop.type = "button"; backdrop.className = "vela-settings-backdrop"; backdrop.setAttribute("aria-label", tr("common.close"));
+        panel = document.createElement("section"); panel.className = "vela-settings-panel"; panel.setAttribute("role", "dialog"); panel.setAttribute("aria-modal", "true"); panel.setAttribute("aria-labelledby", "velaSettingsTitle");
+        header = document.createElement("header"); header.className = "vela-settings-header";
+        title = document.createElement("h2"); title.id = "velaSettingsTitle"; title.setAttribute("data-i18n", "settings.vela.title"); title.textContent = tr("settings.vela.title");
+        close = window.CoreUI.createButton({ document: document, variant: "neutral", classNames: "panel-button vela-settings-close", text: tr("common.close"), ariaLabel: tr("common.close") }); close.setAttribute("data-i18n", "common.close"); close.setAttribute("data-i18n-aria-label", "common.close");
+        content = document.createElement("div"); content.id = "velaSettingsContent";
+        header.appendChild(title); header.appendChild(close); panel.appendChild(header); panel.appendChild(content); root.appendChild(backdrop); root.appendChild(panel); byId("appShell").appendChild(root);
+        backdrop.addEventListener("click", closeVelaSettingsSurface); close.addEventListener("click", closeVelaSettingsSurface);
+        backdrop.setAttribute("data-i18n-aria-label", "common.close");
+        VelaSettingsSurface = { root: root, panel: panel, content: content, close: close, title: title, backdrop: backdrop, returnFocus: null, motion: null, phase: "closed" };
+        return VelaSettingsSurface;
+    }
+
+    function openVelaSettingsSurface(launchSource) {
+        var surface = ensureVelaSettingsSurface(); var motion; var finish;
+        if (!surface) return;
+        if (surface.phase === "open" || surface.phase === "opening") return;
+        surface.returnFocus = launchSource || null;
+        renderVelaSettingsContent(surface.content);
+        applyI18n(surface.root);
+        surface.phase = "opening"; surface.root.hidden = false; surface.root.setAttribute("aria-hidden", "false"); surface.root.classList.add("is-open", "is-transitioning");
+        motion = beginSpatialSurfaceMorph("vela:settings-presentation", 2, function () { surface.phase = "open"; surface.root.classList.remove("is-transitioning"); surface.close.focus(); });
+        finish = motion.completePart;
+        playSpatialAnimation(motion.transaction, surface.backdrop, [{ opacity: "0" }, { opacity: "1" }], { duration: semanticMotionDuration("viewContentEnter"), easing: semanticMotionEasing("viewContentEnter"), fill: "forwards" }, finish);
+        playSpatialAnimation(motion.transaction, surface.panel, [{ opacity: "0", transform: "translateY(calc(6px * var(--ui-scale)))" }, { opacity: "1", transform: "translateY(0)" }], { duration: semanticMotionDuration("viewContentEnter"), easing: semanticMotionEasing("viewContentEnter"), fill: "forwards" }, finish);
+    }
+
+    function closeVelaSettingsSurface() {
+        var surface = VelaSettingsSurface; var returnFocus; var motion; var finish;
+        if (!surface || surface.root.hidden) return false;
+        if (surface.phase === "closing") return true;
+        returnFocus = surface.returnFocus; surface.phase = "closing"; surface.root.classList.add("is-transitioning");
+        motion = beginSpatialSurfaceMorph("vela:settings-presentation", 2, function () {
+            surface.phase = "closed"; surface.root.classList.remove("is-open", "is-transitioning"); surface.root.hidden = true; surface.root.setAttribute("aria-hidden", "true");
+            if (returnFocus && typeof returnFocus.focus === "function") returnFocus.focus();
+        });
+        finish = motion.completePart;
+        playSpatialAnimation(motion.transaction, surface.backdrop, [{ opacity: "1" }, { opacity: "0" }], { duration: semanticMotionDuration("viewContentExit"), easing: semanticMotionEasing("viewContentExit"), fill: "forwards" }, finish);
+        playSpatialAnimation(motion.transaction, surface.panel, [{ opacity: "1", transform: "translateY(0)" }, { opacity: "0", transform: "translateY(calc(6px * var(--ui-scale)))" }], { duration: semanticMotionDuration("viewContentExit"), easing: semanticMotionEasing("viewContentExit"), fill: "forwards" }, finish);
+        return true;
+    }
+
+    function openSettingsPanel(focusSectionId, launchSource) {
         var view = byId("settingsView");
         var panel;
         var backdrop;
@@ -8842,69 +9762,72 @@
         var target;
         var sourceRect;
         var finishGate;
+        var spatialMotion;
+        var sourceIdentity;
+        var destinationIdentity;
+        var identityOverlay;
+        var sourceElement;
 
-        if (focusSectionId) {
-            pendingSettingsFocusSectionId = focusSectionId;
-        }
         if (!view || byId("appShell").classList.contains("is-animating")) {
             return;
         }
         if (view.classList.contains("is-open")) {
-            focusPendingSettingsSection();
+            renderSettingsDesignTuningMotion();
             return;
         }
         ensurePaletteWorkspaceClosed();
+        renderSettingsDesignTuningMotion();
         closeCustomSelectMenus();
         panel = view.querySelector(".settings-panel");
         backdrop = byId("settingsBackdrop");
-        source = byId("settingsBtn");
-        sourceRect = source.getBoundingClientRect();
+        source = launchSource || ActiveSettingsSourceElement || HomeLayoutManager.getButtonByToolId("settings");
+        if (!source) {
+            return;
+        }
+        ActiveSettingsSourceElement = source;
+        sourceElement = getToolIcon(source);
+        sourceRect = sourceElement.getBoundingClientRect();
         target = getSettingsTargetRect();
+        sourceIdentity = snapshotSurfaceIdentity(sourceElement);
+        destinationIdentity = snapshotSurfaceIdentity(panel, target);
+        identityOverlay = createSurfaceIdentityOverlay(sourceIdentity, "surface-identity-overlay--settings");
 
         beginAnimation();
         clearSettingsContentClasses();
         suppressSettingsContent();
-        setPanelMorphRect(panel, sourceRect, "19px");
+        setPanelMorphRect(panel, sourceRect, sourceIdentity.radius);
+        panel.appendChild(identityOverlay); identityOverlay.style.opacity = "1";
         view.classList.add("is-morphing");
         view.setAttribute("aria-hidden", "false");
         if (backdrop) {
             backdrop.style.opacity = "0";
         }
+        beginHomeRecede(byId("homeView"));
 
-        finishGate = makeAnimationGate(backdrop ? 2 : 1, function () {
+        spatialMotion = beginSpatialSurfaceMorph("system:view", backdrop ? 2 : 1, function () {
             finishOpenSettingsTransition();
         });
+        finishGate = spatialMotion.completePart;
+        scheduleSettingsContentHandoff(view, spatialMotion.transaction, Math.max(0,
+            semanticMotionDuration("spatialMorphExpand") - semanticMotionDuration("viewContentEnter")
+        ));
 
-        playAnimation(panel, [
-            {
-                left: sourceRect.left + "px",
-                top: sourceRect.top + "px",
-                width: sourceRect.width + "px",
-                height: sourceRect.height + "px",
-                borderRadius: "19px"
-            },
-            {
-                left: target.left + "px",
-                top: target.top + "px",
-                width: target.width + "px",
-                height: target.height + "px",
-                borderRadius: "22px"
-            }
-        ], {
-            duration: duration("launch"),
-            easing: Motion.appleOut,
+        playSpatialAnimation(spatialMotion.transaction, panel, [window.SurfaceIdentity.frame(sourceIdentity), window.SurfaceIdentity.frame(destinationIdentity)], {
+            duration: semanticMotionDuration("spatialMorphExpand"),
+            easing: semanticMotionEasing("spatialMorphExpand"),
             fill: "forwards"
         }, function () {
             finishGate();
         });
+        playAnimation(identityOverlay, [{ opacity: "1" }, { opacity: "0" }], { duration: semanticMotionDuration("spatialMorphIdentity"), easing: semanticMotionEasing("spatialMorphIdentity"), fill: "forwards" });
 
         if (backdrop) {
-            playAnimation(backdrop, [
+            playSpatialAnimation(spatialMotion.transaction, backdrop, [
                 { opacity: "0" },
                 { opacity: "1" }
             ], {
-                duration: duration("normal"),
-                easing: Motion.appleOut,
+                duration: semanticMotionDuration("spatialMorphIdentity"),
+                easing: semanticMotionEasing("spatialMorphIdentity"),
                 fill: "forwards"
             }, function () {
                 finishGate();
@@ -8920,75 +9843,101 @@
         var sourceRect;
         var currentRect;
         var finishGate;
+        var spatialMotion;
+        var sourceIdentity;
+        var destinationIdentity;
+        var identityOverlay;
+        var destinationElement;
 
+        endSettingsPeekManipulation();
+        cancelDesignTuningCalibrationGesture();
+        clearAppearancePreviews();
         if (!view || byId("appShell").classList.contains("is-animating") || !view.classList.contains("is-open")) {
             return;
         }
+        captureSettingsPresentationSession();
         closePaletteWorkspace({ reason: "settings-close", animate: false });
         closeCustomSelectMenus();
         beginAnimation();
-        exitSettingsContent(function () {
+        exitSettingsContent();
             panel = view.querySelector(".settings-panel");
             backdrop = byId("settingsBackdrop");
-            source = byId("settingsBtn");
-            sourceRect = source.getBoundingClientRect();
+            source = ActiveSettingsSourceElement;
+            if (!source || !document.documentElement.contains(source)) {
+                source = HomeLayoutManager.getButtonByToolId("settings");
+            }
+            if (!source) {
+                finishCloseSettingsTransition();
+                return;
+            }
+            ActiveSettingsSourceElement = source;
+            destinationElement = getToolIcon(source);
+            sourceRect = getHomeToolIconRect(source);
             currentRect = panel.getBoundingClientRect();
+            sourceIdentity = snapshotSurfaceIdentity(panel, currentRect);
+            destinationIdentity = snapshotSurfaceIdentity(destinationElement, sourceRect);
+            if (destinationIdentity) {
+                destinationIdentity = window.SurfaceIdentity.composite(destinationIdentity, destinationElement, destinationElement);
+            }
+            if (!sourceIdentity || !destinationIdentity) {
+                finishCloseSettingsTransition();
+                return;
+            }
+            identityOverlay = createSurfaceIdentityOverlay(destinationIdentity, "surface-identity-overlay--settings");
 
-            setPanelMorphRect(panel, currentRect, "22px");
-            suppressSettingsContent();
+            prepareHomeRestore(byId("homeView"));
+            setPanelMorphRect(panel, currentRect, sourceIdentity.radius);
+            if (identityOverlay) {
+                mountCloseIdentityLayer(identityOverlay); identityOverlay.style.opacity = "0";
+            }
             view.classList.add("is-morphing");
 
-            finishGate = makeAnimationGate(backdrop ? 2 : 1, function () {
+            spatialMotion = beginSpatialSurfaceMorph("system:view", backdrop ? 3 : 2, function () {
                 finishCloseSettingsTransition();
             });
+            finishGate = spatialMotion.completePart;
+            scheduleSurfaceContentSuppression(view, spatialMotion.transaction, suppressSettingsContent);
+            scheduleHomeRestore(byId("homeView"), spatialMotion.transaction, Math.max(0,
+                semanticMotionDuration("spatialMorphContract") - semanticMotionDuration("homeHandoffRestore")
+            ));
 
-            playAnimation(panel, [
-                {
-                    left: currentRect.left + "px",
-                    top: currentRect.top + "px",
-                    width: currentRect.width + "px",
-                    height: currentRect.height + "px",
-                    borderRadius: "22px"
-                },
-                {
-                    left: sourceRect.left + "px",
-                    top: sourceRect.top + "px",
-                    width: sourceRect.width + "px",
-                    height: sourceRect.height + "px",
-                    borderRadius: "19px"
-                }
-            ], {
-                duration: duration("close"),
-                easing: Motion.appleIn,
+            playSpatialAnimation(spatialMotion.transaction, panel, [window.SurfaceIdentity.geometryFrame(sourceIdentity), window.SurfaceIdentity.geometryFrame(destinationIdentity)], {
+                duration: semanticMotionDuration("spatialMorphContract"),
+                easing: semanticMotionEasing("spatialMorphContract"),
                 fill: "forwards"
             }, function () {
                 finishGate();
             });
+            playSpatialAnimation(spatialMotion.transaction, identityOverlay, closeIdentityKeyframes(sourceIdentity, destinationIdentity), { duration: semanticMotionDuration("spatialMorphContract"), easing: semanticMotionEasing("spatialMorphIdentity"), fill: "forwards" }, function () { finishGate(); });
 
             if (backdrop) {
-                playAnimation(backdrop, [
+                playSpatialAnimation(spatialMotion.transaction, backdrop, [
                     { opacity: "1" },
                     { opacity: "0" }
                 ], {
-                    duration: duration("close"),
-                    easing: Motion.appleIn,
+                    duration: semanticMotionDuration("spatialMorphContract"),
+                    easing: semanticMotionEasing("spatialMorphContract"),
                     fill: "forwards"
                 }, function () {
                     finishGate();
                 });
             }
-        });
     }
 
     function bindEvents() {
-        var settingsBtn;
         var closeSettingsBtn;
         var settingsBackdrop;
         var refreshBtn;
 
+        initializeDesignTuning();
+        SettingsState = window.SettingsStateAdapter.create({ storage: window.localStorage, storageKey: StorageKeys.settings, defaults: DefaultSettings });
+        SettingsState.initialize(loadStoredJson(StorageKeys.settings, DefaultSettings));
+        ensureCoreAppearance(SettingsState.snapshot());
+        initializeSystemRouter();
         if (window.ProceduralPaletteStore && typeof window.ProceduralPaletteStore.initialize === "function") {
             window.ProceduralPaletteStore.initialize({
-                library: window.ProceduralPaletteLibrary
+                library: window.ProceduralPaletteLibrary,
+                storage: window.localStorage
             });
         }
         bindThemePaletteStore();
@@ -9001,17 +9950,18 @@
         renderSettingsMotion();
         setupMotionSpeed();
         setupUiScale();
+        setupFloatingActionClearance();
         renderSettingsLanguage();
-        renderSettingsVela();
         renderSettingsDeveloperMode();
+        setupAppearanceSubpage();
         setupHomeIconRadius();
         setupHomeDragShadowIntensity();
         loadPersistentState();
         setupLanguageSelector();
         setupCollapsibleSettings();
         BackgroundEngine.init();
-        if (window.ProceduralHomeBackground && typeof window.ProceduralHomeBackground.initialize === "function") {
-            window.ProceduralHomeBackground.initialize({
+        if (window.ProceduralHomeBackground && typeof window.ProceduralHomeBackground.activate === "function") {
+            window.ProceduralHomeBackground.activate({
                 rootElement: byId("appShell"),
                 canvas: byId("proceduralHomeBackgroundCanvas"),
                 mode: byId("backgroundSource") ? byId("backgroundSource").value : DefaultSettings.backgroundSource,
@@ -9022,7 +9972,6 @@
                 iconAppearance: getProceduralHomeBackgroundIconAppearance()
             });
         }
-        setupCustomSelectInputs();
         HomeLayoutManager.init();
         initializeVelaSurface();
         if (window.ProceduralHomeIcons && typeof window.ProceduralHomeIcons.initialize === "function") {
@@ -9037,19 +9986,15 @@
         byId("backBtn").addEventListener("click", function () {
             closeToolWithLaunchTransition();
         });
-        settingsBtn = byId("settingsBtn");
         closeSettingsBtn = byId("closeSettingsBtn");
         settingsBackdrop = byId("settingsBackdrop");
         refreshBtn = byId("refreshSelectionBtn");
 
-        if (settingsBtn) {
-            settingsBtn.addEventListener("click", openSettingsPanel);
-        }
         if (closeSettingsBtn) {
-            closeSettingsBtn.addEventListener("click", closeSettingsPanel);
+            closeSettingsBtn.addEventListener("click", requestSettingsBack);
         }
         if (settingsBackdrop) {
-            settingsBackdrop.addEventListener("click", closeSettingsPanel);
+            settingsBackdrop.addEventListener("click", requestCloseSettings);
         }
         if (refreshBtn) {
             refreshBtn.addEventListener("click", refreshSelection);
@@ -9073,13 +10018,17 @@
         document.addEventListener("keydown", function (event) {
             if (event.keyCode === 27) {
                 closeRegistryColorPicker();
-                closeSettingsPanel();
+                if (closeVelaSettingsSurface()) return;
+                requestCloseSettings();
             }
         });
         window.addEventListener("focus", function () {
             if (!panelShuttingDown && !panelSuspended) {
                 refreshActiveTool();
             }
+        });
+        window.addEventListener("blur", function () {
+            endSettingsPeekManipulation();
         });
 
         bindPanelLifecycle();

@@ -8,11 +8,11 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 236 |
+| A | Core / Global; keep | 448 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
-| C | Legacy fallback; temporarily keep | 0 |
+| C | Legacy fallback; temporarily keep | 3 |
 | D | Candidate delete; low-risk after AE test | 0 |
-| E | Deferred / uncertain | 193 |
+| E | Deferred / uncertain | 195 |
 
 ## Registry Tools i18n Table
 
@@ -22,7 +22,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | proceduralAppearanceLab.tool.jsx | proceduralAppearanceLab | tools.proceduralAppearanceLab.title | tools.proceduralAppearanceLab.description | yes | yes | none | none | messageKey-oriented | ok |
 | registryControlLab.tool.jsx | registryControlLab | tools.registryControlLab.title | tools.registryControlLab.description | yes | yes | none | none | messageKey-oriented | ok |
 | selectionInfo.tool.jsx | selectionInfo | tools.selectionInfo.title | tools.selectionInfo.description | yes | yes | none | none | messageKey-oriented | ok |
-| settingsRendererLab.tool.jsx | settingsRendererLab | tools.settingsRendererLab.title | tools.settingsRendererLab.description | yes | yes | label.registryDebugTools, section.motion, label.motionSpeed, label.uiScale, section.theme, label.accentColor, label.homeBackground, section.backgroundEngine ... | none | messageKey-oriented | ok |
+| settingsRendererLab.tool.jsx | settingsRendererLab | tools.settingsRendererLab.title | tools.settingsRendererLab.description | yes | yes | label.registryDebugTools, section.motion, label.motionSpeed, label.uiScale, section.theme, label.accentColor, label.homeBaseColor, section.backgroundEngine ... | none | messageKey-oriented | ok |
 | shapeAdd.tool.jsx | shapeAdd | tools.shapeAdd.title | tools.shapeAdd.description | yes | yes | none | none | messageKey-oriented | ok |
 | textBackgroundBox.tool.jsx | textBackgroundBox | tools.textBackgroundBox.title | tools.textBackgroundBox.description | yes | yes | none | none | messageKey-oriented | ok |
 
@@ -31,6 +31,60 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | key | group | en value summary | zh-CN value summary | found in runtime files | found in tool-local i18n | classification | recommendation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | app.title | app | Lomond Cabinet | Lomond Cabinet | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| appearance.action.primaryForeground.description | appearance | The foreground (content) color of the primary action. | 主要操作的前景（内容）颜色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.action.primaryForeground.label | appearance | Primary Action Foreground | 主要操作前景 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.action.primaryHoverSurface.description | appearance | The hover fill of the primary action. | 主要操作的悬停填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.action.primaryHoverSurface.label | appearance | Primary Action Hover Surface | 主要操作悬停表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.action.primarySurface.description | appearance | The base fill of the primary action. | 主要操作的基础填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.action.primarySurface.label | appearance | Primary Action Surface | 主要操作表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.base.accent.description | appearance | The primary accent color used across the interface. | 贯穿界面的主强调色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.base.accent.label | appearance | Accent | 强调色 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.base.canvas.description | appearance | The base background color of the interface. | 界面的基础背景底色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.base.canvas.label | appearance | Background | 背景色 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.checkedSurface.description | appearance | The fill used for the checked control state. | 用于勾选控件状态的填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.checkedSurface.label | appearance | Checked Surface | 勾选表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.focusBorder.description | appearance | The border color applied to a focused control. | 聚焦控件应用的边框颜色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.focusBorder.label | appearance | Focus Border | 焦点边框 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.focusRing.description | appearance | The focus indicator ring color for interactive controls. | 交互控件的焦点指示环颜色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.focusRing.label | appearance | Focus Ring | 焦点圆环 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.hoverBorder.description | appearance | The border color applied while a control is hovered. | 控件悬停时应用的边框颜色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.hoverBorder.label | appearance | Hover Border | 悬停边框 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.hoverSurface.description | appearance | The fill applied while a control is hovered. | 控件悬停时应用的填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.hoverSurface.label | appearance | Hover Surface | 悬停表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.selectedForeground.description | appearance | The foreground color used for the selected item. | 用于选中条目的前景颜色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.selectedForeground.label | appearance | Selected Foreground | 选中前景 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.selectedSurface.description | appearance | The fill used for the selected option or item. | 用于选中选项或条目的填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.interaction.selectedSurface.label | appearance | Selected Surface | 选中表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.layout.scale.description | appearance | Scales interface spacing and type proportionally. | 按比例缩放界面间距与文字大小。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.layout.scale.label | appearance | Interface Scale | 界面缩放 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.motion.speed.description | appearance | Adjusts the pace of motion across the interface. | 调整界面动画的整体速度。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.motion.speed.label | appearance | Motion Speed | 动画速度 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.select.menuSurface.description | appearance | The fill used behind the Select popup menu. | 选择器弹出菜单背后的填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.select.menuSurface.label | appearance | Select Menu Surface | 选择器菜单面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.select.triggerSurface.description | appearance | The fill used behind the Select trigger. | 选择器触发器背后的填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.select.triggerSurface.label | appearance | Select Trigger Surface | 选择器触发面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.selection.indicatorSurface.description | appearance | The fill of the selection indicator. | 选择指示器的填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.selection.indicatorSurface.label | appearance | Selection Indicator Surface | 选择指示表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.surface.panel.description | appearance | The panel fill used for primary work surfaces. | 主工作表面使用的面板填充色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.surface.panel.label | appearance | Panel Surface | 面板表面 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.text.primary.description | appearance | The primary text color used for headings and emphasis. | 用于标题与强调的主要文本色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.text.primary.label | appearance | Primary Text | 主要文本 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.text.secondary.description | appearance | The secondary text color used for supporting copy at partial opacity. | 用于支援文本的次要文本色，带部分透明度。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.text.secondary.label | appearance | Secondary Text | 次要文本 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.text.tertiary.description | appearance | The tertiary text color used for muted or less prominent copy. | 用于淡化或不太突出文本的三级文本色。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.text.tertiary.label | appearance | Tertiary Text | 三级文本 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.bodySize.description | appearance | Adjusts Body and Control text together. | 同时调整正文与控件文字。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.bodySize.label | appearance | Body Size | 正文大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.codeSize.description | appearance | Adjusts Code text and Palette JSON independently from Supporting text. | 独立调整代码文本与 Palette JSON，不跟随辅助文本。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.codeSize.label | appearance | Code Size | 代码文本大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.fieldLabelSize.description | appearance | Adjusts semantic Field Labels while preserving each domain's weight e... | 调整语义字段标签，并保留各领域的字重强调。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.fieldLabelSize.label | appearance | Field Label Size | 字段标签大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.sectionTitleSize.description | appearance | Adjusts Section titles independently from Page and Surface titles. | 独立调整分区标题，不影响页面与表面标题。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.sectionTitleSize.label | appearance | Section Title Size | 分区标题大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.supportingSize.description | appearance | Adjusts Supporting and derived Eyebrow or category text. | 调整辅助文本与派生的分类标记文字。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.supportingSize.label | appearance | Supporting Size | 辅助文本大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.titleSize.description | appearance | Adjusts Page and Surface titles together while preserving their relat... | 同时调整页面与表面标题，并保持它们的原有层级。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| appearance.typography.titleSize.label | appearance | Title Size | 标题大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | bootstrap.loadFailed | bootstrap | Tools failed to load. | 工具加载失败。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | bootstrap.loadingTools | bootstrap | Loading tools... | 正在加载工具... | client/index.html, client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | bootstrap.partialFailure | bootstrap | Some tools failed to load. | 部分工具加载失败。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -43,9 +97,10 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | button.resetProceduralAppearanceParams | button | Restore Procedural Defaults | 恢复程序化默认参数 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.apply | common | Apply | 应用 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.auto | common | Auto | 自动 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.back | common | Back | 返回 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.back | common | Back | 返回 | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.cancel | common | Cancel | 取消 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.center | common | Center | 居中 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.close | common | Close | 关闭 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.create | common | Create | 创建 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.disabled | common | Disabled | 禁用 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.done | common | Done | 完成 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -54,9 +109,9 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | common.error | common | Error | 错误 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.fitBox | common | Fit Box | 适配框 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.fixed | common | Fixed | 固定 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.global | common | Global | 全局 | client/index.html, client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.global | common | Global | 全局 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.gradient | common | Gradient | 渐变 | host/tools/registryControlLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.home | common | Home | 主页 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.home | common | Home | 主页 | client/index.html, client/js/main.js, client/js/proceduralPaletteWorkspace.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.language | common | Language | 语言 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.left | common | Left | 左对齐 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.none | common | None | 无 | host/tools/adComponentKit.tool.jsx, host/tools/registryControlLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -67,10 +122,11 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | common.reset | common | Reset | 重置 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.resetDefaults | common | Reset Defaults | 恢复默认值 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.restoreDefaults | common | Restore Defaults | 恢复默认 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.retry | common | Retry | 重试 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.right | common | Right | 右对齐 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.rowMajor | common | Row-Major | 行优先 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.saved | common | Saved | 已保存 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.settings | common | Settings | 设置 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.settings | common | Settings | 设置 | client/index.html, client/js/main.js, client/js/proceduralPaletteWorkspace.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.solid | common | Solid | 纯色 | host/tools/registryControlLab.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.timeline | common | Timeline | 时间线 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.unavailable | common | Unavailable | 不可用 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -79,12 +135,13 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | common.valuesReset | common | Values reset to defaults. | 已恢复默认值。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.xPosition | common | X Position | X 位置 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.yPosition | common | Y Position | Y 位置 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| core.bezier.speedInfluenceHint | core | Shift + horizontal drag: influence only | Shift + 水平拖动：仅调整影响范围 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | helper.accentColor | helper | Used for primary actions, focus states, and key interface accents. | 用于主要操作、焦点状态和界面重点元素。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.autoSelectionStatus | helper | Refresh selected text layer count while the panel is open. | 面板打开时刷新选中文本层数量。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.backgroundSource | helper | Classic keeps the existing Background Engine. Follow Icon Theme mirro... | 经典模式保留现有 Background Engine。跟随图标主题会复用图标的主题关系。手动程序化使用下方的背景种子和色卡。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.enableMotion | helper | Uses slow opacity and transform only. | 仅使用缓慢的透明度和位移动画。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.fallbackIconColors | helper | Only used when a procedural icon cannot render and the fallback glyph... | 仅在程序化图标无法渲染并显示回退图标时使用。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| helper.homeBaseColor | helper | Sets the underlying base color of the Home surface; it does not defin... | 设置主页表面的底层基底色，不代表完整背景处理。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| helper.homeBaseColor | helper | Sets the underlying base color of the Home surface; it does not defin... | 设置主页表面的底层基底色，不代表完整背景处理。 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.homeDragShadowIntensity | helper | Developer-only intensity for the soft shadow shown under the currentl... | 仅开发者模式可见，控制主页编辑时当前拖动图标下方的柔化投影强度。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.homeIconRadius | helper | Developer-only proportional radius for Home tool icons and matching s... | 仅开发者模式可见，控制主页工具图标和同类正方形预览的比例圆角。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | helper.iconDarkSource | helper | Choose a manual dark endpoint or use the base color from a visible so... | 选择手动暗端色，或使用可见源色卡的主体色。 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -157,7 +214,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | label.gradientEnable | label | Gradient Enable | 启用渐变 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.gridOpacity | label | Grid Opacity | 网格不透明度 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.gridSize | label | Grid Size | 网格尺寸 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| label.homeBaseColor | label | Home Base Color | 主页基底色 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| label.homeBaseColor | label | Home Base Color | 主页基底色 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.homeDragShadowIntensity | label | Home drag shadow | 主页拖动投影 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.homeIconRadius | label | Home icon radius | 主页图标圆角 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.iconDarkSource | label | Icon Dark Source | 图标暗端来源 | client/js/settingsSchema.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -223,7 +280,10 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | label.trimOffset | label | Trim Offset | 修剪偏移 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.trimStart | label | Trim Start | 修剪开始 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | label.uiScale | label | UI scale | UI 缩放 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| paletteLibrary.backToSettings | paletteLibrary | Back to Settings | 返回设置 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.addDERIVED | paletteLibrary | Add derived | 添加派生色槽 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.addDIRECT | paletteLibrary | Add direct | 添加直接色槽 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.addREFERENCE | paletteLibrary | Add reference | 添加引用色槽 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.backToSettings | paletteLibrary | Back to Settings | 返回设置 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.base | paletteLibrary | Base | 主色 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.builtIn | paletteLibrary | Built-in | 内置 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.cancel | paletteLibrary | Cancel | 取消 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -233,11 +293,13 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | paletteLibrary.delete | paletteLibrary | Delete | 删除 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.deleteConfirmation | paletteLibrary | Delete {name}? This palette is used by {count} tools. | 删除 {name}？当前有 {count} 个工具使用此色卡。 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.deletePalette | paletteLibrary | Delete Palette | 删除色卡 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.derivation | paletteLibrary | Derivation | 派生方式 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.description | paletteLibrary | Edit curated procedural palettes, custom palettes, and Home tool colo... | 编辑程序化精选色卡、自定义色卡和 Home 工具配色分配。 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.discardChanges | paletteLibrary | Discard Changes | 放弃更改 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.displayName | paletteLibrary | Display name | 显示名称 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.duplicate | paletteLibrary | Duplicate | 复制 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.duplicatePalette | paletteLibrary | Duplicate Palette | 复制色卡 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.dynamicSlots | paletteLibrary | Dynamic slots | 动态色槽 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.export | paletteLibrary | Export | 导出 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.exportConfiguration | paletteLibrary | Export Palette Configuration | 导出色卡配置 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.exportCopied | paletteLibrary | Export Copied | 导出内容已复制 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -255,14 +317,25 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | paletteLibrary.invalidJson | paletteLibrary | Invalid JSON | 无效 JSON | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.invalidPalette | paletteLibrary | Invalid Palette | 无效色卡 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.jsonValid | paletteLibrary | JSON is valid | JSON 验证通过 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.legacyReadOnly | paletteLibrary | This Palette uses advanced slot relationships and is read-only in the... | 此色卡使用高级色槽关系，当前编辑器仅支持只读查看。 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.merge | paletteLibrary | Merge | 合并 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.mergeImport | paletteLibrary | Merge Import | 合并导入 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.modified | paletteLibrary | Modified | 已修改 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.moveDown | paletteLibrary | Move down | 下移 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.moveUp | paletteLibrary | Move up | 上移 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.new | paletteLibrary | New Palette | 新建色卡 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.open | paletteLibrary | Open Palette Library | 打开色卡库 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.paletteDeleted | paletteLibrary | Palette deleted | 色卡已删除 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.paletteInUse | paletteLibrary | Palette In Use | 色卡正在使用 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.parameter.amount | paletteLibrary | Amount | 混合量 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.parameter.chromaScale | paletteLibrary | Chroma scale | 彩度缩放 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.parameter.contrastBias | paletteLibrary | Contrast bias | 对比度偏置 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.parameter.hueDelta | paletteLibrary | Hue delta | 色相偏移 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.parameter.lightnessDelta | paletteLibrary | Lightness delta | 明度偏移 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.parameter.luminanceBias | paletteLibrary | Luminance bias | 亮度偏置 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.parameter.saturationBias | paletteLibrary | Saturation bias | 饱和度偏置 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.pasteJsonPlaceholder | paletteLibrary | Paste exported palette JSON here | 在此粘贴已导出的色卡 JSON | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.proceduralProfile | paletteLibrary | Procedural profile | 程序化外观 Profile | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.replace | paletteLibrary | Replace | 替换 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.replaceConfirmation | paletteLibrary | Replace all custom palettes, built-in overrides, and Home assignments... | 替换所有自定义色卡、内置色卡修改和 Home 映射？内置原始色卡仍会保留。 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.replaceImport | paletteLibrary | Replace Import | 替换导入 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -274,6 +347,13 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | paletteLibrary.secondary | paletteLibrary | Secondary | 辅色 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.shadow | paletteLibrary | Shadow | 阴影 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.show | paletteLibrary | Show | 显示 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.slotColor | paletteLibrary | Color | 颜色 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.slotDeleteBlocked | paletteLibrary | Slot is still required by: | 仍被以下项依赖，无法删除： | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.slotKind | paletteLibrary | Slot kind | 色槽类型 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.slotLabel | paletteLibrary | Slot label | 色槽名称 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.sourceSlot | paletteLibrary | Source slot | 源色槽 | client/js/proceduralPaletteWorkspace.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.sourceSlot1 | paletteLibrary | Source A | 源 A | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| paletteLibrary.sourceSlot2 | paletteLibrary | Source B | 源 B | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.stop1 | paletteLibrary | Stop 1 | 色标 1 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.stop2 | paletteLibrary | Stop 2 | 色标 2 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | paletteLibrary.stop3 | paletteLibrary | Stop 3 | 色标 3 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -317,9 +397,18 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | section.theme | section | Theme | 主题 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | section.trimPaths | section | Trim Paths | 修剪路径 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | selection.layerCount | selection | {count} layer(s) | {count} 个图层 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| selection.noSelection | selection | No selection | 未选择 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | selection.noShapeTarget | selection | No shape target | 无形状目标 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | selection.shapeTarget | selection | Shape target | 形状目标 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.advanced.title | settings | Advanced Appearance Settings | 高级外观设置 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.inherited | settings | Using default / inherited | 使用默认 / 继承 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.overridden | settings | Overridden | 已覆盖 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.percentageUnit | settings | % | % | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.reset | settings | Reset | 重置 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.title | settings | Interface Appearance | 界面外观 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.typography.subgroup.code | settings | Code | 代码 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.typography.subgroup.content | settings | Content | 内容 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.typography.subgroup.titles | settings | Titles | 标题 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.appearance.typography.title | settings | Typography | 字体排版 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPalette.algorithmDefault | settings | Current Algorithm | 当前算法配色 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.blackGold | settings | Black Gold Default | 黑金默认 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundPreset.custom | settings | Custom | 自定义 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -330,10 +419,130 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.backgroundSource.classic | settings | Classic | 经典 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundSource.followIconTheme | settings | Follow Icon Theme | 跟随图标主题 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.backgroundSource.procedural | settings | Manual Procedural | 手动程序化 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.authority.userAppearance | settings | Authority: User Appearance. These editors do not write Design Tuning ... | 权威源：用户外观。这些编辑器不写入设计调校覆盖。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.border.title | settings | Border Color + Alpha | 边框颜色 + Alpha | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.controls.title | settings | Controls & Geometry | 控件与几何 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.curve.progress | settings | Progress / Value | 进度 / 数值 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.curve.speed | settings | Speed | 速度 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.curve.speedHint | settings | Hold Shift while dragging a Speed handle to adjust influence only. | 拖动速度手柄时按住 Shift，可仅调整影响比例。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.default | settings | Default | 默认 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.description | settings | Developer calibration overrides. Canonical defaults remain source-owned. | 开发者校准覆盖。规范默认值仍由其源头拥有。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.elevation.title | settings | Elevation | 视觉层级 / 阴影 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.existingAppearance.title | settings | Existing Appearance / User Parameters | 现有外观 / 用户参数 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.curve.enter | settings | Enter | 进入 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.curve.exit | settings | Exit | 退出 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.curve.press | settings | Press | 按压 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.curve.standard | settings | Standard | 标准 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.curves | settings | Motion Curves | 动效曲线 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.actionFeedback | settings | Action Feedback | 操作反馈 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.actionPress | settings | Action Press | 操作按压 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.dragSettle | settings | Drag Settle | 拖拽安定 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.homeHandoffRecede | settings | Home Handoff Recede | Home 交接退场 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.homeHandoffRestore | settings | Home Handoff Restore | Home 交接恢复 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.paletteEnter | settings | Palette Enter | 色板进入 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.paletteExit | settings | Palette Exit | 色板退出 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.spatialContract | settings | Spatial Contract | 空间收缩 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.spatialExpand | settings | Spatial Expand | 空间展开 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.spatialIdentity | settings | Spatial Identity | 空间身份过渡 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.structuralCollapse | settings | Structural Collapse | 结构收起 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.surfaceState | settings | Surface State | 表面状态 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.toolIdentityOpen | settings | Tool Identity Open | 工具身份展开 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.viewContentEnter | settings | View Content Enter | 视图内容进入 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.duration.viewContentExit | settings | View Content Exit | 视图内容退出 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.durations | settings | Motion Durations | 动效时长 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.motion.title | settings | Motion | 动效 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.overridden | settings | Overridden | 已覆盖 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.border.input | settings | Input Border | 输入框边框 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.border.panel | settings | Panel Border | 面板边框 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.border.separator | settings | Separator Border | 分隔边框 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.componentOptics.sliderThumbShadow | settings | Slider Thumb Optical Shadow | 滑块手柄光学阴影 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.componentOptics.sliderThumbShadow.description | settings | Controls the component-internal shadow that visually separates shared... | 控制共享滑块手柄与轨道或背景之间用于视觉分离的组件内部阴影。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.componentOptics.switchThumbShadow | settings | Switch Thumb Optical Shadow | 开关手柄光学阴影 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.componentOptics.switchThumbShadow.description | settings | Controls the component-internal shadow that visually separates shared... | 控制共享开关手柄与轨道或背景之间用于视觉分离的组件内部阴影。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.actionContainer | settings | Action Container Elevation | 操作容器层级 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.actionContainer.description | settings | Controls the floating container that carries Tool actions. | 控制承载工具操作按钮的浮动容器阴影。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.floatingPicker | settings | Floating Picker Elevation | 浮动选择器层级 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.floatingPicker.description | settings | Controls the shadow depth of the Registry color picker. | 控制 Registry 颜色选择器的阴影深度。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.floatingSurface | settings | Floating Surface Elevation | 浮动表面层级 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.floatingSurface.description | settings | Controls temporary floating surfaces such as Vela Settings and Select... | 控制 Vela 设置和下拉菜单等临时浮动表面的阴影。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.informationSurface | settings | Information Surface Elevation | 信息表面层级 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.informationSurface.description | settings | Controls the shared shadow depth of read-only Tool Description and Ho... | 控制只读工具说明与 Host 状态表面共享的阴影层级。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.primaryAction | settings | Primary Action Elevation | 主要操作层级 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.primaryAction.description | settings | Controls the shadow depth of primary action buttons. | 控制主要操作按钮的阴影层级。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.surfaceShell | settings | Surface Shell Elevation | 表面外壳层级 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.surfaceShell.description | settings | Controls the shadow depth of the Tool Detail primary work surface. | 控制工具详情主工作表面的阴影深度。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.utilityAction | settings | Utility Action Elevation | 实用操作层级 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.elevation.utilityAction.description | settings | Controls the resting shadow depth of Back, Edit Home, Retry, Vela Set... | 控制返回、编辑主页、重试、Vela 设置、发送、取消、批准和拒绝等实用操作的基础阴影层级。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.geometry.button.height | settings | Button Height | 按钮高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.geometry.button.horizontalPadding | settings | Button Horizontal Padding | 按钮水平内边距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.geometry.control.height | settings | Control Height | 控件高度 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.radius.editableControl | settings | Editable Control Radius | 可编辑控件圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.radius.homeIcon | settings | Home Icon Radius | Home 图标圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.radius.homeTile | settings | Home Tile Radius | Home 瓦片圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.radius.nestedSurface | settings | Nested Surface Radius | 嵌套表面圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.radius.primaryWorkSurface | settings | Primary Work Surface Radius | 主工作表面圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.radius.sectionCard | settings | Section Card Radius | 分区卡片圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.card.inset | settings | Card Inset | 卡片内边距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.content.blockInset | settings | Content Block Inset | 内容块轴内边距 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.content.blockInset.description | settings | The top and bottom inset between a content boundary and its text. | 内容边界与文本之间的上下内边距。 | client/js/designTuning/designTuningParameterRegistry.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.content.inlineInset | settings | Content Inline Inset | 内容行内边距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.control.inline | settings | Inline Control Gap | 行内控件间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.field.block | settings | Field Block Gap | 字段块间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.field.copy | settings | Field Copy Gap | 字段文本间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.home.cardTitle | settings | Home Card Title Gap | Home 卡片标题间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.home.majorStack | settings | Home Major Stack | Home 主堆叠间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.home.toolGrid | settings | Home Tool Grid Gap | Home 工具网格间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.palette.fieldControl | settings | Palette Field to Control | 色板字段与控件 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.registry.cardInset | settings | Registry Card Inset | Registry 卡片内边距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.registry.fieldControl | settings | Registry Field to Control | Registry 字段与控件 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.registry.fieldCopy | settings | Registry Field Copy Gap | Registry 字段文本间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.registry.introContent | settings | Registry Intro to Content | Registry 导语与内容 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.registry.sectionCopy | settings | Registry Section Copy Gap | Registry 分区文本间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.registry.sectionHeaderContent | settings | Registry Section Header to Content | Registry 分区标题与内容 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.section.headerContent | settings | Section Header to Content | 分区标题与内容 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.section.stack | settings | Section Stack | 分区堆叠间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.settings.fieldControl | settings | Settings Field to Control | 设置字段与控件 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.spacing.surface.edge | settings | Surface Edge | 表面边缘 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.surface.conversation | settings | Conversation Surface | 对话表面 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.surface.dangerAction | settings | Danger Action Surface | 危险操作表面 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.surface.field | settings | Field Surface | 字段表面 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.surface.neutralAction | settings | Neutral Action Surface | 中性操作表面 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.surface.registryOption | settings | Registry Option Surface | Registry 选项表面 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.surface.utilityAction | settings | Utility Action Surface | 工具操作表面 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.surface.utilityChrome | settings | Utility Chrome Surface | 工具栏表面 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.text.secondary | settings | Secondary Text | 次要文本 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.parameter.text.tertiary | settings | Tertiary Text | 三级文本 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.promotionEvidence | settings | Promotion Evidence | 采纳依据 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.protected.compound-shadow | settings | Read-only compound shadow | 复合阴影暂为只读 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.protected.surface-transition | settings | Protected by Surface Transition contract | 受 Surface Transition 契约保护 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.radius.title | settings | Radius | 圆角 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.resetAll | settings | Reset All Design Tuning | 重置全部设计调校 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.resetDomain | settings | Reset Domain | 重置当前域 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.resetMotion | settings | Reset Motion | 重置动效 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.shadow.alpha | settings | Opacity | 不透明度 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.shadow.blur | settings | Blur | 模糊 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.shadow.color | settings | Color | 颜色 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.shadow.offsetX | settings | X Offset | X 偏移 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.shadow.offsetY | settings | Y Offset | Y 偏移 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.shadow.spread | settings | Spread | 扩散 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.spacing.title | settings | Spacing | 间距 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.surface.title | settings | Surface Color + Alpha | 表面颜色 + Alpha | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.text.title | settings | Text Color + Alpha | 文本颜色 + Alpha | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.designTuning.title | settings | Design Tuning | 设计调校 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.developer.homeCalibration | settings | Home Calibration | 主页校准 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.developer.labs | settings | Labs | 实验室 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.iconDarkSource.manualEndpoints | settings | Manual Endpoints | 手动端点 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.iconDarkSource.paletteScale | settings | Palette Scale | 色卡明度缩放 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.palette.manage | settings | Manage Palettes | 管理色卡 | client/js/main.js, client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.palette.manageSource | settings | Manage Source Palettes | 管理源色卡 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.language.en | settings | English | English | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.language.zhCN | settings | 简体中文 | 简体中文 | client/js/settingsSchema.js, host/tools/settingsRendererLab.tool.jsx | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.navigation.advanced | settings | Advanced | 高级 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.navigation.appearance | settings | Appearance | 外观 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.navigation.background | settings | Background | 背景 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.navigation.developer | settings | Developer | 开发者 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.navigation.general | settings | General | 通用 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.navigation.interface | settings | Interface | 界面 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.palette.manage | settings | Manage Palettes | 管理色卡 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.palette.manageSource | settings | Manage Source Palettes | 管理源色卡 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.palette.none | settings | No source palette available | 没有可用源色卡 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.paletteLibrary | settings | Palette Library | 色卡库 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.paletteSummary.builtIn | settings | built-in | 个内置 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -341,13 +550,15 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.paletteSummary.overrides | settings | tool overrides | 个工具覆盖 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.proceduralIconMode.colorful | settings | Colorful | 彩色 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.proceduralIconMode.themeMapped | settings | Theme-mapped | 主题映射 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.sections.general | settings | General | 通用 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.sections.proceduralAppearance | settings | Procedural Appearance Parameters | 程序化外观参数 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.sections.vela | settings | Vela | Vela | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.colorRamp | settings | Dark endpoint to light endpoint | 暗端到亮端 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.theme.coreAppearance | settings | Core Appearance | 核心外观 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.darkEndpoint | settings | Dark | 暗端 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.fallbackIconColors | settings | Fallback Icon Colors | 回退图标颜色 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.iconColors | settings | Icon Theme Endpoints | 图标主题端点 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| settings.theme.interfaceAppearance | settings | Interface Appearance | 界面外观 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.theme.interfaceAppearance | settings | Interface Appearance | 界面外观 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.lightEndpoint | settings | Light | 亮端 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.midEndpoint | settings | Mid | 中间调 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.theme.toolIconAppearance | settings | Tool Icon Appearance | 工具图标外观 | client/js/settingsSchema.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -369,6 +580,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.vela.networkFailed | settings | Cannot reach the local LM Studio server | 无法连接本地 LM Studio 服务器 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.vela.ready | settings | Experimental Provider ready for this session | 实验 Provider 已在本会话就绪 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.vela.responseInvalid | settings | LM Studio returned an invalid readiness response | LM Studio 返回了无效 readiness 响应 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| settings.vela.title | settings | Vela Settings | Vela 设置 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | settings.vela.unavailable | settings | Configured local model is unavailable or not loaded | 配置的本地模型不可用或未加载 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.addedShape | status | Added: {label} | 已添加：{label} | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.addingShape | status | Adding {label}... | 正在添加 {label}... | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -388,12 +600,14 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | status.hostLoadError | status | Error: host JSX did not load. Check host/index.jsx includes. | 错误：host JSX 未加载。请检查 host/index.jsx include。 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | status.hostLoading | status | Host JSX is still loading... | host JSX 仍在加载... | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.loadingHost | status | Loading host JSX... | 正在加载 host JSX... | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| status.motionSpeedUpdated | status | Motion speed updated. | 动画速度已更新。 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| status.motionSpeedUpdated | status | Motion speed updated. | 动画速度已更新。 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| status.multipleLayersSelected | status | {count} layers selected | 已选择 {count} 个图层 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.noActiveComp | status | No active composition | 没有激活的合成 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.noLayer | status | Please select at least one layer | 请至少选择一个图层 | client/js/main.js, host/tools/textBackgroundBox.jsx, host/tools/textBackgroundBox.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.noResponse | status | No response from After Effects. | After Effects 没有响应。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
-| status.noSelectedLayers | status | No selected layers. | 没有选中图层。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| status.noSelectedLayers | status | No selected layers. | 没有选中图层。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.noTextLayer | status | Please select at least one text layer | 请至少选择一个文本层 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
+| status.oneLayerSelected | status | 1 layer selected | 已选择 1 个图层 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.openComp | status | Please open a composition | 请打开合成 | client/js/main.js, host/tools/shapeAdd.tool.jsx | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.paletteAccentSuggested | status | Palette secondary color applied to Interface Accent; it can be adjust... | 已将色卡辅色设为界面强调色，之后可独立调整。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | status.proceduralAppearanceDefaultsRestored | status | Procedural appearance defaults restored. | 程序化外观默认参数已恢复。 | client/js/main.js | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
@@ -406,6 +620,9 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | status.unableReadSelection | status | Unable to read selection. | 无法读取选择。 | none | no | E | Deferred. Generic/dynamic key group; needs runtime and AE fallback verification. |
 | tools.moreTools.title | tools.moreTools | More Tools | 更多工具 | client/index.html | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | tools.quickStack.title | tools.quickStack | Quick Stack | 快速堆叠 | none | no | E | Reserved or unused Home label. Confirm no planned implementation before deleting. |
+| tools.registryControlLab.fields.colorAlphaField | tools.registryControlLab | Color + Alpha | 颜色 + 透明度 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
+| tools.registryControlLab.fields.shadowField | tools.registryControlLab | Shadow | 阴影 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
+| tools.registryControlLab.sections.coreUiDirect | tools.registryControlLab | CoreUI Direct | CoreUI 直接路径 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
 | vela.surfaceApprove | vela | Approve | 批准 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceCancel | vela | Cancel | 取消 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceComposerLabel | vela | Vela message | Vela 消息 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -419,7 +636,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.surfaceGenericError | vela | The local request could not be completed. Try again. | 本地请求未能完成。请重试。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceIntentRejected | vela | No explicit opacity edit was detected. Specify the target opacity for... | 未检测到明确的不透明度修改请求。请说明要将当前图层的不透明度设为多少（0–100%）。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceIntentTargetMismatch | vela | The local proposal did not match the opacity requested in this turn. ... | 本地 proposal 与本轮请求的不透明度不一致。未创建任何操作。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| vela.surfaceLabel | vela | Vela | Vela | client/index.html, client/js/main.js, client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceLabel | vela | Vela | Vela | client/index.html, client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceLocalProposalNotice | vela | A local action suggestion was received. This conversation area does n... | 已收到一个本地操作建议。 当前对话区域暂不支持查看或执行该建议。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceNoActionableTarget | vela | No actionable target is selected. Select a layer in After Effects and... | 当前没有可操作的目标。请在 AE 中选择一个图层后重新发送请求。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceProviderCancelled | vela | The local request was cancelled. | 已取消本地请求。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -470,6 +687,11 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | settings.backgroundPreset.minimalDark | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
 | settings.backgroundPreset.obsidianRings | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
 | settings.backgroundPreset.solarGrid | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
+| settings.language.en | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
+| settings.language.zhCN | client/js/i18n.js | settingsRendererLab.tool.jsx:en, settingsRendererLab.tool.jsx:zh-CN | Keep in client/js/i18n.js as core/global UI copy. | Low |
+| tools.registryControlLab.fields.colorAlphaField | client/js/i18n.js | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
+| tools.registryControlLab.fields.shadowField | client/js/i18n.js | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
+| tools.registryControlLab.sections.coreUiDirect | client/js/i18n.js | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. | Medium |
 
 ## Candidate Delete Table
 
@@ -657,11 +879,13 @@ No low-risk delete candidates found.
 | status.creatingStrokeFillLayer | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.defaultsRestored | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.hostLoading | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| status.multipleLayersSelected | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.noActiveComp | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.noLayer | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.noResponse | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.noSelectedLayers | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.noTextLayer | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+| status.oneLayerSelected | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.openComp | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.paletteAccentSuggested | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.proceduralAppearanceDefaultsRestored | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
@@ -672,6 +896,24 @@ No low-risk delete candidates found.
 | status.selectionUpdated | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | status.unableReadSelection | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
 | tools.quickStack.title | Generic, dynamic, reserved, or unclear runtime ownership. | Search dynamic construction paths and run AE fallback/startup tests before deleting. |
+
+## Client Registry i18n Key Coverage
+
+These keys are declared as literal `labelKey` / `descriptionKey` / `titleKey` / `hintKey` in client-side registries and rendered through `tr(field.labelKey)`. They are not detected by the literal `tr("...")` scan, so any key missing from the global dictionary is a runtime missing-key warning and must be fixed.
+
+No client-registry i18n key is missing from the global dictionary.
+
+## Literal i18n Key Coverage
+
+These keys are referenced as literal `tr("...")` / `data-i18n="..."` and rendered through the global `tr()`. Any such key missing from the global dictionary is a runtime missing-key warning and must be fixed.
+
+No literal i18n key is missing from the global dictionary.
+
+## Registry Tool Schema i18n Coverage
+
+These i18n references are declared in production Registry Tool schemas (`host/tools/*.tool.jsx`). Each must resolve through the merged tool-local dictionary OR the global dictionary; a reference that resolves in neither is a runtime missing-key warning.
+
+No Registry Tool schema i18n reference is unresolvable.
 
 ## Notes
 

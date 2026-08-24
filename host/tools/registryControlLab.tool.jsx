@@ -66,6 +66,15 @@
         category: "debug",
         iconText: "C",
         debugOnly: true,
+        controlLabCoverage: {
+            registryPath: ["text", "textarea", "number", "range", "select", "checkbox", "switch", "tabs", "color", "button", "actionButton", "divider", "separator", "info", "note", "subheading", "cubicBezier"],
+            coreUiDirect: ["createFieldRow", "enhanceSelect", "createButton", "createShadowField"],
+            buttonVariants: ["utility", "navigation"],
+            colorFieldAlphaMode: true,
+            exemptions: {
+                proceduralPreview: "Domain-bound canvas specimen requires the Procedural Appearance Lab runtime."
+            }
+        },
         stateAction: {
             hostFunction: "AEToolbox.tools.registryControlLab.getState",
             intervalMs: 1200
@@ -93,6 +102,10 @@
                 labelKey: "tools.registryControlLab.sections.basic",
                 descriptionKey: "tools.registryControlLab.sections.basicDescription",
                 fields: [
+                    {
+                        type: "subheading",
+                        labelKey: "tools.registryControlLab.sections.registryPath"
+                    },
                     {
                         type: "info",
                         labelKey: "tools.registryControlLab.notes.basic"
@@ -142,11 +155,18 @@
                 descriptionKey: "tools.registryControlLab.sections.optionsDescription",
                 fields: [
                     {
-                        type: "checkbox",
+                        type: "switch",
                         key: "enabled",
                         labelKey: "tools.registryControlLab.fields.enabled",
                         hintKey: "tools.registryControlLab.hints.enabled",
                         defaultValue: true
+                    },
+                    {
+                        type: "checkbox",
+                        key: "acknowledged",
+                        labelKey: "tools.registryControlLab.fields.acknowledged",
+                        hintKey: "tools.registryControlLab.hints.acknowledged",
+                        defaultValue: false
                     },
                     {
                         type: "select",
@@ -220,9 +240,57 @@
                 ]
             },
             {
+                id: "bezierCurves",
+                labelKey: "tools.registryControlLab.sections.bezierCurves",
+                descriptionKey: "tools.registryControlLab.sections.bezierCurvesDescription",
+                collapsible: true,
+                fields: [
+                    {
+                        type: "cubicBezier",
+                        key: "defaultCurve",
+                        labelKey: "tools.registryControlLab.fields.defaultCurve",
+                        hintKey: "tools.registryControlLab.hints.defaultCurve",
+                        defaultValue: { x1: 0.25, y1: 0.1, x2: 0.25, y2: 1 },
+                        progressLabelKey: "tools.registryControlLab.curve.progress",
+                        speedLabelKey: "tools.registryControlLab.curve.speed",
+                        point1LabelKey: "tools.registryControlLab.curve.point1",
+                        point2LabelKey: "tools.registryControlLab.curve.point2"
+                    },
+                    {
+                        type: "cubicBezier",
+                        key: "overshootCurve",
+                        labelKey: "tools.registryControlLab.fields.overshootCurve",
+                        hintKey: "tools.registryControlLab.hints.overshootCurve",
+                        defaultValue: { x1: 0.2, y1: -0.4, x2: 0.35, y2: 1.45 },
+                        initialView: "speed",
+                        progressLabelKey: "tools.registryControlLab.curve.progress",
+                        speedLabelKey: "tools.registryControlLab.curve.speed",
+                        point1LabelKey: "tools.registryControlLab.curve.point1",
+                        point2LabelKey: "tools.registryControlLab.curve.point2"
+                    },
+                    {
+                        type: "cubicBezier",
+                        key: "readonlyCurve",
+                        labelKey: "tools.registryControlLab.fields.readonlyCurve",
+                        hintKey: "tools.registryControlLab.hints.readonlyCurve",
+                        defaultValue: { x1: 0.42, y1: 0, x2: 0.58, y2: 1 },
+                        readonly: true
+                    },
+                    {
+                        type: "cubicBezier",
+                        key: "disabledCurve",
+                        labelKey: "tools.registryControlLab.fields.disabledCurve",
+                        hintKey: "tools.registryControlLab.hints.disabledCurve",
+                        defaultValue: { x1: 0.3, y1: 0, x2: 0.7, y2: 1 },
+                        disabled: true
+                    }
+                ]
+            },
+            {
                 id: "actions",
                 labelKey: "tools.registryControlLab.sections.actions",
                 descriptionKey: "tools.registryControlLab.sections.actionsDescription",
+                composition: "actionStack",
                 fields: [
                     {
                         type: "button",
@@ -237,6 +305,14 @@
                         key: "primaryButton",
                         labelKey: "tools.registryControlLab.actions.primaryButton",
                         variant: "primary",
+                        fullWidth: true,
+                        actionId: "previewValues"
+                    },
+                    {
+                        type: "button",
+                        key: "dangerButton",
+                        labelKey: "tools.registryControlLab.actions.dangerButton",
+                        variant: "danger",
                         fullWidth: true,
                         actionId: "previewValues"
                     },
@@ -350,6 +426,13 @@
                                 labelKey: "tools.registryControlLab.options.grid",
                                 descriptionKey: "tools.registryControlLab.options.gridDescription",
                                 iconText: "G"
+                            },
+                            {
+                                value: "longDisabled",
+                                labelKey: "tools.registryControlLab.options.longDisabled",
+                                descriptionKey: "tools.registryControlLab.options.longDisabledDescription",
+                                iconText: "L",
+                                disabled: true
                             }
                         ]
                     },
@@ -398,6 +481,10 @@
                 "tools.registryControlLab.title": "Registry Control Lab",
                 "tools.registryControlLab.description": "Test the shared registry renderer with every standard control type.",
                 "tools.registryControlLab.sections.basic": "Basic Controls",
+                "tools.registryControlLab.sections.registryPath": "Registry Path",
+                "tools.registryControlLab.sections.coreUiDirect": "CoreUI Direct",
+                "tools.registryControlLab.fields.shadowField": "Shadow Field",
+                "tools.registryControlLab.fields.colorAlphaField": "Color + Alpha Field",
                 "tools.registryControlLab.sections.basicDescription": "Text, textarea, numeric entry, and slider behavior.",
                 "tools.registryControlLab.sections.colors": "Colors",
                 "tools.registryControlLab.sections.colorsDescription": "Color pills, hex values, and the HSV picker.",
@@ -409,6 +496,8 @@
                 "tools.registryControlLab.sections.actionsDescription": "Tests full-width registry action buttons and center-axis text layout.",
                 "tools.registryControlLab.sections.tabs": "Tabs",
                 "tools.registryControlLab.sections.tabsDescription": "Tests option cards and conditional field visibility.",
+                "tools.registryControlLab.sections.bezierCurves": "Cubic Bezier Curves",
+                "tools.registryControlLab.sections.bezierCurvesDescription": "Generic Progress and Speed editing with structured curve values.",
                 "tools.registryControlLab.sections.state": "Host State",
                 "tools.registryControlLab.sections.actionState": "Action and State",
                 "tools.registryControlLab.sections.actionStateDescription": "Action payloads, state-driven disabled buttons, and state refresh hooks.",
@@ -417,6 +506,7 @@
                 "tools.registryControlLab.fields.numberValue": "Number",
                 "tools.registryControlLab.fields.rangeValue": "Range",
                 "tools.registryControlLab.fields.enabled": "Enabled",
+                "tools.registryControlLab.fields.acknowledged": "Acknowledge this selection",
                 "tools.registryControlLab.fields.mode": "Mode",
                 "tools.registryControlLab.fields.fillColor": "Fill Color",
                 "tools.registryControlLab.fields.strokeColor": "Stroke Color",
@@ -425,9 +515,18 @@
                 "tools.registryControlLab.fields.componentType": "Component Type",
                 "tools.registryControlLab.fields.featureOnlyGap": "Feature Gap",
                 "tools.registryControlLab.fields.gridOnlyColumns": "Grid Columns",
+                "tools.registryControlLab.fields.defaultCurve": "Default Curve",
+                "tools.registryControlLab.fields.overshootCurve": "Overshoot Curve",
+                "tools.registryControlLab.fields.readonlyCurve": "Readonly Curve",
+                "tools.registryControlLab.fields.disabledCurve": "Disabled Curve",
+                "tools.registryControlLab.curve.progress": "Progress / Value",
+                "tools.registryControlLab.curve.speed": "Speed",
+                "tools.registryControlLab.curve.point1": "Control Point 1",
+                "tools.registryControlLab.curve.point2": "Control Point 2",
                 "tools.registryControlLab.actions.previewValues": "Preview Values",
                 "tools.registryControlLab.actions.secondaryButton": "Secondary Full-width Button",
                 "tools.registryControlLab.actions.primaryButton": "Primary Full-width Button",
+                "tools.registryControlLab.actions.dangerButton": "Danger Action Test",
                 "tools.registryControlLab.actions.bilingualButton": "Rectangle",
                 "tools.registryControlLab.actions.payloadButton": "Send Payload",
                 "tools.registryControlLab.actions.stateDisabledButton": "Requires Active Comp",
@@ -435,8 +534,10 @@
                 "tools.registryControlLab.actions.refreshAfterRunButton": "Run and Refresh State",
                 "tools.registryControlLab.options.feature": "Feature",
                 "tools.registryControlLab.options.grid": "Grid",
+                "tools.registryControlLab.options.longDisabled": "Unavailable long-label option",
                 "tools.registryControlLab.options.featureDescription": "Show feature-only fields.",
                 "tools.registryControlLab.options.gridDescription": "Show grid-only fields.",
+                "tools.registryControlLab.options.longDisabledDescription": "Disabled supporting copy for narrow and typography stress.",
                 "tools.registryControlLab.status.previewed": "Received registry control values.",
                 "tools.registryControlLab.status.previewPending": "Sending registry control values...",
                 "tools.registryControlLab.status.previewFailed": "Registry control preview failed.",
@@ -460,17 +561,26 @@
                 "tools.registryControlLab.hints.numberValue": "Type a value or drag horizontally.",
                 "tools.registryControlLab.hints.rangeValue": "Number box and slider stay synchronized.",
                 "tools.registryControlLab.hints.enabled": "Keeps the existing switch visual style.",
+                "tools.registryControlLab.hints.acknowledged": "Checkboxes represent acknowledgement or selection, not an immediate feature toggle.",
                 "tools.registryControlLab.hints.mode": "Uses the existing custom select menu.",
                 "tools.registryControlLab.hints.fillColor": "Opens the custom HSV color picker.",
                 "tools.registryControlLab.hints.strokeColor": "Returns a normalized #rrggbb value.",
                 "tools.registryControlLab.hints.toggleText": "This field is muted while the section is disabled.",
                 "tools.registryControlLab.hints.toggleNumber": "The toggle value is still collected with form values.",
-                "tools.registryControlLab.hints.componentType": "Switch tabs to test visibleWhen field behavior."
+                "tools.registryControlLab.hints.componentType": "Switch tabs to test visibleWhen field behavior.",
+                "tools.registryControlLab.hints.defaultCurve": "Edit P1/P2 by graph, keyboard, numeric input, or scrub.",
+                "tools.registryControlLab.hints.overshootCurve": "Y values outside 0-1 remain valid and expand the viewport.",
+                "tools.registryControlLab.hints.readonlyCurve": "View switching remains available while curve editing is locked.",
+                "tools.registryControlLab.hints.disabledCurve": "All graph, view, and numeric interactions are disabled."
             },
             "zh-CN": {
                 "tools.registryControlLab.title": "\u63a7\u4ef6\u6d4b\u8bd5\u5b9e\u9a8c\u5ba4",
                 "tools.registryControlLab.description": "\u7528\u4e8e\u9a8c\u8bc1\u5171\u7528 registry renderer \u7684\u6240\u6709\u6807\u51c6\u63a7\u4ef6\u7c7b\u578b\u3002",
                 "tools.registryControlLab.sections.basic": "\u57fa\u7840\u63a7\u4ef6",
+                "tools.registryControlLab.sections.registryPath": "Registry \u8def\u5f84",
+                "tools.registryControlLab.sections.coreUiDirect": "CoreUI \u76f4\u63a5\u8def\u5f84",
+                "tools.registryControlLab.fields.shadowField": "\u9634\u5f71\u5b57\u6bb5",
+                "tools.registryControlLab.fields.colorAlphaField": "\u989c\u8272 + Alpha \u5b57\u6bb5",
                 "tools.registryControlLab.sections.basicDescription": "\u9a8c\u8bc1\u6587\u672c\u3001\u591a\u884c\u6587\u672c\u3001\u6570\u503c\u8f93\u5165\u548c\u6ed1\u6746\u884c\u4e3a\u3002",
                 "tools.registryControlLab.sections.colors": "\u989c\u8272",
                 "tools.registryControlLab.sections.colorsDescription": "\u9a8c\u8bc1\u8272\u5757\u3001Hex \u503c\u548c HSV \u53d6\u8272\u5668\u3002",
@@ -482,6 +592,8 @@
                 "tools.registryControlLab.sections.actionsDescription": "\u9a8c\u8bc1\u6a2a\u5411\u586b\u6ee1\u7684 registry action button \u548c\u4e2d\u8f74\u53cc\u6587\u672c\u5e03\u5c40\u3002",
                 "tools.registryControlLab.sections.tabs": "\u6807\u7b7e\u9875",
                 "tools.registryControlLab.sections.tabsDescription": "\u9a8c\u8bc1\u9009\u9879\u5361\u548c\u6761\u4ef6\u5b57\u6bb5\u663e\u9690\u3002",
+                "tools.registryControlLab.sections.bezierCurves": "\u4e09\u6b21\u8d1d\u585e\u5c14\u66f2\u7ebf",
+                "tools.registryControlLab.sections.bezierCurvesDescription": "\u4f7f\u7528\u7ed3\u6784\u5316\u66f2\u7ebf\u503c\u9a8c\u8bc1\u901a\u7528\u8fdb\u5ea6\u4e0e\u901f\u5ea6\u7f16\u8f91\u3002",
                 "tools.registryControlLab.sections.state": "Host \u72b6\u6001",
                 "tools.registryControlLab.sections.actionState": "\u64cd\u4f5c\u4e0e\u72b6\u6001",
                 "tools.registryControlLab.sections.actionStateDescription": "\u9a8c\u8bc1 action payload\u3001\u72b6\u6001\u9a71\u52a8\u7684\u7981\u7528\u6309\u94ae\u548c\u6267\u884c\u540e\u72b6\u6001\u5237\u65b0\u3002",
@@ -490,6 +602,7 @@
                 "tools.registryControlLab.fields.numberValue": "\u6570\u503c",
                 "tools.registryControlLab.fields.rangeValue": "\u6ed1\u6746",
                 "tools.registryControlLab.fields.enabled": "\u542f\u7528",
+                "tools.registryControlLab.fields.acknowledged": "\u786e\u8ba4\u6b64\u9009\u62e9",
                 "tools.registryControlLab.fields.mode": "\u6a21\u5f0f",
                 "tools.registryControlLab.fields.fillColor": "\u586b\u5145\u989c\u8272",
                 "tools.registryControlLab.fields.strokeColor": "\u63cf\u8fb9\u989c\u8272",
@@ -498,9 +611,18 @@
                 "tools.registryControlLab.fields.componentType": "\u7ec4\u4ef6\u7c7b\u578b",
                 "tools.registryControlLab.fields.featureOnlyGap": "\u5356\u70b9\u95f4\u8ddd",
                 "tools.registryControlLab.fields.gridOnlyColumns": "\u7f51\u683c\u5217\u6570",
+                "tools.registryControlLab.fields.defaultCurve": "\u9ed8\u8ba4\u66f2\u7ebf",
+                "tools.registryControlLab.fields.overshootCurve": "\u8d85\u8c03\u66f2\u7ebf",
+                "tools.registryControlLab.fields.readonlyCurve": "\u53ea\u8bfb\u66f2\u7ebf",
+                "tools.registryControlLab.fields.disabledCurve": "\u7981\u7528\u66f2\u7ebf",
+                "tools.registryControlLab.curve.progress": "\u8fdb\u5ea6 / \u503c",
+                "tools.registryControlLab.curve.speed": "\u901f\u5ea6",
+                "tools.registryControlLab.curve.point1": "\u63a7\u5236\u70b9 1",
+                "tools.registryControlLab.curve.point2": "\u63a7\u5236\u70b9 2",
                 "tools.registryControlLab.actions.previewValues": "\u9884\u89c8\u53c2\u6570",
                 "tools.registryControlLab.actions.secondaryButton": "\u6b21\u8981\u6a2a\u5411\u6309\u94ae",
                 "tools.registryControlLab.actions.primaryButton": "\u4e3b\u8981\u6a2a\u5411\u6309\u94ae",
+                "tools.registryControlLab.actions.dangerButton": "\u5371\u9669\u64cd\u4f5c\u6d4b\u8bd5",
                 "tools.registryControlLab.actions.bilingualButton": "\u77e9\u5f62",
                 "tools.registryControlLab.actions.payloadButton": "\u53d1\u9001 Payload",
                 "tools.registryControlLab.actions.stateDisabledButton": "\u9700\u8981\u6fc0\u6d3b\u5408\u6210",
@@ -508,8 +630,10 @@
                 "tools.registryControlLab.actions.refreshAfterRunButton": "\u6267\u884c\u5e76\u5237\u65b0\u72b6\u6001",
                 "tools.registryControlLab.options.feature": "\u5356\u70b9",
                 "tools.registryControlLab.options.grid": "\u7f51\u683c",
+                "tools.registryControlLab.options.longDisabled": "\u4e0d\u53ef\u7528\u7684\u957f\u6807\u7b7e\u9009\u9879",
                 "tools.registryControlLab.options.featureDescription": "\u663e\u793a\u5356\u70b9\u4e13\u5c5e\u5b57\u6bb5\u3002",
                 "tools.registryControlLab.options.gridDescription": "\u663e\u793a\u7f51\u683c\u4e13\u5c5e\u5b57\u6bb5\u3002",
+                "tools.registryControlLab.options.longDisabledDescription": "\u7528\u4e8e\u7a84\u5e03\u5c40\u548c\u6392\u7248\u538b\u529b\u9a8c\u8bc1\u7684\u7981\u7528\u8bf4\u660e\u3002",
                 "tools.registryControlLab.status.previewed": "\u5df2\u63a5\u6536 registry \u63a7\u4ef6\u53c2\u6570\u3002",
                 "tools.registryControlLab.status.previewPending": "\u6b63\u5728\u53d1\u9001 registry \u63a7\u4ef6\u53c2\u6570...",
                 "tools.registryControlLab.status.previewFailed": "Registry \u63a7\u4ef6\u9884\u89c8\u5931\u8d25\u3002",
@@ -533,12 +657,17 @@
                 "tools.registryControlLab.hints.numberValue": "\u53ef\u8f93\u5165\u6570\u503c\uff0c\u4e5f\u53ef\u6a2a\u5411\u62d6\u52a8\u4fee\u6539\u3002",
                 "tools.registryControlLab.hints.rangeValue": "\u6570\u503c\u6846\u548c\u6ed1\u6746\u4fdd\u6301\u540c\u6b65\u3002",
                 "tools.registryControlLab.hints.enabled": "\u4fdd\u7559\u73b0\u6709\u5f00\u5173\u89c6\u89c9\u98ce\u683c\u3002",
+                "tools.registryControlLab.hints.acknowledged": "\u590d\u9009\u6846\u8868\u793a\u786e\u8ba4\u6216\u9009\u62e9\uff0c\u800c\u4e0d\u662f\u7acb\u5373\u529f\u80fd\u5f00\u5173\u3002",
                 "tools.registryControlLab.hints.mode": "\u4f7f\u7528\u73b0\u6709\u81ea\u5b9a\u4e49\u4e0b\u62c9\u83dc\u5355\u3002",
                 "tools.registryControlLab.hints.fillColor": "\u6253\u5f00\u81ea\u5b9a\u4e49 HSV \u53d6\u8272\u5668\u3002",
                 "tools.registryControlLab.hints.strokeColor": "\u8fd4\u56de\u6807\u51c6\u5316\u7684 #rrggbb \u503c\u3002",
                 "tools.registryControlLab.hints.toggleText": "\u5206\u533a\u5173\u95ed\u65f6\u8be5\u5b57\u6bb5\u4f1a\u5f31\u5316\u663e\u793a\u3002",
                 "tools.registryControlLab.hints.toggleNumber": "\u5206\u533a\u5f00\u5173\u503c\u4f1a\u968f\u8868\u5355\u53c2\u6570\u4e00\u8d77\u6536\u96c6\u3002",
-                "tools.registryControlLab.hints.componentType": "\u5207\u6362\u6807\u7b7e\u9875\u4ee5\u6d4b\u8bd5 visibleWhen \u5b57\u6bb5\u663e\u9690\u3002"
+                "tools.registryControlLab.hints.componentType": "\u5207\u6362\u6807\u7b7e\u9875\u4ee5\u6d4b\u8bd5 visibleWhen \u5b57\u6bb5\u663e\u9690\u3002",
+                "tools.registryControlLab.hints.defaultCurve": "\u53ef\u901a\u8fc7\u56fe\u5f62\u3001\u952e\u76d8\u3001\u6570\u503c\u8f93\u5165\u6216\u62d6\u64e6\u7f16\u8f91 P1/P2\u3002",
+                "tools.registryControlLab.hints.overshootCurve": "0-1 \u4e4b\u5916\u7684 Y \u503c\u4ecd\u7136\u5408\u6cd5\uff0c\u5e76\u4f1a\u6269\u5c55\u89c6\u53e3\u3002",
+                "tools.registryControlLab.hints.readonlyCurve": "\u66f2\u7ebf\u7f16\u8f91\u9501\u5b9a\u65f6\u4ecd\u53ef\u5207\u6362\u89c6\u56fe\u3002",
+                "tools.registryControlLab.hints.disabledCurve": "\u7981\u7528\u6240\u6709\u56fe\u5f62\u3001\u89c6\u56fe\u4e0e\u6570\u503c\u4ea4\u4e92\u3002"
             }
         }
     });

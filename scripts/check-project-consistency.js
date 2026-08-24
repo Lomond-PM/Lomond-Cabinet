@@ -107,6 +107,9 @@ function checkRequiredEntrypoints() {
         "client/js/main.js",
         "client/js/i18n.js",
         "client/js/settingsSchema.js",
+        "client/js/designTuning/designTuningParameterRegistry.js",
+        "client/js/designTuning/designTuningStateStore.js",
+        "client/js/designTuning/designTuningResolver.js",
         "client/js/proceduralCache.js",
         "client/js/proceduralPaletteLibrary.js",
         "client/js/proceduralPaletteStore.js",
@@ -229,6 +232,9 @@ function checkIndexHtml() {
         "css/velaSurface.css",
         "js/i18n.js",
         "js/settingsSchema.js",
+        "js/designTuning/designTuningParameterRegistry.js",
+        "js/designTuning/designTuningStateStore.js",
+        "js/designTuning/designTuningResolver.js",
         "js/proceduralCache.js",
         "js/proceduralPaletteLibrary.js",
         "js/proceduralPaletteStore.js",
@@ -442,6 +448,83 @@ function checkRegistryTools() {
     });
 }
 
+function checkPaletteAuthorityClosure() {
+    const store = readText("client/js/palette/paletteStore.js");
+    const facade = readText("client/js/proceduralPaletteStore.js");
+    const model = readText("client/js/palette/paletteModel.js");
+    const resolver = readText("client/js/palette/paletteResolver.js");
+    const registry = readText("client/js/palette/colorDerivationRegistry.js");
+    const migration = readText("client/js/palette/legacyPaletteMigration.js");
+    const adapter = readText("client/js/palette/legacyProceduralPaletteAdapter.js");
+    const workspace = readText("client/js/proceduralPaletteWorkspace.js");
+    const main = readText("client/js/main.js");
+    const library = readText("client/js/proceduralPaletteLibrary.js");
+
+    // 1. PaletteStore v2 is the sole persisted Palette envelope key.
+    check("Palette Store v2 is the sole persisted Palette authority",
+        /STORAGE_KEY\s*=\s*"lomond\.paletteStore\.v2"/.test(store) &&
+        /storage\.setItem\(\s*STORAGE_KEY,\s*serialized\s*\)/.test(store),
+        "PaletteStore must persist exclusively to lomond.paletteStore.v2.");
+
+    // 2. Production palette code never writes the v1 key (migration/rollback/import only).
+    const v1WriteSources = facade + migration.replace(/storage\.setItem\(\s*v2Key,\s*serialized\s*\)/g, "") + adapter + store;
+    check("Production palette modules never write the v1 Palette key",
+        !/\.setItem\(\s*(V1_KEY|v1Key|legacyStorageKey)/.test(v1WriteSources) &&
+        !/\.setItem\(\s*["']lomond\.proceduralPaletteStore\.v1["']/.test(v1WriteSources),
+        "lomond.proceduralPaletteStore.v1 must remain migration/rollback/import-only; production writes to v2 only.");
+
+    // 3. LegacyProceduralPaletteAdapter is a pure compatibility projection (no persistence).
+    check("LegacyProceduralPaletteAdapter holds no persistence path",
+        !/setItem|getItem|localStorage/.test(adapter),
+        "The compatibility adapter must not read/write storage or own a second persistence authority.");
+
+    // 4. Palette core never writes semantic CSS.
+    check("Palette core never writes semantic CSS",
+        !/documentElement\.style|\.setProperty\s*\(/.test(model + resolver + registry + migration + adapter),
+        "PaletteModel/Resolver/DerivationRegistry/Migration/Adapter must not write semantic CSS.");
+
+    // 5. Workspace edits a memory-only full-v2 draft and never persists directly.
+    check("Palette Workspace edits a native full-v2 draft only",
+        /createNativeEditorState/.test(workspace) && /mutateNativeDraft/.test(workspace) &&
+        !/editablePalette|draftSignature|createEditorState\(/.test(workspace) &&
+        !/\.setItem\(/.test(workspace),
+        "Workspace must edit the full v2 draft in memory and never write storage itself.");
+
+    // 6. Transient preview stays in memory and never reaches the persisted envelope/export.
+    check("Transient preview is memory-only",
+        /transients\[externalId\]\s*=/.test(facade) &&
+        /flush:\s*function\s*\(\)\s*\{\s*\}/.test(facade) &&
+        !/\btransients\b/.test(store),
+        "Transient previews must live in an in-memory map and never enter the v2 envelope or export.");
+
+    // 7. Workspace persistence flows only through Save -> v2 transaction.
+    check("Palette Workspace Save is the only Store write boundary",
+        /function saveDraft/.test(workspace) && /store\.(createV2Palette|saveV2Palette)\s*\(/.test(workspace),
+        "Workspace persistence must route only through Save into a v2 transaction.");
+
+    // 8. Palette selection never silently rewrites Appearance Accent/Canvas.
+    check("Palette edits never rewrite Appearance Accent/Canvas automatically",
+        !/applyThemeAccent\(|applyHomeBackground\(/.test(workspace) &&
+        /suggestThemeAccent: true/.test(main) &&
+        /function suggestThemeAccentFromPalette/.test(main),
+        "Palette edits update procedural consumers only; Accent/Canvas writes are explicit user actions.");
+
+    // 9. REFERENCE supports same-palette slotId only.
+    check("REFERENCE supports a single same-palette slotId only",
+        /hasOwnProperty\.call\(\s*slot\.reference,\s*["']paletteId["']\s*\)/.test(model),
+        "A REFERENCE must be a single same-palette slotId and cannot carry a paletteId.");
+
+    // 10. No production Harmony generator exists.
+    check("No production Harmony generator exists",
+        !/Analogous|Complementary|Triadic|Tone\s*ladder|Harmony/i.test(main + workspace + facade),
+        "Palette Harmony/Analogous/Triadic generators are deferred and must not exist in production code.");
+
+    // 11. ProceduralPaletteLibrary remains the unique built-in canonical source.
+    check("ProceduralPaletteLibrary is the unique built-in canonical source",
+        /function\s+listPalettes|\blistPalettes\s*:\s*function/.test(library) && /builtInPalettes/.test(store),
+        "Built-in canonicals come from the factory library; Store v2 keeps canonical-relative overrides only.");
+}
+
 function checkGeneratedI18nReport() {
     const result = I18nUsageReport.checkReport();
     check(
@@ -461,6 +544,7 @@ function main() {
     checkVelaProviderQualificationRubric();
     checkVelaContextHostIncludes();
     checkRegistryTools();
+    checkPaletteAuthorityClosure();
     checkGeneratedI18nReport();
 
     let failed = 0;

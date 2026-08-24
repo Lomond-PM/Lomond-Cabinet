@@ -1,5 +1,34 @@
 # Procedural Appearance Plan for 0.2.5
 
+## Palette v2 native Workspace（0.3.2 Phase 4）
+
+Palette Workspace 现在以 Palette Store v2 返回的完整 Palette definition 作为 draft：`id`、`revision`、`metadata`、动态 `slots` 和 `profiles` 均被保留。Workspace 只拥有 draft、selection、dirty state 与 transient preview；Palette schema、graph resolution、derivation grammar 和 persistence 仍分别由 PaletteModel、PaletteResolver、ColorDerivationRegistry 与 Palette Store v2 持有。
+
+动态色槽支持 `DIRECT`、`REFERENCE` 和 `DERIVED`。色槽 ID 是与显示名称和数组位置分离的 palette-local identity；重命名和重排不会改变引用。REFERENCE 仅允许同 Palette 引用；删除被引用或被 procedural profile 绑定的色槽会被拒绝。DERIVED editor 从 ColorDerivationRegistry 的 input contract 与 parameter schema 投影 `mix.v1` 和 `oklchAdjust.v1` 的 Shared Select / Color / Number controls，颜色结果只由 PaletteResolver 计算。
+
+`profiles.proceduralAppearance` 继续定义 shadow/base/secondary/highlight bindings、stops、weights 与 bias。四个 role 是 consumer binding，不是固定色槽 identity。Preview 直接使用 full v2 draft 建立 memory-only transient projection；Cancel 不写 Store，正式 Save 才增加 revision，并分别进入 custom Palette transaction 或 canonical-relative built-in override transaction。LegacyProceduralPaletteAdapter 继续服务 production procedural consumers；legacy facade 的 `LEGACY_READ_ONLY` 写保护不再限制 native v2 Workspace。
+
+普通 draft mutation（颜色、参数、source、label、profile binding）只走 data mutation → validation → `PaletteResolver.resolvePalette(full draft)` → in-place projection 路径：更新 resolved swatch、error/status、dirty 与 Save enabled、procedural profile preview，绝不重建 Workspace root，也不销毁 scroll owner。结构性 slot edit（Add / Delete / Move / Kind / Derivation change）只局部重建 editor scroll region，`.palette-editor-scroll` 保持 identity 与 scroll position。Derived preview 的唯一颜色 authority 仍是 `PaletteResolver`；UI 不自行做 mix 或 OKLCH 数学。draft mutation 与 full Workspace render lifecycle 分离，避免 viewport reset、focus/cursor loss 与 Select popup 破坏。
+
+本阶段不引入 cross-palette reference、Harmony/Tone generator、arbitrary derivation script、graph editor、Appearance live-link、global active Palette 或 semantic role mapping editor。
+
+## Palette v2 权威收口（0.3.2 Phase 5）
+
+最终权威边界（单层单 owner，无 competing authority）：
+
+- **Palette 定义/模式**：`client/js/palette/paletteModel.js`（PaletteModel）——纯校验/规范化 v2 palette（稳定 `paletteId`/`slotId`、`DIRECT`/`REFERENCE`/`DERIVED`）。
+- **Derivation 语法/数学**：`client/js/palette/colorDerivationRegistry.js`（`mix.v1`、`oklchAdjust.v1`）。
+- **解析图**：`client/js/palette/paletteResolver.js`（对当前 full v2 draft 解析，fail-closed）。
+- **Palette 持久化（唯一 authority）**：`client/js/palette/paletteStore.js`（`lomond.paletteStore.v2`）——custom palette、canonical-relative built-in override、hidden built-ins、`toolPaletteMap`、v1→v2 migration、v1/v2 import、export。`LegacyProceduralPaletteAdapter` 与 `proceduralPaletteStore` facade 仅做投影 / 委托，持有零 persistence。
+- **Built-in factory canonical**：`client/js/proceduralPaletteLibrary.js`（唯一 `listPalettes()` source；Store v2 只存 canonical-relative override）。
+- **Workspace**：`client/js/proceduralPaletteWorkspace.js`——内存 full-v2 draft；Save 是唯一 Store 写边界；Cancel 清除 transient effect；使用稳定 projection/update seam（普通编辑→validate/resolve→in-place projection；结构性编辑→局部 editor-scroll 重建并保持 scroll owner）。
+- **Procedural consumer 投影**：`client/js/palette/legacyProceduralPaletteAdapter.js` 产出 legacy procedural consumer shape 与 semantic signature；`proceduralAppearance.js`、`proceduralHomeIcons.js`、`proceduralHomeBackground.js`、`proceduralThemeMap.js` 消费该投影。
+- **Appearance**：Palette 值 → 显式赋值 → 既有 Appearance authority。`themeAccent`/`homeBackground` 仍是 Settings-backed Appearance 输入，Palette 编辑不会隐式重写；Palette→Accent/Canvas 流程（`suggestThemeAccentFromPalette`，经 `suggestThemeAccent` 门控）仅为显式用户操作，后续手工 Accent/Canvas 编辑保留最终 authority。
+- **Design Tuning**：独立 calibration authority，与 Palette authority 无关。
+- **CSS**：仅 presentation 输出，Palette core 不写 semantic CSS。
+
+`v1`（`lomond.proceduralPaletteStore.v1`）仅作为 migration source / rollback evidence / legacy v1 import 兼容保留，生产代码零写入；用户 v1 storage 不被删除（rollback evidence 保留，真正移除需独立 migration-retention decision）。本阶段不要求 ProceduralAppearance / Home Icons / Background / ThemeMap 原生理解 v2，也不删除 LegacyProceduralPaletteAdapter。
+
 The 0.2.5 procedural appearance scope is shipped on `main` and published as `v0.2.5`. The 0.2.4 feature line remains the previous stable baseline. The next development version has not been designated.
 
 ## Phase 1 Lab Status

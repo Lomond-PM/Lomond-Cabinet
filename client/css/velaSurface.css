@@ -1,18 +1,19 @@
 .vela-surface-mount {
     flex: 0 0 auto;
     min-height: 0;
-    margin-bottom: var(--tool-gap);
+    margin-bottom: var(--space-home-major-stack);
 }
 
 .vela-surface {
     --vela-composer-min-height: calc(46px * var(--ui-scale));
     --vela-controls-min-height: var(--control-height);
     --vela-inline-gap: calc(8px * var(--ui-scale));
+    --vela-controls-column-gap: calc(16px * var(--ui-scale));
     --vela-resize-hit-height: calc(20px * var(--ui-scale));
     --vela-resize-grip-width: calc(28px * var(--ui-scale));
     --vela-resize-grip-height: calc(2px * var(--ui-scale));
     --vela-resize-grip-bottom: calc(4px * var(--ui-scale));
-    --vela-surface-inset: var(--card-pad);
+    --vela-surface-inset: var(--space-card-inset);
     --vela-surface-stack-gap: var(--vela-inline-gap);
     position: relative;
     display: grid;
@@ -27,7 +28,7 @@
     overflow: hidden;
     border: 1px solid var(--panel-border);
     border-radius: var(--radius-md);
-    background: var(--bg-proc-secondary);
+    background: var(--surface-conversation);
 }
 
 .vela-transcript-slot {
@@ -47,7 +48,8 @@
     min-width: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: var(--vela-surface-inset);
+    padding-block: var(--space-content-block-inset);
+    padding-inline: var(--space-content-inline-inset);
     border: 1px solid var(--separator);
     border-radius: var(--radius-sm);
     background: var(--bg-main);
@@ -58,7 +60,7 @@
 .vela-transcript-intro {
     margin: 0;
     color: var(--text-secondary);
-    font-size: var(--font-small);
+    font-size: var(--type-supporting-size);
     line-height: 1.5;
 }
 
@@ -75,7 +77,7 @@
     overflow-wrap: anywhere;
     margin: 0;
     color: var(--text-primary);
-    font-size: var(--font-small);
+    font-size: var(--type-supporting-size);
     line-height: 1.5;
     white-space: pre-wrap;
     word-break: break-word;
@@ -91,30 +93,6 @@
 
 .vela-transcript-user {
     color: var(--text-secondary);
-}
-
-.vela-transcript-scroll::-webkit-scrollbar {
-    width: calc(7px * var(--ui-scale));
-    height: calc(7px * var(--ui-scale));
-}
-
-.vela-transcript-scroll::-webkit-scrollbar-track {
-    border-radius: var(--radius-sm);
-    background: rgba(214, 178, 94, 0.045);
-}
-
-.vela-transcript-scroll::-webkit-scrollbar-thumb {
-    border: 1px solid rgba(5, 4, 3, 0.52);
-    border-radius: var(--radius-sm);
-    background: var(--gold-soft);
-}
-
-.vela-transcript-scroll::-webkit-scrollbar-thumb:hover {
-    background: var(--gold-hot);
-}
-
-.vela-transcript-scroll::-webkit-scrollbar-corner {
-    background: transparent;
 }
 
 .vela-transcript-error,
@@ -134,13 +112,24 @@
     display: block;
     width: 100%;
     min-height: var(--vela-composer-min-height);
-    padding: var(--vela-inline-gap) var(--card-pad);
+    padding-block: var(--space-content-block-inset);
+    padding-inline: var(--space-content-inline-inset);
     resize: none;
-    border: 1px solid var(--input-border);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    font-size: var(--type-control-size);
+    font-weight: var(--type-control-weight);
+    line-height: var(--type-control-line-height);
+}
+
+.vela-composer-frame {
+    min-height: var(--vela-composer-min-height);
+    border-color: var(--input-border);
     border-radius: var(--radius-sm);
     background: var(--bg-main);
-    color: var(--text-primary);
-    font: inherit;
 }
 
 .vela-composer-input::placeholder {
@@ -153,7 +142,7 @@
     grid-template-areas: "settings status actions";
     grid-template-columns: auto minmax(0, 1fr) minmax(0, auto);
     min-width: 0;
-    column-gap: var(--tool-gap);
+    column-gap: var(--vela-controls-column-gap);
 }
 
 .vela-settings-slot {
@@ -171,9 +160,7 @@
     min-height: calc(26px * var(--ui-scale));
     padding: 0 calc(10px * var(--ui-scale));
     border-radius: var(--radius-sm);
-    background: var(--bg-main);
-    box-shadow: none;
-    font-size: var(--font-small);
+    font-size: var(--type-supporting-size);
     line-height: 1;
 }
 
@@ -186,7 +173,7 @@
     min-height: var(--vela-controls-min-height);
     padding: 0 0 var(--vela-surface-inset);
     color: var(--text-secondary);
-    font-size: var(--font-small);
+    font-size: var(--type-supporting-size);
     pointer-events: none;
 }
 
@@ -239,7 +226,7 @@
     min-width: 0;
     overflow: hidden;
     color: var(--text-secondary);
-    font-size: var(--font-small);
+    font-size: var(--type-supporting-size);
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -255,12 +242,18 @@
     min-height: calc(26px * var(--ui-scale));
     padding: 0 calc(10px * var(--ui-scale));
     border-radius: var(--radius-sm);
-    background: var(--bg-main);
-    box-shadow: none;
-    font-size: var(--font-small);
+    font-size: var(--type-supporting-size);
     line-height: 1;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.vela-reject-action {
+    background: var(--danger-surface);
+}
+
+.vela-reject-action:not(:disabled):hover {
+    background: var(--action-danger-hover-surface);
 }
 
 .vela-resize-handle {

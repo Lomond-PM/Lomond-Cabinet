@@ -134,20 +134,8 @@
         }
     }
 
-    function setupCustomSelectInputs() {
-        if (options.setupCustomSelectInputs) {
-            options.setupCustomSelectInputs();
-        }
-    }
-
-    function removePaletteCustomSelectMenus() {
-        var menus = queryAll(".select-menu[data-select-menu-for^='paletteToolMap_']");
-        var i;
-        for (i = 0; i < menus.length; i++) {
-            if (menus[i].parentNode) {
-                menus[i].parentNode.removeChild(menus[i]);
-            }
-        }
+    function enhanceSelect(select) {
+        if (options.enhanceSelect) options.enhanceSelect(select);
     }
 
     function clearPreviewRafs() {
@@ -192,12 +180,12 @@
         var helper = getEditorHelper();
         var palettes = store && store.listResolvedPalettes ? store.listResolvedPalettes(true) : [];
         var nextSelectedId = paletteId || selectedPaletteId || (palettes[0] ? palettes[0].id : "");
-        var palette = store && store.getResolvedPalette ? store.getResolvedPalette(nextSelectedId) : null;
-        if (!palette || !helper || !helper.createEditorState) {
+        var palette = store && store.getV2Palette ? store.getV2Palette(nextSelectedId) : null;
+        if (!palette || !helper || !helper.createNativeEditorState) {
             return;
         }
         selectedPaletteId = palette.id;
-        editorState = helper.createEditorState(palette);
+        editorState = helper.createNativeEditorState(palette);
         editorState.selectedPaletteId = palette.id;
         clearTransientPreview();
     }
@@ -206,16 +194,11 @@
         var store = getStore();
         var helper = getEditorHelper();
         var draft = editorState && editorState.draft ? editorState.draft : null;
-        var candidate;
         var result;
-        if (!store || !draft || typeof store.validatePalette !== "function") {
+        if (!store || !draft || !helper || typeof helper.validateNativeDraft !== "function") {
             return false;
         }
-        if (helper && helper.hasPositiveWeightTotal && !helper.hasPositiveWeightTotal(draft.weights)) {
-            return false;
-        }
-        candidate = Object.assign({}, draft, { id: draft.id || "paletteEditorDraft" });
-        result = store.validatePalette(candidate);
+        result = helper.validateNativeDraft(draft);
         return !!(result && result.ok);
     }
 
@@ -225,11 +208,12 @@
         var saveButton = query(".palette-editor-save");
         var dirty = !!(editorState && editorState.dirty);
         var valid = paletteEditorDraftIsValid();
+        var store = getStore();
         if (workspace) {
             workspace.classList.toggle("has-unsaved-palette-draft", dirty);
         }
         if (status) {
-            status.textContent = dirty ? tr("paletteLibrary.unsavedChanges") : tr("paletteLibrary.saved");
+            status.textContent = valid ? (dirty ? tr("paletteLibrary.unsavedChanges") : tr("paletteLibrary.saved")) : tr("paletteLibrary.invalidPalette");
             status.classList.toggle("is-dirty", dirty);
         }
         if (saveButton) {
@@ -288,154 +272,71 @@
         }));
     }
 
-    function updateEditorDraft(patch) {
+    // A working Palette draft mutation is a data change followed by a projection update.
+    // It must never tear down the Workspace root, its scroll owner, or the rendered slot
+    // cards; only the affected presentation is re-projected from the freshly resolved graph.
+    function mutateNativeDraft(mutator, rerender) {
         var helper = getEditorHelper();
         var store = getStore();
         var validation;
-        if (!editorState || !helper || !helper.updateEditorDraft) {
-            return;
-        }
-        editorState = helper.updateEditorDraft(editorState, patch);
-        if (helper.hasPositiveWeightTotal && !helper.hasPositiveWeightTotal(editorState.draft.weights)) {
-            clearTransientPreview();
-            syncDirtyUi();
-            return;
-        }
-        if (store && typeof store.setTransientPalette === "function") {
-            validation = store.setTransientPalette(PaletteEditorPreviewId, Object.assign({}, editorState.draft, { id: PaletteEditorPreviewId }));
-            if (!validation.ok) {
-                clearTransientPreview();
-                syncDirtyUi();
-                return;
-            }
-        }
-        syncDirtyUi();
-        schedulePreview();
+        if (!editorState || !helper || !helper.mutateNativeState) return;
+        editorState = helper.mutateNativeState(editorState, mutator);
+        if (rerender) { refresh(); return; }
+        validation = helper.validateNativeDraft(editorState.draft);
+        if (validation.ok && store && store.setTransientV2Palette) store.setTransientV2Palette(PaletteEditorPreviewId, editorState.draft);
+        else clearTransientPreview();
+        refreshProjection(validation);
     }
 
-    function createPaletteColorControl(role, value) {
-        var controls = createElement("span");
-        var shell = createElement("button");
-        var input = createElement("input");
-        var hexInput = createElement("input");
-        var inputId = "paletteEditor" + role.charAt(0).toUpperCase() + role.slice(1);
-        var normalizeHex = options.normalizeHex || function (color, fallback) { return color || fallback; };
-        var normalized = normalizeHex(value, "#000000");
-        if (!controls || !shell || !input || !hexInput) {
-            return null;
-        }
-        controls.className = "control-inputs settings-field-control registry-color-control settings-color-control palette-editor-color-control";
-        shell.className = "registry-color-swatch settings-color-pill small-color-shell";
-        shell.type = "button";
-        shell.style.backgroundColor = normalized;
-        shell.setAttribute("data-color-target", inputId);
-        input.id = inputId;
-        input.className = "native-color-input";
-        input.type = "hidden";
-        input.value = normalized;
-        hexInput.id = inputId + "Hex";
-        hexInput.className = "registry-color-hex settings-color-hex";
-        hexInput.type = "text";
-        hexInput.value = normalized;
-        hexInput.setAttribute("spellcheck", "false");
-        if (options.bindHexInputSelectBehavior) {
-            options.bindHexInputSelectBehavior(hexInput);
-        }
-
-        function apply(valueToApply) {
-            var color = normalizeHex(valueToApply, input.value || normalized).toUpperCase();
-            var patch;
-            if (!/^#[0-9A-F]{6}$/.test(color)) {
-                return;
-            }
-            input.value = color;
-            hexInput.value = color;
-            shell.style.backgroundColor = color;
-            patch = { colors: {} };
-            patch.colors[role] = color;
-            updateEditorDraft(patch);
-        }
-
-        hexInput._registryOnValueChange = function () {
-            apply(hexInput.value);
-        };
-        hexInput.addEventListener("input", function () {
-            if (/^#?[0-9a-fA-F]{6}$/.test(this.value)) {
-                apply(this.value);
-            }
-        });
-        hexInput.addEventListener("change", function () {
-            apply(this.value);
-        });
-        shell.addEventListener("click", function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            if (options.openRegistryColorPicker) {
-                options.openRegistryColorPicker(hexInput, shell, normalizeHex(hexInput.value, normalized));
-            }
-        });
-        shell.appendChild(input);
-        controls.appendChild(shell);
-        controls.appendChild(hexInput);
-        return controls;
+    function mutateDependencySource(mutator) {
+        var helper = getEditorHelper(); var trial = helper.mutateNativeState(editorState, mutator); var validation = helper.validateNativeDraft(trial.draft); var code = validation.resolution && validation.resolution.error && validation.resolution.error.code;
+        if (code === "DEPENDENCY_CYCLE" || code === "SELF_REFERENCE") { setStatus(code, "error"); return; }
+        editorState = trial;
+        if (validation.ok && getStore() && getStore().setTransientV2Palette) getStore().setTransientV2Palette(PaletteEditorPreviewId, editorState.draft);
+        else clearTransientPreview();
+        refreshProjection(validation);
     }
 
     function createPaletteTextInput(value, onChange) {
-        var input = createElement("input");
-        input.className = "registry-text-input palette-editor-text";
-        input.type = "text";
-        input.value = value || "";
-        input.addEventListener("input", function () {
-            onChange(this.value);
-        });
-        return input;
+        var input;
+        if (options.CoreUI) return options.CoreUI.createTextInput({ document: getDocument(), value: value || "", classNames: "registry-text-input palette-editor-text", onInput: function () { onChange(this.value); } });
+        input = createElement("input"); input.className = "registry-text-input palette-editor-text"; input.type = "text"; input.value = value || "";
+        input.addEventListener("input", function () { onChange(this.value); }); return input;
     }
 
     function createPaletteNumberInput(value, field, onChange, inputOptions) {
-        var input = createElement("input");
+        var input;
         inputOptions = inputOptions || {};
-        input.className = "num-input registry-range-number settings-number palette-editor-number";
-        input.type = "text";
-        input.inputMode = "decimal";
+        input = options.CoreUI ? options.CoreUI.createNumberInput({ document: getDocument(), value: String(value), field: field, classNames: "num-input registry-range-number settings-number palette-editor-number", disabled: inputOptions.disabled, onInput: function () {
+            var isDraft = options.isSchemaNumberDraftValue ? options.isSchemaNumberDraftValue(this.value) : false;
+            if (!isDraft && !isNaN(Number(this.value))) onChange(this.value, this, "input");
+        }, onDragValue: function (nextValue) { onChange(nextValue, input, "update"); }, onCommit: function (nextValue) { onChange(nextValue, input, "commit"); }, onCancel: function (nextValue) { onChange(nextValue, input, "cancel"); } }) : createElement("input");
+        if (!options.CoreUI) { input.className = "num-input registry-range-number settings-number palette-editor-number"; input.type = "text"; input.inputMode = "decimal"; input.value = String(value); }
         if (options.applySchemaNumberAttributes) {
             options.applySchemaNumberAttributes(input, field);
         }
-        input.value = String(value);
-        input.addEventListener("input", function () {
-            var isDraft = options.isSchemaNumberDraftValue ? options.isSchemaNumberDraftValue(this.value) : false;
-            if (!isDraft && !isNaN(Number(this.value))) {
-                onChange(this.value, this, "input");
-            }
-        });
-        if (options.setupRegistryNumberDrag) {
-            options.setupRegistryNumberDrag(input, field, function (nextValue) {
-                onChange(nextValue, input, "update");
-            }, {
-                onCommit: function (nextValue) {
-                    onChange(nextValue, input, "commit");
-                },
-                onCancel: function (nextValue) {
-                    onChange(nextValue, input, "cancel");
-                }
+        if (!options.CoreUI) {
+            input.addEventListener("input", function () {
+                var isDraft = options.isSchemaNumberDraftValue ? options.isSchemaNumberDraftValue(this.value) : false;
+                if (!isDraft && !isNaN(Number(this.value))) onChange(this.value, this, "input");
+            });
+            if (options.setupRegistryNumberDrag) options.setupRegistryNumberDrag(input, field, function (nextValue) { onChange(nextValue, input, "update"); }, {
+                onCommit: function (nextValue) { onChange(nextValue, input, "commit"); },
+                onCancel: function (nextValue) { onChange(nextValue, input, "cancel"); }
             });
         }
         if (inputOptions.disabled) {
-            input.disabled = true;
             input.classList.remove("is-drag-ready");
         }
         return input;
     }
 
     function renderPaletteEditorField(labelKey, control) {
-        var row = createElement("div");
-        var label = createElement("strong");
-        row.className = "settings-field palette-editor-field";
-        label.className = "control-label registry-text-body settings-field-label";
-        label.setAttribute("data-i18n", labelKey);
-        label.textContent = tr(labelKey);
-        row.appendChild(label);
-        row.appendChild(control);
-        return row;
+        var row;
+        var copy;
+        var label;
+        if (options.CoreUI) return options.CoreUI.createFieldRow({ document: getDocument(), labelKey: labelKey, labelText: tr(labelKey), control: control, classNames: "settings-field palette-editor-field ui-field-row--aligned", copyClassNames: "settings-field-copy palette-editor-field-copy", labelClassNames: "control-label registry-text-body settings-field-label" }).row;
+        row = createElement("div"); copy = createElement("span"); label = createElement("strong"); row.className = "settings-field palette-editor-field ui-field-row ui-field-row--aligned"; copy.className = "ui-field-copy settings-field-copy palette-editor-field-copy"; label.className = "ui-field-label control-label registry-text-body settings-field-label"; label.setAttribute("data-i18n", labelKey); label.textContent = tr(labelKey); copy.appendChild(label); row.appendChild(copy); row.appendChild(control); return row;
     }
 
     function createPalettePreviewBlock() {
@@ -529,10 +430,11 @@
         resetOptions = resetOptions || {};
 
         workspaceOpen = false;
+        if (options.closeColorPicker) options.closeColorPicker("palette-close");
         clearTransition();
         clearWorkspaceBindings();
         clearPreviewRafs();
-        removePaletteCustomSelectMenus();
+        if (options.disposeSelectsWithin && mount) options.disposeSelectsWithin(mount);
         if (resetOptions.discardDraft !== false) {
             discardTransientEditorState();
         } else {
@@ -579,6 +481,7 @@
         if (mount && resetOptions.renderLauncher !== false) {
             renderLauncher(mount);
         }
+        if (options.setSettingsBackParent) options.setSettingsBackParent("common.home");
     }
 
     function openWorkspace() {
@@ -606,6 +509,7 @@
             content.scrollTop = 0;
         }
         view.classList.add("is-palette-workspace", "is-palette-workspace-entering");
+        if (options.setSettingsBackParent) options.setSettingsBackParent("common.settings");
         refresh();
         if (options.nextFrame) {
             options.nextFrame(function () {
@@ -660,7 +564,7 @@
             if (token !== transitionToken) {
                 return;
             }
-            resetWorkspaceDomState({ discardDraft: true, renderLauncher: true });
+            resetWorkspaceDomState({ discardDraft: true, renderLauncher: true, restoreSettingsScroll: true });
             token = transitionToken;
             view.offsetWidth;
             view.classList.add("is-palette-workspace-transitioning", "is-palette-settings-reveal");
@@ -801,13 +705,9 @@
         }
         draft = editorState.draft;
         editorState.saving = true;
-        if (editorState.editorMode === "builtIn") {
-            result = store.updateBuiltInOverride(editorState.selectedPaletteId, draft);
-        } else if (editorState.editorMode === "custom") {
-            result = store.updatePalette(editorState.selectedPaletteId, draft);
-        } else {
-            result = store.createPalette(draft);
-        }
+        result = editorState.editorMode === "new" || editorState.editorMode === "duplicate"
+            ? store.createV2Palette(draft)
+            : store.saveV2Palette(editorState.selectedPaletteId, draft);
         editorState.saving = false;
         if (!result || !result.ok) {
             setStatus(tr("paletteLibrary.invalidPalette"), "error");
@@ -853,10 +753,10 @@
 
     function beginNewDraft() {
         var helper = getEditorHelper();
-        if (!helper || !helper.createNewEditorState) {
+        if (!helper || !helper.createNativeNewEditorState) {
             return;
         }
-        editorState = helper.createNewEditorState(selectedPaletteId);
+        editorState = helper.createNativeNewEditorState(selectedPaletteId);
         clearTransientPreview();
         refresh();
     }
@@ -864,23 +764,29 @@
     function beginDuplicateDraft() {
         var store = getStore();
         var helper = getEditorHelper();
-        var source = store && store.getResolvedPalette(selectedPaletteId);
-        if (!source || !helper || !helper.createDuplicateEditorState) {
+        var source = store && store.getV2Palette(selectedPaletteId);
+        if (!source || !helper || !helper.createNativeDuplicateEditorState) {
             return;
         }
-        editorState = helper.createDuplicateEditorState(source, selectedPaletteId);
+        editorState = helper.createNativeDuplicateEditorState(source, selectedPaletteId);
         clearTransientPreview();
         refresh();
     }
 
     function createButton(labelKey, className, handler) {
-        var button = createElement("button");
-        button.type = "button";
-        button.className = "panel-button registry-large-button " + (className || "");
+        var button = options.CoreUI ? options.CoreUI.createButton({ document: getDocument(), variant: className && className.indexOf("is-primary") >= 0 ? "primary" : (className && className.indexOf("is-danger") >= 0 ? "danger" : "neutral"), classNames: "panel-button registry-large-button panel-local-action " + (className || ""), onClick: handler }) : createElement("button");
+        if (!options.CoreUI) { button.type = "button"; button.className = "ui-button ui-button--" + (className && className.indexOf("is-primary") >= 0 ? "primary" : (className && className.indexOf("is-danger") >= 0 ? "danger" : "neutral")) + " panel-button registry-large-button panel-local-action " + (className || ""); button.addEventListener("click", handler); }
         button.setAttribute("data-i18n", labelKey);
         button.textContent = tr(labelKey);
-        button.addEventListener("click", handler);
         return button;
+    }
+
+    function requestWorkspaceBack() {
+        if (editorState && editorState.dirty) {
+            requestTransition(function () { closeWorkspace({ reason: "back", animate: true }); });
+            return;
+        }
+        closeWorkspace({ reason: "back", animate: true });
     }
 
     function renderActionBar() {
@@ -993,76 +899,178 @@
         }
     }
 
-    function renderEditorPane(editor, palettes, store) {
-        var state = editorState;
-        var draft = state && state.draft;
-        var roles = ["shadow", "base", "secondary", "highlight"];
-        var scroll;
-        var status;
-        var actions;
+    function createPaletteSelect(value, choices, onChange) {
+        var select = options.CoreUI ? options.CoreUI.createSelect({ document: getDocument(), classNames: "select-input settings-select palette-editor-select", onChange: function () { onChange(this.value); } }) : createElement("select");
+        (choices || []).forEach(function (choice) { var option = createElement("option"); option.value = choice.value; option.textContent = choice.label; option.selected = choice.value === value; select.appendChild(option); });
+        if (!options.CoreUI) select.addEventListener("change", function () { onChange(this.value); });
+        getWindow().setTimeout(function () { if (select.parentNode) enhanceSelect(select); }, 0);
+        return select;
+    }
+
+    function slotChoices(draft, excludedId) {
+        return draft.slots.filter(function (slot) { return slot.id !== excludedId; }).map(function (slot) { return { value: slot.id, label: slot.label }; });
+    }
+
+    function createDynamicColorControl(slot) {
+        var normalizeHex = options.normalizeHex || function (value, fallback) { return value || fallback; };
+        var built = options.CoreUI.createColorField({ document: getDocument(), id: "paletteSlot_" + slot.id, value: slot.value.color, fallback: "#000000", normalize: normalizeHex, isValid: function (value) { return /^#?[0-9a-f]{6}$/i.test(value); }, classNames: "control-inputs settings-field-control settings-color-control palette-editor-color-control", swatchClassNames: "settings-color-pill small-color-shell", valueClassNames: "native-color-input", hexClassNames: "settings-color-hex", openPicker: options.openCoreColorPicker, onPreview: apply, onCommit: apply });
+        function apply(value) { var normalized = normalizeHex(value, slot.value.color).toUpperCase(); mutateNativeDraft(function (draft) { draft.slots.filter(function (item) { return item.id === slot.id; })[0].value.color = normalized; }, false); }
+        if (options.bindHexInputSelectBehavior) options.bindHexInputSelectBehavior(built.hex);
+        return built.root;
+    }
+
+    function createNativeNumber(value, contract, apply) {
+        return createPaletteNumberInput(value, { min: contract.min, max: contract.max, step: contract.step || 0.01, defaultValue: value }, function (next) { apply(Number(next)); });
+    }
+
+    // Project the resolution of a single slot card in place. This is the only authority
+    // that writes a slot's resolved swatch / error evidence; both the initial render and
+    // the live projection refresh share it, so an update never rebuilds the slot card DOM.
+    function applyResolvedSlotProjection(card, slot, validation) {
+        var header = card.querySelector(".palette-slot-card-header");
+        var resolution = validation && validation.resolution;
+        var resolved = resolution && resolution.ok ? resolution.colors[slot.id] : null;
+        var swatch = card.querySelector(".palette-slot-resolved-swatch");
+        var error = card.querySelector(".palette-slot-resolution-error");
+        var code;
+        if (resolved) {
+            if (!swatch && header) {
+                swatch = createElement("span");
+                swatch.className = "palette-slot-resolved-swatch";
+                header.insertBefore(swatch, header.children[0] ? header.children[0].nextSibling : null);
+            }
+            if (swatch) {
+                swatch.style.backgroundColor = resolved;
+                swatch.title = resolved;
+            }
+            if (error && error.parentNode) error.parentNode.removeChild(error);
+        } else {
+            code = resolution && resolution.error ? resolution.error.code : (validation && validation.errors && validation.errors[0] && validation.errors[0].code);
+            if (swatch && swatch.parentNode) swatch.parentNode.removeChild(swatch);
+            if (!error) {
+                error = createElement("small");
+                error.className = "palette-slot-resolution-error";
+                card.appendChild(error);
+            }
+            error.textContent = code || tr("paletteLibrary.invalidPalette");
+        }
+    }
+
+    // Re-resolve the current full v2 draft and project every visible slot card's resolved
+    // color / error evidence without touching the Workspace root or its scroll owner.
+    function refreshProjection(validation) {
+        var helper = getEditorHelper();
+        var draft = editorState && editorState.draft;
+        var cards;
         var i;
-        if (!draft) {
-            return;
-        }
-        scroll = createElement("div");
-        scroll.className = "palette-editor-scroll";
-        scroll.appendChild(createPalettePreviewBlock());
-        status = createElement("div");
-        status.className = "palette-editor-draft-status";
-        scroll.appendChild(status);
-        scroll.appendChild(renderPaletteEditorField("paletteLibrary.displayName", createPaletteTextInput(draft.displayName, function (value) {
-            updateEditorDraft({ displayName: value });
-        })));
-        roles.forEach(function (role) {
-            scroll.appendChild(renderPaletteEditorField("paletteLibrary." + role, createPaletteColorControl(role, draft.colors[role])));
-        });
-        for (i = 0; i < 4; i++) {
-            (function (index) {
-                scroll.appendChild(renderPaletteEditorField("paletteLibrary.stop" + (index + 1), createPaletteNumberInput(draft.stops[index], {
-                    min: 0,
-                    max: 1,
-                    step: 0.01,
-                    defaultValue: draft.stops[index]
-                }, function (value, input, phase) {
-                    var helper = getEditorHelper();
-                    var stops = editorState.draft.stops.slice(0);
-                    var clamped = helper.clampStopValue(stops, index, value, 0.01);
-                    if (phase !== "input") {
-                        input.value = Number(clamped).toFixed(2);
-                    }
-                    stops[index] = clamped;
-                    updateEditorDraft({ stops: stops });
-                }, { disabled: index === 0 || index === 3 })));
-            }(i));
-        }
-        roles.forEach(function (role) {
-            scroll.appendChild(renderPaletteEditorField("paletteLibrary.weight." + role, createPaletteNumberInput(draft.weights[role], {
-                min: 0,
-                max: 1,
-                step: 0.01,
-                defaultValue: draft.weights[role]
-            }, function (value, input, phase) {
-                var weights = Object.assign({}, editorState.draft.weights);
-                var normalized = options.normalizeSchemaNumber ? options.normalizeSchemaNumber(value, { min: 0, max: 1, step: 0.01, defaultValue: draft.weights[role] }, draft.weights[role]) : Number(value);
-                if (phase !== "input") {
-                    input.value = Number(normalized).toFixed(2);
-                }
-                weights[role] = normalized;
-                updateEditorDraft({ weights: weights });
-            })));
-        });
-        renderToolMapping(scroll, palettes, store);
-        renderImportExport(scroll, store);
-        editor.appendChild(scroll);
-        actions = createElement("div");
-        actions.className = "palette-editor-action-bar";
-        editor.appendChild(actions);
-        if (store && typeof store.setTransientPalette === "function") {
-            store.setTransientPalette(PaletteEditorPreviewId, Object.assign({}, draft, { id: PaletteEditorPreviewId }));
+        if (!helper || !draft) return;
+        validation = validation || helper.validateNativeDraft(draft);
+        cards = queryAll(".palette-slot-card");
+        for (i = 0; i < cards.length; i++) {
+            var slotId = cards[i].getAttribute("data-slot-id");
+            var slot = draft.slots.filter(function (item) { return item.id === slotId; })[0];
+            if (slot) applyResolvedSlotProjection(cards[i], slot, validation);
         }
         syncDirtyUi();
         schedulePreview();
+    }
+
+    function sectionHeading(key) { var heading = createElement("h3"); heading.className = "palette-editor-section-title"; heading.textContent = tr(key); return heading; }
+
+    function renderSlotCard(slot, index, draft, validation) {
+        var helper = getEditorHelper(); var card = createElement("section"); var header = createElement("div"); var title = createElement("strong"); var buttons = createElement("span"); var kindChoices = ["DIRECT", "REFERENCE", "DERIVED"].map(function (kind) { return { value: kind, label: kind }; });
+        card.className = "palette-slot-card"; card.setAttribute("data-slot-id", slot.id); header.className = "palette-slot-card-header"; title.textContent = slot.label; buttons.className = "palette-slot-order-actions"; header.appendChild(title);
+        buttons.appendChild(createButton("paletteLibrary.moveUp", "palette-slot-move", function () { editorState = helper.moveNativeSlot(editorState, slot.id, -1); refreshEditorPane(); }));
+        buttons.lastChild.disabled = index === 0;
+        buttons.appendChild(createButton("paletteLibrary.moveDown", "palette-slot-move", function () { editorState = helper.moveNativeSlot(editorState, slot.id, 1); refreshEditorPane(); }));
+        buttons.lastChild.disabled = index === draft.slots.length - 1;
+        buttons.appendChild(createButton("paletteLibrary.delete", "palette-slot-delete is-danger", function () { var result = helper.deleteNativeSlot(editorState, slot.id); if (!result.ok) { setStatus(tr("paletteLibrary.slotDeleteBlocked") + " " + result.dependents.map(function (item) { return item.label; }).concat(result.boundRoles).join(", "), "error"); return; } editorState = result.state; refreshEditorPane(); }));
+        header.appendChild(buttons); card.appendChild(header);
+        card.appendChild(renderPaletteEditorField("paletteLibrary.slotLabel", createPaletteTextInput(slot.label, function (value) { mutateNativeDraft(function (next) { next.slots[index].label = value; }, false); title.textContent = value; })));
+        card.appendChild(renderPaletteEditorField("paletteLibrary.slotKind", createPaletteSelect(slot.kind, kindChoices, function (kind) { editorState = helper.updateNativeSlot(editorState, slot.id, { kind: kind }); refreshEditorPane(); })));
+        if (slot.kind === "DIRECT") card.appendChild(renderPaletteEditorField("paletteLibrary.slotColor", createDynamicColorControl(slot)));
+        if (slot.kind === "REFERENCE") card.appendChild(renderPaletteEditorField("paletteLibrary.sourceSlot", createPaletteSelect(slot.reference.slotId, slotChoices(draft, slot.id), function (sourceId) { mutateDependencySource(function (next) { next.slots[index].reference.slotId = sourceId; }); })));
+        if (slot.kind === "DERIVED") renderDerivedFields(card, slot, index, draft);
+        applyResolvedSlotProjection(card, slot, validation);
+        return card;
+    }
+
+    function renderDerivedFields(card, slot, index, draft) {
+        var helper = getEditorHelper(); var definitions = helper.derivationDefinitions(); var definition = definitions.filter(function (item) { return item.id === slot.derivation.derivationId; })[0];
+        card.appendChild(renderPaletteEditorField("paletteLibrary.derivation", createPaletteSelect(slot.derivation.derivationId, definitions.map(function (item) { return { value: item.id, label: item.id }; }), function (id) { editorState = helper.updateNativeSlot(editorState, slot.id, { derivationId: id }); refreshEditorPane(); })));
+        if (!definition) return;
+        slot.derivation.sourceSlotIds.forEach(function (sourceId, sourceIndex) { card.appendChild(renderPaletteEditorField("paletteLibrary.sourceSlot" + (sourceIndex + 1), createPaletteSelect(sourceId, slotChoices(draft, slot.id), function (nextId) { mutateDependencySource(function (next) { next.slots[index].derivation.sourceSlotIds[sourceIndex] = nextId; }); }))); });
+        Object.keys(definition.parameterSchema).forEach(function (name) { var contract = definition.parameterSchema[name]; card.appendChild(renderPaletteEditorField("paletteLibrary.parameter." + name, createNativeNumber(slot.derivation.parameters[name], contract, function (value) { mutateNativeDraft(function (next) { next.slots[index].derivation.parameters[name] = value; }, false); }))); });
+    }
+
+    function renderProfileFields(scroll, draft) {
+        var profile = draft.profiles.proceduralAppearance; var roles = ["shadow", "base", "secondary", "highlight"]; var i;
+        scroll.appendChild(sectionHeading("paletteLibrary.proceduralProfile"));
+        roles.forEach(function (role) { scroll.appendChild(renderPaletteEditorField("paletteLibrary." + role, createPaletteSelect(profile.bindings[role], slotChoices(draft, ""), function (slotId) { mutateNativeDraft(function (next) { next.profiles.proceduralAppearance.bindings[role] = slotId; }, false); }))); });
+        for (i = 0; i < 4; i++) (function (index) { scroll.appendChild(renderPaletteEditorField("paletteLibrary.stop" + (index + 1), createNativeNumber(profile.stops[index], { min: 0, max: 1, step: 0.01 }, function (value) { mutateNativeDraft(function (next) { next.profiles.proceduralAppearance.stops[index] = value; }, false); }))); }(i));
+        roles.forEach(function (role) { scroll.appendChild(renderPaletteEditorField("paletteLibrary.weight." + role, createNativeNumber(profile.weights[role], { min: 0, max: 1, step: 0.01 }, function (value) { mutateNativeDraft(function (next) { next.profiles.proceduralAppearance.weights[role] = value; }, false); }))); });
+        ["saturationBias", "luminanceBias", "contrastBias"].forEach(function (name) { scroll.appendChild(renderPaletteEditorField("paletteLibrary.parameter." + name, createNativeNumber(profile[name] || 0, { step: 0.01 }, function (value) { mutateNativeDraft(function (next) { next.profiles.proceduralAppearance[name] = value; }, false); }))); });
+    }
+
+    // Build the editor pane's scrollable content into an existing scroll container.
+    // This is the local rebuild seam for structural slot edits (add/delete/move/kind/derivation):
+    // it refreshes the slot cards and their projection but never replaces the scroll owner.
+    function buildEditorContent(scroll, palettes, store) {
+        var state = editorState; var draft = state && state.draft; var helper = getEditorHelper(); var status; var validation; var addActions;
+        if (!draft) return;
+        validation = helper.validateNativeDraft(draft);
+        scroll.appendChild(createPalettePreviewBlock());
+        status = createElement("div"); status.className = "palette-editor-draft-status"; scroll.appendChild(status);
+        scroll.appendChild(renderPaletteEditorField("paletteLibrary.displayName", createPaletteTextInput(draft.metadata.displayName, function (value) { mutateNativeDraft(function (next) { next.metadata.displayName = value; }, false); })));
+        scroll.appendChild(sectionHeading("paletteLibrary.dynamicSlots"));
+        draft.slots.forEach(function (slot, index) { scroll.appendChild(renderSlotCard(slot, index, draft, validation)); });
+        addActions = createElement("div"); addActions.className = "palette-slot-add-actions";
+        ["DIRECT", "REFERENCE", "DERIVED"].forEach(function (kind) { addActions.appendChild(createButton("paletteLibrary.add" + kind, "palette-slot-add", function () { editorState = helper.addNativeSlot(editorState, kind); refreshEditorPane(); })); }); scroll.appendChild(addActions);
+        renderProfileFields(scroll, draft); renderToolMapping(scroll, palettes, store); renderImportExport(scroll, store);
+    }
+
+    function syncEditorPresentation() {
+        var store = getStore();
+        var draft = editorState && editorState.draft;
+        if (!store || !draft) return;
+        if (paletteEditorDraftIsValid() && store.setTransientV2Palette) store.setTransientV2Palette(PaletteEditorPreviewId, draft);
+        else clearTransientPreview();
+        syncDirtyUi();
+        schedulePreview();
         renderActionBar();
+    }
+
+    function disposeEditorPaneSelects(editorPane) {
+        if (options.closeCustomSelectMenus) options.closeCustomSelectMenus();
+        if (options.disposeSelectsWithin && editorPane) options.disposeSelectsWithin(editorPane);
+    }
+
+    function renderEditorPane(editor, palettes, store) {
+        var scroll; var actions;
+        if (!editorState || !editorState.draft) return;
+        scroll = createElement("div"); scroll.className = "palette-editor-scroll ui-scroll-region";
+        buildEditorContent(scroll, palettes, store);
+        editor.appendChild(scroll);
+        actions = createElement("div"); actions.className = "palette-editor-action-bar"; editor.appendChild(actions);
+        syncEditorPresentation();
+    }
+
+    function refreshEditorPane() {
+        var mount = byId("settingsPaletteLibraryMount");
+        var store = getStore();
+        var editorPane = query(".palette-editor-pane");
+        var scroll = query(".palette-editor-scroll");
+        if (!mount || !store || !editorPane) return;
+        disposeEditorPaneSelects(editorPane);
+        if (scroll) {
+            scroll.innerHTML = "";
+            buildEditorContent(scroll, store.listResolvedPalettes(true), store);
+            renderActionBar();
+            syncDirtyUi();
+            schedulePreview();
+        } else {
+            renderEditorPane(editorPane, store.listResolvedPalettes(true), store);
+        }
     }
 
     function renderLauncher(mount) {
@@ -1070,9 +1078,18 @@
         var button = createButton("paletteLibrary.open", "palette-library-open", function () {
             openWorkspace();
         });
+        var intro = createElement("div");
+        var summaryMount = createElement("div");
+        intro.className = "palette-library-intro";
+        intro.appendChild(heading);
+        summaryMount.className = "palette-library-intro-summary";
+        intro.appendChild(summaryMount);
+        if (typeof options.renderPaletteSummary === "function") {
+            options.renderPaletteSummary(summaryMount);
+        }
         mount.className = "settings-section settings-section--palette-library";
         mount.innerHTML = "";
-        mount.appendChild(heading);
+        mount.appendChild(intro);
         mount.appendChild(button);
     }
 
@@ -1094,7 +1111,7 @@
             return;
         }
         closeCustomSelectMenus();
-        removePaletteCustomSelectMenus();
+        if (options.disposeSelectsWithin) options.disposeSelectsWithin(mount);
         clearWorkspaceBindings();
         clearPreviewRafs();
         clearTransientPreview();
@@ -1110,16 +1127,6 @@
         mount.innerHTML = "";
         mount.className = "settings-section settings-section--palette-library palette-workspace-section";
         heading = options.createSettingsSectionHeader ? options.createSettingsSectionHeader("section.procedural", "paletteLibrary.title", "paletteLibrary.description") : createElement("div");
-        back = createButton("paletteLibrary.backToSettings", "palette-workspace-back", function () {
-            if (editorState && editorState.dirty) {
-                requestTransition(function () {
-                    closeWorkspace({ reason: "back", animate: true });
-                });
-                return;
-            }
-            closeWorkspace({ reason: "back", animate: true });
-        });
-        heading.appendChild(back);
         mount.appendChild(heading);
 
         workspace = createElement("div");
@@ -1133,7 +1140,7 @@
             requestTransition(beginNewDraft);
         }));
         listScroll = createElement("div");
-        listScroll.className = "palette-library-list";
+        listScroll.className = "palette-library-list ui-scroll-region";
         editor = createElement("div");
         editor.className = "palette-editor-pane";
         splitter = createElement("div");
@@ -1184,7 +1191,6 @@
         renderEditorPane(editor, palettes, store);
         setupWorkspaceResize(workspace);
         setupWorkspaceSplitter(workspace, splitter);
-        setupCustomSelectInputs();
     }
 
     function escapeHtml(value) {
@@ -1207,11 +1213,13 @@
         getPaletteToolRows().forEach(function (tool) {
             var row = createElement("div");
             var label = createElement("span");
-            var select = createElement("select");
+            var select = options.CoreUI ? options.CoreUI.createSelect({ document: getDocument(), id: "paletteToolMap_" + tool.toolId, classNames: "select-input settings-select", onChange: function () {
+                store.setToolPalette(tool.toolId, this.value);
+                refreshPaletteDrivenHomeIcons();
+            } }) : createElement("select");
             row.className = "palette-tool-map-row";
             label.innerHTML = escapeHtml(tr(tool.titleKey)) + "<small>" + escapeHtml(tool.toolId) + "</small>";
-            select.id = "paletteToolMap_" + tool.toolId;
-            select.className = "select-input settings-select";
+            if (!options.CoreUI) { select.id = "paletteToolMap_" + tool.toolId; select.className = "select-input settings-select"; }
             palettes.filter(function (palette) { return !palette.isHidden; }).forEach(function (palette) {
                 var option = createElement("option");
                 option.value = palette.id;
@@ -1221,12 +1229,10 @@
                 }
                 select.appendChild(option);
             });
-            select.addEventListener("change", function () {
-                store.setToolPalette(tool.toolId, this.value);
-                refreshPaletteDrivenHomeIcons();
-            });
+            if (!options.CoreUI) select.addEventListener("change", function () { store.setToolPalette(tool.toolId, this.value); refreshPaletteDrivenHomeIcons(); });
             row.appendChild(label);
             row.appendChild(select);
+            enhanceSelect(select);
             section.appendChild(row);
         });
         container.appendChild(section);
@@ -1244,8 +1250,8 @@
         var importDescription = createElement("p");
         var exportLabel = createElement("label");
         var importLabel = createElement("label");
-        var exportTextarea = createElement("textarea");
-        var importTextarea = createElement("textarea");
+        var exportTextarea = options.CoreUI ? options.CoreUI.createTextarea({ document: getDocument(), classNames: "registry-textarea palette-json-box palette-json-export", resizeDirection: "vertical" }) : createElement("textarea");
+        var importTextarea = options.CoreUI ? options.CoreUI.createTextarea({ document: getDocument(), classNames: "registry-textarea palette-json-box palette-json-import", resizeDirection: "vertical" }) : createElement("textarea");
         var exportActions = createElement("div");
         var importActions = createElement("div");
         var validationStatus = createElement("small");
@@ -1303,7 +1309,7 @@
         exportTitle.textContent = tr("paletteLibrary.exportConfiguration");
         exportDescription.textContent = tr("paletteLibrary.exportDescription");
         exportLabel.textContent = tr("paletteLibrary.exportResult");
-        exportTextarea.className = "registry-textarea palette-json-box palette-json-export";
+        if (!options.CoreUI) exportTextarea.className = "registry-textarea palette-json-box palette-json-export";
         exportTextarea.readOnly = true;
         exportTextarea.setAttribute("aria-label", tr("paletteLibrary.exportResult"));
         exportActions.className = "settings-action-row palette-library-actions";
@@ -1332,7 +1338,7 @@
         importTitle.textContent = tr("paletteLibrary.importConfiguration");
         importDescription.textContent = tr("paletteLibrary.importDescription");
         importLabel.textContent = tr("paletteLibrary.importInput");
-        importTextarea.className = "registry-textarea palette-json-box palette-json-import";
+        if (!options.CoreUI) importTextarea.className = "registry-textarea palette-json-box palette-json-import";
         importTextarea.placeholder = tr("paletteLibrary.pasteJsonPlaceholder");
         importTextarea.setAttribute("aria-label", tr("paletteLibrary.importInput"));
         validationStatus.className = "palette-json-validation";
@@ -1364,12 +1370,12 @@
         exportSection.appendChild(exportTitle);
         exportSection.appendChild(exportDescription);
         exportSection.appendChild(exportLabel);
-        exportSection.appendChild(exportTextarea);
+        exportSection.appendChild(exportTextarea._coreFrame || exportTextarea);
         exportSection.appendChild(exportActions);
         importSection.appendChild(importTitle);
         importSection.appendChild(importDescription);
         importSection.appendChild(importLabel);
-        importSection.appendChild(importTextarea);
+        importSection.appendChild(importTextarea._coreFrame || importTextarea);
         importSection.appendChild(validationStatus);
         importSection.appendChild(importActions);
         importSection.appendChild(replaceConfirm);
@@ -1450,6 +1456,10 @@
         },
         isOpen: function () {
             return workspaceOpen;
+        },
+        requestBack: function () {
+            requestWorkspaceBack();
+            return api;
         },
         refresh: function () {
             refresh();

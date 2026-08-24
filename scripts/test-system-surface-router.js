@@ -1,0 +1,21 @@
+const Catalog = require("../client/js/toolCatalog.js");
+const Router = require("../client/js/system/systemSurfaceRouter.js");
+let assertions = 0;
+function check(value, message) { assertions += 1; if (!value) throw new Error(message); }
+const catalog = Catalog.createCatalog();
+catalog.setRegistryTools([{ id: "tool", titleKey: "tool" }]);
+catalog.registerSystemSurface({ id: "settings", titleKey: "settings", home: { visible: true }, route: { defaultPage: "root", pages: ["root", "appearance"] } });
+catalog.registerSystemSurface({ id: "context", home: { visible: false }, route: { defaultPage: "root", pages: ["root"] } });
+check(catalog.getHomeEntries({}).map((entry) => entry.id).join(",") === "tool,settings", "only Home-visible systems are projected");
+check(catalog.getDisplayMetadata("settings").titleKey === "settings", "system display metadata is available");
+check(catalog.getRegistryTool("settings") === null && catalog.getRoute("settings").kind === "system", "system does not fake Registry ownership");
+const events = [];
+const diagnostics = [];
+const router = Router.create({ catalog, diagnostics: (code) => diagnostics.push(code), callbacks: { open: (route) => events.push("open:" + route.pageId), navigate: (route) => events.push("navigate:" + route.pageId), close: () => events.push("close") } });
+check(router.open("settings", "root", {}) && router.getActiveRoute().kind === "system", "opens structured system route");
+check(router.navigate("appearance") && router.getActiveRoute().pageId === "appearance", "navigates to appearance");
+check(router.back() && router.getActiveRoute().pageId === "root", "back returns to root");
+check(router.close() && router.getActiveRoute() === null, "close clears active route");
+check(!router.open("missing") && !router.open("settings", "missing") && diagnostics.join(",") === "SYSTEM_SURFACE_UNKNOWN,SYSTEM_PAGE_UNKNOWN", "unknown routes fail safely");
+check(events.join(",") === "open:root,navigate:appearance,navigate:root,close", "lifecycle callbacks are deterministic");
+console.log(`System Surface Router tests passed: ${assertions} assertions.`);

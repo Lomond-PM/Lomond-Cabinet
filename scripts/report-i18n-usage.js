@@ -178,6 +178,79 @@ function flattenToolI18n(tool) {
     return out;
 }
 
+const CLIENT_KEY_FIELDS = new Set(["labelKey", "descriptionKey", "titleKey", "hintKey"]);
+
+// Collect every literal i18n-key field value declared in client-side JS (registries,
+// settings schema, design-tuning registry). The static report never indexed these
+// because they are rendered through `field.labelKey` / `tr(field.descriptionKey)`
+// rather than `tr("literal")`. Keys here that are absent from the global dictionary
+// surface as runtime "missing key" warnings, so they must be treated as an error.
+function collectClientKeyFieldRefs() {
+    const refs = new Map();
+    const fieldRe = /(labelKey|descriptionKey|titleKey|hintKey)\s*:\s*"([^"]+)"/g;
+    const files = listFiles(path.join(ROOT, "client"), false)
+        .filter((file) => path.extname(file) === ".js" && !/i18n\.js$/.test(file));
+    for (const file of files) {
+        const text = readText(file);
+        const rel = path.relative(ROOT, file).replace(/\\/g, "/");
+        let m;
+        while ((m = fieldRe.exec(text))) {
+            if (!CLIENT_KEY_FIELDS.has(m[1])) continue;
+            const key = m[2];
+            if (!refs.has(key)) refs.set(key, []);
+            if (refs.get(key).indexOf(rel) === -1) refs.get(key).push(rel);
+        }
+    }
+    return refs;
+}
+
+function missingClientDictionaryKeys(dictionaries, clientRefs) {
+    const en = (dictionaries.en || {});
+    const zh = (dictionaries["zh-CN"] || {});
+    const missing = [];
+    Array.from(clientRefs.keys()).sort().forEach((key) => {
+        if (!en[key]) missing.push(key + " [en]");
+        if (!zh[key]) missing.push(key + " [zh-CN]");
+    });
+    return missing;
+}
+
+// Collect every literal `tr("key")` / `setAttribute("data-i18n","key")` /
+// `data-i18n="key"` reference in client JS/HTML. These are rendered through the
+// global tr(), so a key absent from the dictionary surfaces as a runtime
+// missing-key warning. Tool-local keys (`host/tools/*.tool.jsx` i18n blocks) are
+// not scanned here; a key that only exists tool-locally but is referenced via the
+// global tr() is therefore correctly reported as a global-gap.
+function collectLiteralI18nRefs() {
+    const refs = new Map();
+    const re = /(?:tr\(\s*"([^"]+)"\s*\)|setAttribute\(\s*"data-i18n",\s*"([^"]+)"\s*\)|data-i18n="([^"]+)")/g;
+    const files = listFiles(path.join(ROOT, "client"), false)
+        .filter((file) => (/\.js$/.test(file) || /\.html$/.test(file)) && !/i18n\.js$/.test(file));
+    for (const file of files) {
+        const text = readText(file);
+        const rel = path.relative(ROOT, file).replace(/\\/g, "/");
+        let m;
+        while ((m = re.exec(text))) {
+            const key = m[1] || m[2] || m[3];
+            if (!key || key.indexOf(".") < 0) continue;
+            if (!refs.has(key)) refs.set(key, []);
+            if (refs.get(key).indexOf(rel) === -1) refs.get(key).push(rel);
+        }
+    }
+    return refs;
+}
+
+function missingLiteralI18nKeys(dictionaries, literalRefs) {
+    const en = (dictionaries.en || {});
+    const zh = (dictionaries["zh-CN"] || {});
+    const missing = [];
+    Array.from(literalRefs.keys()).sort().forEach((key) => {
+        if (!en[key]) missing.push(key + " [en]");
+        if (!zh[key]) missing.push(key + " [zh-CN]");
+    });
+    return missing;
+}
+
 function summarizeValue(value) {
     if (typeof value !== "string") {
         return "";
@@ -332,6 +405,7 @@ function buildReport() {
     const toolKeyOwners = new Map();
     const toolRows = [];
 
+    const schemaUnresolvable = new Map(); // key -> { langs:Set, files:Set }
     tools.forEach((tool) => {
         const refs = new Set();
         if (tool.titleKey) refs.add(tool.titleKey);
@@ -356,6 +430,21 @@ function buildReport() {
         const hardcodedCount = countRegex(tool.raw, /\b(?:label|title|description)\s*:\s*["'][^"']+["']/g);
         const plainMessageCount = countRegex(tool.raw, /\bmessage\s*:\s*["'][^"']+["']/g);
 
+        // A Registry Tool schema i18n reference resolves either through the merged
+        // tool-local dictionary OR the global dictionary. If it resolves in neither,
+        // it is a runtime missing-key warning and must be fixed at the schema owner.
+        Array.from(refs).forEach((key) => {
+            if (key.startsWith("common.")) return;
+            const enOk = !!dictionaries.en[key] || enKeys.has(key);
+            const zhOk = !!((dictionaries["zh-CN"] || {})[key]) || zhKeys.has(key);
+            if (enOk && zhOk) return;
+            const entry = schemaUnresolvable.get(key) || { langs: new Set(), files: new Set() };
+            if (!enOk) entry.langs.add("en");
+            if (!zhOk) entry.langs.add("zh-CN");
+            entry.files.add(tool.file);
+            schemaUnresolvable.set(key, entry);
+        });
+
         toolRows.push([
             tool.file,
             tool.id,
@@ -370,9 +459,20 @@ function buildReport() {
         ]);
     });
 
+    const schemaMissingKeys = [];
+    Array.from(schemaUnresolvable.keys()).sort().forEach((key) => {
+        const entry = schemaUnresolvable.get(key);
+        Array.from(entry.langs).sort().forEach((lang) => schemaMissingKeys.push(key + " [" + lang + "]"));
+    });
+
     const globalKeys = Object.keys(dictionaries.en || {}).sort();
     const allFiles = listFiles(ROOT, true);
     const usage = scanKeyUsage(allFiles, globalKeys);
+
+    const clientKeyRefs = collectClientKeyFieldRefs();
+    const missingClientKeys = missingClientDictionaryKeys(dictionaries, clientKeyRefs);
+    const literalRefs = collectLiteralI18nRefs();
+    const missingLiteralKeys = missingLiteralI18nKeys(dictionaries, literalRefs);
 
     const keyRows = [];
     const duplicateRows = [];
@@ -485,6 +585,39 @@ function buildReport() {
         "",
         deferredRows.length ? markdownTable(["key", "reason", "what must be checked before deleting"], deferredRows) : "No deferred keys found.",
         "",
+        "## Client Registry i18n Key Coverage",
+        "",
+        "These keys are declared as literal `labelKey` / `descriptionKey` / `titleKey` / `hintKey` in client-side registries and rendered through `tr(field.labelKey)`. They are not detected by the literal `tr(\"...\")` scan, so any key missing from the global dictionary is a runtime missing-key warning and must be fixed.",
+        "",
+        missingClientKeys.length
+            ? markdownTable(["missing key", "used in"], missingClientKeys.map((key) => {
+                const base = key.replace(" [en]", "").replace(" [zh-CN]", "");
+                return [key, (clientKeyRefs.get(base) || []).join(", ") || "client registry"];
+            }))
+            : "No client-registry i18n key is missing from the global dictionary.",
+        "",
+        "## Literal i18n Key Coverage",
+        "",
+        "These keys are referenced as literal `tr(\"...\")` / `data-i18n=\"...\"` and rendered through the global `tr()`. Any such key missing from the global dictionary is a runtime missing-key warning and must be fixed.",
+        "",
+        missingLiteralKeys.length
+            ? markdownTable(["missing key", "used in"], missingLiteralKeys.map((key) => {
+                const base = key.replace(" [en]", "").replace(" [zh-CN]", "");
+                return [key, (literalRefs.get(base) || []).join(", ") || "client"];
+            }))
+            : "No literal i18n key is missing from the global dictionary.",
+        "",
+        "## Registry Tool Schema i18n Coverage",
+        "",
+        "These i18n references are declared in production Registry Tool schemas (`host/tools/*.tool.jsx`). Each must resolve through the merged tool-local dictionary OR the global dictionary; a reference that resolves in neither is a runtime missing-key warning.",
+        "",
+        schemaMissingKeys.length
+            ? markdownTable(["unresolved key", "tool schema"], schemaMissingKeys.map((key) => {
+                const base = key.replace(" [en]", "").replace(" [zh-CN]", "");
+                return [key, (schemaUnresolvable.get(base) || { files: [] }).files.join(", ") || "tool schema"];
+            }))
+            : "No Registry Tool schema i18n reference is unresolvable.",
+        "",
         "## Notes",
         "",
         "- Registry tool copy should live in each `host/tools/*.tool.jsx` file.",
@@ -496,12 +629,18 @@ function buildReport() {
 
     return {
         content: report,
+        missingClientKeys: missingClientKeys,
+        missingLiteralKeys: missingLiteralKeys,
+        schemaMissingKeys: schemaMissingKeys,
         summary: {
         report: path.relative(ROOT, REPORT_PATH).replace(/\\/g, "/"),
         globalKeyCount: globalKeys.length,
         candidateDeleteCount: candidateRows.length,
         deferredCount: deferredRows.length,
-        duplicateToolKeyCount: duplicateRows.length
+        duplicateToolKeyCount: duplicateRows.length,
+        clientMissingKeyCount: missingClientKeys.length,
+        literalMissingKeyCount: missingLiteralKeys.length,
+        schemaMissingKeyCount: schemaMissingKeys.length
         }
     };
 }
@@ -513,13 +652,27 @@ function normalizeLineEndings(value) {
 function checkReport(reportPath, expectedContent) {
     const target = reportPath || REPORT_PATH;
     if (!fs.existsSync(target)) {
-        return { ok: false, reason: "missing" };
+        return { ok: false, reason: "missing", missingClientKeys: [], missingLiteralKeys: [], schemaMissingKeys: [] };
     }
-    const expected = expectedContent === undefined ? buildReport().content : expectedContent;
-    return {
-        ok: normalizeLineEndings(readText(target)) === normalizeLineEndings(expected),
-        reason: "out-of-date"
-    };
+    const built = expectedContent === undefined ? buildReport() : { content: expectedContent, missingClientKeys: [], missingLiteralKeys: [], schemaMissingKeys: [] };
+    const expected = built.content;
+    const fresh = normalizeLineEndings(readText(target)) === normalizeLineEndings(expected);
+    if (!fresh) {
+        return { ok: false, reason: "out-of-date", missingClientKeys: built.missingClientKeys || [], missingLiteralKeys: built.missingLiteralKeys || [], schemaMissingKeys: built.schemaMissingKeys || [] };
+    }
+    const missingClient = built.missingClientKeys || [];
+    const missingLiteral = built.missingLiteralKeys || [];
+    const missingSchema = built.schemaMissingKeys || [];
+    if (missingClient.length) {
+        return { ok: false, reason: "client-registry-missing-keys: " + missingClient.slice(0, 8).join(", "), missingClientKeys: missingClient, missingLiteralKeys: missingLiteral, schemaMissingKeys: missingSchema };
+    }
+    if (missingLiteral.length) {
+        return { ok: false, reason: "literal-missing-keys: " + missingLiteral.slice(0, 8).join(", "), missingClientKeys: missingClient, missingLiteralKeys: missingLiteral, schemaMissingKeys: missingSchema };
+    }
+    if (missingSchema.length) {
+        return { ok: false, reason: "schema-missing-keys: " + missingSchema.slice(0, 8).join(", "), missingClientKeys: missingClient, missingLiteralKeys: missingLiteral, schemaMissingKeys: missingSchema };
+    }
+    return { ok: true, reason: "", missingClientKeys: missingClient, missingLiteralKeys: missingLiteral, schemaMissingKeys: missingSchema };
 }
 
 function writeReport(reportPath, expectedContent) {
@@ -533,8 +686,10 @@ function writeReport(reportPath, expectedContent) {
     return true;
 }
 
-function printCheckFailure() {
-    console.error("Generated i18n report is out of date.");
+function printCheckFailure(result) {
+    const reason = (result && result.reason) ? result.reason : "";
+    console.error("Generated i18n report is out of date or has missing client-registry keys.");
+    if (reason) console.error(reason);
     console.error("Run: node scripts/report-i18n-usage.js");
     console.error("Then stage docs/reports/i18n-usage-report.md.");
 }
@@ -547,8 +702,9 @@ function runCli(args) {
     }
     const built = buildReport();
     if (options[0] === "--check") {
-        if (!checkReport(REPORT_PATH, built.content).ok) {
-            printCheckFailure();
+        const result = checkReport(REPORT_PATH, built.content);
+        if (!result.ok) {
+            printCheckFailure(result);
             return 1;
         }
         console.log("Generated i18n report is up to date.");

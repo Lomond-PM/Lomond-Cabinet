@@ -8,7 +8,7 @@ AEToolbox.ping = function () {
 
 (function () {
     AEToolbox.hostApiVersion = "1.0.0";
-    AEToolbox.projectVersion = "0.3.1";
+    AEToolbox.projectVersion = "0.3.2";
     AEToolbox.version = AEToolbox.hostApiVersion;
     AEToolbox.tools = AEToolbox.tools || {};
 
@@ -595,19 +595,17 @@ AEToolbox.ping = function () {
         if (!comp) {
             return AEToolbox.toJson({
                 ok: true,
-                message: "Ready. Open a composition to begin.",
-                selectionLabel: "No comp"
+                statusId: "no-active-comp",
+                selectedCount: 0
             });
         }
 
         var selectedCount = comp.selectedLayers ? comp.selectedLayers.length : 0;
-        var message = selectedCount > 0 ? "Selected " + selectedCount + " layer(s)." : "No selected layers.";
-        var label = selectedCount > 0 ? selectedCount + " layer(s)" : "No selection";
 
         return AEToolbox.toJson({
             ok: true,
-            message: message,
-            selectionLabel: label
+            statusId: selectedCount > 0 ? "selection" : "no-selection",
+            selectedCount: selectedCount
         });
     };
 

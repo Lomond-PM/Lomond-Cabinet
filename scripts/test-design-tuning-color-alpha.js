@@ -1,0 +1,38 @@
+#!/usr/bin/env node
+"use strict";
+const assert = require("assert");
+const path = require("path");
+const root = path.resolve(__dirname, "..");
+const CoreUI = require(path.join(root, "client/js/ui/coreUi.js"));
+const Registry = require(path.join(root, "client/js/designTuning/designTuningParameterRegistry.js"));
+const Store = require(path.join(root, "client/js/designTuning/designTuningStateStore.js"));
+const Resolver = require(path.join(root, "client/js/designTuning/designTuningResolver.js"));
+const main = require("fs").readFileSync(path.join(root, "client/js/main.js"), "utf8");
+const canonical = "rgba(5, 4, 3, 0.5)";
+assert.deepStrictEqual(CoreUI.parseColorAlphaValue(canonical), { color: "#050403", alpha: 0.5 });
+["rgba(256, 0, 0, .5)", "rgba(0, 0, 0, 2)", "var(--x)", "color-mix(in srgb, red, blue)", "red", "rgba(bad)"].forEach(value => assert.strictEqual(CoreUI.parseColorAlphaValue(value), null, value + " rejected"));
+assert.strictEqual(CoreUI.isValidColorAlphaValue({ color: "#ABCDEF", alpha: 0 }), true);
+assert.strictEqual(CoreUI.isValidColorAlphaValue({ color: "#abcdef", alpha: 1.01 }), false);
+assert.deepStrictEqual(CoreUI.parseColorAlphaValue(CoreUI.serializeColorAlphaValue({ color: "#ABCDEF", alpha: 0.37 })), { color: "#abcdef", alpha: 0.37 });
+const memory = { value: null, writes: 0, getItem() { return this.value; }, setItem(key, value) { this.value = value; this.writes += 1; } };
+let store = Store.create({ storage: memory, registry: Registry }); store.load();
+const style = { values: {}, setProperty(key, value) { this.values[key] = value; }, removeProperty(key) { delete this.values[key]; } };
+function createResolver(currentStore) { return Resolver.create({ registry: Registry, store: currentStore, rootStyle: style, readComputed: property => property === "--field-surface" ? canonical : ({ "--text-secondary": "rgba(246, 240, 223, .66)", "--text-tertiary": "rgba(246, 240, 223, .42)", "--registry-option-surface": "rgba(8, 7, 6, .68)", "--separator": "rgba(214, 178, 94, .16)", "--panel-border": "rgba(214, 178, 94, .22)", "--input-border": "rgba(214, 178, 94, .16)" }[property] || "12px"), getCanonicalDuration: () => 160, parseShadow: CoreUI.parseShadowValue, serializeShadow: CoreUI.serializeShadowValue, parseColorAlpha: CoreUI.parseColorAlphaValue, serializeColorAlpha: CoreUI.serializeColorAlphaValue }); }
+let resolver = createResolver(store); resolver.initialize(); const writes = memory.writes; const next = { color: "#123456", alpha: 0.52 };
+assert.ok(resolver.setTransientOverride("surface.field", next));
+assert.strictEqual(style.values["--field-surface"], "rgba(18, 52, 86, 0.52)");
+assert.strictEqual(memory.writes, writes, "preview does not write Store");
+assert.strictEqual(resolver.getEvidence().promotionPatch["surface.field"], undefined, "transient excluded from evidence");
+assert.ok(resolver.commitTransientOverride("surface.field", next));
+assert.strictEqual(memory.writes, writes + 1, "one final commit");
+assert.strictEqual(style.values["--field-surface"], "rgba(18, 52, 86, 0.52)", "no-flash handoff");
+assert.deepStrictEqual(resolver.getEvidence().promotionPatch["surface.field"].to, next);
+store = Store.create({ storage: memory, registry: Registry }); store.load(); resolver = createResolver(store); resolver.initialize();
+assert.deepStrictEqual(store.getOverride("surface.field"), next, "reload restores committed structured value");
+resolver.resetParameter("surface.field"); assert.strictEqual(style.values["--field-surface"], undefined, "reset restores stylesheet canonical");
+["text.muted", "border.default", "border.subtle"].forEach(id => assert.strictEqual(Registry.get(id), null, id + " alias has no override"));
+const colorAlphaConsumer = /supportsAlpha:\s*true,\s*classNames:\s*"settings-field-control settings-design-tuning-color-alpha",\s*openPicker:\s*openCoreColorPicker/;
+assert.ok(colorAlphaConsumer.test(main), "Design Tuning alpha ColorField uses the same formal picker seam as ordinary ColorField");
+assert.ok(/registryControlLabColorAlphaField[\s\S]{0,220}supportsAlpha:\s*true,\s*openPicker:\s*openCoreColorPicker/.test(main), "Control Lab alpha specimen uses the same interactive picker seam");
+assert.ok(/function createColorField[\s\S]*listen\(swatch, "click"[\s\S]*options\.openPicker/.test(require("fs").readFileSync(path.join(root, "client/js/ui/coreUi.js"), "utf8")), "swatch remains the generic ColorField picker trigger");
+console.log("Design Tuning Color + Alpha contract tests passed.");
