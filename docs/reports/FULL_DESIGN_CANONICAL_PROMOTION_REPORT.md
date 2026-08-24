@@ -89,9 +89,14 @@ This is an **audit / report artifact** of the Canonical Promotion phase. It is n
 
 Design Tuning remains a formal calibration system; the promotion changes only the canonical baseline values in `MotionDefaults` / canonical CSS. No Design Tuning Registry entries, overrides functionality, transient calibration, or UI were removed or disabled.
 
-## Remaining AE Acceptance
+## AE Acceptance（CLOSED / AE ACCEPTED）
 
-Canonical Promotion changes the *value source*, not the visual result. Real AE acceptance is two-phase:
+Canonical Promotion changes the *value source*, not the visual result. The user completed the real AE two-phase acceptance and confirmed all checkpoints:
 
-1. **With existing overrides** — the promoted build should render identically to pre-promotion (override == new canonical; no double-application).
-2. **Clear calibration overrides** — after confirming Phase 1, the user clears `AEToolbox.designTuning.v1` overrides (Design Tuning Reset All). Expected `override count 39 → 0` and identical visuals. This is a user calibration-lifecycle action, **not** a runtime migration; no code deletes user overrides.
+1. **Existing overrides parity — PASS.** The promoted build rendered identically to pre-promotion with the original 39 Design Tuning overrides present (override == new canonical; no double-application or visual drift).
+2. **Reset All 39 → 0 — PASS.** The user cleared `AEToolbox.designTuning.v1` overrides via Design Tuning Reset All; override count went `39 → 0`. This is a user calibration-lifecycle action, **not** a runtime migration; no code deletes user overrides.
+3. **Post-reset visual parity — PASS.** Visual result was identical before and after the reset across Motion / Spacing / Radius / Controls / Elevation / Surface; Protected parameters unaffected.
+4. **Full AE restart parity — PASS.** After a complete AE restart the overrides remained `0` and the UI kept the accepted calibration result.
+5. **Console clean — PASS.** project-owned Console warnings/errors = 0.
+
+Canonical Promotion: **CLOSED / AE ACCEPTED**.
