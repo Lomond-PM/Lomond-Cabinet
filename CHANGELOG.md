@@ -12,6 +12,26 @@ This project follows simple semantic versioning for development handoff:
 
 _No unreleased changes._
 
+## [0.3.2] - 2026-08-24
+
+### Design system and shared components
+
+- Converged Registry Renderer controls on shared CoreUI component ownership, provenance, accessibility, interaction, and presentation contracts.
+- Added the Appearance and Design Tuning foundations, completed full semantic coverage calibration, and promoted the accepted canonical values without rewriting historical calibration evidence.
+- Converged semantic surface, spacing, radius, motion, control, typography, border, action, and elevation authorities across their intended consumers.
+
+### Palette and Settings
+
+- Shipped Palette Store v2 with stable dynamic slots, `DIRECT` / same-palette `REFERENCE` / registered `DERIVED` sources, procedural role bindings, native full-v2 Workspace editing, and legacy compatibility boundaries.
+- Added Palette Workspace Save/Cancel, Back/Reopen, responsive presentation, shared Color Picker integration, and one-shot Primary Text palette assignment.
+- Finalized the Global Settings information architecture as General, Appearance, Advanced, and Developer, including Advanced Appearance disclosure and generic Developer Mode gating.
+
+### Vela and stability
+
+- Converged Vela presentation and spacing ownership: Card Inset owns shell placement, Content Inline/Block Insets are shared by Conversation and Composer, and Surface Edge owns Vela Settings.
+- Preserved the experimental Provider activation and execution-authority boundaries; no 0.3.3 Agent Runtime capability is included.
+- Removed project-owned startup/runtime Console warnings and expanded integrated regression coverage across bootstrap, Registry, Settings, Appearance, Palette, Design Tuning, Vela, Provider, i18n, and shared controls.
+
 ## [0.3.1] - 2026-08-07
 
 ### Vela

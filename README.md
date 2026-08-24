@@ -2,13 +2,13 @@
 
 Lomond Cabinet is an After Effects CEP extension that combines a registry-driven tool system, procedural Home visuals, and the experimental Vela local-assistant surface.
 
-- **Current version:** `0.3.1`
+- **Current version:** `0.3.2`
 - **Latest published tag:** `v0.3.1`
 - **Extension bundle id:** `com.kevin.aetoolbox`
 - **Manifest menu name:** `AE Toolbox`
 - **Visible panel name:** `Lomond Cabinet`
 
-Version 0.3.1 is the stabilized **Vela Experimental Preview** release line. Its automated release suite and AE P0 regression have passed, while production Provider activation remains locked because no model is qualified or selected as the default.
+Version 0.3.2 is the release candidate for the integrated UI / Design System Foundation. It adds shared component convergence, Appearance and Design Tuning authorities, Palette Store v2 and its native Workspace, the final Settings information architecture, and Vela spacing convergence. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default.
 
 ## Runtime architecture
 
@@ -112,6 +112,14 @@ The Home view supports deterministic procedural tool icons and an optional proce
 
 Detailed decisions are maintained in [`docs/design/procedural-appearance.md`](docs/design/procedural-appearance.md).
 
+### Settings, Appearance, Design Tuning, and Palette
+
+Global Settings is one disclosure-based composition ordered as **General, Appearance, Advanced, Developer**. Appearance owns user-facing visual preferences and the Palette Library entry; Advanced contains Advanced Appearance Settings; Developer is gated by Developer Mode and contains the Design Tuning workspace and labs.
+
+The living Design Tuning Registry contains 67 parameters. Appearance-backed parameters remain mirrors of their original authority, while Design Tuning-owned parameters use the validated `AEToolbox.designTuning.v1` override path. This living 67-parameter set is different from the historical calibration-time 67-parameter snapshot.
+
+Palette Store v2 is the sole production persistence authority. Palettes have stable dynamic slots using `DIRECT`, same-palette `REFERENCE`, or registered `DERIVED` sources, plus procedural appearance role bindings. Palette Workspace edits a full-v2 memory draft; Save is the Store write boundary and Cancel discards transient preview. Cross-palette references, Harmony generators, node editing, global active Palette, and Appearance live-link remain deferred.
+
 ### Vela Experimental Preview
 
 Vela is a persistent conversation surface for local, approval-driven After Effects assistance.
@@ -124,7 +132,7 @@ The optional LM Studio Provider is:
 - reset on reload for acknowledgement, readiness, and enablement;
 - allowed to persist only endpoint and Model ID configuration.
 
-Readiness means only that the configured local model instance is loaded. It is **not** qualification. No model is qualified, recommended, or selected as the production default in 0.3.1.
+Readiness means only that the configured local model instance is loaded. It is **not** qualification. No model is qualified, recommended, or selected as the production default in 0.3.2.
 
 The trusted activation policy keeps:
 
@@ -206,7 +214,7 @@ docs/HANDOFF.md
 
 ## Version and release status
 
-The current release version is `0.3.1`, and the latest published tag is `v0.3.1`. Post-release development continues from `dev`; future releases follow the same reviewed `dev → main → version tag` flow.
+The prepared project version is `0.3.2`; until the user completes the release, the latest published tag remains immutable `v0.3.1`. Releases follow the reviewed `dev → main → version tag` flow.
 
 Keep these synchronized for future releases:
 
@@ -216,11 +224,11 @@ Keep these synchronized for future releases:
 - `CHANGELOG.md`
 - current-version statements in maintained documentation
 
-`AEToolbox.hostApiVersion` is an independent host contract version and remains `1.0.0` in release 0.3.1.
+`AEToolbox.hostApiVersion` is an independent host contract version and remains `1.0.0` in release 0.3.2.
 
 ## Known issues
 
-The 0.3.1 narrow Vela/Settings responsive work is complete. Remaining accepted limitations are tracked in [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md).
+The 0.3.2 integrated UI, Settings, Palette, Design Tuning, and Vela spacing work is closed and AE accepted. Remaining accepted limitations are tracked in [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md).
 
 ## License and release history
 

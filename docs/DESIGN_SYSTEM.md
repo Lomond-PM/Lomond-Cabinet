@@ -1,5 +1,13 @@
 # DESIGN_SYSTEM.md
 
+## 0.3.2 release authority
+
+The 0.3.2 shared-component and semantic-authority convergence is closed. CoreUI owns reusable component behavior and presentation primitives; Registry and product domains retain declarative schema, meaning, persistence, actions, and composition ownership.
+
+The living Design Tuning Registry contains **67 parameters**. This current set differs from the historical Full Design Calibration 67-parameter snapshot. `spacing.content.inlineInset` and `spacing.content.blockInset` are **POST-CALIBRATION SEMANTIC AUTHORITY ADDITIONS**: the former owns Conversation/Composer left-right content inset at its 12px UI-scaled canonical, and the latter owns their top-bottom content inset at its 8px UI-scaled canonical. `spacing.card.inset` owns Vela shell/card placement, while `spacing.surface.edge` owns Vela Settings edges. Historical calibration totals and U/A/D/X/P classifications remain unchanged.
+
+Appearance-backed Design Tuning entries are mirrors of the original Appearance authority, including the migrated Secondary and Tertiary text roles; they do not create parallel Design Tuning persistence. Final Global Settings composition is **General, Appearance, Advanced, Developer**, with Advanced Appearance Settings nested in the Appearance presentation and Developer content gated by Developer Mode. Final Settings IA is closed and AE accepted.
+
 Design Tuning Full Coverage 中，GLOBAL / COMMON 参数必须覆盖所有适用的 canonical semantic consumers；`spacing.settings.*`、`spacing.registry.*`、`spacing.home.*` 仍是 domain-specific。该 scope 只描述消费边界，不决定最终 Settings IA。UI Scale Peek 使用 semantic visual target + structural ancestor path，祖先只保留布局与 containment。Registry Control Lab 分为 Registry Path 与补充无 schema type 的 CoreUI Direct，完整性由自动测试约束。
 
 Design Tuning 使用 real-consumer transient calibration：`onInput → resolver 内存 transient semantic override → real consumers`，`onCommit → persisted authority → clear transient`。Transient 不持久化、不进入 Promotion Evidence。active gesture 期间 Design Tuning editor root 会局部冻结对应 semantic property，避免调参控件被自身 geometry 反馈扰动；其他 Settings 与真实 consumer 继续实时变化。
@@ -287,7 +295,7 @@ Semantic hierarchy is not a numeric level system. Section Title, Field Label, an
 
 Typography family, size, weight, and line height remain non-user-adjustable. `text.secondary` and `text.tertiary` are future Advanced Appearance candidates only; they are not parameters in the current Typography Foundation.
 
-Typography Appearance Parameters are deferred until after Spacing Foundation and require stable semantic parameter IDs rather than persisted CSS variable names. Future work may consider validated UI/monospace family presets and role-specific size, weight, and line-height overrides; it must not introduce an independent Text Scale by default or treat design tokens as persistence IDs.
+Typography Appearance size parameters use stable semantic parameter IDs rather than persisted CSS variable names. Weight, line-height, font-family, domain-specific typography controls, and any validated UI/monospace family presets remain deferred; future work must not introduce an independent Text Scale by default or treat design tokens as persistence IDs.
 
 ## Semantic Spacing Contract
 
@@ -747,7 +755,7 @@ CoreUI ColorField scales its intrinsic swatch/HEX minimums with global UI Scale 
 
 Vela Settings is owned by `Vela Surface -> fixed lower-left Settings button -> lazy Vela-owned modal surface`. Global Settings no longer composes a Vela category and there is no permanent `settings/vela` route. Endpoint and Model ID retain the existing `AEToolbox.settings.v1` persistent authority; acknowledgement, enablement and readiness remain session/runtime-only; qualification and activation policy remain trusted internal authority. The surface reuses CoreUI, semantic tokens and `.ui-scroll-region` without reinitializing conversation or runtime state.
 
-Its presentation consumes the shared Card inset, Surface Title and Settings field typography, Section Card radius, Panel surface/border, Floating Surface elevation, CoreUI control geometry, and View Content Enter/Exit motion roles. Lazy creation immediately projects the active locale. The header is the single surface heading; qualification copy remains body introduction rather than a duplicated Vela heading.
+Its presentation consumes Surface Edge, Surface Title and Settings field typography, Section Card radius, Panel surface/border, Floating Surface elevation, CoreUI control geometry, and View Content Enter/Exit motion roles. Lazy creation immediately projects the active locale. The header is the single surface heading; qualification copy remains body introduction rather than a duplicated Vela heading.
 
 ## Surface Transition Foundation
 

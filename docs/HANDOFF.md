@@ -1,5 +1,15 @@
 # HANDOFF.md
 
+## 0.3.2 release handoff
+
+The 0.3.2 integrated release candidate is prepared from the latest `dev` baseline and is **READY FOR RELEASE**. Registry/shared components, Appearance, the 67-parameter living Design Tuning Registry, Palette Store v2 and native Workspace, Final Settings IA, Runtime Console Cleanup, and Vela spacing convergence are complete. Their focused acceptances and the final integrated After Effects 2026 release smoke are closed and passed.
+
+The next development line is 0.3.3 Agent Runtime Foundation. Keep that work isolated from 0.3.2 and preserve the current Provider, Review, Confirmation, Preflight, ExecutionAdapter, and Host authority boundaries.
+
+## Historical incremental working notes (superseded)
+
+The notes below, before **Purpose**, record intermediate 0.3.2 task handoffs. Their “uncommitted”, pending-AE, or next-step language is historical and is superseded by the release handoff above.
+
 Full Coverage 后续 AE 验收需确认：UI Scale Peek 仅显示语义 reference row；GLOBAL / COMMON control tokens 在 Settings、Registry 与 Control Lab 的适用组件同步；Control Lab 的 Registry Path 完整且 CoreUI Direct ShadowField 可交互。最终参数面向 Developer / Advanced / User 的安置仍延期到校准评审。
 
 AE 需验证 real-consumer transient calibration：continuous drag 实时改变真实适用 consumer，但不写 `AEToolbox.designTuning.v1`；release 仅提交最终值且无闪回。Design Tuning source control 在 active gesture 中应保持稳定，关闭 Settings、Cancel 或 Reset 清 transient。Home/Detail/Settings/Vela transcript 的有意滚动区域使用共享 `.ui-scroll-region` 外观，且无 Preview Stage nested scrollbar。
@@ -12,7 +22,7 @@ The uncommitted `refactor/0.3.2-typography-appearance` work contains Typography 
 
 ## Purpose
 
-This document explains how to continue Lomond Cabinet development on another machine and how to preserve the current 0.3.1 architecture and release state.
+This document explains how to continue Lomond Cabinet development on another machine and preserve the prepared 0.3.2 architecture and release state.
 
 Read before coding:
 
@@ -26,12 +36,12 @@ docs/HANDOFF.md
 
 ## Current release
 
-- Product version: `0.3.1`
+- Product version: `0.3.2`
 - Latest published tag: `v0.3.1`
-- Release status: **0.3.1 Vela Experimental Preview published**
+- Release status: **0.3.2 READY FOR RELEASE**
 - Host API version: `1.0.0`
 
-Version 0.3.1 is published on `main` and tagged `v0.3.1`. Post-release development continues from `dev`, which is the baseline for the next 0.3.2 work.
+Version 0.3.2 is prepared on the release-prep branch from integrated `dev`. Version 0.3.1 remains published on `main` and tagged `v0.3.1` until the user completes the reviewed release.
 
 Vela remains experimental:
 
@@ -114,7 +124,7 @@ com.kevin.aetoolbox
 ## Initial setup on another machine
 
 1. Clone or copy the repository.
-2. Confirm `VERSION` is `0.3.1` for the current release baseline.
+2. Confirm `VERSION` is `0.3.2` for the prepared release baseline.
 3. Confirm both manifest version fields match `VERSION`.
 4. Configure CEP PlayerDebugMode for the AE/CSXS version when using an unsigned development extension.
 5. Create the CEP junction/symlink or install the full extension folder.
@@ -294,9 +304,9 @@ Future release changes must synchronize:
 
 `AEToolbox.hostApiVersion` changes only when the Host contract changes deliberately.
 
-## Post-0.3.1 roadmap
+## Post-0.3.2 roadmap
 
-### 0.3.2 — UI / Design System Foundation
+### 0.3.2 — UI / Design System Foundation (release prepared)
 
 Establish a complete semantic token hierarchy for color, surface, text, status, interaction, typography, spacing, radius, geometry, and component tokens. Progressively align Vela, Registry Renderer, Settings, and Home without redesigning the accepted Vela UI structure.
 
