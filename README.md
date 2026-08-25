@@ -2,13 +2,13 @@
 
 Lomond Cabinet is an After Effects CEP extension that combines a registry-driven tool system, procedural Home visuals, and the experimental Vela local-assistant surface.
 
-- **Current version:** `0.3.2`
+- **Product metadata staged for:** `0.3.3`
 - **Latest published tag:** `v0.3.2`
 - **Extension bundle id:** `com.kevin.aetoolbox`
 - **Manifest menu name:** `AE Toolbox`
 - **Visible panel name:** `Lomond Cabinet`
 
-Version 0.3.2 remains the current published and frozen release for the integrated UI / Design System Foundation. It adds shared component convergence, Appearance and Design Tuning authorities, Palette Store v2 and its native Workspace, the final Settings information architecture, and Vela spacing convergence. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default. Development and final integrated AE acceptance of the isolated 0.3.3 Agent Runtime Foundation are complete, but 0.3.3 is not formally released: release preparation remains pending. Actual Observation and Capability stay staged to 0.3.4; Planning, TaskRun, executionArmed runtime state, and Authority stay staged to 0.3.5+; the AgentDriver reasoning/autonomous loop remains later under the [frozen architecture baseline](docs/design/vela-agent-architecture.md).
+Version 0.3.2 remains the latest published and frozen release for the integrated UI / Design System Foundation. Product metadata is staged at 0.3.3; 0.3.3 development, final integrated AE acceptance, and release preparation are complete, but publication still requires the reviewed release-prep to `dev` to `main` flow and an annotated `v0.3.3` tag. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default. Actual Observation and Capability stay staged to 0.3.4; Planning, TaskRun, executionArmed runtime state, and Authority stay staged to 0.3.5+; the AgentDriver reasoning/autonomous loop remains later under the [frozen architecture baseline](docs/design/vela-agent-architecture.md).
 
 ## Runtime architecture
 
@@ -132,7 +132,7 @@ The optional LM Studio Provider is:
 - reset on reload for acknowledgement, readiness, and enablement;
 - allowed to persist only endpoint and Model ID configuration.
 
-Readiness means only that the configured local model instance is loaded. It is **not** qualification. No model is qualified, recommended, or selected as the production default in 0.3.2.
+Readiness means only that the configured local model instance is loaded. It is **not** qualification. No model is qualified, recommended, or selected as the production default for the 0.3.3 release candidate.
 
 The trusted activation policy keeps:
 
@@ -214,7 +214,7 @@ docs/HANDOFF.md
 
 ## Version and release status
 
-The current published release is `0.3.2`, tagged with immutable `v0.3.2`. The isolated 0.3.3 Agent Runtime Foundation has completed development closure and final integrated AE acceptance but is not yet formally released; release preparation remains pending. Releases follow the reviewed `dev → main → version tag` flow.
+The current published release remains `0.3.2`, tagged with immutable `v0.3.2`. The 0.3.3 product metadata is staged and its Agent Runtime Foundation development, final integrated AE acceptance, and release preparation are complete; 0.3.3 is prepared but not published. Releases follow the reviewed `release-prep → dev → main → annotated version tag` flow.
 
 Keep these synchronized for future releases:
 
@@ -224,7 +224,7 @@ Keep these synchronized for future releases:
 - `CHANGELOG.md`
 - current-version statements in maintained documentation
 
-`AEToolbox.hostApiVersion` is an independent host contract version and remains `1.0.0` in release 0.3.2.
+`AEToolbox.hostApiVersion` is an independent Host contract version and remains `1.0.0`; it is not the 0.3.3 product version.
 
 ## Known issues
 

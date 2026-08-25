@@ -9,10 +9,11 @@ Status: integrated development closure record. This document does not amend the 
 | Runtime Foundation Complete | **YES** |
 | Final integrated AE acceptance | **PASS** |
 | 0.3.3 Development Complete | **YES** |
-| Release Preparation | **PENDING** |
-| Release Ready | **NO — release preparation pending** |
+| Release Preparation | **COMPLETE** |
+| Release Ready | **YES — prepared, awaiting publication** |
+| Published | **NO** |
 | Autonomous Agent Complete | **NO** |
-| Product version metadata | **0.3.2 unchanged** |
+| Product version metadata | **0.3.3 staged** |
 
 Stages A–F are closed and accepted on the development baseline. Stage G records their integrated contract and validation closure without changing runtime behavior. The normative source remains `vela-agent-architecture.md`, **FROZEN FOR 0.3.x**.
 
@@ -124,7 +125,7 @@ The smoke does not claim validation of Observation, Capability, Authority, or Ag
 
 ## Release boundary and deferred manifest
 
-Runtime Foundation Complete, final AE acceptance, 0.3.3 Development Complete, Release Preparation, and Autonomous Agent Complete are separate product states. The foundation, AE acceptance, and development are complete; release preparation remains pending; autonomous Agent completion is false. `VERSION`, manifest versions, and Host project version remain 0.3.2. The 0.3.3 version bump, `dev -> main`, and tag belong to a later release-preparation step, not this closure branch.
+Runtime Foundation Complete, final AE acceptance, 0.3.3 Development Complete, Release Preparation, Publication, and Autonomous Agent Complete are separate product states. The foundation, AE acceptance, development, and release preparation are complete; publication remains pending; autonomous Agent completion is false. `VERSION`, both manifest product versions, and Host project version are staged at 0.3.3. Formal publication still requires release-prep merge to `dev`, `dev` to `main`, and an annotated `v0.3.3` tag; the latest published tag remains `v0.3.2` until then.
 
 Frozen deferred work remains:
 
