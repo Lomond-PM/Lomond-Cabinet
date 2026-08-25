@@ -22,12 +22,13 @@
 }(typeof self !== "undefined" ? self : this, function (sessionRuntime) {
     "use strict";
 
-    var MODULE_REVISION = "vela-agent-runtime-shape-0.3.3-v1";
+    var MODULE_REVISION = "vela-agent-runtime-projection-0.3.3-v2";
     var agentSequence = 0;
     var scopeSequence = 0;
 
     var ERROR_CODES = Object.freeze({
         AGENT_DISPOSED: "AGENT_DISPOSED",
+        AGENT_PROJECTION_LISTENER_INVALID: "AGENT_PROJECTION_LISTENER_INVALID",
         AGENT_SCOPE_BOUNDARY_INVALID: "AGENT_SCOPE_BOUNDARY_INVALID",
         AGENT_RUNTIME_UNAVAILABLE: "AGENT_RUNTIME_UNAVAILABLE"
     });
@@ -111,15 +112,20 @@
         return true;
     }
 
-    function createAgent() {
+    function createAgent(options) {
+        var settings = isPlainObject(options) ? options : {};
         var agentId;
         var session;
         var sessionId;
         var scopeId;
         var lifecycleStage = "created";
         var revision = 0;
+        var projectionRevision = 0;
         var scopeBoundary = deepFreeze({});
         var scope;
+        var projection;
+        var projectionSubscribers = [];
+        var onListenerError = typeof settings.onListenerError === "function" ? settings.onListenerError : function () {};
 
         if (!sessionRuntime || typeof sessionRuntime.createSessionLog !== "function") {
             fail(ERROR_CODES.AGENT_RUNTIME_UNAVAILABLE);
@@ -136,9 +142,84 @@
             if (lifecycleStage === "disposed") { fail(ERROR_CODES.AGENT_DISPOSED); }
         }
 
+        function getSessionLastSeq() {
+            var events = session.getEvents();
+            return events.length > 0 ? events[events.length - 1].seq : 0;
+        }
+
+        function createEnvelope(changeKind) {
+            return deepFreeze({
+                projectionRevision: projectionRevision,
+                agentRevision: revision,
+                sessionSeq: getSessionLastSeq(),
+                changeKind: changeKind
+            });
+        }
+
+        function reportListenerFailure(error, envelope) {
+            try { onListenerError(error, envelope); }
+            catch (reportError) { /* Error reporting is out-of-band and contained. */ }
+        }
+
+        function notifyConsumers(changeKind) {
+            var envelope = createEnvelope(changeKind);
+            var listeners = projectionSubscribers.slice();
+            var index;
+            for (index = 0; index < listeners.length; index += 1) {
+                try { listeners[index](envelope); }
+                catch (error) { reportListenerFailure(error, envelope); }
+            }
+        }
+
+        function commitProjectionChange(changeKind) {
+            projectionRevision += 1;
+            notifyConsumers(changeKind);
+        }
+
         scope = Object.freeze({
             getScopeId: function () { return scopeId; },
             getBoundary: function () { return scopeBoundary; }
+        });
+
+        session.subscribe(function () {
+            commitProjectionChange("session");
+        });
+
+        projection = Object.freeze({
+            getSnapshot: function () {
+                return deepFreeze({
+                    agentId: agentId,
+                    lifecycleStage: lifecycleStage,
+                    scopeId: scopeId,
+                    scopeBoundary: scopeBoundary,
+                    agentRevision: revision,
+                    sessionId: sessionId,
+                    sessionLastSeq: getSessionLastSeq(),
+                    projectionRevision: projectionRevision
+                });
+            },
+            readSessionEvents: function (options) {
+                var readOptions = isPlainObject(options) ? options : {};
+                var fromSeq = typeof readOptions.fromSeq === "number" && readOptions.fromSeq >= 1 ? readOptions.fromSeq : 1;
+                return deepFreeze(session.getEvents().filter(function (event) { return event.seq >= fromSeq; }));
+            },
+            subscribe: function (listener) {
+                var subscribed = true;
+                assertNotDisposed();
+                if (typeof listener !== "function") { fail(ERROR_CODES.AGENT_PROJECTION_LISTENER_INVALID); }
+                projectionSubscribers.push(listener);
+                try { listener(createEnvelope("initial")); }
+                catch (error) { reportListenerFailure(error, createEnvelope("initial")); }
+                return Object.freeze({
+                    unsubscribe: function () {
+                        var index;
+                        if (!subscribed) { return; }
+                        subscribed = false;
+                        index = projectionSubscribers.indexOf(listener);
+                        if (index !== -1) { projectionSubscribers.splice(index, 1); }
+                    }
+                });
+            }
         });
 
         return Object.freeze({
@@ -147,6 +228,7 @@
             getSession: function () { return session; },
             getLifecycleStage: function () { return lifecycleStage; },
             getScope: function () { return scope; },
+            getProjection: function () { return projection; },
             getRevision: function () { return revision; },
             getSnapshot: function () {
                 return deepFreeze({
@@ -163,6 +245,7 @@
                 if (lifecycleStage === "created") {
                     lifecycleStage = "active";
                     revision += 1;
+                    commitProjectionChange("agent");
                 }
                 return lifecycleStage;
             },
@@ -174,6 +257,7 @@
                 if (!sameValue(scopeBoundary, nextBoundary)) {
                     scopeBoundary = nextBoundary;
                     revision += 1;
+                    commitProjectionChange("agent");
                 }
                 return scopeBoundary;
             },
@@ -181,7 +265,9 @@
                 if (lifecycleStage !== "disposed") {
                     lifecycleStage = "disposed";
                     revision += 1;
+                    commitProjectionChange("disposed");
                     session.close();
+                    projectionSubscribers = [];
                 }
                 return lifecycleStage;
             }
