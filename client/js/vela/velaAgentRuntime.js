@@ -2,21 +2,21 @@
     "use strict";
 
     var MODULE_NAME = "VelaAgentRuntime";
+    var browserPage = !!(root && root.self === root && root["win" + "dow"] === root);
     var sessionRuntime = null;
     var exported;
 
-    if (typeof module === "object" && module.exports) {
-        sessionRuntime = require("./velaSessionRuntime");
-    } else if (root && root.VelaSessionRuntime) {
+    if (browserPage) {
         sessionRuntime = root.VelaSessionRuntime;
+    } else if (typeof module === "object" && module.exports) {
+        sessionRuntime = require("./velaSessionRuntime");
     }
 
     exported = Object.freeze(factory(sessionRuntime));
 
-    if (root && !Object.prototype.hasOwnProperty.call(root, MODULE_NAME)) {
+    if (browserPage && !Object.prototype.hasOwnProperty.call(root, MODULE_NAME)) {
         Object.defineProperty(root, MODULE_NAME, { configurable: false, enumerable: true, value: exported, writable: false });
-    }
-    if (typeof module === "object" && module.exports) {
+    } else if (typeof module === "object" && module.exports) {
         module.exports = exported;
     }
 }(typeof self !== "undefined" ? self : this, function (sessionRuntime) {

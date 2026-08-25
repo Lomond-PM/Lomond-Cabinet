@@ -2,12 +2,12 @@
     "use strict";
 
     var MODULE_NAME = "VelaSessionRuntime";
+    var browserPage = !!(root && root.self === root && root["win" + "dow"] === root);
     var exported = Object.freeze(factory());
 
-    if (root && !Object.prototype.hasOwnProperty.call(root, MODULE_NAME)) {
+    if (browserPage && !Object.prototype.hasOwnProperty.call(root, MODULE_NAME)) {
         Object.defineProperty(root, MODULE_NAME, { configurable: false, enumerable: true, value: exported, writable: false });
-    }
-    if (typeof module === "object" && module.exports) {
+    } else if (typeof module === "object" && module.exports) {
         module.exports = exported;
     }
 }(typeof self !== "undefined" ? self : this, function () {

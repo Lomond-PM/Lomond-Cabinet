@@ -19,6 +19,8 @@
         var activationPolicy = ActivationPolicy && typeof ActivationPolicy.getPolicy === "function" ? ActivationPolicy.getPolicy() : null;
         var experimentalEnabled = false;
         var onExperimentalStateChange = options && typeof options.onExperimentalStateChange === "function" ? options.onExperimentalStateChange : function () {};
+        var agentProjection = options && options.agentProjection && typeof options.agentProjection.subscribe === "function" && typeof options.agentProjection.getSnapshot === "function" ? options.agentProjection : null;
+        var onAgentProjectionError = options && typeof options.onAgentProjectionError === "function" ? options.onAgentProjectionError : function () {};
         var experimentalState = experimentalEnabled ? "ready" : "disabled";
         var experimentalDisabledReason = "qualification-required";
         var experimentalConfig = { endpoint: "", model: "", acknowledged: false };
@@ -33,6 +35,8 @@
         var suspended = false;
         var disposed = false;
         var suppressConfirmationTerminal = false;
+        var agentProjectionSubscription = null;
+        var latestAgentProjectionSnapshot = null;
         if (!surface || typeof surface.getElementsForTest !== "function" || !provider || typeof provider.send !== "function" || typeof provider.cancel !== "function" || typeof provider.getState !== "function" || !confirmation || typeof confirmation.review !== "function" || typeof confirmation.approve !== "function" || typeof confirmation.reject !== "function" || typeof confirmation.getState !== "function" || !PresentationModel || typeof PresentationModel.create !== "function" || !TranscriptView || typeof TranscriptView.create !== "function" || !ComposerView || typeof ComposerView.create !== "function" || !ConfirmationView || typeof ConfirmationView.create !== "function" || !ActivationPolicy || typeof ActivationPolicy.isTrustedPolicy !== "function" || !ActivationPolicy.isTrustedPolicy(activationPolicy) || activationPolicy.experimentalOptInAllowed !== true || activationPolicy.productionEnabled !== false) { throw new Error("VelaSurfaceController requires trusted presentation dependencies."); }
         function actionState(providerState, confirmationState) {
             var current = confirmationState && confirmationState.state;
@@ -43,6 +47,33 @@
             if (providerState && providerState.state === "proposal-ready") { return "review"; }
             if (providerState && providerState.state === "proposal-reviewing") { return "none"; }
             return "send";
+        }
+        function reportAgentProjectionError(error, phase) {
+            try { onAgentProjectionError(error, phase); }
+            catch (reportError) { /* Optional diagnostics never affect Surface behavior. */ }
+        }
+        function consumeAgentProjection() {
+            try { latestAgentProjectionSnapshot = agentProjection.getSnapshot(); }
+            catch (error) { reportAgentProjectionError(error, "projection"); }
+        }
+        function subscribeAgentProjection() {
+            if (!agentProjection || agentProjectionSubscription || disposed || suspended || !mounted) { return false; }
+            try {
+                agentProjectionSubscription = agentProjection.subscribe(function () { consumeAgentProjection(); });
+                return !!agentProjectionSubscription;
+            } catch (error) {
+                agentProjectionSubscription = null;
+                reportAgentProjectionError(error, "subscribe");
+                return false;
+            }
+        }
+        function unsubscribeAgentProjection() {
+            var subscription = agentProjectionSubscription;
+            agentProjectionSubscription = null;
+            if (!subscription || typeof subscription.unsubscribe !== "function") { return false; }
+            try { subscription.unsubscribe(); }
+            catch (error) { reportAgentProjectionError(error, "unsubscribe"); }
+            return true;
         }
         function projectedStatusText(state) {
             var keys = {
@@ -194,13 +225,13 @@
             transcript = TranscriptView.create({ root: elements.transcriptScroll, intro: elements.transcriptMessage, t: t });
             composer = ComposerView.create({ composer: elements.composer, actionSlot: elements.actionSlot, t: t, onSend: send, onCancel: cancel, onDraftChange: synchronize });
             confirmationView = ConfirmationView.create({ actionSlot: elements.actionSlot, t: t, onReview: review, onApprove: approve, onReject: reject });
-            mounted = true; synchronize(); return true;
+            mounted = true; subscribeAgentProjection(); synchronize(); return true;
         }
-        function suspend() { if (disposed || !mounted || suspended) { return false; } suspended = true; generation += 1; return true; }
-        function resume() { if (disposed || !mounted || !suspended) { return false; } suspended = false; synchronize(); return true; }
+        function suspend() { if (disposed || !mounted || suspended) { return false; } suspended = true; generation += 1; unsubscribeAgentProjection(); return true; }
+        function resume() { if (disposed || !mounted || !suspended) { return false; } suspended = false; subscribeAgentProjection(); synchronize(); return true; }
         function refreshLocale() { if (disposed || !mounted) { return; } transcript.refreshLocale(); composer.refreshLocale(); confirmationView.refreshLocale(); synchronize(); }
-        function dispose() { if (disposed) { return false; } disposed = true; generation += 1; if (transcript) { transcript.dispose(); } if (composer) { composer.dispose(); } if (confirmationView) { confirmationView.dispose(); } return true; }
-        return Object.freeze({ mount: mount, suspend: suspend, resume: resume, refreshLocale: refreshLocale, configureExperimental: configureExperimental, enableExperimental: enableExperimental, disableExperimental: disableExperimental, getExperimentalState: experimentalSnapshot, getElementsForTest: function () { return elements; }, dispose: dispose });
+        function dispose() { if (disposed) { return false; } disposed = true; generation += 1; unsubscribeAgentProjection(); if (transcript) { transcript.dispose(); } if (composer) { composer.dispose(); } if (confirmationView) { confirmationView.dispose(); } return true; }
+        return Object.freeze({ mount: mount, suspend: suspend, resume: resume, refreshLocale: refreshLocale, configureExperimental: configureExperimental, enableExperimental: enableExperimental, disableExperimental: disableExperimental, getExperimentalState: experimentalSnapshot, getElementsForTest: function () { return elements; }, getAgentProjectionSnapshotForTest: function () { return latestAgentProjectionSnapshot; }, dispose: dispose });
     }
     return Object.freeze({ create: create });
 }));
