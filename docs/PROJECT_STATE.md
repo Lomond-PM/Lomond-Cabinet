@@ -22,7 +22,7 @@ Global Settings is ordered **General, Appearance, Advanced, Developer**. Final S
 
 Palette Store v2 remains the sole production Palette persistence authority, with dynamic `DIRECT`, same-palette `REFERENCE`, and registered `DERIVED` slots, `profiles.proceduralAppearance`, native Workspace Save/Cancel, and the legacy compatibility boundary. Cross-palette references, Harmony generation, node editing, global active Palette, and Appearance live-link remain deferred.
 
-Vela spacing ownership is closed and AE accepted: Card Inset owns shell/card placement; Content Inline and Content Block Insets are shared by Conversation and Composer on their respective axes; Surface Edge owns Vela Settings. The 0.3.3 Agent Runtime Foundation is future scope and is not part of 0.3.2.
+Vela spacing ownership is closed and AE accepted: Card Inset owns shell/card placement; Content Inline and Content Block Insets are shared by Conversation and Composer on their respective axes; Surface Edge owns Vela Settings. The 0.3.3 Agent Runtime Contract Foundation is the current isolated development scope and remains outside the released, frozen 0.3.2 baseline. Its normative baseline is `docs/design/vela-agent-architecture.md` (**FROZEN FOR 0.3.x**), with the bounded implementation contract in `docs/design/vela-agent-runtime-contract-foundation-0.3.3.md`.
 
 Design Tuning Full Coverage 已加入 GLOBAL / COMMON consumer convergence 契约、UI Scale Peek semantic target/structure-only ancestor path，以及 Registry Control Lab Registry Path / CoreUI Direct 完整性检查。Developer / Advanced / User 的最终参数安置仍等待 Full Calibration 后复核。
 
@@ -332,7 +332,7 @@ The release contains:
 
 ## Next development direction
 
-The next isolated development target is **0.3.3 — Agent Runtime Foundation**. It starts from the released 0.3.2 baseline and must not rewrite the published 0.3.2 state or weaken the existing Vela authority boundaries.
+The current isolated development target is **0.3.3 — Agent Runtime Contract Foundation**. It starts from the released 0.3.2 baseline and must not rewrite the published 0.3.2 state or weaken the existing Vela authority boundaries. `docs/design/vela-agent-architecture.md` is the **FROZEN FOR 0.3.x** normative baseline; `docs/design/vela-agent-runtime-contract-foundation-0.3.3.md` records the bounded current implementation contract.
 
 Registry evolves toward a typed Capability Registry consumable by both Agent and Human UI. Capabilities may be `read`, `analyze`, `mutate`, or `create`; a dedicated Human UI is not required for a capability to exist.
 
