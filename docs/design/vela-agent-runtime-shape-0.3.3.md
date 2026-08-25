@@ -89,7 +89,9 @@ descriptor.
 
 ## 6. Deferred integration
 
-- Surface ↔ Agent subscription/projection is deferred to 0.3.3-C; no subscriber system exists here.
+- At the 0.3.3-B delivery boundary, Surface ↔ Agent subscription/projection was deferred. It is
+  subsequently defined by `docs/design/vela-agent-surface-subscription-projection-0.3.3.md` without
+  changing the Agent/AgentScope shape specified here.
 - Observation and Context are deferred to their architecture stage.
 - Provider orchestration is absent: Agent is not Provider, activate does not start Provider or a loop.
 - Existing Review, Confirmation, Preflight, ExecutionAdapter, Host allowlist, and both Execution
