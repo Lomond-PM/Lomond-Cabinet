@@ -8,7 +8,7 @@ Lomond Cabinet is an After Effects CEP extension that combines a registry-driven
 - **Manifest menu name:** `AE Toolbox`
 - **Visible panel name:** `Lomond Cabinet`
 
-Version 0.3.2 is the current published release for the integrated UI / Design System Foundation. It adds shared component convergence, Appearance and Design Tuning authorities, Palette Store v2 and its native Workspace, the final Settings information architecture, and Vela spacing convergence. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default. The next development line is the future 0.3.3 Agent Runtime Foundation.
+Version 0.3.2 remains the current published and frozen release for the integrated UI / Design System Foundation. It adds shared component convergence, Appearance and Design Tuning authorities, Palette Store v2 and its native Workspace, the final Settings information architecture, and Vela spacing convergence. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default. Current development is the isolated 0.3.3 Agent Runtime Contract Foundation, governed by the [Vela Agent Architecture Baseline](docs/design/vela-agent-architecture.md), which is **FROZEN FOR 0.3.x**.
 
 ## Runtime architecture
 
@@ -147,7 +147,7 @@ A model proposal cannot execute directly. With actionable Context, the transitio
 
 The Surface remembers the user's vertical height preference in `AEToolbox.velaSurfaceLayout.v1`. Current viewport, responsive layout, and UI-scale constraints clamp only the effective displayed height, so a temporarily small panel does not overwrite the preference. This layout preference is independent of Vela conversation data and Provider session enablement; acknowledgement, readiness, and enablement still clear on reload, and no multi-session or context persistence is introduced.
 
-See [`docs/design/vela-agent.md`](docs/design/vela-agent.md) for the complete safety architecture and [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) for accepted preview limitations.
+See the frozen [`docs/design/vela-agent-architecture.md`](docs/design/vela-agent-architecture.md) baseline and the current [`docs/design/vela-agent-runtime-contract-foundation-0.3.3.md`](docs/design/vela-agent-runtime-contract-foundation-0.3.3.md) implementation contract. The existing [`docs/design/vela-agent.md`](docs/design/vela-agent.md) documents the shipped preview safety path, and [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) tracks accepted preview limitations.
 
 ## Development installation
 
