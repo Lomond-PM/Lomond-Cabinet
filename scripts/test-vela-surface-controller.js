@@ -43,7 +43,7 @@ function fixture(options) {
         reject() { calls.reject += 1; confirmationState = { state: "rejected", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }; return Promise.resolve(); },
         getState() { return Object.freeze(Object.assign({}, confirmationState)); }
     };
-    const controller = SurfaceController.create({ surface: { getElementsForTest: () => elements }, provider, confirmation, t: options.t || ((key) => "t:" + key), PresentationModel, TranscriptView, ComposerView, ConfirmationView, ActivationPolicy });
+    const controller = SurfaceController.create({ surface: { getElementsForTest: () => elements }, provider, confirmation, t: options.t || ((key) => "t:" + key), PresentationModel, TranscriptView, ComposerView, ConfirmationView, ActivationPolicy, agentProjection: options.agentProjection || null, onAgentProjectionError: options.onAgentProjectionError });
     return { controller, elements, request, confirmationRequest, calls, setProvider(next) { providerState = next; }, setConfirmation(next) { confirmationState = next; } };
 }
 async function flush() { await Promise.resolve(); await Promise.resolve(); }
@@ -189,6 +189,61 @@ async function run() {
     check(!/errorCode|PROVIDER_|VERIFICATION_UNAVAILABLE/.test(TranscriptView.create.toString()), "Transcript does not map internal codes");
     check(!/requestId|candidateId|planId|authority|target|context|nonce|digest/.test(SurfaceController.create.toString()), "Surface controller exposes experimental endpoint configuration without any trusted identity or execution-authority seam");
     check(!/candidateId|planId|authority|target|context|nonce|digest/.test(ConfirmationView.create.toString()), "confirmation view receives no trusted execution data");
+    const projectionCalls = { subscribe: 0, unsubscribe: 0, disposeAgent: 0 };
+    const projectionListeners = [];
+    let projectionRevision = 0;
+    const optionalProjection = {
+        subscribe(listener) {
+            projectionCalls.subscribe += 1;
+            projectionListeners.push(listener);
+            listener({ changeKind: "initial", projectionRevision });
+            let active = true;
+            return { unsubscribe() { if (!active) return; active = false; projectionCalls.unsubscribe += 1; const index = projectionListeners.indexOf(listener); if (index >= 0) projectionListeners.splice(index, 1); } };
+        },
+        getSnapshot() { return Object.freeze({ agentId: "agent_surface", lifecycleStage: "active", projectionRevision }); },
+        emit() { projectionRevision += 1; projectionListeners.slice().forEach((listener) => listener({ changeKind: "agent", projectionRevision })); }
+    };
+    const projected = fixture({ agentProjection: optionalProjection });
+    check(projected.controller.mount(), "Surface with optional Projection retains normal mount behavior");
+    equal(projectionCalls.subscribe, 1, "mount subscribes exactly once");
+    check(!projected.controller.mount(), "repeated mount remains a no-op");
+    equal(projectionCalls.subscribe, 1, "repeated mount creates no duplicate subscription");
+    equal(projected.controller.getAgentProjectionSnapshotForTest().projectionRevision, 0, "synchronous initial captures current Projection truth");
+    const projectedTranscriptCount = projected.elements.transcriptScroll.children.length;
+    const projectedProviderCalls = projected.calls.send.length;
+    const projectedConfirmationCalls = projected.calls.approve;
+    optionalProjection.emit();
+    equal(projected.controller.getAgentProjectionSnapshotForTest().projectionRevision, 1, "Projection notification updates private snapshot cursor");
+    equal(projected.elements.transcriptScroll.children.length, projectedTranscriptCount, "Projection notification does not change transcript");
+    equal(projected.calls.send.length, projectedProviderCalls, "Projection notification does not invoke Provider");
+    equal(projected.calls.approve, projectedConfirmationCalls, "Projection notification does not invoke Confirmation or execution");
+    check(projected.controller.suspend(), "Surface suspends with Projection attached");
+    equal(projectionCalls.unsubscribe, 1, "suspend unsubscribes Projection");
+    equal(projectionCalls.disposeAgent, 0, "suspend never disposes Agent");
+    check(projected.controller.resume(), "Surface resumes with Projection attached");
+    equal(projectionCalls.subscribe, 2, "resume resubscribes exactly once");
+    equal(projected.controller.getAgentProjectionSnapshotForTest().projectionRevision, 1, "resume initial reacquires latest committed truth");
+    check(projected.controller.dispose(), "Surface dispose succeeds with Projection attached");
+    equal(projectionCalls.unsubscribe, 2, "Surface dispose unsubscribes Projection");
+    equal(projectionCalls.disposeAgent, 0, "Surface dispose never disposes Agent");
+
+    const projectionErrors = [];
+    const failingProjection = { subscribe() { throw Object.assign(new Error("subscribe failed"), { code: "SUBSCRIBE_FAILED" }); }, getSnapshot() { return {}; } };
+    const projectionFailureSurface = fixture({ agentProjection: failingProjection, onAgentProjectionError: (error, phase) => projectionErrors.push({ error, phase }) });
+    check(projectionFailureSurface.controller.mount(), "Projection subscription failure preserves existing Surface mount");
+    equal(projectionErrors.length, 1, "Projection subscription failure reports separate diagnostics");
+    equal(projectionErrors[0].phase, "subscribe", "Projection subscription failure retains phase");
+
+    const listenerErrors = [];
+    let failingListener = null;
+    const listenerFailureProjection = { subscribe(listener) { failingListener = listener; listener({ changeKind: "initial" }); return { unsubscribe() {} }; }, getSnapshot() { throw Object.assign(new Error("snapshot failed"), { code: "SNAPSHOT_FAILED" }); } };
+    const listenerFailureSurface = fixture({ agentProjection: listenerFailureProjection, onAgentProjectionError: (error, phase) => listenerErrors.push({ error, phase }) });
+    check(listenerFailureSurface.controller.mount(), "Projection listener error preserves Surface mount");
+    const listenerFailureTranscriptCount = listenerFailureSurface.elements.transcriptScroll.children.length;
+    failingListener({ changeKind: "agent" });
+    equal(listenerErrors.length, 2, "initial and later listener read failures are contained and reported");
+    equal(listenerFailureSurface.elements.transcriptScroll.children.length, listenerFailureTranscriptCount, "listener failure creates no transcript dual-write");
+
     check(test.controller.dispose(), "dispose succeeds once");
     console.log("test-vela-surface-controller: " + assertions + " assertions passed.");
 }

@@ -27,7 +27,7 @@ function harness(options) {
     options = options || {};
     const warnings = [];
     const slot = actionSlot();
-    const calls = { runtimeCreate: 0, runtimeInitialize: 0, runtimeDispose: 0, surfaceCreate: 0, surfaceMount: 0, surfaceDispose: 0, runtimeOptions: null, surfaceOptions: null, resolveFirst: null, rejectFirst: null };
+    const calls = { runtimeCreate: 0, runtimeInitialize: 0, runtimeDispose: 0, agentOwnerCreate: 0, agentOwnerActivate: 0, agentOwnerDispose: 0, surfaceCreate: 0, surfaceMount: 0, surfaceDispose: 0, runtimeOptions: null, surfaceOptions: null, resolveFirst: null, rejectFirst: null };
     const policy = Object.freeze({ releaseMode: "experimental-preview", experimentalOptInAllowed: true, productionEnabled: false, productionBlockReason: "no-qualified-default-model", qualifiedDefaultModelId: null, legacyFallbackRetained: false, formalUiD2Enabled: false, moduleRevision: "vela-activation-policy-v2" });
     const activationModule = Object.freeze({ getPolicy() { return policy; }, isTrustedPolicy(value) { return value === policy; } });
     function runtimeCandidate(ordinal) {
@@ -72,12 +72,14 @@ function harness(options) {
         velaRuntimeInitTransaction: null,
         velaRuntimeLastAttemptCoreGeneration: null,
         velaRuntimeController: null,
+        velaAgentRuntimeOwner: null,
         velaSurfaceShell: { getElementsForTest() { return { actionSlot: slot }; } },
         velaSurfaceController: null,
         velaSurfaceBootstrapState: "idle",
         velaSurfaceBootstrapRevision: 0,
         velaRuntimeStatusRevision: 0,
         velaRuntimeLastErrorCode: null,
+        velaAgentRuntimeLastErrorCode: null,
         activeToolId: "shapeAdd",
         VelaProviderModel: "qwen3.5-4b",
         VelaProviderEndpoint: "http://127.0.0.1:1234",
@@ -92,13 +94,30 @@ function harness(options) {
     context.window.VelaActivationPolicy = activationModule;
     context.getVelaActivationPolicy = function () { return activationModule.getPolicy(); };
     context.window.VelaRuntime = { createRuntime(runtimeOptions) { calls.runtimeCreate += 1; calls.runtimeOptions = runtimeOptions; return calls.runtimeCreate === 1 ? runtime : runtimeCandidate(calls.runtimeCreate); } };
+    context.window.VelaAgentRuntime = { createAgent() {} };
+    context.window.VelaAgentRuntimeOwner = {
+        createOwner(createOptions) {
+            calls.agentOwnerCreate += 1;
+            if (options.agentOwnerFailure) throw Object.assign(new Error("agent owner failed"), { code: "AGENT_OWNER_FAILED" });
+            let disposed = false;
+            const projection = { subscribe() { return { unsubscribe() {} }; }, getSnapshot() { return {}; } };
+            return {
+                activate() { calls.agentOwnerActivate += 1; return true; },
+                dispose() { if (disposed) return false; disposed = true; calls.agentOwnerDispose += 1; return true; },
+                isDisposed() { return disposed; },
+                getCurrentProjection() { return projection; },
+                getCurrentAgent() { return {}; },
+                createOptions
+            };
+        }
+    };
     context.window.VelaSurfaceController = controllerModule;
     context.window.VelaPresentationModel = { create() {} };
     context.window.VelaTranscriptView = { create() {} };
     context.window.VelaComposerView = { create() {} };
     if (!options.missingConfirmationView) context.window.VelaConfirmationView = { create() {} };
     vm.createContext(context);
-    vm.runInContext(source.slice(start, end) + "\nwindow.__testHooks = { initializeRuntime: initializeVelaRuntime, initializeSurface: initializeVelaSurfaceController, runtime: function () { return velaRuntimeController; }, runtimeError: function () { return velaRuntimeLastErrorCode; }, surfaceState: function () { return velaSurfaceBootstrapState; }, surfaceRevision: function () { return velaSurfaceBootstrapRevision; }, controller: function () { return velaSurfaceController; } };", context, { filename: "main-vela-bootstrap-boundary.js" });
+    vm.runInContext(source.slice(start, end) + "\nwindow.__testHooks = { initializeRuntime: initializeVelaRuntime, initializeSurface: initializeVelaSurfaceController, runtime: function () { return velaRuntimeController; }, runtimeError: function () { return velaRuntimeLastErrorCode; }, agentOwner: function () { return velaAgentRuntimeOwner; }, agentError: function () { return velaAgentRuntimeLastErrorCode; }, surfaceState: function () { return velaSurfaceBootstrapState; }, surfaceRevision: function () { return velaSurfaceBootstrapRevision; }, controller: function () { return velaSurfaceController; } };", context, { filename: "main-vela-bootstrap-boundary.js" });
     return { context, slot, calls, warnings, runtime };
 }
 
@@ -107,10 +126,18 @@ async function run() {
     test.context.__testHooks.initializeRuntime(); await flush();
     check(test.context.__testHooks.runtime() === test.runtime && test.runtime.getStatus().state === "ready", "A successful Runtime bootstrap remains ready while Surface starts separately.");
     check(test.calls.surfaceCreate === 1 && test.calls.surfaceMount === 1 && test.slot.children.length === 5, "A complete Surface dependency graph creates the fixed five actions once.");
+    check(test.calls.agentOwnerCreate === 1 && test.calls.agentOwnerActivate === 1 && test.context.__testHooks.agentOwner() !== null, "Successful Runtime commit creates and activates exactly one sibling Agent owner before Surface mount.");
+    check(test.calls.surfaceOptions.agentProjection === test.context.__testHooks.agentOwner().getCurrentProjection(), "Surface receives only the current optional Projection from the main-owned Agent owner.");
     check(test.context.__testHooks.surfaceState() === "ready" && test.context.__testHooks.runtimeError() === null, "Successful Surface bootstrap does not create a Runtime diagnostic.");
     check(!Object.prototype.hasOwnProperty.call(test.calls.runtimeOptions, "activationPolicy") && test.runtime.getStatus().activationPolicy === test.context.window.VelaActivationPolicy.getPolicy() && test.calls.surfaceOptions.ActivationPolicy === test.context.window.VelaActivationPolicy, "Runtime closes over and Surface receives the same source-owned activation policy identity without a caller injection option.");
     test.context.__testHooks.initializeSurface();
     check(test.calls.surfaceCreate === 1 && test.calls.surfaceMount === 1 && test.slot.children.length === 5, "Repeated Surface bootstrap is idempotent and does not duplicate action nodes.");
+
+    test = harness({ agentOwnerFailure: true });
+    test.context.__testHooks.initializeRuntime(); await flush();
+    check(test.context.__testHooks.runtime() === test.runtime && test.runtime.getStatus().state === "ready", "Agent owner failure preserves the committed existing VelaRuntime.");
+    check(test.calls.surfaceCreate === 1 && test.calls.surfaceMount === 1 && test.calls.surfaceOptions.agentProjection === null, "Agent owner failure preserves Surface behavior in optional Projection mode.");
+    check(test.context.__testHooks.runtimeError() === null && test.context.__testHooks.agentError() === "AGENT_OWNER_FAILED", "Agent owner failure uses separate diagnostics without polluting Runtime status.");
 
     test = harness({ missingConfirmationView: true });
     test.context.__testHooks.initializeRuntime(); await flush();
