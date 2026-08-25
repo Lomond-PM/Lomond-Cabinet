@@ -9,6 +9,7 @@ const root = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const html = read("client/index.html");
 const main = read("client/js/main.js");
+const normalizedMain = main.replace(/\r\n?/g, "\n");
 const loader = read("client/js/vela/velaCepModuleLoader.js");
 let assertions = 0;
 function check(value, message) { assertions += 1; assert.ok(value, message); }
@@ -21,7 +22,7 @@ check(sessionIndex !== -1 && sessionIndex < agentIndex && agentIndex < ownerInde
 check(html.indexOf("velaAgentSurfaceProjection.js") === -1, "neutral Agent Surface adapter is not production-loaded");
 check(loader.indexOf("VelaAgentRuntime") === -1 && loader.indexOf("velaAgentRuntime") === -1 && loader.indexOf("VelaSessionRuntime") === -1, "CEP module loader remains outside static Agent module loading");
 check((main.match(/var velaAgentRuntimeOwner = null;/g) || []).length === 1, "main owns exactly one AgentRuntimeOwner reference");
-check(main.indexOf("initializeVelaAgentRuntimeOwner();\n            initializeVelaSurfaceController();") !== -1, "Agent owner initializes after existing Runtime commit and before Surface Controller");
+check(normalizedMain.indexOf("initializeVelaAgentRuntimeOwner();\n            initializeVelaSurfaceController();") !== -1, "Agent owner initializes after existing Runtime commit and before Surface Controller");
 
 const shutdownStart = main.indexOf("    function shutdownPanelRuntime() {");
 const shutdownEnd = main.indexOf("    function recoverPanelRuntime()", shutdownStart);
