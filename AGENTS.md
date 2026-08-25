@@ -4,8 +4,8 @@
 
 This repository is **Lomond Cabinet**, an After Effects CEP extension.
 
-- Product version: `0.3.1`
-- Published tag: `v0.3.1`
+- Product version metadata: `0.3.3` (release-prepared, unpublished)
+- Latest published tag: `v0.3.2`
 - Visible panel title: `Lomond Cabinet`
 - Manifest menu name: `AE Toolbox`
 - Extension bundle id: `com.kevin.aetoolbox`
@@ -78,7 +78,7 @@ Common prefixes:
 
 Do not reset, discard, rebase, force-push, move tags, or apply old stashes without explicit authorization. Do not commit, push, merge, or tag unless the user asks.
 
-Published tags are immutable. `v0.3.1` points to the published 0.3.1 release on `main`; older published tags such as `v0.3.0` remain immutable.
+Published tags are immutable. `v0.3.2` points to the published 0.3.2 release on `main`; older published tags such as `v0.3.1` and `v0.3.0` remain immutable.
 
 ## Architecture principles
 
@@ -257,7 +257,7 @@ AE smoke should verify the active path, not merely file presence. When behavior 
 
 Consult `docs/KNOWN_ISSUES.md` before opportunistic fixes.
 
-The accepted 0.3.1 responsive, Grid, Registry/bootstrap, generated-report, lifecycle, and narrow semantic-token work is closed. Do not reopen that scope during post-release work without a new focused regression and explicit authorization. The next development entry is 0.3.2 UI / Design System Foundation.
+The accepted 0.3.1 and 0.3.2 release work is closed. Do not reopen that scope during post-release work without a new focused regression and explicit authorization. The 0.3.3 Runtime Foundation is release-prepared; frozen staging keeps actual Observation + Capability in 0.3.4 and Planning / Authority / TaskRun in 0.3.5+.
 
 Other sensitive areas:
 
@@ -270,7 +270,7 @@ Other sensitive areas:
 
 ## Release management
 
-Current release version: `0.3.1`. The latest published tag is immutable `v0.3.1`, and post-release development continues from `dev` toward 0.3.2.
+Product metadata is staged at `0.3.3`. The latest published release/tag remains `0.3.2` / immutable `v0.3.2` until the reviewed release-prep reaches `dev`, then `main`, and an annotated `v0.3.3` tag is created.
 
 Future release version changes must keep synchronized:
 

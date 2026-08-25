@@ -12,6 +12,18 @@ This project follows simple semantic versioning for development handoff:
 
 _No unreleased changes._
 
+## [0.3.3] - 2026-08-25
+
+### Vela Agent Runtime Foundation
+
+- Added the append-only typed Session foundation, deterministic projections, in-memory persistence seam, Agent lifecycle, stable AgentScope identity with opaque immutable boundaries, and separated runtime revision domains.
+- Added runtime-owned Agent Projection and consumer-only Surface subscription, plus main-owned production Agent lifecycle integration with bounded bootstrap, suspend/resume, reload, and shutdown ownership.
+- Added standalone Observation / Agent Context plumbing with one-shot async reads, single-flight and stale guards, immutable snapshots, and no Host Observation, production loading, Capability, model invocation, or authority semantics.
+- Closed CEP browser/Node hybrid module publication compatibility for production SessionRuntime, AgentRuntime, and AgentRuntimeOwner; the bounded After Effects 2026 integrated acceptance passed.
+- Clarified runtime-state ownership: AgentDriver remains contract-only, future process-local `executionArmed` belongs to TaskRun rather than Agent, and no autonomous or authority-bearing runtime was introduced.
+
+Actual Observation and Capability remain staged to 0.3.4. Planning, TaskRun, executionArmed runtime state, and Authority remain staged to 0.3.5+, with AgentDriver reasoning/autonomous behavior deferred to a later frozen stage.
+
 ## [0.3.2] - 2026-08-24
 
 ### Design system and shared components

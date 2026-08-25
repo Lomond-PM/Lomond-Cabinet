@@ -1,10 +1,10 @@
 # HANDOFF.md
 
-## 0.3.2 release handoff
+## 0.3.3 release-preparation handoff
 
-Version 0.3.2 is **RELEASED** from the synchronized `main` and `dev` baseline. Registry/shared components, Appearance, the 67-parameter living Design Tuning Registry, Palette Store v2 and native Workspace, Final Settings IA, Runtime Console Cleanup, and Vela spacing convergence are complete. Their focused acceptances and the final integrated After Effects 2026 release smoke are closed and passed.
+Product metadata is staged at **0.3.3**. The 0.3.3 Agent Runtime Foundation development is complete, its canonical regression is **132/132 PASS**, final integrated After Effects 2026 acceptance is **PASS**, and release preparation is **COMPLETE / READY FOR RELEASE**. It is not yet published: the latest published release/tag remains `0.3.2` / `v0.3.2` until release-prep reaches `dev`, then `main`, and an annotated `v0.3.3` tag is created.
 
-The next development line is 0.3.3 Agent Runtime Foundation. Keep that work isolated from 0.3.2 and preserve the current Provider, Review, Confirmation, Preflight, ExecutionAdapter, and Host authority boundaries.
+Frozen staging keeps actual Observation + Capability in 0.3.4, Planning / TaskRun / Authority in 0.3.5+, and the AgentDriver reasoning/autonomous loop later. Preserve the existing Provider, Review, Confirmation, Preflight, ExecutionAdapter, and Host authority boundaries.
 
 ## Historical incremental working notes (superseded)
 
@@ -22,7 +22,7 @@ The uncommitted `refactor/0.3.2-typography-appearance` work contains Typography 
 
 ## Purpose
 
-This document explains how to continue Lomond Cabinet development on another machine and preserve the prepared 0.3.2 architecture and release state.
+This document explains how to continue Lomond Cabinet development on another machine and preserve the release-prepared 0.3.3 metadata, frozen architecture, and unpublished two-phase release state.
 
 Read before coding:
 
@@ -36,12 +36,16 @@ docs/HANDOFF.md
 
 ## Current release
 
-- Product version: `0.3.2`
+- Product metadata: `0.3.3` staged
 - Latest published tag: `v0.3.2`
-- Release status: **0.3.2 RELEASED**
+- Latest published release: `0.3.2`
+- 0.3.3 development: **COMPLETE**
+- 0.3.3 final AE acceptance: **PASS**
+- 0.3.3 release preparation: **COMPLETE / READY FOR RELEASE**
+- 0.3.3 published: **NO**
 - Host API version: `1.0.0`
 
-Version 0.3.2 is published from synchronized `main` and `dev` and tagged with immutable `v0.3.2`. The handoff baseline is the released 0.3.2 state; the next development line is 0.3.3 Agent Runtime Foundation.
+Version 0.3.2 is published from synchronized `main` and `dev` and tagged with immutable `v0.3.2`. Version 0.3.3 is the prepared release candidate; publication requires release-prep merge to `dev`, `dev` to `main`, and an annotated `v0.3.3` tag.
 
 Vela remains experimental:
 
@@ -124,7 +128,7 @@ com.kevin.aetoolbox
 ## Initial setup on another machine
 
 1. Clone or copy the repository.
-2. Confirm `VERSION` is `0.3.2` for the released baseline.
+2. Confirm `VERSION` is `0.3.3` for the prepared release candidate.
 3. Confirm both manifest version fields match `VERSION`.
 4. Configure CEP PlayerDebugMode for the AE/CSXS version when using an unsigned development extension.
 5. Create the CEP junction/symlink or install the full extension folder.
@@ -173,7 +177,7 @@ If CSS/browser JavaScript appears stale, verify the cache query in `client/index
 
 ### Registry Renderer
 
-The active 0.3.2 contract-completion work makes CoreUI the behavior owner for Checkbox, Switch, card-style ChoiceGroup, RangeNumber, ColorField, and Disclosure. Registry remains the declarative adapter and domain code retains meaning, persistence policy, business state, host actions, and payload ownership. `checkbox` and `switch` preserve the same boolean storage shape but have distinct semantics; compatibility `tabs` now consumes ChoiceGroup; Range/Color no longer own duplicate Registry compound-control behavior. Registry collapsible headings are native buttons and Settings theme groups share the same Disclosure controller without changing their layout or motion contract.
+The released 0.3.2 contract-completion work made CoreUI the behavior owner for Checkbox, Switch, card-style ChoiceGroup, RangeNumber, ColorField, and Disclosure. Registry remains the declarative adapter and domain code retains meaning, persistence policy, business state, host actions, and payload ownership. `checkbox` and `switch` preserve the same boolean storage shape but have distinct semantics; compatibility `tabs` now consumes ChoiceGroup; Range/Color no longer own duplicate Registry compound-control behavior. Registry collapsible headings are native buttons and Settings theme groups share the same Disclosure controller without changing their layout or motion contract.
 
 AE acceptance should cover Control Lab Checkbox/Switch/ChoiceGroup/Range/Color/Disclosure, Vela acknowledgement, production Registry option cards, section toggles, Settings theme disclosure, keyboard/focus, disabled states, picker preview/commit/cancel, and wide/narrow bilingual stress.
 
@@ -289,7 +293,7 @@ task branch -> dev -> main -> version tag
 - Use AE smoke for active runtime paths.
 - Keep published tags immutable.
 
-Published tags `v0.3.0` and `v0.3.1` are immutable. Future version tags should be created only after the reviewed release commit reaches `main`.
+Published tags `v0.3.0`, `v0.3.1`, and `v0.3.2` are immutable. Future version tags should be created only after the reviewed release commit reaches `main`.
 
 ## Version management
 
@@ -304,23 +308,27 @@ Future release changes must synchronize:
 
 `AEToolbox.hostApiVersion` changes only when the Host contract changes deliberately.
 
-## Post-0.3.2 roadmap
+## Frozen post-0.3.2 roadmap
 
 ### 0.3.2 — UI / Design System Foundation (released)
 
 Establish a complete semantic token hierarchy for color, surface, text, status, interaction, typography, spacing, radius, geometry, and component tokens. Progressively align Vela, Registry Renderer, Settings, and Home without redesigning the accepted Vela UI structure.
 
-### 0.3.3 — Context & Observation Foundation
+### 0.3.3 — Runtime (release-prepared, unpublished)
 
-Build Observation API, progressive context, task context, conversation context, and typed read/analyze capabilities. Evolve Registry toward a Capability Registry consumed by both Agent and Human UI. A capability may `read`, `analyze`, `mutate`, or `create`; Human UI is not required. Analysis capabilities such as audio BPM detection belong in this registry even without a complex workflow screen.
+Agent, Session, Scope, typed Session events, in-memory persistence seam, Surface-to-Agent consumer, runtime-state contracts, and contract-only AgentDriver are complete. The standalone Observation / Agent Context seam has no Host Observation or Capability semantics.
 
-### 0.3.4 — Agent Authority Foundation
+### 0.3.4 — Observation + Capability
 
-Define `ModelSuggestion`, `ActionCandidate`, `DelegationGrant`, and a Policy Engine returning `ALLOW`, `REVIEW_REQUIRED`, or `DENY`. Natural-language understanding/candidate generation and execution authority must be fully decoupled.
+Add actual Observation, Host-backed structured Context, Capability Registry, read/analyze capabilities, capability-to-registered-action mapping, and unified invocation/result envelopes.
 
-### 0.4.0 — First Delegated Agent
+### 0.3.5+ — Planning / Authority / TaskRun
 
-Introduce the bounded loop `Observe → Plan → Act → Verify → Replan` only after the user grants task-scoped authority. Review should then represent missing authority, out-of-scope/high-risk actions, ambiguity, or escalation rather than an unconditional step in every delegated operation.
+Add Planning, TaskRun and TaskState runtime, process-local `executionArmed`, Authority, PolicyDecision, DelegationGrant, Permission, and JIT binding/authority integration under the frozen architecture.
+
+### Later frozen stage — AgentDriver reasoning/autonomous loop
+
+Introduce bounded reasoning/autonomous behavior only after Observation, Capability, Planning, and Authority prerequisites exist. Observation, Context, Scope, proposal, approval state, permission, and armed state remain distinct from execution authority.
 
 ### 0.4.x — Agent Reliability
 
@@ -368,7 +376,7 @@ AE must validate centered Action press across canonical and compatibility consum
 
 ## Design Tuning Infrastructure handoff
 
-The active `refactor/0.3.2-design-tuning-infrastructure` work establishes the non-UI calibration authority for four Motion curve families and four semantic durations. `AEToolbox.designTuning.v1` stores only validated partial overrides; it never touches Appearance or Settings persistence. Duration overrides enter before the existing Major View Motion Speed multiplier. Structured curve overrides project onto the existing root curve properties, while raw canonical curves remain stylesheet-owned. Projection during protected Tool/Settings motion is deferred until `endAnimation()` and only the latest pending state applies. Reset removes overrides, promotion evidence is data-only, Reduced Motion remains authoritative, and the next task may add Developer → Design Tuning → Motion UI without changing these boundaries.
+The historical `refactor/0.3.2-design-tuning-infrastructure` work established the non-UI calibration authority for four Motion curve families and four semantic durations. `AEToolbox.designTuning.v1` stores only validated partial overrides; it never touches Appearance or Settings persistence. Duration overrides enter before the existing Major View Motion Speed multiplier. Structured curve overrides project onto the existing root curve properties, while raw canonical curves remain stylesheet-owned. Projection during protected Tool/Settings motion is deferred until `endAnimation()` and only the latest pending state applies. Reset removes overrides, promotion evidence is data-only, Reduced Motion remains authoritative; subsequent accepted work added its bounded UI without changing these boundaries.
 
 The active Motion v1 UI work adds that gated Developer stack without changing runtime authority. Four generic BezierCurveField editors commit only on `onChange`, four RangeNumber controls commit semantic milliseconds, Default/Overridden status and reset actions read/write only through the resolver, and promotion evidence is a read-only manual-copy surface. Reset All is intentionally omitted while Motion is the sole UI domain. Content reveal during spatial morph remains AE-verified and unchanged; future Surface Transition work must consume these resolved values rather than introduce another timing authority.
 
