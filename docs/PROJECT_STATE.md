@@ -22,7 +22,13 @@ Global Settings is ordered **General, Appearance, Advanced, Developer**. Final S
 
 Palette Store v2 remains the sole production Palette persistence authority, with dynamic `DIRECT`, same-palette `REFERENCE`, and registered `DERIVED` slots, `profiles.proceduralAppearance`, native Workspace Save/Cancel, and the legacy compatibility boundary. Cross-palette references, Harmony generation, node editing, global active Palette, and Appearance live-link remain deferred.
 
-Vela spacing ownership is closed and AE accepted: Card Inset owns shell/card placement; Content Inline and Content Block Insets are shared by Conversation and Composer on their respective axes; Surface Edge owns Vela Settings. The 0.3.3 Agent Runtime Foundation is future scope and is not part of 0.3.2.
+Vela spacing ownership is closed and AE accepted: Card Inset owns shell/card placement; Content Inline and Content Block Insets are shared by Conversation and Composer on their respective axes; Surface Edge owns Vela Settings. The 0.3.3 Agent Runtime Foundation is development-complete, AE-accepted, and release-prepared while remaining unpublished. Its normative baseline is `docs/design/vela-agent-architecture.md` (**FROZEN FOR 0.3.x**), with the integrated closure in `docs/design/vela-agent-0.3.3-closure.md`.
+
+## 0.3.3 Runtime Foundation development closure
+
+The 0.3.3 Runtime Foundation has completed development across stages A–F: Session Runtime Contract Foundation; Agent / AgentScope Runtime Shape; Agent Surface Projection / Subscription; Production Runtime Lifecycle Integration; standalone Observation / Agent Context Plumbing; and Runtime State Convergence with TaskRun/executionArmed ownership correctly deferred. Stage G is the integrated documentation closure. The frozen 0.3.3 requirements have no remaining staged blocker, and the current development baseline passes **132/132 canonical offline test files**.
+
+This is not a publication declaration. Version 0.3.2 remains the latest published baseline, and its historical **125 offline test files** result above remains the 0.3.2 release snapshot. Version 0.3.3 development, final integrated After Effects 2026 acceptance, and release preparation are complete; product metadata is staged at 0.3.3 and the canonical regression is **132/132 PASS**. Publication remains pending release-prep merge to `dev`, `dev` to `main`, and an annotated `v0.3.3` tag. Actual Observation and Capability remain frozen for 0.3.4. Planning, TaskRun, TaskState runtime, executionArmed runtime state, and Authority remain frozen for 0.3.5+, with the AgentDriver reasoning/autonomous loop later.
 
 Design Tuning Full Coverage 已加入 GLOBAL / COMMON consumer convergence 契约、UI Scale Peek semantic target/structure-only ancestor path，以及 Registry Control Lab Registry Path / CoreUI Direct 完整性检查。Developer / Advanced / User 的最终参数安置仍等待 Full Calibration 后复核。
 
@@ -43,10 +49,13 @@ Lomond Cabinet is an After Effects CEP extension panel.
 - Extension id/folder: `com.kevin.aetoolbox`
 - Current published release version: `0.3.2`
 - Latest published tag: `v0.3.2`
+- Product metadata staged for: `0.3.3`
+- 0.3.3 release preparation: **COMPLETE / READY FOR RELEASE**
+- 0.3.3 published: **NO**
 - Post-release development baseline: synchronized `main` and `dev`
 - Host API version: `1.0.0`
 
-`VERSION`, both version fields in `CSXS/manifest.xml`, and `AEToolbox.projectVersion` identify published product version `0.3.2`. Version 0.3.2 is published from synchronized `main` and `dev`, with immutable tag `v0.3.2` and the completed GitHub Release.
+`VERSION`, both product version fields in `CSXS/manifest.xml`, and `AEToolbox.projectVersion` are staged at `0.3.3` for the release candidate. The latest published version remains 0.3.2 from synchronized `main` and `dev`, with immutable tag `v0.3.2`, until the 0.3.3 publication workflow completes.
 
 ## 0.3.1 release status
 
@@ -332,7 +341,7 @@ The release contains:
 
 ## Next development direction
 
-The next isolated development target is **0.3.3 — Agent Runtime Foundation**. It starts from the released 0.3.2 baseline and must not rewrite the published 0.3.2 state or weaken the existing Vela authority boundaries.
+The isolated **0.3.3 — Agent Runtime Foundation** has completed development, final integrated AE acceptance, canonical 132/132 regression, and release preparation. Product metadata is staged at 0.3.3, but publication remains pending the reviewed release-prep to `dev` to `main` flow and annotated `v0.3.3` tag. The latest published baseline remains 0.3.2. `docs/design/vela-agent-architecture.md` is the **FROZEN FOR 0.3.x** normative baseline; `docs/design/vela-agent-0.3.3-closure.md` records the integrated closure.
 
 Registry evolves toward a typed Capability Registry consumable by both Agent and Human UI. Capabilities may be `read`, `analyze`, `mutate`, or `create`; a dedicated Human UI is not required for a capability to exist.
 

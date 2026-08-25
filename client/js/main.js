@@ -7,6 +7,7 @@
 
     var cs = new CSInterface();
     var velaRuntimeController = null;
+    var velaAgentRuntimeOwner = null;
     var velaRuntimeInitTransaction = null;
     var velaRuntimeLastAttemptCoreGeneration = null;
     var velaSurfaceShell = null;
@@ -15,6 +16,7 @@
     var velaSurfaceBootstrapRevision = 0;
     var velaRuntimeStatusRevision = 0;
     var velaRuntimeLastErrorCode = null;
+    var velaAgentRuntimeLastErrorCode = null;
     var hostLoaded = false;
     var coreBootstrapController = null;
     var coreBootstrapSnapshot = null;
@@ -3917,6 +3919,41 @@
         }
     }
 
+    function reportVelaAgentRuntimeError(error, phase) {
+        var code = error && typeof error.code === "string" ? error.code : "AGENT_RUNTIME_UNAVAILABLE";
+        velaAgentRuntimeLastErrorCode = code;
+        if (window.console && console.warn) {
+            console.warn("[Vela Agent] " + (phase || "runtime") + " unavailable:", code);
+        }
+    }
+
+    function initializeVelaAgentRuntimeOwner() {
+        var owner;
+        if (panelShuttingDown) { return null; }
+        if (velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.isDisposed === "function" && !velaAgentRuntimeOwner.isDisposed()) {
+            return velaAgentRuntimeOwner;
+        }
+        if (!window.VelaAgentRuntime || !window.VelaAgentRuntimeOwner || typeof window.VelaAgentRuntimeOwner.createOwner !== "function") {
+            reportVelaAgentRuntimeError({ code: "AGENT_RUNTIME_UNAVAILABLE" }, "dependency");
+            return null;
+        }
+        try {
+            owner = window.VelaAgentRuntimeOwner.createOwner({
+                onListenerError: function (error) { reportVelaAgentRuntimeError(error, "listener"); }
+            });
+            owner.activate();
+            velaAgentRuntimeOwner = owner;
+            velaAgentRuntimeLastErrorCode = null;
+            return owner;
+        } catch (error) {
+            if (owner && typeof owner.dispose === "function") {
+                try { owner.dispose(); } catch (ignored) {}
+            }
+            reportVelaAgentRuntimeError(error, "initialize");
+            return null;
+        }
+    }
+
     function reportVelaSurfaceInitializationError() {
         if (velaSurfaceBootstrapState === "unavailable") {
             return;
@@ -3964,6 +4001,8 @@
             return null;
         }
         if (velaRuntimeController && committedStatus && committedStatus.state === "ready" && committedStatus.disposed !== true) {
+            initializeVelaAgentRuntimeOwner();
+            initializeVelaSurfaceController();
             return null;
         }
         if (velaRuntimeController) {
@@ -4005,6 +4044,7 @@
             clearVelaRuntimeInitTransaction(transaction);
             velaRuntimeLastErrorCode = null;
             velaRuntimeStatusRevision += 1;
+            initializeVelaAgentRuntimeOwner();
             initializeVelaSurfaceController();
             configureVelaExperimentalSession();
             refreshVelaExperimentalSettings();
@@ -4073,6 +4113,8 @@
                 ConfirmationView: window.VelaConfirmationView,
                 ActivationPolicy: window.VelaActivationPolicy,
                 onExperimentalStateChange: refreshVelaExperimentalSettings,
+                agentProjection: velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.getCurrentProjection === "function" ? velaAgentRuntimeOwner.getCurrentProjection() : null,
+                onAgentProjectionError: function (error, phase) { reportVelaAgentRuntimeError(error, phase || "surface"); },
                 provider: {
                     check: function (config) { return velaRuntimeController.checkProviderReadiness(config); },
                     send: function (message) {
@@ -8971,6 +9013,10 @@
         if (velaSurfaceController) {
             velaSurfaceController.dispose();
             velaSurfaceController = null;
+        }
+        if (velaAgentRuntimeOwner) {
+            velaAgentRuntimeOwner.dispose();
+            velaAgentRuntimeOwner = null;
         }
         if (velaSurfaceShell) {
             velaSurfaceShell.dispose();
