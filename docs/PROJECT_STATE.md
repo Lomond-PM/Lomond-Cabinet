@@ -24,6 +24,12 @@ Palette Store v2 remains the sole production Palette persistence authority, with
 
 Vela spacing ownership is closed and AE accepted: Card Inset owns shell/card placement; Content Inline and Content Block Insets are shared by Conversation and Composer on their respective axes; Surface Edge owns Vela Settings. The 0.3.3 Agent Runtime Contract Foundation is the current isolated development scope and remains outside the released, frozen 0.3.2 baseline. Its normative baseline is `docs/design/vela-agent-architecture.md` (**FROZEN FOR 0.3.x**), with the bounded implementation contract in `docs/design/vela-agent-runtime-contract-foundation-0.3.3.md`.
 
+## 0.3.3 Runtime Foundation development closure
+
+The 0.3.3 Runtime Foundation has completed development across stages A–F: Session Runtime Contract Foundation; Agent / AgentScope Runtime Shape; Agent Surface Projection / Subscription; Production Runtime Lifecycle Integration; standalone Observation / Agent Context Plumbing; and Runtime State Convergence with TaskRun/executionArmed ownership correctly deferred. Stage G is the integrated documentation closure. The frozen 0.3.3 requirements have no remaining staged blocker, and the current development baseline passes **132/132 canonical offline test files**.
+
+This is not a release declaration. Version 0.3.2 remains the released baseline, and its historical **125 offline test files** result above remains the 0.3.2 release snapshot. Version 0.3.3 development and final integrated After Effects 2026 acceptance are complete; release preparation remains pending and no version metadata has been advanced. Actual Observation and Capability remain frozen for 0.3.4. Planning, TaskRun, TaskState runtime, executionArmed runtime state, and Authority remain frozen for 0.3.5+, with the AgentDriver reasoning/autonomous loop later. The integrated closure record is `docs/design/vela-agent-0.3.3-closure.md`.
+
 Design Tuning Full Coverage 已加入 GLOBAL / COMMON consumer convergence 契约、UI Scale Peek semantic target/structure-only ancestor path，以及 Registry Control Lab Registry Path / CoreUI Direct 完整性检查。Developer / Advanced / User 的最终参数安置仍等待 Full Calibration 后复核。
 
 Design Tuning 已改为 real-consumer transient calibration。Resolver precedence 为 canonical → persisted override → transient override；commit 先持久化同值再清 transient，避免闪回。Calibration editor chrome 在 gesture 内冻结自身 semantic geometry，Control Lab 与其他真实 consumer 自然接收 transient。Live Preview Stage 及其 nested scroll owner已移除。
@@ -332,7 +338,7 @@ The release contains:
 
 ## Next development direction
 
-The current isolated development target is **0.3.3 — Agent Runtime Contract Foundation**. It starts from the released 0.3.2 baseline and must not rewrite the published 0.3.2 state or weaken the existing Vela authority boundaries. `docs/design/vela-agent-architecture.md` is the **FROZEN FOR 0.3.x** normative baseline; `docs/design/vela-agent-runtime-contract-foundation-0.3.3.md` records the bounded current implementation contract.
+The isolated **0.3.3 — Agent Runtime Foundation** has completed development and final integrated AE acceptance; release preparation remains pending. It remains outside the published 0.3.2 baseline and must not rewrite that release state or weaken existing Vela authority boundaries. `docs/design/vela-agent-architecture.md` is the **FROZEN FOR 0.3.x** normative baseline; `docs/design/vela-agent-0.3.3-closure.md` records the integrated closure.
 
 Registry evolves toward a typed Capability Registry consumable by both Agent and Human UI. Capabilities may be `read`, `analyze`, `mutate`, or `create`; a dedicated Human UI is not required for a capability to exist.
 
