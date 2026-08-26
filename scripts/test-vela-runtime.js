@@ -56,7 +56,8 @@ function createController(options) {
 async function run() {
     const controller = createController();
     check(Object.isFrozen(controller), "Controller is frozen.");
-    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,cancelProviderRequest,checkProviderReadiness,dispose,getConfirmationSurfaceState,getProviderDiagnostics,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,initialize,rejectActiveCandidate,resetSession,resume,reviewProviderProposal,sendProviderMessage,suspend", "Runtime exposes only Persistent Surface lifecycle, bounded Provider diagnostics, proposal review, and active confirmation facades.");
+    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,cancelProviderRequest,checkProviderReadiness,dispose,getConfirmationSurfaceState,getObservationReadPort,getProviderDiagnostics,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,initialize,rejectActiveCandidate,resetSession,resume,reviewProviderProposal,sendProviderMessage,suspend", "Runtime exposes only Persistent Surface lifecycle, bounded read Observation, Provider diagnostics, proposal review, and active confirmation facades.");
+    check(controller.getObservationReadPort() === null, "Observation read port is unavailable before Runtime initialization.");
     check(controller.cancelProviderRequest.length === 0, "Provider cancellation has no caller-supplied request identifier seam.");
     check(controller.approveActiveCandidate.length === 0 && controller.rejectActiveCandidate.length === 0, "Surface confirmation facades accept no caller-supplied candidate identifier.");
     check(!Object.prototype.hasOwnProperty.call(controller, "getPreflight") && !Object.prototype.hasOwnProperty.call(controller, "getBridge") && !Object.prototype.hasOwnProperty.call(controller, "executeHostRequest"), "Controller does not expose private execution objects.");
@@ -64,6 +65,9 @@ async function run() {
     const second = controller.initialize();
     check(first === second, "Concurrent initialization shares one Promise.");
     const status = await first;
+    const observationReadPort = controller.getObservationReadPort();
+    check(Object.isFrozen(observationReadPort) && Object.keys(observationReadPort).sort().join(",") === "capture,getState", "initialized Runtime exposes one frozen read-only Observation port.");
+    check(!Object.prototype.hasOwnProperty.call(observationReadPort, "buildRequest") && !Object.prototype.hasOwnProperty.call(observationReadPort, "execute"), "Observation read port exposes no execution authority.");
     check(status.state === "ready" && status.initialized === true, "Tier 0 Host v4 readiness succeeds.");
     check(status.hostAdapterRevision === "vela-context-host-v4", "Status reports only the Host revision.");
     check(Object.isFrozen(status) && Object.isFrozen(status.bridgeState), "Status is frozen.");

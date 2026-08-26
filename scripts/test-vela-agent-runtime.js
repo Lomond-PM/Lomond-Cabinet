@@ -79,9 +79,19 @@ check(Object.isFrozen(activeSnapshot), "Agent snapshot is frozen");
 check(Object.isFrozen(activeSnapshot.scopeBoundary), "Agent snapshot boundary is frozen");
 deepEqual(
     Object.keys(activeSnapshot).sort(),
-    ["agentId", "lifecycleStage", "revision", "scopeBoundary", "scopeId", "sessionId"],
+    ["agentId", "lifecycleStage", "revision", "scopeBoundary", "scopeId", "sessionId", "turnId"],
     "Agent snapshot contains only the bounded runtime shape"
 );
+equal(activeSnapshot.turnId, null, "active Agent has no implicit turn");
+const turnAgent = agentRuntime.createAgent();
+turnAgent.activate();
+const firstTurn = turnAgent.beginTurn();
+check(Object.isFrozen(firstTurn), "turn identity is immutable");
+equal(firstTurn.sessionId, turnAgent.getSessionId(), "turn is bound to the Agent Session");
+equal(firstTurn.turnId, turnAgent.getCurrentTurnId(), "Runtime owns the current turn id");
+const secondTurn = turnAgent.beginTurn();
+check(secondTurn.turnId !== firstTurn.turnId, "each explicit turn has a unique identity");
+equal(turnAgent.getSnapshot().turnId, secondTurn.turnId, "Agent snapshot projects current turn identity");
 
 const forbiddenAgentFields = [
     "agentActivity", "taskState", "presentationStatus", "provider", "permission",

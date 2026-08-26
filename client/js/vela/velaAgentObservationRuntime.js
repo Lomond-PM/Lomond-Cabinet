@@ -22,13 +22,19 @@
         OBSERVATION_RESULT_INVALID: "OBSERVATION_RESULT_INVALID",
         OBSERVATION_RESULT_STALE: "OBSERVATION_RESULT_STALE",
         OBSERVATION_CONTEXT_PROJECTION_FAILED: "OBSERVATION_CONTEXT_PROJECTION_FAILED",
+        OBSERVATION_REFRESH_CANCELLED: "OBSERVATION_REFRESH_CANCELLED",
         OBSERVATION_RUNTIME_DISPOSED: "OBSERVATION_RUNTIME_DISPOSED",
         OBSERVATION_RUNTIME_OPTIONS_INVALID: "OBSERVATION_RUNTIME_OPTIONS_INVALID"
     });
 
-    function createError(code) {
+    var CAPABILITY_ERROR_CODES = Object.freeze(["ADAPTER_ERROR", "INVALID_OUTPUT"]);
+
+    function createError(code, capabilityErrorCode) {
         var error = new Error(code);
         error.code = code;
+        if (CAPABILITY_ERROR_CODES.indexOf(capabilityErrorCode) !== -1) {
+            Object.defineProperty(error, "capabilityErrorCode", { configurable: false, enumerable: true, value: capabilityErrorCode, writable: false });
+        }
         return error;
     }
 
@@ -100,6 +106,8 @@
         var settings = isPlainObject(options) ? options : {};
         var readAgentSnapshot = settings.readAgentSnapshot;
         var provider = settings.provider || null;
+        var capabilityRuntime = settings.capabilityRuntime || null;
+        var capabilityId = typeof settings.capabilityId === "string" ? settings.capabilityId : null;
         var onError = typeof settings.onError === "function" ? settings.onError : function () {};
         var disposed = false;
         var observationRevision = 0;
@@ -117,7 +125,7 @@
         }
 
         function rejectStable(error, phase) {
-            report(error, phase);
+            if (!error || error.code !== ERROR_CODES.OBSERVATION_REFRESH_CANCELLED) { report(error, phase); }
             throw error;
         }
 
@@ -130,6 +138,8 @@
             if (error) { throw error; }
             return deepFreeze({
                 agentId: snapshot.agentId,
+                sessionId: typeof snapshot.sessionId === "string" ? snapshot.sessionId : null,
+                turnId: typeof snapshot.turnId === "string" ? snapshot.turnId : null,
                 scopeToken: {
                     scopeId: snapshot.scopeId,
                     agentRevision: snapshot.revision
@@ -189,6 +199,53 @@
 
         function beginRefresh() {
             var request;
+            var invocationPromise;
+            var capabilityOperation;
+            if (capabilityRuntime && capabilityId) {
+                try { request = captureRequest(); }
+                catch (captureError) { return Promise.reject(captureError); }
+                if (!request.sessionId || !request.turnId) { return Promise.reject(createError(ERROR_CODES.AGENT_NOT_ACTIVE)); }
+                invocationPromise = capabilityRuntime.invoke({ capabilityId: capabilityId, input: {} });
+                capabilityOperation = invocationPromise.then(function (result) {
+                    var current;
+                    var data;
+                    var facts;
+                    var provenance;
+                    var nextRevision;
+                    if (!result || result.status === "cancelled") { throw createError(ERROR_CODES.OBSERVATION_REFRESH_CANCELLED); }
+                    if (result.status !== "succeeded") {
+                        throw createError(
+                            result.status === "unavailable" ? ERROR_CODES.OBSERVATION_PROVIDER_UNAVAILABLE : ERROR_CODES.OBSERVATION_PROVIDER_FAILED,
+                            result.status === "error" && result.error ? result.error.code : null
+                        );
+                    }
+                    current = validateAgentSnapshot(readAgentSnapshot());
+                    if (current.lifecycleStage !== "active" || current.agentId !== request.agentId || current.scopeId !== request.scopeToken.scopeId || current.revision !== request.scopeToken.agentRevision || current.sessionId !== request.sessionId || current.turnId !== request.turnId || result.sessionId !== request.sessionId || result.turnId !== request.turnId || result.capabilityId !== capabilityId) { throw createError(ERROR_CODES.OBSERVATION_RESULT_STALE); }
+                    data = result.data;
+                    facts = {
+                        activeComposition: {
+                            available: data.available, compositionId: data.compositionId, type: data.type,
+                            width: data.width, height: data.height, duration: data.duration, frameRate: data.frameRate
+                        }
+                    };
+                    provenance = {
+                        capabilityId: capabilityId, invocationId: result.invocationId,
+                        sessionId: result.sessionId, turnId: result.turnId,
+                        scopeId: request.scopeToken.scopeId, agentRevision: request.scopeToken.agentRevision,
+                        hostContextId: data.hostContextId, hostInstanceId: data.hostInstanceId, hostReloadEpoch: data.hostReloadEpoch
+                    };
+                    nextRevision = observationRevision + 1;
+                    currentObservation = deepFreeze({ observationRevision: nextRevision, agentId: request.agentId, facts: cloneJson(facts), provenance: cloneJson(provenance) });
+                    currentContext = deepFreeze({ agentId: request.agentId, observationRevision: nextRevision, facts: cloneJson(facts), provenance: cloneJson(provenance) });
+                    observationRevision = nextRevision;
+                    return currentObservation;
+                }, function (error) {
+                    if (error && error.code === "CAPABILITY_RESULT_DISCARDED") { throw createError(ERROR_CODES.OBSERVATION_RESULT_STALE); }
+                    throw error;
+                });
+                capabilityOperation.cancel = typeof invocationPromise.cancel === "function" ? invocationPromise.cancel : function () { return false; };
+                return capabilityOperation;
+            }
             if (!provider || typeof provider.observe !== "function") {
                 return Promise.reject(createError(ERROR_CODES.OBSERVATION_PROVIDER_UNAVAILABLE));
             }
@@ -217,11 +274,16 @@
                 inFlight = null;
                 return rejectStable(error, "refresh");
             });
+            if (typeof operation.cancel === "function") { inFlight.cancel = operation.cancel; }
             return inFlight;
         }
 
         return Object.freeze({
             refresh: refresh,
+            cancelRefresh: function () {
+                if (!inFlight || typeof inFlight.cancel !== "function") { return false; }
+                return inFlight.cancel();
+            },
             getObservationSnapshot: function () { return currentObservation; },
             getContextSnapshot: function () { return currentContext; },
             dispose: function () {

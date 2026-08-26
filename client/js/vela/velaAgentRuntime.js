@@ -25,11 +25,13 @@
     var MODULE_REVISION = "vela-agent-runtime-projection-0.3.3-v2";
     var agentSequence = 0;
     var scopeSequence = 0;
+    var turnSequence = 0;
 
     var ERROR_CODES = Object.freeze({
         AGENT_DISPOSED: "AGENT_DISPOSED",
         AGENT_PROJECTION_LISTENER_INVALID: "AGENT_PROJECTION_LISTENER_INVALID",
         AGENT_SCOPE_BOUNDARY_INVALID: "AGENT_SCOPE_BOUNDARY_INVALID",
+        AGENT_NOT_ACTIVE: "AGENT_NOT_ACTIVE",
         AGENT_RUNTIME_UNAVAILABLE: "AGENT_RUNTIME_UNAVAILABLE"
     });
 
@@ -122,6 +124,7 @@
         var revision = 0;
         var projectionRevision = 0;
         var scopeBoundary = deepFreeze({});
+        var currentTurnId = null;
         var scope;
         var projection;
         var projectionSubscribers = [];
@@ -194,6 +197,7 @@
                     scopeBoundary: scopeBoundary,
                     agentRevision: revision,
                     sessionId: sessionId,
+                    turnId: currentTurnId,
                     sessionLastSeq: getSessionLastSeq(),
                     projectionRevision: projectionRevision
                 });
@@ -230,10 +234,12 @@
             getScope: function () { return scope; },
             getProjection: function () { return projection; },
             getRevision: function () { return revision; },
+            getCurrentTurnId: function () { return currentTurnId; },
             getSnapshot: function () {
                 return deepFreeze({
                     agentId: agentId,
                     sessionId: sessionId,
+                    turnId: currentTurnId,
                     lifecycleStage: lifecycleStage,
                     scopeId: scopeId,
                     scopeBoundary: scopeBoundary,
@@ -248,6 +254,15 @@
                     commitProjectionChange("agent");
                 }
                 return lifecycleStage;
+            },
+            beginTurn: function () {
+                assertNotDisposed();
+                if (lifecycleStage !== "active") { fail(ERROR_CODES.AGENT_NOT_ACTIVE); }
+                turnSequence += 1;
+                currentTurnId = "turn_" + String(turnSequence);
+                revision += 1;
+                commitProjectionChange("agent");
+                return deepFreeze({ sessionId: sessionId, turnId: currentTurnId });
             },
             setScopeBoundary: function (snapshot) {
                 var nextBoundary;
