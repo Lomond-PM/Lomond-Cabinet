@@ -534,6 +534,32 @@ function checkGeneratedI18nReport() {
     );
 }
 
+function checkFixtureEolPolicy() {
+    const attributes = exists(".gitattributes") ? readText(".gitattributes") : "";
+    const fixtureRoot = path.join(ROOT, "scripts", "fixtures");
+    const jsonFixtures = [];
+
+    function collect(directory) {
+        fs.readdirSync(directory, { withFileTypes: true }).forEach((entry) => {
+            const entryPath = path.join(directory, entry.name);
+            if (entry.isDirectory()) { collect(entryPath); }
+            else if (entry.isFile() && entry.name.endsWith(".json")) { jsonFixtures.push(entryPath); }
+        });
+    }
+
+    check(
+        "JSON fixtures have a repository-level LF checkout policy",
+        /^scripts\/fixtures\/\*\*\/\*\.json\s+text\s+eol=lf\s*$/m.test(attributes),
+        ".gitattributes must keep scripts/fixtures/**/*.json byte-stable with text eol=lf."
+    );
+    if (exists("scripts/fixtures")) { collect(fixtureRoot); }
+    check(
+        "Checked-out JSON fixtures contain no CR bytes",
+        jsonFixtures.length > 0 && jsonFixtures.every((filePath) => !fs.readFileSync(filePath).includes(13)),
+        "JSON fixtures must be checked out with LF bytes so frozen fixture hashes remain portable."
+    );
+}
+
 function main() {
     const version = checkVersions();
     checkChangelog(version);
@@ -545,6 +571,7 @@ function main() {
     checkVelaContextHostIncludes();
     checkRegistryTools();
     checkPaletteAuthorityClosure();
+    checkFixtureEolPolicy();
     checkGeneratedI18nReport();
 
     let failed = 0;
