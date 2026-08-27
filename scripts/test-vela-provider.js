@@ -79,7 +79,7 @@ function makeRuntime(scheduler, overrides, nowMs) {
 }
 
 function requestIdFromTransport(request) {
-    const match = /Use requestId (req_[a-z0-9]+)/.exec(request.body.messages[0].content);
+    const match = /Use requestId (req_[a-z0-9]+)/.exec(JSON.parse(request.body.messages[1].content).turnResponseContract);
     assert.ok(match, "System prompt must contain the local request id.");
     return match[1];
 }
@@ -237,6 +237,7 @@ async function run() {
     equal(normalResponse.provider, "lmstudio", "Provider metadata must be local.");
     equal(normalResponse.model, "Qwen3.5-4B-Q6_K", "Model metadata must be local.");
     equal(normal.provider.getState().state, "completed", "Successful requests must complete.");
+    equal(normal.provider.getDiagnostics().terminalFailureBoundary, null, "Completed Adapter requests expose no terminal failure boundary.");
     check(Object.isFrozen(normal.provider) && Object.isFrozen(normal.provider.capabilities) && Object.isFrozen(normal.provider.getState()), "Provider public objects and state views must be frozen.");
     check(Object.isFrozen(normalResponse) && Object.isFrozen(normal.provider.getDiagnostics()), "Responses and diagnostics must be frozen.");
     equal(normal.calls.length, 1, "Exactly one fake transport call is expected.");
@@ -265,7 +266,10 @@ async function run() {
     check(schemaMaxLengths.length > 0 && schemaMaxLengths.every((value) => Number.isInteger(value) && value <= 1024), "No LM Studio schema repetition bound may exceed the conservative generation limit.");
     check(!JSON.stringify(sent.body.response_format).includes("json_object") && !JSON.stringify(sent.body.response_format).includes("actionCandidate") && !JSON.stringify(sent.body.response_format).includes("\"plan\""), "Outbound JSON schema must not express deprecated JSON mode or executable envelopes.");
     equal(sent.body.messages[0].role, "system", "The system message must be local and first.");
-    check(sent.body.messages[0].content.includes(handle.requestId) && sent.body.messages[0].content.includes("vela.model-response.v1"), "The system message must bind response metadata.");
+    equal(sent.body.messages[1].role, "assistant", "The bounded turn message must remain second.");
+    const trustedTurn = JSON.parse(sent.body.messages[1].content);
+    check(!sent.body.messages[0].content.includes(handle.requestId) && !sent.body.messages[0].content.includes("Qwen3.5-4B-Q6_K") && sent.body.messages[0].content.includes("vela.model-response.v1"), "The system message must retain stable protocol behavior without concrete turn metadata.");
+    check(Object.keys(trustedTurn).join(",") === "turnResponseContract,trustedGrounding" && trustedTurn.turnResponseContract.includes(handle.requestId) && trustedTurn.turnResponseContract.includes("Qwen3.5-4B-Q6_K") && trustedTurn.trustedGrounding === "unavailable", "The assistant turn structure must retain concrete metadata and an explicit unavailable grounding representation.");
     const prompt = sent.body.messages[0].content;
     const proposal57Example = JSON.stringify({ protocol: normal.protocol.PROTOCOLS.RESPONSE, schemaVersion: normal.protocol.SCHEMA_VERSION, requestId: handle.requestId, provider: "lmstudio", model: "Qwen3.5-4B-Q6_K", envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } } });
     const decisionTable = "DECISION: text by default. Return localProposal only for a direct command to set the current or selected layer opacity to one explicit 0–100 target. Return text for greetings, questions, current-value queries, explanations, suggestions, uncertainty, hypotheticals, negations, relative adjustments, ambiguity, or no one target.";
@@ -313,6 +317,7 @@ async function run() {
     const unauthorizedResponse = await unauthorizedHarness.provider.start(input()).promise;
     equal(unauthorizedResponse.envelope.error.code, base.protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "A structurally valid model-authored error must become the generic local invalid-response result.");
     equal(unauthorizedHarness.provider.getDiagnostics().errorCode, "MODEL_ERROR_NOT_AUTHORIZED", "Only adapter diagnostics may classify a model-authored error as unauthorized.");
+    equal(unauthorizedHarness.provider.getDiagnostics().terminalFailureBoundary, "profile-validation", "Model-authored errors fail at the closed profile-validation boundary.");
     check(!JSON.stringify(unauthorizedResponse).includes("EXPRESSION_NOT_ALLOWLISTED") && !JSON.stringify(unauthorizedResponse).includes("untrusted"), "Model-authored error fields must not enter the canonical response.");
     for (const fenced of [false, true]) {
         const harness = createHarness({ responder: (request) => { let content = canonicalContent(base.protocol, request); if (fenced) content = "```json\n" + content + "\n```"; return Promise.resolve(transportResult(wrapper(content))); } });
@@ -466,6 +471,13 @@ async function run() {
     const connection = createHarness({ responder: () => Promise.reject(new Error("secret endpoint stack token")) });
     const connectionResponse = await connection.provider.start(input({ messages: [{ role: "user", content: "private-message" }] })).promise;
     equal(connectionResponse.envelope.error.code, base.protocol.ERROR_CODES.PROVIDER_CONNECTION_FAILED, "Transport rejects must map to a stable code.");
+    equal(connection.provider.getDiagnostics().terminalFailureBoundary, "transport-read", "Transport rejection diagnostics expose only the closed transport-read boundary.");
+    const outerFailure = createHarness({ responder: () => Promise.resolve(transportResult("{}")) });
+    await outerFailure.provider.start(input()).promise;
+    equal(outerFailure.provider.getDiagnostics().terminalFailureBoundary, "outer-response", "Malformed OpenAI wrappers fail at the closed outer-response boundary.");
+    const contentFailure = createHarness({ responder: () => Promise.resolve(transportResult(wrapper("not-json"))) });
+    await contentFailure.provider.start(input()).promise;
+    equal(contentFailure.provider.getDiagnostics().terminalFailureBoundary, "content-response", "Malformed assistant content fails at the closed content-response boundary.");
     const serializedDiagnostics = JSON.stringify(connection.provider.getDiagnostics());
     check(!serializedDiagnostics.includes("secret") && !serializedDiagnostics.includes("private-message") && !serializedDiagnostics.includes(DEFAULT_ENDPOINT), "Diagnostics must redact transport and request data.");
     const diagnostics = connection.provider.getDiagnostics();
@@ -678,7 +690,7 @@ async function run() {
         const parserValue = Object.freeze({ createResponseParser() {} });
         const capabilityValue = Object.freeze({ getModelProjection() { return Object.freeze({ capabilityId: "set-opacity-v1", parameters: Object.freeze({ properties: Object.freeze({ opacity: Object.freeze({ minimum: 0, maximum: 100 }) }) }) }); } });
         const policyValue = Object.freeze({ PROFILES: Object.freeze({ TEXT_ONLY: "text-only", EXPLICIT_EDIT_ELIGIBLE: "explicit-edit-eligible" }), createRequestBranchPolicy() {} });
-        const promptBuilderValue = Object.freeze({ buildSystemPrompt() { return "prompt"; } });
+        const promptBuilderValue = Object.freeze({ buildSystemPrompt() { return "prompt"; }, buildTurnContract() { return "turn"; } });
         const modules = Object.assign({ VelaProtocol: protocolValue, VelaResponseParser: parserValue, VelaCapabilityContracts: capabilityValue, VelaProviderRequestBranchPolicy: policyValue, VelaCapabilityPromptBuilder: promptBuilderValue }, options.modules || {});
         const bootstrap = Object.freeze({
             getModule(name) { return modules[name]; },

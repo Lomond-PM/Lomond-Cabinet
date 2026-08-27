@@ -240,6 +240,42 @@
         var state = "idle";
         var active = null;
         var ownedCaptureHandles = new WeakMap();
+        var failureDetails = new WeakMap();
+        var contextDiagnostics = Object.freeze({ lastContextOperation: null, lastContextDisposition: null, lastContextFailureStage: null, lastContextHostErrorCode: null, lastContextHostFailureStage: null, lastContextErrorCode: null, lastContextUnavailableReason: null });
+
+        function closedOperation(request) {
+            if (request && request.operation === "captureContext") { return "capture-context"; }
+            if (request && request.operation === "capturePropertyValues") { return "capture-property-values"; }
+            return null;
+        }
+
+        function closedUnavailableReason(value) {
+            return value === "no-project" || value === "no-active-composition" || value === "no-actionable-target" ? value : null;
+        }
+
+        function closedHostFailureStage(value) {
+            return value === "project-read" || value === "project-transition" || value === "active-item-read" || value === "active-item-classification" ? value : null;
+        }
+
+        function rememberFailure(error, stage, hostErrorCode, unavailableReason, hostFailureStage) {
+            if (error && (typeof error === "object" || typeof error === "function")) {
+                failureDetails.set(error, Object.freeze({ stage: stage || null, hostErrorCode: hostErrorCode || null, hostFailureStage: closedHostFailureStage(hostFailureStage), unavailableReason: closedUnavailableReason(unavailableReason) }));
+            }
+            return error;
+        }
+
+        function recordContextTerminal(record, disposition, details, error) {
+            details = details || {};
+            contextDiagnostics = Object.freeze({
+                lastContextOperation: closedOperation(record && record.request),
+                lastContextDisposition: disposition,
+                lastContextFailureStage: details.stage || null,
+                lastContextHostErrorCode: details.hostErrorCode || null,
+                lastContextHostFailureStage: details.hostFailureStage || null,
+                lastContextErrorCode: error && typeof error.code === "string" ? error.code : null,
+                lastContextUnavailableReason: details.unavailableReason || null
+            });
+        }
 
         function issueUniqueSessionId(currentSessionId) {
             var attempts = 1 + protocol.HARD_LIMITS.maxIdCollisionRetries;
@@ -279,13 +315,14 @@
                 record.requestId === active.requestId && record.sessionId === sessionId && !record.settled);
         }
 
-        function settle(record, capturedGeneration, error, value) {
+        function settle(record, capturedGeneration, error, value, terminalDisposition, terminalDetails) {
             if (!recordMatches(record, capturedGeneration)) { return false; }
             record.settled = true;
             clearRecordTimer(record);
             if (record.ownedHandle) { ownedCaptureHandles.delete(record.ownedHandle); }
             active = null;
             state = "idle";
+            recordContextTerminal(record, terminalDisposition || (error ? "failed" : "completed"), terminalDetails || (error && failureDetails.get(error)), error);
             if (error) { record.reject(error); }
             else { record.resolve(value); }
             return true;
@@ -418,26 +455,33 @@
             }
             var result;
             try { result = JSON.parse(raw); }
-            catch (error) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host context result is invalid."); }
-            protocol.assertSafeJson(result, { allowDangerousPaths: ["error.code"] });
-            if (!protocol.isPlainObject(result)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host context result is invalid."); }
-            var baseKeys = ["protocol", "schemaVersion", "requestId", "sessionId", "operation", "ok", "hostAdapterRevision"];
-            protocol.assertNoUnknownKeys(result, baseKeys.concat(result.ok === true ? ["snapshot"] : ["error"]), "hostContext.result");
-            if (result.protocol !== RESULT_PROTOCOL || result.schemaVersion !== SCHEMA_VERSION || result.requestId !== request.requestId ||
-                result.sessionId !== request.sessionId || result.operation !== request.operation || result.hostAdapterRevision !== HOST_ADAPTER_REVISION ||
-                typeof result.ok !== "boolean") {
-                protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host context result metadata is invalid.");
-            }
+            catch (error) { throw rememberFailure(protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED), "raw-json", null, null); }
+            try {
+                protocol.assertSafeJson(result, { allowDangerousPaths: ["error.code"] });
+                if (!protocol.isPlainObject(result)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host context result is invalid."); }
+                var baseKeys = ["protocol", "schemaVersion", "requestId", "sessionId", "operation", "ok", "hostAdapterRevision"];
+                protocol.assertNoUnknownKeys(result, baseKeys.concat(result.ok === true ? ["snapshot"] : ["error"]), "hostContext.result");
+                if (result.protocol !== RESULT_PROTOCOL || result.schemaVersion !== SCHEMA_VERSION || result.requestId !== request.requestId ||
+                    result.sessionId !== request.sessionId || result.operation !== request.operation || result.hostAdapterRevision !== HOST_ADAPTER_REVISION ||
+                    typeof result.ok !== "boolean") {
+                    protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host context result metadata is invalid.");
+                }
+            } catch (error) { throw rememberFailure(error, "raw-envelope", null, null); }
             if (!result.ok) {
-                if (!protocol.isPlainObject(result.error)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host context error is invalid."); }
-                protocol.assertNoUnknownKeys(result.error, ["code", "message", "reason"], "hostContext.error");
-                if (HOST_ERROR_CODES.indexOf(result.error.code) === -1 || typeof result.error.message !== "string") {
-                    protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host context error is invalid.");
-                }
-                if (result.error.reason !== undefined && typeof result.error.reason !== "string") {
-                    protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host context error reason is invalid.");
-                }
-                throw protocolError(protocol, mapHostError(result.error.code, result.error.reason));
+                try {
+                    if (!protocol.isPlainObject(result.error)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host context error is invalid."); }
+                    protocol.assertNoUnknownKeys(result.error, ["code", "message", "reason", "stage"], "hostContext.error");
+                    if (HOST_ERROR_CODES.indexOf(result.error.code) === -1 || typeof result.error.message !== "string") {
+                        protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host context error is invalid.");
+                    }
+                    if (result.error.reason !== undefined && typeof result.error.reason !== "string") {
+                        protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host context error reason is invalid.");
+                    }
+                    if (result.error.stage !== undefined && (result.error.code !== "HOST_CONTEXT_READ_FAILED" || closedHostFailureStage(result.error.stage) !== result.error.stage)) {
+                        protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Host context error stage is invalid.");
+                    }
+                } catch (error) { throw rememberFailure(error, "raw-envelope", null, null); }
+                throw rememberFailure(protocolError(protocol, mapHostError(result.error.code, result.error.reason)), "host-error", result.error.code, result.error.reason, result.error.stage);
             }
             return result;
         }
@@ -477,11 +521,17 @@
 
         function normalizeTierOne(result, request) {
             var raw = result.snapshot;
-            if (!protocol.isPlainObject(raw)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 1 context is invalid."); }
-            protocol.assertNoUnknownKeys(raw, ["hostInstanceId", "hostReloadEpoch", "tier", "projectGeneration", "activeComp", "selection"], "hostContext.snapshot");
-            if (raw.tier !== 1) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 1 context is invalid."); }
-            var authority = normalizeHostAuthority(raw);
-            var projectGeneration = assertRawNumber(raw.projectGeneration, "projectGeneration", true, 1, protocol.HARD_LIMITS.maxNumberAbs);
+            try {
+                if (!protocol.isPlainObject(raw)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 1 context is invalid."); }
+                protocol.assertNoUnknownKeys(raw, ["hostInstanceId", "hostReloadEpoch", "tier", "projectGeneration", "activeComp", "selection"], "hostContext.snapshot");
+                if (raw.tier !== 1) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Tier 1 context is invalid."); }
+            } catch (error) { throw rememberFailure(error, "tier1-base", null, null); }
+            var authority;
+            try { authority = normalizeHostAuthority(raw); }
+            catch (error) { throw rememberFailure(error, "host-authority", null, null); }
+            var projectGeneration;
+            try { projectGeneration = assertRawNumber(raw.projectGeneration, "projectGeneration", true, 1, protocol.HARD_LIMITS.maxNumberAbs); }
+            catch (error) { throw rememberFailure(error, "tier1-base", null, null); }
             var normalized = { sessionId: sessionId, hostInstanceId: authority.hostInstanceId, hostReloadEpoch: authority.hostReloadEpoch, tier: 1 };
             var compId = null;
             var itemId = null;
@@ -819,9 +869,11 @@
                         try {
                             var result = normalizeRawResult(raw, request);
                             var captureResult = normalizer(result, request);
-                            settle(record, capturedGeneration, null, captureResult);
+                            settle(record, capturedGeneration, null, captureResult, "completed", null);
                         } catch (error) {
-                            settle(record, capturedGeneration, error instanceof protocol.VelaProtocolError || isBridgeLocalError(error) ? error : protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED), null);
+                            var terminalError = error instanceof protocol.VelaProtocolError || isBridgeLocalError(error) ? error : protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+                            var details = failureDetails.get(error) || null;
+                            settle(record, capturedGeneration, terminalError, null, terminalError.code === protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE ? "unavailable" : "failed", details);
                         }
                     });
                 } catch (error) {
@@ -1329,13 +1381,13 @@
 
         function cancel(requestId) {
             if (!active || active.requestId !== requestId || state !== "pending") { return false; }
-            return settle(active, active.generation, protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED), null);
+            return settle(active, active.generation, protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED), null, "cancelled", null);
         }
 
         function cancelOwnedCapture(handle) {
             var record = ownedCaptureHandles.get(handle);
             if (!record || active !== record || state !== "pending") { return false; }
-            return settle(record, record.generation, protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED), null);
+            return settle(record, record.generation, protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED), null, "cancelled", null);
         }
 
         function suspend() {
@@ -1467,6 +1519,18 @@
             });
         }
 
+        function getDiagnostics() {
+            return Object.freeze({
+                lastContextOperation: contextDiagnostics.lastContextOperation,
+                lastContextDisposition: contextDiagnostics.lastContextDisposition,
+                lastContextFailureStage: contextDiagnostics.lastContextFailureStage,
+                lastContextHostErrorCode: contextDiagnostics.lastContextHostErrorCode,
+                lastContextHostFailureStage: contextDiagnostics.lastContextHostFailureStage,
+                lastContextErrorCode: contextDiagnostics.lastContextErrorCode,
+                lastContextUnavailableReason: contextDiagnostics.lastContextUnavailableReason
+            });
+        }
+
         var bridge = Object.freeze({
             capture: capture,
             beginOwnedCapture: beginOwnedCapture,
@@ -1481,6 +1545,7 @@
             resetSession: resetSession,
             getSessionId: function () { return sessionId; },
             getState: getState,
+            getDiagnostics: getDiagnostics,
             compareCaptures: compareCaptures
         });
         trustedContextBridges.add(bridge);
