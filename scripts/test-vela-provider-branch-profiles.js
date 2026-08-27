@@ -15,7 +15,7 @@ const ROOT = path.resolve(__dirname, "..");
 const FIXTURE_PATH = path.join(ROOT, "scripts", "fixtures", "vela-capability-contracts", "provider-branch-profiles-v2.json");
 const UNION_FIXTURE_PATH = path.join(ROOT, "scripts", "fixtures", "vela-capability-contracts", "provider-bounded-union-transition-v2.json");
 const C3_FIXTURE_PATH = path.join(ROOT, "scripts", "fixtures", "vela-capability-contracts", "provider-branch-policy-v2.json");
-const C3_FIXTURE_SHA256 = "04e381575a34d0bf83459adab2d609ae5c2a26b9e96d3179ac54c06319958e28";
+const C3_FIXTURE_SHA256 = "8a2968b4e8926ea95a742c4c5e6cc4bdae941c06277d37ddb137b3df6513b8d2";
 const EXPECTED_KEYS = [
     "fixtureType", "schemaRevision", "promptBuilderRevision", "requestBranchPolicyRevision",
     "capabilityId", "capabilityRevision", "protocolVersion", "messageRoleOrder",
