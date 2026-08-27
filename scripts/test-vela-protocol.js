@@ -186,7 +186,7 @@ function run() {
         check(!/(?:require\(["'](?:crypto|fs|net|http|https)["']\)|Buffer\.|process\.|Date\.now\(|randomBytes\(|randomUUID\(|CSInterface|evalScript|\$\.evalFile|AEToolbox|\bapp\b|\bwindow\b|\bdocument\b|localStorage|fetch\(|XMLHttpRequest|WebSocket|\beval\(|\bFunction\s*\()/.test(source), name + " must remain environment-independent.");
     });
 
-    const umdFiles = ["velaProtocol.js", "velaValidator.js", "velaPlan.js", "velaExecutionGuard.js", "velaContext.js", "velaContextBridge.js", "velaExecutionPreflight.js", "velaResponseParser.js"];
+    const umdFiles = ["velaProtocol.js", "velaCapabilityContracts.js", "velaValidator.js", "velaPlan.js", "velaExecutionGuard.js", "velaContext.js", "velaContextBridge.js", "velaExecutionPreflight.js", "velaResponseParser.js"];
     function browserContext() {
         const context = { console, browserRuntime: runtime };
         context.self = context;
@@ -223,6 +223,7 @@ function run() {
     check(browserResult.parsed === true && browserResult.rejected === protocol.ERROR_CODES.JSON_PARSE_FAILED && browserResult.checked === true && browserResult.completed === "consumed" && browserResult.preflight === true, "UMD smoke test must exercise parser, validator, PlanStore, ExecutionGuard and register ExecutionPreflight in dependency order.");
     const originalGlobals = {
         VelaProtocol: browser.VelaProtocol,
+        VelaCapabilityContracts: browser.VelaCapabilityContracts,
         VelaResponseParser: browser.VelaResponseParser,
         VelaContext: browser.VelaContext,
         VelaValidator: browser.VelaValidator,
@@ -240,6 +241,11 @@ function run() {
     let duplicatePreflightCode = null;
     try { loadUmd(browser, "velaExecutionPreflight.js"); } catch (error) { duplicatePreflightCode = error.code; }
     check(duplicatePreflightCode === protocol.ERROR_CODES.MODULE_ALREADY_REGISTERED && browser.VelaExecutionPreflight === originalGlobals.VelaExecutionPreflight, "Repeated ExecutionPreflight loading must fail without replacing its identity.");
+    const missingContracts = browserContext();
+    ["velaProtocol.js", "velaValidator.js", "velaPlan.js", "velaExecutionGuard.js", "velaContext.js", "velaContextBridge.js"].forEach((name) => loadUmd(missingContracts, name));
+    let missingContractsCode = null;
+    try { loadUmd(missingContracts, "velaExecutionPreflight.js"); } catch (error) { missingContractsCode = error.code; }
+    check(missingContractsCode === protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE && missingContracts.VelaExecutionPreflight === undefined && missingContracts.__velaProtocolCoreBootstrapV1.hasModule("VelaExecutionPreflight") === false, "ExecutionPreflight fails closed without registering when VelaCapabilityContracts is missing.");
     const wrongOrder = browserContext();
     let wrongOrderCode = null;
     try { loadUmd(wrongOrder, "velaResponseParser.js"); } catch (error) { wrongOrderCode = error.code; }

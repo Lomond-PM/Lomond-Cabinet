@@ -27,6 +27,13 @@ async function run() {
     check(contracts.getContract("SET-OPACITY-V1") === null && contracts.getContract("missing") === null, "Capability lookup is exact and fail-closed.");
     const model = contracts.getModelProjection("set-opacity-v1"); const local = contracts.getLocalProjection("set-opacity-v1");
     check(Object.isFrozen(model) && Object.isFrozen(local) && !Object.prototype.hasOwnProperty.call(model, "localPolicy") && !Object.prototype.hasOwnProperty.call(local, "modelPolicy"), "Model and local projections are separated and frozen.");
+    const registeredAction = contracts.resolveRegisteredAction("set-opacity-v1");
+    check(Object.isFrozen(registeredAction) && Object.keys(registeredAction).sort().join(",") === "actionId,toolId" && registeredAction.toolId === "vela" && registeredAction.actionId === "set-opacity-v1", "Mutation capability resolves one frozen closed composite registered-action identity.");
+    check(local.registeredAction.toolId === registeredAction.toolId && local.registeredAction.actionId === registeredAction.actionId && Object.isFrozen(local.registeredAction), "Local projection includes the frozen registered-action identity.");
+    check(!Object.prototype.hasOwnProperty.call(model, "registeredAction") && !/toolId|actionId|registeredAction/.test(JSON.stringify(model)), "Model projection excludes registered-action identity.");
+    check(contracts.resolveRegisteredAction("missing") === null && contracts.resolveRegisteredAction("observe-active-composition-v1") === null && contracts.resolveRegisteredAction("SET-OPACITY-V1") === null, "Unknown, Agent read, and case-drifted capability IDs have no mapping or same-name fallback.");
+    check(!/params|target|availability|permission|authority|confirmation|nonce|candidate|plan|execution|host|context/i.test(Object.keys(registeredAction).join(",")) && Object.keys(registeredAction).every((key) => typeof registeredAction[key] === "string"), "Mapping contains identity data only and no params, target, availability, authority, execution, Host, Context, or function reference.");
+    assert.throws(() => { registeredAction.toolId = "other"; }, TypeError, "Frozen mapping rejects caller mutation."); assertions += 1;
     check(model.parameters.properties.opacity.minimum === 0 && model.parameters.properties.opacity.maximum === 100 && local.localPolicy.intentValidatorId === "set-opacity-direct-edit-v1", "Production projections retain the existing opacity boundary and local validator identity.");
     assert.throws(() => { model.parameters.properties.opacity.minimum = 99; }, TypeError, "Frozen projections reject mutation in strict mode."); assertions += 1;
     check(contracts.getModelProjection("set-opacity-v1").parameters.properties.opacity.minimum === 0, "Projection mutation cannot contaminate the Registry.");
@@ -37,6 +44,15 @@ async function run() {
     check(JSON.stringify(testRegistry.listCapabilityIds()) === JSON.stringify(["set-color-test-v1", "set-rotation-test-v1"]), "Synthetic scalar and nested-object contracts have deterministic ordering.");
     check(testRegistry.getModelProjection("set-color-test-v1").parameters.properties.color.properties.a.maximum === 1, "Nested parameter schemas survive model projection.");
     check(contracts.createRegistry([], { allowEmpty: true }).listCapabilityIds().length === 0, "Only the test factory can construct an empty Registry.");
+    const mappedRotation = clone(rotation); mappedRotation.registeredAction = { toolId: "transform", actionId: "apply-rotation-v1" };
+    const mappedRegistry = contracts.createRegistry([mappedRotation]);
+    check(JSON.stringify(mappedRegistry.resolveRegisteredAction("set-rotation-test-v1")) === JSON.stringify({ toolId: "transform", actionId: "apply-rotation-v1" }) && Object.isFrozen(mappedRegistry.resolveRegisteredAction("set-rotation-test-v1")), "Synthetic mapping canonicalizes deterministically and resolves as frozen identity data.");
+    [
+        (value) => { value.registeredAction.extra = true; },
+        (value) => { delete value.registeredAction.toolId; },
+        (value) => { value.registeredAction.actionId = "apply-rotation"; },
+        (value) => { value.registeredAction = { toolId: "transform", actionId: "apply-rotation-v1", params: {} }; }
+    ].forEach((mutate) => { const value = clone(mappedRotation); mutate(value); rejects(() => contracts.createRegistry([value]), "Malformed or open registered-action mapping fails closed."); });
     check(JSON.stringify(adapterModule.buildCapabilityParametersForResponse(testRegistry.getModelProjection("set-color-test-v1"))) === JSON.stringify({ type: "object", additionalProperties: false, required: ["color"], properties: { color: { type: "object", additionalProperties: false, required: ["a", "b", "g", "r"], properties: { a: { type: "number", minimum: 0, maximum: 1 }, b: { type: "number", minimum: 0, maximum: 1 }, g: { type: "number", minimum: 0, maximum: 1 }, r: { type: "number", minimum: 0, maximum: 1 } } } } }), "Adapter response parameter schema is derived from a synthetic Contract projection, including nested keys.");
     check(JSON.stringify(contracts.validateCapabilityParams(testRegistry.getLocalProjection("set-rotation-test-v1"), { angle: 180 })) === JSON.stringify({ angle: 180 }), "Contract parameter validator accepts an exact bounded scalar parameter.");
     [
