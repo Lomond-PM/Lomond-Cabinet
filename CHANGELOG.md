@@ -12,6 +12,34 @@ This project follows simple semantic versioning for development handoff:
 
 _No unreleased changes._
 
+## [0.3.4] - 2026-08-27
+
+### Vela Agent Runtime / Observation
+
+- Completed the Session, Agent, Scope and turn-identity ownership chain for production Observation, with single-flight refresh, cancellation, freshness guards and bounded immutable projections.
+- Added the read/analyze Agent Capability Registry, validated invocation/result envelopes, explicit concurrency contracts and FIFO Host-read serialization.
+- Added the read-only `observe-active-composition-v1` vertical slice with lifecycle-owned Active Composition diagnostics and structured Context integration.
+
+### Provider / Prompt
+
+- Added Prompt Builder v4 with a global and profile-stable system prefix followed by turn-dynamic response-contract and trusted-grounding layers.
+- Preserved the bounded `proposal-capable-union` behavior: a provisional text-only request becomes union-capable only when trusted Context is eligible, without granting mutation permission.
+- Added bounded last-terminal Provider, Context and Host-stage diagnostics without retaining raw prompts, Provider responses, grounding, Host payloads or native project objects.
+
+### Capability / Mutation integration
+
+- Added explicit local capability-to-registered-action mapping for `set-opacity-v1`, with canonical mutation parameters remaining owned by Mutation Capability Contracts.
+- Added Runtime startup cross-validation against the registered `vela` / `set-opacity-v1` action while keeping action existence, risk, scope and executability under ActionValidator ownership.
+- Preserved the existing Parser, Intent Gate, Review, Confirmation, freshness, permission, replay, reservation, Preflight, ExecutionAdapter and Host mutation-safety boundaries; mapping is not execution authority.
+
+### Stability / development infrastructure
+
+- Hardened After Effects native Project lifecycle tracking with guarded validity and identity checks, conservative generation invalidation and reset-required overflow behavior.
+- Fixed qualification fixture portability with repository-enforced LF checkout bytes and canonical LF historical raw-byte hashes.
+- Made Context Host assignment-failure fault injection stable across LF and CRLF test sources without changing production behavior.
+
+Planning, TaskRun authority semantics, DelegationGrant, Policy Engine, process-local `executionArmed`, autonomous execution and generic mutation Agent capabilities remain deferred to 0.3.5+ or later.
+
 ## [0.3.3] - 2026-08-25
 
 ### Vela Agent Runtime Foundation
