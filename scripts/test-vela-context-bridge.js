@@ -60,9 +60,10 @@ function successResult(request, snapshot) {
     });
 }
 
-function errorResult(request, code, reason) {
+function errorResult(request, code, reason, stage) {
     const error = { code, message: "A local safe Host context error." };
     if (reason) error.reason = reason;
+    if (stage !== undefined) error.stage = stage;
     return JSON.stringify({
         protocol: "vela.host-context-result.v1",
         schemaVersion: "1.0",
@@ -614,6 +615,78 @@ async function runCurrentHostAuthorityTests() {
     check(stableHarness.bridge.compareCaptures(stableOne, stableTwo).fresh === true, "host_error_does_not_update: a Host error must not invalidate confirmed authority.");
 }
 
+async function runContextTerminalDiagnosticsTests() {
+    async function hostFailure(code, reason, expectedDisposition, expectedContextCode, hostFailureStage) {
+        const harness = makeHarness((source, callback) => {
+            const request = decodeSource(source);
+            callback(errorResult(request, code, reason, hostFailureStage));
+        });
+        await expectCode(harness.bridge.capture({ tier: 1, purpose: "binding" }), expectedContextCode);
+        const diagnostics = harness.bridge.getDiagnostics();
+        check(diagnostics.lastContextOperation === "capture-context" && diagnostics.lastContextDisposition === expectedDisposition && diagnostics.lastContextFailureStage === "host-error" && diagnostics.lastContextHostErrorCode === code && diagnostics.lastContextHostFailureStage === (hostFailureStage || null) && diagnostics.lastContextErrorCode === expectedContextCode, code + " must retain its closed Host and Context terminal correlation.");
+        check(diagnostics.lastContextUnavailableReason === (reason || null), code + " must expose only its closed unavailable reason.");
+        check(!/safe Host context error|payload|snapshot|fingerprint|nativeLayerId|project path|stack/i.test(JSON.stringify(diagnostics)), "Context diagnostics must not expose Host messages, payloads, snapshots, identities, paths, or stacks.");
+    }
+
+    await hostFailure("HOST_CONTEXT_UNAVAILABLE", "no-project", "unavailable", protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE);
+    await hostFailure("HOST_CONTEXT_UNAVAILABLE", "no-active-composition", "unavailable", protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE);
+    await hostFailure("HOST_CONTEXT_READ_FAILED", null, "failed", protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "project-read");
+    await hostFailure("HOST_CONTEXT_READ_FAILED", null, "failed", protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "project-transition");
+    await hostFailure("HOST_CONTEXT_REQUEST_INVALID", null, "failed", protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+
+    for (const invalidStage of ["unknown-stage", 1]) {
+        const malformedStage = makeHarness((source, callback) => {
+            const request = decodeSource(source);
+            callback(errorResult(request, "HOST_CONTEXT_READ_FAILED", null, invalidStage));
+        });
+        await expectCode(malformedStage.bridge.capture({ tier: 1, purpose: "binding" }), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+        check(malformedStage.bridge.getDiagnostics().lastContextFailureStage === "raw-envelope" && malformedStage.bridge.getDiagnostics().lastContextHostFailureStage === null, "Malformed or unknown Host failure stages must fail closed without projection.");
+    }
+
+    await hostFailure("HOST_CONTEXT_READ_FAILED", null, "failed", protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, null);
+
+    const unavailableWithStage = makeHarness((source, callback) => {
+        const request = decodeSource(source);
+        callback(errorResult(request, "HOST_CONTEXT_UNAVAILABLE", "no-active-composition", "project-read"));
+    });
+    await expectCode(unavailableWithStage.bridge.capture({ tier: 1, purpose: "binding" }), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+    check(unavailableWithStage.bridge.getDiagnostics().lastContextHostFailureStage === null, "Unavailable Host errors cannot acquire a read-failure stage.");
+
+    const malformedJson = makeHarness((source, callback) => callback("not-json SECRET_RAW_PAYLOAD"));
+    await expectCode(malformedJson.bridge.capture({ tier: 1, purpose: "binding" }), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+    check(malformedJson.bridge.getDiagnostics().lastContextFailureStage === "raw-json" && malformedJson.bridge.getDiagnostics().lastContextHostErrorCode === null && malformedJson.bridge.getDiagnostics().lastContextErrorCode === protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED && !JSON.stringify(malformedJson.bridge.getDiagnostics()).includes("SECRET_RAW_PAYLOAD"), "Malformed JSON records only the closed raw-json stage.");
+
+    const malformedEnvelope = makeHarness((source, callback) => {
+        const request = decodeSource(source);
+        callback(JSON.stringify({ protocol: "wrong", schemaVersion: "1.0", requestId: request.requestId, sessionId: request.sessionId, operation: request.operation, ok: true, hostAdapterRevision: "vela-context-host-v4", snapshot: {} }));
+    });
+    await expectCode(malformedEnvelope.bridge.capture({ tier: 1, purpose: "binding" }), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+    check(malformedEnvelope.bridge.getDiagnostics().lastContextFailureStage === "raw-envelope" && malformedEnvelope.bridge.getDiagnostics().lastContextHostErrorCode === null, "Malformed root metadata records only the closed raw-envelope stage.");
+
+    const tierBase = makeHarness((source, callback) => {
+        const request = decodeSource(source);
+        const snapshot = tierOneSnapshot();
+        snapshot.tier = 2;
+        callback(successResult(request, snapshot));
+    });
+    await expectCode(tierBase.bridge.capture({ tier: 1, purpose: "binding" }), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+    check(tierBase.bridge.getDiagnostics().lastContextFailureStage === "tier1-base" && tierBase.bridge.getDiagnostics().lastContextHostErrorCode === null, "Invalid Tier 1 root fields record only the closed tier1-base stage.");
+
+    const persistence = makeHarness();
+    const first = persistence.bridge.capture({ tier: 1, purpose: "binding" });
+    let request = decodeSource(persistence.calls[0]);
+    persistence.callbacks[0](errorResult(request, "HOST_CONTEXT_READ_FAILED", null, "active-item-read"));
+    await expectCode(first, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED);
+    const prior = persistence.bridge.getDiagnostics();
+    const second = persistence.bridge.capture({ tier: 1, purpose: "binding" });
+    check(JSON.stringify(persistence.bridge.getDiagnostics()) === JSON.stringify(prior), "Starting a new Context capture preserves the prior terminal projection.");
+    request = decodeSource(persistence.calls[1]);
+    persistence.callbacks[1](errorResult(request, "HOST_CONTEXT_UNAVAILABLE", "no-active-composition"));
+    await expectCode(second, protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE);
+    const replacement = persistence.bridge.getDiagnostics();
+    check(replacement.lastContextDisposition === "unavailable" && replacement.lastContextFailureStage === "host-error" && replacement.lastContextHostErrorCode === "HOST_CONTEXT_UNAVAILABLE" && replacement.lastContextHostFailureStage === null && replacement.lastContextErrorCode === protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE && replacement.lastContextUnavailableReason === "no-active-composition", "A new terminal attempt atomically replaces every last-Context field.");
+}
+
 async function runTierThreeBridgeTests() {
     const harness = makeHarness((source, callback) => {
         const req = decodeSource(source);
@@ -1097,6 +1170,7 @@ async function run() {
         await runDriftTests();
         await runOwnershipAndTierTwoTests();
         await runCurrentHostAuthorityTests();
+        await runContextTerminalDiagnosticsTests();
         await runTierThreeBridgeTests();
         await runPropertyValueBridgeTests();
         await runPropertyValueReviewPortTests();

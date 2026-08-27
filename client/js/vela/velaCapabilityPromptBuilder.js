@@ -26,7 +26,7 @@
     }
 }(typeof self !== "undefined" ? self : this, function (capabilityContracts, requestBranchPolicy) {
     "use strict";
-    var MODULE_REVISION = "vela-capability-prompt-builder-v3";
+    var MODULE_REVISION = "vela-capability-prompt-builder-v4";
     var CAPABILITY_ID = "set-opacity-v1";
     var RESPONSE_PROTOCOL = "vela.model-response.v1";
     var RESPONSE_SCHEMA_VERSION = "1.1";
@@ -89,10 +89,44 @@
         if (value !== PROFILES.TEXT_ONLY && value !== PROFILES.EXPLICIT_EDIT_ELIGIBLE && value !== PROFILES.PROPOSAL_CAPABLE_UNION) { fail("requestProfile is invalid."); }
         return value;
     }
+    var GLOBAL_STATIC_CONTRACT = [
+        "Return exactly one complete JSON object and nothing else.",
+        "Use protocol " + RESPONSE_PROTOCOL + " and schemaVersion " + RESPONSE_SCHEMA_VERSION + ".",
+        "Every response must use the closed Vela response envelope selected for this request; never add unknown fields.",
+        "Trusted context is a fact only; never guess a missing current value.",
+        "A localProposal is only a bounded candidate and does not modify After Effects.",
+        "Trusted local intent validation, target binding, review, confirmation, preflight, and execution happen later.",
+        "The only supported proposal capability is " + canonicalProjection.capabilityId + "; the model may supply only params.opacity from 0 through 100.",
+        "Never include target identity, layer or comp ids, confirmation, nonce, Host payload, arbitrary code, or extra fields."
+    ].join(" ");
     function rootEnvelope(requestId, model, envelope) {
         return JSON.stringify({ protocol: RESPONSE_PROTOCOL, schemaVersion: RESPONSE_SCHEMA_VERSION, requestId: requestId, provider: PROVIDER_ID, model: model, envelope: envelope });
     }
-    function buildSystemPrompt(modelProjection, requestId, model, requestProfile) {
+    function buildSystemPrompt(modelProjection, requestProfile) {
+        var projection;
+        projection = assertProjection(modelProjection);
+        requestProfile = assertRequestProfile(requestProfile);
+        if (requestProfile === PROFILES.TEXT_ONLY) { return [
+            GLOBAL_STATIC_CONTRACT,
+            "This request is text-only. Return only a text envelope; a localProposal is invalid for this request.",
+            "Answer normal conversation, current-value queries, advice, explanations, ambiguity, and unavailable grounding as text. Trusted context is a fact only; never guess a missing current value.",
+            "Do not claim an edit was performed, will be performed, or that a proposal was created. Do not describe a proposal."
+        ].join(" "); }
+        if (requestProfile === PROFILES.PROPOSAL_CAPABLE_UNION) { return [
+            GLOBAL_STATIC_CONTRACT,
+            "This request is proposal-capable-union. Return either a conversational text envelope or one bounded localProposal envelope for set-opacity-v1.",
+            "Return text for questions, discussion, advice, ambiguity, or any message without a clear direct request to set the current actionable layer opacity.",
+            "For a clear direct opacity edit, use only capabilityId " + projection.capabilityId + " and only params.opacity from 0 through 100. Never include target identity, layer or comp ids, confirmation, nonce, Host payload, arbitrary code, or extra fields.",
+            "A localProposal does not modify After Effects. Trusted local intent validation, target binding, review, confirmation, preflight, and execution happen later."
+        ].join(" "); }
+        return [
+            GLOBAL_STATIC_CONTRACT,
+            "This request is explicit-edit-eligible. Return only a localProposal envelope; text is invalid for this request.",
+            "Extract the single opacity target from the current user message. Use capabilityId " + projection.capabilityId + " and only params.opacity. The target must come from the current user message, never trusted context, history, or a fallback.",
+            "Your role is to propose this supported edit. Trusted local review and approval happen later; do not add text, explanations, or extra fields."
+        ].join(" ");
+    }
+    function buildTurnContract(modelProjection, requestId, model, requestProfile) {
         var projection;
         var exampleParams;
         var proposal57Example;
@@ -104,34 +138,21 @@
         exampleParams[ownData(projection, "modelPolicy").modelMaySupply[0].slice("params.".length)] = 57.5;
         proposal57Example = rootEnvelope(requestId, model, { type: "localProposal", proposal: { capabilityId: projection.capabilityId, params: exampleParams } });
         if (requestProfile === PROFILES.TEXT_ONLY) { return [
-            "Return exactly one complete JSON object and nothing else.",
-            "This request is text-only. Return only a text envelope; a localProposal is invalid for this request.",
-            "Use protocol " + RESPONSE_PROTOCOL + " and schemaVersion " + RESPONSE_SCHEMA_VERSION + ".",
+            "Turn response contract: profile " + requestProfile + ".",
             "Use requestId " + requestId + ", provider " + PROVIDER_ID + ", and model " + model + ".",
-            "Answer normal conversation, current-value queries, advice, explanations, ambiguity, and unavailable grounding as text. Trusted context is a fact only; never guess a missing current value.",
-            "Do not claim an edit was performed, will be performed, or that a proposal was created. Do not describe a proposal.",
-            "Use exactly this envelope shape: " + rootEnvelope(requestId, model, { type: "text", text: "A concise answer." })
+            "Concrete valid response example: " + rootEnvelope(requestId, model, { type: "text", text: "A concise answer." })
         ].join(" "); }
         if (requestProfile === PROFILES.PROPOSAL_CAPABLE_UNION) { return [
-            "Return exactly one complete JSON object and nothing else.",
-            "This request is proposal-capable-union. Return either a conversational text envelope or one bounded localProposal envelope for set-opacity-v1.",
-            "Use protocol " + RESPONSE_PROTOCOL + " and schemaVersion " + RESPONSE_SCHEMA_VERSION + ".",
+            "Turn response contract: profile " + requestProfile + ".",
             "Use requestId " + requestId + ", provider " + PROVIDER_ID + ", and model " + model + ".",
-            "Return text for questions, discussion, advice, ambiguity, or any message without a clear direct request to set the current actionable layer opacity.",
-            "For a clear direct opacity edit, use only capabilityId " + projection.capabilityId + " and only params.opacity from 0 through 100. Never include target identity, layer or comp ids, confirmation, nonce, Host payload, arbitrary code, or extra fields.",
-            "A localProposal does not modify After Effects. Trusted local intent validation, target binding, review, confirmation, preflight, and execution happen later.",
-            "Valid text example: " + rootEnvelope(requestId, model, { type: "text", text: "A concise answer." }),
-            "Valid proposal example: " + proposal57Example
+            "Concrete valid text example: " + rootEnvelope(requestId, model, { type: "text", text: "A concise answer." }),
+            "Concrete valid proposal example: " + proposal57Example
         ].join(" "); }
         return [
-            "Return exactly one complete JSON object and nothing else.",
-            "This request is explicit-edit-eligible. Return only a localProposal envelope; text is invalid for this request.",
-            "Use protocol " + RESPONSE_PROTOCOL + " and schemaVersion " + RESPONSE_SCHEMA_VERSION + ".",
+            "Turn response contract: profile " + requestProfile + ".",
             "Use requestId " + requestId + ", provider " + PROVIDER_ID + ", and model " + model + ".",
-            "Extract the single opacity target from the current user message. Use capabilityId " + projection.capabilityId + " and only params.opacity. The target must come from the current user message, never trusted context, history, or a fallback.",
-            "Your role is to propose this supported edit. Trusted local review and approval happen later; do not add text, explanations, or extra fields.",
-            "Use exactly this envelope shape: " + proposal57Example
+            "Concrete valid response example: " + proposal57Example
         ].join(" ");
     }
-    return Object.freeze({ MODULE_REVISION: MODULE_REVISION, buildSystemPrompt: buildSystemPrompt });
+    return Object.freeze({ MODULE_REVISION: MODULE_REVISION, GLOBAL_STATIC_CONTRACT: GLOBAL_STATIC_CONTRACT, buildSystemPrompt: buildSystemPrompt, buildTurnContract: buildTurnContract });
 }));

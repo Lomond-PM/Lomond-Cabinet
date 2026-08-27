@@ -40,7 +40,7 @@ function metadata(rubric, model, runs) {
         metadataRevision: rubric.appliesTo.metadataRevision,
         caseProfileFingerprint: rubric.appliesTo.caseProfileFingerprint,
         profileFixtureSha256: rubric.appliesTo.profileFixtureSha256,
-        builderRevision: "vela-capability-prompt-builder-v3",
+        builderRevision: "vela-capability-prompt-builder-v4",
         requestBranchPolicyRevision: "vela-provider-request-branch-policy-v1",
         capabilityId: "set-opacity-v1",
         capabilityRevision: "vela-capability-contract-v1",
@@ -96,9 +96,9 @@ function run() {
     const evidenceBefore = evidenceArtifactSnapshot();
     const rubricBytes = fs.readFileSync(rubricModule.RUBRIC_PATH); const rubric = rubricModule.loadRubric();
     check(Object.getOwnPropertyNames(rubric).join(",") === rubricModule.ROOT_KEYS.join(","), "Rubric root has exact keys.");
-    check(rubric.revision === "vela-provider-profile-qualification-rubric-c4-v1", "Rubric revision is frozen.");
+    check(rubric.revision === "vela-provider-profile-qualification-rubric-c4-v2", "Current rubric revision is frozen.");
     check(rubric.appliesTo.caseProfileFingerprint === "df4e3ebf6a8126b7e70a8b0aef88b8aa5850c05df1c43f448f4f84626ce04ccf", "Case fingerprint is frozen.");
-    check(rubric.appliesTo.profileFixtureSha256 === "09f3a60af594e9d4e811eb6f516cd7ea8d7eccbc04235827ffc47d48a3ce2820", "Profile fixture SHA is frozen.");
+    check(rubric.appliesTo.profileFixtureSha256 === "32578157ecba5f799320c75113fa74471aaf1ab483c58105df4147b724f48386", "Current Profile fixture SHA is frozen.");
     check(Object.values(rubric.appliesTo.productionContracts).flatMap(Object.values).every((value) => /^[a-f0-9]{64}$/.test(value)), "All six production SHA values are frozen hex digests.");
     check(crypto.createHash("sha256").update(rubricBytes).digest("hex") === crypto.createHash("sha256").update(fs.readFileSync(rubricModule.RUBRIC_PATH)).digest("hex"), "Rubric raw-byte SHA is stable across independent reads.");
     check(deeplyFrozen(rubric), "Loaded rubric is deeply frozen.");

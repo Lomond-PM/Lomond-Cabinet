@@ -21,6 +21,7 @@ var AEToolbox = AEToolbox || {};
     var bootstrapJsonDescriptor = null;
     var projectInitialized = false;
     var currentProjectReference = null;
+    var currentProjectReferenceWasNull = true;
     var projectGeneration = 1;
     var nativeLayerIdObserved = false;
     var sessionResetRequired = false;
@@ -112,6 +113,17 @@ var AEToolbox = AEToolbox || {};
         };
         var error = hostError(code, messages[code] || messages.HOST_CONTEXT_READ_FAILED);
         if (typeof reason === "string") { error.reason = reason; }
+        throw error;
+    }
+
+    function isHostFailureStage(value) {
+        return value === "project-read" || value === "project-transition" ||
+            value === "active-item-read" || value === "active-item-classification";
+    }
+
+    function failRead(stage) {
+        var error = hostError("HOST_CONTEXT_READ_FAILED", "The Host context could not be read.");
+        if (isHostFailureStage(stage)) { error.stage = stage; }
         throw error;
     }
 
@@ -304,7 +316,7 @@ var AEToolbox = AEToolbox || {};
         };
     }
 
-    function errorResult(request, code, reason) {
+    function errorResult(request, code, reason, stage) {
         var messages = {
             HOST_CONTEXT_REQUEST_INVALID: "The Host context request is invalid.",
             HOST_CONTEXT_OPERATION_UNSUPPORTED: "The Host context operation is unsupported.",
@@ -324,6 +336,7 @@ var AEToolbox = AEToolbox || {};
             message: messages[code] || messages.HOST_CONTEXT_READ_FAILED
         };
         if (typeof reason === "string") { result.error.reason = reason; }
+        if (code === "HOST_CONTEXT_READ_FAILED" && isHostFailureStage(stage)) { result.error.stage = stage; }
         return result;
     }
 
@@ -348,6 +361,7 @@ var AEToolbox = AEToolbox || {};
         hostReloadEpoch++;
         projectInitialized = false;
         currentProjectReference = null;
+        currentProjectReferenceWasNull = true;
         projectGeneration = 1;
         nativeLayerIdObserved = false;
         sessionResetRequired = false;
@@ -355,21 +369,38 @@ var AEToolbox = AEToolbox || {};
     }
 
     function observeProject(project) {
+        var changed = false;
         if (!projectInitialized) {
             currentProjectReference = project;
+            currentProjectReferenceWasNull = project === null;
             projectInitialized = true;
             return;
         }
-        if (project !== currentProjectReference) {
-            if (projectGeneration >= MAX_NUMBER_ABS) {
-                sessionResetRequired = true;
-                nativeLayerIdObserved = false;
-                fail("HOST_CONTEXT_SESSION_RESET_REQUIRED");
+
+        if (currentProjectReferenceWasNull) {
+            changed = project !== null;
+        } else {
+            try {
+                if (typeof isValid === "function" && !isValid(currentProjectReference)) {
+                    changed = true;
+                } else {
+                    changed = project !== currentProjectReference;
+                }
+            } catch (ignoredProjectIdentity) {
+                changed = true;
             }
-            currentProjectReference = project;
-            projectGeneration++;
-            nativeLayerIdObserved = false;
         }
+
+        if (!changed) { return; }
+        if (projectGeneration >= MAX_NUMBER_ABS) {
+            sessionResetRequired = true;
+            nativeLayerIdObserved = false;
+            fail("HOST_CONTEXT_SESSION_RESET_REQUIRED");
+        }
+        currentProjectReference = project;
+        currentProjectReferenceWasNull = project === null;
+        projectGeneration++;
+        nativeLayerIdObserved = false;
     }
 
     function layerType(matchName) {
@@ -424,9 +455,14 @@ var AEToolbox = AEToolbox || {};
         try {
             project = app && app.project ? app.project : null;
         } catch (ignoredProject) {
-            fail("HOST_CONTEXT_READ_FAILED");
+            failRead("project-read");
         }
-        observeProject(project);
+        try {
+            observeProject(project);
+        } catch (transitionError) {
+            if (transitionError && typeof transitionError.code === "string") { throw transitionError; }
+            failRead("project-transition");
+        }
         if (!project) {
             if (request.scope.purpose === "binding") {
                 fail("HOST_CONTEXT_UNAVAILABLE", "no-project");
@@ -443,20 +479,25 @@ var AEToolbox = AEToolbox || {};
         try {
             activeItem = project.activeItem;
         } catch (ignoredActive) {
-            fail("HOST_CONTEXT_READ_FAILED");
+            failRead("active-item-read");
         }
-        if (!activeItem || typeof CompItem === "undefined" || !(activeItem instanceof CompItem)) {
-            if (request.scope.purpose === "binding") {
-                fail("HOST_CONTEXT_UNAVAILABLE", "no-active-composition");
+        try {
+            if (!activeItem || typeof CompItem === "undefined" || !(activeItem instanceof CompItem)) {
+                if (request.scope.purpose === "binding") {
+                    fail("HOST_CONTEXT_UNAVAILABLE", "no-active-composition");
+                }
+                return {
+                    hostInstanceId: hostInstanceId,
+                    hostReloadEpoch: hostReloadEpoch,
+                    tier: 1,
+                    projectGeneration: projectGeneration,
+                    activeComp: null,
+                    selection: { count: 0, identityQuality: "index-only", items: [] }
+                };
             }
-            return {
-                hostInstanceId: hostInstanceId,
-                hostReloadEpoch: hostReloadEpoch,
-                tier: 1,
-                projectGeneration: projectGeneration,
-                activeComp: null,
-                selection: { count: 0, identityQuality: "index-only", items: [] }
-            };
+        } catch (classificationError) {
+            if (classificationError && typeof classificationError.code === "string") { throw classificationError; }
+            failRead("active-item-classification");
         }
         try {
             itemId = assertFiniteNumber(activeItem.id, true, 1, MAX_NUMBER_ABS);
@@ -1179,7 +1220,7 @@ var AEToolbox = AEToolbox || {};
         } catch (error) {
             code = error && typeof error.code === "string" ? error.code : "HOST_CONTEXT_READ_FAILED";
             try {
-                return json.stringifyBounded(errorResult(request, code, error && error.reason), {
+                return json.stringifyBounded(errorResult(request, code, error && error.reason, error && error.stage), {
                     maxBytes: 16 * 1024,
                     maxStringBytes: 8 * 1024,
                     maxDepth: 5,

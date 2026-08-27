@@ -27,9 +27,146 @@ function makeRealm(overrides) {
     return realm;
 }
 
-function loadFacade(realm) {
-    vm.runInContext(contextSource, realm, { filename: "velaContext.jsx" });
+function loadFacade(realm, source) {
+    vm.runInContext(source || contextSource, realm, { filename: "velaContext.jsx" });
     return realm.AEToolbox.VelaContext;
+}
+
+function runHostStageDiagnosticsTests() {
+    function bindingRequest() { return request({ scope: { purpose: "binding", selectionOrderMeaningful: true } }); }
+    function expectStage(facade, stage, label) {
+        const raw = facade.handle(JSON.stringify(bindingRequest()));
+        const result = parseResult(raw);
+        check(result.ok === false && result.error.code === "HOST_CONTEXT_READ_FAILED" && result.error.stage === stage, label + " must retain only its closed Host read stage.");
+        check(raw.indexOf("SECRET_HOST_DETAIL") === -1 && raw.indexOf("stack") === -1 && raw.indexOf("project-path") === -1 && raw.indexOf("native-object") === -1, label + " must not expose the underlying exception or Host object details.");
+    }
+
+    let firstReads = 0;
+    const firstApp = {};
+    Object.defineProperty(firstApp, "project", { get() { firstReads += 1; throw new Error("SECRET_HOST_DETAIL first project read"); } });
+    const firstRealm = makeRealm({ app: firstApp, CompItem: function CompItem() {} });
+    expectStage(loadFacade(firstRealm), "project-read", "The first app.project getter failure");
+    check(firstReads === 1, "The first app.project getter failure must stop after one read.");
+
+    let secondReads = 0;
+    const secondApp = {};
+    Object.defineProperty(secondApp, "project", { get() { secondReads += 1; if (secondReads === 2) throw new Error("SECRET_HOST_DETAIL second project read"); return { activeItem: null }; } });
+    const secondRealm = makeRealm({ app: secondApp, CompItem: function CompItem() {} });
+    expectStage(loadFacade(secondRealm), "project-read", "The second app.project getter failure");
+    check(secondReads === 2, "The existing truthy project expression must still perform its second getter read.");
+
+    const transitionRealm = makeRealm({ app: { project: { activeItem: null } }, CompItem: function CompItem() {} });
+    const transitionSource = contextSource.replace("if (!changed) { return; }", "throw new Error(\"SECRET_HOST_DETAIL transition\");\n        if (!changed) { return; }");
+    const transitionFacade = loadFacade(transitionRealm, transitionSource);
+    check(parseResult(transitionFacade.handle(JSON.stringify(request()))).ok === true, "The controlled transition fault must not affect initial Project observation.");
+    transitionRealm.app.project = { activeItem: null };
+    expectStage(transitionFacade, "project-transition", "An unknown project transition failure");
+
+    const activeProject = {};
+    Object.defineProperty(activeProject, "activeItem", { get() { throw new Error("SECRET_HOST_DETAIL active item"); } });
+    const activeRealm = makeRealm({ app: { project: activeProject }, CompItem: function CompItem() {} });
+    expectStage(loadFacade(activeRealm), "active-item-read", "The project.activeItem getter failure");
+
+    const classificationRealm = makeRealm({ app: { project: { activeItem: {} } } });
+    inRealm(classificationRealm, 'function CompItem(){}; Object.defineProperty(CompItem, Symbol.hasInstance, { value: function(){ throw new Error("SECRET_HOST_DETAIL classification"); } });');
+    expectStage(loadFacade(classificationRealm), "active-item-classification", "The active item classification failure");
+
+    const unavailableRealm = makeRealm({ app: { project: { activeItem: null } }, CompItem: function CompItem() {} });
+    const unavailable = parseResult(loadFacade(unavailableRealm).handle(JSON.stringify(bindingRequest())));
+    check(unavailable.ok === false && unavailable.error.code === "HOST_CONTEXT_UNAVAILABLE" && unavailable.error.reason === "no-active-composition" && !Object.prototype.hasOwnProperty.call(unavailable.error, "stage"), "Normal no-active-composition remains unavailable without a Host failure stage.");
+}
+
+function runProjectReferenceLifetimeTests() {
+    function project() { return { activeItem: null }; }
+    function capture(facade) { return parseResult(facade.handle(JSON.stringify(request()))); }
+
+    const projectA = project();
+    const projectB = project();
+    let validCalls = 0;
+    const validRealm = makeRealm({ app: { project: projectA }, CompItem: function CompItem() {}, isValid(value) { validCalls += 1; return value === projectA || value === projectB; } });
+    const validFacade = loadFacade(validRealm);
+    const initial = capture(validFacade);
+    const same = capture(validFacade);
+    validRealm.app.project = projectB;
+    const replacement = capture(validFacade);
+    const replacementSame = capture(validFacade);
+    check(initial.snapshot.projectGeneration === 1, "Initial Project observation keeps the initial generation.");
+    check(same.snapshot.projectGeneration === 1 && validCalls === 3, "A valid same Project reference does not advance generation and later observations use isValid.");
+    check(replacement.snapshot.projectGeneration === 2 && replacementSame.snapshot.projectGeneration === 2, "A valid Project replacement advances generation exactly once and the accepted Project then remains stable.");
+
+    const invalidA = project();
+    const invalidB = project();
+    const invalidSource = contextSource.replace("changed = project !== currentProjectReference;", "comparisonCalls += 1;\n                    changed = project !== currentProjectReference;");
+    const invalidRealm = makeRealm({ app: { project: invalidA }, CompItem: function CompItem() {}, comparisonCalls: 0, isValid(value) { return value !== invalidA; } });
+    const invalidFacade = loadFacade(invalidRealm, invalidSource);
+    check(capture(invalidFacade).snapshot.projectGeneration === 1, "An initial native Project reference is accepted without validity comparison.");
+    invalidRealm.app.project = invalidB;
+    const invalidReplacement = capture(invalidFacade);
+    const invalidSame = capture(invalidFacade);
+    check(invalidReplacement.ok === true && invalidReplacement.snapshot.projectGeneration === 2 && invalidRealm.comparisonCalls === 1, "An invalid prior Project skips equality, advances once, and the accepted replacement is compared only on its later same-Project capture.");
+    check(invalidSame.snapshot.projectGeneration === 2, "The Project accepted after invalidation remains stable on its next capture.");
+
+    const throwingValidityA = project();
+    const throwingValidityRealm = makeRealm({ app: { project: throwingValidityA }, CompItem: function CompItem() {}, isValid() { throw new Error("validity unavailable"); } });
+    const throwingValidityFacade = loadFacade(throwingValidityRealm);
+    check(capture(throwingValidityFacade).snapshot.projectGeneration === 1, "Initial observation does not invoke validity checks.");
+    throwingValidityRealm.app.project = project();
+    check(capture(throwingValidityFacade).snapshot.projectGeneration === 2, "An isValid exception conservatively advances Project authority once.");
+
+    const throwingComparisonSource = contextSource.replace("changed = project !== currentProjectReference;", "throw new Error(\"comparison unavailable\");");
+    const throwingComparisonA = project();
+    const throwingComparisonRealm = makeRealm({ app: { project: throwingComparisonA }, CompItem: function CompItem() {}, isValid() { return true; } });
+    const throwingComparisonFacade = loadFacade(throwingComparisonRealm, throwingComparisonSource);
+    check(capture(throwingComparisonFacade).snapshot.projectGeneration === 1, "Initial observation bypasses reference comparison.");
+    throwingComparisonRealm.app.project = project();
+    check(capture(throwingComparisonFacade).snapshot.projectGeneration === 2, "A strict-comparison exception conservatively advances Project authority once.");
+
+    const fallbackA = project();
+    const fallbackB = project();
+    const fallbackRealm = makeRealm({ app: { project: fallbackA }, CompItem: function CompItem() {} });
+    const fallbackFacade = loadFacade(fallbackRealm);
+    const fallbackInitial = capture(fallbackFacade);
+    const fallbackSame = capture(fallbackFacade);
+    fallbackRealm.app.project = fallbackB;
+    const fallbackReplacement = capture(fallbackFacade);
+    check(fallbackInitial.snapshot.projectGeneration === 1 && fallbackSame.snapshot.projectGeneration === 1 && fallbackReplacement.snapshot.projectGeneration === 2, "When isValid is unavailable, guarded strict comparison preserves same/replacement generation semantics.");
+
+    let nullValidityCalls = 0;
+    const nullRealm = makeRealm({ app: { project: null }, CompItem: function CompItem() {}, isValid(value) { nullValidityCalls += 1; if (value === null) throw new Error("isValid(null) must not run"); return true; } });
+    const nullFacade = loadFacade(nullRealm);
+    const nullInitial = capture(nullFacade);
+    const nullSame = capture(nullFacade);
+    nullRealm.app.project = project();
+    const nullToProject = capture(nullFacade);
+    const projectSame = capture(nullFacade);
+    nullRealm.app.project = null;
+    const projectToNull = capture(nullFacade);
+    check(nullInitial.snapshot.projectGeneration === 1 && nullSame.snapshot.projectGeneration === 1 && nullValidityCalls === 2, "null to null does not invoke isValid or advance generation; only later non-null observations use validity checks.");
+    check(nullToProject.snapshot.projectGeneration === 2, "null to Project advances generation exactly once.");
+    check(projectSame.snapshot.projectGeneration === 2, "The same valid Project after a null transition does not advance generation.");
+    check(projectToNull.snapshot.projectGeneration === 3, "Project to null advances generation exactly once.");
+
+    const assignmentSource = contextSource.replace("currentProjectReference = project;\n        currentProjectReferenceWasNull = project === null;\n        projectGeneration++;", "throw new Error(\"SECRET_HOST_DETAIL assignment\");\n        currentProjectReference = project;\n        currentProjectReferenceWasNull = project === null;\n        projectGeneration++;");
+    const assignmentRealm = makeRealm({ app: { project: project() }, CompItem: function CompItem() {}, isValid() { return true; } });
+    const assignmentFacade = loadFacade(assignmentRealm, assignmentSource);
+    check(capture(assignmentFacade).ok === true, "The assignment fault fixture leaves initial observation intact.");
+    assignmentRealm.app.project = project();
+    const assignmentFailure = parseResult(assignmentFacade.handle(JSON.stringify(request({ scope: { purpose: "binding", selectionOrderMeaningful: true } }))));
+    check(assignmentFailure.error.code === "HOST_CONTEXT_READ_FAILED" && assignmentFailure.error.stage === "project-transition", "A new-reference assignment failure remains visible as project-transition READ_FAILED.");
+
+    function NativeCompItem() {}
+    const layer = { id: 9, index: 1, matchName: "ADBE AV Layer" };
+    const comp = new NativeCompItem();
+    Object.assign(comp, { id: 7, width: 100, height: 100, duration: 1, frameRate: 24, selectedLayers: [layer] });
+    const nativeA = { activeItem: comp };
+    const nativeB = { activeItem: null };
+    const nativeRealm = makeRealm({ app: { project: nativeA }, CompItem: NativeCompItem, isValid() { return true; } });
+    const nativeFacade = loadFacade(nativeRealm);
+    check(capture(nativeFacade).ok === true, "A native-layer-id observation succeeds before replacement.");
+    check(parseResult(nativeFacade.handle(JSON.stringify(Object.assign(request(), { operation: "getCapabilities", tier: 0 })))).snapshot.capabilities.bindingContextAvailable === true, "Observed native Layer identity enables binding before replacement.");
+    nativeRealm.app.project = nativeB;
+    check(capture(nativeFacade).snapshot.projectGeneration === 2, "Replacement after native Layer observation advances generation.");
+    check(parseResult(nativeFacade.handle(JSON.stringify(Object.assign(request(), { operation: "getCapabilities", tier: 0 })))).snapshot.capabilities.bindingContextAvailable === false, "Project replacement resets nativeLayerIdObserved.");
 }
 
 const REQ = "req_" + "a".repeat(32);
@@ -878,6 +1015,8 @@ function runRuntimeReloadTests() {
 try {
     runJsonTests();
     runAeArrayProfileTests();
+    runHostStageDiagnosticsTests();
+    runProjectReferenceLifetimeTests();
     runFacadeTests();
     runTierTwoTests();
     runTierThreeTests();
