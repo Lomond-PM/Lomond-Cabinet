@@ -1,10 +1,10 @@
 # HANDOFF.md
 
-## 0.3.3 release-preparation handoff
+## 0.3.4 release-candidate handoff
 
-Product metadata is staged at **0.3.3**. The 0.3.3 Agent Runtime Foundation development is complete, its canonical regression is **132/132 PASS**, final integrated After Effects 2026 acceptance is **PASS**, and release preparation is **COMPLETE / READY FOR RELEASE**. It is not yet published: the latest published release/tag remains `0.3.2` / `v0.3.2` until release-prep reaches `dev`, then `main`, and an annotated `v0.3.3` tag is created.
+Product metadata is staged at **0.3.4** on `release/0.3.4`. The Observation + Capability Foundation is implementation-complete, the final Vela release gate is **49/49 PASS**, and existing integrated After Effects 2026 evidence is sufficient for release preparation. Final AE release smoke remains pending before publication. The latest published release/tag is `0.3.3` / immutable `v0.3.3`.
 
-Frozen staging keeps actual Observation + Capability in 0.3.4, Planning / TaskRun / Authority in 0.3.5+, and the AgentDriver reasoning/autonomous loop later. Preserve the existing Provider, Review, Confirmation, Preflight, ExecutionAdapter, and Host authority boundaries.
+Version 0.3.4 closes production Observation, structured Context, read/analyze Capability Registry and Runtime, Active Composition observation, stable Prompt layering and local capability-to-registered-action mapping. Mapping and Context eligibility are not permission. Frozen staging keeps Planning, TaskRun authority semantics, DelegationGrant, Policy Engine, `executionArmed` and Authority in 0.3.5+, with the AgentDriver autonomous loop later. Preserve the existing Provider, Review, Confirmation, Preflight, ExecutionAdapter and Host authority boundaries.
 
 ## Historical incremental working notes (superseded)
 
@@ -22,7 +22,7 @@ The uncommitted `refactor/0.3.2-typography-appearance` work contains Typography 
 
 ## Purpose
 
-This document explains how to continue Lomond Cabinet development on another machine and preserve the release-prepared 0.3.3 metadata, frozen architecture, and unpublished two-phase release state.
+This document explains how to continue Lomond Cabinet development on another machine and preserve the 0.3.4 release-candidate metadata, frozen architecture and pending final-AE/publication state.
 
 Read before coding:
 
@@ -36,16 +36,17 @@ docs/HANDOFF.md
 
 ## Current release
 
-- Product metadata: `0.3.3` staged
-- Latest published tag: `v0.3.2`
-- Latest published release: `0.3.2`
-- 0.3.3 development: **COMPLETE**
-- 0.3.3 final AE acceptance: **PASS**
-- 0.3.3 release preparation: **COMPLETE / READY FOR RELEASE**
-- 0.3.3 published: **NO**
+- Current branch: `release/0.3.4`
+- Product metadata: `0.3.4` staged
+- Latest published tag: `v0.3.3`
+- Latest published release: `0.3.3`
+- 0.3.4 implementation and final release gate: **COMPLETE / 49 OF 49 PASS**
+- 0.3.4 integrated AE evidence: **ACCEPTED FOR RELEASE PREPARATION**
+- 0.3.4 final AE release smoke: **PENDING**
+- 0.3.4 published: **NO**
 - Host API version: `1.0.0`
 
-Version 0.3.2 is published from synchronized `main` and `dev` and tagged with immutable `v0.3.2`. Version 0.3.3 is the prepared release candidate; publication requires release-prep merge to `dev`, `dev` to `main`, and an annotated `v0.3.3` tag.
+Version 0.3.3 is published and tagged with immutable `v0.3.3`. Version 0.3.4 is the prepared candidate; after final AE release acceptance, publication requires release-prep merge to `dev`, `dev` to `main`, and an annotated `v0.3.4` tag.
 
 Vela remains experimental:
 
@@ -128,7 +129,7 @@ com.kevin.aetoolbox
 ## Initial setup on another machine
 
 1. Clone or copy the repository.
-2. Confirm `VERSION` is `0.3.3` for the prepared release candidate.
+2. Confirm `VERSION` is `0.3.4` for the prepared release candidate.
 3. Confirm both manifest version fields match `VERSION`.
 4. Configure CEP PlayerDebugMode for the AE/CSXS version when using an unsigned development extension.
 5. Create the CEP junction/symlink or install the full extension folder.
@@ -293,7 +294,7 @@ task branch -> dev -> main -> version tag
 - Use AE smoke for active runtime paths.
 - Keep published tags immutable.
 
-Published tags `v0.3.0`, `v0.3.1`, and `v0.3.2` are immutable. Future version tags should be created only after the reviewed release commit reaches `main`.
+Published tags `v0.3.0`, `v0.3.1`, `v0.3.2`, and `v0.3.3` are immutable. Future version tags should be created only after the reviewed release commit reaches `main`.
 
 ## Version management
 
@@ -314,17 +315,17 @@ Future release changes must synchronize:
 
 Establish a complete semantic token hierarchy for color, surface, text, status, interaction, typography, spacing, radius, geometry, and component tokens. Progressively align Vela, Registry Renderer, Settings, and Home without redesigning the accepted Vela UI structure.
 
-### 0.3.3 — Runtime (release-prepared, unpublished)
+### 0.3.3 — Runtime (released)
 
-Agent, Session, Scope, typed Session events, in-memory persistence seam, Surface-to-Agent consumer, runtime-state contracts, and contract-only AgentDriver are complete. The standalone Observation / Agent Context seam has no Host Observation or Capability semantics.
+Agent, Session, Scope, typed Session events, in-memory persistence seam, Surface-to-Agent consumer, runtime-state contracts and contract-only AgentDriver shipped as the Runtime Foundation. The standalone Observation seam intentionally preceded the 0.3.4 production capability work.
 
-### 0.3.4 — Observation + Capability
+### 0.3.4 — Observation + Capability (release candidate)
 
-Add actual Observation, Host-backed structured Context, Capability Registry, read/analyze capabilities, capability-to-registered-action mapping, and unified invocation/result envelopes.
+Production Observation, Host-backed structured Context, the read/analyze Capability Registry and Runtime, Active Composition observation, stable Prompt layering, capability-to-registered-action mapping and unified invocation/result envelopes are complete. The final Vela release gate is 49/49 PASS; final AE release smoke is the remaining release action.
 
-### 0.3.5+ — Planning / Authority / TaskRun
+### 0.3.5 — Planning + Authority audit first
 
-Add Planning, TaskRun and TaskState runtime, process-local `executionArmed`, Authority, PolicyDecision, DelegationGrant, Permission, and JIT binding/authority integration under the frozen architecture.
+Begin with a read-only scope and architecture reconciliation against the frozen baseline and the 0.3.4 closure. Do not directly implement Planner, TaskPlan, TaskRun authority semantics, DelegationGrant, Policy Engine, `executionArmed`, authority tokens or automatic execution until that audit defines a focused implementation sequence.
 
 ### Later frozen stage — AgentDriver reasoning/autonomous loop
 

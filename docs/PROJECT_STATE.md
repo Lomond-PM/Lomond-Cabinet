@@ -22,13 +22,19 @@ Global Settings is ordered **General, Appearance, Advanced, Developer**. Final S
 
 Palette Store v2 remains the sole production Palette persistence authority, with dynamic `DIRECT`, same-palette `REFERENCE`, and registered `DERIVED` slots, `profiles.proceduralAppearance`, native Workspace Save/Cancel, and the legacy compatibility boundary. Cross-palette references, Harmony generation, node editing, global active Palette, and Appearance live-link remain deferred.
 
-Vela spacing ownership is closed and AE accepted: Card Inset owns shell/card placement; Content Inline and Content Block Insets are shared by Conversation and Composer on their respective axes; Surface Edge owns Vela Settings. The 0.3.3 Agent Runtime Foundation is development-complete, AE-accepted, and release-prepared while remaining unpublished. Its normative baseline is `docs/design/vela-agent-architecture.md` (**FROZEN FOR 0.3.x**), with the integrated closure in `docs/design/vela-agent-0.3.3-closure.md`.
+Vela spacing ownership is closed and AE accepted: Card Inset owns shell/card placement; Content Inline and Content Block Insets are shared by Conversation and Composer on their respective axes; Surface Edge owns Vela Settings. Version 0.3.3 is published, and 0.3.4 is the current release candidate for the completed Observation + Capability Foundation. The normative baseline remains `docs/design/vela-agent-architecture.md` (**FROZEN FOR 0.3.x**); implementation closure is recorded in `docs/design/vela-agent-0.3.4-closure.md`.
 
-## 0.3.3 Runtime Foundation development closure
+## 0.3.4 Observation + Capability release candidate
 
-The 0.3.3 Runtime Foundation has completed development across stages A–F: Session Runtime Contract Foundation; Agent / AgentScope Runtime Shape; Agent Surface Projection / Subscription; Production Runtime Lifecycle Integration; standalone Observation / Agent Context Plumbing; and Runtime State Convergence with TaskRun/executionArmed ownership correctly deferred. Stage G is the integrated documentation closure. The frozen 0.3.3 requirements have no remaining staged blocker, and the current development baseline passes **132/132 canonical offline test files**.
+The 0.3.4 scope is complete across three focused stages: **0.3.4-A Active Composition Observation**, **0.3.4-B Prompt Stable Prefix Reconciliation**, and **0.3.4-C Capability → Registered Action Mapping**. Production now owns lifecycle-bounded Observation, structured Context, a read/analyze Capability Registry and Runtime, validated invocation/result envelopes, FIFO Host-read serialization, Active Composition observation, Prompt Builder v4 layering and local registered-action mapping.
 
-This is not a publication declaration. Version 0.3.2 remains the latest published baseline, and its historical **125 offline test files** result above remains the 0.3.2 release snapshot. Version 0.3.3 development, final integrated After Effects 2026 acceptance, and release preparation are complete; product metadata is staged at 0.3.3 and the canonical regression is **132/132 PASS**. Publication remains pending release-prep merge to `dev`, `dev` to `main`, and an annotated `v0.3.3` tag. Actual Observation and Capability remain frozen for 0.3.4. Planning, TaskRun, TaskState runtime, executionArmed runtime state, and Authority remain frozen for 0.3.5+, with the AgentDriver reasoning/autonomous loop later.
+The final release gate reran the complete Vela inventory at **49/49 suites PASS**, including **292 Context Host assertions**, qualification contracts and module-order tests. Integrated After Effects evidence covers Active Composition lifecycle and freshness, Provider conversation/read/proposal/Review/Confirmation/execution/cancellation/reload, Project replacement and same-Project turns, and mapped opacity mutation with no mutation before approval. Project-owned Console warnings/errors were **0/0**. The final Context Host portability fix changed tests only, so this accepted production evidence remains applicable to the release candidate.
+
+Mapping lookup, Context eligibility and capability availability remain distinct from permission and execution authority. Every mutation continues through Review, Confirmation, freshness/permission/replay/reservation checks, Preflight, ExecutionAdapter and Host validation. Planning, TaskPlan, TaskRun authority semantics, TaskState authority, DelegationGrant, Policy Engine, process-local `executionArmed`, automatic execution, scheduling/priorities and generic mutation Agent capabilities remain deferred to 0.3.5+ or later.
+
+## Historical 0.3.3 Runtime Foundation closure
+
+The published 0.3.3 Runtime Foundation completed Session Runtime, Agent / AgentScope shape, Agent Surface projection, production lifecycle integration, the standalone Observation seam and runtime-state ownership convergence. Its historical canonical result was **132/132 PASS**, and `docs/design/vela-agent-0.3.3-closure.md` remains its integrated record.
 
 Design Tuning Full Coverage 已加入 GLOBAL / COMMON consumer convergence 契约、UI Scale Peek semantic target/structure-only ancestor path，以及 Registry Control Lab Registry Path / CoreUI Direct 完整性检查。Developer / Advanced / User 的最终参数安置仍等待 Full Calibration 后复核。
 
@@ -47,15 +53,15 @@ Lomond Cabinet is an After Effects CEP extension panel.
 - Visible product name: **Lomond Cabinet**
 - Manifest menu name: **AE Toolbox**
 - Extension id/folder: `com.kevin.aetoolbox`
-- Current published release version: `0.3.2`
-- Latest published tag: `v0.3.2`
-- Product metadata staged for: `0.3.3`
-- 0.3.3 release preparation: **COMPLETE / READY FOR RELEASE**
-- 0.3.3 published: **NO**
-- Post-release development baseline: synchronized `main` and `dev`
+- Current published release version: `0.3.3`
+- Latest published tag: `v0.3.3`
+- Product metadata staged for: `0.3.4`
+- 0.3.4 release preparation: **IN PROGRESS / FINAL AE RELEASE SMOKE PENDING**
+- 0.3.4 published: **NO**
+- Release-candidate source baseline: `release/0.3.4` from synchronized `dev`
 - Host API version: `1.0.0`
 
-`VERSION`, both product version fields in `CSXS/manifest.xml`, and `AEToolbox.projectVersion` are staged at `0.3.3` for the release candidate. The latest published version remains 0.3.2 from synchronized `main` and `dev`, with immutable tag `v0.3.2`, until the 0.3.3 publication workflow completes.
+`VERSION`, both product version fields in `CSXS/manifest.xml`, and `AEToolbox.projectVersion` are synchronized at `0.3.4` for the release candidate. The latest published version remains 0.3.3 with immutable tag `v0.3.3` until final 0.3.4 AE release acceptance and publication complete.
 
 ## 0.3.1 release status
 
@@ -341,9 +347,9 @@ The release contains:
 
 ## Next development direction
 
-The isolated **0.3.3 — Agent Runtime Foundation** has completed development, final integrated AE acceptance, canonical 132/132 regression, and release preparation. Product metadata is staged at 0.3.3, but publication remains pending the reviewed release-prep to `dev` to `main` flow and annotated `v0.3.3` tag. The latest published baseline remains 0.3.2. `docs/design/vela-agent-architecture.md` is the **FROZEN FOR 0.3.x** normative baseline; `docs/design/vela-agent-0.3.3-closure.md` records the integrated closure.
+The **0.3.4 — Observation + Capability Foundation** is the current release candidate after a 49/49 Vela release gate and accepted integrated AE evidence. Its next step is final AE release smoke, followed by the reviewed release-prep to `dev` to `main` flow and annotated `v0.3.4` tag. `docs/design/vela-agent-architecture.md` remains the **FROZEN FOR 0.3.x** normative baseline; `docs/design/vela-agent-0.3.4-closure.md` records the implementation closure.
 
-Registry evolves toward a typed Capability Registry consumable by both Agent and Human UI. Capabilities may be `read`, `analyze`, `mutate`, or `create`; a dedicated Human UI is not required for a capability to exist.
+The next development stage is **0.3.5 Planning + Authority**, beginning with a read-only scope and architecture audit. Do not directly implement Planner, TaskPlan, TaskRun authority, DelegationGrant, Policy Engine or `executionArmed` behavior before that audit reconciles the frozen architecture with the released 0.3.4 ownership boundaries.
 
 Long-term natural-language understanding and candidate generation must remain separate from execution authority. Preserve typed allowlists, parameter schemas, trusted target binding, Context fingerprints, generation/replay protection, fresh Preflight, Execution Guard, Execution Adapter, Host allowlists, and lifecycle fail-closed behavior. Later authority work may replace single-message lexical denial, hard text/proposal splits, universal raw-message provenance, and confirm-every-action as the only authority model, but none of those migrations are part of 0.3.1.
 # 0.3.2 Motion Architecture Foundation
