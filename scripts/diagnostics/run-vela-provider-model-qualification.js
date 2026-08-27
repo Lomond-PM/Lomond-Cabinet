@@ -14,15 +14,15 @@ const PROFILE_MISMATCH_REASONS = Object.freeze(["TEXT_ONLY_RECEIVED_LOCAL_PROPOS
 const PROFILE_CONTRACT_KEYS = Object.freeze(["promptSha256", "responseFormatSha256", "stableRequestBodySha256", "messageRoleOrder"]);
 const FROZEN_PROFILE_CONTRACTS = deepFreeze({
     textOnly: {
-        promptSha256: "cc9aa49f440748db2fc08d900b5c5ad1fdd6fd75f6d79aab9139e26d16450476",
+        promptSha256: "1b9cdddc0947ea79ead0db83f6ed93f2962e21f99ec08ccbe35b0cef8db6f5b2",
         responseFormatSha256: "85813dd8950079ab9c9542612aa0ad14b82c98e3f3e71f3a370561669e64cdf8",
-        stableRequestBodySha256: "208e84b1898f38b98f9a16785ab0a10e6c200551d0193b5b0037f968385a3d54",
+        stableRequestBodySha256: "64b794d240e85b8fa4f9af03a2cba9d46e448b46644e62bbaa2dc61cd4406d42",
         messageRoleOrder: ["system", "assistant", "user"]
     },
     explicitEditEligible: {
-        promptSha256: "32d55e4db60f7273c00c51004338e59dca14565643561b20420484b9ccd1bb69",
+        promptSha256: "8fb06e5b8798f58847045d36628391cf35879b70f9bfcf8d6fb6c5000bc1801a",
         responseFormatSha256: "509230d09996e81eb3d4baddd332f3730707badd37d6b4d28b4499b6e6ca6b2f",
-        stableRequestBodySha256: "953962fb5b390831287a05b2d72811c6f2d474016766dba40209b8aceb5f4a83",
+        stableRequestBodySha256: "09c61d0aeadaec868c826fae905ed4ed767401664084845f05e7cfc541347f3f",
         messageRoleOrder: ["system", "assistant", "user"]
     }
 });
@@ -131,7 +131,7 @@ function reservePartialOutput(fsModule, output, pathOptions) {
     return Object.freeze({ output, partial, handle });
 }
 function validateProfileQualificationMetadata(metadata, args) {
-    if (!exactOwnData(metadata, METADATA_KEYS) || metadata.metadataRevision !== qualification.PROFILE_METADATA_REVISION || metadata.caseProfileFingerprint !== qualification.PROFILE_CASE_FINGERPRINT || metadata.profileFixtureSha256 !== qualification.PROFILE_FIXTURE_SHA256 || metadata.builderRevision !== "vela-capability-prompt-builder-v3" || metadata.requestBranchPolicyRevision !== "vela-provider-request-branch-policy-v1" || metadata.capabilityId !== "set-opacity-v1" || metadata.capabilityRevision !== "vela-capability-contract-v1" || metadata.protocolVersion !== "vela.model-response.v1" || JSON.stringify(metadata.messageRoleOrder) !== JSON.stringify(["system", "assistant", "user"]) || metadata.caseCount !== qualification.PROFILE_CASES.length || metadata.runsPerCase !== args.runs || metadata.modelIdentifier !== args.model || metadata.quantization !== args.quantization || metadata.operatorDeclaredReasoningMode !== args.reasoningMode) throw localError("QUALIFICATION_CONTRACT_DRIFT");
+    if (!exactOwnData(metadata, METADATA_KEYS) || metadata.metadataRevision !== qualification.PROFILE_METADATA_REVISION || metadata.caseProfileFingerprint !== qualification.PROFILE_CASE_FINGERPRINT || metadata.profileFixtureSha256 !== qualification.PROFILE_FIXTURE_SHA256 || metadata.builderRevision !== "vela-capability-prompt-builder-v4" || metadata.requestBranchPolicyRevision !== "vela-provider-request-branch-policy-v1" || metadata.capabilityId !== "set-opacity-v1" || metadata.capabilityRevision !== "vela-capability-contract-v1" || metadata.protocolVersion !== "vela.model-response.v1" || JSON.stringify(metadata.messageRoleOrder) !== JSON.stringify(["system", "assistant", "user"]) || metadata.caseCount !== qualification.PROFILE_CASES.length || metadata.runsPerCase !== args.runs || metadata.modelIdentifier !== args.model || metadata.quantization !== args.quantization || metadata.operatorDeclaredReasoningMode !== args.reasoningMode) throw localError("QUALIFICATION_CONTRACT_DRIFT");
     if (!exactOwnData(metadata.textOnlyContract, PROFILE_CONTRACT_KEYS) || !exactOwnData(metadata.explicitEditEligibleContract, PROFILE_CONTRACT_KEYS) || JSON.stringify(metadata.textOnlyContract) !== JSON.stringify(FROZEN_PROFILE_CONTRACTS.textOnly) || JSON.stringify(metadata.explicitEditEligibleContract) !== JSON.stringify(FROZEN_PROFILE_CONTRACTS.explicitEditEligible)) throw localError("QUALIFICATION_CONTRACT_DRIFT");
     return metadata;
 }

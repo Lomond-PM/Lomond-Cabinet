@@ -53,12 +53,12 @@ const PROFILE_CASES = freezeJson([
     { id: "Q12", fixtureId: "A", message: "你好", requestProfile: "text-only", expectedOutcome: "text", expectedOpacity: null }
 ]);
 const BRANCH_FIXTURE_PATH = path.join(__dirname, "..", "fixtures", "vela-capability-contracts", "provider-branch-policy-v2.json");
-const PROFILE_FIXTURE_PATH = path.join(__dirname, "..", "fixtures", "vela-capability-contracts", "provider-branch-profiles-v1.json");
+const PROFILE_FIXTURE_PATH = path.join(__dirname, "..", "fixtures", "vela-capability-contracts", "provider-branch-profiles-v2.json");
 const BRANCH_POLICY_REVISION = "vela-branch-policy-v2";
-const PROFILE_METADATA_REVISION = "vela-provider-model-qualification-metadata-c4-v1";
-const PROFILE_FIXTURE_SHA256 = "09f3a60af594e9d4e811eb6f516cd7ea8d7eccbc04235827ffc47d48a3ce2820";
+const PROFILE_METADATA_REVISION = "vela-provider-model-qualification-metadata-c4-v2";
+const PROFILE_FIXTURE_SHA256 = "32578157ecba5f799320c75113fa74471aaf1ab483c58105df4147b724f48386";
 const PROFILE_CASE_FINGERPRINT = "df4e3ebf6a8126b7e70a8b0aef88b8aa5850c05df1c43f448f4f84626ce04ccf";
-const PROFILE_EVIDENCE_REVISION = "vela-provider-model-qualification-v3";
+const PROFILE_EVIDENCE_REVISION = "vela-provider-model-qualification-v4";
 const C2_PROMPT_SHA256 = "2109193792f682367499f7594a6644e758ea55b46522c0bc526c092a35de5c92";
 const C3A_PROMPT_SHA256 = "340c06c86fa01b7f0382d6bf3d365dc6e007af4e6b371c7728eb41ac8f08ebee";
 const RESPONSE_FORMAT_SHA256 = "9b5cce993021397d828e07110b5e7a8b6a68b68e5362cc54840e6aa8486e3b51";
@@ -142,7 +142,7 @@ async function captureProfileContracts(options) {
 }
 function validateProfileFixture(fixture) {
     if (!exactKeys(fixture, PROFILE_FIXTURE_KEYS) || !exactKeys(fixture.textOnly, PROFILE_CONTRACT_KEYS) || !exactKeys(fixture.explicitEditEligible, PROFILE_CONTRACT_KEYS)) throw contractDrift();
-    if (fixture.fixtureType !== "vela-provider-branch-profiles" || fixture.schemaRevision !== "v1" || fixture.promptBuilderRevision !== promptBuilder.MODULE_REVISION || fixture.promptBuilderRevision !== "vela-capability-prompt-builder-v3" || fixture.requestBranchPolicyRevision !== requestBranchPolicy.MODULE_REVISION || fixture.requestBranchPolicyRevision !== "vela-provider-request-branch-policy-v1" || fixture.capabilityId !== "set-opacity-v1" || fixture.capabilityRevision !== "vela-capability-contract-v1" || fixture.protocolVersion !== "vela.model-response.v1" || JSON.stringify(fixture.messageRoleOrder) !== JSON.stringify(["system", "assistant", "user"]) || fixture.fixedModelIdentifier !== "vela-contract-model" || fixture.fixedRequestId !== "req_00000000000000000000000000000000" || fixture.fixedAssistantContext !== "Trusted request context: active composition type CompItem; selected layers 1; first selected layer type AVLayer; selected layer opacity 25." || fixture.fixedTextUserMessage !== "Set opacity to 50%" || fixture.fixedExtractionUserMessage !== "Set opacity to 50%" || fixture.changeReason !== "C4-B2 profile-specific provider request contracts" || fixture.generatedBy !== "production Adapter mock-transport capture") throw contractDrift();
+    if (fixture.fixtureType !== "vela-provider-branch-profiles" || fixture.schemaRevision !== "v2" || fixture.promptBuilderRevision !== promptBuilder.MODULE_REVISION || fixture.promptBuilderRevision !== "vela-capability-prompt-builder-v4" || fixture.requestBranchPolicyRevision !== requestBranchPolicy.MODULE_REVISION || fixture.requestBranchPolicyRevision !== "vela-provider-request-branch-policy-v1" || fixture.capabilityId !== "set-opacity-v1" || fixture.capabilityRevision !== "vela-capability-contract-v1" || fixture.protocolVersion !== "vela.model-response.v1" || JSON.stringify(fixture.messageRoleOrder) !== JSON.stringify(["system", "assistant", "user"]) || fixture.fixedModelIdentifier !== "vela-contract-model" || fixture.fixedRequestId !== "req_00000000000000000000000000000000" || fixture.fixedAssistantContext !== "Trusted request context: active composition type CompItem; selected layers 1; first selected layer type AVLayer; selected layer opacity 25." || fixture.fixedTextUserMessage !== "Set opacity to 50%" || fixture.fixedExtractionUserMessage !== "Set opacity to 50%" || fixture.changeReason !== "0.3.4-B structured stable system and bounded dynamic turn contract" || fixture.generatedBy !== "production Adapter mock-transport capture") throw contractDrift();
 }
 function validateProfileMetadataArgs(args) {
     if (!args || typeof args !== "object" || typeof args.model !== "string" || !args.model.trim() || typeof args.quantization !== "string" || !/^[A-Za-z0-9._-]{1,64}$/.test(args.quantization) || typeof args.reasoningMode !== "string" || !/^[A-Za-z0-9._-]{1,64}$/.test(args.reasoningMode) || !Number.isInteger(args.runs) || args.runs < 1 || args.runs > 100) throw contractDrift();

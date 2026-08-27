@@ -10,12 +10,15 @@
         return error;
     }
 
-    function assertDependencies(protocolDependency, validatorDependency, planDependency, guardDependency, bridgeDependency) {
+    function assertDependencies(protocolDependency, capabilityContractsDependency, validatorDependency, planDependency, guardDependency, bridgeDependency) {
         if (!protocolDependency || typeof protocolDependency.createProtocol !== "function" || typeof protocolDependency.isTrustedProtocol !== "function" || !protocolDependency.ERROR_CODES) {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaExecutionPreflight requires VelaProtocol.");
         }
         if (!validatorDependency || typeof validatorDependency.isTrustedActionValidatorForProtocol !== "function" || typeof validatorDependency.isTrustedAuthorityForProtocol !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaExecutionPreflight requires VelaValidator.");
+        }
+        if (!capabilityContractsDependency || typeof capabilityContractsDependency.getLocalProjection !== "function" || typeof capabilityContractsDependency.resolveRegisteredAction !== "function" || typeof capabilityContractsDependency.validateCapabilityParams !== "function") {
+            throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaExecutionPreflight requires VelaCapabilityContracts.");
         }
         if (!planDependency || typeof planDependency.isTrustedPlanStoreForProtocol !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaExecutionPreflight requires VelaPlan.");
@@ -26,7 +29,7 @@
         if (!bridgeDependency || typeof bridgeDependency.isTrustedContextBridgeForProtocol !== "function" || typeof bridgeDependency.isTrustedReviewPortForProtocol !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaExecutionPreflight requires VelaContextBridge.");
         }
-        return { protocol: protocolDependency, validator: validatorDependency, plan: planDependency, guard: guardDependency, bridge: bridgeDependency };
+        return { protocol: protocolDependency, capabilityContracts: capabilityContractsDependency, validator: validatorDependency, plan: planDependency, guard: guardDependency, bridge: bridgeDependency };
     }
 
     function registerBrowserModule(target, name, create) {
@@ -36,8 +39,8 @@
         if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.getModule !== "function" || typeof bootstrap.hasModule !== "function" || typeof bootstrap.registerModule !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "The Vela protocol bootstrap is invalid."); }
         if (bootstrap.hasModule(name)) { throw bootstrapError("MODULE_ALREADY_REGISTERED", name + " is already registered."); }
         if (hasOwn.call(target, name) || !Object.isExtensible(target)) { throw bootstrapError("MODULE_BOOTSTRAP_CONFLICT", name + " global registration conflicts with the loaded module."); }
-        var dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaValidator"), bootstrap.getModule("VelaPlan"), bootstrap.getModule("VelaExecutionGuard"), bootstrap.getModule("VelaContextBridge"));
-        var exported = Object.freeze(create(dependencies.protocol, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge));
+        var dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaCapabilityContracts"), bootstrap.getModule("VelaValidator"), bootstrap.getModule("VelaPlan"), bootstrap.getModule("VelaExecutionGuard"), bootstrap.getModule("VelaContextBridge"));
+        var exported = Object.freeze(create(dependencies.protocol, dependencies.capabilityContracts, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge));
         bootstrap.registerModule(name, exported);
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
@@ -45,10 +48,10 @@
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        var dependencies = assertDependencies(require("./velaProtocol"), require("./velaValidator"), require("./velaPlan"), require("./velaExecutionGuard"), require("./velaContextBridge"));
-        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge));
+        var dependencies = assertDependencies(require("./velaProtocol"), require("./velaCapabilityContracts"), require("./velaValidator"), require("./velaPlan"), require("./velaExecutionGuard"), require("./velaContextBridge"));
+        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.capabilityContracts, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge));
     }
-}(typeof self !== "undefined" ? self : this, function (protocolModule, validatorModule, planModule, guardModule, bridgeModule) {
+}(typeof self !== "undefined" ? self : this, function (protocolModule, capabilityContracts, validatorModule, planModule, guardModule, bridgeModule) {
     "use strict";
 
     function requireOwnFunction(protocol, value, key) {
@@ -221,18 +224,19 @@
                 if (localProposal !== undefined) {
                     var localCapabilityId;
                     var localParams;
-                    var localOpacity;
+                    var localCapability;
+                    var registeredAction;
+                    var validatedLocalParams;
                     if (!protocol.isPlainObject(localProposal)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Local proposal input is invalid."); }
                     protocol.assertNoUnknownKeys(localProposal, ["capabilityId", "params"], "executionPreflight.localProposal");
                     localCapabilityId = protocol.getOwnDataProperty(localProposal, "capabilityId");
                     localParams = protocol.getOwnDataProperty(localProposal, "params");
-                    if (localCapabilityId !== "set-opacity-v1" || !protocol.isPlainObject(localParams)) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TOOL_ACTION, "Local proposal capability is unavailable."); }
-                    protocol.assertNoUnknownKeys(localParams, ["opacity"], "executionPreflight.localProposal.params");
-                    localOpacity = protocol.getOwnDataProperty(localParams, "opacity");
-                    if (typeof localOpacity !== "number" || !Number.isFinite(localOpacity) || Object.is(localOpacity, -0) || localOpacity < 0 || localOpacity > 100) {
-                        protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Local opacity proposal is out of range.");
-                    }
-                    localProposal = protocol.deepFreeze({ capabilityId: localCapabilityId, params: { opacity: localOpacity } });
+                    localCapability = capabilityContracts.getLocalProjection(localCapabilityId);
+                    registeredAction = capabilityContracts.resolveRegisteredAction(localCapabilityId);
+                    if (!localCapability || !registeredAction || !protocol.isPlainObject(localParams)) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TOOL_ACTION, "Local proposal capability is unavailable."); }
+                    try { validatedLocalParams = capabilityContracts.validateCapabilityParams(localCapability, localParams); }
+                    catch (error) { protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Local capability parameters are invalid."); }
+                    localProposal = protocol.deepFreeze({ capabilityId: localCapabilityId, params: validatedLocalParams, registeredAction: registeredAction });
                 }
                 return freshBinding(protocol.getOwnDataProperty(input, "selectionOrderMeaningful")).then(function (bindingCapture) {
                     var selection = bindingCapture.snapshot && bindingCapture.snapshot.selection;
@@ -268,13 +272,13 @@
                             }
                             target.propertyValueDigest = valueCapture.snapshot.targets[0].valueDigest;
                             proposal = {
-                                providerActionId: "local:set-opacity-v1:" + valueCapture.requestId,
+                                providerActionId: "local:" + localProposal.capabilityId + ":" + valueCapture.requestId,
                                 kind: "tool",
                                 title: "Set Opacity",
                                 rationale: "Local deterministic opacity proposal.",
                                 risk: "write",
                                 target: target,
-                                payload: { toolId: "vela", actionId: "set-opacity-v1", params: { opacity: protocol.getOwnDataProperty(protocol.getOwnDataProperty(localProposal, "params"), "opacity") } },
+                                payload: { toolId: localProposal.registeredAction.toolId, actionId: localProposal.registeredAction.actionId, params: protocol.cloneJson(localProposal.params, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes }) },
                                 undoGroupLabel: "Vela: Set Opacity",
                                 requiresConfirmation: true
                             };

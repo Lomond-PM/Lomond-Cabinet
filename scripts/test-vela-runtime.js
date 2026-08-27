@@ -3,6 +3,7 @@
 
 const assert = require("assert");
 const runtimeModule = require("../client/js/vela/velaRuntime");
+const capabilityContracts = require("../client/js/vela/velaCapabilityContracts");
 const activationPolicy = require("../client/js/vela/velaActivationPolicy").VelaActivationPolicy;
 const nodeRuntime = require("./velaNodeRuntime");
 let assertions = 0;
@@ -54,9 +55,20 @@ function createController(options) {
 }
 
 async function run() {
+    const derivedSchema = runtimeModule.deriveRegisteredActionParamsSchema({ parameters: { type: "object", additionalProperties: false, required: ["opacity"], properties: { opacity: { type: "number", minimum: 12, maximum: 88, unit: "percent" } } } });
+    check(Object.isFrozen(derivedSchema) && Object.isFrozen(derivedSchema.required) && Object.isFrozen(derivedSchema.properties) && Object.isFrozen(derivedSchema.properties.opacity) && derivedSchema.properties.opacity.minimum === 12 && derivedSchema.properties.opacity.maximum === 88 && !Object.prototype.hasOwnProperty.call(derivedSchema.properties.opacity, "unit"), "Runtime registered-action params schema is frozen and derives canonical bounds without copying capability-only annotations.");
+    const registeredTool = Object.freeze({ id: "vela", actions: Object.freeze({ "set-opacity-v1": Object.freeze({ id: "set-opacity-v1" }) }) });
+    const validMappings = runtimeModule.validateRegisteredActionMappings(capabilityContracts, {
+        getTool(toolId) { return toolId === "vela" ? registeredTool : null; },
+        getAction(tool, actionId) { return tool && tool.actions[actionId] || null; }
+    });
+    check(Object.isFrozen(validMappings) && validMappings.length === 1 && Object.isFrozen(validMappings[0]) && Object.isFrozen(validMappings[0].registeredAction) && validMappings[0].registeredAction.toolId === "vela" && validMappings[0].registeredAction.actionId === "set-opacity-v1", "Runtime startup cross-validation accepts the exact registered composite action identity and returns only frozen mapping data.");
+    assert.throws(() => runtimeModule.validateRegisteredActionMappings(capabilityContracts, { getTool() { return null; }, getAction() { return null; } }), (error) => error && error.code === "RUNTIME_CAPABILITY_UNAVAILABLE", "Runtime startup fails closed when the mapped tool is missing."); assertions += 1;
+    assert.throws(() => runtimeModule.validateRegisteredActionMappings(capabilityContracts, { getTool() { return registeredTool; }, getAction() { return null; } }), (error) => error && error.code === "RUNTIME_CAPABILITY_UNAVAILABLE", "Runtime startup fails closed when the mapped action is missing."); assertions += 1;
     const controller = createController();
     check(Object.isFrozen(controller), "Controller is frozen.");
-    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,cancelProviderRequest,checkProviderReadiness,dispose,getConfirmationSurfaceState,getProviderDiagnostics,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,initialize,rejectActiveCandidate,resetSession,resume,reviewProviderProposal,sendProviderMessage,suspend", "Runtime exposes only Persistent Surface lifecycle, bounded Provider diagnostics, proposal review, and active confirmation facades.");
+    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,cancelProviderRequest,checkProviderReadiness,dispose,getConfirmationSurfaceState,getObservationReadPort,getProviderDiagnostics,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,initialize,rejectActiveCandidate,resetSession,resume,reviewProviderProposal,sendProviderMessage,suspend", "Runtime exposes only Persistent Surface lifecycle, bounded read Observation, Provider diagnostics, proposal review, and active confirmation facades.");
+    check(controller.getObservationReadPort() === null, "Observation read port is unavailable before Runtime initialization.");
     check(controller.cancelProviderRequest.length === 0, "Provider cancellation has no caller-supplied request identifier seam.");
     check(controller.approveActiveCandidate.length === 0 && controller.rejectActiveCandidate.length === 0, "Surface confirmation facades accept no caller-supplied candidate identifier.");
     check(!Object.prototype.hasOwnProperty.call(controller, "getPreflight") && !Object.prototype.hasOwnProperty.call(controller, "getBridge") && !Object.prototype.hasOwnProperty.call(controller, "executeHostRequest"), "Controller does not expose private execution objects.");
@@ -64,6 +76,9 @@ async function run() {
     const second = controller.initialize();
     check(first === second, "Concurrent initialization shares one Promise.");
     const status = await first;
+    const observationReadPort = controller.getObservationReadPort();
+    check(Object.isFrozen(observationReadPort) && Object.keys(observationReadPort).sort().join(",") === "capture,getState", "initialized Runtime exposes one frozen read-only Observation port.");
+    check(!Object.prototype.hasOwnProperty.call(observationReadPort, "buildRequest") && !Object.prototype.hasOwnProperty.call(observationReadPort, "execute"), "Observation read port exposes no execution authority.");
     check(status.state === "ready" && status.initialized === true, "Tier 0 Host v4 readiness succeeds.");
     check(status.hostAdapterRevision === "vela-context-host-v4", "Status reports only the Host revision.");
     check(Object.isFrozen(status) && Object.isFrozen(status.bridgeState), "Status is frozen.");

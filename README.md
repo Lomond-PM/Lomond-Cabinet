@@ -2,13 +2,13 @@
 
 Lomond Cabinet is an After Effects CEP extension that combines a registry-driven tool system, procedural Home visuals, and the experimental Vela local-assistant surface.
 
-- **Product metadata staged for:** `0.3.3`
-- **Latest published tag:** `v0.3.2`
+- **Product metadata staged for:** `0.3.4`
+- **Latest published tag:** `v0.3.3`
 - **Extension bundle id:** `com.kevin.aetoolbox`
 - **Manifest menu name:** `AE Toolbox`
 - **Visible panel name:** `Lomond Cabinet`
 
-Version 0.3.2 remains the latest published and frozen release for the integrated UI / Design System Foundation. Product metadata is staged at 0.3.3; 0.3.3 development, final integrated AE acceptance, and release preparation are complete, but publication still requires the reviewed release-prep to `dev` to `main` flow and an annotated `v0.3.3` tag. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default. Actual Observation and Capability stay staged to 0.3.4; Planning, TaskRun, executionArmed runtime state, and Authority stay staged to 0.3.5+; the AgentDriver reasoning/autonomous loop remains later under the [frozen architecture baseline](docs/design/vela-agent-architecture.md).
+Version 0.3.3 is the latest published release. Product metadata is staged at 0.3.4 for the Observation + Capability Foundation release candidate. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default. Version 0.3.4 adds production-owned Observation, structured Context, a read/analyze Capability Registry and Runtime, Active Composition observation, stable-prefix Prompt Builder v4, and local capability-to-registered-action mapping. Mapping and Context eligibility grant no permission: every mutation still crosses Review, Confirmation, freshness and permission checks, Preflight, ExecutionAdapter, and Host validation. Planning, TaskRun authority semantics, `executionArmed`, DelegationGrant, Policy Engine, generic mutation Agent capabilities, and autonomous execution remain deferred to 0.3.5+ or later under the [frozen architecture baseline](docs/design/vela-agent-architecture.md).
 
 ## Runtime architecture
 
@@ -132,7 +132,7 @@ The optional LM Studio Provider is:
 - reset on reload for acknowledgement, readiness, and enablement;
 - allowed to persist only endpoint and Model ID configuration.
 
-Readiness means only that the configured local model instance is loaded. It is **not** qualification. No model is qualified, recommended, or selected as the production default for the 0.3.3 release candidate.
+Readiness means only that the configured local model instance is loaded. It is **not** qualification. No model is qualified, recommended, or selected as the production default for the 0.3.4 release candidate.
 
 The trusted activation policy keeps:
 
@@ -145,9 +145,11 @@ The trusted activation policy keeps:
 
 A model proposal cannot execute directly. With actionable Context, the transitional `proposal-capable-union` profile may return conversational text or a bounded `set-opacity-v1` proposal. Every proposal still passes parsing, profile checks, Intent Gate, Review, Confirmation, fresh Preflight, Execution Guard, ExecutionAdapter, and Host boundaries. Vela Persistent Surface is the only Vela user entry; the legacy Tool fallback is retired.
 
+The 0.3.4 Observation path uses lifecycle-owned, single-flight and cancellable refreshes with bounded freshness. `observe-active-composition-v1` is a local read capability, while the Agent Capability Registry accepts only `read` and `analyze` definitions. Prompt Builder v4 keeps the global and profile system contracts stable and places the response contract, trusted grounding, and user input in turn-dynamic layers. Mutation contracts separately own canonical parameters and the local `set-opacity-v1` registered-action identity; ActionValidator and the existing safety spine retain execution eligibility and authority.
+
 The Surface remembers the user's vertical height preference in `AEToolbox.velaSurfaceLayout.v1`. Current viewport, responsive layout, and UI-scale constraints clamp only the effective displayed height, so a temporarily small panel does not overwrite the preference. This layout preference is independent of Vela conversation data and Provider session enablement; acknowledgement, readiness, and enablement still clear on reload, and no multi-session or context persistence is introduced.
 
-See the frozen [`docs/design/vela-agent-architecture.md`](docs/design/vela-agent-architecture.md) baseline, the [`0.3.3 Runtime Foundation closure record`](docs/design/vela-agent-0.3.3-closure.md), and the bounded [`0.3.3-A foundation contract`](docs/design/vela-agent-runtime-contract-foundation-0.3.3.md). The existing [`docs/design/vela-agent.md`](docs/design/vela-agent.md) documents the shipped preview safety path, and [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) tracks accepted preview limitations.
+See the frozen [`docs/design/vela-agent-architecture.md`](docs/design/vela-agent-architecture.md) baseline, the [`0.3.4 Observation + Capability closure record`](docs/design/vela-agent-0.3.4-closure.md), the historical [`0.3.3 Runtime Foundation closure`](docs/design/vela-agent-0.3.3-closure.md), and the bounded [`0.3.3-A foundation contract`](docs/design/vela-agent-runtime-contract-foundation-0.3.3.md). The existing [`docs/design/vela-agent.md`](docs/design/vela-agent.md) documents the shipped preview safety path, and [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) tracks accepted preview limitations.
 
 ## Development installation
 
@@ -214,7 +216,7 @@ docs/HANDOFF.md
 
 ## Version and release status
 
-The current published release remains `0.3.2`, tagged with immutable `v0.3.2`. The 0.3.3 product metadata is staged and its Agent Runtime Foundation development, final integrated AE acceptance, and release preparation are complete; 0.3.3 is prepared but not published. Releases follow the reviewed `release-prep → dev → main → annotated version tag` flow.
+The current published release is `0.3.3`, tagged with immutable `v0.3.3`. Version 0.3.4 is the release candidate for the completed Observation + Capability Foundation and is pending final AE release smoke and the reviewed `release-prep → dev → main → annotated version tag` publication flow.
 
 Keep these synchronized for future releases:
 
@@ -224,7 +226,7 @@ Keep these synchronized for future releases:
 - `CHANGELOG.md`
 - current-version statements in maintained documentation
 
-`AEToolbox.hostApiVersion` is an independent Host contract version and remains `1.0.0`; it is not the 0.3.3 product version.
+`AEToolbox.hostApiVersion` is an independent Host contract version and remains `1.0.0`; it is not the 0.3.4 product version.
 
 ## Known issues
 

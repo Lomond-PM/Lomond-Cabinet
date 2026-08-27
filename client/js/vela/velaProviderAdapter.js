@@ -31,7 +31,7 @@
     }
 
     function assertCapabilityPromptBuilder(dependency) {
-        if (!dependency || typeof dependency.buildSystemPrompt !== "function") {
+        if (!dependency || typeof dependency.buildSystemPrompt !== "function" || typeof dependency.buildTurnContract !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaProviderAdapter requires VelaCapabilityPromptBuilder.");
         }
         return dependency;
@@ -370,7 +370,7 @@
         var activeRequest = null;
         var generation = 0;
         var usedRequestIds = new Set();
-        var diagnostics = Object.freeze({ providerId: PROVIDER_ID, modelId: model, requestId: null, state: state, elapsedMs: 0, httpStatus: null, errorCode: null });
+        var diagnostics = Object.freeze({ providerId: PROVIDER_ID, modelId: model, requestId: null, state: state, elapsedMs: 0, httpStatus: null, errorCode: null, terminalFailureBoundary: null });
 
         function getCapabilityModelSpec() {
             var capability = capabilityContracts.getModelProjection("set-opacity-v1");
@@ -443,7 +443,7 @@
             return Number.isInteger(value) && value >= 100 && value <= 599 ? value : null;
         }
 
-        function makeDiagnostics(record, nextState, httpStatus, errorCode, elapsedValue) {
+        function makeDiagnostics(record, nextState, httpStatus, errorCode, elapsedValue, failureBoundary) {
             return Object.freeze({
                 providerId: PROVIDER_ID,
                 modelId: model,
@@ -451,7 +451,8 @@
                 state: nextState,
                 elapsedMs: record ? (elapsedValue === undefined ? safeElapsed(record) : elapsedValue) : 0,
                 httpStatus: safeHttpStatus(httpStatus),
-                errorCode: errorCode || null
+                errorCode: errorCode || null,
+                terminalFailureBoundary: failureBoundary || null
             });
         }
 
@@ -496,7 +497,7 @@
             activeRequest = null;
             var timerId = record.timerId;
             record.timerId = null;
-            diagnostics = makeDiagnostics(record, nextState, fields.httpStatus, fields.errorCode);
+            diagnostics = makeDiagnostics(record, nextState, fields.httpStatus, fields.errorCode, undefined, fields.failureBoundary);
             if (timerId !== null) {
                 try { clearTimer(timerId); } catch (error) { /* terminal state remains authoritative */ }
             }
@@ -507,11 +508,12 @@
             return true;
         }
 
-        function finishWithError(record, capturedGeneration, nextState, code, httpStatus, abort) {
+        function finishWithError(record, capturedGeneration, nextState, code, httpStatus, abort, failureBoundary) {
             return finishRequest(record, capturedGeneration, nextState, canonicalError(code, record.requestId), {
                 abort: abort === true,
                 errorCode: code,
-                httpStatus: httpStatus
+                httpStatus: httpStatus,
+                failureBoundary: failureBoundary || null
             });
         }
 
@@ -581,10 +583,23 @@
             });
         }
 
-        function systemMessage(requestId) {
+        function promptContract(requestId) {
             var metadata = responseMetadata(requestId);
             var modelSpec = getCapabilityModelSpec();
-            return capabilityPromptBuilder.buildSystemPrompt(modelSpec.capability, metadata.requestId, metadata.model, requestProfile);
+            return Object.freeze({
+                systemPrompt: capabilityPromptBuilder.buildSystemPrompt(modelSpec.capability, requestProfile),
+                turnContract: capabilityPromptBuilder.buildTurnContract(modelSpec.capability, metadata.requestId, metadata.model, requestProfile)
+            });
+        }
+
+        function assembleMessages(messages, contract) {
+            var grounding = "unavailable";
+            var remaining = messages.slice();
+            var assistantContent;
+            if (remaining.length && remaining[0].role === "assistant") { grounding = remaining.shift().content; }
+            assistantContent = JSON.stringify({ turnResponseContract: contract.turnContract, trustedGrounding: grounding });
+            assistantContent = protocol.assertString(assistantContent, "provider assistant turn message", protocol.HARD_LIMITS.maxMessageBytes);
+            return [{ role: "system", content: contract.systemPrompt }, { role: "assistant", content: assistantContent }].concat(remaining);
         }
 
         function buildRequest(input, requestId) {
@@ -606,12 +621,13 @@
                 tier: input.context.tier
             };
             if (!Number.isInteger(context.tier) || context.tier < 0 || context.tier > 3) { protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Provider context tier is invalid."); }
+            var contract = promptContract(requestId);
             var request = {
                 protocol: protocol.PROTOCOLS.REQUEST,
                 schemaVersion: protocol.SCHEMA_VERSION,
                 requestId: requestId,
                 model: model,
-                messages: [{ role: "system", content: systemMessage(requestId) }].concat(messages),
+                messages: assembleMessages(messages, contract),
                 responseFormat: { type: "json_object", schemaId: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? RESPONSE_SCHEMA_IDS.TEXT_ONLY : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? RESPONSE_SCHEMA_IDS.EXPLICIT_EDIT_ELIGIBLE : RESPONSE_SCHEMA_IDS.PROPOSAL_CAPABLE_UNION) },
                 context: context
             };
@@ -658,7 +674,7 @@
             });
         }
 
-        function validateTransportResponse(snapshot, requestId) {
+        function validateTransportResponse(snapshot, requestId, setFailureBoundary) {
             var status = snapshot.status;
             var bodyText = snapshot.bodyText;
             if (status !== 200) { protocol.fail(protocol.ERROR_CODES.PROVIDER_HTTP_ERROR, "The local provider returned an HTTP error.", { details: { actualType: String(status) } }); }
@@ -690,6 +706,7 @@
             if (message.role !== "assistant" || typeof message.content !== "string" || !message.content.trim()) {
                 protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant content is invalid.");
             }
+            setFailureBoundary("content-response");
             var rawCanonical;
             try { rawCanonical = responseParser.parseProviderJson(message.content); }
             catch (error) { rawCanonical = null; }
@@ -705,10 +722,12 @@
                 protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The Vela response metadata is invalid.");
             }
             if (parsed.response.envelope.type === protocol.ENVELOPE_TYPES.ERROR) {
+                setFailureBoundary("profile-validation");
                 return { response: canonicalError(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, requestId), parserErrorCode: MODEL_ERROR_NOT_AUTHORIZED };
             }
             if ((requestProfile === REQUEST_PROFILES.TEXT_ONLY && parsed.response.envelope.type !== protocol.ENVELOPE_TYPES.TEXT) ||
                 (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE && parsed.response.envelope.type !== protocol.ENVELOPE_TYPES.LOCAL_PROPOSAL)) {
+                setFailureBoundary("profile-validation");
                 return { response: canonicalError(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, requestId), parserErrorCode: protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID };
             }
             var canonical = {
@@ -766,7 +785,7 @@
                 maxResponseBytes: transportInput.maxResponseBytes,
                 allowRedirects: transportInput.allowRedirects
             });
-            var pendingDiagnostics = makeDiagnostics(record, "pending", null, null, 0);
+            var pendingDiagnostics = makeDiagnostics(record, "pending", null, null, 0, null);
 
             generation = nextGeneration;
             activeRequest = record;
@@ -802,24 +821,25 @@
                 var snapshot;
                 try { snapshot = snapshotTransportResponse(transportResponse); }
                 catch (error) {
-                    finishWithError(record, capturedGeneration, "failed", protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, null, false);
+                    finishWithError(record, capturedGeneration, "failed", protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, null, false, "outer-response");
                     return;
                 }
                 var result;
-                try { result = validateTransportResponse(snapshot, requestId); }
+                var failureBoundary = "outer-response";
+                try { result = validateTransportResponse(snapshot, requestId, function (value) { failureBoundary = value; }); }
                 catch (error) {
                     var code = error instanceof protocol.VelaProtocolError ? error.code : protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID;
                     if (code !== protocol.ERROR_CODES.PROVIDER_HTTP_ERROR && code !== protocol.ERROR_CODES.PROVIDER_RESPONSE_TOO_LARGE) { code = protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID; }
-                    finishWithError(record, capturedGeneration, "failed", code, snapshot.status, false);
+                    finishWithError(record, capturedGeneration, "failed", code, snapshot.status, false, failureBoundary);
                     return;
                 }
                 if (result.parserErrorCode) {
-                    finishRequest(record, capturedGeneration, "failed", result.response, { errorCode: result.parserErrorCode, httpStatus: 200 });
+                    finishRequest(record, capturedGeneration, "failed", result.response, { errorCode: result.parserErrorCode, httpStatus: 200, failureBoundary: failureBoundary });
                 } else {
                     finishRequest(record, capturedGeneration, "completed", result.response, { errorCode: null, httpStatus: 200 });
                 }
             }).catch(function () {
-                finishWithError(record, capturedGeneration, "failed", protocol.ERROR_CODES.PROVIDER_CONNECTION_FAILED, null, false);
+                finishWithError(record, capturedGeneration, "failed", protocol.ERROR_CODES.PROVIDER_CONNECTION_FAILED, null, false, "transport-read");
             });
             return Object.freeze({ requestId: requestId, promise: promise });
         }
@@ -835,7 +855,7 @@
         }
 
         function getDiagnostics() {
-            if (activeRequest && activeRequest.state === "pending") { diagnostics = makeDiagnostics(activeRequest, "pending", null, null); }
+            if (activeRequest && activeRequest.state === "pending") { diagnostics = makeDiagnostics(activeRequest, "pending", null, null, undefined, null); }
             return Object.freeze({
                 providerId: diagnostics.providerId,
                 modelId: diagnostics.modelId,
@@ -843,7 +863,8 @@
                 state: diagnostics.state,
                 elapsedMs: diagnostics.elapsedMs,
                 httpStatus: diagnostics.httpStatus,
-                errorCode: diagnostics.errorCode
+                errorCode: diagnostics.errorCode,
+                terminalFailureBoundary: diagnostics.terminalFailureBoundary
             });
         }
 

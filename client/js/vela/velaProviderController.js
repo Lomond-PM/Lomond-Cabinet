@@ -92,7 +92,7 @@
         }
         try { providerContextPort = bridgeModule.createProviderContextPort(bridge, protocol); }
         catch (error) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
-        if (!bridgeModule.isTrustedProviderContextPortForProtocol(providerContextPort, protocol) || typeof ownData(providerContextPort, "project") !== "function" || typeof ownData(providerContextPort, "unavailable") !== "function") {
+        if (!bridgeModule.isTrustedProviderContextPortForProtocol(providerContextPort, protocol) || typeof ownData(providerContextPort, "project") !== "function" || typeof ownData(providerContextPort, "unavailable") !== "function" || typeof ownData(bridge, "getDiagnostics") !== "function") {
             throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
         }
         var modelProjection;
@@ -108,7 +108,7 @@
         var active = null;
         var activeProposal = null;
         var reviewingProposal = null;
-        var diagnostics = Object.freeze({ moduleRevision: MODULE_REVISION, provisionalProfile: null, contextUnionEligible: false, finalProfile: null, responseSchemaName: null, parsedResponseType: null, intentAllowed: null, intentReason: null });
+        var diagnostics = Object.freeze({ moduleRevision: MODULE_REVISION, provisionalProfile: null, contextUnionEligible: false, finalProfile: null, responseSchemaName: null, parsedResponseType: null, intentAllowed: null, intentReason: null, lastTerminalRequestId: null, lastTerminalDisposition: null, lastTerminalFailureBoundary: null, lastTerminalErrorCode: null, lastContextOperation: null, lastContextDisposition: null, lastContextFailureStage: null, lastContextHostErrorCode: null, lastContextHostFailureStage: null, lastContextErrorCode: null, lastContextUnavailableReason: null });
         var generation = 1;
         var publicState = protocol.deepFreeze({ state: state, requestId: null, text: null, errorCode: null, intentReason: null, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: MODULE_REVISION });
         function publish(nextState, requestId, text, errorCode, model, proposal, intentReason) {
@@ -142,8 +142,26 @@
                 responseSchemaName: values.responseSchemaName === undefined ? diagnostics.responseSchemaName : values.responseSchemaName,
                 parsedResponseType: values.parsedResponseType === undefined ? diagnostics.parsedResponseType : values.parsedResponseType,
                 intentAllowed: values.intentAllowed === undefined ? diagnostics.intentAllowed : values.intentAllowed,
-                intentReason: values.intentReason === undefined ? diagnostics.intentReason : values.intentReason
+                intentReason: values.intentReason === undefined ? diagnostics.intentReason : values.intentReason,
+                lastTerminalRequestId: values.lastTerminalRequestId === undefined ? diagnostics.lastTerminalRequestId : values.lastTerminalRequestId,
+                lastTerminalDisposition: values.lastTerminalDisposition === undefined ? diagnostics.lastTerminalDisposition : values.lastTerminalDisposition,
+                lastTerminalFailureBoundary: values.lastTerminalFailureBoundary === undefined ? diagnostics.lastTerminalFailureBoundary : values.lastTerminalFailureBoundary,
+                lastTerminalErrorCode: values.lastTerminalErrorCode === undefined ? diagnostics.lastTerminalErrorCode : values.lastTerminalErrorCode,
+                lastContextOperation: values.lastContextOperation === undefined ? diagnostics.lastContextOperation : values.lastContextOperation,
+                lastContextDisposition: values.lastContextDisposition === undefined ? diagnostics.lastContextDisposition : values.lastContextDisposition,
+                lastContextFailureStage: values.lastContextFailureStage === undefined ? diagnostics.lastContextFailureStage : values.lastContextFailureStage,
+                lastContextHostErrorCode: values.lastContextHostErrorCode === undefined ? diagnostics.lastContextHostErrorCode : values.lastContextHostErrorCode,
+                lastContextHostFailureStage: values.lastContextHostFailureStage === undefined ? diagnostics.lastContextHostFailureStage : values.lastContextHostFailureStage,
+                lastContextErrorCode: values.lastContextErrorCode === undefined ? diagnostics.lastContextErrorCode : values.lastContextErrorCode,
+                lastContextUnavailableReason: values.lastContextUnavailableReason === undefined ? diagnostics.lastContextUnavailableReason : values.lastContextUnavailableReason
             });
+        }
+        function syncContextDiagnostics() {
+            var context = bridge.getDiagnostics();
+            updateDiagnostics({ lastContextOperation: context.lastContextOperation, lastContextDisposition: context.lastContextDisposition, lastContextFailureStage: context.lastContextFailureStage, lastContextHostErrorCode: context.lastContextHostErrorCode, lastContextHostFailureStage: context.lastContextHostFailureStage, lastContextErrorCode: context.lastContextErrorCode, lastContextUnavailableReason: context.lastContextUnavailableReason });
+        }
+        function recordTerminal(requestId, disposition, failureBoundary, errorCode) {
+            updateDiagnostics({ lastTerminalRequestId: requestId || null, lastTerminalDisposition: disposition, lastTerminalFailureBoundary: failureBoundary || null, lastTerminalErrorCode: errorCode || null });
         }
         function unavailableGrounding(capturedGeneration) {
             var contextId = "provider-context-unavailable-" + String(capturedGeneration);
@@ -264,7 +282,7 @@
             try { provisionalProfile = requestPolicy.classify(values.message); }
             catch (error) { publish("failed", null, null, safeCode(protocol, error), values.model); return Promise.reject(error); }
             requestProfile = provisionalProfile;
-            diagnostics = Object.freeze({ moduleRevision: MODULE_REVISION, provisionalProfile: provisionalProfile, contextUnionEligible: false, finalProfile: null, responseSchemaName: null, parsedResponseType: null, intentAllowed: null, intentReason: null });
+            diagnostics = Object.freeze({ moduleRevision: MODULE_REVISION, provisionalProfile: provisionalProfile, contextUnionEligible: false, finalProfile: null, responseSchemaName: null, parsedResponseType: null, intentAllowed: null, intentReason: null, lastTerminalRequestId: diagnostics.lastTerminalRequestId, lastTerminalDisposition: diagnostics.lastTerminalDisposition, lastTerminalFailureBoundary: diagnostics.lastTerminalFailureBoundary, lastTerminalErrorCode: diagnostics.lastTerminalErrorCode, lastContextOperation: diagnostics.lastContextOperation, lastContextDisposition: diagnostics.lastContextDisposition, lastContextFailureStage: diagnostics.lastContextFailureStage, lastContextHostErrorCode: diagnostics.lastContextHostErrorCode, lastContextHostFailureStage: diagnostics.lastContextHostFailureStage, lastContextErrorCode: diagnostics.lastContextErrorCode, lastContextUnavailableReason: diagnostics.lastContextUnavailableReason });
             capturedGeneration = generation + 1;
             generation = capturedGeneration;
             publish("pending", null, null, null, values.model);
@@ -302,6 +320,7 @@
                 var started;
                 var contextUnionEligible;
                 if (!active || active.generation !== capturedGeneration || capturedGeneration !== generation || state !== "pending") { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
+                syncContextDiagnostics();
                 contextUnionEligible = isUnionEligible(grounded.projection);
                 if (provisionalProfile === requestPolicyProfiles.TEXT_ONLY && contextUnionEligible) { requestProfile = requestPolicyProfiles.PROPOSAL_CAPABLE_UNION; }
                 updateDiagnostics({ contextUnionEligible: contextUnionEligible, finalProfile: requestProfile, responseSchemaName: schemaNameForProfile(requestProfile) });
@@ -312,12 +331,15 @@
                 return started.promise;
             }).then(function (response) {
                 var envelope;
+                var adapterDiagnostics;
+                var responseText;
                 if (!active || active.generation !== capturedGeneration || capturedGeneration !== generation || state !== "pending") { return publicState; }
+                adapterDiagnostics = active.provider && active.provider.getDiagnostics();
                 active = null;
                 envelope = response && ownData(response, "envelope");
-                if (!envelope || (envelope.type !== "text" && envelope.type !== "error" && envelope.type !== "localProposal")) { return publish("failed", publicState.requestId, null, protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, values.model); }
+                if (!envelope || (envelope.type !== "text" && envelope.type !== "error" && envelope.type !== "localProposal")) { recordTerminal(publicState.requestId, "failed", "controller-commit", protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID); return publish("failed", publicState.requestId, null, protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, values.model); }
                 updateDiagnostics({ parsedResponseType: envelope.type });
-                if (envelope.type === "error") { return publish("failed", publicState.requestId, null, safeCode(protocol, ownData(envelope, "error")), values.model); }
+                if (envelope.type === "error") { var terminalCode = safeCode(protocol, ownData(envelope, "error")); recordTerminal(publicState.requestId, "failed", adapterDiagnostics && adapterDiagnostics.terminalFailureBoundary, terminalCode); return publish("failed", publicState.requestId, null, terminalCode, values.model); }
                 if (envelope.type === "localProposal") {
                     var proposal = ownData(envelope, "proposal");
                     var capabilityId = ownData(proposal, "capabilityId");
@@ -326,14 +348,20 @@
                     updateDiagnostics({ intentAllowed: !!(intent && intent.allowed === true), intentReason: intent && typeof intent.reason === "string" ? intent.reason : null });
                     if (!intent || intent.allowed !== true) {
                         activeProposal = null;
+                        recordTerminal(publicState.requestId, "completed", null, null);
                         return publish("intent-rejected", publicState.requestId, null, null, values.model, null, intent.reason);
                     }
                     activeProposal = protocol.deepFreeze({ requestId: publicState.requestId, generation: capturedGeneration, capabilityId: capabilityId, opacity: opacity });
+                    recordTerminal(publicState.requestId, "completed", null, null);
                     return publish("proposal-ready", publicState.requestId, null, null, values.model, { capabilityId: capabilityId, opacity: opacity });
                 }
-                return publish("completed", publicState.requestId, protocol.assertString(ownData(envelope, "text"), "provider text", protocol.HARD_LIMITS.maxMessageBytes), null, values.model);
+                responseText = protocol.assertString(ownData(envelope, "text"), "provider text", protocol.HARD_LIMITS.maxMessageBytes);
+                recordTerminal(publicState.requestId, "completed", null, null);
+                return publish("completed", publicState.requestId, responseText, null, values.model);
             }, function (error) {
                 if (capturedGeneration !== generation || state !== "pending") { return publicState; }
+                syncContextDiagnostics();
+                recordTerminal(publicState.requestId, "failed", active && active.provider ? "controller-correlation" : "context-capture", safeCode(protocol, error));
                 active = null;
                 return publish("failed", publicState.requestId, null, safeCode(protocol, error), values.model);
             });
@@ -352,6 +380,7 @@
             cancelActiveCapture();
             if (active.provider) { active.provider.cancel(requestId); }
             active = null;
+            recordTerminal(requestId, "cancelled", null, protocol.ERROR_CODES.PROVIDER_REQUEST_ABORTED);
             publish("cancelled", requestId, null, protocol.ERROR_CODES.PROVIDER_REQUEST_ABORTED, publicState.modelId);
             return true;
         }

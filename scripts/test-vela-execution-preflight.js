@@ -218,6 +218,12 @@ async function run() {
     const localPlan = await localHarness.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } }, selectionOrderMeaningful: true });
     check(localPlan.review.beforeValue === 25 && localPlan.review.valueKind === "number" && Object.isFrozen(localPlan.review), "Local proposal must return a frozen bounded review beforeValue from the same Tier 3 capture used for candidate binding.");
     check(localPlan.candidates.length === 1 && localPlan.candidates[0].action.payload.params.opacity === 57.5, "Local proposal must create exactly one deterministic set-opacity-v1 candidate.");
+    check(localPlan.candidates[0].action.payload.toolId === "vela" && localPlan.candidates[0].action.payload.actionId === "set-opacity-v1", "ExecutionPreflight consumes the mutation contract resolver composite identity when constructing the registered action payload.");
+    check(localHarness.executorCalls === 0, "Mapping lookup and local candidate creation do not invoke the executor before confirmation.");
+    const callsBeforeRejectedMapping = localHarness.calls.length;
+    await expectCode(localHarness.preflight.createBoundPlan({ localProposal: { capabilityId: "observe-active-composition-v1", params: {} }, selectionOrderMeaningful: true }), protocol.ERROR_CODES.UNKNOWN_TOOL_ACTION, "Agent read capability IDs do not resolve to mutation actions.");
+    await expectCode(localHarness.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5, target: "forbidden" } }, selectionOrderMeaningful: true }), protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Canonical mutation params validation rejects extra target data.");
+    check(localHarness.calls.length === callsBeforeRejectedMapping && localHarness.executorCalls === 0, "Failed mapping or canonical params validation performs no Context capture, Host request, or execution.");
     check(!JSON.stringify(localPlan.candidates[0]).includes("beforeValue") &&
         !JSON.stringify(localPlan).includes("nativeLayerId") && !JSON.stringify(localPlan).includes("capture") && !JSON.stringify(localPlan).includes("reviewPort"), "Review data must not enter public action, candidate, native identity, capture or review port fields.");
     localHarness.state.value = 30;

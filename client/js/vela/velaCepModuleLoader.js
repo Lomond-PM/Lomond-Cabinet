@@ -145,9 +145,9 @@
         if (!value || !Object.isFrozen(value)) { return false; }
         if (name === "VelaProtocol") { return typeof value.createProtocol === "function" && typeof value.isTrustedProtocol === "function" && value.ERROR_CODES; }
         if (name === "VelaResponseParser") { return typeof value.createResponseParser === "function"; }
-        if (name === "VelaCapabilityContracts") { return typeof value.getModelProjection === "function" && typeof value.getLocalProjection === "function" && typeof value.createRegistry === "function"; }
+        if (name === "VelaCapabilityContracts") { return typeof value.getModelProjection === "function" && typeof value.getLocalProjection === "function" && typeof value.resolveRegisteredAction === "function" && typeof value.validateCapabilityParams === "function" && typeof value.createRegistry === "function"; }
         if (name === "VelaProviderRequestBranchPolicy") { return isRequestBranchPolicyShape(value); }
-        if (name === "VelaCapabilityPromptBuilder") { return typeof value.buildSystemPrompt === "function"; }
+        if (name === "VelaCapabilityPromptBuilder") { return typeof value.buildSystemPrompt === "function" && typeof value.buildTurnContract === "function"; }
         if (name === "VelaProviderAdapter") { return typeof value.createLocalOpenAICompatibleProvider === "function"; }
         if (name === "VelaProviderIntentGate") { return typeof value.evaluate === "function"; }
         if (name === "VelaLocalTransport") { return typeof value.createLocalTransport === "function" && typeof value.isTrustedLocalTransportForProtocol === "function"; }

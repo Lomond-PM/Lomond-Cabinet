@@ -12,10 +12,10 @@ const requestBranchPolicy = require("../client/js/vela/velaProviderRequestBranch
 const providerAdapter = require("../client/js/vela/velaProviderAdapter");
 
 const ROOT = path.resolve(__dirname, "..");
-const FIXTURE_PATH = path.join(ROOT, "scripts", "fixtures", "vela-capability-contracts", "provider-branch-profiles-v1.json");
-const UNION_FIXTURE_PATH = path.join(ROOT, "scripts", "fixtures", "vela-capability-contracts", "provider-bounded-union-transition-v1.json");
+const FIXTURE_PATH = path.join(ROOT, "scripts", "fixtures", "vela-capability-contracts", "provider-branch-profiles-v2.json");
+const UNION_FIXTURE_PATH = path.join(ROOT, "scripts", "fixtures", "vela-capability-contracts", "provider-bounded-union-transition-v2.json");
 const C3_FIXTURE_PATH = path.join(ROOT, "scripts", "fixtures", "vela-capability-contracts", "provider-branch-policy-v2.json");
-const C3_FIXTURE_SHA256 = "04e381575a34d0bf83459adab2d609ae5c2a26b9e96d3179ac54c06319958e28";
+const C3_FIXTURE_SHA256 = "8a2968b4e8926ea95a742c4c5e6cc4bdae941c06277d37ddb137b3df6513b8d2";
 const EXPECTED_KEYS = [
     "fixtureType", "schemaRevision", "promptBuilderRevision", "requestBranchPolicyRevision",
     "capabilityId", "capabilityRevision", "protocolVersion", "messageRoleOrder",
@@ -132,8 +132,8 @@ async function run() {
     equal(Object.keys(fixture.explicitEditEligible).sort().join("|"), PROFILE_KEYS.slice().sort().join("|"), "explicitEditEligible contains exactly three SHA fields.");
     check(!/(?:qualification|caseProfileFingerprint|runsPerCase|operator|endpoint|timestamp|localPath|modelResponse)/i.test(fixtureText), "Fixture excludes qualification, operator, endpoint, timestamp, path, and model-response metadata.");
     equal(fixture.fixtureType, "vela-provider-branch-profiles", "Fixture type is fixed.");
-    equal(fixture.schemaRevision, "v1", "Fixture schema revision is fixed.");
-    equal(fixture.promptBuilderRevision, "vela-capability-prompt-builder-v3", "Historical fixture retains Prompt Builder v3 identity.");
+    equal(fixture.schemaRevision, "v2", "Current fixture schema revision is fixed.");
+    equal(fixture.promptBuilderRevision, "vela-capability-prompt-builder-v4", "Current fixture binds Prompt Builder v4 identity.");
     equal(fixture.requestBranchPolicyRevision, "vela-provider-request-branch-policy-v1", "Historical fixture retains Request Branch Policy v1 identity.");
     equal(fixture.capabilityId, projection.capabilityId, "Fixture capability id matches production.");
     equal(fixture.capabilityRevision, projection.revision, "Fixture capability revision matches production.");

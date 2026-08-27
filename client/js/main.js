@@ -17,6 +17,12 @@
     var velaRuntimeStatusRevision = 0;
     var velaRuntimeLastErrorCode = null;
     var velaAgentRuntimeLastErrorCode = null;
+    var velaActiveCompositionDiagnosticsGeneration = 0;
+    var velaActiveCompositionDiagnosticsPromise = null;
+    var velaActiveCompositionDiagnosticsFacts = null;
+    var velaActiveCompositionDiagnosticsProvenance = null;
+    var velaActiveCompositionDiagnosticsLastErrorCode = null;
+    var velaActiveCompositionDiagnosticsCapabilityErrorCode = null;
     var hostLoaded = false;
     var coreBootstrapController = null;
     var coreBootstrapSnapshot = null;
@@ -103,6 +109,128 @@
     }
 
     installVelaRuntimeStatusView();
+
+    function activeCompositionDiagnosticsEnabled() {
+        return window.AETOOLBOX_DEBUG_REGISTRY === true;
+    }
+
+    function activeCompositionDiagnosticsRuntimeAvailable() {
+        try {
+            return !!(velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.isDisposed === "function" && !velaAgentRuntimeOwner.isDisposed() &&
+                typeof velaAgentRuntimeOwner.refreshActiveComposition === "function" && typeof velaAgentRuntimeOwner.cancelActiveCompositionRefresh === "function" &&
+                typeof velaAgentRuntimeOwner.getObservationRuntime === "function" && velaAgentRuntimeOwner.getObservationRuntime());
+        } catch (error) { return false; }
+    }
+
+    function projectActiveCompositionFacts(value) {
+        if (!value || typeof value !== "object" || typeof velaOwnStatusValue(value, "available", null) !== "boolean") { return null; }
+        return Object.freeze({
+            available: velaOwnStatusValue(value, "available", false),
+            compositionId: typeof velaOwnStatusValue(value, "compositionId", null) === "string" ? velaOwnStatusValue(value, "compositionId", null) : null,
+            type: velaOwnStatusValue(value, "type", null) === "CompItem" ? "CompItem" : null,
+            width: typeof velaOwnStatusValue(value, "width", null) === "number" ? velaOwnStatusValue(value, "width", null) : null,
+            height: typeof velaOwnStatusValue(value, "height", null) === "number" ? velaOwnStatusValue(value, "height", null) : null,
+            duration: typeof velaOwnStatusValue(value, "duration", null) === "number" ? velaOwnStatusValue(value, "duration", null) : null,
+            frameRate: typeof velaOwnStatusValue(value, "frameRate", null) === "number" ? velaOwnStatusValue(value, "frameRate", null) : null
+        });
+    }
+
+    function projectActiveCompositionProvenance(value) {
+        var stringKeys = ["capabilityId", "invocationId", "sessionId", "turnId", "scopeId", "hostContextId", "hostInstanceId"];
+        var projected = {};
+        var index;
+        if (!value || typeof value !== "object") { return null; }
+        for (index = 0; index < stringKeys.length; index += 1) {
+            projected[stringKeys[index]] = velaOwnStatusValue(value, stringKeys[index], null);
+            if (typeof projected[stringKeys[index]] !== "string" || !projected[stringKeys[index]]) { return null; }
+        }
+        projected.agentRevision = velaOwnStatusValue(value, "agentRevision", null);
+        projected.hostReloadEpoch = velaOwnStatusValue(value, "hostReloadEpoch", null);
+        if (typeof projected.agentRevision !== "number" || typeof projected.hostReloadEpoch !== "number") { return null; }
+        return Object.freeze(projected);
+    }
+
+    function projectCapabilityErrorCode(value) {
+        return value === "ADAPTER_ERROR" || value === "INVALID_OUTPUT" ? value : null;
+    }
+
+    function activeCompositionDiagnosticsResult(status, facts, provenance, errorCode, capabilityErrorCode) {
+        return Object.freeze({ schemaRevision: "vela-active-composition-diagnostics-v1", status: status, activeComposition: facts, provenance: provenance, errorCode: errorCode, capabilityErrorCode: projectCapabilityErrorCode(capabilityErrorCode) });
+    }
+
+    function resetActiveCompositionDiagnostics() {
+        velaActiveCompositionDiagnosticsGeneration += 1;
+        velaActiveCompositionDiagnosticsPromise = null;
+        velaActiveCompositionDiagnosticsFacts = null;
+        velaActiveCompositionDiagnosticsProvenance = null;
+        velaActiveCompositionDiagnosticsLastErrorCode = null;
+        velaActiveCompositionDiagnosticsCapabilityErrorCode = null;
+    }
+
+    function refreshActiveCompositionDiagnostics() {
+        var generation;
+        var operation;
+        var wrapper;
+        if (arguments.length !== 0) { return Promise.resolve(activeCompositionDiagnosticsResult("error", null, null, "REFRESH_FAILED", null)); }
+        if (!activeCompositionDiagnosticsEnabled()) { velaActiveCompositionDiagnosticsCapabilityErrorCode = null; return Promise.resolve(activeCompositionDiagnosticsResult("disabled", null, null, "DIAGNOSTICS_DISABLED", null)); }
+        if (!activeCompositionDiagnosticsRuntimeAvailable()) { velaActiveCompositionDiagnosticsCapabilityErrorCode = null; return Promise.resolve(activeCompositionDiagnosticsResult("unavailable", null, null, "RUNTIME_UNAVAILABLE", null)); }
+        if (velaActiveCompositionDiagnosticsPromise) { return velaActiveCompositionDiagnosticsPromise; }
+        generation = velaActiveCompositionDiagnosticsGeneration;
+        try { operation = velaAgentRuntimeOwner.refreshActiveComposition(); }
+        catch (error) { velaActiveCompositionDiagnosticsCapabilityErrorCode = null; return Promise.resolve(activeCompositionDiagnosticsResult("error", null, null, "REFRESH_FAILED", null)); }
+        wrapper = Promise.resolve(operation).then(function (observation) {
+            var facts;
+            var provenance;
+            if (generation !== velaActiveCompositionDiagnosticsGeneration || panelShuttingDown || !activeCompositionDiagnosticsRuntimeAvailable()) { velaActiveCompositionDiagnosticsCapabilityErrorCode = null; return activeCompositionDiagnosticsResult("cancelled", null, null, "CANCELLED", null); }
+            facts = projectActiveCompositionFacts(observation && observation.facts && observation.facts.activeComposition);
+            provenance = projectActiveCompositionProvenance(observation && observation.provenance);
+            if (!facts || !provenance) { velaActiveCompositionDiagnosticsLastErrorCode = "REFRESH_FAILED"; velaActiveCompositionDiagnosticsCapabilityErrorCode = null; return activeCompositionDiagnosticsResult("error", null, null, "REFRESH_FAILED", null); }
+            velaActiveCompositionDiagnosticsFacts = facts;
+            velaActiveCompositionDiagnosticsProvenance = provenance;
+            velaActiveCompositionDiagnosticsLastErrorCode = null;
+            velaActiveCompositionDiagnosticsCapabilityErrorCode = null;
+            return activeCompositionDiagnosticsResult("succeeded", projectActiveCompositionFacts(facts), projectActiveCompositionProvenance(provenance), null, null);
+        }, function (error) {
+            var code = error && typeof error.code === "string" ? error.code : null;
+            if (generation !== velaActiveCompositionDiagnosticsGeneration || panelShuttingDown || !activeCompositionDiagnosticsRuntimeAvailable()) { velaActiveCompositionDiagnosticsCapabilityErrorCode = null; return activeCompositionDiagnosticsResult("cancelled", null, null, "CANCELLED", null); }
+            if (code === "OBSERVATION_REFRESH_CANCELLED" || code === "CANCELLED") { velaActiveCompositionDiagnosticsLastErrorCode = "CANCELLED"; velaActiveCompositionDiagnosticsCapabilityErrorCode = null; return activeCompositionDiagnosticsResult("cancelled", null, null, "CANCELLED", null); }
+            velaActiveCompositionDiagnosticsLastErrorCode = "REFRESH_FAILED";
+            velaActiveCompositionDiagnosticsCapabilityErrorCode = projectCapabilityErrorCode(error && error.capabilityErrorCode);
+            return activeCompositionDiagnosticsResult("error", null, null, "REFRESH_FAILED", velaActiveCompositionDiagnosticsCapabilityErrorCode);
+        });
+        velaActiveCompositionDiagnosticsPromise = wrapper;
+        wrapper.then(function () { if (velaActiveCompositionDiagnosticsPromise === wrapper) { velaActiveCompositionDiagnosticsPromise = null; } }, function () { if (velaActiveCompositionDiagnosticsPromise === wrapper) { velaActiveCompositionDiagnosticsPromise = null; } });
+        return wrapper;
+    }
+
+    function cancelActiveCompositionDiagnostics() {
+        if (arguments.length !== 0 || !activeCompositionDiagnosticsEnabled() || !velaActiveCompositionDiagnosticsPromise || !activeCompositionDiagnosticsRuntimeAvailable()) { return false; }
+        try { return velaAgentRuntimeOwner.cancelActiveCompositionRefresh() === true; }
+        catch (error) { return false; }
+    }
+
+    function activeCompositionDiagnosticsState() {
+        var enabled = activeCompositionDiagnosticsEnabled();
+        var available = enabled && activeCompositionDiagnosticsRuntimeAvailable();
+        return Object.freeze({
+            schemaRevision: "vela-active-composition-diagnostics-v1", diagnosticOnly: true, enabled: enabled, runtimeAvailable: available,
+            refreshing: enabled && !!velaActiveCompositionDiagnosticsPromise,
+            activeComposition: enabled && velaActiveCompositionDiagnosticsFacts ? projectActiveCompositionFacts(velaActiveCompositionDiagnosticsFacts) : null,
+            provenance: enabled && velaActiveCompositionDiagnosticsProvenance ? projectActiveCompositionProvenance(velaActiveCompositionDiagnosticsProvenance) : null,
+            lastErrorCode: enabled ? (available ? velaActiveCompositionDiagnosticsLastErrorCode : "RUNTIME_UNAVAILABLE") : "DIAGNOSTICS_DISABLED",
+            capabilityErrorCode: enabled && available ? projectCapabilityErrorCode(velaActiveCompositionDiagnosticsCapabilityErrorCode) : null
+        });
+    }
+
+    function installVelaActiveCompositionDiagnostics() {
+        var diagnostics;
+        if (Object.prototype.hasOwnProperty.call(window, "VelaActiveCompositionDiagnostics")) { return; }
+        diagnostics = Object.freeze({ refresh: refreshActiveCompositionDiagnostics, cancel: cancelActiveCompositionDiagnostics, getState: activeCompositionDiagnosticsState });
+        try { Object.defineProperty(window, "VelaActiveCompositionDiagnostics", { configurable: false, enumerable: true, writable: false, value: diagnostics }); }
+        catch (error) { /* Diagnostic-only surface must never affect the existing toolbox. */ }
+    }
+
+    installVelaActiveCompositionDiagnostics();
     var Motion = {
         fast: 160,
         normal: 260,
@@ -3929,6 +4057,8 @@
 
     function initializeVelaAgentRuntimeOwner() {
         var owner;
+        var ownerOptions;
+        var observationReadPort;
         if (panelShuttingDown) { return null; }
         if (velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.isDisposed === "function" && !velaAgentRuntimeOwner.isDisposed()) {
             return velaAgentRuntimeOwner;
@@ -3938,11 +4068,22 @@
             return null;
         }
         try {
-            owner = window.VelaAgentRuntimeOwner.createOwner({
+            ownerOptions = {
                 onListenerError: function (error) { reportVelaAgentRuntimeError(error, "listener"); }
-            });
+            };
+            if (window.VelaAgentCapabilityRuntime && window.VelaActiveCompositionCapability && window.VelaAgentObservationRuntime && velaRuntimeController && typeof velaRuntimeController.getObservationReadPort === "function") {
+                observationReadPort = velaRuntimeController.getObservationReadPort();
+                if (observationReadPort) {
+                    ownerOptions.AgentCapabilityRuntime = window.VelaAgentCapabilityRuntime;
+                    ownerOptions.ActiveCompositionCapability = window.VelaActiveCompositionCapability;
+                    ownerOptions.AgentObservationRuntime = window.VelaAgentObservationRuntime;
+                    ownerOptions.observationReadPort = observationReadPort;
+                }
+            }
+            owner = window.VelaAgentRuntimeOwner.createOwner(ownerOptions);
             owner.activate();
             velaAgentRuntimeOwner = owner;
+            resetActiveCompositionDiagnostics();
             velaAgentRuntimeLastErrorCode = null;
             return owner;
         } catch (error) {
@@ -9015,6 +9156,7 @@
             velaSurfaceController = null;
         }
         if (velaAgentRuntimeOwner) {
+            resetActiveCompositionDiagnostics();
             velaAgentRuntimeOwner.dispose();
             velaAgentRuntimeOwner = null;
         }
