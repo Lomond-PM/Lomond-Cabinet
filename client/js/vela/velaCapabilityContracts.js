@@ -31,6 +31,7 @@
     var BOOLEAN_KEYS = Object.freeze(["type", "enum"]);
     var MODEL_POLICY_KEYS = Object.freeze(["responseType", "branchPolicy", "modelMaySupply", "groundingField", "unavailableBehavior"]);
     var LOCAL_POLICY_KEYS = Object.freeze(["parameterValidatorId", "intentValidatorId", "routerId"]);
+    var REGISTERED_ACTION_KEYS = Object.freeze(["toolId", "actionId"]);
     var UNSAFE_PATH_SEGMENTS = Object.freeze(["__proto__", "prototype", "constructor"]);
     function fail(message) { throw new Error("CAPABILITY_CONTRACT_INVALID: " + message); }
     function ownData(value, key) { var descriptor; try { descriptor = Object.getOwnPropertyDescriptor(value, key); } catch (error) { return undefined; } return descriptor && !descriptor.get && !descriptor.set && Object.prototype.hasOwnProperty.call(descriptor, "value") ? descriptor.value : undefined; }
@@ -181,16 +182,28 @@
         });
         return result;
     }
+    function canonicalRegisteredAction(identity) {
+        var toolId;
+        var actionId;
+        if (!isPlainObject(identity)) { fail("registeredAction is invalid."); }
+        assertOnlyKeys(identity, REGISTERED_ACTION_KEYS, "registeredAction");
+        toolId = ownData(identity, "toolId");
+        actionId = ownData(identity, "actionId");
+        if (typeof toolId !== "string" || !/^[a-z][a-z0-9-]*$/.test(toolId) || typeof actionId !== "string" || !/^[a-z][a-z0-9-]*-v[1-9][0-9]*$/.test(actionId)) { fail("registeredAction identity is invalid."); }
+        return { toolId: toolId, actionId: actionId };
+    }
     function canonicalContract(contract) {
-        var allowed = ["capabilityId", "revision", "parameters", "modelPolicy", "localPolicy"];
+        var allowed = ["capabilityId", "revision", "parameters", "modelPolicy", "localPolicy", "registeredAction"];
         var parameters;
+        var registeredAction;
         if (!isPlainObject(contract)) { fail("Contract must be an object."); }
         assertSafeValue(contract, "contract", []);
         assertOnlyKeys(contract, allowed, "contract");
         if (typeof ownData(contract, "capabilityId") !== "string" || !/^[a-z][a-z0-9-]*-v[1-9][0-9]*$/.test(ownData(contract, "capabilityId"))) { fail("capabilityId is invalid."); }
         if (typeof ownData(contract, "revision") !== "string" || !/^vela-capability-contract-v[1-9][0-9]*$/.test(ownData(contract, "revision"))) { fail("revision is invalid."); }
         parameters = canonicalSchema(ownData(contract, "parameters"), "parameters");
-        return { capabilityId: ownData(contract, "capabilityId"), revision: ownData(contract, "revision"), parameters: parameters, modelPolicy: canonicalModelPolicy(ownData(contract, "modelPolicy"), parameters), localPolicy: canonicalLocalPolicy(ownData(contract, "localPolicy")) };
+        registeredAction = ownData(contract, "registeredAction") === undefined ? null : canonicalRegisteredAction(ownData(contract, "registeredAction"));
+        return { capabilityId: ownData(contract, "capabilityId"), revision: ownData(contract, "revision"), parameters: parameters, modelPolicy: canonicalModelPolicy(ownData(contract, "modelPolicy"), parameters), localPolicy: canonicalLocalPolicy(ownData(contract, "localPolicy")), registeredAction: registeredAction };
     }
     function validateSchemaValue(schema, value, path) {
         var result;
@@ -224,14 +237,16 @@
         if (!Array.isArray(definitions) || (!allowEmpty && definitions.length === 0)) { fail("Registry definitions are invalid."); }
         values = definitions.map(function (definition) { return deepFreeze(canonicalContract(definition)); }).sort(function (left, right) { return compareStrings(left.capabilityId, right.capabilityId); });
         values.forEach(function (contract, index) { if (index && values[index - 1].capabilityId === contract.capabilityId) { fail("Duplicate capabilityId."); } byId[contract.capabilityId] = contract; });
-        function projection(id, local) { var contract = byId[id]; var result; if (!contract) { return null; } result = { capabilityId: contract.capabilityId, revision: contract.revision, parameters: copyValue(contract.parameters) }; result[local ? "localPolicy" : "modelPolicy"] = copyValue(contract[local ? "localPolicy" : "modelPolicy"]); return deepFreeze(result); }
-        return Object.freeze({ listCapabilityIds: function () { return Object.freeze(values.map(function (contract) { return contract.capabilityId; })); }, getContract: function (id) { return typeof id === "string" && byId[id] ? deepFreeze(copyValue(byId[id])) : null; }, getModelProjection: function (id) { return projection(id, false); }, getLocalProjection: function (id) { return projection(id, true); } });
+        function projection(id, local) { var contract = byId[id]; var result; if (!contract) { return null; } result = { capabilityId: contract.capabilityId, revision: contract.revision, parameters: copyValue(contract.parameters) }; result[local ? "localPolicy" : "modelPolicy"] = copyValue(contract[local ? "localPolicy" : "modelPolicy"]); if (local) { result.registeredAction = copyValue(contract.registeredAction); } return deepFreeze(result); }
+        function resolveRegisteredAction(id) { var contract = typeof id === "string" ? byId[id] : null; return contract && contract.registeredAction ? deepFreeze(copyValue(contract.registeredAction)) : null; }
+        return Object.freeze({ listCapabilityIds: function () { return Object.freeze(values.map(function (contract) { return contract.capabilityId; })); }, getContract: function (id) { return typeof id === "string" && byId[id] ? deepFreeze(copyValue(byId[id])) : null; }, getModelProjection: function (id) { return projection(id, false); }, getLocalProjection: function (id) { return projection(id, true); }, resolveRegisteredAction: resolveRegisteredAction });
     }
     var productionRegistry = createRegistry([{
         capabilityId: "set-opacity-v1", revision: "vela-capability-contract-v1",
         parameters: { type: "object", additionalProperties: false, required: ["opacity"], properties: { opacity: { type: "number", minimum: 0, maximum: 100, unit: "percent" } } },
         modelPolicy: { responseType: "localProposal", branchPolicy: "direct-single-target-edit-only", modelMaySupply: ["params.opacity"], groundingField: "selection.selectedLayerOpacity", unavailableBehavior: "respond-with-text-without-guessing" },
-        localPolicy: { parameterValidatorId: "opacity-percent-v1", intentValidatorId: "set-opacity-direct-edit-v1", routerId: "set-opacity-v1" }
+        localPolicy: { parameterValidatorId: "opacity-percent-v1", intentValidatorId: "set-opacity-direct-edit-v1", routerId: "set-opacity-v1" },
+        registeredAction: { toolId: "vela", actionId: "set-opacity-v1" }
     }]);
-    return Object.freeze({ MODULE_REVISION: MODULE_REVISION, createRegistry: createRegistry, validateCapabilityParams: validateCapabilityParams, getContract: productionRegistry.getContract, getModelProjection: productionRegistry.getModelProjection, getLocalProjection: productionRegistry.getLocalProjection, listCapabilityIds: productionRegistry.listCapabilityIds });
+    return Object.freeze({ MODULE_REVISION: MODULE_REVISION, createRegistry: createRegistry, validateCapabilityParams: validateCapabilityParams, getContract: productionRegistry.getContract, getModelProjection: productionRegistry.getModelProjection, getLocalProjection: productionRegistry.getLocalProjection, listCapabilityIds: productionRegistry.listCapabilityIds, resolveRegisteredAction: productionRegistry.resolveRegisteredAction });
 }));

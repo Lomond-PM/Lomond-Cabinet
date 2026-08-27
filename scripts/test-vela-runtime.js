@@ -3,6 +3,7 @@
 
 const assert = require("assert");
 const runtimeModule = require("../client/js/vela/velaRuntime");
+const capabilityContracts = require("../client/js/vela/velaCapabilityContracts");
 const activationPolicy = require("../client/js/vela/velaActivationPolicy").VelaActivationPolicy;
 const nodeRuntime = require("./velaNodeRuntime");
 let assertions = 0;
@@ -54,6 +55,16 @@ function createController(options) {
 }
 
 async function run() {
+    const derivedSchema = runtimeModule.deriveRegisteredActionParamsSchema({ parameters: { type: "object", additionalProperties: false, required: ["opacity"], properties: { opacity: { type: "number", minimum: 12, maximum: 88, unit: "percent" } } } });
+    check(Object.isFrozen(derivedSchema) && Object.isFrozen(derivedSchema.required) && Object.isFrozen(derivedSchema.properties) && Object.isFrozen(derivedSchema.properties.opacity) && derivedSchema.properties.opacity.minimum === 12 && derivedSchema.properties.opacity.maximum === 88 && !Object.prototype.hasOwnProperty.call(derivedSchema.properties.opacity, "unit"), "Runtime registered-action params schema is frozen and derives canonical bounds without copying capability-only annotations.");
+    const registeredTool = Object.freeze({ id: "vela", actions: Object.freeze({ "set-opacity-v1": Object.freeze({ id: "set-opacity-v1" }) }) });
+    const validMappings = runtimeModule.validateRegisteredActionMappings(capabilityContracts, {
+        getTool(toolId) { return toolId === "vela" ? registeredTool : null; },
+        getAction(tool, actionId) { return tool && tool.actions[actionId] || null; }
+    });
+    check(Object.isFrozen(validMappings) && validMappings.length === 1 && Object.isFrozen(validMappings[0]) && Object.isFrozen(validMappings[0].registeredAction) && validMappings[0].registeredAction.toolId === "vela" && validMappings[0].registeredAction.actionId === "set-opacity-v1", "Runtime startup cross-validation accepts the exact registered composite action identity and returns only frozen mapping data.");
+    assert.throws(() => runtimeModule.validateRegisteredActionMappings(capabilityContracts, { getTool() { return null; }, getAction() { return null; } }), (error) => error && error.code === "RUNTIME_CAPABILITY_UNAVAILABLE", "Runtime startup fails closed when the mapped tool is missing."); assertions += 1;
+    assert.throws(() => runtimeModule.validateRegisteredActionMappings(capabilityContracts, { getTool() { return registeredTool; }, getAction() { return null; } }), (error) => error && error.code === "RUNTIME_CAPABILITY_UNAVAILABLE", "Runtime startup fails closed when the mapped action is missing."); assertions += 1;
     const controller = createController();
     check(Object.isFrozen(controller), "Controller is frozen.");
     check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,cancelProviderRequest,checkProviderReadiness,dispose,getConfirmationSurfaceState,getObservationReadPort,getProviderDiagnostics,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,initialize,rejectActiveCandidate,resetSession,resume,reviewProviderProposal,sendProviderMessage,suspend", "Runtime exposes only Persistent Surface lifecycle, bounded read Observation, Provider diagnostics, proposal review, and active confirmation facades.");

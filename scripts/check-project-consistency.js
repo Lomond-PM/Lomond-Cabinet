@@ -323,6 +323,8 @@ function checkIndexHtml() {
 function checkVelaRuntimeBootstrap() {
     const loader = exists("client/js/vela/velaCepModuleLoader.js") ? readText("client/js/vela/velaCepModuleLoader.js") : "";
     const runtime = exists("client/js/vela/velaRuntime.js") ? readText("client/js/vela/velaRuntime.js") : "";
+    const contracts = exists("client/js/vela/velaCapabilityContracts.js") ? readText("client/js/vela/velaCapabilityContracts.js") : "";
+    const preflight = exists("client/js/vela/velaExecutionPreflight.js") ? readText("client/js/vela/velaExecutionPreflight.js") : "";
     const main = exists("client/js/main.js") ? readText("client/js/main.js") : "";
     const surface = exists("client/js/vela/velaSurface.js") ? readText("client/js/vela/velaSurface.js") : "";
     const host = exists("host/vela/velaContext.jsx") ? readText("host/vela/velaContext.jsx") : "";
@@ -341,6 +343,11 @@ function checkVelaRuntimeBootstrap() {
     check("main keeps Vela Surface controller private", main.indexOf("window.velaSurfaceController") === -1 && main.indexOf("window.VelaSurfaceController =") === -1, "main.js must not publish the Vela Surface controller.");
     check("Vela Surface has no execution dependency", !/VelaRuntime|VelaProvider|VelaExecution|VelaController|PlanStore|localStorage/.test(surface), "velaSurface.js must remain presentation-only and session-only.");
     check("Vela runtime has no Registry passthrough", runtime.indexOf("runRegisteredToolAction") === -1 && runtime.indexOf("AEToolbox.tools") === -1, "velaRuntime.js must not route execution through the Registry.");
+    check("Mutation contracts own local registered-action identity mapping", /registeredAction:\s*\{\s*toolId:\s*"vela",\s*actionId:\s*"set-opacity-v1"\s*\}/.test(contracts) && /resolveRegisteredAction/.test(contracts), "VelaCapabilityContracts must own one bounded local composite action identity and resolver.");
+    check("Model projection excludes registered-action identity", /if\s*\(local\)\s*\{\s*result\.registeredAction/.test(contracts), "Registered-action identity must be added only to the local capability projection.");
+    check("ExecutionPreflight resolves mapping without hard-coded action translation", /resolveRegisteredAction\s*\(\s*localCapabilityId\s*\)/.test(preflight) && /toolId:\s*localProposal\.registeredAction\.toolId/.test(preflight) && /actionId:\s*localProposal\.registeredAction\.actionId/.test(preflight) && !/payload:\s*\{\s*toolId:\s*"vela",\s*actionId:\s*"set-opacity-v1"/.test(preflight), "ExecutionPreflight must consume the composite resolver identity rather than hard-code capability-to-action translation.");
+    check("Runtime derives and validates registered mutation action", /deriveRegisteredActionParamsSchema\s*\(\s*mutationCapability\s*\)/.test(runtime) && /validateRegisteredActionMappings\s*\(\s*capabilityContracts\s*,\s*validator\s*\)/.test(runtime), "VelaRuntime must derive action params from the canonical mutation contract and validate mapping targets at startup.");
+    check("Agent Capability Registry remains read/analyze only", exists("client/js/vela/velaAgentCapabilityRegistry.js") && /KINDS\s*=\s*Object\.freeze\s*\(\s*\["read",\s*"analyze"\]\s*\)/.test(readText("client/js/vela/velaAgentCapabilityRegistry.js")), "0.3.4-C must not add a mutation kind to the Agent Capability Registry.");
 }
 
 function checkVelaProviderBranchProfiles() {
