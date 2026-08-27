@@ -15,6 +15,16 @@ const contextSource = fs.readFileSync(CONTEXT_PATH, "utf8");
 let assertions = 0;
 
 function check(condition, message) { assert.ok(condition, message); assertions += 1; }
+
+function injectProjectAssignmentFailure(source, label) {
+    const pattern = /(^[ \t]*)currentProjectReference = project;(\r?\n)\1currentProjectReferenceWasNull = project === null;\2\1projectGeneration\+\+;/gm;
+    const matches = source.match(pattern) || [];
+    check(matches.length === 1, label + " assignment fault injection must match exactly one replacement-transition block.");
+    const patched = source.replace(pattern, (match, indent, eol) => indent + "throw new Error(\"SECRET_HOST_DETAIL assignment\");" + eol + match);
+    check(patched !== source, label + " assignment fault injection must change the source.");
+    check(patched.indexOf("SECRET_HOST_DETAIL assignment") !== -1, label + " assignment fault marker must exist in the patched source.");
+    return patched;
+}
 function expectCode(callback, code, message) {
     assert.throws(callback, (error) => error && error.code === code, message || ("Expected " + code));
     assertions += 1;
@@ -146,13 +156,19 @@ function runProjectReferenceLifetimeTests() {
     check(projectSame.snapshot.projectGeneration === 2, "The same valid Project after a null transition does not advance generation.");
     check(projectToNull.snapshot.projectGeneration === 3, "Project to null advances generation exactly once.");
 
-    const assignmentSource = contextSource.replace("currentProjectReference = project;\n        currentProjectReferenceWasNull = project === null;\n        projectGeneration++;", "throw new Error(\"SECRET_HOST_DETAIL assignment\");\n        currentProjectReference = project;\n        currentProjectReferenceWasNull = project === null;\n        projectGeneration++;");
-    const assignmentRealm = makeRealm({ app: { project: project() }, CompItem: function CompItem() {}, isValid() { return true; } });
-    const assignmentFacade = loadFacade(assignmentRealm, assignmentSource);
-    check(capture(assignmentFacade).ok === true, "The assignment fault fixture leaves initial observation intact.");
-    assignmentRealm.app.project = project();
-    const assignmentFailure = parseResult(assignmentFacade.handle(JSON.stringify(request({ scope: { purpose: "binding", selectionOrderMeaningful: true } }))));
-    check(assignmentFailure.error.code === "HOST_CONTEXT_READ_FAILED" && assignmentFailure.error.stage === "project-transition", "A new-reference assignment failure remains visible as project-transition READ_FAILED.");
+    [
+        ["checked-out", contextSource],
+        ["LF", contextSource.replace(/\r\n/g, "\n")],
+        ["CRLF", contextSource.replace(/\r?\n/g, "\r\n")]
+    ].forEach(([label, source]) => {
+        const assignmentSource = injectProjectAssignmentFailure(source, label);
+        const assignmentRealm = makeRealm({ app: { project: project() }, CompItem: function CompItem() {}, isValid() { return true; } });
+        const assignmentFacade = loadFacade(assignmentRealm, assignmentSource);
+        check(capture(assignmentFacade).ok === true, label + " assignment fault fixture leaves initial observation intact.");
+        assignmentRealm.app.project = project();
+        const assignmentFailure = parseResult(assignmentFacade.handle(JSON.stringify(request({ scope: { purpose: "binding", selectionOrderMeaningful: true } }))));
+        check(assignmentFailure.error.code === "HOST_CONTEXT_READ_FAILED" && assignmentFailure.error.stage === "project-transition", label + " new-reference assignment failure remains visible as project-transition READ_FAILED.");
+    });
 
     function NativeCompItem() {}
     const layer = { id: 9, index: 1, matchName: "ADBE AV Layer" };
