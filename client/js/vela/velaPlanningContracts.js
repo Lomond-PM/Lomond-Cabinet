@@ -416,14 +416,24 @@
     // ActionCandidate — a locally validated candidate; never authority.
     // -------------------------------------------------------------------------
     function createActionCandidate(input) {
-        var candidate = { contractType: "action-candidate", candidateId: null, capabilityId: null, kind: null, risk: null, params: null, targetScope: null, requiresConfirmation: false, provenance: null };
+        var candidate = { contractType: "action-candidate", candidateId: null, capabilityId: null, operationKind: null, kind: null, risk: null, params: null, targetScope: null, requiresConfirmation: false, provenance: null };
         if (!isPlainObject(input)) { fail(ERROR_CODES.PLANNING_CONTRACT_INVALID, "ActionCandidate input must be an object.", { stage: "action-candidate" }); }
-        assertNoUnknownKeys(input, ["candidateId", "capabilityId", "kind", "risk", "params", "targetScope", "requiresConfirmation", "provenance"], "ActionCandidate", ERROR_CODES.PLANNING_CONTRACT_INVALID, "action-candidate");
+        assertNoUnknownKeys(input, ["candidateId", "capabilityId", "operationKind", "kind", "risk", "params", "targetScope", "requiresConfirmation", "provenance"], "ActionCandidate", ERROR_CODES.PLANNING_CONTRACT_INVALID, "action-candidate");
         assertNoForbiddenKeys(input, "ActionCandidate", {}, ERROR_CODES.PLANNING_CONTRACT_FORBIDDEN_FIELD, "action-candidate");
         candidate.candidateId = assertLocalId(input.candidateId, "ActionCandidate.candidateId", "action-candidate");
         candidate.capabilityId = assertCapabilityId(input.capabilityId, "ActionCandidate.capabilityId", "action-candidate");
-        if (!contains(INVOCATION_KINDS, input.kind)) { fail(ERROR_CODES.PLANNING_CONTRACT_INVALID, "ActionCandidate.kind is not a closed invocation kind.", { stage: "action-candidate" }); }
-        candidate.kind = input.kind;
+        // operationKind is the capability-operation discriminator (read/analyze/
+        // mutate/create). It is required so a read/analyze candidate is legal
+        // without a mutation invocation kind. kind (tool/expression/script) is
+        // optional and describes only a mutation-spine invocation form.
+        if (!contains(OPERATION_KINDS, input.operationKind)) { fail(ERROR_CODES.PLANNING_CONTRACT_INVALID, "ActionCandidate.operationKind is not a closed operation kind.", { stage: "action-candidate" }); }
+        candidate.operationKind = input.operationKind;
+        if (input.kind !== undefined && input.kind !== null) {
+            if (!contains(INVOCATION_KINDS, input.kind)) { fail(ERROR_CODES.PLANNING_CONTRACT_INVALID, "ActionCandidate.kind is not a closed invocation kind.", { stage: "action-candidate" }); }
+            candidate.kind = input.kind;
+        } else {
+            candidate.kind = null;
+        }
         if (!contains(RISK_LEVELS, input.risk)) { fail(ERROR_CODES.PLANNING_CONTRACT_INVALID, "ActionCandidate.risk is not a closed risk level.", { stage: "action-candidate" }); }
         candidate.risk = input.risk;
         if (!isPlainObject(input.params)) { fail(ERROR_CODES.PLANNING_CONTRACT_INVALID, "ActionCandidate.params must be an object.", { stage: "action-candidate" }); }
@@ -434,7 +444,7 @@
         candidate.requiresConfirmation = input.requiresConfirmation;
         if (input.provenance !== undefined) {
             if (!isPlainObject(input.provenance)) { fail(ERROR_CODES.PLANNING_CONTRACT_INVALID, "ActionCandidate.provenance must be an object.", { stage: "action-candidate" }); }
-            assertNoUnknownKeys(input.provenance, ["source", "moduleRevision"], "ActionCandidate.provenance", ERROR_CODES.PLANNING_CONTRACT_INVALID, "action-candidate");
+            assertNoUnknownKeys(input.provenance, ["source", "moduleRevision", "capabilityId", "requestedOperation", "capabilitySource"], "ActionCandidate.provenance", ERROR_CODES.PLANNING_CONTRACT_INVALID, "action-candidate");
             assertNoForbiddenKeys(input.provenance, "ActionCandidate.provenance", {}, ERROR_CODES.PLANNING_CONTRACT_FORBIDDEN_FIELD, "action-candidate");
             candidate.provenance = snapshot(input.provenance, "ActionCandidate.provenance");
         } else {
