@@ -71,6 +71,7 @@ function browserContext() {
         exports: exportsSentinel,
         require() { requireCalls += 1; throw new Error("Browser module path must not require."); }
     };
+    context.VelaLegacyAuthorityBridge = Object.freeze({ createActionCandidateFromLocalProposal() {}, decide() {} });
     context.window = context;
     context.self = context;
     const sandbox = vm.createContext(context);

@@ -1,19 +1,18 @@
 (function (root, factory) {
     "use strict";
 
-    var hasModule = typeof module === "object" && module.exports;
-    var sessionRuntime = hasModule
-        ? require("./velaSessionRuntime")
-        : (root && root.VelaSessionRuntime) || null;
+    var browserPage = !!(root && root.self === root && root["win" + "dow"] === root);
+    var hasModule = !browserPage && typeof module === "object" && module.exports;
+    var sessionRuntime = browserPage
+        ? root.VelaSessionRuntime
+        : hasModule ? require("./velaSessionRuntime") : null;
 
     var exported = Object.freeze(factory(sessionRuntime));
 
-    if (hasModule) {
+    if (browserPage && !Object.prototype.hasOwnProperty.call(root, "VelaPlanningContracts")) {
+        Object.defineProperty(root, "VelaPlanningContracts", { configurable: false, enumerable: true, value: exported, writable: false });
+    } else if (hasModule) {
         module.exports = exported;
-    } else {
-        if (root && root.self === root && root["win" + "dow"] === root && !Object.prototype.hasOwnProperty.call(root, "VelaPlanningContracts")) {
-            Object.defineProperty(root, "VelaPlanningContracts", { configurable: false, enumerable: true, value: exported, writable: false });
-        }
     }
 }(typeof self !== "undefined" ? self : this, function (sessionRuntime) {
     "use strict";

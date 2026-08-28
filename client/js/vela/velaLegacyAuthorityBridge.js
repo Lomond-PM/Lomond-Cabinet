@@ -1,16 +1,17 @@
 (function (root, factory) {
     "use strict";
 
-    var hasModule = typeof module === "object" && module.exports;
-    var planning = hasModule
-        ? require("./velaPlanningContracts")
-        : (root && root.VelaPlanningContracts) || null;
+    var browserPage = !!(root && root.self === root && root["win" + "dow"] === root);
+    var hasModule = !browserPage && typeof module === "object" && module.exports;
+    var planning = browserPage
+        ? root.VelaPlanningContracts
+        : hasModule ? require("./velaPlanningContracts") : null;
     var exported = Object.freeze(factory(planning));
 
-    if (hasModule) {
-        module.exports = exported;
-    } else if (root && root.self === root && root["win" + "dow"] === root && !Object.prototype.hasOwnProperty.call(root, "VelaLegacyAuthorityBridge")) {
+    if (browserPage && !Object.prototype.hasOwnProperty.call(root, "VelaLegacyAuthorityBridge")) {
         Object.defineProperty(root, "VelaLegacyAuthorityBridge", { configurable: false, enumerable: true, value: exported, writable: false });
+    } else if (hasModule) {
+        module.exports = exported;
     }
 }(typeof self !== "undefined" ? self : this, function (planning) {
     "use strict";
