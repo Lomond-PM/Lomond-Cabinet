@@ -55,6 +55,11 @@ function createController(options) {
 }
 
 async function run() {
+    const runtimeSource = require("fs").readFileSync(require.resolve("../client/js/vela/velaRuntime"), "utf8");
+    ["velaAuthorizedPlanMaterializer", "velaTaskRun", "velaPlanReviewProjection", "velaPlanController", "velaReviewRuntimePort"].forEach((file) => { check(runtimeSource.indexOf('require("./' + file + '")') !== -1, "Runtime CommonJS graph requires " + file + " before construction."); });
+    check(/createAuthorizedPlanMaterializer\([\s\S]*preflight:\s*preflight[\s\S]*createPlanController\([\s\S]*planStore:\s*planStore[\s\S]*preflight:\s*preflight/.test(runtimeSource), "Dormant PlanController shares the exact production PlanStore and Preflight mutation spine.");
+    check(/reviewRuntimePort\.invalidateAll\(\)[\s\S]*planController\.invalidate\("suspend"\)/.test(runtimeSource) && /planController\.invalidate\("session-reset"\)/.test(runtimeSource) && /planController\.dispose\(\)/.test(runtimeSource), "Suspend, resetSession, and dispose invalidate dormant review/orchestration lifetime.");
+    check(!/acceptAuthorizedPlan|acceptPlan|submitPlan|approvePlanReview|confirmPlan|runPlan|getPendingPlanReview|currentReview|listReviews/.test(runtimeSource), "Runtime exposes no orchestration producer, confirmation, execution, or review-selection API.");
     const derivedSchema = runtimeModule.deriveRegisteredActionParamsSchema({ parameters: { type: "object", additionalProperties: false, required: ["opacity"], properties: { opacity: { type: "number", minimum: 12, maximum: 88, unit: "percent" } } } });
     check(Object.isFrozen(derivedSchema) && Object.isFrozen(derivedSchema.required) && Object.isFrozen(derivedSchema.properties) && Object.isFrozen(derivedSchema.properties.opacity) && derivedSchema.properties.opacity.minimum === 12 && derivedSchema.properties.opacity.maximum === 88 && !Object.prototype.hasOwnProperty.call(derivedSchema.properties.opacity, "unit"), "Runtime registered-action params schema is frozen and derives canonical bounds without copying capability-only annotations.");
     const registeredTool = Object.freeze({ id: "vela", actions: Object.freeze({ "set-opacity-v1": Object.freeze({ id: "set-opacity-v1" }) }) });
@@ -117,7 +122,7 @@ async function run() {
 
     const invalid = runtimeModule.createRuntime({ invokeHost: null, activationPolicy });
     await expectCode(invalid.initialize(), "RUNTIME_CAPABILITY_UNAVAILABLE", "Missing browser capabilities fail closed.");
-    check(!/ownData\(options,\s*["']activationPolicy["']\)/.test(require("fs").readFileSync(require.resolve("../client/js/vela/velaRuntime"), "utf8")), "Runtime exposes no caller option for replacing the source-owned activation policy.");
+    check(!/ownData\(options,\s*["']activationPolicy["']\)/.test(runtimeSource), "Runtime exposes no caller option for replacing the source-owned activation policy.");
     console.log("test-vela-runtime: " + assertions + " assertions passed.");
 }
 

@@ -227,6 +227,23 @@ async function run() {
     await ordering.controller.run(orderingRecord.waiting.executionPlanId);
     check(ordering.executed.map(function (item) { return item.opacity; }).join(",") === "31,62", "Execution ordering remains owned by PlanStore, not projection.");
 
+    const invalidatedWaiting = makeHarness(); const invalidatedWaitingRecord = await invalidatedWaiting.controller.accept(authorized([45]), { selectionOrderMeaningful: true });
+    check(typeof invalidatedWaiting.controller.invalidate === "function" && invalidatedWaiting.controller.invalidate("session-reset") === true, "Reusable invalidate exists and clears waiting orchestration state.");
+    await expectCode(Promise.resolve().then(function () { return invalidatedWaiting.controller.getProgress(invalidatedWaitingRecord.executionPlanId); }), protocol.ERROR_CODES.PLAN_INVALID, "No old waiting record remains callable after invalidate.");
+    const reused = await invalidatedWaiting.controller.accept(authorized([35]), { selectionOrderMeaningful: true });
+    check(reused.taskState === "waiting-approval" && reused.executionArmed === false, "Invalidate does not dispose PlanController and the same instance is reusable.");
+
+    const invalidatedActive = makeHarness(); const invalidatedActiveRecord = await acceptAndConfirm(invalidatedActive, [50, 25]); invalidatedActive.state.deferAt = 0;
+    const invalidatedRun = invalidatedActive.controller.run(invalidatedActiveRecord.waiting.executionPlanId); await flush(); await flush();
+    check(invalidatedActive.executed.length === 1, "Invalidate race begins with one in-flight Host mutation.");
+    invalidatedActive.controller.invalidate("suspend"); invalidatedActive.release(); await invalidatedRun;
+    check(invalidatedActive.executed.length === 1 && invalidatedActive.state.value === 50, "In-flight mutation may finish without rollback, while generation invalidation blocks every later step.");
+    await expectCode(Promise.resolve().then(function () { return invalidatedActive.controller.confirm(invalidatedActiveRecord.waiting.executionPlanId); }), protocol.ERROR_CODES.PLAN_INVALID, "Invalidated TaskRun cannot be re-armed.");
+
+    const invalidatedCompleted = makeHarness(); const completedRecord = await acceptAndConfirm(invalidatedCompleted, [42]); await invalidatedCompleted.controller.run(completedRecord.waiting.executionPlanId);
+    invalidatedCompleted.controller.invalidate("reset");
+    check(invalidatedCompleted.state.value === 42 && invalidatedCompleted.executed.length === 1, "Invalidate leaves completed mutation effects unchanged and adds no retry or rollback.");
+
     const source = fs.readFileSync(require.resolve("../client/js/vela/velaPlanController"), "utf8");
     check(!/Surface|SessionRuntime|Observation|refreshActiveComposition|task\//.test(source), "PlanController has no Surface, Session event, or Observation dependency.");
     check(!/retry|replan|rollback/.test(source), "PlanController implements no retry, replan, or rollback.");
