@@ -75,7 +75,18 @@ function makeBrowser(options) {
     if (options.exportsDescriptor) Object.defineProperty(context, "exports", options.exportsDescriptor);
     if (options.requireDescriptor) Object.defineProperty(context, "require", options.requireDescriptor);
     const sandbox = vm.createContext(context);
+    const savedModule = Object.getOwnPropertyDescriptor(context, "module");
+    const savedExports = Object.getOwnPropertyDescriptor(context, "exports");
+    const savedRequire = Object.getOwnPropertyDescriptor(context, "require");
+    delete context.module;
+    delete context.exports;
+    delete context.require;
     vm.runInContext(fs.readFileSync(path.join(VELA, "velaActivationPolicy.js"), "utf8"), sandbox, { filename: "velaActivationPolicy.js" });
+    vm.runInContext(fs.readFileSync(path.join(VELA, "velaPlanningContracts.js"), "utf8"), sandbox, { filename: "velaPlanningContracts.js" });
+    vm.runInContext(fs.readFileSync(path.join(VELA, "velaLegacyAuthorityBridge.js"), "utf8"), sandbox, { filename: "velaLegacyAuthorityBridge.js" });
+    if (savedModule) Object.defineProperty(context, "module", savedModule);
+    if (savedExports) Object.defineProperty(context, "exports", savedExports);
+    if (savedRequire) Object.defineProperty(context, "require", savedRequire);
     vm.runInContext(loaderSource, sandbox, { filename: "velaCepModuleLoader.js" });
     return { context, sandbox, timers, document, getAppendCount() { return appendCount; }, requestedUrls };
 }
