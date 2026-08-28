@@ -15,14 +15,16 @@
     function createPlanController(options) {
         var protocol = options && options.protocol;
         if (!protocol || !protocol.isPlainObject(options)) { throw new Error("RUNTIME_CAPABILITY_UNAVAILABLE"); }
-        protocol.assertNoUnknownKeys(options, ["protocol", "materializer", "preflight", "planStore", "taskRunFactory", "taskRunIdFactory", "now"], "planController.options");
+        protocol.assertNoUnknownKeys(options, ["protocol", "materializer", "projectionFactory", "preflight", "planStore", "taskRunFactory", "taskRunIdFactory", "now"], "planController.options");
+        if (!Object.prototype.hasOwnProperty.call(options, "projectionFactory")) { protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Plan review projection is unavailable."); }
         var materializer = protocol.getOwnDataProperty(options, "materializer");
+        var projectionFactory = protocol.getOwnDataProperty(options, "projectionFactory");
         var preflight = protocol.getOwnDataProperty(options, "preflight");
         var planStore = protocol.getOwnDataProperty(options, "planStore");
         var taskRunFactory = protocol.getOwnDataProperty(options, "taskRunFactory");
         var taskRunIdFactory = protocol.getOwnDataProperty(options, "taskRunIdFactory");
         var now = protocol.getOwnDataProperty(options, "now");
-        if (!materializer || typeof materializer.materialize !== "function" || !preflight || typeof preflight.confirmBoundPlan !== "function" ||
+        if (!materializer || typeof materializer.materialize !== "function" || !projectionFactory || typeof projectionFactory.project !== "function" || !preflight || typeof preflight.confirmBoundPlan !== "function" ||
                 typeof preflight.executeStep !== "function" || typeof preflight.discardBoundPlan !== "function" || !planStore ||
                 typeof planStore.getPlanView !== "function" || typeof taskRunFactory !== "function" || typeof taskRunIdFactory !== "function" || typeof now !== "function") {
             protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "PlanController dependencies are unavailable.");
@@ -65,12 +67,18 @@
             }).then(function (materialized) {
                 failDisposed();
                 if (records.has(materialized.executionPlanId) || authorityIds.has(materialized.authorizedPlanId)) { protocol.fail(protocol.ERROR_CODES.CANDIDATE_REPLAY, "Authorized or execution plan identity was already accepted."); }
+                var projection;
+                try { projection = projectionFactory.project(authorizedPlan, materialized); }
+                catch (errorProjection) {
+                    try { preflight.discardBoundPlan({ planId: materialized.executionPlanId, reason: "review-projection-failed" }); } catch (ignoredDiscard) { /* preserve the projection failure */ }
+                    throw errorProjection;
+                }
                 var taskRunId;
                 try { taskRunId = taskRunIdFactory("taskRun"); } catch (error) { protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "TaskRun identity factory failed."); }
                 protocol.assertNonEmptyString(taskRunId, "planController.taskRunId", protocol.HARD_LIMITS.maxLocalIdBytes);
                 if (taskRunIds.has(taskRunId) || taskRunId === materialized.authorizedPlanId || taskRunId === materialized.executionPlanId) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "TaskRun identity collision."); }
                 var taskRun = taskRunFactory({ protocol: protocol, taskRunId: taskRunId, authorizedPlanId: materialized.authorizedPlanId, executionPlanId: materialized.executionPlanId, now: now });
-                var record = { materializedPlan: materialized, taskRun: taskRun, running: false, generation: 0 };
+                var record = { materializedPlan: materialized, projection: projection, taskRun: taskRun, running: false, generation: 0 };
                 records.set(materialized.executionPlanId, record);
                 authorityIds.add(materialized.authorizedPlanId);
                 taskRunIds.add(taskRunId);
@@ -82,6 +90,7 @@
             failDisposed();
             var record = recordFor(executionPlanId);
             if (record.taskRun.snapshot().state !== "waiting-approval") { protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "TaskRun is not waiting for approval."); }
+            if (!record.projection || record.projection.revision !== record.materializedPlan.authorizedPlanRevision) { protocol.fail(protocol.ERROR_CODES.PLAN_INVALID, "Plan review projection revision is inconsistent."); }
             return Promise.resolve(preflight.confirmBoundPlan({ planId: executionPlanId })).then(function () {
                 failDisposed();
                 record.taskRun.arm();
@@ -138,7 +147,7 @@
         function getProgress(executionPlanId) { return progress(recordFor(executionPlanId)); }
         function getReviewState(executionPlanId) {
             var record = recordFor(executionPlanId);
-            return protocol.deepFreeze({ executionPlanId: executionPlanId, review: record.materializedPlan.review, actionCount: record.materializedPlan.actionCount });
+            return protocol.deepFreeze({ executionPlanId: executionPlanId, review: record.materializedPlan.review, actionCount: record.materializedPlan.actionCount, projection: record.projection });
         }
         function dispose() {
             if (disposed) { return false; }

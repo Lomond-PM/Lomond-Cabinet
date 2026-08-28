@@ -13,6 +13,7 @@ const bridgeModule = require("../client/js/vela/velaContextBridge");
 const preflightModule = require("../client/js/vela/velaExecutionPreflight");
 const contextModule = require("../client/js/vela/velaContext");
 const materializerModule = require("../client/js/vela/velaAuthorizedPlanMaterializer");
+const projectionModule = require("../client/js/vela/velaPlanReviewProjection");
 const taskRunModule = require("../client/js/vela/velaTaskRun");
 const controllerModule = require("../client/js/vela/velaPlanController");
 const runtime = require("./velaNodeRuntime");
@@ -60,7 +61,8 @@ function decode(source) {
 }
 function hostResult(request, snapshot) { return JSON.stringify({ protocol: "vela.host-context-result.v1", schemaVersion: "1.0", requestId: request.requestId, sessionId: request.sessionId, operation: request.operation, ok: true, hostAdapterRevision: "vela-context-host-v4", snapshot }); }
 
-function makeHarness() {
+function makeHarness(options) {
+    options = options || {};
     const number = ++harnessId;
     const state = { value: 100, layerIndex: 3, selectionExtra: false, deferAt: null, failAt: null, permissionRevision: "p1" };
     const executed = [];
@@ -106,9 +108,11 @@ function makeHarness() {
         }
     });
     const materializer = materializerModule.createAuthorizedPlanMaterializer({ protocol, planningContracts: planning, capabilityContracts: capabilities, preflight });
+    const projectionFactory = options.projectionFactory || projectionModule.createPlanReviewProjection({ protocol, planningContracts: planning, capabilityContracts: capabilities });
     let taskId = 0;
-    const controller = controllerModule.createPlanController({ protocol, materializer, preflight, planStore: store, taskRunFactory: taskRunModule.createTaskRun, taskRunIdFactory() { return "task_run_" + number + "_" + (++taskId); }, now() { return ++id; } });
-    return { state, executed, deferred, bridge, store, preflight, materializer, controller, release() { const next = deferred.shift(); if (next) next(); } };
+    let taskRunCreations = 0;
+    const controller = controllerModule.createPlanController({ protocol, materializer, projectionFactory, preflight, planStore: store, taskRunFactory(input) { taskRunCreations += 1; return taskRunModule.createTaskRun(input); }, taskRunIdFactory() { return "task_run_" + number + "_" + (++taskId); }, now() { return ++id; } });
+    return { state, executed, deferred, bridge, store, preflight, materializer, controller, getTaskRunCreations() { return taskRunCreations; }, release() { const next = deferred.shift(); if (next) next(); } };
 }
 
 async function acceptAndConfirm(harness, opacities) {
@@ -126,7 +130,9 @@ async function run() {
     check(waiting.taskState === "waiting-approval" && waiting.executionArmed === false && waiting.nextStep === 0, "accept creates one unarmed waiting-approval TaskRun.");
     check(accepted.executed.length === 0 && accepted.store.getPlanView(waiting.executionPlanId).state === "pending-confirmation", "accept neither confirms nor executes.");
     const review = accepted.controller.getReviewState(waiting.executionPlanId);
-    check(Object.isFrozen(review) && review.actionCount === 2, "Plan-level review is exposed without Surface projection.");
+    check(Object.isFrozen(review) && review.actionCount === 2 && review.projection.stepCount === 2, "Accept creates and exposes the whole-plan projection.");
+    check(Object.isFrozen(review.projection) && Object.isFrozen(review.projection.steps) && Object.isFrozen(review.projection.steps[0].parameters), "getReviewState returns the immutable projection snapshot.");
+    check(review.projection.executionPlanId === undefined && review.projection.authorizedPlanId === undefined && review.projection.taskRunId === undefined, "Projection contains no execution or runtime plan identity.");
     await expectCode(Promise.resolve().then(function () { return accepted.controller.run(waiting.executionPlanId); }), protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "run before confirmation is impossible.");
     const active = await accepted.controller.confirm(waiting.executionPlanId);
     check(active.taskState === "active" && active.executionArmed === true && accepted.executed.length === 0, "confirm arms only after Preflight confirmation and does not auto-execute.");
@@ -197,6 +203,29 @@ async function run() {
     await expectCode(invalid.controller.accept(taskPlan, { selectionOrderMeaningful: true }), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "TaskPlan cannot enter PlanController.");
     const rawCandidate = planning.createActionCandidate({ candidateId: "raw_input", capabilityId: "set-opacity-v1", operationKind: "mutate", kind: "tool", risk: "write", params: { opacity: 50 }, targetScope: { type: "selected-layer", property: "opacity" }, requiresConfirmation: true });
     await expectCode(invalid.controller.accept(rawCandidate, { selectionOrderMeaningful: true }), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Raw ActionCandidate cannot enter PlanController.");
+
+    assert.throws(function () { controllerModule.createPlanController({ protocol, materializer: invalid.materializer, preflight: invalid.preflight, planStore: invalid.store, taskRunFactory: taskRunModule.createTaskRun, taskRunIdFactory() { return "task_missing_projection"; }, now() { return 1; } }); }, function (error) { return error && error.code === protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE; }, "Projection factory is a required PlanController dependency."); assertions += 1;
+
+    let failedExecutionPlanId = null;
+    const projectionFailure = makeHarness({ projectionFactory: { project(plan, materializedPlan) { failedExecutionPlanId = materializedPlan.executionPlanId; throw new protocol.VelaProtocolError(protocol.ERROR_CODES.PLAN_INVALID); } } });
+    await expectCode(projectionFailure.controller.accept(authorized([50, 25]), { selectionOrderMeaningful: true }), protocol.ERROR_CODES.PLAN_INVALID, "Projection failure rejects accept.");
+    check(failedExecutionPlanId !== null && projectionFailure.store.getPlanView(failedExecutionPlanId).state === "discarded", "Projection failure discards the newly materialized execution plan.");
+    check(projectionFailure.getTaskRunCreations() === 0 && projectionFailure.executed.length === 0, "Projection failure creates no TaskRun and executes nothing.");
+    await expectCode(Promise.resolve().then(function () { return projectionFailure.controller.confirm(failedExecutionPlanId); }), protocol.ERROR_CODES.PLAN_INVALID, "Projection failure leaves no confirmable controller record.");
+    await expectCode(Promise.resolve().then(function () { return projectionFailure.controller.run(failedExecutionPlanId); }), protocol.ERROR_CODES.PLAN_INVALID, "Projection failure leaves no runnable controller record.");
+
+    const mutableProjection = { revision: null };
+    const revisionMismatch = makeHarness({ projectionFactory: { project(plan) { mutableProjection.revision = plan.revision; return mutableProjection; } } });
+    const mismatchWaiting = await revisionMismatch.controller.accept(authorized([50]), { selectionOrderMeaningful: true });
+    mutableProjection.revision += 1;
+    await expectCode(Promise.resolve().then(function () { return revisionMismatch.controller.confirm(mismatchWaiting.executionPlanId); }), protocol.ERROR_CODES.PLAN_INVALID, "Confirm rejects an internally inconsistent projection revision.");
+    check(revisionMismatch.controller.getProgress(mismatchWaiting.executionPlanId).executionArmed === false && revisionMismatch.executed.length === 0, "Projection revision mismatch cannot arm or execute.");
+
+    const ordering = makeHarness(); const orderingRecord = await acceptAndConfirm(ordering, [31, 62]);
+    const orderingReview = ordering.controller.getReviewState(orderingRecord.waiting.executionPlanId).projection;
+    orderingReview.steps.forEach(function (item) { check(Object.isFrozen(item), "Projection step cannot be mutated to influence execution ordering."); });
+    await ordering.controller.run(orderingRecord.waiting.executionPlanId);
+    check(ordering.executed.map(function (item) { return item.opacity; }).join(",") === "31,62", "Execution ordering remains owned by PlanStore, not projection.");
 
     const source = fs.readFileSync(require.resolve("../client/js/vela/velaPlanController"), "utf8");
     check(!/Surface|SessionRuntime|Observation|refreshActiveComposition|task\//.test(source), "PlanController has no Surface, Session event, or Observation dependency.");
