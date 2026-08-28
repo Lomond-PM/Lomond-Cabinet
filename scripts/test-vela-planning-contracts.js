@@ -78,13 +78,13 @@ expectCode(() => p.createCapabilityIntent({ intentId: "i", capabilityId: "x-v1",
 // ===========================================================================
 // C. ActionCandidate does not imply authority.
 // ===========================================================================
-const candidate = p.createActionCandidate({ candidateId: "cand_1", capabilityId: "set-opacity-v1", kind: "tool", risk: "write", params: { opacity: 50 }, targetScope: { type: "selected-layer", property: "opacity" }, requiresConfirmation: true, provenance: { source: "local-validator" } });
+const candidate = p.createActionCandidate({ candidateId: "cand_1", capabilityId: "set-opacity-v1", operationKind: "mutate", kind: "tool", risk: "write", params: { opacity: 50 }, targetScope: { type: "selected-layer", property: "opacity" }, requiresConfirmation: true, provenance: { source: "local-validator" } });
 check(p.isActionCandidate(candidate), "candidate is an ActionCandidate");
 check(p.assertActionCandidateNonAuthoritative(candidate) === candidate, "candidate is non-authoritative");
 deepEqual(candidate.contractType, "action-candidate", "candidate discriminant");
 // A candidate must not carry an approval/authority marker.
 expectCode(() => p.assertActionCandidateNonAuthoritative({ contractType: "action-candidate", candidateId: "c", capabilityId: "x-v1", kind: "tool", risk: "read", params: {}, targetScope: { type: "current-comp" }, requiresConfirmation: false, provenance: {}, approved: true }), "PLANNING_CONTRACT_FORBIDDEN_FIELD", "candidate with approved marker is rejected as authoritative");
-expectCode(() => p.normalizeActionCandidate({ candidateId: "c", capabilityId: "x-v1", kind: "tool", risk: "read", params: {}, targetScope: { type: "current-comp" }, requiresConfirmation: false, policyDecision: "ALLOW" }), "PLANNING_CONTRACT_INVALID", "candidate cannot carry a policyDecision field");
+expectCode(() => p.normalizeActionCandidate({ candidateId: "c", capabilityId: "x-v1", operationKind: "read", kind: "tool", risk: "read", params: {}, targetScope: { type: "current-comp" }, requiresConfirmation: false, policyDecision: "ALLOW" }), "PLANNING_CONTRACT_INVALID", "candidate cannot carry a policyDecision field");
 
 // ===========================================================================
 // D. AuthorizedPlan rejects trusted final binding / Host payload.
