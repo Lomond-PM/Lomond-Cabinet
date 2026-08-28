@@ -362,6 +362,9 @@
         function markStale(candidateId, reason) {
             var candidate = requiredCandidate(candidateId);
             var plan = requiredPlan(candidate.planId);
+            if (plan.candidateIds.some(function (id) { return candidates.get(id).state === "executing"; })) {
+                protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "An executing plan cannot become stale.");
+            }
             if (candidate.state !== "pending-confirmation" && candidate.state !== "confirmed") {
                 protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "Only pending or confirmed candidates can become stale.", { details: { candidateId: candidateId, state: candidate.state } });
             }
@@ -536,7 +539,7 @@
             var completedAt = safeNow();
             var resultSnapshot = result.summary === undefined ? { ok: result.ok } : protocol.cloneJson(result.summary, { maxBytes: protocol.HARD_LIMITS.maxErrorDetailsJsonBytes });
             var terminalState = result.ok ? "consumed" : "failed";
-            var terminalPlanState = result.ok ? (plan.nextStep >= plan.actionCount ? "consumed" : "confirmed") : "failed";
+            var terminalPlanState = plan.state === "stale" ? "stale" : (result.ok ? (plan.nextStep >= plan.actionCount ? "consumed" : "confirmed") : "failed");
             var acknowledgement = makeTerminalAcknowledgement(candidate, plan, terminalState, undefined, false);
             var publicCandidate = terminalCandidateView(candidate, terminalState, completedAt, resultSnapshot);
             return commitTerminal({
