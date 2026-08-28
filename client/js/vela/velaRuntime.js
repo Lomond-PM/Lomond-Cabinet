@@ -5,17 +5,24 @@
     var BOOTSTRAP_NAME = "__velaProtocolCoreBootstrapV1";
 
     function bootstrapError(code) { var error = new Error(code); error.code = code; return error; }
-    function assertDependencies(protocol, parser, capabilityContracts, providerAdapter, localTransport, context, validator, plan, guard, bridge, preflight, executionAdapter, controller, providerController, proposalRouter) {
-        if (!protocol || !parser || !capabilityContracts || !providerAdapter || !localTransport || !context || !validator || !plan || !guard || !bridge || !preflight || !executionAdapter || !providerController || !proposalRouter ||
+    function assertDependencies(protocol, parser, capabilityContracts, providerAdapter, localTransport, context, validator, plan, guard, bridge, preflight, executionAdapter, controller, providerController, proposalRouter, planningContracts, materializer, taskRun, planReviewProjection, planController, reviewRuntimePort) {
+        if (!protocol || !parser || !capabilityContracts || !providerAdapter || !localTransport || !context || !validator || !plan || !guard || !bridge || !preflight || !executionAdapter || !providerController || !proposalRouter || !planningContracts || !materializer || !taskRun || !planReviewProjection || !planController || !reviewRuntimePort ||
             typeof protocol.createProtocol !== "function" || typeof context.createContextApi !== "function" ||
             typeof capabilityContracts.getLocalProjection !== "function" || typeof capabilityContracts.resolveRegisteredAction !== "function" || typeof capabilityContracts.listCapabilityIds !== "function" ||
             typeof validator.createActionValidator !== "function" || typeof plan.createPlanStore !== "function" ||
             typeof bridge.createContextBridge !== "function" || typeof bridge.createExecutionPort !== "function" || typeof bridge.createReviewPort !== "function" || typeof preflight.createExecutionPreflight !== "function" || typeof executionAdapter.createExecutionAdapter !== "function" ||
             !controller || typeof controller.createController !== "function" || typeof controller.isTrustedControllerForProtocol !== "function" || typeof proposalRouter.createProposalRouter !== "function" ||
-            typeof parser.createResponseParser !== "function" || typeof providerAdapter.createLocalOpenAICompatibleProvider !== "function" || typeof localTransport.createLocalTransport !== "function" || typeof providerController.createProviderController !== "function") {
+            typeof parser.createResponseParser !== "function" || typeof providerAdapter.createLocalOpenAICompatibleProvider !== "function" || typeof localTransport.createLocalTransport !== "function" || typeof providerController.createProviderController !== "function" ||
+            typeof planningContracts.createAuthorizedPlan !== "function" || typeof materializer.createAuthorizedPlanMaterializer !== "function" || typeof taskRun.createTaskRun !== "function" || typeof planReviewProjection.createPlanReviewProjection !== "function" || typeof planController.createPlanController !== "function" || typeof reviewRuntimePort.createReviewRuntimePort !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE");
         }
-        return { protocol: protocol, parser: parser, capabilityContracts: capabilityContracts, providerAdapter: providerAdapter, localTransport: localTransport, context: context, validator: validator, plan: plan, guard: guard, bridge: bridge, preflight: preflight, executionAdapter: executionAdapter, controller: controller, providerController: providerController, proposalRouter: proposalRouter };
+        return { protocol: protocol, parser: parser, capabilityContracts: capabilityContracts, providerAdapter: providerAdapter, localTransport: localTransport, context: context, validator: validator, plan: plan, guard: guard, bridge: bridge, preflight: preflight, executionAdapter: executionAdapter, controller: controller, providerController: providerController, proposalRouter: proposalRouter, planningContracts: planningContracts, materializer: materializer, taskRun: taskRun, planReviewProjection: planReviewProjection, planController: planController, reviewRuntimePort: reviewRuntimePort };
+    }
+    function trustedBrowserModule(target, name) {
+        var descriptor;
+        try { descriptor = Object.getOwnPropertyDescriptor(target, name); }
+        catch (error) { return null; }
+        return descriptor && !descriptor.get && !descriptor.set && Object.prototype.hasOwnProperty.call(descriptor, "value") && descriptor.writable === false && descriptor.configurable === false && Object.isFrozen(descriptor.value) ? descriptor.value : null;
     }
     function trustedBrowserActivationPolicy(target) {
         var descriptor;
@@ -37,20 +44,20 @@
         bootstrap = target[BOOTSTRAP_NAME];
         if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.getModule !== "function" || typeof bootstrap.hasModule !== "function" || typeof bootstrap.registerModule !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
         if (bootstrap.hasModule(name)) { throw bootstrapError("MODULE_ALREADY_REGISTERED"); }
-        dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaResponseParser"), bootstrap.getModule("VelaCapabilityContracts"), bootstrap.getModule("VelaProviderAdapter"), bootstrap.getModule("VelaLocalTransport"), bootstrap.getModule("VelaContext"), bootstrap.getModule("VelaValidator"), bootstrap.getModule("VelaPlan"), bootstrap.getModule("VelaExecutionGuard"), bootstrap.getModule("VelaContextBridge"), bootstrap.getModule("VelaExecutionPreflight"), bootstrap.getModule("VelaExecutionAdapter"), bootstrap.getModule("VelaController"), bootstrap.getModule("VelaProviderController"), bootstrap.getModule("VelaProviderProposalRouter"));
+        dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaResponseParser"), bootstrap.getModule("VelaCapabilityContracts"), bootstrap.getModule("VelaProviderAdapter"), bootstrap.getModule("VelaLocalTransport"), bootstrap.getModule("VelaContext"), bootstrap.getModule("VelaValidator"), bootstrap.getModule("VelaPlan"), bootstrap.getModule("VelaExecutionGuard"), bootstrap.getModule("VelaContextBridge"), bootstrap.getModule("VelaExecutionPreflight"), bootstrap.getModule("VelaExecutionAdapter"), bootstrap.getModule("VelaController"), bootstrap.getModule("VelaProviderController"), bootstrap.getModule("VelaProviderProposalRouter"), trustedBrowserModule(target, "VelaPlanningContracts"), trustedBrowserModule(target, "VelaAuthorizedPlanMaterializer"), trustedBrowserModule(target, "VelaTaskRun"), trustedBrowserModule(target, "VelaPlanReviewProjection"), trustedBrowserModule(target, "VelaPlanController"), trustedBrowserModule(target, "VelaReviewRuntimePort"));
         var activationPolicy = trustedBrowserActivationPolicy(target);
         if (!activationPolicy) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
-        exported = Object.freeze(create(dependencies.protocol, dependencies.parser, dependencies.capabilityContracts, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter, activationPolicy));
+        exported = Object.freeze(create(dependencies.protocol, dependencies.parser, dependencies.capabilityContracts, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter, dependencies.planningContracts, dependencies.materializer, dependencies.taskRun, dependencies.planReviewProjection, dependencies.planController, dependencies.reviewRuntimePort, activationPolicy));
         bootstrap.registerModule(name, exported);
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        var dependencies = assertDependencies(require("./velaProtocol"), require("./velaResponseParser"), require("./velaCapabilityContracts"), require("./velaProviderAdapter"), require("./velaLocalTransport"), require("./velaContext"), require("./velaValidator"), require("./velaPlan"), require("./velaExecutionGuard"), require("./velaContextBridge"), require("./velaExecutionPreflight"), require("./velaExecutionAdapter"), require("./velaController"), require("./velaProviderController"), require("./velaProviderProposalRouter"));
-        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.parser, dependencies.capabilityContracts, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter, require("./velaActivationPolicy").VelaActivationPolicy));
+        var dependencies = assertDependencies(require("./velaProtocol"), require("./velaResponseParser"), require("./velaCapabilityContracts"), require("./velaProviderAdapter"), require("./velaLocalTransport"), require("./velaContext"), require("./velaValidator"), require("./velaPlan"), require("./velaExecutionGuard"), require("./velaContextBridge"), require("./velaExecutionPreflight"), require("./velaExecutionAdapter"), require("./velaController"), require("./velaProviderController"), require("./velaProviderProposalRouter"), require("./velaPlanningContracts"), require("./velaAuthorizedPlanMaterializer"), require("./velaTaskRun"), require("./velaPlanReviewProjection"), require("./velaPlanController"), require("./velaReviewRuntimePort"));
+        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.parser, dependencies.capabilityContracts, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter, dependencies.planningContracts, dependencies.materializer, dependencies.taskRun, dependencies.planReviewProjection, dependencies.planController, dependencies.reviewRuntimePort, require("./velaActivationPolicy").VelaActivationPolicy));
     }
-}(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule, capabilityContracts, providerAdapterModule, localTransportModule, contextModule, validatorModule, planModule, guardModule, bridgeModule, preflightModule, executionAdapterModule, controllerModule, providerControllerModule, proposalRouterModule, activationPolicyModule) {
+}(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule, capabilityContracts, providerAdapterModule, localTransportModule, contextModule, validatorModule, planModule, guardModule, bridgeModule, preflightModule, executionAdapterModule, controllerModule, providerControllerModule, proposalRouterModule, planningContracts, materializerModule, taskRunModule, planReviewProjectionModule, planControllerModule, reviewRuntimePortModule, activationPolicyModule) {
     "use strict";
 
     var MODULE_REVISION = "vela-runtime-v1";
@@ -200,7 +207,13 @@
         var controller = null;
         var providerController = null;
         var providerProposalRouter = null;
+        var authorizedPlanMaterializer = null;
+        var planReviewProjection = null;
+        var planController = null;
+        var reviewRuntimePort = null;
         var protocolClock = null;
+        var taskRunSerial = 0;
+        var reviewTokenSerial = 0;
         var runtime = environment || {};
         function safeStatus() {
             var bridgeState = bridge ? bridge.getState() : null;
@@ -261,6 +274,10 @@
                 getCurrentExecutionBinding: function () { return { settingsFingerprint: contextApi.fingerprintSettings({}), permissionSnapshot: { mode: "confirm-every-action", grants: [], policyRevision: MODULE_REVISION }, lifecycle: "ready", hasVerifier: true }; },
                 executeValidatedAction: executionAdapter.executeValidatedAction
             });
+            authorizedPlanMaterializer = materializerModule.createAuthorizedPlanMaterializer({ protocol: protocol, planningContracts: planningContracts, capabilityContracts: capabilityContracts, preflight: preflight });
+            planReviewProjection = planReviewProjectionModule.createPlanReviewProjection({ protocol: protocol, planningContracts: planningContracts, capabilityContracts: capabilityContracts });
+            planController = planControllerModule.createPlanController({ protocol: protocol, materializer: authorizedPlanMaterializer, projectionFactory: planReviewProjection, preflight: preflight, planStore: planStore, taskRunFactory: taskRunModule.createTaskRun, taskRunIdFactory: function () { taskRunSerial += 1; return "task_run_" + taskRunSerial; }, now: protocolClock.now });
+            reviewRuntimePort = reviewRuntimePortModule.createReviewRuntimePort({ protocol: protocol, planController: planController, tokenFactory: function () { reviewTokenSerial += 1; return "review_" + reviewTokenSerial; } });
             controller = controllerModule.createController({ protocol: protocol, preflight: preflight });
             if (!controllerModule.isTrustedControllerForProtocol(controller, protocol)) { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
             if (typeof fetchFn !== "function" || typeof TextDecoderCtor !== "function" || typeof root.AbortController !== "function") { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
@@ -294,6 +311,8 @@
             if (disposed || state !== "ready") { return false; }
             if (controller) { controller.invalidate("stale"); }
             if (providerController) { providerController.invalidate("idle"); }
+            if (reviewRuntimePort) { reviewRuntimePort.invalidateAll(); }
+            if (planController) { planController.invalidate("suspend"); }
             if (bridge) { bridge.suspend(); }
             suspended = true;
             state = "suspended";
@@ -310,6 +329,8 @@
             if (disposed || state !== "ready" || !bridge) { return false; }
             if (controller) { controller.invalidate("idle"); }
             if (providerController) { providerController.invalidate("idle"); }
+            if (reviewRuntimePort) { reviewRuntimePort.invalidateAll(); }
+            if (planController) { planController.invalidate("session-reset"); }
             bridge.resetSession();
             try { protocolClock.reset(); }
             catch (error) { lastErrorCode = stableErrorCode(error); state = "failed"; return false; }
@@ -321,7 +342,9 @@
             if (bridge) { try { bridge.suspend(); } catch (ignored) {} }
             if (controller) { try { controller.invalidate("idle"); } catch (ignoredController) {} }
             if (providerController) { try { providerController.invalidate("idle"); } catch (ignoredProvider) {} }
-            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; reviewPort = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; protocolClock = null;
+            if (reviewRuntimePort) { try { reviewRuntimePort.invalidateAll(); } catch (ignoredReviews) {} }
+            if (planController) { try { planController.dispose(); } catch (ignoredPlans) {} }
+            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; reviewPort = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; authorizedPlanMaterializer = null; planReviewProjection = null; planController = null; reviewRuntimePort = null; protocolClock = null;
             initialized = false; suspended = false; disposed = true; state = "disposed";
             return true;
         }

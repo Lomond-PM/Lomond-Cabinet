@@ -149,6 +149,22 @@
             var record = recordFor(executionPlanId);
             return protocol.deepFreeze({ executionPlanId: executionPlanId, review: record.materializedPlan.review, actionCount: record.materializedPlan.actionCount, projection: record.projection });
         }
+        function invalidate(reason) {
+            if (disposed) { return false; }
+            generation += 1;
+            records.forEach(function (record) {
+                var state = record.taskRun.snapshot().state;
+                record.generation += 1;
+                if (state === "waiting-approval" || state === "active") {
+                    try { record.taskRun.cancel(reason || "controller-invalidated"); } catch (ignoredCancel) { /* already terminal */ }
+                    try { preflight.discardBoundPlan({ planId: record.materializedPlan.executionPlanId, reason: reason || "controller-invalidated" }); } catch (ignoredDiscard) { /* an in-flight step may finish */ }
+                }
+            });
+            records.clear();
+            authorityIds.clear();
+            taskRunIds.clear();
+            return true;
+        }
         function dispose() {
             if (disposed) { return false; }
             disposed = true; generation += 1;
@@ -163,7 +179,7 @@
             return true;
         }
 
-        return Object.freeze({ accept: accept, cancel: cancel, confirm: confirm, dispose: dispose, getProgress: getProgress, getReviewState: getReviewState, run: run });
+        return Object.freeze({ accept: accept, cancel: cancel, confirm: confirm, dispose: dispose, getProgress: getProgress, getReviewState: getReviewState, invalidate: invalidate, run: run });
     }
 
     return { createPlanController: createPlanController };
