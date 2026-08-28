@@ -252,15 +252,18 @@ async function run() {
     const valuePlan = await seedAndCreate(valueDrift);
     await confirm(valueDrift, valuePlan);
     valueDrift.state.value = 51;
-    await expectCode(valueDrift.preflight.executeStep({ planId: valuePlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.CONTEXT_STALE, "Value digest drift must block before reserve.");
-    check(valueDrift.executorCalls === 0 && valueDrift.store.getCandidate(valuePlan.candidateIds[0]).state === "stale", "Value drift must mark the candidate stale without executor access.");
+    // Review observation is presentation evidence. For absolute set-opacity, the
+    // step-due capture becomes the current CAS baseline while the Tier 1 target
+    // anchor, Host CAS, and result verification remain mandatory.
+    check((await valueDrift.preflight.executeStep({ planId: valuePlan.planId, stepIndex: 0 })).candidate.state === "consumed", "Absolute set-opacity must JIT-bind the current value instead of treating review value drift as stale.");
+    check(valueDrift.executorCalls === 1, "JIT-rebased absolute set-opacity must execute exactly once.");
 
     const timeDrift = makeHarness();
     const timePlan = await seedAndCreate(timeDrift);
     await confirm(timeDrift, timePlan);
     timeDrift.state.sampleTime = 2;
-    await expectCode(timeDrift.preflight.executeStep({ planId: timePlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.CONTEXT_STALE, "Sample-time drift must block before reserve.");
-    check(timeDrift.executorCalls === 0, "Sample-time drift must not call executor.");
+    check((await timeDrift.preflight.executeStep({ planId: timePlan.planId, stepIndex: 0 })).candidate.state === "consumed", "A new sample time is part of the step-due absolute-value CAS capture, not review authority.");
+    check(timeDrift.executorCalls === 1, "Step-due capture must still reach the verified executor once.");
 
     const selectionDrift = makeHarness();
     const selectionPlan = await seedAndCreate(selectionDrift);
@@ -419,7 +422,7 @@ async function run() {
     await expectCode(suspended.preflight.executeStep({ planId: suspendedPlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.LIFECYCLE_BLOCKED, "Suspend must be transient and reserve nothing.");
     check(suspended.executorCalls === 0 && suspended.store.getCandidate(suspendedPlan.candidateIds[0]).state === "confirmed", "Suspend must preserve a candidate until lifecycle resumes.");
     check(suspended.bridge.resume() === true, "Resuming the Bridge must restore request availability.");
-    await expectCode(suspended.preflight.executeStep({ planId: suspendedPlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.CONTEXT_STALE, "A resumed Bridge must reject the old candidate because its capture lifecycle changed.");
+    check((await suspended.preflight.executeStep({ planId: suspendedPlan.planId, stepIndex: 0 })).candidate.state === "consumed", "After transient resume, a fresh JIT capture may execute only when the reviewed Tier 1 target anchor still matches.");
     const replacementPlan = await seedAndCreate(suspended);
     check(replacementPlan.actionCount === 1, "A fresh plan must be creatable after a suspend/resume lifecycle boundary.");
 
