@@ -133,6 +133,9 @@ expectCode(() => p.assertTrustedDecisionSource({ contractType: "policy-decision"
 // ===========================================================================
 const grant = p.createDelegationGrant({ grantId: "grant_1", capabilityFamily: "mutation", capabilityId: "set-opacity-v1", targetScope: { type: "current-comp" }, riskCeiling: "write", taskId: "task_1", expiresAt: 1000, maxActions: 2, provenance: { source: "local", requestId: "req_1" } });
 check(p.isDelegationGrant(grant), "DelegationGrant created");
+const operationGrant = p.createDelegationGrant({ grantId: "grant_operation", capabilityFamily: "mutation", capabilityId: "set-opacity-v1", operationKind: "mutate", targetScope: { type: "selected-layer" }, riskCeiling: "write" });
+check(operationGrant.operationKind === "mutate", "DelegationGrant carries an exact closed operation restriction when supplied");
+expectCode(() => p.createDelegationGrant({ grantId: "grant_bad_operation", capabilityFamily: "mutation", capabilityId: "set-opacity-v1", operationKind: "delete", riskCeiling: "write" }), "AUTHORITY_CONTRACT_INVALID", "DelegationGrant rejects operations outside the closed taxonomy");
 check(p.grantAllowsMutation(grant) === false, "a valid grant does not allow mutation");
 check(p.assertGrantDoesNotAuthorizeMutation(grant) === grant, "grant passes the does-not-authorize check");
 check(p.legacyAuthorityPolicy({ capabilityId: "set-opacity-v1", requestedOperation: "mutate", capabilityKnown: true, paramsValid: true, operationSupported: true }).decision === "REVIEW_REQUIRED", "a mutation is still REVIEW_REQUIRED even when a grant exists");

@@ -14,7 +14,8 @@
 
     var MODULE_REVISION = "vela-delegation-grant-store-v1";
     var storeSerial = 0;
-    var SPEC_KEYS = Object.freeze(["capabilityFamily", "capabilityId", "targetScope", "riskCeiling", "taskId", "expiresAt", "maxActions", "provenance"]);
+    var trustedStores = new WeakSet();
+    var SPEC_KEYS = Object.freeze(["capabilityFamily", "capabilityId", "operationKind", "targetScope", "riskCeiling", "taskId", "expiresAt", "maxActions", "provenance"]);
     var ERROR_CODES = Object.freeze({
         GRANT_STORE_INVALID_SPEC: "GRANT_STORE_INVALID_SPEC",
         GRANT_STORE_CLOCK_UNAVAILABLE: "GRANT_STORE_CLOCK_UNAVAILABLE",
@@ -130,6 +131,15 @@
             grants.forEach(function (record) { expireIfDue(record); if (record.status === "active") { result.push(recordSnapshot(record)); } });
             return Object.freeze(result);
         }
+        function getAuthorityView() {
+            assertUsable();
+            var evaluationTime = safeNow();
+            var result = [];
+            grants.forEach(function (record) {
+                if (record.status === "active" && (record.grant.expiresAt === null || evaluationTime < record.grant.expiresAt)) { result.push(recordSnapshot(record)); }
+            });
+            return planning.deepFreeze({ evaluatedAt: evaluationTime, grants: result });
+        }
         function revoke(grantId) {
             var record = recordFor(grantId);
             if (record.status === "expired") { fail(ERROR_CODES.GRANT_STORE_GRANT_EXPIRED, "Delegation grant is expired."); }
@@ -185,8 +195,9 @@
         function suspend() { assertUsable(); invalidateAll(); return true; }
         function dispose() { if (disposed) { return false; } invalidateAll(); disposed = true; return true; }
 
-        return Object.freeze({
+        var store = Object.freeze({
             dispose: dispose,
+            getAuthorityView: getAuthorityView,
             issue: issue,
             listActive: listActive,
             lookup: lookup,
@@ -197,7 +208,9 @@
             suspend: suspend,
             consume: consume
         });
+        trustedStores.add(store);
+        return store;
     }
 
-    return { ERROR_CODES: ERROR_CODES, GrantStoreError: GrantStoreError, MODULE_REVISION: MODULE_REVISION, createDelegationGrantStore: createDelegationGrantStore };
+    return { ERROR_CODES: ERROR_CODES, GrantStoreError: GrantStoreError, MODULE_REVISION: MODULE_REVISION, createDelegationGrantStore: createDelegationGrantStore, isTrustedDelegationGrantStore: function (store) { return Boolean(store && trustedStores.has(store)); } };
 }));
