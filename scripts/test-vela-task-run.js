@@ -30,6 +30,11 @@ function makeRun() {
 
 function run() {
     check(typeof taskRunModule.createTaskRun === "function", "Node/CommonJS import works.");
+    let armClockCalls = 0;
+    const armClockFailure = taskRunModule.createTaskRun({ protocol, taskRunId: "task_run_arm_clock", authorizedPlanId: "authority_plan_arm_clock", executionPlanId: "execution_plan_arm_clock", now() { armClockCalls += 1; if (armClockCalls > 1) throw new Error("clock"); return 1; } });
+    expectCode(() => armClockFailure.arm(), protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Arm clock failure is reported.");
+    check(armClockFailure.snapshot().state === "waiting-approval" && armClockFailure.snapshot().executionArmed === false, "Arm clock failure leaves no partial active state.");
+    expectCode(() => armClockFailure.arm(), protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Arm can deterministically retry and fail without a partial transition.");
     browserSmoke();
     check(taskRunModule.TASK_STATE.join(",") === "active,paused,waiting-approval,blocked,completed,cancelled" && taskRunModule.TASK_STATE.indexOf("failed") === -1, "TaskRun uses the frozen task vocabulary without a failed state.");
     const initial = makeRun();

@@ -45,7 +45,15 @@
         function snapshot() {
             return Object.freeze({ taskRunId: taskRunId, authorizedPlanId: authorizedPlanId, executionPlanId: executionPlanId, state: state, executionArmed: executionArmed, createdAt: createdAt, updatedAt: updatedAt, terminalErrorCode: terminalErrorCode, cancelReason: cancelReason });
         }
-        function arm() { requireState("waiting-approval"); state = "active"; executionArmed = true; touch(); return snapshot(); }
+        function arm() {
+            var armedAt;
+            requireState("waiting-approval");
+            armedAt = safeNow();
+            state = "active";
+            executionArmed = true;
+            updatedAt = armedAt;
+            return snapshot();
+        }
         function complete() { requireState("active"); state = "completed"; executionArmed = false; touch(); return snapshot(); }
         function block(errorCode) {
             requireState("active");
