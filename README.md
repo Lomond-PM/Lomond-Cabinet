@@ -2,14 +2,14 @@
 
 Lomond Cabinet is an After Effects CEP extension that combines a registry-driven tool system, procedural Home visuals, and the experimental Vela local-assistant surface.
 
-- **Current product version:** `0.3.5` (release-prepared candidate)
-- **Latest published tag:** `v0.3.4`
+- **Current product version:** `0.3.5`
+- **Latest published tag:** `v0.3.5`
 - **Default development branch:** `dev`
 - **Extension bundle id:** `com.kevin.aetoolbox`
 - **Manifest menu name:** `AE Toolbox`
 - **Visible panel name:** `Lomond Cabinet`
 
-Version 0.3.5 is release-prepared for the Vela Planning + Authority Contracts Foundation; it is not yet published and `v0.3.4` remains the latest immutable published tag until final AE release smoke, promotion to `main`, and tagging complete. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default.
+Version 0.3.5 is the current published baseline for the Vela Planning + Authority Contracts Foundation, tagged with immutable `v0.3.5`. Final After Effects release smoke passed. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default.
 
 ## Runtime architecture
 
@@ -202,7 +202,7 @@ docs/HANDOFF.md
 
 ## Version and release status
 
-The current metadata is staged at **0.3.5** on `release/0.3.5`. The latest published release remains **0.3.4**, tagged with immutable **`v0.3.4`**, until the 0.3.5 final AE release smoke and publication flow complete. Host `projectVersion` now reports `0.3.5` for release acceptance.
+The current published release is **0.3.5**, tagged with immutable **`v0.3.5`**. The 0.3.5 Final AE Release Smoke passed, Host `projectVersion` reports `0.3.5`, and stages A–H1 are complete. Production multi-step remains deferred by design; the reachable mutation path remains the legacy single-step confirmation flow.
 
 Keep these synchronized for future releases:
 
@@ -216,7 +216,7 @@ Keep these synchronized for future releases:
 
 `AEToolbox.hostApiVersion` is an independent Host contract version and remains `1.0.0`; it is not the product version.
 
-The next architectural stage after 0.3.5 is a later-version real producer and informed whole-plan review/confirmation design. Do not enable production multi-step execution, Planner, DelegationPolicyEngine, AgentDriver, autonomous loops, retry/replan/rollback, or delegated authority as release-preparation work.
+The next development stage is **0.3.6 Delegated Authority** and related post-0.3.5 producer/whole-plan review design. Production multi-step is not implicitly enabled by the version transition; Planner, DelegationPolicyEngine, AgentDriver, autonomous loops, retry/replan/rollback, and delegated mutation authority require separately scoped work.
 
 ## Known issues and release history
 

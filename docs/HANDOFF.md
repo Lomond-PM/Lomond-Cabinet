@@ -1,14 +1,14 @@
 # HANDOFF.md
 
-## Current handoff — 0.3.5 release-prepared candidate
+## Current handoff — 0.3.5 published baseline
 
-Lomond Cabinet version **0.3.5** has completed feature development and release preparation on `release/0.3.5`.
+Lomond Cabinet version **0.3.5** is released and published with immutable tag `v0.3.5`.
 
 - Product metadata / Host `projectVersion`: `0.3.5`
-- Latest published release/tag: `0.3.4` / immutable `v0.3.4`
-- Final 0.3.5 AE release smoke: **PENDING**
-- `main` publication and `v0.3.5` tag: **NOT YET PERFORMED**
-- Next action: **final 0.3.5 AE release smoke**
+- Latest published release/tag: `0.3.5` / immutable `v0.3.5`
+- Final 0.3.5 AE Release Smoke: **PASS**
+- Stages A–H1: **COMPLETE**
+- Next development stage: **0.3.6 Delegated Authority**
 
 Do not begin G2/H2 or enable production multi-step during release work.
 
@@ -68,20 +68,10 @@ With `core.autocrlf=true`, the Provider branch-profile JSON fixture is checked o
 
 ## Final AE release smoke
 
-Perform a full AE restart and verify Host `projectVersion` 0.3.5; Vela startup; Provider manual opt-in; ordinary chat and Active Composition reads; legacy single-step opacity review/confirm/mutation; cancel; selection and value drift safety; visibility suspend/resume; panel close/reopen; runtime reset/reload; no plan-review UI, unexpected pending plan, or reachable production N-step path; Console warnings/errors `0/0`; and a second full restart with the key mutation repeated.
+Final AE Release Smoke: **PASS**. Accepted coverage included Host `projectVersion` 0.3.5; Vela startup; Provider manual opt-in; ordinary chat and Active Composition reads; legacy single-step opacity review/confirm/mutation; cancel; selection and value drift safety; visibility suspend/resume; panel close/reopen; runtime reset/reload; no plan-review UI, unexpected pending plan, or reachable production N-step path; Console warnings/errors `0/0`; and a second full restart with the key mutation repeated.
 
 Do not inject a synthetic AuthorizedPlan for release acceptance.
 
-## Release flow after acceptance
+## Next continuation point
 
-```text
-release/0.3.5
-→ final AE release acceptance
-→ PR into dev
-→ dev → main
-→ annotated immutable v0.3.5 tag
-→ mandatory post-release documentation reconciliation
-→ synchronize main and dev
-```
-
-Do not commit, push, merge, tag, or publish as part of the current Codex release-preparation task unless separately authorized. Published tags must never be moved.
+Begin future work from the synchronized post-publication baseline. The next named stage is **0.3.6 Delegated Authority**, with any real producer, whole-plan review, confirmation/run wiring, or production multi-step enablement requiring an explicit focused scope. Published tags must never be moved.
