@@ -1,14 +1,13 @@
 # PROJECT_STATE.md
 
-## Current release-prepared baseline — 0.3.5
+## Current released baseline — 0.3.5
 
-Version **0.3.5** is the current **RELEASE-PREPARED CANDIDATE** for Lomond Cabinet.
+Version **0.3.5** is the current **RELEASED / PUBLISHED BASELINE** for Lomond Cabinet.
 
 - Product metadata and Host `projectVersion`: `0.3.5`
-- Release branch: `release/0.3.5`
-- Latest published release/tag: `0.3.4` / immutable `v0.3.4`
-- Final 0.3.5 AE release smoke: **PENDING**
-- Publication to `main` and tag `v0.3.5`: **NOT YET PERFORMED**
+- Immutable published tag: `v0.3.5`
+- Final 0.3.5 AE Release Smoke: **PASS**
+- Stages A–H1: **COMPLETE**
 
 The normative architecture remains [`docs/design/vela-agent-architecture.md`](design/vela-agent-architecture.md), marked **FROZEN FOR 0.3.x**. Release preparation does not amend it.
 
@@ -78,6 +77,6 @@ The fixture, expected hash, and line-ending policy must not be changed during re
 
 ## Next architectural stage
 
-After publication and mandatory state reconciliation, later work may design a real production AuthorizedPlan producer, actionable whole-plan review ownership, and a confirmation-to-immediately-runnable execution gate. Planner, DelegationPolicyEngine, AgentDriver, autonomous execution, generic mutation Agent capabilities, retry/replan/rollback, and production N-step enablement remain outside 0.3.5.
+The next development stage is **0.3.6 Delegated Authority**. Later work may design a real production AuthorizedPlan producer, actionable whole-plan review ownership, and a confirmation-to-immediately-runnable execution gate. Planner, DelegationPolicyEngine, AgentDriver, autonomous execution, generic mutation Agent capabilities, retry/replan/rollback, and production N-step enablement remain outside 0.3.5 until separately scoped.
 
-The latest published tag remains `v0.3.4` until final AE release smoke passes, the accepted release reaches `main`, and an annotated immutable `v0.3.5` tag is created. After publication, reconcile README, this file, and HANDOFF from candidate language to the published baseline; record final AE acceptance; synchronize `main` and `dev`; and never move the published tag.
+The current immutable published tag is `v0.3.5`. README, this file, and HANDOFF identify the same published baseline and record final AE acceptance as complete. Published tags must never be moved.
