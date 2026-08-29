@@ -6,6 +6,7 @@ const runtimeModule = require("../client/js/vela/velaRuntime");
 const capabilityContracts = require("../client/js/vela/velaCapabilityContracts");
 const activationPolicy = require("../client/js/vela/velaActivationPolicy").VelaActivationPolicy;
 const nodeRuntime = require("./velaNodeRuntime");
+const sessionRuntime = require("../client/js/vela/velaSessionRuntime");
 let assertions = 0;
 const HOST = "host_0123456789abcdef0123456789abcdef0123456789abcdef";
 
@@ -45,6 +46,7 @@ function createController(options) {
     const environment = Object.assign({ setTimeout, clearTimeout }, nodeRuntime, options.environment || {});
     return runtimeModule.createRuntime({
         activationPolicy,
+        exactAgentSession: options.exactAgentSession || sessionRuntime.createSessionLog(),
         environment,
         invokeHost(source, callback) {
             const request = decode(source);
@@ -72,7 +74,7 @@ async function run() {
     assert.throws(() => runtimeModule.validateRegisteredActionMappings(capabilityContracts, { getTool() { return registeredTool; }, getAction() { return null; } }), (error) => error && error.code === "RUNTIME_CAPABILITY_UNAVAILABLE", "Runtime startup fails closed when the mapped action is missing."); assertions += 1;
     const controller = createController();
     check(Object.isFrozen(controller), "Controller is frozen.");
-    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,cancelProviderRequest,checkProviderReadiness,dispose,getConfirmationSurfaceState,getObservationReadPort,getProviderDiagnostics,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,initialize,rejectActiveCandidate,resetSession,resume,reviewProviderProposal,sendProviderMessage,suspend", "Runtime exposes only Persistent Surface lifecycle, bounded read Observation, Provider diagnostics, proposal review, and active confirmation facades.");
+    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,cancelProviderRequest,checkProviderReadiness,dispose,getAuthorityDiagnostics,getAuthorityProjection,getConfirmationSurfaceState,getObservationReadPort,getProviderDiagnostics,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,initialize,rejectActiveCandidate,resetSession,resume,reviewProviderProposal,sendProviderMessage,suspend", "Runtime exposes only existing facades plus bounded read-only Authority projection and diagnostics.");
     check(controller.getObservationReadPort() === null, "Observation read port is unavailable before Runtime initialization.");
     check(controller.cancelProviderRequest.length === 0, "Provider cancellation has no caller-supplied request identifier seam.");
     check(controller.approveActiveCandidate.length === 0 && controller.rejectActiveCandidate.length === 0, "Surface confirmation facades accept no caller-supplied candidate identifier.");
@@ -81,6 +83,15 @@ async function run() {
     const second = controller.initialize();
     check(first === second, "Concurrent initialization shares one Promise.");
     const status = await first;
+    const authorityProjection = controller.getAuthorityProjection();
+    check(Object.isFrozen(authorityProjection) && authorityProjection.state === "inactive" && authorityProjection.active === false && authorityProjection.capabilityId === null && authorityProjection.taskId === null, "Authority projection is frozen and inactive without a consent producer.");
+    check(controller.getAuthorityDiagnostics() === null, "Authority diagnostics are debug-gated.");
+    global.AETOOLBOX_DEBUG_REGISTRY = true;
+    const authorityDiagnostics = controller.getAuthorityDiagnostics();
+    check(Object.isFrozen(authorityDiagnostics) && authorityDiagnostics.canonicalComposition === true && authorityDiagnostics.lifecycleState === "ready" && authorityDiagnostics.projection.state === "inactive", "Debug diagnostics witness a canonical, ready, inactive production Authority Plane.");
+    check(Object.isFrozen(authorityDiagnostics.moduleRevisions) && !/store|engine|resolver|coordinator|appender|issue|revoke|reserve|activate|run/.test(Object.keys(authorityDiagnostics).join(",")), "Diagnostics expose revisions and summaries without raw Authority handles or mutation methods.");
+    delete global.AETOOLBOX_DEBUG_REGISTRY;
+    check(!Object.prototype.hasOwnProperty.call(controller, "issueGrant") && !Object.prototype.hasOwnProperty.call(controller, "revokeGrant") && !Object.prototype.hasOwnProperty.call(controller, "produce") && !Object.prototype.hasOwnProperty.call(controller, "activate") && !Object.prototype.hasOwnProperty.call(controller, "run"), "Production facade exposes no delegated authority mutation entry point.");
     const observationReadPort = controller.getObservationReadPort();
     check(Object.isFrozen(observationReadPort) && Object.keys(observationReadPort).sort().join(",") === "capture,getState", "initialized Runtime exposes one frozen read-only Observation port.");
     check(!Object.prototype.hasOwnProperty.call(observationReadPort, "buildRequest") && !Object.prototype.hasOwnProperty.call(observationReadPort, "execute"), "Observation read port exposes no execution authority.");

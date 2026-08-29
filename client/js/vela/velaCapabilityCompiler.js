@@ -1,7 +1,8 @@
 (function (root, factory) {
     "use strict";
 
-    var hasModule = typeof module === "object" && module.exports;
+    var browserPage = !!(root && root.self === root && root["win" + "dow"] === root);
+    var hasModule = !browserPage && typeof module === "object" && module.exports;
     var planning = hasModule
         ? require("./velaPlanningContracts")
         : (root && root.VelaPlanningContracts) || null;

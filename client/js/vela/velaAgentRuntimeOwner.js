@@ -64,8 +64,10 @@
         }
         projection = agent.getProjection();
 
-        if (settings.AgentCapabilityRuntime && settings.ActiveCompositionCapability && settings.AgentObservationRuntime && settings.observationReadPort) {
-            var capability = settings.ActiveCompositionCapability.create({ contextBridge: settings.observationReadPort });
+        function attachObservationReadPort(observationReadPort) {
+            var capability;
+            if (disposed || observationRuntime || !settings.AgentCapabilityRuntime || !settings.ActiveCompositionCapability || !settings.AgentObservationRuntime || !observationReadPort) { return false; }
+            capability = settings.ActiveCompositionCapability.create({ contextBridge: observationReadPort });
             capabilityRuntime = settings.AgentCapabilityRuntime.createCapabilityRuntime({
                 registry: capability.registry,
                 adapters: capability.adapters,
@@ -80,12 +82,18 @@
                 capabilityId: capability.capabilityId,
                 onError: function (error) { try { reporter(error, Object.freeze({ phase: "observation" })); } catch (ignored) {} }
             });
+            return true;
+        }
+        if (settings.observationReadPort) {
+            attachObservationReadPort(settings.observationReadPort);
         }
 
         return Object.freeze({
             getCurrentAgent: function () { return agent; },
+            getSessionRuntime: function () { return disposed ? null : agent.getSession(); },
             getCurrentProjection: function () { return projection; },
             getObservationRuntime: function () { return observationRuntime; },
+            attachObservationReadPort: attachObservationReadPort,
             activate: function () {
                 if (disposed) { return false; }
                 agent.activate();
