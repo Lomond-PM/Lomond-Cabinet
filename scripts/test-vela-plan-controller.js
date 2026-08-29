@@ -123,6 +123,22 @@ async function acceptAndConfirm(harness, opacities) {
 
 async function run() {
     check(typeof controllerModule.createPlanController === "function", "Node/CommonJS import works.");
+    const delegatedPreflight = makeHarness();
+    const delegatedBound = await delegatedPreflight.preflight.createBoundPlan({ steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 33 }, targetScope: { type: "selected-layer", property: "opacity" } }], selectionOrderMeaningful: true });
+    const delegatedActivationPort = delegatedPreflight.preflight.createDelegatedActivationPort({ planId: delegatedBound.planId, activationId: "activation_delegated_test" });
+    await delegatedPreflight.preflight.activateDelegatedBoundPlan({ planId: delegatedBound.planId, activationPort: delegatedActivationPort });
+    let commitCalls = 0;
+    const delegatedCommitPort = delegatedPreflight.preflight.createExecutionCommitPort({ planId: delegatedBound.planId, stepIndex: 0, commit() { commitCalls += 1; } });
+    await delegatedPreflight.preflight.executeStep({ planId: delegatedBound.planId, stepIndex: 0, commitPort: delegatedCommitPort });
+    check(commitCalls === 1 && delegatedPreflight.executed.length === 1, "Delegated PlanStore branch commits exactly once before the existing executor seam.");
+    check(!delegatedPreflight.store.getCandidate(delegatedBound.candidateIds[0]).confirmationNonce, "Delegated activation does not mint or reuse a human confirmation nonce.");
+    const failedCommit = makeHarness();
+    const failedBound = await failedCommit.preflight.createBoundPlan({ steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 44 }, targetScope: { type: "selected-layer", property: "opacity" } }], selectionOrderMeaningful: true });
+    const failedActivationPort = failedCommit.preflight.createDelegatedActivationPort({ planId: failedBound.planId, activationId: "activation_failed_commit" });
+    await failedCommit.preflight.activateDelegatedBoundPlan({ planId: failedBound.planId, activationPort: failedActivationPort });
+    const failedCommitPort = failedCommit.preflight.createExecutionCommitPort({ planId: failedBound.planId, stepIndex: 0, commit() { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.PERMISSION_DENIED); } });
+    await expectCode(failedCommit.preflight.executeStep({ planId: failedBound.planId, stepIndex: 0, commitPort: failedCommitPort }), protocol.ERROR_CODES.PERMISSION_DENIED, "Authority commit failure stops delegated execution.");
+    check(failedCommit.executed.length === 0 && failedCommit.store.getPlanView(failedBound.planId).state === "failed", "Commit failure calls no executor and terminalizes the PlanStore reservation without replay restoration.");
     browserSmoke();
 
     const accepted = makeHarness();

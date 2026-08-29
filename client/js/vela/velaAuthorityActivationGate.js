@@ -102,6 +102,11 @@
             trustedPlanActivations.set(record.plan, "consumed");
             return true;
         }
+        function assertPending(activation) {
+            var record = activationRecord(activation);
+            assertSettlementLive(record);
+            return true;
+        }
         function release(activation) {
             var record = activationRecord(activation);
             assertSettlementLive(record);
@@ -111,7 +116,7 @@
             trustedPlanActivations.delete(record.plan);
             return true;
         }
-        var gate = Object.freeze({ reserve: reserve, consume: consume, release: release });
+        var gate = Object.freeze({ reserve: reserve, assertPending: assertPending, consume: consume, release: release });
         trustedGates.add(gate);
         return gate;
     }

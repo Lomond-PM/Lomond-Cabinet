@@ -84,6 +84,8 @@
         var reservations = new WeakMap();
         var reservationsByCandidate = new Map();
         var settledReservations = new WeakMap();
+        var delegatedActivationTokens = new WeakMap();
+        var delegatedTokenByCandidate = new Map();
         var stableErrorCodes = new Set(Object.keys(protocol.ERROR_CODES).map(function (key) {
             return protocol.ERROR_CODES[key];
         }));
@@ -134,7 +136,8 @@
                 contextFingerprint: value.contextFingerprint,
                 settingsFingerprint: value.settingsFingerprint,
                 permissionSnapshot: permissionSnapshot,
-                confirmationNonce: value.confirmationNonce
+                confirmationNonce: value.confirmationNonce,
+                delegatedActivationToken: value.delegatedActivationToken
             };
         }
 
@@ -359,6 +362,30 @@
             return getPlanView(planId);
         }
 
+        function createDelegatedActivationToken(planId, activationId) {
+            var plan = requiredPlan(planId);
+            if (plan.state !== "pending-confirmation" || plan.actionCount !== 1 || typeof activationId !== "string" || activationId.length === 0) { protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "Delegated plan activation is invalid."); }
+            var token = Object.freeze({});
+            delegatedActivationTokens.set(token, { planId: planId, activationId: activationId, used: false });
+            return token;
+        }
+
+        function activateDelegatedPlan(planId, supplied, token) {
+            var plan = requiredPlan(planId);
+            var tokenRecord = token && delegatedActivationTokens.get(token);
+            if (!tokenRecord || tokenRecord.used || tokenRecord.planId !== planId || plan.state !== "pending-confirmation" || plan.actionCount !== 1) { protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "Delegated plan activation is invalid."); }
+            var current = binding(supplied);
+            plan.candidateIds.forEach(function (candidateId) {
+                var candidate = candidates.get(candidateId);
+                bindingMatches(candidate, current);
+                candidate.state = "confirmed";
+                delegatedTokenByCandidate.set(candidateId, token);
+            });
+            tokenRecord.used = true;
+            plan.state = "confirmed";
+            return getPlanView(planId);
+        }
+
         function markStale(candidateId, reason) {
             var candidate = requiredCandidate(candidateId);
             var plan = requiredPlan(candidate.planId);
@@ -414,7 +441,9 @@
             var candidate = candidates.get(plan.candidateIds[stepIndex]);
             if (candidate.state !== "confirmed") { protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "The plan step candidate is not confirmed.", { details: { state: candidate.state } }); }
             var currentBinding = bindingMatches(candidate, current);
-            if (candidate.requiresConfirmation !== false && candidate.confirmationNonce !== currentBinding.confirmationNonce) { protocol.fail(protocol.ERROR_CODES.PERMISSION_DENIED, "The confirmation nonce does not match."); }
+            if (delegatedTokenByCandidate.has(candidate.candidateId)) {
+                if (delegatedTokenByCandidate.get(candidate.candidateId) !== currentBinding.delegatedActivationToken) { protocol.fail(protocol.ERROR_CODES.PERMISSION_DENIED, "The delegated activation token does not match."); }
+            } else if (candidate.requiresConfirmation !== false && candidate.confirmationNonce !== currentBinding.confirmationNonce) { protocol.fail(protocol.ERROR_CODES.PERMISSION_DENIED, "The confirmation nonce does not match."); }
             if (candidate.action.risk !== "read" && current.hasVerifier !== true) { protocol.fail(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "A mutation verifier is unavailable."); }
             var publicReplayKey = candidate.candidateId + ":" + candidate.planRevision + ":" + stepIndex;
             var internalReplayKey = sessionId + ":" + publicReplayKey;
@@ -600,10 +629,12 @@
             complete: complete,
             completeStep: completeStep,
             abortStep: abortStep,
+            activateDelegatedPlan: activateDelegatedPlan,
             confirm: confirm,
             confirmCandidate: confirmCandidate,
             confirmPlan: confirmPlan,
             createPlan: createPlan,
+            createDelegatedActivationToken: createDelegatedActivationToken,
             discard: discard,
             discardPlan: discardPlan,
             failStep: failStep,
