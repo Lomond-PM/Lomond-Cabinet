@@ -12,6 +12,29 @@ This project follows simple semantic versioning for development handoff:
 
 _No unreleased changes._
 
+## [0.3.5] - 2026-08-29
+
+### Planning and authority contracts
+
+- Added the frozen Planning / Authority contract foundation, deterministic CapabilityCompiler, and Legacy Authority Bridge compatibility wiring for closed local `PolicyDecision` production semantics.
+- Added ordered one-to-eight-step PlanStore invariants while preserving the rule that `TaskPlan` and raw model output cannot enter the Execution Spine or become authority.
+- Kept `AuthorizedPlan` semantic and identity-safe: it carries no trusted native target binding, confirmation nonce, reservation, Host payload, or execution authority.
+
+### Orchestration and review foundations
+
+- Added per-step just-in-time target and value binding, so every mutation step re-enters the existing freshness, permission, replay, reservation, CAS, ExecutionAdapter, and Host safety path at execution time.
+- Added AuthorizedPlan materialization, TaskRun-owned process-local `executionArmed`, and PlanController orchestration with ordered execution, failure blocking, cancellation, lifecycle invalidation, and no retry, replan, or rollback.
+- Added immutable review-safe PlanReviewProjection snapshots with exact AuthorizedPlan order, closed presentation mappings, revision consistency, observed-versus-execution-time value semantics, and no execution, authority, candidate, native-binding, nonce, reservation, or CAS identity.
+- Added a read-only runtime-local ReviewRuntimePort for opaque token-to-projection correlation; tokens are not authority, permission, grants, nonces, or confirmation evidence.
+
+### Production runtime and compatibility
+
+- Production-loads and runtime-owns the materializer, TaskRun factory, projection factory, dormant PlanController, and ReviewRuntimePort on the existing shared PlanStore / ExecutionPreflight mutation-safety spine.
+- Added lifecycle-safe suspend, reset-session, and dispose invalidation so stale review correlations and orchestration state cannot resume or schedule later steps.
+- Preserved the existing Provider single-proposal → legacy Controller → ConfirmationView → `executeStep(0)` production path and its just-in-time binding behavior.
+
+Production multi-step execution is infrastructure-proven but not user-enabled in 0.3.5. It is deferred by design: no production AuthorizedPlan producer, synthetic producer/debug hook, PlanController accept facade, plan-review Surface, or production confirm/run path exists. A future real producer must own exact revision-bound informed review and enter confirmation through the same gate as immediately runnable PlanController execution. Human-confirmed one-shot multi-step work does not inherently require delegation, but no such producer belongs to the 0.3.5 roadmap.
+
 ## [0.3.4] - 2026-08-27
 
 ### Vela Agent Runtime / Observation

@@ -22,6 +22,11 @@
         { name: "VelaController", file: "velaController.js" },
         { name: "VelaProviderController", file: "velaProviderController.js" },
         { name: "VelaProviderProposalRouter", file: "velaProviderProposalRouter.js" },
+        { name: "VelaAuthorizedPlanMaterializer", file: "velaAuthorizedPlanMaterializer.js" },
+        { name: "VelaTaskRun", file: "velaTaskRun.js" },
+        { name: "VelaPlanReviewProjection", file: "velaPlanReviewProjection.js" },
+        { name: "VelaPlanController", file: "velaPlanController.js" },
+        { name: "VelaReviewRuntimePort", file: "velaReviewRuntimePort.js" },
         { name: "VelaRuntime", file: "velaRuntime.js" }
     ]);
     var state = "idle";
@@ -161,6 +166,11 @@
         if (name === "VelaController") { return typeof value.createController === "function" && typeof value.isTrustedControllerForProtocol === "function"; }
         if (name === "VelaProviderController") { return typeof value.createProviderController === "function" && typeof value.isTrustedProviderControllerForProtocol === "function"; }
         if (name === "VelaProviderProposalRouter") { return typeof value.createProposalRouter === "function" && typeof value.isTrustedProposalRouterForProtocol === "function"; }
+        if (name === "VelaAuthorizedPlanMaterializer") { return typeof value.createAuthorizedPlanMaterializer === "function"; }
+        if (name === "VelaTaskRun") { return typeof value.createTaskRun === "function"; }
+        if (name === "VelaPlanReviewProjection") { return typeof value.createPlanReviewProjection === "function" && value.LABEL_KEYS; }
+        if (name === "VelaPlanController") { return typeof value.createPlanController === "function"; }
+        if (name === "VelaReviewRuntimePort") { return typeof value.createReviewRuntimePort === "function"; }
         if (name === "VelaRuntime") { return typeof value.createRuntime === "function"; }
         return false;
     }
@@ -176,6 +186,7 @@
             if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.getModule !== "function" || typeof bootstrap.hasModule !== "function" || typeof bootstrap.registerModule !== "function") { return false; }
             if (!globalDescriptor || globalDescriptor.get || globalDescriptor.set || globalDescriptor.configurable !== false || globalDescriptor.writable !== false) { return false; }
             moduleValue = globalDescriptor.value;
+            if (["VelaAuthorizedPlanMaterializer", "VelaTaskRun", "VelaPlanReviewProjection", "VelaPlanController", "VelaReviewRuntimePort"].indexOf(name) !== -1) { return expectedModuleShape(name, moduleValue); }
             return bootstrap.hasModule(name) === true && bootstrap.getModule(name) === moduleValue && expectedModuleShape(name, moduleValue);
         } catch (error) {
             return false;

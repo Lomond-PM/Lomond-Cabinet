@@ -9,6 +9,7 @@ const transportModule = require("../client/js/vela/velaLocalTransport");
 const providerControllerModule = require("../client/js/vela/velaProviderController");
 const controllerModule = require("../client/js/vela/velaController");
 const routerModule = require("../client/js/vela/velaProviderProposalRouter");
+const authorityBridge = require("../client/js/vela/velaLegacyAuthorityBridge");
 let assertions = 0;
 function check(value, message) { assert.ok(value, message); assertions += 1; }
 async function expectCode(value, code, message) { await assert.rejects(Promise.resolve(value), (error) => error && error.code === code, message); assertions += 1; }
@@ -25,7 +26,7 @@ function createHarness(options) {
     const provider = providerControllerModule.createProviderController({ protocol: p, contextBridge: bridge, transport, runtime: { setTimeout, clearTimeout, createAbortController() { return { signal: {}, abort() {} }; }, parseUrl(value) { const u = new URL(value); return { protocol: u.protocol, hostname: u.hostname, port: u.port, pathname: u.pathname, username: u.username, password: u.password, search: u.search, hash: u.hash, href: u.href }; }, nowMs: () => 1 } });
     const preflight = { createBoundPlan(input) { creates += 1; check(Object.keys(input).join(",") === "localProposal,selectionOrderMeaningful", "Router supplies only the bounded local proposal shape to the local controller."); check(input.localProposal.capabilityId === "set-opacity-v1" && input.localProposal.params.opacity === 57.5, "Router forwards the normalized opacity exactly once."); return options.createPromise || (options.createFailure ? Promise.reject(new p.VelaProtocolError(p.ERROR_CODES.CONTEXT_STALE)) : Promise.resolve({ planId: "plan_local", candidateIds: ["cand_local"], review: { valueKind: "number", beforeValue: 20 } })); }, discardBoundPlan() {}, confirmBoundPlan() { return Promise.resolve(); }, executeStep() { return Promise.resolve(); } };
     const controller = controllerModule.createController({ protocol: p, preflight });
-    const router = routerModule.createProposalRouter({ protocol: p, providerController: provider, controller });
+    const router = routerModule.createProposalRouter({ protocol: p, providerController: provider, controller, authorityBridge: options.authorityBridge || authorityBridge });
     return { p, provider, controller, router, proposalPort: providerControllerModule.createProposalPort(provider, p), getCreates: () => creates };
 }
 async function sendProposal(h) { return h.provider.send({ message: "Set the selected layer opacity to 57.5%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" }); }
@@ -65,6 +66,14 @@ async function run() {
     const foreign = createHarness();
     assert.throws(() => routerModule.createProposalRouter({ protocol: h.p, providerController: foreign.provider, controller: h.controller }), (error) => error.code === h.p.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); assertions += 1;
     check(!/candidate|plan|nonce|digest|native|authority/i.test(JSON.stringify(proposal)), "Public provider state continues to omit trusted execution data.");
+    const denied = createHarness({ authorityBridge: { createActionCandidateFromLocalProposal: authorityBridge.createActionCandidateFromLocalProposal, decide: () => ({ decision: "DENY" }) } });
+    await sendProposal(denied);
+    await expectCode(denied.router.review(), denied.p.ERROR_CODES.PERMISSION_DENIED, "Authority DENY rejects with generic permission error.");
+    check(denied.getCreates() === 0 && denied.controller.getUiState().candidateId === null, "Authority DENY creates no controller candidate or plan.");
+    const allow = createHarness({ authorityBridge: { createActionCandidateFromLocalProposal: authorityBridge.createActionCandidateFromLocalProposal, decide: () => ({ decision: "ALLOW" }) } });
+    await sendProposal(allow);
+    const allowReview = await allow.router.review();
+    check(allowReview.state === "pending-confirmation" && allow.getCreates() === 1, "Mutation ALLOW remains on the existing confirmation path.");
     console.log("test-vela-provider-proposal-router: " + assertions + " assertions passed.");
 }
 run().catch((error) => { console.error(error && error.stack ? error.stack : error); process.exitCode = 1; });
