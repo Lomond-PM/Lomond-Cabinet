@@ -14,7 +14,7 @@
 
     var MODULE_REVISION = "vela-delegation-grant-store-v1";
     var storeSerial = 0;
-    var trustedStores = new WeakSet();
+    var trustedStores = new WeakMap();
     var SPEC_KEYS = Object.freeze(["capabilityFamily", "capabilityId", "operationKind", "targetScope", "riskCeiling", "taskId", "expiresAt", "maxActions", "provenance"]);
     var ERROR_CODES = Object.freeze({
         GRANT_STORE_INVALID_SPEC: "GRANT_STORE_INVALID_SPEC",
@@ -208,9 +208,20 @@
             suspend: suspend,
             consume: consume
         });
-        trustedStores.add(store);
+        trustedStores.set(store, { getEpoch: function () { return generation; } });
         return store;
     }
 
-    return { ERROR_CODES: ERROR_CODES, GrantStoreError: GrantStoreError, MODULE_REVISION: MODULE_REVISION, createDelegationGrantStore: createDelegationGrantStore, isTrustedDelegationGrantStore: function (store) { return Boolean(store && trustedStores.has(store)); } };
+    return {
+        ERROR_CODES: ERROR_CODES,
+        GrantStoreError: GrantStoreError,
+        MODULE_REVISION: MODULE_REVISION,
+        createDelegationGrantStore: createDelegationGrantStore,
+        isTrustedDelegationGrantStore: function (store) { return Boolean(store && trustedStores.has(store)); },
+        getTrustedDelegationGrantStoreEpoch: function (store) {
+            var identity = store && trustedStores.get(store);
+            if (!identity) { fail(ERROR_CODES.GRANT_STORE_INVALID_SPEC, "DelegationGrantStore identity is invalid."); }
+            return identity.getEpoch();
+        }
+    };
 }));

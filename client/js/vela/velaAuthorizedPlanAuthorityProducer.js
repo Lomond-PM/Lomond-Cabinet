@@ -24,7 +24,8 @@
         AUTHORIZED_PLAN_CORRELATION_FAILED: "AUTHORIZED_PLAN_CORRELATION_FAILED",
         AUTHORIZED_PLAN_ID_INVALID: "AUTHORIZED_PLAN_ID_INVALID"
     });
-    var trustedProducedPlans = new WeakSet();
+    var trustedProducers = new WeakMap();
+    var trustedProducedPlans = new WeakMap();
 
     function fail(code, message) { var error = new Error(message || code); error.code = code; throw error; }
     function isPlainObject(value) { return Boolean(value && Object.prototype.toString.call(value) === "[object Object]" && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)); }
@@ -117,12 +118,48 @@
                 });
                 planning.assertAuthorizedPlanNoTrustedBinding(plan);
             } catch (errorPlan) { fail(ERROR_CODES.AUTHORIZED_PLAN_CORRELATION_FAILED); }
-            trustedProducedPlans.add(plan);
+            trustedProducedPlans.set(plan, {
+                producer: producer,
+                grantStore: grantStore,
+                storeEpoch: grantStoreModule.getTrustedDelegationGrantStoreEpoch(grantStore),
+                sessionId: context.sessionId,
+                taskId: context.taskId === undefined ? null : context.taskId,
+                candidateId: candidate.candidateId,
+                capabilityId: candidate.capabilityId,
+                operationKind: candidate.operationKind,
+                targetScope: candidate.targetScope,
+                grantId: grant.grantId
+            });
             return plan;
         }
 
-        return Object.freeze({ produce: produce });
+        var producer = Object.freeze({ produce: produce });
+        trustedProducers.set(producer, { grantStore: grantStore, sessionId: evidenceResolver.getSessionId() });
+        return producer;
     }
 
-    return Object.freeze({ ERROR_CODES: ERROR_CODES, MODULE_REVISION: MODULE_REVISION, createAuthorizedPlanAuthorityProducer: createAuthorizedPlanAuthorityProducer, isTrustedAuthorityProducedPlan: function (plan) { return Boolean(plan && trustedProducedPlans.has(plan)); } });
+    return Object.freeze({
+        ERROR_CODES: ERROR_CODES,
+        MODULE_REVISION: MODULE_REVISION,
+        createAuthorizedPlanAuthorityProducer: createAuthorizedPlanAuthorityProducer,
+        isTrustedAuthorityProducedPlan: function (plan) { return Boolean(plan && trustedProducedPlans.has(plan)); },
+        isTrustedAuthorityProducerFor: function (producer, grantStore, sessionId) {
+            var identity = producer && trustedProducers.get(producer);
+            return Boolean(identity && identity.grantStore === grantStore && identity.sessionId === sessionId);
+        },
+        getTrustedAuthorityPlanIdentity: function (plan, producer, grantStore, sessionId) {
+            var identity = plan && trustedProducedPlans.get(plan);
+            if (!identity || identity.producer !== producer || identity.grantStore !== grantStore || identity.sessionId !== sessionId) { return null; }
+            return planning.deepFreeze({
+                sessionId: identity.sessionId,
+                storeEpoch: identity.storeEpoch,
+                taskId: identity.taskId,
+                candidateId: identity.candidateId,
+                capabilityId: identity.capabilityId,
+                operationKind: identity.operationKind,
+                targetScope: identity.targetScope,
+                grantId: identity.grantId
+            });
+        }
+    });
 }));
