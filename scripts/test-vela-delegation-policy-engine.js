@@ -41,6 +41,10 @@ function run() {
     const exactGrant = exactStore.issue(grantSpec());
     const exactCandidate = candidate();
     const exactEngine = engine(exactStore);
+    check(policyModule.isTrustedDelegationPolicyEngine(exactEngine), "PolicyEngine factory output carries module-private identity.");
+    check(!policyModule.isTrustedDelegationPolicyEngine({ evaluate() {} }), "Caller-created PolicyEngine facade is not trusted.");
+    check(policyModule.isTrustedDelegationPolicyEngineFor(exactEngine, exactStore, "session_1"), "PolicyEngine identity retains its exact Store and Session ownership.");
+    check(!policyModule.isTrustedDelegationPolicyEngineFor(exactEngine, createStore(), "session_1"), "PolicyEngine cannot be substituted across Store instances.");
     const allowed = exactEngine.evaluate(exactCandidate, context());
     equal(allowed.decision, "ALLOW", "Valid trusted candidate plus exact active grant is ALLOW.");
     equal(allowed.issuedBy, "local-authority", "ALLOW is issued by trusted local authority.");

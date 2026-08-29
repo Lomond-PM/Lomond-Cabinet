@@ -13,6 +13,7 @@
     "use strict";
 
     var MODULE_REVISION = "vela-delegation-policy-engine-v1";
+    var trustedEngines = new WeakMap();
     var ERROR_CODES = Object.freeze({
         POLICY_ENGINE_INVALID_OPTIONS: "POLICY_ENGINE_INVALID_OPTIONS",
         POLICY_ENGINE_INVALID_CONTEXT: "POLICY_ENGINE_INVALID_CONTEXT",
@@ -120,8 +121,20 @@
             return decision("ALLOW", "active-delegation-grant", candidate, matches[0].grant);
         }
 
-        return Object.freeze({ evaluate: evaluate });
+        var engine = Object.freeze({ evaluate: evaluate });
+        trustedEngines.set(engine, { grantStore: grantStore, sessionId: sessionId });
+        return engine;
     }
 
-    return { ERROR_CODES: ERROR_CODES, MODULE_REVISION: MODULE_REVISION, RISK_RANK: RISK_RANK, createDelegationPolicyEngine: createDelegationPolicyEngine };
+    return {
+        ERROR_CODES: ERROR_CODES,
+        MODULE_REVISION: MODULE_REVISION,
+        RISK_RANK: RISK_RANK,
+        createDelegationPolicyEngine: createDelegationPolicyEngine,
+        isTrustedDelegationPolicyEngine: function (engine) { return Boolean(engine && trustedEngines.has(engine)); },
+        isTrustedDelegationPolicyEngineFor: function (engine, grantStore, sessionId) {
+            var identity = engine && trustedEngines.get(engine);
+            return Boolean(identity && identity.grantStore === grantStore && identity.sessionId === sessionId);
+        }
+    };
 }));
