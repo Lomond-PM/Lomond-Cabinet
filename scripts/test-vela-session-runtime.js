@@ -67,6 +67,15 @@ check(!sessionRuntime.isSessionEventKind("mystery/kind"), "isSessionEventKind fa
 ["todo/write", "task/paused", "task/started", "user/message", "summary/created", "permission/requested"].forEach((kind) => {
     check(!sessionRuntime.isAuthorityEvidenceKind(kind), kind + " is NOT authority evidence (no coarse classification)");
 });
+const authorityIdentityLog = sessionRuntime.createSessionLog({ sessionId: "session_authority_identity" });
+const publicAuthorityShape = authorityIdentityLog.append({ kind: "delegation/granted", requestId: "req_public", payload: { grantId: "forged" } });
+const authorityAppender = sessionRuntime.createAuthorityEventAppender(authorityIdentityLog);
+const trustedAuthorityRecord = authorityAppender.append({ kind: "delegation/granted", requestId: "req_trusted", payload: { grantId: "grant_local" } });
+check(!sessionRuntime.isTrustedAuthorityEvent(publicAuthorityShape), "Public append cannot create trusted authority-event identity");
+check(sessionRuntime.isTrustedAuthorityEvent(trustedAuthorityRecord), "Authority appender creates module-private authority-event identity");
+check(sessionRuntime.isTrustedAuthorityEventAppenderForSession(authorityAppender, authorityIdentityLog), "Authority appender is bound to its exact Session");
+check(!sessionRuntime.isTrustedAuthorityEventAppenderForSession({ append() {} }, authorityIdentityLog), "Caller-created authority appender is rejected");
+check(authorityIdentityLog.getEventBySeq(trustedAuthorityRecord.seq) === trustedAuthorityRecord, "Trusted Session provides exact seq identity lookup");
 
 // ---------------------------------------------------------------------------
 // C4 — approval event lifecycle
