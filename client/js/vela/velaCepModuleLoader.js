@@ -22,11 +22,19 @@
         { name: "VelaController", file: "velaController.js" },
         { name: "VelaProviderController", file: "velaProviderController.js" },
         { name: "VelaProviderProposalRouter", file: "velaProviderProposalRouter.js" },
+        { name: "VelaCapabilityCompiler", file: "velaCapabilityCompiler.js" },
         { name: "VelaAuthorizedPlanMaterializer", file: "velaAuthorizedPlanMaterializer.js" },
         { name: "VelaTaskRun", file: "velaTaskRun.js" },
         { name: "VelaPlanReviewProjection", file: "velaPlanReviewProjection.js" },
         { name: "VelaPlanController", file: "velaPlanController.js" },
         { name: "VelaReviewRuntimePort", file: "velaReviewRuntimePort.js" },
+        { name: "VelaDelegationGrantStore", file: "velaDelegationGrantStore.js" },
+        { name: "VelaDelegationPolicyEngine", file: "velaDelegationPolicyEngine.js" },
+        { name: "VelaAuthorityEvidenceResolver", file: "velaAuthorityEvidenceResolver.js" },
+        { name: "VelaDelegationAuthorityCoordinator", file: "velaDelegationAuthorityCoordinator.js" },
+        { name: "VelaAuthorizedPlanAuthorityProducer", file: "velaAuthorizedPlanAuthorityProducer.js" },
+        { name: "VelaAuthorityActivationGate", file: "velaAuthorityActivationGate.js" },
+        { name: "VelaAtomicActivationCoordinator", file: "velaAtomicActivationCoordinator.js" },
         { name: "VelaRuntime", file: "velaRuntime.js" }
     ]);
     var state = "idle";
@@ -147,7 +155,18 @@
     }
 
     function expectedModuleShape(name, value) {
+        var authorityRevisions = {
+            VelaCapabilityCompiler: "vela-capability-compiler-v1",
+            VelaDelegationGrantStore: "vela-delegation-grant-store-v1",
+            VelaDelegationPolicyEngine: "vela-delegation-policy-engine-v1",
+            VelaAuthorityEvidenceResolver: "vela-authority-evidence-resolver-v1",
+            VelaDelegationAuthorityCoordinator: "vela-delegation-authority-coordinator-v1",
+            VelaAuthorizedPlanAuthorityProducer: "vela-authorized-plan-authority-producer-v1",
+            VelaAuthorityActivationGate: "vela-authority-activation-gate-v1",
+            VelaAtomicActivationCoordinator: "vela-atomic-activation-coordinator-v1"
+        };
         if (!value || !Object.isFrozen(value)) { return false; }
+        if (authorityRevisions[name] && value.MODULE_REVISION !== authorityRevisions[name]) { return false; }
         if (name === "VelaProtocol") { return typeof value.createProtocol === "function" && typeof value.isTrustedProtocol === "function" && value.ERROR_CODES; }
         if (name === "VelaResponseParser") { return typeof value.createResponseParser === "function"; }
         if (name === "VelaCapabilityContracts") { return typeof value.getModelProjection === "function" && typeof value.getLocalProjection === "function" && typeof value.resolveRegisteredAction === "function" && typeof value.validateCapabilityParams === "function" && typeof value.createRegistry === "function"; }
@@ -166,11 +185,19 @@
         if (name === "VelaController") { return typeof value.createController === "function" && typeof value.isTrustedControllerForProtocol === "function"; }
         if (name === "VelaProviderController") { return typeof value.createProviderController === "function" && typeof value.isTrustedProviderControllerForProtocol === "function"; }
         if (name === "VelaProviderProposalRouter") { return typeof value.createProposalRouter === "function" && typeof value.isTrustedProposalRouterForProtocol === "function"; }
+        if (name === "VelaCapabilityCompiler") { return typeof value.createCapabilityCompiler === "function" && typeof value.isTrustedActionCandidate === "function"; }
         if (name === "VelaAuthorizedPlanMaterializer") { return typeof value.createAuthorizedPlanMaterializer === "function"; }
         if (name === "VelaTaskRun") { return typeof value.createTaskRun === "function"; }
         if (name === "VelaPlanReviewProjection") { return typeof value.createPlanReviewProjection === "function" && value.LABEL_KEYS; }
         if (name === "VelaPlanController") { return typeof value.createPlanController === "function"; }
         if (name === "VelaReviewRuntimePort") { return typeof value.createReviewRuntimePort === "function"; }
+        if (name === "VelaDelegationGrantStore") { return typeof value.createDelegationGrantStore === "function" && typeof value.isTrustedDelegationGrantStore === "function"; }
+        if (name === "VelaDelegationPolicyEngine") { return typeof value.createDelegationPolicyEngine === "function" && typeof value.isTrustedDelegationPolicyEngineFor === "function"; }
+        if (name === "VelaAuthorityEvidenceResolver") { return typeof value.createAuthorityEvidenceResolver === "function" && typeof value.isTrustedAuthorityEvidenceResolver === "function"; }
+        if (name === "VelaDelegationAuthorityCoordinator") { return typeof value.createDelegationAuthorityCoordinator === "function"; }
+        if (name === "VelaAuthorizedPlanAuthorityProducer") { return typeof value.createAuthorizedPlanAuthorityProducer === "function" && typeof value.isTrustedAuthorityProducerFor === "function"; }
+        if (name === "VelaAuthorityActivationGate") { return typeof value.createAuthorityActivationGate === "function" && typeof value.isTrustedAuthorityActivationGate === "function"; }
+        if (name === "VelaAtomicActivationCoordinator") { return typeof value.createAtomicActivationCoordinator === "function" && typeof value.isTrustedAtomicActivationCoordinator === "function"; }
         if (name === "VelaRuntime") { return typeof value.createRuntime === "function"; }
         return false;
     }
@@ -186,7 +213,7 @@
             if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.getModule !== "function" || typeof bootstrap.hasModule !== "function" || typeof bootstrap.registerModule !== "function") { return false; }
             if (!globalDescriptor || globalDescriptor.get || globalDescriptor.set || globalDescriptor.configurable !== false || globalDescriptor.writable !== false) { return false; }
             moduleValue = globalDescriptor.value;
-            if (["VelaAuthorizedPlanMaterializer", "VelaTaskRun", "VelaPlanReviewProjection", "VelaPlanController", "VelaReviewRuntimePort"].indexOf(name) !== -1) { return expectedModuleShape(name, moduleValue); }
+            if (["VelaCapabilityCompiler", "VelaAuthorizedPlanMaterializer", "VelaTaskRun", "VelaPlanReviewProjection", "VelaPlanController", "VelaReviewRuntimePort", "VelaDelegationGrantStore", "VelaDelegationPolicyEngine", "VelaAuthorityEvidenceResolver", "VelaDelegationAuthorityCoordinator", "VelaAuthorizedPlanAuthorityProducer", "VelaAuthorityActivationGate", "VelaAtomicActivationCoordinator"].indexOf(name) !== -1) { return expectedModuleShape(name, moduleValue); }
             return bootstrap.hasModule(name) === true && bootstrap.getModule(name) === moduleValue && expectedModuleShape(name, moduleValue);
         } catch (error) {
             return false;

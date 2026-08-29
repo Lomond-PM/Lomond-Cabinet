@@ -39,6 +39,7 @@ function harness(options) {
                 return options.runtimeFailure && ordinal === 1 ? Promise.reject({ code: "SCHEMA_VALIDATION_FAILED" }) : Promise.resolve({ ok: true });
             },
             getStatus() { return Object.freeze({ state: disposed ? "disposed" : "ready", initialized: !disposed, disposed, activationPolicy: policy }); },
+            getObservationReadPort() { return Object.freeze({ capture() {} }); },
             dispose() { if (disposed) return false; disposed = true; calls.runtimeDispose += 1; return true; },
             sendProviderMessage() {}, checkProviderReadiness() {}, cancelProviderRequest() {}, getProviderSurfaceState() { return Object.freeze({ state: "idle" }); },
             reviewProviderProposal() {}, approveActiveCandidate() {}, rejectActiveCandidate() {}, getConfirmationSurfaceState() { return Object.freeze({ state: "idle" }); }
@@ -87,6 +88,7 @@ function harness(options) {
         configureVelaExperimentalSession() {},
         refreshVelaExperimentalSettings() {},
         tr(key) { return key; },
+        resetActiveCompositionDiagnostics() {},
         invokeVelaHost() {}
     };
     context.window = context;
@@ -102,6 +104,8 @@ function harness(options) {
             let disposed = false;
             const projection = { subscribe() { return { unsubscribe() {} }; }, getSnapshot() { return {}; } };
             return {
+                getSessionRuntime() { return Object.freeze({ exactSessionWitness: true }); },
+                attachObservationReadPort() { return true; },
                 activate() { calls.agentOwnerActivate += 1; return true; },
                 dispose() { if (disposed) return false; disposed = true; calls.agentOwnerDispose += 1; return true; },
                 isDisposed() { return disposed; },
@@ -135,9 +139,9 @@ async function run() {
 
     test = harness({ agentOwnerFailure: true });
     test.context.__testHooks.initializeRuntime(); await flush();
-    check(test.context.__testHooks.runtime() === test.runtime && test.runtime.getStatus().state === "ready", "Agent owner failure preserves the committed existing VelaRuntime.");
-    check(test.calls.surfaceCreate === 1 && test.calls.surfaceMount === 1 && test.calls.surfaceOptions.agentProjection === null, "Agent owner failure preserves Surface behavior in optional Projection mode.");
-    check(test.context.__testHooks.runtimeError() === null && test.context.__testHooks.agentError() === "AGENT_OWNER_FAILED", "Agent owner failure uses separate diagnostics without polluting Runtime status.");
+    check(test.context.__testHooks.runtime() === null, "Agent owner failure prevents Runtime composition without an exact Session.");
+    check(test.calls.surfaceCreate === 0 && test.calls.surfaceMount === 0, "Agent owner failure exposes no partially composed production Surface.");
+    check(test.context.__testHooks.runtimeError() === "AGENT_RUNTIME_UNAVAILABLE" && test.context.__testHooks.agentError() === "AGENT_OWNER_FAILED", "Agent owner failure remains fail-closed in both bounded diagnostics channels.");
 
     test = harness({ missingConfirmationView: true });
     test.context.__testHooks.initializeRuntime(); await flush();

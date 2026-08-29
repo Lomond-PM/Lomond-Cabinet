@@ -195,6 +195,25 @@ expectCode(() => {
     log.append(null);
 }, sessionRuntime.ERROR_CODES.SESSION_EVENT_INVALID, "non-object event is rejected");
 
+// post-commit authority publishing
+const listenerErrors = [];
+const publishLog = sessionRuntime.createSessionLog({ sessionId: "session_publish", onListenerError(error, envelope) { listenerErrors.push({ error, envelope }); } });
+const publishAppender = sessionRuntime.createAuthorityEventAppender(publishLog);
+const observedAuthority = [];
+publishLog.subscribe(() => { throw new Error("listener failure"); });
+publishLog.subscribe((event) => { observedAuthority.push(event); });
+const committedAuthorityEvent = publishAppender.append({ kind: "delegation/granted", requestId: "request_publish", payload: { grantId: "grant_publish" } });
+check(observedAuthority.length === 0 && publishLog.getEvents()[0] === committedAuthorityEvent, "trusted authority append commits before subscriber publication");
+check(publishAppender.publishCommitted(committedAuthorityEvent) === true, "exact authority appender publishes its committed event");
+check(observedAuthority.length === 1 && observedAuthority[0] === committedAuthorityEvent && listenerErrors.length === 1 && listenerErrors[0].envelope.phase === "authority-post-commit", "listener failure is contained and later listeners receive the exact event");
+check(publishLog.getEvents().length === 1 && publishLog.getEvents()[0] === committedAuthorityEvent, "post-commit listener failure cannot roll back Session history");
+expectCode(() => publishAppender.publishCommitted(committedAuthorityEvent), sessionRuntime.ERROR_CODES.SESSION_AUTHORITY_EVENT_ALREADY_PUBLISHED, "double publication is rejected");
+expectCode(() => publishAppender.publishCommitted(Object.assign({}, committedAuthorityEvent)), sessionRuntime.ERROR_CODES.SESSION_AUTHORITY_EVENT_UNPUBLISHABLE, "copied authority event is rejected");
+const wrongPublishLog = sessionRuntime.createSessionLog({ sessionId: "session_publish_wrong" });
+const wrongPublishAppender = sessionRuntime.createAuthorityEventAppender(wrongPublishLog);
+expectCode(() => wrongPublishAppender.publishCommitted(committedAuthorityEvent), sessionRuntime.ERROR_CODES.SESSION_AUTHORITY_EVENT_UNPUBLISHABLE, "wrong Session appender rejects a trusted event");
+expectCode(() => publishAppender.publishCommitted(Object.freeze({ kind: "delegation/granted", seq: 2, requestId: null, payload: Object.freeze({}) })), sessionRuntime.ERROR_CODES.SESSION_AUTHORITY_EVENT_UNPUBLISHABLE, "raw unappended event is rejected");
+
 // close semantics
 log.close();
 check(log.isClosed() === true, "close marks session closed");

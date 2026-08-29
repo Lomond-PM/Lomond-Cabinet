@@ -47,7 +47,7 @@
         dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaResponseParser"), bootstrap.getModule("VelaCapabilityContracts"), bootstrap.getModule("VelaProviderAdapter"), bootstrap.getModule("VelaLocalTransport"), bootstrap.getModule("VelaContext"), bootstrap.getModule("VelaValidator"), bootstrap.getModule("VelaPlan"), bootstrap.getModule("VelaExecutionGuard"), bootstrap.getModule("VelaContextBridge"), bootstrap.getModule("VelaExecutionPreflight"), bootstrap.getModule("VelaExecutionAdapter"), bootstrap.getModule("VelaController"), bootstrap.getModule("VelaProviderController"), bootstrap.getModule("VelaProviderProposalRouter"), trustedBrowserModule(target, "VelaPlanningContracts"), trustedBrowserModule(target, "VelaAuthorizedPlanMaterializer"), trustedBrowserModule(target, "VelaTaskRun"), trustedBrowserModule(target, "VelaPlanReviewProjection"), trustedBrowserModule(target, "VelaPlanController"), trustedBrowserModule(target, "VelaReviewRuntimePort"));
         var activationPolicy = trustedBrowserActivationPolicy(target);
         if (!activationPolicy) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
-        exported = Object.freeze(create(dependencies.protocol, dependencies.parser, dependencies.capabilityContracts, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter, dependencies.planningContracts, dependencies.materializer, dependencies.taskRun, dependencies.planReviewProjection, dependencies.planController, dependencies.reviewRuntimePort, activationPolicy));
+        exported = Object.freeze(create(dependencies.protocol, dependencies.parser, dependencies.capabilityContracts, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter, dependencies.planningContracts, dependencies.materializer, dependencies.taskRun, dependencies.planReviewProjection, dependencies.planController, dependencies.reviewRuntimePort, activationPolicy, trustedBrowserModule(target, "VelaSessionRuntime"), trustedBrowserModule(target, "VelaCapabilityCompiler"), trustedBrowserModule(target, "VelaDelegationGrantStore"), trustedBrowserModule(target, "VelaDelegationPolicyEngine"), trustedBrowserModule(target, "VelaAuthorityEvidenceResolver"), trustedBrowserModule(target, "VelaDelegationAuthorityCoordinator"), trustedBrowserModule(target, "VelaAuthorizedPlanAuthorityProducer"), trustedBrowserModule(target, "VelaAuthorityActivationGate"), trustedBrowserModule(target, "VelaAtomicActivationCoordinator")));
         bootstrap.registerModule(name, exported);
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
@@ -55,9 +55,9 @@
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
         var dependencies = assertDependencies(require("./velaProtocol"), require("./velaResponseParser"), require("./velaCapabilityContracts"), require("./velaProviderAdapter"), require("./velaLocalTransport"), require("./velaContext"), require("./velaValidator"), require("./velaPlan"), require("./velaExecutionGuard"), require("./velaContextBridge"), require("./velaExecutionPreflight"), require("./velaExecutionAdapter"), require("./velaController"), require("./velaProviderController"), require("./velaProviderProposalRouter"), require("./velaPlanningContracts"), require("./velaAuthorizedPlanMaterializer"), require("./velaTaskRun"), require("./velaPlanReviewProjection"), require("./velaPlanController"), require("./velaReviewRuntimePort"));
-        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.parser, dependencies.capabilityContracts, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter, dependencies.planningContracts, dependencies.materializer, dependencies.taskRun, dependencies.planReviewProjection, dependencies.planController, dependencies.reviewRuntimePort, require("./velaActivationPolicy").VelaActivationPolicy));
+        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.parser, dependencies.capabilityContracts, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter, dependencies.planningContracts, dependencies.materializer, dependencies.taskRun, dependencies.planReviewProjection, dependencies.planController, dependencies.reviewRuntimePort, require("./velaActivationPolicy").VelaActivationPolicy, require("./velaSessionRuntime"), require("./velaCapabilityCompiler"), require("./velaDelegationGrantStore"), require("./velaDelegationPolicyEngine"), require("./velaAuthorityEvidenceResolver"), require("./velaDelegationAuthorityCoordinator"), require("./velaAuthorizedPlanAuthorityProducer"), require("./velaAuthorityActivationGate"), require("./velaAtomicActivationCoordinator")));
     }
-}(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule, capabilityContracts, providerAdapterModule, localTransportModule, contextModule, validatorModule, planModule, guardModule, bridgeModule, preflightModule, executionAdapterModule, controllerModule, providerControllerModule, proposalRouterModule, planningContracts, materializerModule, taskRunModule, planReviewProjectionModule, planControllerModule, reviewRuntimePortModule, activationPolicyModule) {
+}(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule, capabilityContracts, providerAdapterModule, localTransportModule, contextModule, validatorModule, planModule, guardModule, bridgeModule, preflightModule, executionAdapterModule, controllerModule, providerControllerModule, proposalRouterModule, planningContracts, materializerModule, taskRunModule, planReviewProjectionModule, planControllerModule, reviewRuntimePortModule, activationPolicyModule, sessionRuntimeModule, compilerModule, grantStoreModule, policyEngineModule, evidenceResolverModule, authorityCoordinatorModule, authorityProducerModule, activationGateModule, atomicCoordinatorModule) {
     "use strict";
 
     var MODULE_REVISION = "vela-runtime-v1";
@@ -186,6 +186,7 @@
     function createRuntime(options) {
         var invokeHost = options && ownData(options, "invokeHost");
         var environment = options && ownData(options, "environment");
+        var exactAgentSession = options && ownData(options, "exactAgentSession");
         var activationPolicy = activationPolicyModule && typeof activationPolicyModule.getPolicy === "function" ? activationPolicyModule.getPolicy() : null;
         var root = typeof self !== "undefined" ? self : (typeof globalThis !== "undefined" ? globalThis : null);
         var state = "new";
@@ -214,7 +215,52 @@
         var protocolClock = null;
         var taskRunSerial = 0;
         var reviewTokenSerial = 0;
+        var authorityIdSerial = 0;
+        var authorityPlane = null;
         var runtime = environment || {};
+        function authorityProjection() {
+            return Object.freeze({ state: "inactive", active: false, remainingActions: null, capabilityId: null, expiresAt: null, taskId: null, errorCode: null });
+        }
+        function authorityDiagnostics() {
+            if (!(root && root.AETOOLBOX_DEBUG_REGISTRY === true)) { return null; }
+            return Object.freeze({ lifecycleState: authorityPlane ? (disposed ? "disposed" : suspended ? "suspended" : initialized ? "ready" : "created") : "unavailable", canonicalComposition: Boolean(authorityPlane), sessionId: authorityPlane ? exactAgentSession.getSessionId() : null, projection: authorityProjection(), moduleRevisions: authorityPlane ? Object.freeze({ compiler: compilerModule.MODULE_REVISION, grantStore: grantStoreModule.MODULE_REVISION, policyEngine: policyEngineModule.MODULE_REVISION, evidenceResolver: evidenceResolverModule.MODULE_REVISION, coordinator: authorityCoordinatorModule.MODULE_REVISION, producer: authorityProducerModule.MODULE_REVISION, activationGate: activationGateModule.MODULE_REVISION, atomicCoordinator: atomicCoordinatorModule.MODULE_REVISION }) : null });
+        }
+        function makeAuthorityId(kind) { authorityIdSerial += 1; return kind + "_" + authorityIdSerial; }
+        function disposeAuthorityPlane() {
+            if (!authorityPlane) { return false; }
+            try { authorityPlane.grantStore.dispose(); } catch (ignored) {}
+            authorityPlane = null;
+            return true;
+        }
+        function composeAuthorityPlane(authorityNow) {
+            var sessionId;
+            var grantStore;
+            var resolver;
+            var policyEngine;
+            var coordinator;
+            var producer;
+            var gate;
+            var delegatedMaterializer;
+            var atomicCoordinator;
+            var authorityAppender;
+            if (!sessionRuntimeModule || !sessionRuntimeModule.isTrustedSessionLog(exactAgentSession) || exactAgentSession.isClosed() || !compilerModule || !grantStoreModule || !policyEngineModule || !evidenceResolverModule || !authorityCoordinatorModule || !authorityProducerModule || !activationGateModule || !atomicCoordinatorModule) { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
+            sessionId = exactAgentSession.getSessionId();
+            authorityAppender = sessionRuntimeModule.createAuthorityEventAppender(exactAgentSession);
+            grantStore = grantStoreModule.createDelegationGrantStore({ now: authorityNow, idFactory: makeAuthorityId });
+            try {
+                resolver = evidenceResolverModule.createAuthorityEvidenceResolver({ session: exactAgentSession });
+                policyEngine = policyEngineModule.createDelegationPolicyEngine({ grantStore: grantStore, resolveCapability: capabilityContracts.getLocalProjection, sessionId: sessionId });
+                coordinator = authorityCoordinatorModule.createDelegationAuthorityCoordinator({ grantStore: grantStore, session: exactAgentSession, authorityAppender: authorityAppender, evidenceResolver: resolver, issuerId: "vela-runtime" });
+                producer = authorityProducerModule.createAuthorizedPlanAuthorityProducer({ policyEngine: policyEngine, grantStore: grantStore, evidenceResolver: resolver, makePlanId: makeAuthorityId });
+                gate = activationGateModule.createAuthorityActivationGate({ producer: producer, grantStore: grantStore, sessionId: sessionId, makeActivationId: makeAuthorityId });
+                delegatedMaterializer = materializerModule.createAuthorizedPlanMaterializer({ protocol: protocol, planningContracts: planningContracts, capabilityContracts: capabilityContracts, preflight: preflight, authorityProducerModule: authorityProducerModule, authorityProducer: producer, authorityGrantStore: grantStore, authoritySessionId: sessionId });
+                atomicCoordinator = atomicCoordinatorModule.createAtomicActivationCoordinator({ protocol: protocol, activationGate: gate, delegatedMaterializer: delegatedMaterializer, preflight: preflight, session: exactAgentSession, authorityAppender: authorityAppender, evidenceResolver: resolver, taskRunIdFactory: makeAuthorityId, now: protocolClock.now });
+                authorityPlane = { grantStore: grantStore, policyEngine: policyEngine, resolver: resolver, coordinator: coordinator, producer: producer, gate: gate, atomicCoordinator: atomicCoordinator, authorityAppender: authorityAppender };
+            } catch (error) {
+                try { grantStore.dispose(); } catch (ignored) {}
+                throw error;
+            }
+        }
         function safeStatus() {
             var bridgeState = bridge ? bridge.getState() : null;
             return Object.freeze({ state: state, initialized: initialized, disposed: disposed, suspended: suspended, moduleRevision: MODULE_REVISION, hostAdapterRevision: initialized ? HOST_ADAPTER_REVISION : null, bridgeState: Object.freeze({ state: bridgeState ? bridgeState.state : null }), lastErrorCode: lastErrorCode, activationPolicy: activationPolicy });
@@ -284,6 +330,7 @@
             var localTransport = localTransportModule.createLocalTransport({ protocol: protocol, fetch: fetchFn, TextDecoder: TextDecoderCtor });
             providerController = providerControllerModule.createProviderController({ protocol: protocol, contextBridge: bridge, transport: localTransport, runtime: { setTimeout: setTimer, clearTimeout: clearTimer, createAbortController: function () { var nativeController = new root.AbortController(); return { signal: nativeController.signal, abort: function () { nativeController.abort(); } }; }, parseUrl: function (value) { var parsed = new root.URL(value); return { protocol: parsed.protocol, hostname: parsed.hostname, port: parsed.port, pathname: parsed.pathname, username: parsed.username, password: parsed.password, search: parsed.search, hash: parsed.hash, href: parsed.href }; }, nowMs: wallClock } });
             providerProposalRouter = proposalRouterModule.createProposalRouter({ protocol: protocol, providerController: providerController, controller: controller });
+            composeAuthorityPlane(wallClock);
         }
         function initialize() {
             var capturedEpoch;
@@ -313,6 +360,7 @@
             if (providerController) { providerController.invalidate("idle"); }
             if (reviewRuntimePort) { reviewRuntimePort.invalidateAll(); }
             if (planController) { planController.invalidate("suspend"); }
+            if (authorityPlane) { authorityPlane.grantStore.suspend(); }
             if (bridge) { bridge.suspend(); }
             suspended = true;
             state = "suspended";
@@ -331,6 +379,7 @@
             if (providerController) { providerController.invalidate("idle"); }
             if (reviewRuntimePort) { reviewRuntimePort.invalidateAll(); }
             if (planController) { planController.invalidate("session-reset"); }
+            if (authorityPlane) { authorityPlane.grantStore.resetSession(); }
             bridge.resetSession();
             try { protocolClock.reset(); }
             catch (error) { lastErrorCode = stableErrorCode(error); state = "failed"; return false; }
@@ -340,6 +389,7 @@
             if (disposed) { return false; }
             epoch += 1;
             if (bridge) { try { bridge.suspend(); } catch (ignored) {} }
+            disposeAuthorityPlane();
             if (controller) { try { controller.invalidate("idle"); } catch (ignoredController) {} }
             if (providerController) { try { providerController.invalidate("idle"); } catch (ignoredProvider) {} }
             if (reviewRuntimePort) { try { reviewRuntimePort.invalidateAll(); } catch (ignoredReviews) {} }
@@ -404,7 +454,7 @@
             var proposedValue = hasConfirmation && source && typeof source.proposedValue === "number" && isFinite(source.proposedValue) && source.proposedValue >= 0 && source.proposedValue <= 100 ? source.proposedValue : null;
             return Object.freeze({ state: state, beforeValue: beforeValue, proposedValue: proposedValue, errorCode: source && typeof source.errorCode === "string" ? source.errorCode : null, moduleRevision: "vela-confirmation-surface-v1" });
         }
-        return Object.freeze({ initialize: initialize, getStatus: safeStatus, getObservationReadPort: function () { return initialized && !disposed ? observationReadPort : null; }, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, approveActiveCandidate: approveActiveCandidate, rejectActiveCandidate: rejectActiveCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, checkProviderReadiness: checkProviderReadiness, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderDiagnostics: getProviderDiagnostics, getProviderSurfaceState: getProviderSurfaceState, getConfirmationSurfaceState: getConfirmationSurfaceState });
+        return Object.freeze({ initialize: initialize, getStatus: safeStatus, getAuthorityProjection: authorityProjection, getAuthorityDiagnostics: authorityDiagnostics, getObservationReadPort: function () { return initialized && !disposed ? observationReadPort : null; }, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, approveActiveCandidate: approveActiveCandidate, rejectActiveCandidate: rejectActiveCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, checkProviderReadiness: checkProviderReadiness, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderDiagnostics: getProviderDiagnostics, getProviderSurfaceState: getProviderSurfaceState, getConfirmationSurfaceState: getConfirmationSurfaceState });
     }
     return Object.freeze({ createRuntime: createRuntime, deriveRegisteredActionParamsSchema: deriveRegisteredActionParamsSchema, validateRegisteredActionMappings: validateRegisteredActionMappings });
 }));

@@ -25,15 +25,20 @@
     var defaultSessionSequence = 0;
     var trustedSessionLogs = new WeakSet();
     var authorityAppendBySession = new WeakMap();
+    var authorityPublishBySession = new WeakMap();
     var trustedAuthorityAppenders = new WeakMap();
     var trustedAuthorityEvents = new WeakSet();
+    var authorityEventSessions = new WeakMap();
+    var publishedAuthorityEvents = new WeakSet();
 
     // Stable error codes (do not localize; do not change).
     var ERROR_CODES = Object.freeze({
         SESSION_EVENT_INVALID: "SESSION_EVENT_INVALID",
         SESSION_EVENT_FROZEN: "SESSION_EVENT_FROZEN",
         SESSION_SEQ_GAP: "SESSION_SEQ_GAP",
-        SESSION_CLOSED: "SESSION_CLOSED"
+        SESSION_CLOSED: "SESSION_CLOSED",
+        SESSION_AUTHORITY_EVENT_UNPUBLISHABLE: "SESSION_AUTHORITY_EVENT_UNPUBLISHABLE",
+        SESSION_AUTHORITY_EVENT_ALREADY_PUBLISHED: "SESSION_AUTHORITY_EVENT_ALREADY_PUBLISHED"
     });
 
     function fail(code) {
@@ -207,6 +212,7 @@
         var lastSeq = 0;
         var closed = false;
         var subscribers = [];
+        var onListenerError = typeof settings.onListenerError === "function" ? settings.onListenerError : function () {};
 
         function assertOpen() {
             if (closed) { fail(ERROR_CODES.SESSION_CLOSED); }
@@ -237,7 +243,10 @@
             if (event.seq !== lastSeq + 1) { fail(ERROR_CODES.SESSION_SEQ_GAP); }
             lastSeq = event.seq;
             events.push(deepFreeze(event));
-            if (authorityOwned) { trustedAuthorityEvents.add(events[events.length - 1]); }
+            if (authorityOwned) {
+                trustedAuthorityEvents.add(events[events.length - 1]);
+                authorityEventSessions.set(events[events.length - 1], sessionLog);
+            }
             // Authority transitions use a narrow append-and-return boundary.
             // Publishing them to general subscribers is deferred until a future
             // Runtime integration can do so after its authority transaction has
@@ -246,6 +255,18 @@
                 for (index = 0; index < subscribers.length; index += 1) { subscribers[index](events[events.length - 1]); }
             }
             return events[events.length - 1];
+        }
+        function publishAuthorityInternal(event) {
+            var index;
+            assertOpen();
+            if (!trustedAuthorityEvents.has(event) || authorityEventSessions.get(event) !== sessionLog || sessionLog.getEventBySeq(event.seq) !== event) { fail(ERROR_CODES.SESSION_AUTHORITY_EVENT_UNPUBLISHABLE); }
+            if (publishedAuthorityEvents.has(event)) { fail(ERROR_CODES.SESSION_AUTHORITY_EVENT_ALREADY_PUBLISHED); }
+            publishedAuthorityEvents.add(event);
+            for (index = 0; index < subscribers.length; index += 1) {
+                try { subscribers[index](event); }
+                catch (error) { try { onListenerError(error, Object.freeze({ phase: "authority-post-commit", event: event })); } catch (ignored) {} }
+            }
+            return true;
         }
 
         var sessionLog = Object.freeze({
@@ -289,15 +310,21 @@
         });
         trustedSessionLogs.add(sessionLog);
         authorityAppendBySession.set(sessionLog, function (input) { return appendInternal(input, true); });
+        authorityPublishBySession.set(sessionLog, publishAuthorityInternal);
         return sessionLog;
     }
 
     function createAuthorityEventAppender(sessionLog) {
         var appendAuthority;
+        var publishAuthority;
         var appender;
         if (!trustedSessionLogs.has(sessionLog) || !authorityAppendBySession.has(sessionLog)) { fail(ERROR_CODES.SESSION_EVENT_INVALID); }
         appendAuthority = authorityAppendBySession.get(sessionLog);
-        appender = Object.freeze({ append: function (input) { return appendAuthority(input); } });
+        publishAuthority = authorityPublishBySession.get(sessionLog);
+        appender = Object.freeze({
+            append: function (input) { return appendAuthority(input); },
+            publishCommitted: function (event) { return publishAuthority(event); }
+        });
         trustedAuthorityAppenders.set(appender, sessionLog);
         return appender;
     }
