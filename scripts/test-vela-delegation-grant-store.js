@@ -13,7 +13,7 @@ let ids = 0;
 function check(value, message) { assert.ok(value, message); assertions += 1; }
 function expectCode(fn, code, message) { assert.throws(fn, error => error && error.code === code, message); assertions += 1; }
 function store() { return moduleApi.createDelegationGrantStore({ now() { return clock; }, idFactory() { ids += 1; return "grant_local_" + ids; } }); }
-function spec(overrides) { return Object.assign({ capabilityFamily: "mutation", capabilityId: "set-opacity-v1", targetScope: { type: "selected-layer", property: "opacity" }, riskCeiling: "write", taskId: "task_1", expiresAt: 200, maxActions: 1, provenance: { source: "local-user", requestId: "request_1", issuedAt: 100 } }, overrides || {}); }
+function spec(overrides) { return Object.assign({ capabilityFamily: "mutation", capabilityId: "set-opacity-v1", operationKind: "mutate", targetScope: { type: "selected-layer", property: "opacity" }, riskCeiling: "write", taskId: "task_1", expiresAt: 200, maxActions: 1, provenance: { source: "local-user", requestId: "request_1", issuedAt: 100 } }, overrides || {}); }
 
 function browserSmoke() {
     const planningSource = fs.readFileSync(require.resolve("../client/js/vela/velaPlanningContracts"), "utf8");
@@ -30,6 +30,8 @@ function run() {
     browserSmoke();
     clock = 100;
     const empty = store();
+    check(moduleApi.isTrustedDelegationGrantStore(empty), "Factory output carries module-private Store identity.");
+    check(!moduleApi.isTrustedDelegationGrantStore({ getAuthorityView() { return {}; } }), "A caller-created Store facade is not trusted.");
     check(empty.listActive().length === 0, "A new store is empty.");
 
     const issued = empty.issue(spec());
@@ -38,6 +40,8 @@ function run() {
     check(Object.isFrozen(issued) && Object.isFrozen(issued.grant) && Object.isFrozen(issued.grant.targetScope), "Public snapshots are deeply immutable.");
     assert.throws(() => { issued.remainingActions = 99; }); assertions += 1;
     check(empty.lookup(issued.grant.grantId).remainingActions === 1, "Caller mutation cannot affect internal state.");
+    const authorityView = empty.getAuthorityView();
+    check(Object.isFrozen(authorityView) && Object.isFrozen(authorityView.grants) && authorityView.grants[0].grant.grantId === issued.grant.grantId, "Read-only authority view is immutable and Store-derived.");
     expectCode(() => empty.issue(spec({ grantId: "forged" })), C.GRANT_STORE_INVALID_SPEC, "Caller grantId is rejected.");
     expectCode(() => empty.issue(spec({ trusted: true })), C.GRANT_STORE_INVALID_SPEC, "Caller trusted metadata is rejected.");
     expectCode(() => empty.issue(spec({ issuedBy: "model" })), C.GRANT_STORE_INVALID_SPEC, "Caller issuedBy metadata is rejected.");

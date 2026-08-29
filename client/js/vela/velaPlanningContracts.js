@@ -590,7 +590,7 @@
         if (input.provenance !== undefined) {
             provenance = input.provenance;
             if (!isPlainObject(provenance)) { fail(ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "PolicyDecision.provenance must be an object.", { stage: "policy-decision" }); }
-            assertNoUnknownKeys(provenance, ["rule", "capabilityId", "requestedOperation", "issuedBy"], "PolicyDecision.provenance", ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "policy-decision");
+            assertNoUnknownKeys(provenance, ["rule", "capabilityId", "requestedOperation", "issuedBy", "grantId", "candidateId", "authoritySource"], "PolicyDecision.provenance", ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "policy-decision");
             assertNoForbiddenKeys(provenance, "PolicyDecision.provenance", {}, ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "policy-decision");
             decision.provenance = snapshot(provenance, "PolicyDecision.provenance");
         } else {
@@ -635,13 +635,17 @@
     // DelegationGrant — typed contract only. It NEVER grants mutation authority.
     // -------------------------------------------------------------------------
     function createDelegationGrant(input) {
-        var grant = { contractType: "delegation-grant", grantId: null, capabilityFamily: null, targetScope: null, riskCeiling: null, taskId: null, expiresAt: null, maxActions: null, provenance: null };
+        var grant = { contractType: "delegation-grant", grantId: null, capabilityFamily: null, operationKind: null, targetScope: null, riskCeiling: null, taskId: null, expiresAt: null, maxActions: null, provenance: null };
         if (!isPlainObject(input)) { fail(ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "DelegationGrant input must be an object.", { stage: "delegation-grant" }); }
-        assertNoUnknownKeys(input, ["grantId", "capabilityFamily", "capabilityId", "targetScope", "riskCeiling", "taskId", "expiresAt", "maxActions", "provenance"], "DelegationGrant", ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "delegation-grant");
+        assertNoUnknownKeys(input, ["grantId", "capabilityFamily", "capabilityId", "operationKind", "targetScope", "riskCeiling", "taskId", "expiresAt", "maxActions", "provenance"], "DelegationGrant", ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "delegation-grant");
         assertNoForbiddenKeys(input, "DelegationGrant", {}, ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "delegation-grant");
         grant.grantId = assertLocalId(input.grantId, "DelegationGrant.grantId", "delegation-grant");
         grant.capabilityFamily = assertNonEmptyString(input.capabilityFamily, "DelegationGrant.capabilityFamily", "delegation-grant");
         if (input.capabilityId !== undefined) { grant.capabilityId = assertCapabilityId(input.capabilityId, "DelegationGrant.capabilityId", "delegation-grant"); }
+        if (input.operationKind !== undefined) {
+            if (!contains(OPERATION_KINDS, input.operationKind)) { fail(ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "DelegationGrant.operationKind is not a closed operation kind.", { stage: "delegation-grant" }); }
+            grant.operationKind = input.operationKind;
+        }
         if (input.targetScope !== undefined) { grant.targetScope = normalizeTargetScope(input.targetScope, "delegation-grant"); }
         if (!contains(GRANT_RISK_CEILINGS, input.riskCeiling)) { fail(ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "DelegationGrant.riskCeiling is not a closed grant ceiling.", { stage: "delegation-grant" }); }
         grant.riskCeiling = input.riskCeiling;

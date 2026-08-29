@@ -43,6 +43,8 @@ function mutationIntent(overrides) {
 // ===========================================================================
 const readCandidate = compiler.compile(planning.createCapabilityIntent(readIntent()));
 check(planning.isActionCandidate(readCandidate), "read compile output is an ActionCandidate");
+check(compilerModule.isTrustedActionCandidate(readCandidate), "Compiler output carries module-private trusted identity");
+check(!compilerModule.isTrustedActionCandidate(planning.snapshotActionCandidate(readCandidate)), "A structurally identical snapshot cannot forge Compiler identity");
 check(!planning.isAuthorizedPlan(readCandidate), "compile does not create an AuthorizedPlan");
 check(readCandidate.operationKind === "read", "candidate operationKind is read");
 check(readCandidate.risk === "read", "candidate risk is read");
