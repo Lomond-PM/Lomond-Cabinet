@@ -21,12 +21,12 @@ check(authorityFiles.every((file) => index.indexOf(file) === -1), "Authority mod
 check(loader.indexOf("velaAtomicActivationCoordinator.js") < loader.indexOf("velaRuntime.js"), "Runtime is loaded after the complete Authority graph");
 check(main.indexOf("exactAgentSession: exactAgentSession") !== -1 && main.indexOf("owner = initializeVelaAgentRuntimeOwner();") !== -1, "main passes only the exact owner Session into Runtime composition");
 check(!/DelegationGrantStore|DelegationPolicyEngine|AuthorityEvidenceResolver|DelegationAuthorityCoordinator|AuthorizedPlanAuthorityProducer|AuthorityActivationGate|AtomicActivationCoordinator/.test(main), "main owns no raw Authority Plane component");
-check(!/issueGrant|revokeGrant|grantNextOpacity|produceAuthorized|reserveActivation|activateDelegated|runDelegated/.test(main + surface + router), "production orchestration, Surface, and Provider router expose no grant or delegated activation path");
+check(!/issueGrant|revokeGrant|produceAuthorized|reserveActivation|activateDelegated|runDelegated|grantSpec/.test(main + surface + router), "production orchestration and Surface expose no generic grant spec or raw delegated activation path");
 check(router.indexOf("DelegationPolicyEngine") === -1 && router.indexOf("policyEngine") === -1, "ProviderProposalRouter remains disconnected from DelegationPolicyEngine");
 check(runtime.indexOf("providerProposalRouter = proposalRouterModule.createProposalRouter") !== -1 && runtime.indexOf("providerProposalRouter.review()") !== -1, "Provider proposals retain the existing review router");
-check(runtime.indexOf("getAuthorityProjection") !== -1 && runtime.indexOf("getAuthorityDiagnostics") !== -1, "Runtime exposes only bounded Authority observation seams");
+check(runtime.indexOf("grantNextOpacityMutation") !== -1 && runtime.indexOf("revokeOpacityDelegation") !== -1 && runtime.indexOf("getAuthorityProjection") !== -1 && runtime.indexOf("getAuthorityDiagnostics") !== -1, "Runtime exposes only the fixed pilot operations plus bounded Authority observation seams");
 check(!/getGrantStore|getPolicyEngine|getEvidenceResolver|getAuthorityCoordinator|getAuthorityProducer|getActivationGate|getAtomicCoordinator/.test(runtime), "Runtime facade exposes no raw Authority dependency getter");
-check(!/consent|delegation grant|grant delegation/i.test(surface), "Surface contains no H2 consent action");
-check(read("VERSION").trim() === "0.3.5", "H1 does not change VERSION");
+check(surface.indexOf("vela.surfaceGrantOpacityConsent") !== -1 && surface.indexOf("vela.surfaceRevokeOpacityConsent") !== -1, "Surface contains the explicit one-shot consent and revoke action");
+check(read("VERSION").trim() === "0.3.5", "H2 does not change VERSION");
 
 console.log("test-vela-authority-production-composition: " + assertions + " assertions passed.");

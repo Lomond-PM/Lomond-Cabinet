@@ -153,6 +153,7 @@ const realDefinitionFiles = fs.readdirSync(path.join(ROOT, "host", "tools"))
     const h = makeHarness();
     const result = h.load([]);
     check(result.ok === false && result.tools.length === 0 && result.loadErrors[0] === "REGISTRY_EMPTY_CATALOG: registry", "empty definitions fail with a stable diagnostic");
+    check(result.registryRevision === 0 && result.lastAttemptSucceeded === false, "cold-start failure envelope identifies the failed Host transaction");
 }
 
 // Last-known-good references and actions survive a failed staging attempt.

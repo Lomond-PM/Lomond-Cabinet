@@ -110,8 +110,11 @@ function complete(h, registry = catalog(), evalResult = "") {
 
 // Registry validation and degraded publication.
 {
-    const h = harness(); h.controller.start(); h.calls[0].callback(""); h.calls[1].callback("AEToolbox host loaded"); h.calls[2].callback('{"ok":false}');
-    check(h.controller.getSnapshot().lastErrorCode === "REGISTRY_REQUEST_FAILED" && h.catalogs.length === 0, "registry request failure does not publish");
+    const h = harness(); h.controller.start(); h.calls[0].callback(""); h.calls[1].callback("AEToolbox host loaded"); h.calls[2].callback('{"ok":false,"tools":[],"loadErrors":["REGISTRY_EMPTY_CATALOG: registry"],"registryRevision":0,"lastAttemptSucceeded":false}');
+    const state = h.controller.getSnapshot();
+    check(state.state === "retrying" && state.lastErrorCode === "REGISTRY_REQUEST_FAILED" && h.catalogs.length === 0, "retryable registry request failure remains non-terminal and does not publish");
+    check(state.generation === 2 && state.attempt === 1 && state.registryRequestCount === 1, "generation 2 identifies invalidation of the first generation 1 request");
+    check(state.lastErrorDetails.loadErrors[0] === "REGISTRY_EMPTY_CATALOG: registry" && state.lastErrorDetails.registryRevision === 0 && !state.lastErrorDetails.lastAttemptSucceeded, "Host registry failure diagnostics survive normalization");
 }
 {
     const h = harness(); h.controller.start(); h.calls[0].callback(""); h.calls[1].callback("AEToolbox host loaded"); h.calls[2].callback(catalog([]));
@@ -157,6 +160,32 @@ check(Bootstrap.validateCatalog('{"ok":true,"tools":{},"loadErrors":[]}').code =
     check(h.controller.getSnapshot().attempt === 2 && h.calls.length === 2, "first failure schedules a new-generation automatic retry");
     complete(h);
     check(h.controller.getSnapshot().state === "ready", "automatic retry can recover");
+}
+
+// Realistic startup transaction: stale completions, transient recovery, terminal failure, and duplicate start.
+{
+    const h = harness();
+    check(h.controller.start() && !h.controller.start(), "duplicate bootstrap start is serialized into one Host load request");
+    const staleLoad = h.calls[0].callback;
+    h.fakeClock.advance(100);
+    check(h.controller.getSnapshot().state === "retrying", "timed-out current request enters bounded retry without terminal failure");
+    staleLoad("");
+    check(h.calls.length === 1, "stale generation completion cannot begin ping or Registry work");
+    h.fakeClock.advance(10);
+    complete(h);
+    check(h.controller.getSnapshot().state === "ready" && h.controller.getSnapshot().registryRequestCount === 1, "current generation succeeds after stale completion is ignored");
+}
+{
+    const h = harness(); h.controller.start();
+    h.calls[0].callback(""); h.calls[1].callback("AEToolbox host loaded"); h.calls[2].callback('{"ok":false,"tools":[],"loadErrors":["REGISTRY_EMPTY_CATALOG: registry"],"registryRevision":0,"lastAttemptSucceeded":false}');
+    check(h.states.filter((state) => state.state === "failed").length === 0 && h.controller.getSnapshot().state === "retrying", "first transient Host registry failure does not publish a terminal failure");
+    h.fakeClock.advance(10); complete(h);
+    check(h.controller.getSnapshot().state === "ready" && h.controller.getSnapshot().registryRequestCount === 2, "bounded retry performs exactly one additional Registry request before recovery");
+}
+{
+    const h = harness({ retryDelaysMs: [] }); h.controller.start();
+    h.calls[0].callback(""); h.calls[1].callback("AEToolbox host loaded"); h.calls[2].callback('{"ok":false,"tools":[],"loadErrors":["REGISTRY_DIRECTORY_UNAVAILABLE: tools"],"registryRevision":0,"lastAttemptSucceeded":false}');
+    check(h.controller.getSnapshot().state === "failed" && h.controller.getSnapshot().lastErrorDetails.loadErrors.length === 1, "final Registry failure remains terminal with actionable Host diagnostics");
 }
 {
     const h = harness(); h.controller.start(); h.calls[0].callback("EvalScript error."); h.fakeClock.advance(10); h.calls[1].callback("EvalScript error."); h.fakeClock.advance(20); h.calls[2].callback("EvalScript error.");
@@ -204,6 +233,7 @@ check(Bootstrap.validateCatalog('{"ok":true,"tools":{},"loadErrors":[]}').code =
     check(/coreBootstrapSnapshot\.state !== "ready" && coreBootstrapSnapshot\.state !== "degraded"/.test(main), "Registry polling is gated by catalog readiness");
     check(/coreBootstrapController\.shutdown\(\)/.test(main), "panel shutdown invalidates Core bootstrap");
     check(/renderCoreBootstrapState\(coreBootstrapSnapshot\)/.test(main), "locale refresh reprojects bootstrap text");
+    check(/snapshot\.state === "failed" && window\.console && console\.warn/.test(main), "only terminal Core failure emits the project-owned warning");
     check(/snapshot\.state === "ready"[\s\S]*root\.hidden = true/.test(main), "ready hides bootstrap status UI");
     check(/id="toolBootstrapStatus" role="status" aria-live="polite"/.test(html), "bootstrap feedback has accessible live status");
     check(/js\/coreBootstrap\.js[^>]*><\/script>[\s\S]*js\/main\.js/.test(html), "Core bootstrap module loads before main.js");

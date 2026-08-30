@@ -190,7 +190,9 @@ AEToolbox.ping = function () {
         return AEToolbox.stringify({
             ok: AEToolbox._hasValidRegisteredToolCatalog === true,
             tools: AEToolbox._registeredTools,
-            loadErrors: AEToolbox._registeredToolLoadErrors
+            loadErrors: AEToolbox._registeredToolLoadErrors,
+            registryRevision: AEToolbox._registeredToolRegistryRevision,
+            lastAttemptSucceeded: AEToolbox._registeredToolLastAttemptSucceeded === true
         });
     };
 

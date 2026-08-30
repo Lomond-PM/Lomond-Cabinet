@@ -52,7 +52,7 @@
         else if (provider === "proposal-ready" || provider === "proposal-reviewing") { state = "reviewing"; }
         else if (provider === "failed" || provider === "intent-rejected") { state = "error"; }
         else if (provider === "cancelled") { state = "cancelled"; }
-        else if (provider === "completed") { state = "completed"; }
+        else if (provider === "completed" || provider === "local-proposal-handled") { state = "completed"; }
         else if (typeof composerValue === "string" && /\S/.test(composerValue)) { state = "composing"; }
         return Object.freeze({
             state: state,
@@ -94,8 +94,8 @@
             var intentReason = providerState && typeof providerState.intentReason === "string" ? providerState.intentReason : null;
             if (state === "pending") { pending = true; return snapshot(); }
             if (!pending && !proposalReviewPending) { return snapshot(); }
-            if (proposalReviewPending && (state === "proposal-reviewing" || state === "idle")) {
-                if (state === "idle") {
+            if (proposalReviewPending && (state === "proposal-reviewing" || state === "idle" || state === "local-proposal-handled")) {
+                if (state === "idle" || state === "local-proposal-handled") {
                     proposalReviewPending = false;
                     if (code) { terminalGeneration += 1; append("error", "", errorDisplayKey(code)); }
                 }
@@ -104,6 +104,7 @@
             pending = false;
             terminalGeneration += 1;
             if (state === "completed" && text) { append("assistant", text, null); }
+            else if (state === "local-proposal-handled") { /* Trusted local handling needs no fabricated assistant text. */ }
             else if (state === "proposal-ready") { proposalReviewPending = true; append("notice", "", "vela.surfaceLocalProposalNotice"); }
             else if (state === "intent-rejected") { append("notice", "", intentReason === "target-mismatch" ? "vela.surfaceIntentTargetMismatch" : "vela.surfaceIntentRejected"); }
             else if (state === "cancelled") { append("error", "", errorDisplayKey(code || "PROVIDER_REQUEST_ABORTED")); }
