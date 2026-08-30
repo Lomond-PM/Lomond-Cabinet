@@ -1,82 +1,35 @@
 # PROJECT_STATE.md
 
-## Current released baseline — 0.3.5
+## Current release candidate — 0.3.6
 
-Version **0.3.5** is the current **RELEASED / PUBLISHED BASELINE** for Lomond Cabinet.
+Version **0.3.6 Delegated Authority** is release-prepared pending final AE release smoke. Product metadata and Host `projectVersion` are `0.3.6`. The latest published release/tag remains immutable `0.3.5` / `v0.3.5` until publication.
 
-- Product metadata and Host `projectVersion`: `0.3.5`
-- Immutable published tag: `v0.3.5`
-- Final 0.3.5 AE Release Smoke: **PASS**
-- Stages A–H1: **COMPLETE**
+The normative [`vela-agent-architecture.md`](design/vela-agent-architecture.md) remains **FROZEN FOR 0.3.x** with zero release-reconciliation changes. The implementation record is [`vela-agent-0.3.6-closure.md`](design/vela-agent-0.3.6-closure.md).
 
-The normative architecture remains [`docs/design/vela-agent-architecture.md`](design/vela-agent-architecture.md), marked **FROZEN FOR 0.3.x**. Release preparation does not amend it.
+## Production behavior
 
-## 0.3.5 Planning + Authority Contracts Foundation
+0.3.6 adds explicit, bounded, process-local delegation. The only production pilot is one-shot `set-opacity-v1`: `mutate`, semantic `selected-layer`, risk ceiling `write`, one action, 60-second expiry, exact current Session and Runtime-owned task, `local-user` provenance, and no persistence.
 
-Completed stages:
+The canonical Authority Plane owns one DelegationGrantStore, DelegationPolicyEngine, AuthorityEvidenceResolver, DelegationAuthorityCoordinator, AuthorizedPlanAuthorityProducer, AuthorityActivationGate and AtomicActivationCoordinator. Compiler output enters trusted Policy routing. A valid grant may produce `ALLOW`; absent, invalid, expired, exhausted or revoked authority falls back to human review or fails closed.
 
-1. **A — Planning / Authority Contracts**
-2. **B — CapabilityCompiler**
-3. **C — Legacy Authority Bridge + PolicyDecision production wiring**
-4. **D1 — Multi-step PlanStore invariants**
-5. **E1 — Per-step JIT Binding**
-6. **F1 — AuthorizedPlanMaterializer + TaskRun + PlanController**
-7. **G1 — PlanReviewProjection**
-8. **H1 — Review-only Runtime Seam**
+`ALLOW` is not execution authority. Every mutation retains fresh JIT binding → Guard → PlanStore reservation → authority consumption → ExecutionAdapter → Host validation/CAS. Model and Provider cannot issue grants, forge trusted authority objects, or call Host directly.
 
-The foundation provides closed Planning and Authority contracts, ordered one-to-eight-step PlanStore behavior, per-step JIT target/value binding, AuthorizedPlan materialization, TaskRun-owned process-local `executionArmed`, dormant PlanController orchestration, immutable review-safe projections, and runtime-local read-only review correlation.
+## Lifecycle and budget
 
-## Production behavior reality
+Issue, revoke, expiry, consume, reset, suspend, dispose and AE restart fail closed. Grants are never persisted or reconstructed from Session history. AuthorityEvidence is trusted historical evidence, not live authority. The Session event whitelist is unchanged.
 
-F1/G1/H1 modules are production-loaded and owned by VelaRuntime, sharing the existing PlanStore and ExecutionPreflight safety spine. They are deliberately dormant.
+One delegated action slot is one Host mutation attempt that crosses the execution commit boundary. Precommit failure does not consume; postcommit failure consumes and is never refunded.
 
-The reachable production mutation path remains:
+The accepted semantic `selected-layer` target binds current selection at the fresh binding boundary. This differs from a stale native binding, which must fail closed. Manual value drift cannot reliably hit the short Host CAS window; release acceptance relies on Tier-3 capture, Preflight, Host CAS and Adapter/Host witness regressions.
 
-```text
-Provider single proposal
-→ legacy Controller
-→ existing ConfirmationView
-→ approve/reject
-→ executeStep(0)
-```
+## Runtime closure
 
-There is no production AuthorizedPlan producer, synthetic producer/debug hook, PlanController `accept` facade, plan-review Surface, production PlanController `confirm`/`run` path, autonomous loop, retry, replan, or rollback.
+Successful delegated `localProposal` settles as `local-proposal-handled` without fabricated assistant text. Stale Runtime initialization cannot report an old `LIFECYCLE_BLOCKED` into the current Core generation. Retryable Registry failure publishes `retrying`; exhausted retry remains terminal and diagnostic.
 
-## Authority and execution boundaries
+## Deferred beyond 0.3.6
 
-- `TaskPlan` cannot enter the Execution Spine.
-- Model output and transcript text cannot become authority.
-- `AuthorizedPlan` contains semantic intent but no trusted native target binding, Host payload, confirmation nonce, reservation, or execution authority.
-- Every executable step performs final target and value binding just in time through Preflight, Guard, ExecutionAdapter, and Host validation.
-- `executionArmed` is owned only by TaskRun and is unreachable in the 0.3.5 production path.
-- Surface remains consumer-only and receives no PlanController or execution identity.
-- ReviewRuntimePort performs correlation only; its tokens are not authority, permission, grants, nonces, or confirmation evidence.
+AgentDriver, Observe → Reason → Act, Verify/Replan, autonomous retry, no-progress detection, generic Delegation Sheet, persistent grants, multi-capability delegation, multi-step delegated budgeting, autonomous task production, Session intelligence/compaction and a generic N-step Plan Review producer/surface remain deferred to 0.3.7+ or later focused work.
 
-## Production multi-step deferral
+## Verification baseline
 
-Production multi-step execution is **deferred by design** to a later version.
-
-- No real producer belongs to the 0.3.5 roadmap.
-- Actionable review requires an exact immutable, revision-bound informed review snapshot.
-- Future production confirmation must enter the same safety gate as immediately runnable PlanController execution; it must not create an armed-but-not-runnable state.
-- Future producer ownership belongs to later Authority/Agent orchestration work.
-
-Human-confirmed one-shot multi-step execution does not inherently require delegation. The deferral exists because 0.3.5 has no legitimate production producer or consumer, not because every human-confirmed multi-step plan would require a DelegationGrant.
-
-## Verification and known workstation baseline
-
-Release preparation runs the complete Vela and repository test inventories plus version/manifest/Host consistency, loader/bootstrap production wiring, generated-report and i18n freshness, Host JSX checks, project consistency, and `git diff --check`.
-
-On this Windows checkout, `core.autocrlf=true` causes the committed LF Provider branch-profile fixture to be checked out with CRLF bytes. The known direct-test and project-consistency failure is recorded as:
-
-```text
-PRE-EXISTING WORKSTATION EOL FIXTURE FAILURE
-```
-
-The fixture, expected hash, and line-ending policy must not be changed during release preparation.
-
-## Next architectural stage
-
-The next development stage is **0.3.6 Delegated Authority**. Later work may design a real production AuthorizedPlan producer, actionable whole-plan review ownership, and a confirmation-to-immediately-runnable execution gate. Planner, DelegationPolicyEngine, AgentDriver, autonomous execution, generic mutation Agent capabilities, retry/replan/rollback, and production N-step enablement remain outside 0.3.5 until separately scoped.
-
-The current immutable published tag is `v0.3.5`. README, this file, and HANDOFF identify the same published baseline and record final AE acceptance as complete. Published tags must never be moved.
+Release preparation runs every `scripts/test-*.js` suite plus JavaScript syntax, i18n report freshness, project/version consistency, frozen-architecture diff and `git diff --check`. This Windows checkout has a known `core.autocrlf=true` CRLF checkout mismatch for a frozen LF JSON fixture; the fixture, hash and line-ending architecture are not changed during 0.3.6 release work.

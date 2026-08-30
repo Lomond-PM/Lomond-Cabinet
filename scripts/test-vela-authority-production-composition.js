@@ -27,6 +27,6 @@ check(runtime.indexOf("providerProposalRouter = proposalRouterModule.createPropo
 check(runtime.indexOf("grantNextOpacityMutation") !== -1 && runtime.indexOf("revokeOpacityDelegation") !== -1 && runtime.indexOf("getAuthorityProjection") !== -1 && runtime.indexOf("getAuthorityDiagnostics") !== -1, "Runtime exposes only the fixed pilot operations plus bounded Authority observation seams");
 check(!/getGrantStore|getPolicyEngine|getEvidenceResolver|getAuthorityCoordinator|getAuthorityProducer|getActivationGate|getAtomicCoordinator/.test(runtime), "Runtime facade exposes no raw Authority dependency getter");
 check(surface.indexOf("vela.surfaceGrantOpacityConsent") !== -1 && surface.indexOf("vela.surfaceRevokeOpacityConsent") !== -1, "Surface contains the explicit one-shot consent and revoke action");
-check(read("VERSION").trim() === "0.3.5", "H2 does not change VERSION");
+check(read("VERSION").trim() === "0.3.6", "release metadata identifies the delegated authority release");
 
 console.log("test-vela-authority-production-composition: " + assertions + " assertions passed.");

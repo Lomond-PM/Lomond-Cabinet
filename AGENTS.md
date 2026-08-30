@@ -4,8 +4,8 @@
 
 This repository is **Lomond Cabinet**, an After Effects CEP extension.
 
-- Product version metadata: `0.3.3` (release-prepared, unpublished)
-- Latest published tag: `v0.3.2`
+- Product version metadata: `0.3.6` (release candidate, unpublished)
+- Latest published tag: `v0.3.5`
 - Visible panel title: `Lomond Cabinet`
 - Manifest menu name: `AE Toolbox`
 - Extension bundle id: `com.kevin.aetoolbox`
@@ -270,7 +270,7 @@ Other sensitive areas:
 
 ## Release management
 
-Product metadata is staged at `0.3.3`. The latest published release/tag remains `0.3.2` / immutable `v0.3.2` until the reviewed release-prep reaches `dev`, then `main`, and an annotated `v0.3.3` tag is created.
+Product metadata is staged at `0.3.6`. The latest published release/tag remains `0.3.5` / immutable `v0.3.5` until final AE release smoke passes and the reviewed release-prep reaches `dev`, then `main`, and an annotated `v0.3.6` tag is created.
 
 Future release version changes must keep synchronized:
 

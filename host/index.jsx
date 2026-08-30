@@ -8,7 +8,7 @@ AEToolbox.ping = function () {
 
 (function () {
     AEToolbox.hostApiVersion = "1.0.0";
-    AEToolbox.projectVersion = "0.3.5";
+    AEToolbox.projectVersion = "0.3.6";
     AEToolbox.version = AEToolbox.hostApiVersion;
     AEToolbox.tools = AEToolbox.tools || {};
 
