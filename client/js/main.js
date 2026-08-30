@@ -3969,16 +3969,19 @@
     function updateCoreBootstrapState(snapshot) {
         coreBootstrapSnapshot = snapshot;
         hostLoaded = snapshot.hostReady;
+        invalidateVelaRuntimeInitForCoreSnapshot(snapshot);
         if (snapshot.state === "failed" && window.console && console.warn) {
             console.warn("[Core Bootstrap] failed", {
                 stage: snapshot.lastErrorStage,
                 code: snapshot.lastErrorCode,
                 generation: snapshot.generation,
-                attempt: snapshot.attempt
+                attempt: snapshot.attempt,
+                details: snapshot.lastErrorDetails,
+                registryRequestCount: snapshot.registryRequestCount
             });
         }
         renderCoreBootstrapState(snapshot);
-        if (snapshot.state === "host-loading" || snapshot.state === "registry-loading") {
+        if (snapshot.state === "host-loading" || snapshot.state === "registry-loading" || snapshot.state === "retrying") {
             setStatus(tr("status.loadingHost"), "busy", true);
         } else if (snapshot.state === "failed") {
             setStatus(tr("bootstrap.loadFailed"), "error", true);
@@ -4138,6 +4141,14 @@
         return true;
     }
 
+    function invalidateVelaRuntimeInitForCoreSnapshot(snapshot) {
+        var transaction = velaRuntimeInitTransaction;
+        if (!transaction || (snapshot && snapshot.hostReady === true && snapshot.generation === transaction.coreGeneration)) { return false; }
+        disposeVelaRuntimeCandidate(transaction);
+        clearVelaRuntimeInitTransaction(transaction);
+        return true;
+    }
+
     function initializeVelaRuntime(coreSnapshot) {
         var snapshot = coreSnapshot || coreBootstrapSnapshot;
         var coreGeneration = snapshot && typeof snapshot.generation === "number" ? snapshot.generation : 0;
@@ -4281,6 +4292,11 @@
                     approve: function () { return velaRuntimeController.approveActiveCandidate(); },
                     reject: function () { return velaRuntimeController.rejectActiveCandidate(); },
                     getState: function () { return velaRuntimeController.getConfirmationSurfaceState(); }
+                },
+                authority: {
+                    grant: function () { return velaRuntimeController.grantNextOpacityMutation(); },
+                    revoke: function () { return velaRuntimeController.revokeOpacityDelegation(); },
+                    getState: function () { return velaRuntimeController.getAuthorityProjection(); }
                 }
             });
             mounted = controller && controller.mount && controller.mount();

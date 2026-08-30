@@ -407,17 +407,20 @@
                 var proposal = reviewingProposal;
                 var outcome;
                 var errorCode;
+                var handled;
                 if (!protocol.isPlainObject(input)) { return false; }
                 try {
-                    protocol.assertNoUnknownKeys(input, ["requestId", "generation", "outcome", "errorCode"], "providerProposal.finalizeReview");
+                    protocol.assertNoUnknownKeys(input, ["requestId", "generation", "outcome", "errorCode", "handled"], "providerProposal.finalizeReview");
                     if (!proposal || ownData(input, "requestId") !== proposal.requestId || ownData(input, "generation") !== proposal.generation) { return false; }
                     outcome = ownData(input, "outcome");
                     errorCode = ownData(input, "errorCode");
+                    handled = ownData(input, "handled") === true;
                     if (outcome !== "completed" && outcome !== "failed") { return false; }
                     if (outcome === "failed" && (typeof errorCode !== "string" || safeCode(protocol, { code: errorCode }) !== errorCode)) { return false; }
+                    if (outcome === "failed" && handled) { return false; }
                 } catch (error) { return false; }
                 reviewingProposal = null;
-                publish("idle", proposal.requestId, null, outcome === "failed" ? errorCode : null, publicState.modelId);
+                publish(outcome === "completed" && handled ? "local-proposal-handled" : "idle", proposal.requestId, null, outcome === "failed" ? errorCode : null, publicState.modelId);
                 return true;
             }
         });

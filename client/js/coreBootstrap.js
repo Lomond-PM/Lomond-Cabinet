@@ -23,6 +23,12 @@
             loadErrorCount: snapshot.loadErrorCount,
             lastErrorStage: snapshot.lastErrorStage,
             lastErrorCode: snapshot.lastErrorCode,
+            lastErrorDetails: snapshot.lastErrorDetails ? {
+                loadErrors: snapshot.lastErrorDetails.loadErrors.slice(0),
+                registryRevision: snapshot.lastErrorDetails.registryRevision,
+                lastAttemptSucceeded: snapshot.lastErrorDetails.lastAttemptSucceeded
+            } : null,
+            registryRequestCount: snapshot.registryRequestCount,
             retryAvailable: snapshot.retryAvailable
         };
     }
@@ -49,7 +55,16 @@
         var id;
 
         if (!result || result.ok !== true) {
-            return { ok: false, stage: result ? "registry" : "catalog-validation", code: result ? "REGISTRY_REQUEST_FAILED" : "REGISTRY_RESPONSE_INVALID" };
+            return {
+                ok: false,
+                stage: result ? "registry" : "catalog-validation",
+                code: result ? "REGISTRY_REQUEST_FAILED" : "REGISTRY_RESPONSE_INVALID",
+                details: result ? {
+                    loadErrors: result.loadErrors instanceof Array ? result.loadErrors.filter(function (value) { return typeof value === "string"; }).slice(0) : [],
+                    registryRevision: typeof result.registryRevision === "number" ? result.registryRevision : null,
+                    lastAttemptSucceeded: result.lastAttemptSucceeded === true
+                } : null
+            };
         }
         if (!(result.tools instanceof Array) || !(result.loadErrors instanceof Array)) {
             return { ok: false, stage: "catalog-validation", code: "REGISTRY_RESPONSE_INVALID" };
@@ -102,6 +117,8 @@
             loadErrorCount: 0,
             lastErrorStage: null,
             lastErrorCode: null,
+            lastErrorDetails: null,
+            registryRequestCount: 0,
             retryAvailable: false
         };
         var stageTimer = null;
@@ -160,17 +177,21 @@
             }, retryDelays[delayIndex]);
         }
 
-        function fail(stage, code) {
+        function fail(stage, code, details) {
+            var willRetry = snapshot.attempt - 1 < retryDelays.length;
             clearStageTimer();
             snapshot.generation += 1;
             publish({
-                state: "failed",
+                state: willRetry ? "retrying" : "failed",
                 hostReady: false,
                 lastErrorStage: stage,
                 lastErrorCode: code,
-                retryAvailable: true
+                lastErrorDetails: details || null,
+                retryAvailable: !willRetry
             });
-            scheduleRetry();
+            if (willRetry) {
+                scheduleRetry();
+            }
         }
 
         function invoke(source, callback, errorStage, errorCode) {
@@ -182,7 +203,7 @@
         }
 
         function requestRegistry(generation) {
-            publish({ state: "registry-loading", lastErrorStage: null, lastErrorCode: null, retryAvailable: false });
+            publish({ state: "registry-loading", registryRequestCount: snapshot.registryRequestCount + 1, lastErrorStage: null, lastErrorCode: null, lastErrorDetails: null, retryAvailable: false });
             scheduleStageTimeout(generation, "REGISTRY_TIMEOUT", fail);
             invoke("AEToolbox.getRegisteredTools()", function (raw) {
                 var candidate;
@@ -192,7 +213,7 @@
                 clearStageTimer();
                 candidate = validateCatalog(raw);
                 if (!candidate.ok) {
-                    fail(candidate.stage, candidate.code);
+                    fail(candidate.stage, candidate.code, candidate.details);
                     return;
                 }
                 if (typeof options.onCatalog === "function") {
@@ -246,6 +267,7 @@
                 loadErrorCount: 0,
                 lastErrorStage: null,
                 lastErrorCode: null,
+                lastErrorDetails: null,
                 retryAvailable: false
             });
             scheduleStageTimeout(generation, "HOST_EVAL_TIMEOUT", fail);

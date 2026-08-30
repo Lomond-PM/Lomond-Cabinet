@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 448 |
+| A | Core / Global; keep | 456 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 3 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -624,6 +624,12 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | tools.registryControlLab.fields.shadowField | tools.registryControlLab | Shadow | 阴影 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
 | tools.registryControlLab.sections.coreUiDirect | tools.registryControlLab | CoreUI Direct | CoreUI 直接路径 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
 | vela.surfaceApprove | vela | Approve | 批准 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceAuthorityStatus.active | vela | The next opacity change is allowed | 已允许下一次不透明度修改 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceAuthorityStatus.consumed | vela | The one-time automatic change permission was used | 本次自动修改权限已使用 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceAuthorityStatus.executing | vela | Applying the authorized opacity change | 正在执行已授权的不透明度修改 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceAuthorityStatus.expired | vela | Automatic opacity change permission expired | 自动修改权限已过期 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceAuthorityStatus.failed | vela | The authorized change failed; the one-time permission was used | 已授权修改失败，本次权限已使用 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceAuthorityStatus.revoked | vela | Automatic opacity change permission revoked | 已撤销自动修改不透明度的权限 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceCancel | vela | Cancel | 取消 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceComposerLabel | vela | Vela message | Vela 消息 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceComposerPlaceholder | vela | Message Vela | 输入给 Vela 的消息 | client/js/vela/velaComposerView.js, client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -634,6 +640,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.surfaceExecutionCompleted | vela | The local opacity change was completed. | 本地不透明度更改已完成。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceExperimentalStatus | vela | Experimental · Not qualified · Manual opt-in required | 实验性 · 未通过资格认证 · 需手动选择加入 | client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceGenericError | vela | The local request could not be completed. Try again. | 本地请求未能完成。请重试。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceGrantOpacityConsent | vela | Allow the next opacity change (once, 60 seconds) | 允许下一次不透明度修改（一次，60 秒） | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceIntentRejected | vela | No explicit opacity edit was detected. Specify the target opacity for... | 未检测到明确的不透明度修改请求。请说明要将当前图层的不透明度设为多少（0–100%）。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceIntentTargetMismatch | vela | The local proposal did not match the opacity requested in this turn. ... | 本地 proposal 与本轮请求的不透明度不一致。未创建任何操作。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceLabel | vela | Vela | Vela | client/index.html, client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -649,6 +656,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.surfaceReject | vela | Reject | 拒绝 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceResize | vela | Resize Vela conversation area | 调整 Vela 对话区域大小 | client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceReview | vela | Review | 查看 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceRevokeOpacityConsent | vela | Revoke automatic opacity change | 撤销自动修改不透明度的权限 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceRuntimeUnavailable | vela | Vela is temporarily unavailable. Reopen the panel and try again. | Vela 暂时不可用。请重新打开面板后重试。 | client/js/main.js, client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceSend | vela | Send | 发送 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceSettings | vela | Settings | 设置 | client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |

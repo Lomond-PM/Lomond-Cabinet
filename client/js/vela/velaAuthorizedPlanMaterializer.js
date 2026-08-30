@@ -34,6 +34,11 @@
 
         function canonicalAuthorizedPlan(value) {
             var rebuilt;
+            function comparisonCopy(plan) {
+                var copy = planning.cloneJson(plan, [], "AuthorizedPlan comparison");
+                copy.steps.forEach(function (step) { if (step.grantProvenance) { step.grantProvenance.issuedAt = 0; } });
+                return copy;
+            }
             if (!planning.isAuthorizedPlan(value) || !Object.isFrozen(value)) { fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "A frozen AuthorizedPlan contract is required."); }
             try {
                 rebuilt = planning.createAuthorizedPlan({ planId: value.planId, revision: value.revision, steps: value.steps.map(function (step) {
@@ -48,7 +53,7 @@
                 fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "AuthorizedPlan validation failed.");
             }
             var stringifyOptions = { allowDangerousPaths: ["steps.*.candidateId", "steps.*.policyDecision.provenance.candidateId", "steps.*.grantProvenance.source"] };
-            if (protocol.canonicalStringify(rebuilt, stringifyOptions) !== protocol.canonicalStringify(value, stringifyOptions)) { fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "AuthorizedPlan is not canonical."); }
+            if (protocol.canonicalStringify(comparisonCopy(rebuilt), stringifyOptions) !== protocol.canonicalStringify(comparisonCopy(value), stringifyOptions)) { fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "AuthorizedPlan is not canonical."); }
             return rebuilt;
         }
 

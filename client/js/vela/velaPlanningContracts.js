@@ -58,6 +58,7 @@
     var AUTHORITY_EVIDENCE_TYPES = Object.freeze(["canonical-record", "evidentiary-fact", "authority-evidence"]);
     var TRUSTED_DECISION_SOURCES = Object.freeze(["local-authority", "legacy-policy"]);
     var GRANT_RISK_CEILINGS = Object.freeze(["read", "analyze", "mutate", "create", "write"]);
+    var MAX_CANONICAL_TIMESTAMP = Number.MAX_SAFE_INTEGER || 9007199254740991;
     var DENY_REASON_CODES = Object.freeze(["unknown-capability", "unsupported-operation", "invalid-params", "outside-declared-scope", "policy-denied"]);
 
     // Fields that carry execution/authority semantics and are forbidden in any
@@ -122,6 +123,13 @@
 
     function assertNonNegativeInteger(value, label, context) {
         if (typeof value !== "number" || !Number.isInteger(value) || value < 0) { fail(ERROR_CODES.PLANNING_CONTRACT_INVALID, label + " must be a non-negative integer.", { stage: context }); }
+        return value;
+    }
+
+    function assertTimestamp(value, label, context) {
+        if (typeof value !== "number" || !Number.isFinite(value) || Object.is(value, -0) || !Number.isInteger(value) || value < 0 || value > MAX_CANONICAL_TIMESTAMP) {
+            fail(ERROR_CODES.AUTHORITY_CONTRACT_INVALID, label + " must be a non-negative safe-integer timestamp.", { stage: context });
+        }
         return value;
     }
 
@@ -536,7 +544,12 @@
             if (!isPlainObject(step.grantProvenance)) { fail(ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "AuthorizedPlan.steps[" + index + "].grantProvenance must be an object.", { stage: "authorized-plan" }); }
             assertNoUnknownKeys(step.grantProvenance, ["grantId", "capabilityFamily", "source", "issuedAt"], "AuthorizedPlan.grantProvenance", ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "authorized-plan");
             assertNoForbiddenKeys(step.grantProvenance, "AuthorizedPlan.grantProvenance", { forbiddenMarkers: FORBIDDEN_AUTHORITY_MARKERS }, ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "authorized-plan");
-            normalized.grantProvenance = snapshot(step.grantProvenance, "AuthorizedPlan.grantProvenance");
+            normalized.grantProvenance = snapshot({
+                grantId: assertLocalId(step.grantProvenance.grantId, "AuthorizedPlan.grantProvenance.grantId", "authorized-plan"),
+                capabilityFamily: assertNonEmptyString(step.grantProvenance.capabilityFamily, "AuthorizedPlan.grantProvenance.capabilityFamily", "authorized-plan"),
+                source: assertNonEmptyString(step.grantProvenance.source, "AuthorizedPlan.grantProvenance.source", "authorized-plan"),
+                issuedAt: assertTimestamp(step.grantProvenance.issuedAt, "AuthorizedPlan.grantProvenance.issuedAt", "authorized-plan")
+            }, "AuthorizedPlan.grantProvenance");
         }
         if (step.authorityEvidence !== undefined) { normalized.authorityEvidence = createAuthorityEvidence(step.authorityEvidence); }
         return normalized;
@@ -651,8 +664,7 @@
         grant.riskCeiling = input.riskCeiling;
         if (input.taskId !== undefined) { grant.taskId = assertLocalId(input.taskId, "DelegationGrant.taskId", "delegation-grant"); }
         if (input.expiresAt !== undefined) {
-            if (typeof input.expiresAt !== "number" || !Number.isFinite(input.expiresAt)) { fail(ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "DelegationGrant.expiresAt must be a finite number.", { stage: "delegation-grant" }); }
-            grant.expiresAt = input.expiresAt;
+            grant.expiresAt = assertTimestamp(input.expiresAt, "DelegationGrant.expiresAt", "delegation-grant");
         }
         if (input.maxActions !== undefined) {
             assertNonNegativeInteger(input.maxActions, "DelegationGrant.maxActions", "delegation-grant");
@@ -662,10 +674,12 @@
             if (!isPlainObject(input.provenance)) { fail(ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "DelegationGrant.provenance must be an object.", { stage: "delegation-grant" }); }
             assertNoUnknownKeys(input.provenance, ["source", "requestId", "issuedAt"], "DelegationGrant.provenance", ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "delegation-grant");
             assertNoForbiddenKeys(input.provenance, "DelegationGrant.provenance", {}, ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "delegation-grant");
+            if (input.provenance.issuedAt !== undefined) { assertTimestamp(input.provenance.issuedAt, "DelegationGrant.provenance.issuedAt", "delegation-grant"); }
             grant.provenance = snapshot(input.provenance, "DelegationGrant.provenance");
         } else {
             grant.provenance = Object.freeze({});
         }
+        if (grant.expiresAt !== null && grant.provenance && grant.provenance.issuedAt !== undefined && grant.expiresAt <= grant.provenance.issuedAt) { fail(ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "DelegationGrant expiry must follow issuance.", { stage: "delegation-grant" }); }
         return snapshot(grant, "DelegationGrant");
     }
 
@@ -875,6 +889,7 @@
         RISK_LEVELS: RISK_LEVELS,
         POLICY_DECISIONS: POLICY_DECISIONS,
         TARGET_SCOPE_TYPES: TARGET_SCOPE_TYPES,
+        MAX_CANONICAL_TIMESTAMP: MAX_CANONICAL_TIMESTAMP,
         AUTHORITY_EVIDENCE_TYPES: AUTHORITY_EVIDENCE_TYPES,
         TRUSTED_DECISION_SOURCES: TRUSTED_DECISION_SOURCES,
         FORBIDDEN_AUTHORITY_MARKERS: FORBIDDEN_AUTHORITY_MARKERS,
@@ -930,6 +945,7 @@
         isPlainObject: isPlainObject,
         deepFreeze: deepFreeze,
         cloneJson: cloneJson,
-        snapshot: snapshot
+        snapshot: snapshot,
+        assertTimestamp: assertTimestamp
     });
 }));

@@ -121,7 +121,7 @@ function harness(options) {
     context.window.VelaComposerView = { create() {} };
     if (!options.missingConfirmationView) context.window.VelaConfirmationView = { create() {} };
     vm.createContext(context);
-    vm.runInContext(source.slice(start, end) + "\nwindow.__testHooks = { initializeRuntime: initializeVelaRuntime, initializeSurface: initializeVelaSurfaceController, runtime: function () { return velaRuntimeController; }, runtimeError: function () { return velaRuntimeLastErrorCode; }, agentOwner: function () { return velaAgentRuntimeOwner; }, agentError: function () { return velaAgentRuntimeLastErrorCode; }, surfaceState: function () { return velaSurfaceBootstrapState; }, surfaceRevision: function () { return velaSurfaceBootstrapRevision; }, controller: function () { return velaSurfaceController; } };", context, { filename: "main-vela-bootstrap-boundary.js" });
+    vm.runInContext(source.slice(start, end) + "\nwindow.__testHooks = { initializeRuntime: initializeVelaRuntime, invalidateForCore: invalidateVelaRuntimeInitForCoreSnapshot, initializeSurface: initializeVelaSurfaceController, runtime: function () { return velaRuntimeController; }, runtimeError: function () { return velaRuntimeLastErrorCode; }, agentOwner: function () { return velaAgentRuntimeOwner; }, agentError: function () { return velaAgentRuntimeLastErrorCode; }, surfaceState: function () { return velaSurfaceBootstrapState; }, surfaceRevision: function () { return velaSurfaceBootstrapRevision; }, controller: function () { return velaSurfaceController; } };", context, { filename: "main-vela-bootstrap-boundary.js" });
     return { context, slot, calls, warnings, runtime };
 }
 
@@ -165,6 +165,12 @@ async function run() {
     test = harness({ deferFirst: true });
     test.context.__testHooks.initializeRuntime(); await flush();
     check(test.calls.runtimeCreate === 1 && test.context.__testHooks.runtime() === null, "An initializing candidate remains private until its initialize promise succeeds.");
+    check(test.context.__testHooks.invalidateForCore({ state: "failed", generation: 2, hostReady: false }) === true && test.calls.runtimeDispose === 1, "A failed Core generation immediately invalidates and disposes its in-flight Runtime candidate.");
+    test.calls.rejectFirst({ code: "LIFECYCLE_BLOCKED" }); await flush();
+    check(test.context.__testHooks.runtimeError() === null && test.warnings.join("\n").indexOf("LIFECYCLE_BLOCKED") === -1, "A stale Runtime continuation is no longer current and cannot report a false lifecycle warning.");
+
+    test = harness({ deferFirst: true });
+    test.context.__testHooks.initializeRuntime(); await flush();
     test.context.coreBootstrapSnapshot = { state: "host-ready", generation: 3, hostReady: true };
     test.context.__testHooks.initializeRuntime(test.context.coreBootstrapSnapshot); await flush();
     check(test.calls.runtimeDispose === 1 && test.calls.runtimeCreate === 2 && test.context.__testHooks.runtime() !== null, "A newer Core generation disposes the stale candidate and commits a fresh candidate.");
