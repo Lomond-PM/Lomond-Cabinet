@@ -106,6 +106,8 @@
             protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Execution guard terminalization is unavailable.");
         }
         var recordsByPlanId = new Map();
+        var delegatedActivationPorts = new WeakMap();
+        var executionCommitPorts = new WeakMap();
         var active = false;
 
         function summarizeReview(bindingCapture, valueCapture) {
@@ -411,6 +413,47 @@
             });
         }
 
+        function createDelegatedActivationPort(input) {
+            if (!protocol.isPlainObject(input)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Delegated activation port input is invalid."); }
+            protocol.assertNoUnknownKeys(input, ["planId", "activationId"], "executionPreflight.delegatedActivationPort");
+            var planId = protocol.assertNonEmptyString(input.planId, "executionPreflight.planId", protocol.HARD_LIMITS.maxLocalIdBytes);
+            var activationId = protocol.assertNonEmptyString(input.activationId, "executionPreflight.activationId", protocol.HARD_LIMITS.maxLocalIdBytes);
+            var token = planStore.createDelegatedActivationToken(planId, activationId);
+            var port = Object.freeze({});
+            delegatedActivationPorts.set(port, { planId: planId, activationId: activationId, token: token, used: false });
+            return port;
+        }
+
+        function activateDelegatedBoundPlan(input) {
+            return withActive(function () {
+                if (!protocol.isPlainObject(input)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Delegated BoundPlan activation input is invalid."); }
+                protocol.assertNoUnknownKeys(input, ["planId", "activationPort"], "executionPreflight.activateDelegatedBoundPlan");
+                var planId = protocol.assertNonEmptyString(input.planId, "executionPreflight.planId", protocol.HARD_LIMITS.maxLocalIdBytes);
+                var port = input.activationPort;
+                var portRecord = port && delegatedActivationPorts.get(port);
+                var record = recordForPlan(planId);
+                if (!portRecord || portRecord.used || portRecord.planId !== planId || record.lifecycle !== "pending-confirmation") { protocol.fail(protocol.ERROR_CODES.PERMISSION_DENIED, "Delegated BoundPlan activation authority is invalid."); }
+                return freshBinding(record.selectionOrderMeaningful).then(function (fresh) {
+                    if (fresh.fingerprint !== record.contextFingerprint) { markStale(record, record.steps[0].candidateId, "context-drift-before-delegated-activation"); throw protocolError(protocol, protocol.ERROR_CODES.CONTEXT_STALE); }
+                    var current = cloneCurrentBinding();
+                    var activated = planStore.activateDelegatedPlan(planId, { contextFingerprint: fresh.fingerprint, settingsFingerprint: current.settingsFingerprint, permissionSnapshot: current.permissionSnapshot }, portRecord.token);
+                    portRecord.used = true;
+                    record.lifecycle = "confirmed";
+                    record.authorityMode = "delegated";
+                    record.delegatedActivationToken = portRecord.token;
+                    return activated;
+                });
+            });
+        }
+
+        function createExecutionCommitPort(input) {
+            if (!protocol.isPlainObject(input) || typeof input.commit !== "function") { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Execution commit port input is invalid."); }
+            protocol.assertNoUnknownKeys(input, ["planId", "stepIndex", "commit"], "executionPreflight.executionCommitPort");
+            var port = Object.freeze({});
+            executionCommitPorts.set(port, { planId: input.planId, stepIndex: input.stepIndex, commit: input.commit, used: false });
+            return port;
+        }
+
         function staleFromError(record, error) {
             if (error && (error.code === protocol.ERROR_CODES.CONTEXT_STALE || error.code === protocol.ERROR_CODES.UNKNOWN_TARGET)) {
                 if (recordsByPlanId.get(record.planId) === record) {
@@ -435,7 +478,7 @@
         function executeStep(input) {
             return withActive(function () {
                 if (!protocol.isPlainObject(input)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Execution step input is invalid."); }
-                protocol.assertNoUnknownKeys(input, ["planId", "stepIndex"], "executionPreflight.executeStep");
+                protocol.assertNoUnknownKeys(input, ["planId", "stepIndex", "commitPort"], "executionPreflight.executeStep");
                 var planId = protocol.assertNonEmptyString(protocol.getOwnDataProperty(input, "planId"), "executionPreflight.planId", protocol.HARD_LIMITS.maxLocalIdBytes);
                 var stepIndex = protocol.getOwnDataProperty(input, "stepIndex");
                 var record = recordForPlan(planId);
@@ -473,16 +516,19 @@
                     var freshBindingCapture = fresh.bindingCapture;
                     var freshValueCapture = fresh.valueCapture;
                     var current = cloneCurrentBinding();
-                    current = protocol.deepFreeze(protocol.cloneJson({
+                    var currentInput = {
                         lifecycle: current.lifecycle === undefined ? "active" : current.lifecycle,
                         planRevision: record.planRevision,
                         totalSteps: plan.actionCount,
-                        confirmationNonce: candidate.confirmationNonce,
                         permissionSnapshot: current.permissionSnapshot,
                         contextFingerprint: freshBindingCapture.fingerprint,
                         settingsFingerprint: current.settingsFingerprint,
                         hasVerifier: current.hasVerifier === true
-                    }, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes }));
+                    };
+                    if (record.authorityMode !== "delegated") { currentInput.confirmationNonce = candidate.confirmationNonce; }
+                    current = protocol.cloneJson(currentInput, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes });
+                    if (record.authorityMode === "delegated") { current.delegatedActivationToken = record.delegatedActivationToken; }
+                    current = Object.freeze(current);
                     var checked = guard.check(record.planId, stepIndex, current);
                     if (!checked.ok) { throw protocolError(protocol, checked.error.code); }
                     var reserved = guard.reserve(record.planId, stepIndex, current);
@@ -494,6 +540,14 @@
                        value is never cloned, serialized, returned, or stored by
                        PlanStore; the execution adapter must validate it again. */
                     var trustedExecutionContext = Object.freeze({ bindingCapture: stepRecord.transient.bindingCapture, valueCapture: stepRecord.transient.valueCapture });
+
+                    if (record.authorityMode === "delegated") {
+                        var commitPort = input.commitPort;
+                        var commitRecord = commitPort && executionCommitPorts.get(commitPort);
+                        if (!commitRecord || commitRecord.used || commitRecord.planId !== record.planId || commitRecord.stepIndex !== stepIndex) { return failTerminal(protocolError(protocol, protocol.ERROR_CODES.PERMISSION_DENIED)); }
+                        try { commitRecord.commit({ planId: record.planId, stepIndex: stepIndex, candidateId: candidate.candidateId }); commitRecord.used = true; }
+                        catch (commitError) { commitRecord.used = true; return failTerminal(commitError); }
+                    }
 
                     function stableExecutorError(error) {
                         return isProtocolError(protocol, error) ? error : protocolError(protocol, protocol.ERROR_CODES.PLAN_FAILED);
@@ -569,6 +623,9 @@
 
         return Object.freeze({
             createBoundPlan: createBoundPlan,
+            createDelegatedActivationPort: createDelegatedActivationPort,
+            activateDelegatedBoundPlan: activateDelegatedBoundPlan,
+            createExecutionCommitPort: createExecutionCommitPort,
             confirmBoundPlan: confirmBoundPlan,
             executeStep: executeStep,
             discardBoundPlan: discardBoundPlan

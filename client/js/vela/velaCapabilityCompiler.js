@@ -1,7 +1,8 @@
 (function (root, factory) {
     "use strict";
 
-    var hasModule = typeof module === "object" && module.exports;
+    var browserPage = !!(root && root.self === root && root["win" + "dow"] === root);
+    var hasModule = !browserPage && typeof module === "object" && module.exports;
     var planning = hasModule
         ? require("./velaPlanningContracts")
         : (root && root.VelaPlanningContracts) || null;
@@ -43,6 +44,7 @@
     }
 
     var MODULE_REVISION = "vela-capability-compiler-v1";
+    var trustedCandidates = new WeakSet();
 
     // Compiler-local stable fail-closed codes. Distinct from existing protocol
     // codes and from the 0.3.5-A planning/authority codes (no collision).
@@ -279,6 +281,7 @@
             });
             // Enforce the output is non-authoritative (never approval/authority).
             planning.assertActionCandidateNonAuthoritative(candidate);
+            trustedCandidates.add(candidate);
             return candidate;
         }
 
@@ -321,6 +324,7 @@
         canonicalizeCapability: canonicalizeCapability,
         createCapabilityViewResolver: createCapabilityViewResolver,
         validateCapabilityView: validateCapabilityView,
+        isTrustedActionCandidate: function (candidate) { return Boolean(candidate && trustedCandidates.has(candidate)); },
         isCapabilityIntent: planning.isCapabilityIntent,
         createCapabilityIntent: planning.createCapabilityIntent
     });

@@ -23,13 +23,22 @@
 
     var MODULE_REVISION = "vela-session-runtime-0.3.3-v1";
     var defaultSessionSequence = 0;
+    var trustedSessionLogs = new WeakSet();
+    var authorityAppendBySession = new WeakMap();
+    var authorityPublishBySession = new WeakMap();
+    var trustedAuthorityAppenders = new WeakMap();
+    var trustedAuthorityEvents = new WeakSet();
+    var authorityEventSessions = new WeakMap();
+    var publishedAuthorityEvents = new WeakSet();
 
     // Stable error codes (do not localize; do not change).
     var ERROR_CODES = Object.freeze({
         SESSION_EVENT_INVALID: "SESSION_EVENT_INVALID",
         SESSION_EVENT_FROZEN: "SESSION_EVENT_FROZEN",
         SESSION_SEQ_GAP: "SESSION_SEQ_GAP",
-        SESSION_CLOSED: "SESSION_CLOSED"
+        SESSION_CLOSED: "SESSION_CLOSED",
+        SESSION_AUTHORITY_EVENT_UNPUBLISHABLE: "SESSION_AUTHORITY_EVENT_UNPUBLISHABLE",
+        SESSION_AUTHORITY_EVENT_ALREADY_PUBLISHED: "SESSION_AUTHORITY_EVENT_ALREADY_PUBLISHED"
     });
 
     function fail(code) {
@@ -203,6 +212,7 @@
         var lastSeq = 0;
         var closed = false;
         var subscribers = [];
+        var onListenerError = typeof settings.onListenerError === "function" ? settings.onListenerError : function () {};
 
         function assertOpen() {
             if (closed) { fail(ERROR_CODES.SESSION_CLOSED); }
@@ -224,24 +234,51 @@
             return event;
         }
 
-        return Object.freeze({
+        function appendInternal(input, authorityOwned) {
+            var event;
+            var index;
+            assertOpen();
+            event = normalizeEvent(input);
+            if (authorityOwned && !isAuthorityEvidenceKind(event.kind)) { fail(ERROR_CODES.SESSION_EVENT_INVALID); }
+            if (event.seq !== lastSeq + 1) { fail(ERROR_CODES.SESSION_SEQ_GAP); }
+            lastSeq = event.seq;
+            events.push(deepFreeze(event));
+            if (authorityOwned) {
+                trustedAuthorityEvents.add(events[events.length - 1]);
+                authorityEventSessions.set(events[events.length - 1], sessionLog);
+            }
+            // Authority transitions use a narrow append-and-return boundary.
+            // Publishing them to general subscribers is deferred until a future
+            // Runtime integration can do so after its authority transaction has
+            // completed; re-entrant listeners must not split that transaction.
+            if (!authorityOwned) {
+                for (index = 0; index < subscribers.length; index += 1) { subscribers[index](events[events.length - 1]); }
+            }
+            return events[events.length - 1];
+        }
+        function publishAuthorityInternal(event) {
+            var index;
+            assertOpen();
+            if (!trustedAuthorityEvents.has(event) || authorityEventSessions.get(event) !== sessionLog || sessionLog.getEventBySeq(event.seq) !== event) { fail(ERROR_CODES.SESSION_AUTHORITY_EVENT_UNPUBLISHABLE); }
+            if (publishedAuthorityEvents.has(event)) { fail(ERROR_CODES.SESSION_AUTHORITY_EVENT_ALREADY_PUBLISHED); }
+            publishedAuthorityEvents.add(event);
+            for (index = 0; index < subscribers.length; index += 1) {
+                try { subscribers[index](event); }
+                catch (error) { try { onListenerError(error, Object.freeze({ phase: "authority-post-commit", event: event })); } catch (ignored) {} }
+            }
+            return true;
+        }
+
+        var sessionLog = Object.freeze({
             append: function (input) {
-                var event;
-                var index;
-                assertOpen();
-                event = normalizeEvent(input);
-                // Defensive stable marker: normalizeEvent owns seq assignment, so
-                // a gap is structurally unreachable through the public append API.
-                if (event.seq !== lastSeq + 1) { fail(ERROR_CODES.SESSION_SEQ_GAP); }
-                lastSeq = event.seq;
-                events.push(deepFreeze(event));
-                for (index = 0; index < subscribers.length; index += 1) {
-                    subscribers[index](events[events.length - 1]);
-                }
-                return events[events.length - 1];
+                return appendInternal(input, false);
             },
             getEvents: function () {
                 return deepFreeze(events.slice());
+            },
+            getEventBySeq: function (seq) {
+                if (typeof seq !== "number" || !Number.isInteger(seq) || seq < 1) { fail(ERROR_CODES.SESSION_EVENT_INVALID); }
+                return seq <= events.length && events[seq - 1].seq === seq ? events[seq - 1] : null;
             },
             getSnapshot: function () {
                 assertOpen();
@@ -271,6 +308,25 @@
             getSessionId: function () { return sessionId; },
             isClosed: function () { return closed; }
         });
+        trustedSessionLogs.add(sessionLog);
+        authorityAppendBySession.set(sessionLog, function (input) { return appendInternal(input, true); });
+        authorityPublishBySession.set(sessionLog, publishAuthorityInternal);
+        return sessionLog;
+    }
+
+    function createAuthorityEventAppender(sessionLog) {
+        var appendAuthority;
+        var publishAuthority;
+        var appender;
+        if (!trustedSessionLogs.has(sessionLog) || !authorityAppendBySession.has(sessionLog)) { fail(ERROR_CODES.SESSION_EVENT_INVALID); }
+        appendAuthority = authorityAppendBySession.get(sessionLog);
+        publishAuthority = authorityPublishBySession.get(sessionLog);
+        appender = Object.freeze({
+            append: function (input) { return appendAuthority(input); },
+            publishCommitted: function (event) { return publishAuthority(event); }
+        });
+        trustedAuthorityAppenders.set(appender, sessionLog);
+        return appender;
     }
 
     // -------------------------------------------------------------------------
@@ -359,6 +415,10 @@
         PRESENTATION_STATUS: PRESENTATION_STATUS,
         isValidStateTripartition: isValidStateTripartition,
         createSessionLog: createSessionLog,
+        isTrustedSessionLog: function (sessionLog) { return Boolean(sessionLog && trustedSessionLogs.has(sessionLog)); },
+        createAuthorityEventAppender: createAuthorityEventAppender,
+        isTrustedAuthorityEventAppenderForSession: function (appender, sessionLog) { return Boolean(appender && trustedAuthorityAppenders.has(appender) && trustedAuthorityAppenders.get(appender) === sessionLog); },
+        isTrustedAuthorityEvent: function (event) { return Boolean(event && trustedAuthorityEvents.has(event)); },
         createInMemorySessionPersistence: createInMemorySessionPersistence,
         createNullSessionPersistence: createNullSessionPersistence,
         AGENT_LIFECYCLE_STAGES: AGENT_LIFECYCLE_STAGES,

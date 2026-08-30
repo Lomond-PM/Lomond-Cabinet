@@ -31,6 +31,12 @@ function fixture(options) {
     let providerState = { state: "idle", text: null, errorCode: null };
     let confirmationState = { state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" };
     const calls = { check: [], send: [], cancel: 0, review: 0, approve: 0, reject: 0 };
+    let authorityState = { state: "inactive", active: false };
+    const authority = options.authority ? {
+        grant() { calls.grant = (calls.grant || 0) + 1; authorityState = { state: "active", active: true }; return Promise.resolve(authorityState); },
+        revoke() { calls.revoke = (calls.revoke || 0) + 1; authorityState = { state: "revoked", active: false }; return Promise.resolve(authorityState); },
+        getState() { return Object.freeze(Object.assign({}, authorityState)); }
+    } : null;
     const provider = {
         check(config) { calls.check.push(config); if (options.readinessError) { return Promise.reject(options.readinessError); } return options.readinessPromise || Promise.resolve(options.readinessResult || { ready: true, code: "experimental-ready", modelId: config.model, loadedInstances: 1, quantization: "Q_TEST", contextLength: 8192 }); },
         send(message) { calls.send.push(message); if (options.synchronousRejection) { providerState = { state: "failed", text: null, errorCode: "VERIFICATION_UNAVAILABLE" }; return Promise.reject(new Error("VERIFICATION_UNAVAILABLE")); } providerState = { state: "pending", text: null, errorCode: null }; return request.promise; },
@@ -43,7 +49,7 @@ function fixture(options) {
         reject() { calls.reject += 1; confirmationState = { state: "rejected", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }; return Promise.resolve(); },
         getState() { return Object.freeze(Object.assign({}, confirmationState)); }
     };
-    const controller = SurfaceController.create({ surface: { getElementsForTest: () => elements }, provider, confirmation, t: options.t || ((key) => "t:" + key), PresentationModel, TranscriptView, ComposerView, ConfirmationView, ActivationPolicy, agentProjection: options.agentProjection || null, onAgentProjectionError: options.onAgentProjectionError });
+    const controller = SurfaceController.create({ surface: { getElementsForTest: () => elements }, provider, confirmation, authority, t: options.t || ((key) => "t:" + key), PresentationModel, TranscriptView, ComposerView, ConfirmationView, ActivationPolicy, agentProjection: options.agentProjection || null, onAgentProjectionError: options.onAgentProjectionError });
     return { controller, elements, request, confirmationRequest, calls, setProvider(next) { providerState = next; }, setConfirmation(next) { confirmationState = next; } };
 }
 async function flush() { await Promise.resolve(); await Promise.resolve(); }
@@ -55,6 +61,7 @@ async function run() {
     equal(PresentationModel.errorDisplayKey("UNKNOWN_TARGET"), "vela.surfaceNoActionableTarget", "no actionable target has a specific localized error");
     equal(PresentationModel.errorDisplayKey("UNKNOWN_TEST_ERROR"), "vela.surfaceGenericError", "unknown error uses localized fallback");
     equal(PresentationModel.projectSurfaceState({ state: "completed", text: "model cannot choose state" }, { state: "idle" }, "", true, ActivationPolicy.getPolicy()).state, "completed", "projection uses trusted provider state rather than model text");
+    equal(PresentationModel.projectSurfaceState({ state: "local-proposal-handled", text: null }, { state: "idle" }, "", true, ActivationPolicy.getPolicy()).state, "completed", "trusted handled local proposal projects successful completion without text");
     equal(PresentationModel.projectSurfaceState({ state: "idle" }, { state: "idle" }, "", true).state, "idle", "trusted idle state projects idle");
     equal(PresentationModel.projectSurfaceState({ state: "idle", text: "requesting" }, { state: "idle" }, "draft", true).state, "composing", "non-empty local draft projects composing without trusting provider text");
     equal(PresentationModel.projectSurfaceState({ state: "pending" }, { state: "idle" }, "", true).state, "requesting", "trusted pending state projects requesting");
@@ -111,6 +118,10 @@ async function run() {
     equal(reject.getAttribute("aria-label"), "t:vela.surfaceReject", "Reject has a stable accessible label");
     check(!send.hidden && cancel.hidden && review.hidden && approve.hidden && reject.hidden, "idle exposes only Send");
     check(send.disabled, "empty composer keeps Send disabled");
+    const consent = fixture({ authority: true }); await mountEnabled(consent); const consentButton = consent.elements.actionSlot.children[6];
+    check(consentButton && !consentButton.hidden && consentButton.textContent === "t:vela.surfaceGrantOpacityConsent", "explicit one-shot opacity consent appears only in the opted-in idle Surface");
+    consentButton.emit("click"); await flush(); equal(consent.calls.grant, 1, "real consent action invokes the fixed Runtime grant port once"); equal(consentButton.textContent, "t:vela.surfaceRevokeOpacityConsent", "active grant switches the same narrow action to revoke");
+    consentButton.emit("click"); await flush(); equal(consent.calls.revoke, 1, "active consent action revokes through the narrow Runtime port");
     e.composer.value = "draft"; e.composer.emit("input"); check(!send.disabled, "non-empty composer enables Send only in an opted-in fixture"); e.composer.value = ""; e.composer.emit("input");
     const matrix = fixture(); await mountEnabled(matrix); const m = matrix.elements.actionSlot.children; const matrixNodes = m.slice();
     check(!matrix.elements.actionSlot.hidden && !m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "fresh provider and confirmation idle keeps slot visible and exposes only Send");
@@ -177,6 +188,7 @@ async function run() {
     const errors = fixture(); await mountEnabled(errors); errors.elements.composer.value = "fail"; errors.elements.actionSlot.children[0].emit("click"); errors.setProvider({ state: "failed", text: null, errorCode: "PROVIDER_CONNECTION_FAILED" }); errors.request.resolve(); await flush();
     equal(errors.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceProviderConnection", "Transcript receives mapped presentation text");
     check(errors.elements.transcriptScroll.children[1].children[1].textContent.indexOf("PROVIDER_CONNECTION_FAILED") === -1, "Transcript never exposes raw error codes");
+    const handled = fixture({ authority: true }); await mountEnabled(handled); handled.elements.composer.value = "opacity 50"; handled.elements.actionSlot.children[0].emit("click"); handled.setProvider({ state: "local-proposal-handled", text: null, errorCode: null }); handled.request.resolve(); await flush(); const handledItems = handled.elements.transcriptScroll.children[1].children; equal(handledItems.length, 1, "Delegated handled success leaves only the user turn and appends no unusable-response or fabricated assistant text"); equal(handled.elements.root.getAttribute("data-vela-surface-state"), "completed", "Delegated handled success projects a completed Surface state"); equal(handled.calls.send.length, 1, "Handled settlement never resends the Provider request");
     const claim = fixture(); await mountEnabled(claim); claim.elements.composer.value = "将当前选中图层的不透明度设置为 50%。"; claim.elements.actionSlot.children[0].emit("click"); claim.setProvider({ state: "failed", text: "已经修改，已执行，调整完成", errorCode: "PROVIDER_RESPONSE_INVALID" }); claim.request.resolve(); await flush(); const claimTranscript = claim.elements.transcriptScroll.children[1].children.map((node) => node.textContent).join("|"); check(!claimTranscript.includes("已经修改") && !claimTranscript.includes("已执行") && !claimTranscript.includes("调整完成"), "A failed explicit response cannot render model-authored execution claims into transcript"); equal(claim.elements.root.getAttribute("data-vela-surface-state"), "error", "Profile mismatch remains a local error and cannot project completed or proposal-ready");
     errors.elements.composer.value = "recover"; errors.elements.composer.emit("input"); errors.elements.actionSlot.children[0].emit("click");
     check(!errors.elements.actionSlot.children[1].hidden, "a local draft can recover from an error into a new requesting state");
@@ -187,7 +199,7 @@ async function run() {
     const sync = fixture({ synchronousRejection: true }); await mountEnabled(sync); sync.elements.composer.value = "keep"; const syncTextarea = sync.elements.composer; sync.elements.actionSlot.children[0].emit("click"); await flush(); equal(sync.elements.composer.value, "keep", "synchronous rejection keeps draft"); equal(sync.elements.composer, syncTextarea, "synchronous rejection preserves textarea");
     const beforeChildren = e.actionSlot.children.slice(); test.controller.suspend(); e.composer.value = "suspended"; test.setProvider({ state: "completed", text: "late", errorCode: null }); test.controller.refreshLocale(); equal(e.composer.value, "suspended", "suspension blocks patches"); test.controller.resume(); check(e.actionSlot.children.every((node, index) => node === beforeChildren[index]), "resume preserves controls DOM identity");
     check(!/errorCode|PROVIDER_|VERIFICATION_UNAVAILABLE/.test(TranscriptView.create.toString()), "Transcript does not map internal codes");
-    check(!/requestId|candidateId|planId|authority|target|context|nonce|digest/.test(SurfaceController.create.toString()), "Surface controller exposes experimental endpoint configuration without any trusted identity or execution-authority seam");
+    check(!/requestId|candidateId|planId|rawGrant|grantSpec|PolicyDecision|reservation|nonce|digest/.test(SurfaceController.create.toString()), "Surface controller receives only fixed consent/revoke operations and no trusted identity or raw authority material");
     check(!/candidateId|planId|authority|target|context|nonce|digest/.test(ConfirmationView.create.toString()), "confirmation view receives no trusted execution data");
     const projectionCalls = { subscribe: 0, unsubscribe: 0, disposeAgent: 0 };
     const projectionListeners = [];

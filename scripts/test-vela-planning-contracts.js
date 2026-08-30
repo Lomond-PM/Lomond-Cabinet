@@ -102,6 +102,12 @@ const authPlan = validAuthorized();
 check(p.isAuthorizedPlan(authPlan), "AuthorizedPlan created");
 check(!p.isTaskPlan(authPlan), "an AuthorizedPlan is NOT a TaskPlan");
 check(p.assertAuthorizedPlanNoTrustedBinding(authPlan) === authPlan, "clean AuthorizedPlan has no trusted binding");
+const realisticIssuedAt = 1788020000000;
+const delegatedPlan = validAuthorized({ grantProvenance: { grantId: "grant_realistic", capabilityFamily: "mutation", source: "local-user", issuedAt: realisticIssuedAt } });
+check(delegatedPlan.steps[0].grantProvenance.issuedAt === realisticIssuedAt, "AuthorizedPlan accepts a realistic epoch-ms authority timestamp.");
+[undefined, "1700000000000", NaN, Infinity, -1, 1.5, Number.MAX_SAFE_INTEGER + 1].forEach((issuedAt) => expectCode(() => validAuthorized({ grantProvenance: { grantId: "grant_bad_time", capabilityFamily: "mutation", source: "local-user", issuedAt } }), "AUTHORITY_CONTRACT_INVALID", "AuthorizedPlan rejects a missing, malformed, negative, fractional, or unsafe issuedAt"));
+check(validAuthorized({ grantProvenance: { grantId: "grant_zero_time", capabilityFamily: "mutation", source: "local-user", issuedAt: 0 } }).steps[0].grantProvenance.issuedAt === 0, "AuthorizedPlan accepts the canonical timestamp lower bound.");
+check(validAuthorized({ grantProvenance: { grantId: "grant_max_time", capabilityFamily: "mutation", source: "local-user", issuedAt: Number.MAX_SAFE_INTEGER } }).steps[0].grantProvenance.issuedAt === Number.MAX_SAFE_INTEGER, "AuthorizedPlan accepts the canonical safe-integer timestamp upper bound.");
 // params with a native binding is rejected.
 expectCode(() => validAuthorized({ params: { opacity: 50, layerId: 3 } }), "AUTHORITY_CONTRACT_INVALID", "AuthorizedPlan params cannot carry a trusted native layerId");
 // a step-level native binding is rejected.
@@ -133,8 +139,14 @@ expectCode(() => p.assertTrustedDecisionSource({ contractType: "policy-decision"
 // ===========================================================================
 const grant = p.createDelegationGrant({ grantId: "grant_1", capabilityFamily: "mutation", capabilityId: "set-opacity-v1", targetScope: { type: "current-comp" }, riskCeiling: "write", taskId: "task_1", expiresAt: 1000, maxActions: 2, provenance: { source: "local", requestId: "req_1" } });
 check(p.isDelegationGrant(grant), "DelegationGrant created");
+const operationGrant = p.createDelegationGrant({ grantId: "grant_operation", capabilityFamily: "mutation", capabilityId: "set-opacity-v1", operationKind: "mutate", targetScope: { type: "selected-layer" }, riskCeiling: "write" });
+check(operationGrant.operationKind === "mutate", "DelegationGrant carries an exact closed operation restriction when supplied");
+expectCode(() => p.createDelegationGrant({ grantId: "grant_bad_operation", capabilityFamily: "mutation", capabilityId: "set-opacity-v1", operationKind: "delete", riskCeiling: "write" }), "AUTHORITY_CONTRACT_INVALID", "DelegationGrant rejects operations outside the closed taxonomy");
 check(p.grantAllowsMutation(grant) === false, "a valid grant does not allow mutation");
 check(p.assertGrantDoesNotAuthorizeMutation(grant) === grant, "grant passes the does-not-authorize check");
+const epochGrant = p.createDelegationGrant({ grantId: "grant_epoch", capabilityFamily: "mutation", capabilityId: "set-opacity-v1", operationKind: "mutate", targetScope: { type: "selected-layer" }, riskCeiling: "write", expiresAt: realisticIssuedAt + 60000, maxActions: 1, provenance: { source: "local-user", requestId: "req_epoch", issuedAt: realisticIssuedAt } });
+check(epochGrant.expiresAt - epochGrant.provenance.issuedAt === 60000, "Grant issuedAt and expiresAt share epoch-ms units and preserve the 60-second duration.");
+expectCode(() => p.createDelegationGrant({ grantId: "grant_bad_expiry", capabilityFamily: "mutation", riskCeiling: "write", expiresAt: realisticIssuedAt, provenance: { source: "local-user", requestId: "req_bad_expiry", issuedAt: realisticIssuedAt } }), "AUTHORITY_CONTRACT_INVALID", "Grant expiry must be strictly later than issuance");
 check(p.legacyAuthorityPolicy({ capabilityId: "set-opacity-v1", requestedOperation: "mutate", capabilityKnown: true, paramsValid: true, operationSupported: true }).decision === "REVIEW_REQUIRED", "a mutation is still REVIEW_REQUIRED even when a grant exists");
 
 // ===========================================================================

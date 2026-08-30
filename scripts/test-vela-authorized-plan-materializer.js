@@ -62,6 +62,9 @@ async function run() {
     check((await eightHarness.materializer.materialize(authorized(8), { selectionOrderMeaningful: true })).actionCount === 8, "Eight-step boundary is accepted.");
 
     const invalidHarness = harness();
+    const realisticHarness = harness();
+    const realisticPlan = authorized(1, { grantProvenance: { grantId: "grant_realistic", capabilityFamily: "mutation", source: "local-user", issuedAt: 1788020000000 } });
+    check((await realisticHarness.materializer.materialize(realisticPlan, { selectionOrderMeaningful: true })).actionCount === 1, "Materializer accepts canonical realistic epoch-ms grant provenance without relaxing application params.");
     await expectCode(invalidHarness.materializer.materialize(Object.freeze({ contractType: "authorized-plan", planId: "bad", revision: 0, steps: "bad" }), { selectionOrderMeaningful: true }), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Invalid AuthorizedPlan is rejected.");
     const taskPlan = planning.createTaskPlan({ planId: "task_plan", revision: 0, steps: [{ stepId: "step_1", kind: "observe" }] });
     await expectCode(invalidHarness.materializer.materialize(taskPlan, { selectionOrderMeaningful: true }), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "TaskPlan is rejected.");

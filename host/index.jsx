@@ -8,7 +8,7 @@ AEToolbox.ping = function () {
 
 (function () {
     AEToolbox.hostApiVersion = "1.0.0";
-    AEToolbox.projectVersion = "0.3.5";
+    AEToolbox.projectVersion = "0.3.6";
     AEToolbox.version = AEToolbox.hostApiVersion;
     AEToolbox.tools = AEToolbox.tools || {};
 
@@ -190,7 +190,9 @@ AEToolbox.ping = function () {
         return AEToolbox.stringify({
             ok: AEToolbox._hasValidRegisteredToolCatalog === true,
             tools: AEToolbox._registeredTools,
-            loadErrors: AEToolbox._registeredToolLoadErrors
+            loadErrors: AEToolbox._registeredToolLoadErrors,
+            registryRevision: AEToolbox._registeredToolRegistryRevision,
+            lastAttemptSucceeded: AEToolbox._registeredToolLastAttemptSucceeded === true
         });
     };
 

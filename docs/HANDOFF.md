@@ -1,77 +1,37 @@
 # HANDOFF.md
 
-## Current handoff — 0.3.5 published baseline
+## Current handoff — 0.3.6 release candidate
 
-Lomond Cabinet version **0.3.5** is released and published with immutable tag `v0.3.5`.
+Lomond Cabinet **0.3.6 Delegated Authority** is release-prepared on `release/0.3.6`, pending final AE release smoke.
 
-- Product metadata / Host `projectVersion`: `0.3.5`
+- Product metadata / Host `projectVersion`: `0.3.6`
 - Latest published release/tag: `0.3.5` / immutable `v0.3.5`
-- Final 0.3.5 AE Release Smoke: **PASS**
-- Stages A–H1: **COMPLETE**
-- Next development stage: **0.3.6 Delegated Authority**
+- H2 real-AE delegated acceptance: **PASS**
+- Registry retry retest and Console project-owned warnings/errors: **PASS / 0/0**
+- Frozen architecture: **unchanged**
 
-Do not begin G2/H2 or enable production multi-step during release work.
+## Accepted production scope
 
-## Completed 0.3.5 scope
+The explicit one-shot `set-opacity-v1` pilot is production-reachable with exact Session/task binding, `selected-layer` scope, `write` risk ceiling, one action, 60-second expiry, `local-user` provenance and no persistence. Consent, revoke, expiry, consume, lifecycle invalidation, restart clearing, Policy fallback and successful `localProposal` settlement passed real AE acceptance.
 
-The Planning + Authority Contracts Foundation completed A through H1:
+Canonical ownership is VelaRuntime → exact Agent Session → one GrantStore → one Authority Plane composition. Authority modules load through `VelaCepModuleLoader`, with `VelaRuntime` last and no duplicate direct script tags.
 
-- Planning / Authority contracts and CapabilityCompiler;
-- Legacy Authority Bridge and trusted local `PolicyDecision` compatibility wiring;
-- ordered one-to-eight-step PlanStore invariants and per-step JIT binding;
-- AuthorizedPlanMaterializer, TaskRun-owned `executionArmed`, and dormant PlanController orchestration;
-- immutable review-safe PlanReviewProjection and production-loaded read-only ReviewRuntimePort;
-- shared PlanStore / ExecutionPreflight mutation-safety spine;
-- suspend, reset-session, and dispose invalidation.
+## Safety handoff
 
-The frozen architecture remains [`docs/design/vela-agent-architecture.md`](design/vela-agent-architecture.md), **FROZEN FOR 0.3.x**, with zero release-preparation changes.
+- Model/Provider cannot issue grants, forge trusted authority objects, or call Host.
+- Policy `ALLOW` is not execution authority; AuthorizedPlan is not native binding; ActivationReservation is not Host permission.
+- The mutation spine remains fresh JIT → Guard → PlanStore reserve → authority consume → Host.
+- Precommit failure does not consume; postcommit failure consumes without refund.
+- Session evidence cannot restore live Store authority; the event whitelist is unchanged.
+- Semantic current-selection rebinding is accepted before fresh binding; stale native bindings fail closed.
+- CAS acceptance relies on deterministic offline capture/Preflight/Host/Adapter witnesses, not a production debug race hook.
 
-## Production reality and deferral
+## Deferred scope
 
-Production remains behaviorally single-step:
-
-```text
-Provider single proposal
-→ legacy Controller
-→ existing ConfirmationView
-→ approve/reject
-→ executeStep(0)
-```
-
-The PlanController stack is loaded and runtime-owned but dormant. There is no production AuthorizedPlan producer, accept/confirm/run facade, synthetic producer/debug hook, plan-review Surface, reachable armed TaskRun, or production N-step execution.
-
-Production multi-step execution is deferred by design. A later real producer must establish exact revision-bound informed review and connect confirmation to the same immediately runnable PlanController safety gate. Human-confirmed one-shot multi-step execution does not inherently require delegation; the deferral reflects the absence of an in-scope legitimate producer and consumer.
-
-## Safety invariants
-
-- TaskPlan cannot enter the Execution Spine.
-- Model output cannot become authority.
-- AuthorizedPlan contains no trusted native binding.
-- Final target and value binding remains per-step JIT.
-- TaskRun alone owns `executionArmed`.
-- Surface remains consumer-only.
-- ReviewRuntimePort is correlation-only; tokens are not authority.
-- No production PlanController accept, confirm, or run path exists.
-- No autonomous loop, retry, replan, or rollback was introduced.
-
-## Verification baseline
-
-Run the complete Vela and repository test inventories plus version, manifest, Host project-version, generated-report, i18n, production-wiring, loader/bootstrap, Host JSX, project-consistency, and `git diff --check` gates.
-
-Known workstation exception:
-
-```text
-PRE-EXISTING WORKSTATION EOL FIXTURE FAILURE
-```
-
-With `core.autocrlf=true`, the Provider branch-profile JSON fixture is checked out with CRLF rather than its frozen LF bytes. Do not modify the fixture, expected hash, or line-ending policy during release preparation.
+Do not add AgentDriver, autonomous loops, Observe → Reason → Act, Verify/Replan, autonomous retry, persistent or generic grants, multi-capability or multi-step delegated budgeting, generic Delegation Sheet, Session intelligence, or generic N-step Plan Review production behavior during release work.
 
 ## Final AE release smoke
 
-Final AE Release Smoke: **PASS**. Accepted coverage included Host `projectVersion` 0.3.5; Vela startup; Provider manual opt-in; ordinary chat and Active Composition reads; legacy single-step opacity review/confirm/mutation; cancel; selection and value drift safety; visibility suspend/resume; panel close/reopen; runtime reset/reload; no plan-review UI, unexpected pending plan, or reachable production N-step path; Console warnings/errors `0/0`; and a second full restart with the key mutation repeated.
+After all offline gates pass: fully restart AE; confirm panel startup and Host `projectVersion = 0.3.6`; Provider readiness and normal read; no-grant opacity human review; explicit consent; delegated mutation; one-shot consumption and second-request fallback; revoke or expiry spot-check; restart clears grants; canonical diagnostics; Console project-owned warnings/errors `0/0`.
 
-Do not inject a synthetic AuthorizedPlan for release acceptance.
-
-## Next continuation point
-
-Begin future work from the synchronized post-publication baseline. The next named stage is **0.3.6 Delegated Authority**, with any real producer, whole-plan review, confirmation/run wiring, or production multi-step enablement requiring an explicit focused scope. Published tags must never be moved.
+Only after this smoke passes may 0.3.6 proceed to PR/publication flow. Do not commit, push, merge or tag as part of release reconciliation unless explicitly authorized.

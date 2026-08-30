@@ -28,13 +28,16 @@ check(agentIndex < registryIndex && registryIndex < serializerIndex && serialize
 check(html.indexOf("velaAgentSurfaceProjection.js") === -1, "neutral Agent Surface adapter is not production-loaded");
 check(loader.indexOf("VelaAgentRuntime") === -1 && loader.indexOf("velaAgentRuntime") === -1 && loader.indexOf("VelaSessionRuntime") === -1, "CEP module loader remains outside static Agent module loading");
 check((main.match(/var velaAgentRuntimeOwner = null;/g) || []).length === 1, "main owns exactly one AgentRuntimeOwner reference");
-check(normalizedMain.indexOf("initializeVelaAgentRuntimeOwner();\n            initializeVelaSurfaceController();") !== -1, "Agent owner initializes after existing Runtime commit and before Surface Controller");
+const runtimeInitStart = main.indexOf("    function initializeVelaRuntime(");
+const runtimeInitEnd = main.indexOf("    function getVelaSurfaceUiScale", runtimeInitStart);
+const runtimeInit = main.slice(runtimeInitStart, runtimeInitEnd);
+check(runtimeInit.indexOf("owner = initializeVelaAgentRuntimeOwner();") < runtimeInit.indexOf("transaction.candidate = window.VelaRuntime.createRuntime"), "Agent owner supplies the exact Session before Runtime construction");
 
 const shutdownStart = main.indexOf("    function shutdownPanelRuntime() {");
 const shutdownEnd = main.indexOf("    function recoverPanelRuntime()", shutdownStart);
 const shutdown = main.slice(shutdownStart, shutdownEnd);
 check(shutdown.indexOf("velaSurfaceController.dispose()") < shutdown.indexOf("velaAgentRuntimeOwner.dispose()"), "shutdown unsubscribes Surface before Agent owner disposal");
-check(shutdown.indexOf("velaAgentRuntimeOwner.dispose()") < shutdown.indexOf("velaRuntimeController.dispose()"), "Agent owner disposes before existing VelaRuntime");
+check(shutdown.indexOf("velaRuntimeController.dispose()") < shutdown.indexOf("velaAgentRuntimeOwner.dispose()"), "Runtime Authority Plane disposes before Agent Session ownership");
 
 const agentReportStart = main.indexOf("    function reportVelaAgentRuntimeError(");
 const agentReportEnd = main.indexOf("    function initializeVelaAgentRuntimeOwner", agentReportStart);

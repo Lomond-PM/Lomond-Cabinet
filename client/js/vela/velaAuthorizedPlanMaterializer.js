@@ -17,6 +17,10 @@
         var planning = options && options.planningContracts;
         var capabilities = options && options.capabilityContracts;
         var preflight = options && options.preflight;
+        var authorityProducerModule = options && options.authorityProducerModule;
+        var authorityProducer = options && options.authorityProducer;
+        var authorityGrantStore = options && options.authorityGrantStore;
+        var authoritySessionId = options && options.authoritySessionId;
         if (!protocol || !protocol.isPlainObject(options) || !planning || !capabilities || !preflight ||
                 typeof planning.createAuthorizedPlan !== "function" || typeof planning.isAuthorizedPlan !== "function" ||
                 typeof planning.assertAuthorizedPlanNoTrustedBinding !== "function" || typeof planning.assertPolicyDecisionClosed !== "function" ||
@@ -30,6 +34,11 @@
 
         function canonicalAuthorizedPlan(value) {
             var rebuilt;
+            function comparisonCopy(plan) {
+                var copy = planning.cloneJson(plan, [], "AuthorizedPlan comparison");
+                copy.steps.forEach(function (step) { if (step.grantProvenance) { step.grantProvenance.issuedAt = 0; } });
+                return copy;
+            }
             if (!planning.isAuthorizedPlan(value) || !Object.isFrozen(value)) { fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "A frozen AuthorizedPlan contract is required."); }
             try {
                 rebuilt = planning.createAuthorizedPlan({ planId: value.planId, revision: value.revision, steps: value.steps.map(function (step) {
@@ -43,17 +52,22 @@
             } catch (error) {
                 fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "AuthorizedPlan validation failed.");
             }
-            var stringifyOptions = { allowDangerousPaths: ["steps.*.candidateId"] };
-            if (protocol.canonicalStringify(rebuilt, stringifyOptions) !== protocol.canonicalStringify(value, stringifyOptions)) { fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "AuthorizedPlan is not canonical."); }
+            var stringifyOptions = { allowDangerousPaths: ["steps.*.candidateId", "steps.*.policyDecision.provenance.candidateId", "steps.*.grantProvenance.source"] };
+            if (protocol.canonicalStringify(comparisonCopy(rebuilt), stringifyOptions) !== protocol.canonicalStringify(comparisonCopy(value), stringifyOptions)) { fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "AuthorizedPlan is not canonical."); }
             return rebuilt;
         }
 
-        function materialize(authorizedPlan, executionInput) {
+        function materializeInternal(authorizedPlan, executionInput, delegated) {
             return Promise.resolve().then(function () {
             if (!protocol.isPlainObject(executionInput)) { fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Materialization execution input is invalid."); }
             protocol.assertNoUnknownKeys(executionInput, ["selectionOrderMeaningful"], "authorizedPlanMaterializer.executionInput");
             if (typeof protocol.getOwnDataProperty(executionInput, "selectionOrderMeaningful") !== "boolean") { fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Selection-order semantics are required."); }
             var canonical = canonicalAuthorizedPlan(authorizedPlan);
+            var delegatedIdentity = null;
+            if (delegated) {
+                delegatedIdentity = authorityProducerModule && typeof authorityProducerModule.getTrustedAuthorityPlanIdentity === "function" ? authorityProducerModule.getTrustedAuthorityPlanIdentity(authorizedPlan, authorityProducer, authorityGrantStore, authoritySessionId) : null;
+                if (!delegatedIdentity || canonical.steps.length !== 1 || delegatedIdentity.capabilityId !== "set-opacity-v1" || delegatedIdentity.operationKind !== "mutate") { fail(protocol.ERROR_CODES.PERMISSION_DENIED, "A trusted single-step delegated opacity plan is required."); }
+            }
             if (canonical.steps.length < 1 || canonical.steps.length > protocol.HARD_LIMITS.maxPlanSteps) { fail(protocol.ERROR_CODES.CAPABILITY_BUDGET_EXCEEDED, "AuthorizedPlan step count is outside the execution budget."); }
             var authorityCandidateIds = [];
             var steps = canonical.steps.map(function (step) {
@@ -64,7 +78,7 @@
                 try { params = capabilities.validateCapabilityParams(projection, step.params); }
                 catch (error) { fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Authorized capability parameters are invalid."); }
                 if (step.kind !== "tool" || step.risk !== "write" || step.requiresConfirmation !== true ||
-                        !step.targetScope || step.targetScope.type !== "selected-layer" || step.targetScope.property !== "opacity") {
+                        !step.targetScope || step.targetScope.type !== "selected-layer" || (!delegated && step.targetScope.property !== "opacity") || (delegated && step.targetScope.property !== undefined && step.targetScope.property !== "opacity")) {
                     fail(protocol.ERROR_CODES.PERMISSION_DENIED, "Authorized mutation semantics do not match the local registry subset.");
                 }
                 if (!step.policyDecision) { fail(protocol.ERROR_CODES.PERMISSION_DENIED, "A local review policy decision is required."); }
@@ -73,7 +87,7 @@
                     planning.assertTrustedDecisionSource(step.policyDecision);
                     if (step.authorityEvidence && typeof planning.assertAuthorityEvidenceNotDerived === "function") { planning.assertAuthorityEvidenceNotDerived(step.authorityEvidence); }
                 } catch (error) { fail(protocol.ERROR_CODES.PERMISSION_DENIED, "Authorized mutation policy evidence is invalid."); }
-                if (step.policyDecision.decision !== "REVIEW_REQUIRED") { fail(protocol.ERROR_CODES.PERMISSION_DENIED, "Mutation execution requires local review authority."); }
+                if ((!delegated && step.policyDecision.decision !== "REVIEW_REQUIRED") || (delegated && step.policyDecision.decision !== "ALLOW")) { fail(protocol.ERROR_CODES.PERMISSION_DENIED, delegated ? "Delegated mutation requires trusted ALLOW authority." : "Mutation execution requires local review authority."); }
                 authorityCandidateIds.push(step.candidateId);
                 return { capabilityId: step.capabilityId, params: params, targetScope: { type: "selected-layer", property: "opacity" } };
             });
@@ -93,7 +107,10 @@
             });
         }
 
-        return Object.freeze({ materialize: materialize });
+        function materialize(authorizedPlan, executionInput) { return materializeInternal(authorizedPlan, executionInput, false); }
+        function materializeDelegated(authorizedPlan, executionInput) { return materializeInternal(authorizedPlan, executionInput, true); }
+
+        return Object.freeze({ materialize: materialize, materializeDelegated: materializeDelegated });
     }
 
     return { createAuthorizedPlanMaterializer: createAuthorizedPlanMaterializer };

@@ -55,6 +55,7 @@
         var moduleRevision = null;
         var hostAdapterRevision = null;
         var providerDiagnostics = null;
+        var authorityDiagnostics = null;
         var lastErrorCode = velaRuntimeLastErrorCode;
         try {
             if (velaRuntimeController && typeof velaRuntimeController.getStatus === "function") {
@@ -68,6 +69,9 @@
                 lastErrorCode = velaOwnStatusValue(runtimeStatus, "lastErrorCode", lastErrorCode);
                 if (typeof velaRuntimeController.getProviderDiagnostics === "function") {
                     providerDiagnostics = velaRuntimeController.getProviderDiagnostics();
+                }
+                if (window.AETOOLBOX_DEBUG_REGISTRY === true && typeof velaRuntimeController.getAuthorityDiagnostics === "function") {
+                    authorityDiagnostics = velaRuntimeController.getAuthorityDiagnostics();
                 }
             }
             if (window.VelaCepModuleLoader && typeof window.VelaCepModuleLoader.getStatus === "function") {
@@ -88,6 +92,7 @@
             moduleRevision: typeof moduleRevision === "string" ? moduleRevision : null,
             hostAdapterRevision: typeof hostAdapterRevision === "string" ? hostAdapterRevision : null,
             providerDiagnostics: providerDiagnostics && typeof providerDiagnostics === "object" ? providerDiagnostics : null,
+            authorityDiagnostics: authorityDiagnostics && typeof authorityDiagnostics === "object" ? authorityDiagnostics : null,
             lastErrorCode: typeof lastErrorCode === "string" ? lastErrorCode : null,
             statusRevision: velaRuntimeStatusRevision
         });
@@ -3964,16 +3969,19 @@
     function updateCoreBootstrapState(snapshot) {
         coreBootstrapSnapshot = snapshot;
         hostLoaded = snapshot.hostReady;
+        invalidateVelaRuntimeInitForCoreSnapshot(snapshot);
         if (snapshot.state === "failed" && window.console && console.warn) {
             console.warn("[Core Bootstrap] failed", {
                 stage: snapshot.lastErrorStage,
                 code: snapshot.lastErrorCode,
                 generation: snapshot.generation,
-                attempt: snapshot.attempt
+                attempt: snapshot.attempt,
+                details: snapshot.lastErrorDetails,
+                registryRequestCount: snapshot.registryRequestCount
             });
         }
         renderCoreBootstrapState(snapshot);
-        if (snapshot.state === "host-loading" || snapshot.state === "registry-loading") {
+        if (snapshot.state === "host-loading" || snapshot.state === "registry-loading" || snapshot.state === "retrying") {
             setStatus(tr("status.loadingHost"), "busy", true);
         } else if (snapshot.state === "failed") {
             setStatus(tr("bootstrap.loadFailed"), "error", true);
@@ -4133,6 +4141,14 @@
         return true;
     }
 
+    function invalidateVelaRuntimeInitForCoreSnapshot(snapshot) {
+        var transaction = velaRuntimeInitTransaction;
+        if (!transaction || (snapshot && snapshot.hostReady === true && snapshot.generation === transaction.coreGeneration)) { return false; }
+        disposeVelaRuntimeCandidate(transaction);
+        clearVelaRuntimeInitTransaction(transaction);
+        return true;
+    }
+
     function initializeVelaRuntime(coreSnapshot) {
         var snapshot = coreSnapshot || coreBootstrapSnapshot;
         var coreGeneration = snapshot && typeof snapshot.generation === "number" ? snapshot.generation : 0;
@@ -4170,11 +4186,16 @@
         };
         velaRuntimeInitTransaction = transaction;
         transaction.promise = Promise.resolve(window.VelaCepModuleLoader.load()).then(function () {
+            var owner;
+            var exactAgentSession;
             if (panelShuttingDown || velaRuntimeInitTransaction !== transaction || transaction.panelGeneration !== panelLifecycleGeneration || !coreBootstrapSnapshot || coreBootstrapSnapshot.generation !== transaction.coreGeneration || coreBootstrapSnapshot.hostReady !== true || !window.VelaRuntime || typeof window.VelaRuntime.createRuntime !== "function") {
                 throw { code: "LIFECYCLE_BLOCKED" };
             }
             if (!getVelaActivationPolicy()) { throw { code: "VELA_ACTIVATION_POLICY_UNAVAILABLE" }; }
-            transaction.candidate = window.VelaRuntime.createRuntime({ invokeHost: invokeVelaHost });
+            owner = initializeVelaAgentRuntimeOwner();
+            exactAgentSession = owner && typeof owner.getSessionRuntime === "function" ? owner.getSessionRuntime() : null;
+            if (!exactAgentSession) { throw { code: "AGENT_RUNTIME_UNAVAILABLE" }; }
+            transaction.candidate = window.VelaRuntime.createRuntime({ invokeHost: invokeVelaHost, exactAgentSession: exactAgentSession });
             return transaction.candidate.initialize();
         }).then(function (result) {
             if (panelShuttingDown || velaRuntimeInitTransaction !== transaction || transaction.panelGeneration !== panelLifecycleGeneration || !coreBootstrapSnapshot || coreBootstrapSnapshot.generation !== transaction.coreGeneration || coreBootstrapSnapshot.hostReady !== true || !transaction.candidate || transaction.candidate.getStatus().state !== "ready") {
@@ -4185,7 +4206,9 @@
             clearVelaRuntimeInitTransaction(transaction);
             velaRuntimeLastErrorCode = null;
             velaRuntimeStatusRevision += 1;
-            initializeVelaAgentRuntimeOwner();
+            if (velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.attachObservationReadPort === "function") {
+                velaAgentRuntimeOwner.attachObservationReadPort(velaRuntimeController.getObservationReadPort());
+            }
             initializeVelaSurfaceController();
             configureVelaExperimentalSession();
             refreshVelaExperimentalSettings();
@@ -4269,6 +4292,11 @@
                     approve: function () { return velaRuntimeController.approveActiveCandidate(); },
                     reject: function () { return velaRuntimeController.rejectActiveCandidate(); },
                     getState: function () { return velaRuntimeController.getConfirmationSurfaceState(); }
+                },
+                authority: {
+                    grant: function () { return velaRuntimeController.grantNextOpacityMutation(); },
+                    revoke: function () { return velaRuntimeController.revokeOpacityDelegation(); },
+                    getState: function () { return velaRuntimeController.getAuthorityProjection(); }
                 }
             });
             mounted = controller && controller.mount && controller.mount();
@@ -9155,11 +9183,6 @@
             velaSurfaceController.dispose();
             velaSurfaceController = null;
         }
-        if (velaAgentRuntimeOwner) {
-            resetActiveCompositionDiagnostics();
-            velaAgentRuntimeOwner.dispose();
-            velaAgentRuntimeOwner = null;
-        }
         if (velaSurfaceShell) {
             velaSurfaceShell.dispose();
             velaSurfaceShell = null;
@@ -9168,6 +9191,11 @@
             velaRuntimeController.dispose();
             velaRuntimeController = null;
             velaRuntimeStatusRevision += 1;
+        }
+        if (velaAgentRuntimeOwner) {
+            resetActiveCompositionDiagnostics();
+            velaAgentRuntimeOwner.dispose();
+            velaAgentRuntimeOwner = null;
         }
         clearProceduralAppearanceSourceDebounce();
         stopSelectionPolling();
