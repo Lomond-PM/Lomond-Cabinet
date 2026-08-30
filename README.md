@@ -2,14 +2,14 @@
 
 Lomond Cabinet is an After Effects CEP extension that combines a registry-driven tool system, procedural Home visuals, and the experimental Vela local-assistant surface.
 
-- **Current product version:** `0.3.5`
+- **Current product version:** `0.3.6` release candidate
 - **Latest published tag:** `v0.3.5`
 - **Default development branch:** `dev`
 - **Extension bundle id:** `com.kevin.aetoolbox`
 - **Manifest menu name:** `AE Toolbox`
 - **Visible panel name:** `Lomond Cabinet`
 
-Version 0.3.5 is the current published baseline for the Vela Planning + Authority Contracts Foundation, tagged with immutable `v0.3.5`. Final After Effects release smoke passed. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default.
+Version 0.3.6 is the release candidate for Vela Delegated Authority. The latest published baseline remains immutable `v0.3.5` until final AE smoke and publication. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default.
 
 ## Runtime architecture
 
@@ -107,7 +107,7 @@ The optional LM Studio Provider is:
 - reset on reload for acknowledgement, readiness, and enablement;
 - allowed to persist only endpoint and Model ID configuration.
 
-Readiness means only that the configured local model instance is loaded. It is **not** qualification. No model is qualified, recommended, or selected as the production default in 0.3.5.
+Readiness means only that the configured local model instance is loaded. It is **not** qualification. No model is qualified, recommended, or selected as the production default in 0.3.6.
 
 The trusted activation policy keeps production activation locked. A model proposal cannot execute directly. With actionable Context, the transitional `proposal-capable-union` profile may return conversational text or a bounded `set-opacity-v1` proposal, but every mutation still crosses Review, Confirmation, freshness and permission checks, Preflight, ExecutionAdapter, and Host validation.
 
@@ -121,7 +121,7 @@ Version 0.3.5 adds the Planning + Authority Contracts Foundation:
 - lifecycle-safe suspend, reset-session, and dispose invalidation;
 - preservation of the existing legacy single-step production mutation path.
 
-Production multi-step execution is deferred by design. Version 0.3.5 has no production AuthorizedPlan producer, PlanController accept/confirm/run facade, synthetic producer hook, or plan-review Surface. The infrastructure is tested but remains dormant and user-inaccessible.
+Version 0.3.6 adds explicit process-local delegation and a single production pilot for one-shot `set-opacity-v1`. Consent is explicit; policy evaluates exact Session/task, scope, risk, budget, expiry and provenance; absent or exhausted authority falls back to human review. The grant is never persisted. Generic multi-step delegated execution and autonomous Agent behavior remain dormant or deferred.
 
 The core architecture boundary is:
 
@@ -136,6 +136,7 @@ See:
 
 - [`docs/design/vela-agent-architecture.md`](docs/design/vela-agent-architecture.md) — frozen 0.3.x architecture baseline;
 - [`docs/design/vela-agent-0.3.4-closure.md`](docs/design/vela-agent-0.3.4-closure.md) — 0.3.4 implementation closure;
+- [`docs/design/vela-agent-0.3.6-closure.md`](docs/design/vela-agent-0.3.6-closure.md) — 0.3.6 delegated-authority closure and release boundaries;
 - [`docs/design/vela-agent-0.3.3-closure.md`](docs/design/vela-agent-0.3.3-closure.md) — historical Runtime Foundation closure;
 - [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) — accepted limitations.
 
@@ -202,7 +203,7 @@ docs/HANDOFF.md
 
 ## Version and release status
 
-The current published release is **0.3.5**, tagged with immutable **`v0.3.5`**. The 0.3.5 Final AE Release Smoke passed, Host `projectVersion` reports `0.3.5`, and stages A–H1 are complete. Production multi-step remains deferred by design; the reachable mutation path remains the legacy single-step confirmation flow.
+The current release candidate is **0.3.6**; the latest published release remains immutable **`v0.3.5`** until final AE release smoke and publication. Host `projectVersion` reports `0.3.6`. The bounded one-shot opacity delegation is production-reachable; autonomous and generic multi-step delegation remain deferred.
 
 Keep these synchronized for future releases:
 
@@ -216,7 +217,7 @@ Keep these synchronized for future releases:
 
 `AEToolbox.hostApiVersion` is an independent Host contract version and remains `1.0.0`; it is not the product version.
 
-The next development stage is **0.3.6 Delegated Authority** and related post-0.3.5 producer/whole-plan review design. Production multi-step is not implicitly enabled by the version transition; Planner, DelegationPolicyEngine, AgentDriver, autonomous loops, retry/replan/rollback, and delegated mutation authority require separately scoped work.
+The next architectural work after this release is **0.3.7+** and remains separately scoped. AgentDriver, Observe → Reason → Act, Verify/Replan, autonomous retry, persistent or generic multi-capability grants, multi-step delegated budgeting, Session intelligence and a generic N-step Plan Review producer/surface are not part of 0.3.6.
 
 ## Known issues and release history
 

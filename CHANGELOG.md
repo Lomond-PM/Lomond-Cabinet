@@ -12,6 +12,25 @@ This project follows simple semantic versioning for development handoff:
 
 _No unreleased changes._
 
+## [0.3.6] - 2026-08-30
+
+### Delegated authority
+
+- Added process-local `DelegationGrantStore`, trusted authority evidence, deterministic `DelegationPolicyEngine`, and canonical Authority Plane composition with scope, risk, budget, expiry, provenance, revoke, and lifecycle invalidation.
+- Added trusted AuthorizedPlan production, atomic dormant BoundPlan activation, TaskRun arm hardening, and the execution commit port while preserving JIT binding, Guard, PlanStore reservation, authority consumption, Adapter, and Host validation.
+- Added an explicit, session-only one-shot delegation pilot for `set-opacity-v1`: `selected-layer`, `mutate`, `write` ceiling, one action, 60-second expiry, exact current Session and Runtime-owned task.
+- Production Compiler output now enters the trusted Policy route; absent, expired, exhausted, revoked, or out-of-scope delegation continues to require human review or fail closed.
+- A delegated action slot is consumed only after crossing the execution commit boundary. Precommit failure does not consume; postcommit failure consumes and is never refunded.
+- Added successful delegated `localProposal` settlement as `local-proposal-handled` without fabricated assistant success text.
+- Reconciled stale Runtime initialization and Core Registry retry presentation so stale continuations and retryable intermediate failures do not emit terminal warnings.
+
+### Boundaries
+
+- Delegation is never persisted and cannot be restored from Session history. `AuthorityEvidence` is trusted historical evidence, not live authority.
+- Authority timestamps are finite, integer, non-negative epoch milliseconds within `Number.MAX_SAFE_INTEGER`, with `expiresAt > issuedAt`, without widening generic application-number schemas.
+- The accepted `selected-layer` semantic target binds current selection at the fresh binding boundary; stale native bindings still fail closed.
+- This release does not add AgentDriver, an Observe → Reason → Act loop, Verify/Replan, autonomous retry, persistent or generic multi-capability grants, multi-step delegated budgeting, or a generic Plan Review producer/surface.
+
 ## [0.3.5] - 2026-08-29
 
 ### Planning and authority contracts
