@@ -18,6 +18,8 @@
         "PROVIDER_CONFIG_INVALID": "vela.surfaceProviderConfiguration",
         "RUNTIME_CAPABILITY_UNAVAILABLE": "vela.surfaceRuntimeUnavailable",
         "LIFECYCLE_BLOCKED": "vela.surfaceRuntimeUnavailable",
+        "REVIEW_REQUIRED": "vela.surfaceReviewRequired",
+        "PERMISSION_DENIED": "vela.surfacePermissionDenied",
         "SCHEMA_VALIDATION_FAILED": "vela.surfaceGenericError",
         "PAYLOAD_BUDGET_EXCEEDED": "vela.surfaceGenericError",
         "UNKNOWN_TARGET": "vela.surfaceNoActionableTarget",
@@ -50,6 +52,7 @@
         else if (confirmation === "rejected") { state = "cancelled"; }
         else if (provider === "pending") { state = "requesting"; }
         else if (provider === "proposal-ready" || provider === "proposal-reviewing") { state = "reviewing"; }
+        else if (provider === "objective-blocked") { state = "blocked"; }
         else if (provider === "failed" || provider === "intent-rejected") { state = "error"; }
         else if (provider === "cancelled") { state = "cancelled"; }
         else if (provider === "completed" || provider === "local-proposal-handled") { state = "completed"; }
@@ -107,6 +110,7 @@
             else if (state === "local-proposal-handled") { /* Trusted local handling needs no fabricated assistant text. */ }
             else if (state === "proposal-ready") { proposalReviewPending = true; append("notice", "", "vela.surfaceLocalProposalNotice"); }
             else if (state === "intent-rejected") { append("notice", "", intentReason === "target-mismatch" ? "vela.surfaceIntentTargetMismatch" : "vela.surfaceIntentRejected"); }
+            else if (state === "objective-blocked") { append(code === "REVIEW_REQUIRED" ? "notice" : "error", "", errorDisplayKey(code)); }
             else if (state === "cancelled") { append("error", "", errorDisplayKey(code || "PROVIDER_REQUEST_ABORTED")); }
             else { append("error", "", errorDisplayKey(code || "PROVIDER_RESPONSE_INVALID")); }
             if (state !== "proposal-ready" && state !== "proposal-reviewing") { proposalReviewPending = false; }

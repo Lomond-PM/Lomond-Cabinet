@@ -97,6 +97,7 @@
                 "executing": "vela.surfaceStatusExecuting",
                 "completed": "vela.surfaceStatusCompleted",
                 "cancelled": "vela.surfaceStatusCancelled",
+                "blocked": "vela.surfaceStatusBlocked",
                 "error": "vela.surfaceStatusFailed"
             };
             return t(keys[state] || "vela.surfaceStatusFailed");

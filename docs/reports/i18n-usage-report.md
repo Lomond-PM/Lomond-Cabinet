@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 456 |
+| A | Core / Global; keep | 459 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 3 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -646,6 +646,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.surfaceLabel | vela | Vela | Vela | client/index.html, client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceLocalProposalNotice | vela | A local action suggestion was received. This conversation area does n... | 已收到一个本地操作建议。 当前对话区域暂不支持查看或执行该建议。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceNoActionableTarget | vela | No actionable target is selected. Select a layer in After Effects and... | 当前没有可操作的目标。请在 AE 中选择一个图层后重新发送请求。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfacePermissionDenied | vela | This action was not authorized and was not performed. | 当前操作未获授权，且未执行。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceProviderCancelled | vela | The local request was cancelled. | 已取消本地请求。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceProviderConfiguration | vela | The local model configuration is unavailable. Check LM Studio and try... | 本地模型配置不可用。请检查 LM Studio 后重试。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceProviderConnection | vela | Unable to connect to LM Studio. Start the local server and check it i... | 无法连接 LM Studio。请启动本地服务器并确认其可用后重试。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -655,11 +656,13 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.surfaceProviderTimeout | vela | The local model took too long to respond. Check LM Studio and try again. | 本地模型响应超时。请检查 LM Studio 后重试。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceReject | vela | Reject | 拒绝 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceResize | vela | Resize Vela conversation area | 调整 Vela 对话区域大小 | client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| vela.surfaceReview | vela | Review | 查看 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceReview | vela | Review | 查看 | client/js/vela/velaConfirmationView.js, client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceReviewRequired | vela | This action requires authorization before it can run. Allow the next ... | 当前操作需要授权后才能执行。请允许下一次不透明度修改，然后发起新请求。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceRevokeOpacityConsent | vela | Revoke automatic opacity change | 撤销自动修改不透明度的权限 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceRuntimeUnavailable | vela | Vela is temporarily unavailable. Reopen the panel and try again. | Vela 暂时不可用。请重新打开面板后重试。 | client/js/main.js, client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceSend | vela | Send | 发送 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceSettings | vela | Settings | 设置 | client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceStatusBlocked | vela | Local action requires authorization | 本地操作需要授权 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusCancelled | vela | Local request cancelled | 已取消本地请求 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusCompleted | vela | Local response received | 已收到本地响应 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusComposing | vela | Drafting a local message | 正在编辑本地消息 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
