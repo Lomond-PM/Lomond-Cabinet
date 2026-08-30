@@ -129,6 +129,9 @@ async function run() {
     check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "provider text terminal exposes only Send");
     matrix.setProvider({ state: "failed", text: null, errorCode: "PROVIDER_CONNECTION_FAILED" }); matrix.controller.refreshLocale();
     check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "provider error terminal exposes only Send");
+    const blocked = fixture({ authority: true }); await mountEnabled(blocked); const blockedActions = blocked.elements.actionSlot.children; blocked.elements.composer.value = "opacity 47"; blockedActions[0].emit("click"); blocked.setProvider({ state: "objective-blocked", text: null, errorCode: "REVIEW_REQUIRED" }); blocked.request.resolve(); await flush();
+    check(!blockedActions[0].hidden && blockedActions[1].hidden && blockedActions[3].hidden && blockedActions[4].hidden && blockedActions[5].hidden && !blockedActions[6].hidden, "A1 REVIEW_REQUIRED restores Send and delegation while keeping Review, Approve, and Reject hidden");
+    equal(blocked.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceReviewRequired", "A1 REVIEW_REQUIRED renders the bounded authorization notice");
     matrix.setProvider({ state: "cancelled", text: null, errorCode: "PROVIDER_REQUEST_ABORTED" }); matrix.controller.refreshLocale();
     check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "provider cancellation terminal exposes only Send");
     matrix.setProvider({ state: "intent-rejected", text: null, errorCode: null }); matrix.controller.refreshLocale();

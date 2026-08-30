@@ -202,6 +202,7 @@
         var planStore = null;
         var bridge = null;
         var observationReadPort = null;
+        var opacityVerificationPort = null;
         var reviewPort = null;
         var preflight = null;
         var executionAdapter = null;
@@ -217,6 +218,8 @@
         var reviewTokenSerial = 0;
         var authorityIdSerial = 0;
         var authorityPlane = null;
+        var agentDriverRuntimePort = null;
+        var agentDriverProposal = null;
         var authorityState = "inactive";
         var authorityErrorCode = null;
         var activePilot = null;
@@ -337,6 +340,7 @@
             validateRegisteredActionMappings(capabilityContracts, validator);
             planStore = planModule.createPlanStore(protocol, { validatorAuthority: validator.authority });
             bridge = bridgeModule.createContextBridge({ protocol: protocol, contextApi: contextApi, invokeHost: invokeHost, runtime: { setTimeout: setTimer, clearTimeout: clearTimer, timeoutMs: timeoutMs } });
+            opacityVerificationPort = bridgeModule.createOpacityVerificationPort(bridge, protocol);
             observationReadPort = Object.freeze({
                 capture: function (options) { return bridge.capture(options); },
                 getState: function () { return bridge.getState(); }
@@ -444,6 +448,92 @@
                 }, function (error) { authorityState = activePilot && authorityProjection().active ? "active" : authorityState; authorityErrorCode = error && error.code || "PLAN_FAILED"; latestAuthorityFailure = Object.freeze({ stage: failureStage, sourceStage: error && typeof error.stage === "string" ? error.stage : null, code: authorityErrorCode, field: error && error.details && typeof error.details.field === "string" ? error.details.field : null }); authorityRouting = false; authorityPlane.proposalPort.finalizeReview({ requestId: proposal.requestId, generation: proposal.generation, outcome: "failed", errorCode: stableErrorCode(error) }); throw error; });
             } catch (error) { authorityRouting = false; authorityErrorCode = error && error.code || "RUNTIME_CAPABILITY_UNAVAILABLE"; latestAuthorityFailure = Object.freeze({ stage: failureStage, sourceStage: error && typeof error.stage === "string" ? error.stage : null, code: authorityErrorCode, field: error && error.details && typeof error.details.field === "string" ? error.details.field : null }); if (proposal) { authorityPlane.proposalPort.finalizeReview({ requestId: proposal.requestId, generation: proposal.generation, outcome: "failed", errorCode: stableErrorCode(error) }); } return Promise.reject(error); }
         }
+        function createAgentDriverRuntimePort() {
+            function settleAgentDriverProposal(outcome, errorCode, handled) {
+                var proposal = agentDriverProposal;
+                agentDriverProposal = null;
+                if (!proposal || !authorityPlane) { return false; }
+                return authorityPlane.proposalPort.finalizeReview({ requestId: proposal.requestId, generation: proposal.generation, outcome: outcome, errorCode: errorCode || null, handled: handled === true });
+            }
+            function settleDelegatedExecutionFailure(errorCode, settleProposal) {
+                var projection;
+                activeDelegatedTask = null;
+                projection = authorityProjection();
+                authorityErrorCode = errorCode || "PLAN_FAILED";
+                if (activePilot && projection.remainingActions > 0) {
+                    authorityRemainingActions = projection.remainingActions;
+                    authorityState = "active";
+                } else {
+                    activePilot = null;
+                    authorityRemainingActions = 0;
+                    authorityState = "failed";
+                }
+                if (settleProposal !== false) { try { settleAgentDriverProposal("failed", authorityErrorCode, false); } catch (ignoredSettlement) {} }
+                return authorityProjection();
+            }
+            if (agentDriverRuntimePort) { return agentDriverRuntimePort; }
+            agentDriverRuntimePort = Object.freeze({
+                reason: function (input) {
+                    if (disposed || state !== "ready" || !providerController || agentDriverProposal) { return Promise.reject(safeError("LIFECYCLE_BLOCKED")); }
+                    return Promise.resolve(providerController.send(input)).then(function () {
+                        var proposal = authorityPlane && authorityPlane.proposalPort.beginReview();
+                        if (!proposal || proposal.capabilityId !== "set-opacity-v1") { throw safeError("PROVIDER_RESPONSE_INVALID"); }
+                        agentDriverProposal = proposal;
+                        return Object.freeze({ capabilityId: proposal.capabilityId, params: Object.freeze({ opacity: proposal.opacity }) });
+                    });
+                },
+                submitIntent: function (input) {
+                    var candidate;
+                    var decision;
+                    var plan;
+                    var proposal = agentDriverProposal;
+                    if (disposed || state !== "ready" || !authorityPlane || !proposal || !planningContracts.isCapabilityIntent(input && input.capabilityIntent) || input.sessionId !== exactAgentSession.getSessionId() || input.capabilityIntent.capabilityId !== "set-opacity-v1") { settleAgentDriverProposal("failed", "LIFECYCLE_BLOCKED", false); return Promise.reject(safeError("LIFECYCLE_BLOCKED")); }
+                    try {
+                        candidate = authorityPlane.compiler.compile(input.capabilityIntent);
+                        decision = authorityPlane.policyEngine.evaluate(candidate, { sessionId: exactAgentSession.getSessionId(), taskId: activePilot ? activePilot.taskId : input.taskId });
+                        latestAuthorityDecision = Object.freeze({ decision: decision.decision, reasonCode: decision.reasonCode, candidateId: candidate.candidateId });
+                        if (decision.decision === "REVIEW_REQUIRED") {
+                            settleAgentDriverProposal("completed", null, true);
+                            return Promise.resolve(Object.freeze({ state: "review-required", committed: false, code: "REVIEW_REQUIRED" }));
+                        }
+                        if (decision.decision !== "ALLOW") {
+                            settleAgentDriverProposal("failed", "PERMISSION_DENIED", false);
+                            return Promise.resolve(Object.freeze({ state: "denied", committed: false, code: "PERMISSION_DENIED" }));
+                        }
+                        if (!activePilot) { throw safeError("LIFECYCLE_BLOCKED"); }
+                        plan = authorityPlane.producer.produce({ candidate: candidate, context: { sessionId: exactAgentSession.getSessionId(), taskId: activePilot.taskId }, delegationGrantedEvidence: activePilot.evidence });
+                    } catch (error) { settleAgentDriverProposal("failed", stableErrorCode(error), false); return Promise.reject(error); }
+                    authorityState = "executing";
+                    return authorityPlane.atomicCoordinator.activate(plan, { selectionOrderMeaningful: false }).then(function (handle) {
+                        activeDelegatedTask = handle;
+                        authorityPlane.authorityAppender.publishCommitted(exactAgentSession.getEventBySeq(handle.armedEvidenceSeq));
+                        return authorityPlane.atomicCoordinator.run(handle).then(function (result) {
+                            var settlementSucceeded = true;
+                            activeDelegatedTask = null; activePilot = null; authorityRemainingActions = 0; authorityState = "consumed";
+                            try { settleAgentDriverProposal("completed", null, true); }
+                            catch (ignoredSettlement) { settlementSucceeded = false; }
+                            return Object.freeze({ state: "executed", committed: true, executionResult: result, transcriptSettled: settlementSucceeded });
+                        }, function (runError) {
+                            settleDelegatedExecutionFailure(stableErrorCode(runError), true);
+                            throw runError;
+                        });
+                    }, function (activationError) { settleDelegatedExecutionFailure(stableErrorCode(activationError), true); throw activationError; });
+                },
+                verifyOpacity: function (input) {
+                    return opacityVerificationPort.observe().then(function (observation) {
+                        return Object.freeze({ fresh: observation.fresh === true, opacity: observation.opacity, matches: observation.opacity === input.expectedOpacity, observationRevision: observation.observationId });
+                    });
+                },
+                cancel: function () {
+                    if (agentDriverProposal && authorityPlane) { try { settleAgentDriverProposal("failed", "AGENT_DRIVER_CANCELLED", false); } catch (ignored) {} }
+                    if (providerController) { try { providerController.cancel({ requestId: null }); } catch (ignoredProvider) {} }
+                    var cancelled = cancelActiveDelegatedTask();
+                    if (cancelled && authorityState === "executing") { settleDelegatedExecutionFailure("AGENT_DRIVER_CANCELLED", false); }
+                    return cancelled;
+                }
+            });
+            return agentDriverRuntimePort;
+        }
         function initialize() {
             var capturedEpoch;
             if (disposed || state === "failed") { return Promise.reject(safeError(lastErrorCode || "RUNTIME_CAPABILITY_UNAVAILABLE")); }
@@ -511,7 +601,7 @@
             if (providerController) { try { providerController.invalidate("idle"); } catch (ignoredProvider) {} }
             if (reviewRuntimePort) { try { reviewRuntimePort.invalidateAll(); } catch (ignoredReviews) {} }
             if (planController) { try { planController.dispose(); } catch (ignoredPlans) {} }
-            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; reviewPort = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; authorizedPlanMaterializer = null; planReviewProjection = null; planController = null; reviewRuntimePort = null; protocolClock = null;
+            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; reviewPort = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; authorizedPlanMaterializer = null; planReviewProjection = null; planController = null; reviewRuntimePort = null; protocolClock = null; agentDriverRuntimePort = null; agentDriverProposal = null; opacityVerificationPort = null;
             initialized = false; suspended = false; disposed = true; state = "disposed";
             return true;
         }
@@ -571,7 +661,7 @@
             var proposedValue = hasConfirmation && source && typeof source.proposedValue === "number" && isFinite(source.proposedValue) && source.proposedValue >= 0 && source.proposedValue <= 100 ? source.proposedValue : null;
             return Object.freeze({ state: state, beforeValue: beforeValue, proposedValue: proposedValue, errorCode: source && typeof source.errorCode === "string" ? source.errorCode : null, moduleRevision: "vela-confirmation-surface-v1" });
         }
-        return Object.freeze({ initialize: initialize, getStatus: safeStatus, getAuthorityProjection: authorityProjection, getAuthorityDiagnostics: authorityDiagnostics, grantNextOpacityMutation: grantNextOpacityMutation, revokeOpacityDelegation: revokeOpacityDelegation, getObservationReadPort: function () { return initialized && !disposed ? observationReadPort : null; }, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, approveActiveCandidate: approveActiveCandidate, rejectActiveCandidate: rejectActiveCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, checkProviderReadiness: checkProviderReadiness, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderDiagnostics: getProviderDiagnostics, getProviderSurfaceState: getProviderSurfaceState, getConfirmationSurfaceState: getConfirmationSurfaceState });
+        return Object.freeze({ initialize: initialize, getStatus: safeStatus, getAuthorityProjection: authorityProjection, getAuthorityDiagnostics: authorityDiagnostics, grantNextOpacityMutation: grantNextOpacityMutation, revokeOpacityDelegation: revokeOpacityDelegation, getObservationReadPort: function () { return initialized && !disposed ? observationReadPort : null; }, getAgentDriverRuntimePort: function () { return initialized && !disposed ? createAgentDriverRuntimePort() : null; }, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, approveActiveCandidate: approveActiveCandidate, rejectActiveCandidate: rejectActiveCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, checkProviderReadiness: checkProviderReadiness, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderDiagnostics: getProviderDiagnostics, getProviderSurfaceState: getProviderSurfaceState, getConfirmationSurfaceState: getConfirmationSurfaceState });
     }
     return Object.freeze({ createRuntime: createRuntime, deriveRegisteredActionParamsSchema: deriveRegisteredActionParamsSchema, validateRegisteredActionMappings: validateRegisteredActionMappings });
 }));

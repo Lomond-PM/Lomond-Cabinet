@@ -109,6 +109,8 @@
     var reviewPortProtocols = new WeakMap();
     var providerContextPorts = new WeakMap();
     var providerContextPortProtocols = new WeakMap();
+    var opacityVerificationPorts = new WeakMap();
+    var opacityVerificationPortProtocols = new WeakMap();
     var OPACITY_PROPERTY_PATH = Object.freeze(["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0]);
 
     function isTrustedContextBridge(bridge) {
@@ -159,6 +161,14 @@
 
     function isTrustedProviderContextPortForProtocol(port, protocol) {
         return Boolean(port && protocolModule.isTrustedProtocol(protocol) && providerContextPortProtocols.get(port) === protocol);
+    }
+
+    function createOpacityVerificationPort(bridge, protocol) {
+        var port;
+        if (!isTrustedContextBridgeForProtocol(bridge, protocol)) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
+        port = opacityVerificationPorts.get(bridge);
+        if (!port) { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
+        return port;
     }
 
     function protocolError(protocol, code, stage) {
@@ -1569,6 +1579,22 @@
         });
         providerContextPorts.set(bridge, providerContextPort);
         providerContextPortProtocols.set(providerContextPort, protocol);
+        var opacityVerificationPort = Object.freeze({
+            observe: function () {
+                return capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: false }).then(function (bindingCapture) {
+                    var selection = bindingCapture && bindingCapture.snapshot && bindingCapture.snapshot.selection;
+                    if (!bindingCapture || bindingCapture.executable !== true || !Array.isArray(selection) || selection.length !== 1) { throw protocolError(protocol, protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE); }
+                    return capturePropertyValues(bindingCapture, [{ layerId: selection[0].layerId, propertyPath: OPACITY_PROPERTY_PATH }]);
+                }).then(function (valueCapture) {
+                    var record = captureRecords.get(valueCapture);
+                    var target = record && record.valueTargets && record.valueTargets[0];
+                    if (!target || typeof target.reviewValue !== "number" || !Number.isFinite(target.reviewValue)) { throw protocolError(protocol, protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE); }
+                    return protocol.deepFreeze({ fresh: true, opacity: target.reviewValue, valueDigest: target.valueDigest, observationId: valueCapture.requestId });
+                });
+            }
+        });
+        opacityVerificationPorts.set(bridge, opacityVerificationPort);
+        opacityVerificationPortProtocols.set(opacityVerificationPort, protocol);
         return bridge;
     }
 
@@ -1582,6 +1608,7 @@
         isTrustedReviewPortForProtocol: isTrustedReviewPortForProtocol,
         createProviderContextPort: createProviderContextPort,
         isTrustedProviderContextPortForProtocol: isTrustedProviderContextPortForProtocol,
+        createOpacityVerificationPort: createOpacityVerificationPort,
         quoteForExtendScript: quoteForExtendScript
     });
 }));

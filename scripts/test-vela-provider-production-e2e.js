@@ -15,7 +15,9 @@ const planModule = require("../client/js/vela/velaPlan");
 const preflightModule = require("../client/js/vela/velaExecutionPreflight");
 const adapterModule = require("../client/js/vela/velaExecutionAdapter");
 const contextModule = require("../client/js/vela/velaContext");
+const planningModule = require("../client/js/vela/velaPlanningContracts");
 const presentationModule = require("../client/js/vela/velaPresentationModel").VelaPresentationModel;
+const agentDriverModule = require("../client/js/vela/velaAgentDriver");
 const nodeRuntime = require("./velaNodeRuntime");
 let assertions = 0;
 const HOST = "host_0123456789abcdef0123456789abcdef0123456789abcdef";
@@ -33,7 +35,7 @@ function hostContextError(request, code, reason) { const error = { code, message
 function hostExecution(request, digest) { return JSON.stringify({ protocol: "vela.host-execution-result.v1", schemaVersion: "1.0", requestId: request.requestId, sessionId: request.sessionId, operation: "executeCapability", ok: true, hostExecutionRevision: "vela-execution-host-v1", result: { capabilityId: "set-opacity-v1", valueKind: "number", resultingValueDigest: digest } }); }
 function makeHarness() {
     let now = 1700000000000;
-    const state = { value: 25, selectionCount: 1, layerIndex: 3, generation: 3, epoch: 1, error: null, providerMode: "proposal", proposalOpacity: 57.5, groundingUnavailableOnce: false, contextHostErrorOnce: null, contextHostReasonOnce: null };
+    const state = { value: 25, selectionCount: 1, nativeLayerId: 45, layerIndex: 3, generation: 3, epoch: 1, error: null, executionError: null, providerMode: "proposal", proposalOpacity: 57.5, groundingUnavailableOnce: false, contextHostErrorOnce: null, contextHostReasonOnce: null, advanceLayerIdAfterCapture: false };
     const calls = [];
     const providerBodies = [];
     const environment = Object.assign({}, nodeRuntime, {
@@ -54,20 +56,79 @@ function makeHarness() {
     });
     const digestProtocol = protocolModule.createProtocol(environment);
     const digestContext = contextModule.createContextApi(digestProtocol);
-    const runtime = runtimeModule.createRuntime({ activationPolicy, environment, exactAgentSession: sessionRuntime.createSessionLog(), invokeHost(source, callback) {
+    const session = sessionRuntime.createSessionLog();
+    const runtime = runtimeModule.createRuntime({ activationPolicy, environment, exactAgentSession: session, invokeHost(source, callback) {
         const call = decode(source); calls.push(call);
-        if (call.kind === "execution") { state.value = call.request.scope.params.opacity; callback(hostExecution(call.request, digestContext.digestPropertyValue("number", state.value))); return; }
+        if (call.kind === "execution") { if (state.executionError) { callback(JSON.stringify({ protocol: "vela.host-execution-result.v1", schemaVersion: "1.0", requestId: call.request.requestId, sessionId: call.request.sessionId, operation: "executeCapability", ok: false, hostExecutionRevision: "vela-execution-host-v1", error: { code: state.executionError, message: "bounded" } })); return; } state.value = call.request.scope.params.opacity; callback(hostExecution(call.request, digestContext.digestPropertyValue("number", state.value))); return; }
         if (call.request.operation === "getCapabilities") { callback(hostContext(call.request, { hostInstanceId: HOST, hostReloadEpoch: state.epoch, tier: 0, capabilities: { maxTier: 3, nativeLayerIdAvailable: true, bindingContextAvailable: true, hostAdapterRevision: "vela-context-host-v4" } })); return; }
         if (state.error) { callback(hostContextError(call.request, state.error)); return; }
-        if (call.request.operation === "captureContext") { if (state.contextHostErrorOnce) { const code = state.contextHostErrorOnce; const reason = state.contextHostReasonOnce; state.contextHostErrorOnce = null; state.contextHostReasonOnce = null; callback(hostContextError(call.request, code, reason)); return; } if (state.groundingUnavailableOnce) { state.groundingUnavailableOnce = false; callback(hostContextError(call.request, "HOST_CONTEXT_UNAVAILABLE", "no-actionable-target")); return; } callback(hostContext(call.request, { hostInstanceId: HOST, hostReloadEpoch: state.epoch, tier: 1, projectGeneration: state.generation, activeComp: { itemId: 12, projectGeneration: state.generation, type: "CompItem", width: 1920, height: 1080, duration: 10, frameRate: 30 }, selection: { count: state.selectionCount, identityQuality: "native-layer-id", items: state.selectionCount === 1 ? [{ nativeLayerId: 45, layerIndex: state.layerIndex, selectedOrder: 0, matchName: "ADBE AV Layer", type: "av" }] : [] } })); return; }
+        if (call.request.operation === "captureContext") { if (state.contextHostErrorOnce) { const code = state.contextHostErrorOnce; const reason = state.contextHostReasonOnce; state.contextHostErrorOnce = null; state.contextHostReasonOnce = null; callback(hostContextError(call.request, code, reason)); return; } if (state.groundingUnavailableOnce) { state.groundingUnavailableOnce = false; callback(hostContextError(call.request, "HOST_CONTEXT_UNAVAILABLE", "no-actionable-target")); return; } callback(hostContext(call.request, { hostInstanceId: HOST, hostReloadEpoch: state.epoch, tier: 1, projectGeneration: state.generation, activeComp: { itemId: 12, projectGeneration: state.generation, type: "CompItem", width: 1920, height: 1080, duration: 10, frameRate: 30 }, selection: { count: state.selectionCount, identityQuality: "native-layer-id", items: state.selectionCount === 1 ? [{ nativeLayerId: state.nativeLayerId, layerIndex: state.layerIndex, selectedOrder: 0, matchName: "ADBE AV Layer", type: "av" }] : [] } })); if (state.advanceLayerIdAfterCapture) { state.advanceLayerIdAfterCapture = false; state.nativeLayerId += 1; } return; }
         callback(hostContext(call.request, { hostInstanceId: HOST, hostReloadEpoch: state.epoch, projectGeneration: state.generation, sampleTime: 1, tier: 3, targets: call.request.scope.targets.map((target, index) => ({ targetOrdinal: index, nativeLayerId: target.nativeLayerId, layerIndex: target.layerIndex, propertyPath: target.propertyPath, propertyMatchName: "ADBE Opacity", value: { kind: "number", data: state.value } })) }));
     } });
-    return { runtime, state, calls, providerBodies };
+    return { runtime, session, state, calls, providerBodies };
 }
 async function sendProposal(harness, opacity) { harness.state.providerMode = "proposal"; harness.state.proposalOpacity = opacity; return harness.runtime.sendProviderMessage({ message: "Set the selected layer opacity to " + opacity + "%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" }); }
 async function run() {
     check(typeof protocolModule.createProtocol === "function" && typeof parserModule.createResponseParser === "function" && typeof providerAdapterModule.createLocalOpenAICompatibleProvider === "function" && typeof providerControllerModule.createProviderController === "function" && typeof routerModule.createProposalRouter === "function" && typeof controllerModule.createController === "function" && typeof validatorModule.createActionValidator === "function" && typeof planModule.createPlanStore === "function" && typeof preflightModule.createExecutionPreflight === "function" && typeof adapterModule.createExecutionAdapter === "function", "D2-C loads the real production Protocol, parser, provider, router, controller, validator, plan, preflight and execution adapter modules.");
     const h = makeHarness(); await h.runtime.initialize();
+    const agentSlice = makeHarness(); agentSlice.state.proposalOpacity = 63; await agentSlice.runtime.initialize(); await agentSlice.runtime.grantNextOpacityMutation();
+    const agentPort = agentSlice.runtime.getAgentDriverRuntimePort();
+    const reasoning = await agentPort.reason({ message: "Set the selected layer opacity to 63%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+    const agentIntent = planningModule.createCapabilityIntent({ intentId: "intent_agent_e2e", capabilityId: reasoning.capabilityId, requestedOperation: "mutate", params: reasoning.params });
+    const agentOutcome = await agentPort.submitIntent({ sessionId: agentSlice.session.getSessionId(), taskId: "agent_task_e2e", taskPlanId: "agent_plan_e2e", stepId: "agent_step_e2e", capabilityIntent: agentIntent });
+    const agentVerification = await agentPort.verifyOpacity({ taskId: "agent_task_e2e", expectedOpacity: 63 });
+    check(agentOutcome.state === "executed" && agentOutcome.committed === true && agentSlice.calls.filter((call) => call.kind === "execution").length === 1, "Agent Driver port reaches the existing delegated execution spine exactly once.");
+    check(agentVerification.fresh === true && agentVerification.matches === true && agentVerification.opacity === 63, "Agent Driver port performs a fresh trusted opacity read after commit.");
+    const sequence = makeHarness(); await sequence.runtime.initialize(); await sequence.runtime.grantNextOpacityMutation();
+    let sequenceTurn = 0;
+    const sequenceDriver = agentDriverModule.createAgentDriver({
+        beginTurn() { sequenceTurn += 1; return Object.freeze({ sessionId: sequence.session.getSessionId(), turnId: "sequence_turn_" + sequenceTurn }); },
+        observe() { return Promise.resolve(); },
+        getObservation() { return Object.freeze({ observationRevision: "sequence_observation_" + sequenceTurn }); },
+        appendSessionEvent() {},
+        onListenerError() {}
+    });
+    check(sequenceDriver.attachRuntimePort(sequence.runtime.getAgentDriverRuntimePort()), "sequence Driver attaches the real production Runtime port once.");
+    sequence.state.proposalOpacity = 63;
+    const sequenceFirst = await sequenceDriver.startObjective({ message: "Set the selected layer opacity to 63%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+    check(sequenceFirst.terminal.outcome === "completed" && sequence.state.value === 63 && sequence.calls.filter((call) => call.kind === "execution").length === 1, "sequence objective one consumes the grant through exactly one real Host mutation and fresh verification.");
+    check(sequence.runtime.getAuthorityProjection().state === "consumed" && sequence.runtime.getAuthorityProjection().remainingActions === 0 && sequence.runtime.getProviderUiState().state === "local-proposal-handled", "sequence objective one closes Provider ownership and exhausts the one-shot grant.");
+    sequence.state.proposalOpacity = 47;
+    const sequenceSecond = await sequenceDriver.startObjective({ message: "Set the selected layer opacity to 47%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+    global.AETOOLBOX_DEBUG_REGISTRY = true;
+    const sequenceDiagnostics = sequence.runtime.getAuthorityDiagnostics();
+    delete global.AETOOLBOX_DEBUG_REGISTRY;
+    check(sequenceSecond.objectiveId !== sequenceFirst.objectiveId && sequenceSecond.turn.turnId !== sequenceFirst.turn.turnId && sequenceSecond.taskPlan.planId !== sequenceFirst.taskPlan.planId && sequenceSecond.taskPlan.steps[0].capabilityIntent.intentId !== sequenceFirst.taskPlan.steps[0].capabilityIntent.intentId, "sequence objective two has fresh objective, turn, TaskPlan, and CapabilityIntent ownership.");
+    check(sequenceSecond.terminal.outcome === "blocked" && sequenceSecond.terminal.code === "REVIEW_REQUIRED" && sequenceDiagnostics.latestDecision.decision === "REVIEW_REQUIRED" && sequenceDiagnostics.latestDecision.reasonCode === "delegated-authority-insufficient", "sequence objective two reaches the real PolicyEngine and closes with its canonical REVIEW_REQUIRED decision.");
+    check(sequence.state.value === 63 && sequence.calls.filter((call) => call.kind === "execution").length === 1 && sequenceSecond.counters.actions === 1 && sequenceSecond.counters.replans === 0, "REVIEW_REQUIRED neither reuses the consumed grant nor retries or calls Host.");
+    check(sequence.runtime.getProviderUiState().state === "local-proposal-handled" && sequence.runtime.getProviderUiState().state !== "proposal-ready" && sequence.runtime.getProviderUiState().state !== "proposal-reviewing", "REVIEW_REQUIRED terminal-settles the Provider proposal and clears Runtime-held proposal ownership.");
+    const blockedPresentation = presentationModule.create(); blockedPresentation.begin("Set opacity to 47%"); blockedPresentation.apply({ state: "pending", text: null, errorCode: null });
+    const blockedTranscript = blockedPresentation.apply({ state: "objective-blocked", text: null, errorCode: "REVIEW_REQUIRED" });
+    check(blockedTranscript.pending === false && blockedTranscript.items.some((item) => item.displayTextKey === "vela.surfaceReviewRequired") && !blockedTranscript.items.some((item) => item.displayTextKey === "vela.surfaceProviderResponse"), "REVIEW_REQUIRED has an explicit bounded presentation and never falls back to invalid Provider response.");
+    await sequence.runtime.grantNextOpacityMutation(); sequence.state.proposalOpacity = 47;
+    const sequenceThird = await sequenceDriver.startObjective({ message: "Set the selected layer opacity to 47%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+    check(sequenceThird.terminal.outcome === "completed" && sequenceThird.objectiveId !== sequenceSecond.objectiveId && sequence.state.value === 47 && sequence.calls.filter((call) => call.kind === "execution").length === 2, "a new grant permits a fresh third objective and exactly one additional Host mutation.");
+    const precommit = makeHarness(); precommit.state.selectionCount = 0; precommit.state.proposalOpacity = 58; await precommit.runtime.initialize(); await precommit.runtime.grantNextOpacityMutation();
+    let precommitTurn = 0;
+    const precommitDriver = agentDriverModule.createAgentDriver({ beginTurn() { precommitTurn += 1; return Object.freeze({ sessionId: precommit.session.getSessionId(), turnId: "precommit_turn_" + precommitTurn }); }, observe() { return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: "precommit_observation_" + precommitTurn }); }, appendSessionEvent() {}, onListenerError() {} });
+    precommitDriver.attachRuntimePort(precommit.runtime.getAgentDriverRuntimePort());
+    const precommitBlocked = await precommitDriver.startObjective({ message: "Set the selected layer opacity to 58%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+    check(precommitBlocked.terminal.outcome === "blocked" && precommit.calls.filter((call) => call.kind === "execution").length === 0, "real no-selection Preflight blocks before Host dispatch without mutation retry.");
+    check(precommit.runtime.getAuthorityProjection().state === "active" && precommit.runtime.getAuthorityProjection().active === true && precommit.runtime.getAuthorityProjection().remainingActions === 1 && precommit.runtime.getProviderUiState().state !== "proposal-ready" && precommit.runtime.getProviderUiState().state !== "proposal-reviewing", "pre-commit failure terminal-settles Provider ownership and restores the canonical live grant projection.");
+    precommit.state.selectionCount = 1;
+    const precommitRecovery = await precommitDriver.startObjective({ message: "Set the selected layer opacity to 58%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+    check(precommitRecovery.terminal.outcome === "completed" && precommit.state.value === 58 && precommit.calls.filter((call) => call.kind === "execution").length === 1 && precommit.runtime.getAuthorityProjection().state === "consumed", "a fresh objective consumes the recovered grant exactly once.");
+    const stale = makeHarness(); stale.state.proposalOpacity = 66; await stale.runtime.initialize(); await stale.runtime.grantNextOpacityMutation();
+    const stalePort = stale.runtime.getAgentDriverRuntimePort(); const staleReason = await stalePort.reason({ message: "Set the selected layer opacity to 66%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" }); stale.state.advanceLayerIdAfterCapture = true;
+    const staleIntent = planningModule.createCapabilityIntent({ intentId: "intent_stale_precommit", capabilityId: staleReason.capabilityId, requestedOperation: "mutate", params: staleReason.params });
+    let staleError = null; try { await stalePort.submitIntent({ sessionId: stale.session.getSessionId(), taskId: "stale_task", taskPlanId: "stale_plan", stepId: "stale_step", capabilityIntent: staleIntent }); } catch (error) { staleError = error; }
+    check(staleError && staleError.code === "CONTEXT_STALE", "JIT selection drift rejects before delegated commit; got " + (staleError && staleError.code));
+    check(stale.calls.filter((call) => call.kind === "execution").length === 0 && stale.runtime.getAuthorityProjection().state === "active" && stale.runtime.getAuthorityProjection().remainingActions === 1, "stale pre-commit rejection restores active authority without changing binding policy.");
+    const postcommit = makeHarness(); postcommit.state.proposalOpacity = 72; postcommit.state.executionError = "HOST_EXECUTION_MUTATION_FAILED"; await postcommit.runtime.initialize(); await postcommit.runtime.grantNextOpacityMutation();
+    const postPort = postcommit.runtime.getAgentDriverRuntimePort(); const postReason = await postPort.reason({ message: "Set the selected layer opacity to 72%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+    const postIntent = planningModule.createCapabilityIntent({ intentId: "intent_postcommit", capabilityId: postReason.capabilityId, requestedOperation: "mutate", params: postReason.params });
+    await expectCode(postPort.submitIntent({ sessionId: postcommit.session.getSessionId(), taskId: "post_task", taskPlanId: "post_plan", stepId: "post_step", capabilityIntent: postIntent }), "PLAN_FAILED", "Host failure occurs only after delegated commit consumed the grant.");
+    check(postcommit.calls.filter((call) => call.kind === "execution").length === 1 && postcommit.runtime.getAuthorityProjection().state === "failed" && postcommit.runtime.getAuthorityProjection().active === false && postcommit.runtime.getAuthorityProjection().remainingActions === 0, "post-commit failure never restores authority or creates a free retry.");
     const greeting = makeHarness(); await greeting.runtime.initialize();
     const rejectedGreeting = await greeting.runtime.sendProviderMessage({ message: "你好", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
     check(rejectedGreeting.state === "intent-rejected" && rejectedGreeting.intentReason === "missing-action" && rejectedGreeting.proposalCapabilityId === null && greeting.runtime.getProviderUiState().state !== "proposal-ready" && greeting.runtime.getProviderUiState().proposalCapabilityId === null && greeting.runtime.getUiState().candidateId === null, "An actionable-context greeting receiving a mistaken union localProposal is rejected by Intent Gate and cannot create proposal or candidate authority.");
