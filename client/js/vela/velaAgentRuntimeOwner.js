@@ -109,20 +109,20 @@
             var snapshot;
             var review;
             var resolution;
-            if (disposed || !driver) { return Object.freeze({ state: "inactive", reviewId: null, revision: null, capabilityId: null, proposedValue: null, outcome: null }); }
+            if (disposed || !driver) { return Object.freeze({ state: "inactive", reviewId: null, revision: null, capabilityId: null, beforeValue: null, proposedValue: null, outcome: null }); }
             snapshot = driver.getSnapshot();
             review = snapshot.suspendedReview;
             resolution = snapshot.reviewResolution;
             if (snapshot.state === "awaiting-review" && review) {
-                return Object.freeze({ state: "active", reviewId: review.reviewId, revision: review.revision, capabilityId: review.capabilityId, proposedValue: review.params.opacity, outcome: null });
+                return Object.freeze({ state: "active", reviewId: review.reviewId, revision: review.revision, capabilityId: review.capabilityId, beforeValue: review.beforeValue, proposedValue: review.params.opacity, outcome: null });
             }
             if (snapshot.state === "awaiting-outcome" && resolution && resolution.outcome === "approved") {
-                return Object.freeze({ state: "resolved", reviewId: resolution.reviewId, revision: resolution.revision, capabilityId: null, proposedValue: null, outcome: resolution.outcome });
+                return Object.freeze({ state: "resolved", reviewId: resolution.reviewId, revision: resolution.revision, capabilityId: null, beforeValue: null, proposedValue: null, outcome: resolution.outcome });
             }
             if (snapshot.state === "terminal" && snapshot.terminal && snapshot.terminal.outcome === "rejected" && resolution && resolution.outcome === "rejected") {
-                return Object.freeze({ state: "resolved", reviewId: resolution.reviewId, revision: resolution.revision, capabilityId: null, proposedValue: null, outcome: resolution.outcome });
+                return Object.freeze({ state: "resolved", reviewId: resolution.reviewId, revision: resolution.revision, capabilityId: null, beforeValue: null, proposedValue: null, outcome: resolution.outcome });
             }
-            return Object.freeze({ state: "inactive", reviewId: null, revision: null, capabilityId: null, proposedValue: null, outcome: null });
+            return Object.freeze({ state: "inactive", reviewId: null, revision: null, capabilityId: null, beforeValue: null, proposedValue: null, outcome: null });
         }
         var objectiveReviewPort = Object.freeze({
             getProjection: objectiveReviewProjection,

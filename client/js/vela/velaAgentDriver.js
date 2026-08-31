@@ -84,7 +84,8 @@
             }).then(function (outcome) {
                 if (!current(captured) || !outcome) { return snapshot(); }
                 if (outcome.state === "review-required") {
-                    active.suspendedReview = Object.freeze({ objectiveId: active.objectiveId, taskId: active.taskId, sessionId: active.turn.sessionId, turnId: active.turn.turnId, taskPlanId: active.taskPlan.planId, taskPlanRevision: active.taskPlan.revision, stepId: active.taskPlan.steps[0].stepId, capabilityId: active.intent.capabilityId, params: Object.freeze({ opacity: active.intent.params.opacity }), localExpectation: Object.freeze({ opacity: active.intent.params.opacity }), reviewId: "agent_review_" + serial + "_" + generation, revision: generation });
+                    var beforeValue = typeof outcome.beforeValue === "number" && isFinite(outcome.beforeValue) && outcome.beforeValue >= 0 && outcome.beforeValue <= 100 ? outcome.beforeValue : null;
+                    active.suspendedReview = Object.freeze({ objectiveId: active.objectiveId, taskId: active.taskId, sessionId: active.turn.sessionId, turnId: active.turn.turnId, taskPlanId: active.taskPlan.planId, taskPlanRevision: active.taskPlan.revision, stepId: active.taskPlan.steps[0].stepId, capabilityId: active.intent.capabilityId, params: Object.freeze({ opacity: active.intent.params.opacity }), localExpectation: Object.freeze({ opacity: active.intent.params.opacity }), beforeValue: beforeValue, reviewId: "agent_review_" + serial + "_" + generation, revision: generation });
                     transition("awaiting-review");
                     event("task/review-required", { taskId: active.taskId, taskPlanId: active.taskPlan.planId, stepId: active.taskPlan.steps[0].stepId, reviewId: active.suspendedReview.reviewId, reviewRevision: active.suspendedReview.revision, code: outcome.code || "REVIEW_REQUIRED" });
                     return snapshot();

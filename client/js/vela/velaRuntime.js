@@ -452,6 +452,13 @@
             } catch (error) { authorityRouting = false; authorityErrorCode = error && error.code || "RUNTIME_CAPABILITY_UNAVAILABLE"; latestAuthorityFailure = Object.freeze({ stage: failureStage, sourceStage: error && typeof error.stage === "string" ? error.stage : null, code: authorityErrorCode, field: error && error.details && typeof error.details.field === "string" ? error.details.field : null }); if (proposal) { authorityPlane.proposalPort.finalizeReview({ requestId: proposal.requestId, generation: proposal.generation, outcome: "failed", errorCode: stableErrorCode(error) }); } return Promise.reject(error); }
         }
         function createAgentDriverRuntimePort() {
+            function captureReviewPresentationBaseline() {
+                // Presentation only: any future approved continuation must still obtain fresh Observe, binding and Preflight evidence.
+                return Promise.resolve(opacityVerificationPort.observe()).then(function (observation) {
+                    var opacity = observation && observation.opacity;
+                    return typeof opacity === "number" && isFinite(opacity) && opacity >= 0 && opacity <= 100 ? opacity : null;
+                }, function () { return null; });
+            }
             function settleAgentDriverProposal(outcome, errorCode, handled) {
                 var proposal = agentDriverProposal;
                 agentDriverProposal = null;
@@ -513,7 +520,7 @@
                         latestAuthorityDecision = Object.freeze({ decision: decision.decision, reasonCode: decision.reasonCode, candidateId: candidate.candidateId });
                         if (decision.decision === "REVIEW_REQUIRED") {
                             settleAgentDriverProposal("completed", null, true);
-                            return Promise.resolve(Object.freeze({ state: "review-required", committed: false, code: "REVIEW_REQUIRED" }));
+                            return captureReviewPresentationBaseline().then(function (beforeValue) { return Object.freeze({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: beforeValue }); });
                         }
                         if (decision.decision !== "ALLOW") {
                             settleAgentDriverProposal("failed", "PERMISSION_DENIED", false);
@@ -694,7 +701,7 @@
         }
         function getConfirmationSurfaceState() {
             var objectiveReview = objectiveReviewRuntimePort ? objectiveReviewRuntimePort.getProjection() : null;
-            if (objectiveReview && objectiveReview.state === "active") { return Object.freeze({ state: "confirmation-ready", beforeValue: null, proposedValue: objectiveReview.proposedValue, errorCode: null, moduleRevision: "vela-objective-review-surface-v1" }); }
+            if (objectiveReview && objectiveReview.state === "active") { return Object.freeze({ state: "confirmation-ready", beforeValue: objectiveReview.beforeValue, proposedValue: objectiveReview.proposedValue, errorCode: null, moduleRevision: "vela-objective-review-surface-v1" }); }
             if (objectiveReview && objectiveReview.state === "resolved" && objectiveReview.outcome === "approved") { return Object.freeze({ state: "review-approved", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "vela-objective-review-surface-v1" }); }
             if (objectiveReview && objectiveReview.state === "resolved" && objectiveReview.outcome === "rejected") { return Object.freeze({ state: "rejected", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "vela-objective-review-surface-v1" }); }
             var source = getUiState();

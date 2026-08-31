@@ -95,7 +95,7 @@
                 "requesting": "vela.surfaceStatusPending",
                 "reviewing": "vela.surfaceStatusProposalReady",
                 "awaiting-confirmation": "vela.surfaceStatusConfirmation",
-                "awaiting-continuation": "vela.surfaceStatusPending",
+                "awaiting-continuation": "vela.surfaceStatusAwaitingContinuation",
                 "executing": "vela.surfaceStatusExecuting",
                 "completed": "vela.surfaceStatusCompleted",
                 "cancelled": "vela.surfaceStatusCancelled",

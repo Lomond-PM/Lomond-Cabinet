@@ -107,7 +107,7 @@ async function coldStartRegression() {
     check(coldOwner.getObservationRuntime(), "late attachment creates the real ObservationRuntime");
     check(coldOwner.attachAgentDriverRuntimePort(Object.freeze({
         reason() { reasons += 1; return Promise.resolve(Object.freeze({ capabilityId: "set-opacity-v1", params: Object.freeze({ opacity: 63 }) })); },
-        submitIntent() { submissions += 1; return Promise.resolve(Object.freeze(submissionMode === "review" ? { state: "review-required", committed: false, code: "REVIEW_REQUIRED" } : submissionMode === "denied" ? { state: "denied", committed: false, code: "PERMISSION_DENIED" } : { state: "executed", committed: true })); },
+        submitIntent() { submissions += 1; return Promise.resolve(Object.freeze(submissionMode === "review" ? { state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: 100 } : submissionMode === "denied" ? { state: "denied", committed: false, code: "PERMISSION_DENIED" } : { state: "executed", committed: true })); },
         verifyOpacity() { return Promise.resolve(Object.freeze({ fresh: true, matches: true, opacity: 63 })); },
         cancel() { return false; }
     })), "late Runtime action port attaches to the Owner-held Driver");
@@ -123,8 +123,9 @@ async function coldStartRegression() {
     equal(suspended.state, "awaiting-review", "Owner preserves the Driver suspended review state");
     const ownerReviewPort = coldOwner.getObjectiveReviewPort();
     const reviewProjection = ownerReviewPort.getProjection();
-    check(Object.isFrozen(ownerReviewPort) && Object.isFrozen(reviewProjection) && Object.keys(reviewProjection).sort().join(",") === "capabilityId,outcome,proposedValue,reviewId,revision,state", "Owner exposes only a frozen bounded objective review port and projection");
+    check(Object.isFrozen(ownerReviewPort) && Object.isFrozen(reviewProjection) && Object.keys(reviewProjection).sort().join(",") === "beforeValue,capabilityId,outcome,proposedValue,reviewId,revision,state", "Owner exposes only a frozen bounded objective review port and projection");
     equal(reviewProjection.reviewId, suspended.suspendedReview.reviewId, "Owner projection correlates the exact Driver review identity");
+    equal(reviewProjection.beforeValue, 100, "Owner projects the Driver-owned scalar presentation baseline without reading AE");
     const approved = ownerReviewPort.resolve({ reviewId: reviewProjection.reviewId, revision: reviewProjection.revision, outcome: "approved" });
     equal(approved.state, "awaiting-outcome", "Owner approve preserves the active objective awaiting its future continuation");
     equal(ownerReviewPort.getProjection().outcome, "approved", "Owner projection exposes approved only while the objective awaits continuation");

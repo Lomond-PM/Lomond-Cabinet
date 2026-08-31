@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 459 |
+| A | Core / Global; keep | 460 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 3 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -662,6 +662,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.surfaceRuntimeUnavailable | vela | Vela is temporarily unavailable. Reopen the panel and try again. | Vela 暂时不可用。请重新打开面板后重试。 | client/js/main.js, client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceSend | vela | Send | 发送 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceSettings | vela | Settings | 设置 | client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceStatusAwaitingContinuation | vela | Approved, awaiting continuation | 已批准，等待继续处理 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusBlocked | vela | Local action requires authorization | 本地操作需要授权 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusCancelled | vela | Local request cancelled | 已取消本地请求 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusCompleted | vela | Local response received | 已收到本地响应 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |

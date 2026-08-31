@@ -147,6 +147,9 @@ async function run() {
     matrix.setProvider({ state: "pending", text: null, errorCode: null }); matrix.setConfirmation({ state: "review-approved", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
     check(m[0].hidden && !m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "approved B2 review closes Confirmation and exposes only objective Cancel while awaiting continuation");
     equal(matrix.elements.root.getAttribute("data-vela-surface-state"), "awaiting-continuation", "approved B2 review is not projected as execution or completion");
+    equal(matrix.elements.statusText.textContent, "t:vela.surfaceStatusAwaitingContinuation", "awaiting-continuation uses its own accurate status rather than local-model pending");
+    matrix.setConfirmation({ state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
+    equal(matrix.elements.statusText.textContent, "t:vela.surfaceStatusPending", "actual pending Provider work retains the local-model waiting status");
     matrix.setProvider({ state: "idle", text: null, errorCode: null });
     matrix.setConfirmation({ state: "executing", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
     check(m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "executing hides every action");
