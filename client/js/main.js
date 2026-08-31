@@ -4214,6 +4214,9 @@
             if (velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.attachAgentDriverRuntimePort === "function" && typeof velaRuntimeController.getAgentDriverRuntimePort === "function") {
                 velaAgentRuntimeOwner.attachAgentDriverRuntimePort(velaRuntimeController.getAgentDriverRuntimePort());
             }
+            if (velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.getObjectiveReviewPort === "function" && typeof velaRuntimeController.attachObjectiveReviewPort === "function") {
+                velaRuntimeController.attachObjectiveReviewPort(velaAgentRuntimeOwner.getObjectiveReviewPort());
+            }
             initializeVelaSurfaceController();
             configureVelaExperimentalSession();
             refreshVelaExperimentalSettings();

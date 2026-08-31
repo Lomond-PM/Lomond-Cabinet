@@ -40,7 +40,7 @@ function fixture(options) {
     const provider = {
         check(config) { calls.check.push(config); if (options.readinessError) { return Promise.reject(options.readinessError); } return options.readinessPromise || Promise.resolve(options.readinessResult || { ready: true, code: "experimental-ready", modelId: config.model, loadedInstances: 1, quantization: "Q_TEST", contextLength: 8192 }); },
         send(message) { calls.send.push(message); if (options.synchronousRejection) { providerState = { state: "failed", text: null, errorCode: "VERIFICATION_UNAVAILABLE" }; return Promise.reject(new Error("VERIFICATION_UNAVAILABLE")); } providerState = { state: "pending", text: null, errorCode: null }; return request.promise; },
-        cancel() { calls.cancel += 1; providerState = { state: "cancelled", text: null, errorCode: "PROVIDER_REQUEST_ABORTED" }; },
+        cancel() { calls.cancel += 1; providerState = { state: "cancelled", text: null, errorCode: "PROVIDER_REQUEST_ABORTED" }; if (options.clearConfirmationOnCancel) { confirmationState = { state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }; } },
         getState() { return Object.freeze(Object.assign({}, providerState)); }
     };
     const confirmation = {
@@ -144,12 +144,27 @@ async function run() {
     check(m[0].hidden && m[1].hidden && !m[3].hidden && m[4].hidden && m[5].hidden, "proposal-ready exposes only Review");
     matrix.setProvider({ state: "idle", text: null, errorCode: null }); matrix.setConfirmation({ state: "confirmation-ready", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
     check(m[0].hidden && m[1].hidden && m[3].hidden && !m[4].hidden && !m[5].hidden, "confirmation-ready exposes only Approve and Reject");
+    matrix.setProvider({ state: "pending", text: null, errorCode: null }); matrix.setConfirmation({ state: "review-approved", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
+    check(m[0].hidden && !m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "approved B2 review closes Confirmation and exposes only objective Cancel while awaiting continuation");
+    equal(matrix.elements.root.getAttribute("data-vela-surface-state"), "awaiting-continuation", "approved B2 review is not projected as execution or completion");
+    matrix.setProvider({ state: "idle", text: null, errorCode: null });
     matrix.setConfirmation({ state: "executing", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
     check(m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "executing hides every action");
     matrix.setConfirmation({ state: "execution-completed", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
     check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "execution terminal exposes only Send");
     matrix.setConfirmation({ state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
     check(!m[0].hidden && m[1].hidden, "locale refresh retains idle Send visibility");
+    const cancelConvergence = fixture({ clearConfirmationOnCancel: true }); await mountEnabled(cancelConvergence); const cc = cancelConvergence.elements.actionSlot.children;
+    cancelConvergence.elements.composer.value = "opacity 47"; cc[0].emit("click");
+    cancelConvergence.setConfirmation({ state: "confirmation-ready", beforeValue: null, proposedValue: 47, errorCode: null, moduleRevision: "test" }); cancelConvergence.controller.refreshLocale();
+    cc[4].emit("click"); cancelConvergence.setConfirmation({ state: "review-approved", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }); cancelConvergence.confirmationRequest.resolve(); await flush();
+    check(cc[0].hidden && !cc[1].hidden && cc[4].hidden && cc[5].hidden, "approved review awaiting continuation exposes only Cancel");
+    cc[1].emit("click");
+    check(!cc[0].hidden && cc[1].hidden && cc[4].hidden && cc[5].hidden, "terminal cancel plus inactive Confirmation naturally restores Send");
+    equal(cancelConvergence.calls.cancel, 1, "full approve-to-cancel Surface sequence invokes objective cancellation once");
+    const cancelledItemCount = cancelConvergence.elements.transcriptScroll.children[1].children.length; cc[1].emit("click");
+    equal(cancelConvergence.calls.cancel, 1, "hidden Cancel cannot dispatch a duplicate cancellation");
+    equal(cancelConvergence.elements.transcriptScroll.children[1].children.length, cancelledItemCount, "duplicate Cancel produces no second transcript terminal");
     matrix.controller.suspend(); matrix.controller.resume();
     check(!m[0].hidden && matrixNodes.every((node, index) => node === m[index]), "suspend and resume retain idle Send visibility and every action node identity");
     e.composer.value = "set opacity"; e.composer.focus(); e.composer.setSelectionRange(2, 5); send.emit("click");

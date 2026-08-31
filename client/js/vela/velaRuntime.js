@@ -13,7 +13,7 @@
             typeof bridge.createContextBridge !== "function" || typeof bridge.createExecutionPort !== "function" || typeof bridge.createReviewPort !== "function" || typeof preflight.createExecutionPreflight !== "function" || typeof executionAdapter.createExecutionAdapter !== "function" ||
             !controller || typeof controller.createController !== "function" || typeof controller.isTrustedControllerForProtocol !== "function" || typeof proposalRouter.createProposalRouter !== "function" ||
             typeof parser.createResponseParser !== "function" || typeof providerAdapter.createLocalOpenAICompatibleProvider !== "function" || typeof localTransport.createLocalTransport !== "function" || typeof providerController.createProviderController !== "function" ||
-            typeof planningContracts.createAuthorizedPlan !== "function" || typeof materializer.createAuthorizedPlanMaterializer !== "function" || typeof taskRun.createTaskRun !== "function" || typeof planReviewProjection.createPlanReviewProjection !== "function" || typeof planController.createPlanController !== "function" || typeof reviewRuntimePort.createReviewRuntimePort !== "function") {
+            typeof planningContracts.createAuthorizedPlan !== "function" || typeof materializer.createAuthorizedPlanMaterializer !== "function" || typeof taskRun.createTaskRun !== "function" || typeof planReviewProjection.createPlanReviewProjection !== "function" || typeof planController.createPlanController !== "function" || typeof reviewRuntimePort.createReviewRuntimePort !== "function" || typeof reviewRuntimePort.createObjectiveReviewRuntimePort !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE");
         }
         return { protocol: protocol, parser: parser, capabilityContracts: capabilityContracts, providerAdapter: providerAdapter, localTransport: localTransport, context: context, validator: validator, plan: plan, guard: guard, bridge: bridge, preflight: preflight, executionAdapter: executionAdapter, controller: controller, providerController: providerController, proposalRouter: proposalRouter, planningContracts: planningContracts, materializer: materializer, taskRun: taskRun, planReviewProjection: planReviewProjection, planController: planController, reviewRuntimePort: reviewRuntimePort };
@@ -213,6 +213,7 @@
         var planReviewProjection = null;
         var planController = null;
         var reviewRuntimePort = null;
+        var objectiveReviewRuntimePort = null;
         var protocolClock = null;
         var taskRunSerial = 0;
         var reviewTokenSerial = 0;
@@ -220,6 +221,8 @@
         var authorityPlane = null;
         var agentDriverRuntimePort = null;
         var agentDriverProposal = null;
+        var agentReasoningGeneration = 0;
+        var activeAgentReasoning = null;
         var authorityState = "inactive";
         var authorityErrorCode = null;
         var activePilot = null;
@@ -474,12 +477,28 @@
             if (agentDriverRuntimePort) { return agentDriverRuntimePort; }
             agentDriverRuntimePort = Object.freeze({
                 reason: function (input) {
+                    var capturedGeneration;
                     if (disposed || state !== "ready" || !providerController || agentDriverProposal) { return Promise.reject(safeError("LIFECYCLE_BLOCKED")); }
+                    agentReasoningGeneration += 1;
+                    capturedGeneration = agentReasoningGeneration;
+                    activeAgentReasoning = Object.freeze({ generation: capturedGeneration });
                     return Promise.resolve(providerController.send(input)).then(function () {
-                        var proposal = authorityPlane && authorityPlane.proposalPort.beginReview();
+                        var proposal;
+                        if (disposed || state !== "ready" || !activeAgentReasoning || activeAgentReasoning.generation !== capturedGeneration || agentReasoningGeneration !== capturedGeneration) {
+                            if (authorityPlane && providerController.getUiState().state === "proposal-ready") {
+                                proposal = authorityPlane.proposalPort.beginReview();
+                                authorityPlane.proposalPort.finalizeReview({ requestId: proposal.requestId, generation: proposal.generation, outcome: "failed", errorCode: "LIFECYCLE_BLOCKED", handled: false });
+                            }
+                            throw safeError("LIFECYCLE_BLOCKED");
+                        }
+                        activeAgentReasoning = null;
+                        proposal = authorityPlane && authorityPlane.proposalPort.beginReview();
                         if (!proposal || proposal.capabilityId !== "set-opacity-v1") { throw safeError("PROVIDER_RESPONSE_INVALID"); }
                         agentDriverProposal = proposal;
                         return Object.freeze({ capabilityId: proposal.capabilityId, params: Object.freeze({ opacity: proposal.opacity }) });
+                    }, function (error) {
+                        if (activeAgentReasoning && activeAgentReasoning.generation === capturedGeneration) { activeAgentReasoning = null; }
+                        throw error;
                     });
                 },
                 submitIntent: function (input) {
@@ -525,8 +544,17 @@
                     });
                 },
                 cancel: function () {
+                    var providerState;
+                    var cancelledReasoning = activeAgentReasoning;
+                    agentReasoningGeneration += 1;
+                    activeAgentReasoning = null;
                     if (agentDriverProposal && authorityPlane) { try { settleAgentDriverProposal("failed", "AGENT_DRIVER_CANCELLED", false); } catch (ignored) {} }
-                    if (providerController) { try { providerController.cancel({ requestId: null }); } catch (ignoredProvider) {} }
+                    if (providerController && cancelledReasoning) {
+                        try {
+                            providerState = providerController.getUiState();
+                            if (providerState && providerState.state === "pending") { providerController.cancel({ requestId: providerState.requestId }); }
+                        } catch (ignoredProvider) {}
+                    }
                     var cancelled = cancelActiveDelegatedTask();
                     if (cancelled && authorityState === "executing") { settleDelegatedExecutionFailure("AGENT_DRIVER_CANCELLED", false); }
                     return cancelled;
@@ -600,8 +628,9 @@
             if (controller) { try { controller.invalidate("idle"); } catch (ignoredController) {} }
             if (providerController) { try { providerController.invalidate("idle"); } catch (ignoredProvider) {} }
             if (reviewRuntimePort) { try { reviewRuntimePort.invalidateAll(); } catch (ignoredReviews) {} }
+            if (objectiveReviewRuntimePort) { try { objectiveReviewRuntimePort.invalidate(); } catch (ignoredObjectiveReview) {} }
             if (planController) { try { planController.dispose(); } catch (ignoredPlans) {} }
-            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; reviewPort = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; authorizedPlanMaterializer = null; planReviewProjection = null; planController = null; reviewRuntimePort = null; protocolClock = null; agentDriverRuntimePort = null; agentDriverProposal = null; opacityVerificationPort = null;
+            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; reviewPort = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; authorizedPlanMaterializer = null; planReviewProjection = null; planController = null; reviewRuntimePort = null; objectiveReviewRuntimePort = null; protocolClock = null; agentDriverRuntimePort = null; agentDriverProposal = null; agentReasoningGeneration += 1; activeAgentReasoning = null; opacityVerificationPort = null;
             initialized = false; suspended = false; disposed = true; state = "disposed";
             return true;
         }
@@ -615,12 +644,23 @@
             return { candidateId: source.candidateId };
         }
         function approveActiveCandidate() {
-            try { return ensureReadyController().approveCandidate(activeCandidateInput()); }
+            try {
+                if (objectiveReviewRuntimePort && objectiveReviewRuntimePort.getProjection().state === "active") { return Promise.resolve(objectiveReviewRuntimePort.resolve("approved")); }
+                return ensureReadyController().approveCandidate(activeCandidateInput());
+            }
             catch (error) { return Promise.reject(error); }
         }
         function rejectActiveCandidate() {
-            try { return Promise.resolve(ensureReadyController().rejectCandidate(activeCandidateInput())); }
+            try {
+                if (objectiveReviewRuntimePort && objectiveReviewRuntimePort.getProjection().state === "active") { return Promise.resolve(objectiveReviewRuntimePort.resolve("rejected")); }
+                return Promise.resolve(ensureReadyController().rejectCandidate(activeCandidateInput()));
+            }
             catch (error) { return Promise.reject(error); }
+        }
+        function attachObjectiveReviewPort(ownerPort) {
+            if (disposed || !initialized || objectiveReviewRuntimePort || !reviewRuntimePortModule || typeof reviewRuntimePortModule.createObjectiveReviewRuntimePort !== "function") { return false; }
+            try { objectiveReviewRuntimePort = reviewRuntimePortModule.createObjectiveReviewRuntimePort({ protocol: protocol, ownerPort: ownerPort }); return true; }
+            catch (error) { objectiveReviewRuntimePort = null; return false; }
         }
         function reviewProviderProposal() {
             try {
@@ -653,6 +693,10 @@
             return Object.freeze({ state: nextState, text: source && typeof source.text === "string" ? source.text : null, errorCode: source && typeof source.errorCode === "string" ? source.errorCode : null, intentReason: source && typeof source.intentReason === "string" ? source.intentReason : null, moduleRevision: "vela-provider-surface-v1" });
         }
         function getConfirmationSurfaceState() {
+            var objectiveReview = objectiveReviewRuntimePort ? objectiveReviewRuntimePort.getProjection() : null;
+            if (objectiveReview && objectiveReview.state === "active") { return Object.freeze({ state: "confirmation-ready", beforeValue: null, proposedValue: objectiveReview.proposedValue, errorCode: null, moduleRevision: "vela-objective-review-surface-v1" }); }
+            if (objectiveReview && objectiveReview.state === "resolved" && objectiveReview.outcome === "approved") { return Object.freeze({ state: "review-approved", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "vela-objective-review-surface-v1" }); }
+            if (objectiveReview && objectiveReview.state === "resolved" && objectiveReview.outcome === "rejected") { return Object.freeze({ state: "rejected", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "vela-objective-review-surface-v1" }); }
             var source = getUiState();
             var sourceState = source && typeof source.state === "string" ? source.state : "idle";
             var state = sourceState === "pending-confirmation" ? "confirmation-ready" : sourceState === "executing" ? "executing" : sourceState === "consumed" ? "execution-completed" : sourceState === "discarded" ? "rejected" : sourceState === "failed" || sourceState === "stale" ? "execution-failed" : "idle";
@@ -661,7 +705,7 @@
             var proposedValue = hasConfirmation && source && typeof source.proposedValue === "number" && isFinite(source.proposedValue) && source.proposedValue >= 0 && source.proposedValue <= 100 ? source.proposedValue : null;
             return Object.freeze({ state: state, beforeValue: beforeValue, proposedValue: proposedValue, errorCode: source && typeof source.errorCode === "string" ? source.errorCode : null, moduleRevision: "vela-confirmation-surface-v1" });
         }
-        return Object.freeze({ initialize: initialize, getStatus: safeStatus, getAuthorityProjection: authorityProjection, getAuthorityDiagnostics: authorityDiagnostics, grantNextOpacityMutation: grantNextOpacityMutation, revokeOpacityDelegation: revokeOpacityDelegation, getObservationReadPort: function () { return initialized && !disposed ? observationReadPort : null; }, getAgentDriverRuntimePort: function () { return initialized && !disposed ? createAgentDriverRuntimePort() : null; }, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, approveActiveCandidate: approveActiveCandidate, rejectActiveCandidate: rejectActiveCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, checkProviderReadiness: checkProviderReadiness, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderDiagnostics: getProviderDiagnostics, getProviderSurfaceState: getProviderSurfaceState, getConfirmationSurfaceState: getConfirmationSurfaceState });
+        return Object.freeze({ initialize: initialize, attachObjectiveReviewPort: attachObjectiveReviewPort, getStatus: safeStatus, getAuthorityProjection: authorityProjection, getAuthorityDiagnostics: authorityDiagnostics, grantNextOpacityMutation: grantNextOpacityMutation, revokeOpacityDelegation: revokeOpacityDelegation, getObservationReadPort: function () { return initialized && !disposed ? observationReadPort : null; }, getAgentDriverRuntimePort: function () { return initialized && !disposed ? createAgentDriverRuntimePort() : null; }, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, approveActiveCandidate: approveActiveCandidate, rejectActiveCandidate: rejectActiveCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, checkProviderReadiness: checkProviderReadiness, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderDiagnostics: getProviderDiagnostics, getProviderSurfaceState: getProviderSurfaceState, getConfirmationSurfaceState: getConfirmationSurfaceState });
     }
     return Object.freeze({ createRuntime: createRuntime, deriveRegisteredActionParamsSchema: deriveRegisteredActionParamsSchema, validateRegisteredActionMappings: validateRegisteredActionMappings });
 }));

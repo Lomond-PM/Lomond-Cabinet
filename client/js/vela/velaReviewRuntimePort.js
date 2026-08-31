@@ -69,5 +69,32 @@
         return Object.freeze({ register: register, resolve: resolve, invalidate: invalidate, invalidateAll: invalidateAll });
     }
 
-    return { createReviewRuntimePort: createReviewRuntimePort };
+    function createObjectiveReviewRuntimePort(options) {
+        var protocol = options && options.protocol;
+        var ownerPort;
+        var invalidatedReviewId = null;
+        var invalidatedRevision = null;
+        if (!protocol || !protocol.isPlainObject(options)) { throw new Error("RUNTIME_CAPABILITY_UNAVAILABLE"); }
+        protocol.assertNoUnknownKeys(options, ["protocol", "ownerPort"], "objectiveReviewRuntimePort.options");
+        ownerPort = protocol.getOwnDataProperty(options, "ownerPort");
+        if (!ownerPort || typeof ownerPort.getProjection !== "function" || typeof ownerPort.resolve !== "function") { protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Objective review owner port is unavailable."); }
+        function projection() {
+            var value;
+            value = ownerPort.getProjection();
+            if (!value || (value.state !== "inactive" && value.state !== "active" && value.state !== "resolved")) { protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "Objective review projection is invalid."); }
+            if (value.state === "active" && (typeof value.reviewId !== "string" || !Number.isInteger(value.revision) || value.revision < 1 || value.capabilityId !== "set-opacity-v1" || typeof value.proposedValue !== "number" || !isFinite(value.proposedValue) || value.proposedValue < 0 || value.proposedValue > 100 || value.outcome !== null)) { protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "Active objective review projection is invalid."); }
+            if (value.state === "resolved" && value.outcome !== "approved" && value.outcome !== "rejected") { protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "Resolved objective review projection is invalid."); }
+            if (value.state === "active" && value.reviewId === invalidatedReviewId && value.revision === invalidatedRevision) { return protocol.deepFreeze({ state: "inactive", reviewId: null, revision: null, capabilityId: null, proposedValue: null, outcome: null }); }
+            return protocol.deepFreeze({ state: value.state, reviewId: value.reviewId || null, revision: Number.isInteger(value.revision) ? value.revision : null, capabilityId: value.capabilityId || null, proposedValue: typeof value.proposedValue === "number" ? value.proposedValue : null, outcome: value.outcome || null });
+        }
+        function resolve(outcome) {
+            var current = projection();
+            if (current.state !== "active" || (outcome !== "approved" && outcome !== "rejected")) { protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "Objective review is not active."); }
+            return ownerPort.resolve({ reviewId: current.reviewId, revision: current.revision, outcome: outcome });
+        }
+        function invalidate() { var current = projection(); if (current.state !== "active") { return false; } invalidatedReviewId = current.reviewId; invalidatedRevision = current.revision; return true; }
+        return Object.freeze({ getProjection: projection, resolve: resolve, invalidate: invalidate });
+    }
+
+    return { createReviewRuntimePort: createReviewRuntimePort, createObjectiveReviewRuntimePort: createObjectiveReviewRuntimePort };
 }));

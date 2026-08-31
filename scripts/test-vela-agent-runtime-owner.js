@@ -81,7 +81,7 @@ async function coldStartRegression() {
     let captures = 0;
     let reasons = 0;
     let submissions = 0;
-    let requireReview = false;
+    let submissionMode = "executed";
     const coldOwner = ownerModule.createOwner({
         AgentCapabilityRuntime: capabilityRuntime,
         ActiveCompositionCapability: activeCompositionCapability,
@@ -107,7 +107,7 @@ async function coldStartRegression() {
     check(coldOwner.getObservationRuntime(), "late attachment creates the real ObservationRuntime");
     check(coldOwner.attachAgentDriverRuntimePort(Object.freeze({
         reason() { reasons += 1; return Promise.resolve(Object.freeze({ capabilityId: "set-opacity-v1", params: Object.freeze({ opacity: 63 }) })); },
-        submitIntent() { submissions += 1; return Promise.resolve(Object.freeze(requireReview ? { state: "review-required", committed: false, code: "REVIEW_REQUIRED" } : { state: "executed", committed: true })); },
+        submitIntent() { submissions += 1; return Promise.resolve(Object.freeze(submissionMode === "review" ? { state: "review-required", committed: false, code: "REVIEW_REQUIRED" } : submissionMode === "denied" ? { state: "denied", committed: false, code: "PERMISSION_DENIED" } : { state: "executed", committed: true })); },
         verifyOpacity() { return Promise.resolve(Object.freeze({ fresh: true, matches: true, opacity: 63 })); },
         cancel() { return false; }
     })), "late Runtime action port attaches to the Owner-held Driver");
@@ -117,12 +117,38 @@ async function coldStartRegression() {
     equal(reasons, 1, "reason executes exactly once after initial Observe");
     equal(submissions, 1, "submitIntent executes exactly once without mutation retry");
     check(result.terminal.code !== "OBSERVATION_PROVIDER_UNAVAILABLE", "cold-start objective cannot fail with missing Observation provider");
-    requireReview = true;
+    equal(coldOwner.getObjectiveReviewPort().getProjection().state, "inactive", "completed Driver terminal truth has no active objective review projection");
+    submissionMode = "review";
     const suspended = await coldOwner.startObjective({ message: "Review opacity 63", endpoint: "http://127.0.0.1:1234", model: "m" });
     equal(suspended.state, "awaiting-review", "Owner preserves the Driver suspended review state");
-    const rejected = coldOwner.resolveObjectiveReview({ reviewId: suspended.suspendedReview.reviewId, revision: suspended.suspendedReview.revision, outcome: "rejected" });
+    const ownerReviewPort = coldOwner.getObjectiveReviewPort();
+    const reviewProjection = ownerReviewPort.getProjection();
+    check(Object.isFrozen(ownerReviewPort) && Object.isFrozen(reviewProjection) && Object.keys(reviewProjection).sort().join(",") === "capabilityId,outcome,proposedValue,reviewId,revision,state", "Owner exposes only a frozen bounded objective review port and projection");
+    equal(reviewProjection.reviewId, suspended.suspendedReview.reviewId, "Owner projection correlates the exact Driver review identity");
+    const approved = ownerReviewPort.resolve({ reviewId: reviewProjection.reviewId, revision: reviewProjection.revision, outcome: "approved" });
+    equal(approved.state, "awaiting-outcome", "Owner approve preserves the active objective awaiting its future continuation");
+    equal(ownerReviewPort.getProjection().outcome, "approved", "Owner projection exposes approved only while the objective awaits continuation");
+    check(coldOwner.cancelObjective(), "Owner cancels an approved objective awaiting continuation");
+    const cancelled = coldOwner.getAgentDriver().getSnapshot();
+    equal(cancelled.state, "terminal", "approved objective cancel reaches Driver terminal truth");
+    equal(cancelled.terminal.outcome, "cancelled", "approved objective cancel records cancelled outcome");
+    equal(cancelled.reviewResolution.outcome, "approved", "historical approved review evidence remains in the Driver snapshot");
+    equal(ownerReviewPort.getProjection().state, "inactive", "terminal cancelled truth suppresses historical approved review projection");
+    check(!coldOwner.cancelObjective(), "duplicate cancel is inert after terminal settlement");
+    expectCode(function () { ownerReviewPort.resolve({ reviewId: reviewProjection.reviewId, revision: reviewProjection.revision, outcome: "approved" }); }, "AGENT_DRIVER_REVIEW_INVALID", "late approve fails closed after cancel");
+    expectCode(function () { ownerReviewPort.resolve({ reviewId: reviewProjection.reviewId, revision: reviewProjection.revision, outcome: "rejected" }); }, "AGENT_DRIVER_REVIEW_INVALID", "late reject fails closed after cancel");
+    const replacement = await coldOwner.startObjective({ message: "Review replacement opacity 63", endpoint: "http://127.0.0.1:1234", model: "m" });
+    check(replacement.objectiveId !== suspended.objectiveId && ownerReviewPort.getProjection().state === "active", "fresh objective starts with a new active review after terminal cancel");
+    const replacementProjection = ownerReviewPort.getProjection();
+    const rejected = ownerReviewPort.resolve({ reviewId: replacementProjection.reviewId, revision: replacementProjection.revision, outcome: "rejected" });
     equal(rejected.terminal.outcome, "rejected", "Owner review facade resolves only the Owner-held Driver objective");
+    equal(ownerReviewPort.getProjection().state, "resolved", "terminal rejection retains only bounded non-actionable rejected presentation");
+    submissionMode = "denied";
+    const blocked = await coldOwner.startObjective({ message: "Denied opacity objective", endpoint: "http://127.0.0.1:1234", model: "m" });
+    equal(blocked.terminal.outcome, "blocked", "denied replacement reaches Driver blocked terminal truth");
+    equal(ownerReviewPort.getProjection().state, "inactive", "blocked Driver terminal truth has no active objective review projection");
     coldOwner.dispose();
+    equal(coldOwner.getObjectiveReviewPort(), null, "disposed Owner exposes no objective review port");
 }
 
 coldStartRegression().then(function () {

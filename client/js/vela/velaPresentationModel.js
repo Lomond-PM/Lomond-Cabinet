@@ -47,6 +47,7 @@
         if (experimentalEnabled !== true) { state = experimentalState === "configuring" || experimentalState === "checking" || experimentalState === "unavailable" ? "experimental-" + experimentalState : experimentalState === "disabled" || experimentalState === "ready" ? "experimental-disabled" : experimentalState || "experimental-disabled"; }
         else if (confirmation === "executing") { state = "executing"; }
         else if (confirmation === "confirmation-ready") { state = "awaiting-confirmation"; }
+        else if (confirmation === "review-approved") { state = "awaiting-continuation"; }
         else if (confirmation === "execution-failed") { state = "error"; }
         else if (confirmation === "execution-completed") { state = "completed"; }
         else if (confirmation === "rejected") { state = "cancelled"; }

@@ -38,6 +38,7 @@ function forbidden(value) { const text = JSON.stringify(value); return /executio
 
 async function run() {
     check(typeof portModule.createReviewRuntimePort === "function", "CommonJS ReviewRuntimePort factory is available.");
+    check(typeof portModule.createObjectiveReviewRuntimePort === "function", "Objective review adapter factory is available.");
     const source = fs.readFileSync(require.resolve("../client/js/vela/velaReviewRuntimePort"), "utf8");
     let requires = 0; const sentinel = { exports: { untouched: true } }; const browser = { Object, Error, Map, Number, module: sentinel, require() { requires += 1; } }; browser.self = browser; browser.window = browser;
     vm.runInNewContext(source, browser, { filename: "velaReviewRuntimePort.js" });
@@ -76,6 +77,23 @@ async function run() {
     const oldPort = harness(); const oldWaiting = await oldPort.controller.accept(authorized([10]), { selectionOrderMeaningful: true }); const oldToken = oldPort.port.register(oldWaiting.executionPlanId); const freshPort = harness();
     expectCode(function () { freshPort.port.resolve(oldToken); }, protocol.ERROR_CODES.PLAN_INVALID, "Fresh port cannot resolve a prior lifetime token.");
     check(oldPort.controller.getProgress(oldWaiting.executionPlanId).executionArmed === false, "Registration and resolution never arm TaskRun.");
+
+    let objectiveState = Object.freeze({ state: "active", reviewId: "agent_review_1", revision: 1, capabilityId: "set-opacity-v1", proposedValue: 47, outcome: null });
+    let objectiveResolutions = 0;
+    const objectivePort = portModule.createObjectiveReviewRuntimePort({ protocol, ownerPort: Object.freeze({
+        getProjection() { return objectiveState; },
+        resolve(input) { objectiveResolutions += 1; objectiveState = Object.freeze({ state: "resolved", reviewId: input.reviewId, revision: input.revision, capabilityId: null, proposedValue: null, outcome: input.outcome }); return Object.freeze({ state: input.outcome === "approved" ? "awaiting-outcome" : "terminal" }); }
+    }) });
+    const objectiveProjection = objectivePort.getProjection();
+    check(Object.isFrozen(objectiveProjection) && objectiveProjection.state === "active" && objectiveProjection.reviewId === "agent_review_1" && objectiveProjection.proposedValue === 47, "Objective adapter returns only a frozen bounded projection.");
+    check(!forbidden(objectiveProjection) && !/taskPlan|CapabilityIntent|ActionCandidate|authority|host/i.test(JSON.stringify(objectiveProjection)), "Objective projection contains no planning, authority, binding, or Host object.");
+    check(objectivePort.resolve("approved").state === "awaiting-outcome" && objectiveResolutions === 1, "Objective adapter routes one exact approved outcome to its owner.");
+    expectCode(function () { objectivePort.resolve("rejected"); }, protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "Resolved objective review rejects duplicate or crossed outcomes.");
+    objectiveState = Object.freeze({ state: "active", reviewId: "agent_review_2", revision: 2, capabilityId: "set-opacity-v1", proposedValue: 51, outcome: null });
+    check(objectivePort.invalidate() === true && objectivePort.invalidate() === false && objectivePort.getProjection().state === "inactive", "Objective adapter invalidation closes only the exact active review.");
+    objectiveState = Object.freeze({ state: "active", reviewId: "agent_review_3", revision: 3, capabilityId: "set-opacity-v1", proposedValue: 52, outcome: null });
+    check(objectivePort.getProjection().state === "active", "A fresh review identity remains available after prior invalidation.");
+    check(!/confirm\(|\.run\(|ExecutionAdapter|Host|executeStep/.test(portModule.createObjectiveReviewRuntimePort.toString()), "Objective adapter has no confirmation, execution, Adapter, or Host seam.");
     console.log("PASS Vela ReviewRuntime seam: " + assertions + " assertions.");
 }
 
