@@ -113,6 +113,7 @@
             getAgentDriver: function () { return disposed ? null : driver; },
             attachAgentDriverRuntimePort: function (port) { return !disposed && driver ? driver.attachRuntimePort(port) : false; },
             startObjective: function (input) { return !disposed && driver ? driver.startObjective(input) : Promise.reject(Object.assign(new Error("AGENT_OWNER_RUNTIME_UNAVAILABLE"), { code: "AGENT_OWNER_RUNTIME_UNAVAILABLE" })); },
+            resolveObjectiveReview: function (input) { if (disposed || !driver) { throw Object.assign(new Error("AGENT_OWNER_RUNTIME_UNAVAILABLE"), { code: "AGENT_OWNER_RUNTIME_UNAVAILABLE" }); } return driver.resolveReview(input); },
             cancelObjective: function () { return !disposed && driver ? driver.cancel() : false; },
             attachObservationReadPort: attachObservationReadPort,
             activate: function () {
