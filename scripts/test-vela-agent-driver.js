@@ -59,14 +59,16 @@ async function run() {
     equal(settled.calls.submit, 1, "transcript settlement failure never replays mutation");
     const denied = harness({ outcome: { state: "denied", committed: false, code: "PERMISSION_DENIED" } });
     equal((await denied.driver.startObjective({ message: "set", endpoint: "e", model: "m" })).terminal.code, "PERMISSION_DENIED", "DENY blocks without replan");
-    const review = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED" } });
+    const review = harness({ opacity: 47, outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: 100 } });
     const suspended = await review.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
     equal(suspended.state, "awaiting-review", "REVIEW_REQUIRED suspends the active objective");
     equal(suspended.objectiveId, "objective_agent_1", "suspension preserves objective identity");
     equal(suspended.suspendedReview.taskPlanId, suspended.taskPlan.planId, "suspension preserves TaskPlan identity");
     equal(suspended.suspendedReview.taskPlanRevision, suspended.taskPlan.revision, "suspension binds the exact TaskPlan revision");
+    equal(suspended.suspendedReview.beforeValue, 100, "suspension retains only the trusted numeric presentation baseline");
+    equal(suspended.suspendedReview.params.opacity, 47, "the requested opacity remains distinct from the presentation baseline");
     check(Object.isFrozen(suspended.suspendedReview) && Object.isFrozen(suspended.suspendedReview.params) && Object.isFrozen(suspended.suspendedReview.localExpectation), "suspended review record is deeply immutable at every owned nested value");
-    check(["authorizedPlan", "boundPlan", "nonce", "executionContext", "executionReservation", "taskRun", "hostPayload", "targetBinding", "nativeLayerId"].every((key) => !Object.prototype.hasOwnProperty.call(suspended.suspendedReview, key)), "suspended review contains no execution or Host authority object");
+    check(["authorizedPlan", "boundPlan", "nonce", "executionContext", "executionReservation", "taskRun", "hostPayload", "targetBinding", "nativeLayerId", "valueDigest", "binding", "observation"].every((key) => !Object.prototype.hasOwnProperty.call(suspended.suspendedReview, key)), "suspended review contains no execution, binding, digest, observation, or Host authority object");
     equal(review.events.filter((event) => event.kind === "task/review-required").length, 1, "review-required lifecycle evidence is appended exactly once");
     equal(review.calls.verify, 0, "suspension invokes no verification or mutation continuation");
     await code(() => review.driver.startObjective({ message: "second", endpoint: "e", model: "m" }), "AGENT_DRIVER_BUSY", "a suspended objective excludes a second objective");

@@ -77,7 +77,7 @@ async function run() {
     assert.throws(() => runtimeModule.validateRegisteredActionMappings(capabilityContracts, { getTool() { return registeredTool; }, getAction() { return null; } }), (error) => error && error.code === "RUNTIME_CAPABILITY_UNAVAILABLE", "Runtime startup fails closed when the mapped action is missing."); assertions += 1;
     const controller = createController();
     check(Object.isFrozen(controller), "Controller is frozen.");
-    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,cancelProviderRequest,checkProviderReadiness,dispose,getAgentDriverRuntimePort,getAuthorityDiagnostics,getAuthorityProjection,getConfirmationSurfaceState,getObservationReadPort,getProviderDiagnostics,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,grantNextOpacityMutation,initialize,rejectActiveCandidate,resetSession,resume,reviewProviderProposal,revokeOpacityDelegation,sendProviderMessage,suspend", "Runtime exposes only existing facades plus the fixed pilot operations and bounded Agent Driver port.");
+    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,attachObjectiveReviewPort,cancelProviderRequest,checkProviderReadiness,dispose,getAgentDriverRuntimePort,getAuthorityDiagnostics,getAuthorityProjection,getConfirmationSurfaceState,getObservationReadPort,getProviderDiagnostics,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,grantNextOpacityMutation,initialize,rejectActiveCandidate,resetSession,resume,reviewProviderProposal,revokeOpacityDelegation,sendProviderMessage,suspend", "Runtime exposes only existing facades plus bounded Agent Driver and objective review composition ports.");
     check(controller.getObservationReadPort() === null, "Observation read port is unavailable before Runtime initialization.");
     check(controller.getAgentDriverRuntimePort() === null, "Agent Driver runtime port is unavailable before Runtime initialization.");
     check(controller.cancelProviderRequest.length === 0, "Provider cancellation has no caller-supplied request identifier seam.");
@@ -87,6 +87,19 @@ async function run() {
     const second = controller.initialize();
     check(first === second, "Concurrent initialization shares one Promise.");
     const status = await first;
+    let objectiveProjection = Object.freeze({ state: "active", reviewId: "runtime_review_1", revision: 1, capabilityId: "set-opacity-v1", beforeValue: 100, proposedValue: 47, outcome: null });
+    let objectiveResolveCalls = 0;
+    check(controller.attachObjectiveReviewPort(Object.freeze({ getProjection() { return objectiveProjection; }, resolve(input) { objectiveResolveCalls += 1; objectiveProjection = Object.freeze({ state: "resolved", reviewId: input.reviewId, revision: input.revision, capabilityId: null, beforeValue: null, proposedValue: null, outcome: input.outcome }); return Object.freeze({ state: input.outcome === "approved" ? "awaiting-outcome" : "terminal" }); } })) === true, "Runtime attaches one narrow owner-owned objective review port after initialization.");
+    check(controller.getConfirmationSurfaceState().state === "confirmation-ready" && controller.getConfirmationSurfaceState().beforeValue === 100 && controller.getConfirmationSurfaceState().proposedValue === 47, "Active objective review projects its bounded baseline through the existing Confirmation facade.");
+    const objectiveApproved = await controller.approveActiveCandidate();
+    check(objectiveApproved.state === "awaiting-outcome" && objectiveResolveCalls === 1 && controller.getConfirmationSurfaceState().state === "review-approved", "Approve routes exactly once and closes Confirmation without execution.");
+    await expectCode(controller.rejectActiveCandidate(), "CANDIDATE_STATE_INVALID", "Approve followed by Reject fails closed.");
+    objectiveProjection = Object.freeze({ state: "inactive", reviewId: null, revision: null, capabilityId: null, beforeValue: null, proposedValue: null, outcome: null });
+    check(controller.getConfirmationSurfaceState().state === "idle", "inactive Owner projection converges Runtime Confirmation to idle after objective terminalization.");
+    objectiveProjection = Object.freeze({ state: "active", reviewId: "runtime_review_2", revision: 2, capabilityId: "set-opacity-v1", beforeValue: null, proposedValue: 48, outcome: null });
+    const objectiveRejected = await controller.rejectActiveCandidate();
+    check(objectiveRejected.state === "terminal" && objectiveResolveCalls === 2 && controller.getConfirmationSurfaceState().state === "rejected", "Reject routes exactly once and projects the closed terminal review.");
+    await expectCode(controller.approveActiveCandidate(), "CANDIDATE_STATE_INVALID", "Reject followed by Approve fails closed.");
     const authorityProjection = controller.getAuthorityProjection();
     check(Object.isFrozen(authorityProjection) && authorityProjection.state === "inactive" && authorityProjection.active === false && authorityProjection.capabilityId === null && authorityProjection.taskId === null, "Authority projection is frozen and inactive without a consent producer.");
     check(controller.getAuthorityDiagnostics() === null, "Authority diagnostics are debug-gated.");

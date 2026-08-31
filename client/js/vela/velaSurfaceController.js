@@ -44,6 +44,7 @@
             var current = confirmationState && confirmationState.state;
             if (current === "executing") { return "none"; }
             if (current === "confirmation-ready") { return "confirm"; }
+            if (current === "review-approved") { return "cancel"; }
             if (current === "execution-completed" || current === "rejected" || current === "execution-failed") { return "send"; }
             if (providerState && providerState.state === "pending") { return "cancel"; }
             if (providerState && providerState.state === "proposal-ready") { return "review"; }
@@ -94,6 +95,7 @@
                 "requesting": "vela.surfaceStatusPending",
                 "reviewing": "vela.surfaceStatusProposalReady",
                 "awaiting-confirmation": "vela.surfaceStatusConfirmation",
+                "awaiting-continuation": "vela.surfaceStatusAwaitingContinuation",
                 "executing": "vela.surfaceStatusExecuting",
                 "completed": "vela.surfaceStatusCompleted",
                 "cancelled": "vela.surfaceStatusCancelled",

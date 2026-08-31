@@ -60,10 +60,13 @@ check(factoryGuard !== -1 && runtimePortGuard > factoryGuard && ownerInit.indexO
 check(ownerInit.slice(factoryGuard, runtimePortGuard).indexOf("velaRuntimeController") === -1, "Observation module factory assignment does not depend on an existing Runtime controller");
 check(ownerInit.indexOf("ownerOptions.observationReadPort = observationReadPort;", runtimePortGuard) > runtimePortGuard, "only the concrete Observation read port depends on Runtime availability");
 check(main.indexOf("velaAgentRuntimeOwner.attachAgentDriverRuntimePort(velaRuntimeController.getAgentDriverRuntimePort())") !== -1, "main wires the narrow Runtime port into the Owner-held Driver after Runtime initialization");
+check(main.indexOf("velaRuntimeController.attachObjectiveReviewPort(velaAgentRuntimeOwner.getObjectiveReviewPort())") !== -1, "main wires the Owner-owned objective review port into Runtime composition.");
 check(main.indexOf("velaAgentRuntimeOwner.startObjective({ message: message") !== -1, "the production composer enters the Owner-held AgentDriver objective path");
-check(!/resolveObjectiveReview|resolveReview/.test(main), "B1 exposes no production Confirmation or review resolution wiring");
+check(!/suspendedReview|reviewResolution|resolveObjectiveReview|resolveReview/.test(main), "main holds no objective review identity, record, or resolution truth.");
 const driverSource = read("client/js/vela/velaAgentDriver.js");
 check(!/PlanController|ExecutionAdapter|confirmBoundPlan|executeStep|TaskRun|Host payload/.test(driverSource), "AgentDriver review contract imports no execution or Host authority owner");
+const surfaceSource = read("client/js/vela/velaSurfaceController.js");
+check(!/AgentDriver|resolveObjectiveReview|resolveReview|suspendedReview|reviewId|reviewRevision/.test(surfaceSource), "Surface references no Driver or objective review identity internals.");
 check(main.indexOf("installVelaActiveCompositionDiagnostics();") !== -1 && main.indexOf("Object.defineProperty(window, \"VelaActiveCompositionDiagnostics\"") !== -1, "main permanently installs the bounded Active Composition diagnostics surface");
 check(main.indexOf("diagnostics = Object.freeze({ refresh: refreshActiveCompositionDiagnostics, cancel: cancelActiveCompositionDiagnostics, getState: activeCompositionDiagnosticsState })") !== -1, "diagnostics global exposes only refresh, cancel, and getState");
 check(main.indexOf("window.velaAgentRuntimeOwner") === -1 && main.indexOf("window.velaRuntimeController") === -1, "diagnostics preserves lexical production Runtime and Owner ownership");
