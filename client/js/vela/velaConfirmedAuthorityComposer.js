@@ -41,6 +41,12 @@
     function canonical(value) { validateCanonical(value, []); if (Array.isArray(value)) { return "[" + value.map(canonical).join(",") + "]"; } if (plain(value)) { return "{" + Object.keys(value).sort().map(function (key) { return JSON.stringify(key) + ":" + canonical(value[key]); }).join(",") + "}"; } return JSON.stringify(value); }
     function same(left, right) { return canonical(left) === canonical(right); }
     function stableCode(error) { return error && typeof error.code === "string" ? error.code : "PLAN_FAILED"; }
+    function createReviewedPolicySemantics(decision) { var provenance = decision && decision.provenance || {}; return Object.freeze({ decision: decision && decision.decision, reasonCode: decision && decision.reasonCode || null, issuedBy: decision && decision.issuedBy || null, rule: provenance.rule || null, capabilityId: provenance.capabilityId || null, requestedOperation: provenance.requestedOperation || null, authoritySource: provenance.authoritySource || null }); }
+    function createReviewedSemantics(intent, candidate, resolveRegisteredAction) {
+        var action = typeof resolveRegisteredAction === "function" ? resolveRegisteredAction(candidate && candidate.capabilityId) : null;
+        if (!planning || !planning.isCapabilityIntent(intent) || !candidate || !action || typeof action.toolId !== "string" || typeof action.actionId !== "string") { fail("LIFECYCLE_BLOCKED"); }
+        return Object.freeze({ capabilityId: candidate.capabilityId, requestedOperation: intent.requestedOperation, operationKind: candidate.operationKind, kind: candidate.kind, risk: candidate.risk, params: candidate.params, targetScope: candidate.targetScope, targetProperty: "opacity", requiresConfirmation: candidate.requiresConfirmation, registeredAction: Object.freeze({ toolId: action.toolId, actionId: action.actionId }), provenance: candidate.provenance });
+    }
     function createConfirmedAuthorityComposer(options) {
         var compiler = options && options.compiler;
         var policyEngine = options && options.policyEngine;
@@ -54,12 +60,6 @@
         var activeRecord = null;
         var disposed = false;
         if (!planning || !plain(options) || !compiler || typeof compiler.compile !== "function" || !policyEngine || typeof policyEngine.evaluate !== "function" || !planController || typeof planController.accept !== "function" || typeof planController.confirm !== "function" || typeof planController.cancel !== "function" || typeof resolveRegisteredAction !== "function" || typeof makePlanId !== "function" || typeof getRuntimeGeneration !== "function" || typeof claimApprovedReview !== "function") { fail("RUNTIME_CAPABILITY_UNAVAILABLE"); }
-        function policySemantics(decision) { var provenance = decision && decision.provenance || {}; return Object.freeze({ decision: decision && decision.decision, reasonCode: decision && decision.reasonCode || null, issuedBy: decision && decision.issuedBy || null, rule: provenance.rule || null, capabilityId: provenance.capabilityId || null, requestedOperation: provenance.requestedOperation || null, authoritySource: provenance.authoritySource || null }); }
-        function candidateSemantics(intent, candidate) {
-            var action = resolveRegisteredAction(candidate && candidate.capabilityId);
-            if (!planning.isCapabilityIntent(intent) || !candidate || !action || typeof action.toolId !== "string" || typeof action.actionId !== "string") { fail("LIFECYCLE_BLOCKED"); }
-            return Object.freeze({ capabilityId: candidate.capabilityId, requestedOperation: intent.requestedOperation, operationKind: candidate.operationKind, kind: candidate.kind, risk: candidate.risk, params: candidate.params, targetScope: candidate.targetScope, targetProperty: "opacity", requiresConfirmation: candidate.requiresConfirmation, registeredAction: Object.freeze({ toolId: action.toolId, actionId: action.actionId }), provenance: candidate.provenance });
-        }
         function reviewedSnapshot(value) {
             var keys = ["capabilityId", "requestedOperation", "operationKind", "kind", "risk", "params", "targetScope", "targetProperty", "requiresConfirmation", "registeredAction", "provenance"];
             if (!plain(value) || Object.keys(value).sort().join(",") !== keys.slice().sort().join(",") || value.targetProperty !== "opacity") { fail("LIFECYCLE_BLOCKED"); }
@@ -90,18 +90,18 @@
                 intent = input.capabilityIntent;
                 reviewed = reviewedSnapshot(input.reviewedSemantics);
                 freshCandidate = compiler.compile(intent);
-                freshSemantics = candidateSemantics(intent, freshCandidate);
+                freshSemantics = createReviewedSemantics(intent, freshCandidate, resolveRegisteredAction);
                 if (!same(freshSemantics, reviewed)) { return Promise.resolve(Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED" })); }
                 decision = policyEngine.evaluate(freshCandidate, input.policyContext);
                 if (!decision || decision.decision === "DENY") { return Promise.resolve(Object.freeze({ state: "blocked", code: "PERMISSION_DENIED" })); }
-                if (decision.decision !== "REVIEW_REQUIRED" || !same(policySemantics(decision), input.reviewPolicySemantics)) { return Promise.resolve(Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED" })); }
+                if (decision.decision !== "REVIEW_REQUIRED" || !same(createReviewedPolicySemantics(decision), input.reviewPolicySemantics)) { return Promise.resolve(Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED" })); }
             } catch (error) { return Promise.resolve(Object.freeze({ state: "blocked", code: stableCode(error) })); }
             generation += 1;
             record = { generation: generation, runtimeGeneration: getRuntimeGeneration(), cancelled: false, claimed: false, executionPlanId: null, phase: "claim-pending", terminalized: false, cancellationErrorCode: null };
             activeRecord = record; state = "composing";
             return Promise.resolve().then(function () {
                 if (!current(record)) { return cancelledResult(); }
-                return claimApprovedReview({ reviewId: input.review.reviewId, reviewRevision: input.review.reviewRevision, objectiveId: input.review.objectiveId, taskId: input.review.taskId, taskPlanId: input.review.taskPlanId, taskPlanRevision: input.review.taskPlanRevision, stepId: input.review.stepId, capabilityIntent: intent, reviewedSemantics: reviewed, freshSemantics: freshSemantics, freshCandidateId: freshCandidate.candidateId, runtimeGeneration: record.runtimeGeneration });
+                return claimApprovedReview({ reviewId: input.review.reviewId, reviewRevision: input.review.reviewRevision, reviewCorrelation: input.review.reviewCorrelation, objectiveId: input.review.objectiveId, taskId: input.review.taskId, sessionId: input.review.sessionId, turnId: input.review.turnId, taskPlanId: input.review.taskPlanId, taskPlanRevision: input.review.taskPlanRevision, stepId: input.review.stepId, capabilityIntent: intent, reviewedSemantics: reviewed, reviewPolicySemantics: input.reviewPolicySemantics, freshSemantics: freshSemantics, freshCandidateId: freshCandidate.candidateId, runtimeGeneration: record.runtimeGeneration });
             }).then(function (claim) {
                 var plan;
                 if (!current(record)) { return cancelledResult(); }
@@ -128,5 +128,5 @@
         function dispose() { if (disposed) { return false; } var record = activeRecord; disposed = true; generation += 1; state = "disposed"; if (record) { record.cancelled = true; if (record.phase === "claim-pending" || officialCancel(record, "disposed")) { activeRecord = null; } } return true; }
         return Object.freeze({ compose: compose, cancel: cancel, dispose: dispose });
     }
-    return Object.freeze({ MODULE_REVISION: MODULE_REVISION, createConfirmedAuthorityComposer: createConfirmedAuthorityComposer });
+    return Object.freeze({ MODULE_REVISION: MODULE_REVISION, createReviewedSemantics: createReviewedSemantics, createReviewedPolicySemantics: createReviewedPolicySemantics, sameReviewedSemantics: same, createConfirmedAuthorityComposer: createConfirmedAuthorityComposer });
 }));

@@ -27,6 +27,7 @@
         { name: "VelaTaskRun", file: "velaTaskRun.js" },
         { name: "VelaPlanReviewProjection", file: "velaPlanReviewProjection.js" },
         { name: "VelaPlanController", file: "velaPlanController.js" },
+        { name: "VelaConfirmedAuthorityComposer", file: "velaConfirmedAuthorityComposer.js" },
         { name: "VelaReviewRuntimePort", file: "velaReviewRuntimePort.js" },
         { name: "VelaDelegationGrantStore", file: "velaDelegationGrantStore.js" },
         { name: "VelaDelegationPolicyEngine", file: "velaDelegationPolicyEngine.js" },
@@ -190,6 +191,7 @@
         if (name === "VelaTaskRun") { return typeof value.createTaskRun === "function"; }
         if (name === "VelaPlanReviewProjection") { return typeof value.createPlanReviewProjection === "function" && value.LABEL_KEYS; }
         if (name === "VelaPlanController") { return typeof value.createPlanController === "function"; }
+        if (name === "VelaConfirmedAuthorityComposer") { return typeof value.createConfirmedAuthorityComposer === "function" && typeof value.createReviewedSemantics === "function" && typeof value.createReviewedPolicySemantics === "function" && typeof value.sameReviewedSemantics === "function"; }
         if (name === "VelaReviewRuntimePort") { return typeof value.createReviewRuntimePort === "function"; }
         if (name === "VelaDelegationGrantStore") { return typeof value.createDelegationGrantStore === "function" && typeof value.isTrustedDelegationGrantStore === "function"; }
         if (name === "VelaDelegationPolicyEngine") { return typeof value.createDelegationPolicyEngine === "function" && typeof value.isTrustedDelegationPolicyEngineFor === "function"; }
@@ -213,7 +215,7 @@
             if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.getModule !== "function" || typeof bootstrap.hasModule !== "function" || typeof bootstrap.registerModule !== "function") { return false; }
             if (!globalDescriptor || globalDescriptor.get || globalDescriptor.set || globalDescriptor.configurable !== false || globalDescriptor.writable !== false) { return false; }
             moduleValue = globalDescriptor.value;
-            if (["VelaCapabilityCompiler", "VelaAuthorizedPlanMaterializer", "VelaTaskRun", "VelaPlanReviewProjection", "VelaPlanController", "VelaReviewRuntimePort", "VelaDelegationGrantStore", "VelaDelegationPolicyEngine", "VelaAuthorityEvidenceResolver", "VelaDelegationAuthorityCoordinator", "VelaAuthorizedPlanAuthorityProducer", "VelaAuthorityActivationGate", "VelaAtomicActivationCoordinator"].indexOf(name) !== -1) { return expectedModuleShape(name, moduleValue); }
+            if (["VelaCapabilityCompiler", "VelaAuthorizedPlanMaterializer", "VelaTaskRun", "VelaPlanReviewProjection", "VelaPlanController", "VelaConfirmedAuthorityComposer", "VelaReviewRuntimePort", "VelaDelegationGrantStore", "VelaDelegationPolicyEngine", "VelaAuthorityEvidenceResolver", "VelaDelegationAuthorityCoordinator", "VelaAuthorizedPlanAuthorityProducer", "VelaAuthorityActivationGate", "VelaAtomicActivationCoordinator"].indexOf(name) !== -1) { return expectedModuleShape(name, moduleValue); }
             return bootstrap.hasModule(name) === true && bootstrap.getModule(name) === moduleValue && expectedModuleShape(name, moduleValue);
         } catch (error) {
             return false;

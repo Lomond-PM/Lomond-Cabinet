@@ -32,6 +32,7 @@ const MODULES = [
     "velaTaskRun.js",
     "velaPlanReviewProjection.js",
     "velaPlanController.js",
+    "velaConfirmedAuthorityComposer.js",
     "velaReviewRuntimePort.js",
     "velaRuntime.js"
 ];
@@ -146,7 +147,7 @@ function run() {
     ["VelaProtocol", "VelaResponseParser", "VelaCapabilityContracts", "VelaProviderRequestBranchPolicy", "VelaCapabilityPromptBuilder", "VelaProviderAdapter", "VelaProviderIntentGate", "VelaLocalTransport", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaProviderController", "VelaProviderProposalRouter", "VelaRuntime"].forEach((name) => {
         check(bootstrap.getModule(name) === browser.context[name] && Object.isFrozen(browser.context[name]), name + " registers through the browser bootstrap.");
     });
-    ["VelaAuthorizedPlanMaterializer", "VelaTaskRun", "VelaPlanReviewProjection", "VelaPlanController", "VelaReviewRuntimePort"].forEach((name) => { check(Object.isFrozen(browser.context[name]), name + " registers as a frozen CEP browser global before Runtime."); });
+    ["VelaAuthorizedPlanMaterializer", "VelaTaskRun", "VelaPlanReviewProjection", "VelaPlanController", "VelaConfirmedAuthorityComposer", "VelaReviewRuntimePort"].forEach((name) => { check(Object.isFrozen(browser.context[name]), name + " registers as a frozen CEP browser global before Runtime."); });
     check(browser.requireCalls() === 0, "Browser-first registration never calls require.");
     check(browser.context.VelaRuntime && browser.context.VelaActivationPolicy.isTrustedPolicy(browser.context.VelaRuntime.createRuntime({}).getStatus().activationPolicy), "Browser Runtime closes over the exact source-owned activation policy rather than a caller option.");
     check(browser.context.module === browser.moduleSentinel && browser.context.module.exports === browser.exportsSentinel && browser.context.exports === browser.exportsSentinel, "Browser registration never changes CommonJS object identities.");

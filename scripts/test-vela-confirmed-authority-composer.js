@@ -189,7 +189,7 @@ async function run() {
 
     const runtimeSource = fs.readFileSync(require.resolve("../client/js/vela/velaRuntime"), "utf8");
     const driverSource = fs.readFileSync(require.resolve("../client/js/vela/velaAgentDriver"), "utf8");
-    check(!/ConfirmedAuthorityComposer|confirmedAuthorityComposer/.test(runtimeSource + driverSource), "Current C1 Runtime and Driver production path remain unattached.");
+    check(/createConfirmedAuthorityComposer/.test(runtimeSource) && !/\.compose\s*\(/.test(runtimeSource) && !/ConfirmedAuthorityComposer|confirmedAuthorityComposer/.test(driverSource), "E1 Runtime privately owns the production Composer while Driver and production continuation remain unattached from compose.");
     check(!/\.run\s*\(/.test(source) && !/executeStep/.test(source) && !/materializeDelegated|AuthorizedPlanAuthorityProducer|AtomicActivationCoordinator/.test(source), "Component source has no run, executeStep, delegated materialization, or delegated producer path.");
     console.log("PASS Vela Confirmed Authority Composer D1: " + assertions + " assertions.");
 }
