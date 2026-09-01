@@ -80,12 +80,13 @@
                 if (!current(captured) || !reason) { return snapshot(); }
                 intent = buildPlan(reason); transition("awaiting-outcome"); active.actions += 1;
                 event("agent/action-performed", { taskId: active.taskId, taskPlanId: active.taskPlan.planId, stepId: active.taskPlan.steps[0].stepId, capabilityId: intent.capabilityId, phase: "submitted" });
-                return runtimePort.submitIntent({ sessionId: active.turn.sessionId, taskId: active.taskId, taskPlanId: active.taskPlan.planId, stepId: active.taskPlan.steps[0].stepId, capabilityIntent: intent });
+                return runtimePort.submitIntent({ objectiveId: active.objectiveId, sessionId: active.turn.sessionId, turnId: active.turn.turnId, taskId: active.taskId, taskPlanId: active.taskPlan.planId, taskPlanRevision: active.taskPlan.revision, stepId: active.taskPlan.steps[0].stepId, reviewRevision: captured, capabilityIntent: intent });
             }).then(function (outcome) {
                 if (!current(captured) || !outcome) { return snapshot(); }
                 if (outcome.state === "review-required") {
                     var beforeValue = typeof outcome.beforeValue === "number" && isFinite(outcome.beforeValue) && outcome.beforeValue >= 0 && outcome.beforeValue <= 100 ? outcome.beforeValue : null;
-                    active.suspendedReview = Object.freeze({ objectiveId: active.objectiveId, taskId: active.taskId, sessionId: active.turn.sessionId, turnId: active.turn.turnId, taskPlanId: active.taskPlan.planId, taskPlanRevision: active.taskPlan.revision, stepId: active.taskPlan.steps[0].stepId, capabilityId: active.intent.capabilityId, params: Object.freeze({ opacity: active.intent.params.opacity }), localExpectation: Object.freeze({ opacity: active.intent.params.opacity }), beforeValue: beforeValue, reviewId: "agent_review_" + serial + "_" + generation, revision: generation });
+                    if (typeof outcome.reviewCorrelation !== "string" || outcome.reviewCorrelation.length === 0) { return terminal("blocked", ERROR_CODES.AGENT_DRIVER_EXECUTION_FAILED); }
+                    active.suspendedReview = Object.freeze({ objectiveId: active.objectiveId, taskId: active.taskId, sessionId: active.turn.sessionId, turnId: active.turn.turnId, taskPlanId: active.taskPlan.planId, taskPlanRevision: active.taskPlan.revision, stepId: active.taskPlan.steps[0].stepId, capabilityId: active.intent.capabilityId, params: Object.freeze({ opacity: active.intent.params.opacity }), localExpectation: Object.freeze({ opacity: active.intent.params.opacity }), beforeValue: beforeValue, reviewId: "agent_review_" + serial + "_" + generation, revision: generation, reviewCorrelation: outcome.reviewCorrelation });
                     transition("awaiting-review");
                     event("task/review-required", { taskId: active.taskId, taskPlanId: active.taskPlan.planId, stepId: active.taskPlan.steps[0].stepId, reviewId: active.suspendedReview.reviewId, reviewRevision: active.suspendedReview.revision, code: outcome.code || "REVIEW_REQUIRED" });
                     return snapshot();
@@ -104,6 +105,7 @@
         function resolveReview(input) {
             var review;
             var outcome;
+            var captured;
             if (disposed) { throw error(ERROR_CODES.AGENT_DRIVER_DISPOSED); }
             review = active && active.suspendedReview;
             if (state !== "awaiting-review" || !review || !plain(input) || Object.keys(input).sort().join(",") !== "outcome,reviewId,revision" || input.reviewId !== review.reviewId || input.revision !== review.revision || (input.outcome !== "approved" && input.outcome !== "rejected")) { throw error(ERROR_CODES.AGENT_DRIVER_REVIEW_INVALID); }
@@ -112,10 +114,16 @@
             active.reviewResolution = Object.freeze({ reviewId: review.reviewId, revision: review.revision, outcome: outcome, objectiveId: review.objectiveId, taskId: review.taskId, taskPlanId: review.taskPlanId, stepId: review.stepId });
             if (outcome === "rejected") { return terminal("rejected", "REVIEW_REJECTED"); }
             transition("awaiting-outcome");
-            return snapshot();
+            captured = generation;
+            return Promise.resolve(runtimePort.continueApprovedReview({ objectiveId: review.objectiveId, taskId: review.taskId, sessionId: review.sessionId, turnId: review.turnId, taskPlanId: review.taskPlanId, taskPlanRevision: review.taskPlanRevision, stepId: review.stepId, capabilityIntent: active.intent, localExpectation: review.localExpectation, reviewId: review.reviewId, reviewRevision: review.revision, reviewCorrelation: review.reviewCorrelation })).then(function (continuation) {
+                if (!current(captured)) { return snapshot(); }
+                if (continuation && continuation.state === "ready") { return snapshot(); }
+                if (continuation && continuation.state === "cancelled") { return terminal("cancelled", continuation.code || "AGENT_DRIVER_CANCELLED"); }
+                return terminal("blocked", continuation && continuation.code || ERROR_CODES.AGENT_DRIVER_EXECUTION_FAILED);
+            }, function (failure) { return fail(captured, failure); });
         }
         function cancel() { generation += 1; if (disposed || !active || active.terminal || state === "idle" || state === "terminal") { return false; } try { if (runtimePort && typeof runtimePort.cancel === "function") { runtimePort.cancel(); } } catch (ignored) {} terminal("cancelled", "AGENT_DRIVER_CANCELLED"); return true; }
-        function attachRuntimePort(port) { if (disposed || runtimePort || !port || typeof port.reason !== "function" || typeof port.submitIntent !== "function" || typeof port.verifyOpacity !== "function") { return false; } runtimePort = port; return true; }
+        function attachRuntimePort(port) { if (disposed || runtimePort || !port || typeof port.reason !== "function" || typeof port.submitIntent !== "function" || typeof port.continueApprovedReview !== "function" || typeof port.verifyOpacity !== "function") { return false; } runtimePort = port; return true; }
         function dispose() { if (disposed) { return false; } if (active && !active.terminal && state !== "idle") { cancel(); } disposed = true; generation += 1; runtimePort = null; listeners = []; return true; }
         return Object.freeze({ attachRuntimePort: attachRuntimePort, startObjective: startObjective, resolveReview: resolveReview, cancel: cancel, dispose: dispose, getSnapshot: snapshot, subscribe: function (listener) { var subscribed = true; if (typeof listener !== "function" || disposed) { throw error(ERROR_CODES.AGENT_DRIVER_DISPOSED); } listeners.push(listener); try { listener(snapshot()); } catch (listenerError) { try { onListenerError(listenerError, Object.freeze({ phase: "driver-listener" })); } catch (ignored) {} } return Object.freeze({ unsubscribe: function () { var index; if (!subscribed) { return; } subscribed = false; index = listeners.indexOf(listener); if (index !== -1) { listeners.splice(index, 1); } } }); } });
     }

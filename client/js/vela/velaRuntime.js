@@ -223,6 +223,8 @@
         var agentDriverProposal = null;
         var agentReasoningGeneration = 0;
         var activeAgentReasoning = null;
+        var reviewBarrierGeneration = 0;
+        var reviewBarriers = new Map();
         var authorityState = "inactive";
         var authorityErrorCode = null;
         var activePilot = null;
@@ -258,6 +260,58 @@
             return Object.freeze({ lifecycleState: authorityPlane ? (disposed ? "disposed" : suspended ? "suspended" : initialized ? "ready" : "created") : "unavailable", canonicalComposition: Boolean(authorityPlane), sessionId: authorityPlane ? exactAgentSession.getSessionId() : null, projection: authorityProjection(), latestDecision: latestAuthorityDecision, latestExecution: latestAuthorityExecution, latestParamTrace: latestAuthorityParamTrace, latestFailure: latestAuthorityFailure, moduleRevisions: authorityPlane ? Object.freeze({ compiler: compilerModule.MODULE_REVISION, grantStore: grantStoreModule.MODULE_REVISION, policyEngine: policyEngineModule.MODULE_REVISION, evidenceResolver: evidenceResolverModule.MODULE_REVISION, coordinator: authorityCoordinatorModule.MODULE_REVISION, producer: authorityProducerModule.MODULE_REVISION, activationGate: activationGateModule.MODULE_REVISION, atomicCoordinator: atomicCoordinatorModule.MODULE_REVISION }) : null });
         }
         function makeAuthorityId(kind) { authorityIdSerial += 1; return kind + "_" + authorityIdSerial; }
+        function invalidateReviewBarriers() { reviewBarrierGeneration += 1; reviewBarriers.clear(); return true; }
+        function reviewBarrierError(code) { var value = safeError(code); return value; }
+        function captureReviewBarrier(input) {
+            var capturedGeneration = reviewBarrierGeneration;
+            var correlation;
+            var opacityPath = ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0];
+            if (!input || typeof input.sessionId !== "string" || input.sessionId !== exactAgentSession.getSessionId() || typeof input.taskId !== "string" || typeof input.taskPlanId !== "string" || !Number.isInteger(input.taskPlanRevision) || typeof input.stepId !== "string" || !Number.isInteger(input.reviewRevision) || !planningContracts.isCapabilityIntent(input.capabilityIntent) || input.capabilityIntent.capabilityId !== "set-opacity-v1" || !bridge) { return Promise.reject(reviewBarrierError("LIFECYCLE_BLOCKED")); }
+            try { correlation = protocol.randomId("req"); }
+            catch (error) { return Promise.reject(reviewBarrierError("RUNTIME_CAPABILITY_UNAVAILABLE")); }
+            if (typeof correlation !== "string" || correlation.length === 0 || reviewBarriers.has(correlation)) { return Promise.reject(reviewBarrierError("RUNTIME_CAPABILITY_UNAVAILABLE")); }
+            reviewBarriers.set(correlation, { state: "capturing", generation: capturedGeneration, objectiveId: input.objectiveId, taskId: input.taskId, sessionId: input.sessionId, turnId: input.turnId, taskPlanId: input.taskPlanId, taskPlanRevision: input.taskPlanRevision, stepId: input.stepId, reviewRevision: input.reviewRevision, capabilityIntent: input.capabilityIntent, localExpectation: Object.freeze({ opacity: input.capabilityIntent.params.opacity }) });
+            return bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true }).then(function (bindingCapture) {
+                var selection = bindingCapture && bindingCapture.snapshot && bindingCapture.snapshot.selection;
+                if (!bindingCapture || bindingCapture.executable !== true || !Array.isArray(selection) || selection.length !== 1 || !selection[0]) { throw reviewBarrierError("UNKNOWN_TARGET"); }
+                return bridge.capturePropertyValues(bindingCapture, [{ layerId: selection[0].layerId, propertyPath: opacityPath }]).then(function (valueCapture) { return { bindingCapture: bindingCapture, valueCapture: valueCapture }; });
+            }).then(function (captures) {
+                var record = reviewBarriers.get(correlation);
+                var target = captures.valueCapture && captures.valueCapture.snapshot && captures.valueCapture.snapshot.targets && captures.valueCapture.snapshot.targets[0];
+                if (!record || record.state !== "capturing" || disposed || state !== "ready" || reviewBarrierGeneration !== capturedGeneration) { throw reviewBarrierError("LIFECYCLE_BLOCKED"); }
+                if (!captures.bindingCapture || typeof captures.bindingCapture.fingerprint !== "string" || !target || typeof target.valueDigest !== "string") { throw reviewBarrierError("VERIFICATION_UNAVAILABLE"); }
+                record.state = "ready";
+                record.contextFingerprint = captures.bindingCapture.fingerprint;
+                record.valueDigest = target.valueDigest;
+                return Object.freeze({ reviewCorrelation: correlation });
+            }, function (error) { reviewBarriers.delete(correlation); throw error; });
+        }
+        function continueApprovedReview(input) {
+            var record;
+            var capturedGeneration;
+            var opacityPath = ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0];
+            if (!input || typeof input.reviewCorrelation !== "string") { return Promise.resolve(Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED" })); }
+            record = reviewBarriers.get(input.reviewCorrelation);
+            if (!record || record.state !== "ready" || disposed || state !== "ready" || input.objectiveId !== record.objectiveId || input.taskId !== record.taskId || input.sessionId !== record.sessionId || input.turnId !== record.turnId || input.taskPlanId !== record.taskPlanId || input.taskPlanRevision !== record.taskPlanRevision || input.stepId !== record.stepId || input.reviewRevision !== record.reviewRevision || !planningContracts.isCapabilityIntent(input.capabilityIntent) || input.capabilityIntent !== record.capabilityIntent) { return Promise.resolve(Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED" })); }
+            record.state = "claimed";
+            capturedGeneration = reviewBarrierGeneration;
+            return bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true }).then(function (bindingCapture) {
+                var selection = bindingCapture && bindingCapture.snapshot && bindingCapture.snapshot.selection;
+                if (!bindingCapture || bindingCapture.executable !== true || !Array.isArray(selection) || selection.length !== 1 || !selection[0]) { throw reviewBarrierError("UNKNOWN_TARGET"); }
+                return bridge.capturePropertyValues(bindingCapture, [{ layerId: selection[0].layerId, propertyPath: opacityPath }]).then(function (valueCapture) { return { bindingCapture: bindingCapture, valueCapture: valueCapture }; });
+            }).then(function (captures) {
+                var current = reviewBarriers.get(input.reviewCorrelation);
+                var target = captures.valueCapture && captures.valueCapture.snapshot && captures.valueCapture.snapshot.targets && captures.valueCapture.snapshot.targets[0];
+                reviewBarriers.delete(input.reviewCorrelation);
+                if (!current || current !== record || disposed || state !== "ready" || reviewBarrierGeneration !== capturedGeneration) { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
+                if (!captures.bindingCapture || captures.bindingCapture.fingerprint !== record.contextFingerprint || !target || target.valueDigest !== record.valueDigest) { return Object.freeze({ state: "blocked", code: "CONTEXT_STALE" }); }
+                return Object.freeze({ state: "ready", code: null });
+            }, function (error) {
+                reviewBarriers.delete(input.reviewCorrelation);
+                if (reviewBarrierGeneration !== capturedGeneration || disposed || state !== "ready") { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
+                return Object.freeze({ state: "blocked", code: stableErrorCode(error) });
+            });
+        }
         function disposeAuthorityPlane() {
             if (!authorityPlane) { return false; }
             try { authorityPlane.grantStore.dispose(); } catch (ignored) {}
@@ -520,7 +574,7 @@
                         latestAuthorityDecision = Object.freeze({ decision: decision.decision, reasonCode: decision.reasonCode, candidateId: candidate.candidateId });
                         if (decision.decision === "REVIEW_REQUIRED") {
                             settleAgentDriverProposal("completed", null, true);
-                            return captureReviewPresentationBaseline().then(function (beforeValue) { return Object.freeze({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: beforeValue }); });
+                            return captureReviewBarrier(input).then(function (barrier) { return captureReviewPresentationBaseline().then(function (beforeValue) { return Object.freeze({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: beforeValue, reviewCorrelation: barrier.reviewCorrelation }); }); });
                         }
                         if (decision.decision !== "ALLOW") {
                             settleAgentDriverProposal("failed", "PERMISSION_DENIED", false);
@@ -550,11 +604,13 @@
                         return Object.freeze({ fresh: observation.fresh === true, opacity: observation.opacity, matches: observation.opacity === input.expectedOpacity, observationRevision: observation.observationId });
                     });
                 },
+                continueApprovedReview: continueApprovedReview,
                 cancel: function () {
                     var providerState;
                     var cancelledReasoning = activeAgentReasoning;
                     agentReasoningGeneration += 1;
                     activeAgentReasoning = null;
+                    invalidateReviewBarriers();
                     if (agentDriverProposal && authorityPlane) { try { settleAgentDriverProposal("failed", "AGENT_DRIVER_CANCELLED", false); } catch (ignored) {} }
                     if (providerController && cancelledReasoning) {
                         try {
@@ -597,6 +653,7 @@
             if (providerController) { providerController.invalidate("idle"); }
             if (reviewRuntimePort) { reviewRuntimePort.invalidateAll(); }
             if (planController) { planController.invalidate("suspend"); }
+            invalidateReviewBarriers();
             cancelActiveDelegatedTask();
             if (authorityPlane) { authorityPlane.grantStore.suspend(); }
             activePilot = null; lastPilot = null; authorityRemainingActions = null; authorityState = "inactive"; authorityRouting = false;
@@ -614,6 +671,7 @@
         }
         function resetSession() {
             if (disposed || state !== "ready" || !bridge) { return false; }
+            invalidateReviewBarriers();
             if (controller) { controller.invalidate("idle"); }
             if (providerController) { providerController.invalidate("idle"); }
             if (reviewRuntimePort) { reviewRuntimePort.invalidateAll(); }
@@ -629,6 +687,7 @@
         function dispose() {
             if (disposed) { return false; }
             epoch += 1;
+            invalidateReviewBarriers();
             if (bridge) { try { bridge.suspend(); } catch (ignored) {} }
             cancelActiveDelegatedTask();
             disposeAuthorityPlane();
