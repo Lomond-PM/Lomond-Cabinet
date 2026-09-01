@@ -5,18 +5,18 @@
     var BOOTSTRAP_NAME = "__velaProtocolCoreBootstrapV1";
 
     function bootstrapError(code) { var error = new Error(code); error.code = code; return error; }
-    function assertDependencies(protocol, parser, capabilityContracts, providerAdapter, localTransport, context, validator, plan, guard, bridge, preflight, executionAdapter, controller, providerController, proposalRouter, planningContracts, materializer, taskRun, planReviewProjection, planController, reviewRuntimePort) {
-        if (!protocol || !parser || !capabilityContracts || !providerAdapter || !localTransport || !context || !validator || !plan || !guard || !bridge || !preflight || !executionAdapter || !providerController || !proposalRouter || !planningContracts || !materializer || !taskRun || !planReviewProjection || !planController || !reviewRuntimePort ||
+    function assertDependencies(protocol, parser, capabilityContracts, providerAdapter, localTransport, context, validator, plan, guard, bridge, preflight, executionAdapter, controller, providerController, proposalRouter, planningContracts, materializer, taskRun, planReviewProjection, planController, confirmedAuthorityComposer, reviewRuntimePort) {
+        if (!protocol || !parser || !capabilityContracts || !providerAdapter || !localTransport || !context || !validator || !plan || !guard || !bridge || !preflight || !executionAdapter || !providerController || !proposalRouter || !planningContracts || !materializer || !taskRun || !planReviewProjection || !planController || !confirmedAuthorityComposer || !reviewRuntimePort ||
             typeof protocol.createProtocol !== "function" || typeof context.createContextApi !== "function" ||
             typeof capabilityContracts.getLocalProjection !== "function" || typeof capabilityContracts.resolveRegisteredAction !== "function" || typeof capabilityContracts.listCapabilityIds !== "function" ||
             typeof validator.createActionValidator !== "function" || typeof plan.createPlanStore !== "function" ||
             typeof bridge.createContextBridge !== "function" || typeof bridge.createExecutionPort !== "function" || typeof bridge.createReviewPort !== "function" || typeof preflight.createExecutionPreflight !== "function" || typeof executionAdapter.createExecutionAdapter !== "function" ||
             !controller || typeof controller.createController !== "function" || typeof controller.isTrustedControllerForProtocol !== "function" || typeof proposalRouter.createProposalRouter !== "function" ||
             typeof parser.createResponseParser !== "function" || typeof providerAdapter.createLocalOpenAICompatibleProvider !== "function" || typeof localTransport.createLocalTransport !== "function" || typeof providerController.createProviderController !== "function" ||
-            typeof planningContracts.createAuthorizedPlan !== "function" || typeof materializer.createAuthorizedPlanMaterializer !== "function" || typeof taskRun.createTaskRun !== "function" || typeof planReviewProjection.createPlanReviewProjection !== "function" || typeof planController.createPlanController !== "function" || typeof reviewRuntimePort.createReviewRuntimePort !== "function" || typeof reviewRuntimePort.createObjectiveReviewRuntimePort !== "function") {
+            typeof planningContracts.createAuthorizedPlan !== "function" || typeof materializer.createAuthorizedPlanMaterializer !== "function" || typeof taskRun.createTaskRun !== "function" || typeof planReviewProjection.createPlanReviewProjection !== "function" || typeof planController.createPlanController !== "function" || typeof confirmedAuthorityComposer.createConfirmedAuthorityComposer !== "function" || typeof confirmedAuthorityComposer.createReviewedSemantics !== "function" || typeof confirmedAuthorityComposer.createReviewedPolicySemantics !== "function" || typeof confirmedAuthorityComposer.sameReviewedSemantics !== "function" || typeof reviewRuntimePort.createReviewRuntimePort !== "function" || typeof reviewRuntimePort.createObjectiveReviewRuntimePort !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE");
         }
-        return { protocol: protocol, parser: parser, capabilityContracts: capabilityContracts, providerAdapter: providerAdapter, localTransport: localTransport, context: context, validator: validator, plan: plan, guard: guard, bridge: bridge, preflight: preflight, executionAdapter: executionAdapter, controller: controller, providerController: providerController, proposalRouter: proposalRouter, planningContracts: planningContracts, materializer: materializer, taskRun: taskRun, planReviewProjection: planReviewProjection, planController: planController, reviewRuntimePort: reviewRuntimePort };
+        return { protocol: protocol, parser: parser, capabilityContracts: capabilityContracts, providerAdapter: providerAdapter, localTransport: localTransport, context: context, validator: validator, plan: plan, guard: guard, bridge: bridge, preflight: preflight, executionAdapter: executionAdapter, controller: controller, providerController: providerController, proposalRouter: proposalRouter, planningContracts: planningContracts, materializer: materializer, taskRun: taskRun, planReviewProjection: planReviewProjection, planController: planController, confirmedAuthorityComposer: confirmedAuthorityComposer, reviewRuntimePort: reviewRuntimePort };
     }
     function trustedBrowserModule(target, name) {
         var descriptor;
@@ -44,20 +44,20 @@
         bootstrap = target[BOOTSTRAP_NAME];
         if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.getModule !== "function" || typeof bootstrap.hasModule !== "function" || typeof bootstrap.registerModule !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
         if (bootstrap.hasModule(name)) { throw bootstrapError("MODULE_ALREADY_REGISTERED"); }
-        dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaResponseParser"), bootstrap.getModule("VelaCapabilityContracts"), bootstrap.getModule("VelaProviderAdapter"), bootstrap.getModule("VelaLocalTransport"), bootstrap.getModule("VelaContext"), bootstrap.getModule("VelaValidator"), bootstrap.getModule("VelaPlan"), bootstrap.getModule("VelaExecutionGuard"), bootstrap.getModule("VelaContextBridge"), bootstrap.getModule("VelaExecutionPreflight"), bootstrap.getModule("VelaExecutionAdapter"), bootstrap.getModule("VelaController"), bootstrap.getModule("VelaProviderController"), bootstrap.getModule("VelaProviderProposalRouter"), trustedBrowserModule(target, "VelaPlanningContracts"), trustedBrowserModule(target, "VelaAuthorizedPlanMaterializer"), trustedBrowserModule(target, "VelaTaskRun"), trustedBrowserModule(target, "VelaPlanReviewProjection"), trustedBrowserModule(target, "VelaPlanController"), trustedBrowserModule(target, "VelaReviewRuntimePort"));
+        dependencies = assertDependencies(bootstrap.getModule("VelaProtocol"), bootstrap.getModule("VelaResponseParser"), bootstrap.getModule("VelaCapabilityContracts"), bootstrap.getModule("VelaProviderAdapter"), bootstrap.getModule("VelaLocalTransport"), bootstrap.getModule("VelaContext"), bootstrap.getModule("VelaValidator"), bootstrap.getModule("VelaPlan"), bootstrap.getModule("VelaExecutionGuard"), bootstrap.getModule("VelaContextBridge"), bootstrap.getModule("VelaExecutionPreflight"), bootstrap.getModule("VelaExecutionAdapter"), bootstrap.getModule("VelaController"), bootstrap.getModule("VelaProviderController"), bootstrap.getModule("VelaProviderProposalRouter"), trustedBrowserModule(target, "VelaPlanningContracts"), trustedBrowserModule(target, "VelaAuthorizedPlanMaterializer"), trustedBrowserModule(target, "VelaTaskRun"), trustedBrowserModule(target, "VelaPlanReviewProjection"), trustedBrowserModule(target, "VelaPlanController"), trustedBrowserModule(target, "VelaConfirmedAuthorityComposer"), trustedBrowserModule(target, "VelaReviewRuntimePort"));
         var activationPolicy = trustedBrowserActivationPolicy(target);
         if (!activationPolicy) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
-        exported = Object.freeze(create(dependencies.protocol, dependencies.parser, dependencies.capabilityContracts, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter, dependencies.planningContracts, dependencies.materializer, dependencies.taskRun, dependencies.planReviewProjection, dependencies.planController, dependencies.reviewRuntimePort, activationPolicy, trustedBrowserModule(target, "VelaSessionRuntime"), trustedBrowserModule(target, "VelaCapabilityCompiler"), trustedBrowserModule(target, "VelaDelegationGrantStore"), trustedBrowserModule(target, "VelaDelegationPolicyEngine"), trustedBrowserModule(target, "VelaAuthorityEvidenceResolver"), trustedBrowserModule(target, "VelaDelegationAuthorityCoordinator"), trustedBrowserModule(target, "VelaAuthorizedPlanAuthorityProducer"), trustedBrowserModule(target, "VelaAuthorityActivationGate"), trustedBrowserModule(target, "VelaAtomicActivationCoordinator")));
+        exported = Object.freeze(create(dependencies.protocol, dependencies.parser, dependencies.capabilityContracts, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter, dependencies.planningContracts, dependencies.materializer, dependencies.taskRun, dependencies.planReviewProjection, dependencies.planController, dependencies.confirmedAuthorityComposer, dependencies.reviewRuntimePort, activationPolicy, trustedBrowserModule(target, "VelaSessionRuntime"), trustedBrowserModule(target, "VelaCapabilityCompiler"), trustedBrowserModule(target, "VelaDelegationGrantStore"), trustedBrowserModule(target, "VelaDelegationPolicyEngine"), trustedBrowserModule(target, "VelaAuthorityEvidenceResolver"), trustedBrowserModule(target, "VelaDelegationAuthorityCoordinator"), trustedBrowserModule(target, "VelaAuthorizedPlanAuthorityProducer"), trustedBrowserModule(target, "VelaAuthorityActivationGate"), trustedBrowserModule(target, "VelaAtomicActivationCoordinator")));
         bootstrap.registerModule(name, exported);
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        var dependencies = assertDependencies(require("./velaProtocol"), require("./velaResponseParser"), require("./velaCapabilityContracts"), require("./velaProviderAdapter"), require("./velaLocalTransport"), require("./velaContext"), require("./velaValidator"), require("./velaPlan"), require("./velaExecutionGuard"), require("./velaContextBridge"), require("./velaExecutionPreflight"), require("./velaExecutionAdapter"), require("./velaController"), require("./velaProviderController"), require("./velaProviderProposalRouter"), require("./velaPlanningContracts"), require("./velaAuthorizedPlanMaterializer"), require("./velaTaskRun"), require("./velaPlanReviewProjection"), require("./velaPlanController"), require("./velaReviewRuntimePort"));
-        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.parser, dependencies.capabilityContracts, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter, dependencies.planningContracts, dependencies.materializer, dependencies.taskRun, dependencies.planReviewProjection, dependencies.planController, dependencies.reviewRuntimePort, require("./velaActivationPolicy").VelaActivationPolicy, require("./velaSessionRuntime"), require("./velaCapabilityCompiler"), require("./velaDelegationGrantStore"), require("./velaDelegationPolicyEngine"), require("./velaAuthorityEvidenceResolver"), require("./velaDelegationAuthorityCoordinator"), require("./velaAuthorizedPlanAuthorityProducer"), require("./velaAuthorityActivationGate"), require("./velaAtomicActivationCoordinator")));
+        var dependencies = assertDependencies(require("./velaProtocol"), require("./velaResponseParser"), require("./velaCapabilityContracts"), require("./velaProviderAdapter"), require("./velaLocalTransport"), require("./velaContext"), require("./velaValidator"), require("./velaPlan"), require("./velaExecutionGuard"), require("./velaContextBridge"), require("./velaExecutionPreflight"), require("./velaExecutionAdapter"), require("./velaController"), require("./velaProviderController"), require("./velaProviderProposalRouter"), require("./velaPlanningContracts"), require("./velaAuthorizedPlanMaterializer"), require("./velaTaskRun"), require("./velaPlanReviewProjection"), require("./velaPlanController"), require("./velaConfirmedAuthorityComposer"), require("./velaReviewRuntimePort"));
+        module.exports = Object.freeze(factory(dependencies.protocol, dependencies.parser, dependencies.capabilityContracts, dependencies.providerAdapter, dependencies.localTransport, dependencies.context, dependencies.validator, dependencies.plan, dependencies.guard, dependencies.bridge, dependencies.preflight, dependencies.executionAdapter, dependencies.controller, dependencies.providerController, dependencies.proposalRouter, dependencies.planningContracts, dependencies.materializer, dependencies.taskRun, dependencies.planReviewProjection, dependencies.planController, dependencies.confirmedAuthorityComposer, dependencies.reviewRuntimePort, require("./velaActivationPolicy").VelaActivationPolicy, require("./velaSessionRuntime"), require("./velaCapabilityCompiler"), require("./velaDelegationGrantStore"), require("./velaDelegationPolicyEngine"), require("./velaAuthorityEvidenceResolver"), require("./velaDelegationAuthorityCoordinator"), require("./velaAuthorizedPlanAuthorityProducer"), require("./velaAuthorityActivationGate"), require("./velaAtomicActivationCoordinator")));
     }
-}(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule, capabilityContracts, providerAdapterModule, localTransportModule, contextModule, validatorModule, planModule, guardModule, bridgeModule, preflightModule, executionAdapterModule, controllerModule, providerControllerModule, proposalRouterModule, planningContracts, materializerModule, taskRunModule, planReviewProjectionModule, planControllerModule, reviewRuntimePortModule, activationPolicyModule, sessionRuntimeModule, compilerModule, grantStoreModule, policyEngineModule, evidenceResolverModule, authorityCoordinatorModule, authorityProducerModule, activationGateModule, atomicCoordinatorModule) {
+}(typeof self !== "undefined" ? self : this, function (protocolModule, parserModule, capabilityContracts, providerAdapterModule, localTransportModule, contextModule, validatorModule, planModule, guardModule, bridgeModule, preflightModule, executionAdapterModule, controllerModule, providerControllerModule, proposalRouterModule, planningContracts, materializerModule, taskRunModule, planReviewProjectionModule, planControllerModule, confirmedAuthorityComposerModule, reviewRuntimePortModule, activationPolicyModule, sessionRuntimeModule, compilerModule, grantStoreModule, policyEngineModule, evidenceResolverModule, authorityCoordinatorModule, authorityProducerModule, activationGateModule, atomicCoordinatorModule) {
     "use strict";
 
     var MODULE_REVISION = "vela-runtime-v1";
@@ -212,6 +212,7 @@
         var authorizedPlanMaterializer = null;
         var planReviewProjection = null;
         var planController = null;
+        var confirmedAuthorityComposer = null;
         var reviewRuntimePort = null;
         var objectiveReviewRuntimePort = null;
         var protocolClock = null;
@@ -261,16 +262,40 @@
         }
         function makeAuthorityId(kind) { authorityIdSerial += 1; return kind + "_" + authorityIdSerial; }
         function invalidateReviewBarriers() { reviewBarrierGeneration += 1; reviewBarriers.clear(); return true; }
+        function claimApprovedReview(input) {
+            var record = input && typeof input.reviewCorrelation === "string" ? reviewBarriers.get(input.reviewCorrelation) : null;
+            var identityMatches = false;
+            try { identityMatches = record && record.state === "claimable" && record.generation === reviewBarrierGeneration && input.runtimeGeneration === record.generation && input.objectiveId === record.objectiveId && input.taskId === record.taskId && input.sessionId === record.sessionId && input.turnId === record.turnId && input.taskPlanId === record.taskPlanId && input.taskPlanRevision === record.taskPlanRevision && input.stepId === record.stepId && input.reviewId === record.reviewId && input.reviewRevision === record.reviewRevision && input.capabilityIntent === record.capabilityIntent && input.reviewedSemantics === record.reviewedSemantics && input.reviewPolicySemantics === record.reviewedPolicySemantics && typeof input.freshCandidateId === "string" && confirmedAuthorityComposerModule.sameReviewedSemantics(input.freshSemantics, record.reviewedSemantics); }
+            catch (ignoredSemanticMismatch) { identityMatches = false; }
+            if (!record || !identityMatches || disposed || state !== "ready") {
+                if (record) { record.state = "terminal"; reviewBarriers.delete(record.reviewCorrelation); }
+                return Object.freeze({ claimed: false, code: "LIFECYCLE_BLOCKED" });
+            }
+            record.state = "claimed";
+            return Object.freeze({ claimed: true });
+        }
+        function disposeConfirmedAuthorityComposer() {
+            var composer = confirmedAuthorityComposer;
+            if (!composer) { return false; }
+            try { composer.dispose(); } catch (ignored) {}
+            confirmedAuthorityComposer = null;
+            return true;
+        }
+        function createConfirmedAuthorityComposer() {
+            if (confirmedAuthorityComposer || !authorityPlane || !planController) { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
+            confirmedAuthorityComposer = confirmedAuthorityComposerModule.createConfirmedAuthorityComposer({ compiler: authorityPlane.compiler, policyEngine: authorityPlane.policyEngine, planController: planController, resolveRegisteredAction: capabilityContracts.resolveRegisteredAction, makePlanId: makeAuthorityId, getRuntimeGeneration: function () { return reviewBarrierGeneration; }, claimApprovedReview: claimApprovedReview });
+            return confirmedAuthorityComposer;
+        }
         function reviewBarrierError(code) { var value = safeError(code); return value; }
-        function captureReviewBarrier(input) {
+        function captureReviewBarrier(input, reviewedCandidate, reviewedDecision) {
             var capturedGeneration = reviewBarrierGeneration;
             var correlation;
             var opacityPath = ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0];
-            if (!input || typeof input.sessionId !== "string" || input.sessionId !== exactAgentSession.getSessionId() || typeof input.taskId !== "string" || typeof input.taskPlanId !== "string" || !Number.isInteger(input.taskPlanRevision) || typeof input.stepId !== "string" || !Number.isInteger(input.reviewRevision) || !planningContracts.isCapabilityIntent(input.capabilityIntent) || input.capabilityIntent.capabilityId !== "set-opacity-v1" || !bridge) { return Promise.reject(reviewBarrierError("LIFECYCLE_BLOCKED")); }
+            if (!input || typeof input.objectiveId !== "string" || typeof input.sessionId !== "string" || input.sessionId !== exactAgentSession.getSessionId() || typeof input.turnId !== "string" || typeof input.taskId !== "string" || typeof input.taskPlanId !== "string" || !Number.isInteger(input.taskPlanRevision) || typeof input.stepId !== "string" || !Number.isInteger(input.reviewRevision) || !planningContracts.isCapabilityIntent(input.capabilityIntent) || input.capabilityIntent.capabilityId !== "set-opacity-v1" || !reviewedCandidate || !reviewedDecision || reviewedDecision.decision !== "REVIEW_REQUIRED" || !bridge) { return Promise.reject(reviewBarrierError("LIFECYCLE_BLOCKED")); }
             try { correlation = protocol.randomId("req"); }
             catch (error) { return Promise.reject(reviewBarrierError("RUNTIME_CAPABILITY_UNAVAILABLE")); }
             if (typeof correlation !== "string" || correlation.length === 0 || reviewBarriers.has(correlation)) { return Promise.reject(reviewBarrierError("RUNTIME_CAPABILITY_UNAVAILABLE")); }
-            reviewBarriers.set(correlation, { state: "capturing", generation: capturedGeneration, objectiveId: input.objectiveId, taskId: input.taskId, sessionId: input.sessionId, turnId: input.turnId, taskPlanId: input.taskPlanId, taskPlanRevision: input.taskPlanRevision, stepId: input.stepId, reviewRevision: input.reviewRevision, capabilityIntent: input.capabilityIntent, localExpectation: Object.freeze({ opacity: input.capabilityIntent.params.opacity }) });
+            reviewBarriers.set(correlation, { state: "capturing", generation: capturedGeneration, reviewCorrelation: correlation, objectiveId: input.objectiveId, taskId: input.taskId, sessionId: input.sessionId, turnId: input.turnId, taskPlanId: input.taskPlanId, taskPlanRevision: input.taskPlanRevision, stepId: input.stepId, reviewId: null, reviewRevision: input.reviewRevision, capabilityIntent: input.capabilityIntent, localExpectation: Object.freeze({ opacity: input.capabilityIntent.params.opacity }), reviewedSemantics: confirmedAuthorityComposerModule.createReviewedSemantics(input.capabilityIntent, reviewedCandidate, capabilityContracts.resolveRegisteredAction), reviewedPolicySemantics: confirmedAuthorityComposerModule.createReviewedPolicySemantics(reviewedDecision), contextFingerprint: null, valueDigest: null });
             return bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true }).then(function (bindingCapture) {
                 var selection = bindingCapture && bindingCapture.snapshot && bindingCapture.snapshot.selection;
                 if (!bindingCapture || bindingCapture.executable !== true || !Array.isArray(selection) || selection.length !== 1 || !selection[0]) { throw reviewBarrierError("UNKNOWN_TARGET"); }
@@ -292,8 +317,9 @@
             var opacityPath = ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0];
             if (!input || typeof input.reviewCorrelation !== "string") { return Promise.resolve(Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED" })); }
             record = reviewBarriers.get(input.reviewCorrelation);
-            if (!record || record.state !== "ready" || disposed || state !== "ready" || input.objectiveId !== record.objectiveId || input.taskId !== record.taskId || input.sessionId !== record.sessionId || input.turnId !== record.turnId || input.taskPlanId !== record.taskPlanId || input.taskPlanRevision !== record.taskPlanRevision || input.stepId !== record.stepId || input.reviewRevision !== record.reviewRevision || !planningContracts.isCapabilityIntent(input.capabilityIntent) || input.capabilityIntent !== record.capabilityIntent) { return Promise.resolve(Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED" })); }
-            record.state = "claimed";
+            if (!record || record.state !== "ready" || disposed || state !== "ready" || typeof input.reviewId !== "string" || input.reviewId.length === 0 || input.objectiveId !== record.objectiveId || input.taskId !== record.taskId || input.sessionId !== record.sessionId || input.turnId !== record.turnId || input.taskPlanId !== record.taskPlanId || input.taskPlanRevision !== record.taskPlanRevision || input.stepId !== record.stepId || input.reviewRevision !== record.reviewRevision || !planningContracts.isCapabilityIntent(input.capabilityIntent) || input.capabilityIntent !== record.capabilityIntent) { return Promise.resolve(Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED" })); }
+            record.state = "continuing";
+            record.reviewId = input.reviewId;
             capturedGeneration = reviewBarrierGeneration;
             return bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true }).then(function (bindingCapture) {
                 var selection = bindingCapture && bindingCapture.snapshot && bindingCapture.snapshot.selection;
@@ -302,9 +328,9 @@
             }).then(function (captures) {
                 var current = reviewBarriers.get(input.reviewCorrelation);
                 var target = captures.valueCapture && captures.valueCapture.snapshot && captures.valueCapture.snapshot.targets && captures.valueCapture.snapshot.targets[0];
-                reviewBarriers.delete(input.reviewCorrelation);
                 if (!current || current !== record || disposed || state !== "ready" || reviewBarrierGeneration !== capturedGeneration) { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
-                if (!captures.bindingCapture || captures.bindingCapture.fingerprint !== record.contextFingerprint || !target || target.valueDigest !== record.valueDigest) { return Object.freeze({ state: "blocked", code: "CONTEXT_STALE" }); }
+                if (!captures.bindingCapture || captures.bindingCapture.fingerprint !== record.contextFingerprint || !target || target.valueDigest !== record.valueDigest) { record.state = "terminal"; reviewBarriers.delete(input.reviewCorrelation); return Object.freeze({ state: "blocked", code: "CONTEXT_STALE" }); }
+                record.state = "claimable";
                 return Object.freeze({ state: "ready", code: null });
             }, function (error) {
                 reviewBarriers.delete(input.reviewCorrelation);
@@ -424,6 +450,7 @@
             providerController = providerControllerModule.createProviderController({ protocol: protocol, contextBridge: bridge, transport: localTransport, runtime: { setTimeout: setTimer, clearTimeout: clearTimer, createAbortController: function () { var nativeController = new root.AbortController(); return { signal: nativeController.signal, abort: function () { nativeController.abort(); } }; }, parseUrl: function (value) { var parsed = new root.URL(value); return { protocol: parsed.protocol, hostname: parsed.hostname, port: parsed.port, pathname: parsed.pathname, username: parsed.username, password: parsed.password, search: parsed.search, hash: parsed.hash, href: parsed.href }; }, nowMs: wallClock } });
             providerProposalRouter = proposalRouterModule.createProposalRouter({ protocol: protocol, providerController: providerController, controller: controller });
             composeAuthorityPlane(wallClock);
+            createConfirmedAuthorityComposer();
         }
         function cancelActiveDelegatedTask() {
             if (!authorityPlane || !activeDelegatedTask) { return false; }
@@ -574,7 +601,7 @@
                         latestAuthorityDecision = Object.freeze({ decision: decision.decision, reasonCode: decision.reasonCode, candidateId: candidate.candidateId });
                         if (decision.decision === "REVIEW_REQUIRED") {
                             settleAgentDriverProposal("completed", null, true);
-                            return captureReviewBarrier(input).then(function (barrier) { return captureReviewPresentationBaseline().then(function (beforeValue) { return Object.freeze({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: beforeValue, reviewCorrelation: barrier.reviewCorrelation }); }); });
+                            return captureReviewBarrier(input, candidate, decision).then(function (barrier) { return captureReviewPresentationBaseline().then(function (beforeValue) { return Object.freeze({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: beforeValue, reviewCorrelation: barrier.reviewCorrelation }); }); });
                         }
                         if (decision.decision !== "ALLOW") {
                             settleAgentDriverProposal("failed", "PERMISSION_DENIED", false);
@@ -611,6 +638,7 @@
                     agentReasoningGeneration += 1;
                     activeAgentReasoning = null;
                     invalidateReviewBarriers();
+                    if (confirmedAuthorityComposer) { try { confirmedAuthorityComposer.cancel(); } catch (ignoredComposer) {} }
                     if (agentDriverProposal && authorityPlane) { try { settleAgentDriverProposal("failed", "AGENT_DRIVER_CANCELLED", false); } catch (ignored) {} }
                     if (providerController && cancelledReasoning) {
                         try {
@@ -649,11 +677,12 @@
         }
         function suspend() {
             if (disposed || state !== "ready") { return false; }
+            invalidateReviewBarriers();
             if (controller) { controller.invalidate("stale"); }
             if (providerController) { providerController.invalidate("idle"); }
             if (reviewRuntimePort) { reviewRuntimePort.invalidateAll(); }
+            disposeConfirmedAuthorityComposer();
             if (planController) { planController.invalidate("suspend"); }
-            invalidateReviewBarriers();
             cancelActiveDelegatedTask();
             if (authorityPlane) { authorityPlane.grantStore.suspend(); }
             activePilot = null; lastPilot = null; authorityRemainingActions = null; authorityState = "inactive"; authorityRouting = false;
@@ -665,6 +694,7 @@
         function resume() {
             if (disposed || state === "failed" || state !== "suspended") { return false; }
             if (bridge) { bridge.resume(); }
+            createConfirmedAuthorityComposer();
             suspended = false;
             state = initialized ? "ready" : "new";
             return true;
@@ -675,6 +705,7 @@
             if (controller) { controller.invalidate("idle"); }
             if (providerController) { providerController.invalidate("idle"); }
             if (reviewRuntimePort) { reviewRuntimePort.invalidateAll(); }
+            disposeConfirmedAuthorityComposer();
             if (planController) { planController.invalidate("session-reset"); }
             cancelActiveDelegatedTask();
             if (authorityPlane) { authorityPlane.grantStore.resetSession(); }
@@ -682,12 +713,14 @@
             bridge.resetSession();
             try { protocolClock.reset(); }
             catch (error) { lastErrorCode = stableErrorCode(error); state = "failed"; return false; }
+            createConfirmedAuthorityComposer();
             return true;
         }
         function dispose() {
             if (disposed) { return false; }
             epoch += 1;
             invalidateReviewBarriers();
+            disposeConfirmedAuthorityComposer();
             if (bridge) { try { bridge.suspend(); } catch (ignored) {} }
             cancelActiveDelegatedTask();
             disposeAuthorityPlane();
@@ -696,7 +729,7 @@
             if (reviewRuntimePort) { try { reviewRuntimePort.invalidateAll(); } catch (ignoredReviews) {} }
             if (objectiveReviewRuntimePort) { try { objectiveReviewRuntimePort.invalidate(); } catch (ignoredObjectiveReview) {} }
             if (planController) { try { planController.dispose(); } catch (ignoredPlans) {} }
-            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; reviewPort = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; authorizedPlanMaterializer = null; planReviewProjection = null; planController = null; reviewRuntimePort = null; objectiveReviewRuntimePort = null; protocolClock = null; agentDriverRuntimePort = null; agentDriverProposal = null; agentReasoningGeneration += 1; activeAgentReasoning = null; opacityVerificationPort = null;
+            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; reviewPort = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; authorizedPlanMaterializer = null; planReviewProjection = null; planController = null; confirmedAuthorityComposer = null; reviewRuntimePort = null; objectiveReviewRuntimePort = null; protocolClock = null; agentDriverRuntimePort = null; agentDriverProposal = null; agentReasoningGeneration += 1; activeAgentReasoning = null; opacityVerificationPort = null;
             initialized = false; suspended = false; disposed = true; state = "disposed";
             return true;
         }
@@ -718,7 +751,7 @@
         }
         function rejectActiveCandidate() {
             try {
-                if (objectiveReviewRuntimePort && objectiveReviewRuntimePort.getProjection().state === "active") { return Promise.resolve(objectiveReviewRuntimePort.resolve("rejected")); }
+                if (objectiveReviewRuntimePort && objectiveReviewRuntimePort.getProjection().state === "active") { return Promise.resolve(objectiveReviewRuntimePort.resolve("rejected")).then(function (result) { invalidateReviewBarriers(); return result; }); }
                 return Promise.resolve(ensureReadyController().rejectCandidate(activeCandidateInput()));
             }
             catch (error) { return Promise.reject(error); }

@@ -125,7 +125,7 @@ async function run() {
     check(result.ok === true && result.state === "ready", "Loader reaches ready state.");
     check(Object.isFrozen(browser.context.VelaCepModuleLoader.getStatus()) && browser.context.VelaCepModuleLoader.getStatus().state === "ready" && browser.context.VelaCepModuleLoader.getStatus().lastErrorCode === null, "Loader exposes only a frozen ready diagnostic snapshot.");
     check(Object.isFrozen(result) && Object.isFrozen(result.modules), "Loader result is frozen.");
-    check(result.modules.length === 32 && result.modules[18] === "VelaCapabilityCompiler" && result.modules.slice(-8).join(",") === "VelaDelegationGrantStore,VelaDelegationPolicyEngine,VelaAuthorityEvidenceResolver,VelaDelegationAuthorityCoordinator,VelaAuthorizedPlanAuthorityProducer,VelaAuthorityActivationGate,VelaAtomicActivationCoordinator,VelaRuntime", "Loader returns the canonical Authority dependency order with Runtime last.");
+    check(result.modules.length === 33 && result.modules[18] === "VelaCapabilityCompiler" && result.modules[23] === "VelaConfirmedAuthorityComposer" && result.modules.slice(-8).join(",") === "VelaDelegationGrantStore,VelaDelegationPolicyEngine,VelaAuthorityEvidenceResolver,VelaDelegationAuthorityCoordinator,VelaAuthorizedPlanAuthorityProducer,VelaAuthorityActivationGate,VelaAtomicActivationCoordinator,VelaRuntime", "Loader returns the canonical Composer and Authority dependency order with Runtime last.");
     check(browser.context.__velaProtocolCoreBootstrapV1.getModule("VelaProtocol") === browser.context.VelaProtocol, "Protocol uses the browser bootstrap identity.");
     check(browser.context.__velaProtocolCoreBootstrapV1.getModule("VelaRuntime") === browser.context.VelaRuntime, "Runtime uses the browser bootstrap identity.");
     check(Object.isFrozen(browser.context.VelaRuntime), "Runtime browser module is frozen.");
@@ -151,7 +151,7 @@ async function run() {
     check(await browser.context.VelaCepModuleLoader.load() === result, "Ready loader calls return the same result.");
     check(Object.getOwnPropertyDescriptor(browser.context, "CSInterface") === undefined, "Loader does not create CSInterface state.");
     check(Object.getOwnPropertyDescriptor(browser.context, "__adobe_cep__") === undefined, "Loader does not create Adobe CEP state.");
-    check(browser.getAppendCount() === 32, "Loader injects each protected module exactly once.");
+    check(browser.getAppendCount() === 33, "Loader injects each protected module exactly once.");
     check(browser.requestedUrls[0] === "file:///C:/extension/client/js/vela/velaProtocol.js?v=test", "The captured loader base and cache query produce VelaProtocol as the first request after currentScript is cleared.");
     check(JSON.stringify(browser.requestedUrls) === JSON.stringify([
         "file:///C:/extension/client/js/vela/velaProtocol.js?v=test",
@@ -177,6 +177,7 @@ async function run() {
         "file:///C:/extension/client/js/vela/velaTaskRun.js?v=test",
         "file:///C:/extension/client/js/vela/velaPlanReviewProjection.js?v=test",
         "file:///C:/extension/client/js/vela/velaPlanController.js?v=test",
+        "file:///C:/extension/client/js/vela/velaConfirmedAuthorityComposer.js?v=test",
         "file:///C:/extension/client/js/vela/velaReviewRuntimePort.js?v=test",
         "file:///C:/extension/client/js/vela/velaDelegationGrantStore.js?v=test",
         "file:///C:/extension/client/js/vela/velaDelegationPolicyEngine.js?v=test",
@@ -208,6 +209,9 @@ async function run() {
     const missingReviewPort = makeBrowser({ failFile: "velaReviewRuntimePort.js" });
     await expectCode(missingReviewPort.context.VelaCepModuleLoader.load(), "RUNTIME_CAPABILITY_UNAVAILABLE", "A missing ReviewRuntimePort fails closed before Runtime.");
     check(missingReviewPort.context.VelaRuntime === undefined, "Missing H1 module cannot silently fall back to a partial Runtime.");
+    const missingComposer = makeBrowser({ failFile: "velaConfirmedAuthorityComposer.js" });
+    await expectCode(missingComposer.context.VelaCepModuleLoader.load(), "RUNTIME_CAPABILITY_UNAVAILABLE", "A missing ConfirmedAuthorityComposer fails closed before Runtime.");
+    check(missingComposer.context.VelaRuntime === undefined, "Missing E1 Composer cannot produce a partial Runtime.");
     const malformedReviewPort = makeBrowser({ moduleSources: { "velaReviewRuntimePort.js": "Object.defineProperty(window, 'VelaReviewRuntimePort', { value: Object.freeze({}), writable: false, configurable: false });" } });
     await expectCode(malformedReviewPort.context.VelaCepModuleLoader.load(), "MODULE_BOOTSTRAP_CONFLICT", "Malformed ReviewRuntimePort shape fails closed.");
     const wrongGrantRevisionSource = fs.readFileSync(path.join(VELA, "velaDelegationGrantStore.js"), "utf8").replace("vela-delegation-grant-store-v1", "vela-delegation-grant-store-wrong");

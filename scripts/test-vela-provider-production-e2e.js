@@ -1,6 +1,22 @@
 #!/usr/bin/env node
 "use strict";
 const assert = require("assert");
+const composerPath = require.resolve("../client/js/vela/velaConfirmedAuthorityComposer");
+const realComposerModule = require(composerPath);
+const composerTracker = { creates: 0, composes: 0, cancels: 0, disposes: 0, instances: [], semantics: [], policies: [] };
+require.cache[composerPath].exports = Object.freeze({
+    MODULE_REVISION: realComposerModule.MODULE_REVISION,
+    createReviewedSemantics(intent, candidate, resolver) { const value = realComposerModule.createReviewedSemantics(intent, candidate, resolver); composerTracker.semantics.push({ intent, candidate, value }); return value; },
+    createReviewedPolicySemantics(decision) { const value = realComposerModule.createReviewedPolicySemantics(decision); composerTracker.policies.push({ decision, value }); return value; },
+    sameReviewedSemantics: realComposerModule.sameReviewedSemantics,
+    createConfirmedAuthorityComposer(options) {
+        composerTracker.creates += 1;
+        const real = realComposerModule.createConfirmedAuthorityComposer(options);
+        const record = { options, real };
+        composerTracker.instances.push(record);
+        return Object.freeze({ compose(input) { composerTracker.composes += 1; return real.compose(input); }, cancel() { composerTracker.cancels += 1; return real.cancel(); }, dispose() { composerTracker.disposes += 1; return real.dispose(); } });
+    }
+});
 const runtimeModule = require("../client/js/vela/velaRuntime");
 const sessionRuntime = require("../client/js/vela/velaSessionRuntime");
 const activationPolicy = require("../client/js/vela/velaActivationPolicy").VelaActivationPolicy;
@@ -74,7 +90,9 @@ function makeHarness() {
 async function sendProposal(harness, opacity) { harness.state.providerMode = "proposal"; harness.state.proposalOpacity = opacity; return harness.runtime.sendProviderMessage({ message: "Set the selected layer opacity to " + opacity + "%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" }); }
 async function run() {
     check(typeof protocolModule.createProtocol === "function" && typeof parserModule.createResponseParser === "function" && typeof providerAdapterModule.createLocalOpenAICompatibleProvider === "function" && typeof providerControllerModule.createProviderController === "function" && typeof routerModule.createProposalRouter === "function" && typeof controllerModule.createController === "function" && typeof validatorModule.createActionValidator === "function" && typeof planModule.createPlanStore === "function" && typeof preflightModule.createExecutionPreflight === "function" && typeof adapterModule.createExecutionAdapter === "function", "D2-C loads the real production Protocol, parser, provider, router, controller, validator, plan, preflight and execution adapter modules.");
-    const h = makeHarness(); await h.runtime.initialize();
+    const h = makeHarness(); const createsBeforeFirstSetup = composerTracker.creates; await h.runtime.initialize();
+    check(composerTracker.creates === createsBeforeFirstSetup + 1 && composerTracker.instances.length === composerTracker.creates, "Runtime setup creates exactly one private ConfirmedAuthorityComposer instance.");
+    check(!Object.keys(h.runtime).some((key) => /composer/i.test(key)) && composerTracker.composes === 0, "Runtime exposes no Composer instance and E1 setup never calls compose.");
     const agentSlice = makeHarness(); agentSlice.state.proposalOpacity = 63; await agentSlice.runtime.initialize(); await agentSlice.runtime.grantNextOpacityMutation();
     const agentPort = agentSlice.runtime.getAgentDriverRuntimePort();
     const reasoning = await agentPort.reason({ message: "Set the selected layer opacity to 63%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
@@ -132,17 +150,26 @@ async function run() {
     async function directBarrier(harness, label, serial) {
         const port = harness.runtime.getAgentDriverRuntimePort();
         const reason = await port.reason({ message: "Set the selected layer opacity to 47%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
-        const intent = planningModule.createCapabilityIntent({ intentId: "intent_direct_" + label + "_" + serial, capabilityId: reason.capabilityId, requestedOperation: "mutate", params: reason.params });
-        const identity = { objectiveId: "objective_direct_" + label + "_" + serial, sessionId: harness.session.getSessionId(), turnId: "turn_direct_" + label + "_" + serial, taskId: "task_direct_" + label + "_" + serial, taskPlanId: "plan_direct_" + label + "_" + serial, taskPlanRevision: 0, stepId: "step_direct_" + label + "_" + serial, reviewRevision: serial, capabilityIntent: intent };
+        const localLabel = label.replace(/[^a-z0-9_-]/gi, "_");
+        const intent = planningModule.createCapabilityIntent({ intentId: "intent_direct_" + localLabel + "_" + serial, capabilityId: reason.capabilityId, requestedOperation: "mutate", params: reason.params });
+        const identity = { objectiveId: "objective_direct_" + localLabel + "_" + serial, sessionId: harness.session.getSessionId(), turnId: "turn_direct_" + localLabel + "_" + serial, taskId: "task_direct_" + localLabel + "_" + serial, taskPlanId: "plan_direct_" + localLabel + "_" + serial, taskPlanRevision: 0, stepId: "step_direct_" + localLabel + "_" + serial, reviewRevision: serial, capabilityIntent: intent };
         const outcome = await port.submitIntent(identity);
         check(outcome.state === "review-required" && typeof outcome.reviewCorrelation === "string", label + " direct setup establishes a valid Runtime barrier correlation.");
-        return { port, outcome, input: Object.freeze(Object.assign({}, identity, { localExpectation: Object.freeze({ opacity: 47 }), reviewId: "review_direct_" + label + "_" + serial, reviewCorrelation: outcome.reviewCorrelation })) };
+        const semantic = composerTracker.semantics.filter((item) => item.intent === intent).slice(-1)[0];
+        const policy = composerTracker.policies[composerTracker.policies.length - 1];
+        return { port, outcome, semantic, policy, composer: composerTracker.instances[composerTracker.instances.length - 1], input: Object.freeze(Object.assign({}, identity, { localExpectation: Object.freeze({ opacity: 47 }), reviewId: "review_direct_" + localLabel + "_" + serial, reviewCorrelation: outcome.reviewCorrelation })) };
+    }
+    function privateClaim(barrier, overrides) {
+        return barrier.composer.options.claimApprovedReview(Object.assign({ reviewCorrelation: barrier.input.reviewCorrelation, reviewId: barrier.input.reviewId, reviewRevision: barrier.input.reviewRevision, objectiveId: barrier.input.objectiveId, taskId: barrier.input.taskId, sessionId: barrier.input.sessionId, turnId: barrier.input.turnId, taskPlanId: barrier.input.taskPlanId, taskPlanRevision: barrier.input.taskPlanRevision, stepId: barrier.input.stepId, capabilityIntent: barrier.input.capabilityIntent, reviewedSemantics: barrier.semantic.value, reviewPolicySemantics: barrier.policy.value, freshSemantics: barrier.semantic.value, freshCandidateId: barrier.semantic.candidate.candidateId, runtimeGeneration: barrier.composer.options.getRuntimeGeneration() }, overrides || {}));
     }
     const correlationHarness = makeHarness(); correlationHarness.state.proposalOpacity = 47; await correlationHarness.runtime.initialize();
     const firstCorrelation = await directBarrier(correlationHarness, "correlation", 1);
     const providerCountBeforeContinuation = correlationHarness.providerBodies.length;
     const firstContinuation = await firstCorrelation.port.continueApprovedReview(firstCorrelation.input);
     check(firstContinuation.state === "ready", "first direct continuation consumes the valid correlation once.");
+    check(Object.isFrozen(firstCorrelation.semantic.value) && Object.isFrozen(firstCorrelation.policy.value) && firstCorrelation.semantic.intent === firstCorrelation.input.capabilityIntent && firstCorrelation.policy.decision.decision === "REVIEW_REQUIRED", "Runtime stores canonical immutable reviewed semantics and real REVIEW_REQUIRED policy truth from the initial candidate path.");
+    check(privateClaim(firstCorrelation).claimed === true, "Runtime-private claim consumes the claimable approved continuation exactly once.");
+    check(privateClaim(firstCorrelation).claimed === false, "A duplicate Runtime-private claim fails closed without minting another approval.");
     const duplicateContinuation = await firstCorrelation.port.continueApprovedReview(firstCorrelation.input);
     check(duplicateContinuation.state === "blocked" && duplicateContinuation.code === "LIFECYCLE_BLOCKED", "duplicate direct continuation fails closed after one-shot consumption.");
     const secondCorrelation = await directBarrier(correlationHarness, "correlation", 2);
@@ -155,6 +182,38 @@ async function run() {
     check(wrongIdentityResult.state === "blocked", "valid correlation with wrong logical identity fails closed without consuming the valid binding.");
     const secondContinuation = await secondCorrelation.port.continueApprovedReview(secondCorrelation.input);
     check(secondContinuation.state === "ready" && correlationHarness.providerBodies.length === providerCountBeforeContinuation + 1 && correlationHarness.calls.filter((call) => call.kind === "execution").length === 0, "valid fresh identity remains usable once with no continuation Provider request or Host mutation.");
+    check(privateClaim(secondCorrelation, { objectiveId: "objective_wrong_claim" }).claimed === false && privateClaim(secondCorrelation).claimed === false, "A wrong trusted claim identity terminalizes the approval and prevents a later valid probe.");
+    async function claimMismatch(label, override) {
+        const harness = makeHarness(); harness.state.proposalOpacity = 47; await harness.runtime.initialize();
+        const barrier = await directBarrier(harness, label, 1); await barrier.port.continueApprovedReview(barrier.input);
+        check(privateClaim(barrier, override(barrier)).claimed === false && privateClaim(barrier).claimed === false, label + " mismatch terminalizes the private approval record exactly once.");
+        harness.runtime.dispose();
+    }
+    await claimMismatch("review revision", () => ({ reviewRevision: 99 }));
+    await claimMismatch("CapabilityIntent identity", (barrier) => ({ capabilityIntent: planningModule.createCapabilityIntent({ intentId: "intent_wrong_claim_identity", capabilityId: barrier.input.capabilityIntent.capabilityId, requestedOperation: "mutate", params: barrier.input.capabilityIntent.params }) }));
+    await claimMismatch("session", () => ({ sessionId: "session_wrong_claim" }));
+    await claimMismatch("Runtime generation", (barrier) => ({ runtimeGeneration: barrier.composer.options.getRuntimeGeneration() + 1 }));
+
+    const cancelClaimHarness = makeHarness(); cancelClaimHarness.state.proposalOpacity = 47; await cancelClaimHarness.runtime.initialize();
+    const cancelClaim = await directBarrier(cancelClaimHarness, "cancel_claim", 1); check((await cancelClaim.port.continueApprovedReview(cancelClaim.input)).state === "ready", "Cancel fixture reaches claimable after the C1 barrier.");
+    cancelClaim.port.cancel();
+    check(privateClaim(cancelClaim).claimed === false && composerTracker.composes === 0 && cancelClaimHarness.calls.filter((call) => call.kind === "execution").length === 0, "Cancel invalidates claimable approval and still performs no compose or Host execution.");
+
+    const rejectClaimHarness = makeHarness(); rejectClaimHarness.state.proposalOpacity = 47; await rejectClaimHarness.runtime.initialize(); let rejectTurn = 0;
+    const rejectDriver = agentDriverModule.createAgentDriver({ beginTurn() { rejectTurn += 1; return Object.freeze({ sessionId: rejectClaimHarness.session.getSessionId(), turnId: "reject_claim_turn_" + rejectTurn }); }, observe() { return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: "reject_claim_observation_" + rejectTurn }); }, appendSessionEvent() {}, onListenerError() {} });
+    const rejectPort = rejectClaimHarness.runtime.getAgentDriverRuntimePort(); rejectDriver.attachRuntimePort(rejectPort);
+    rejectClaimHarness.runtime.attachObjectiveReviewPort(Object.freeze({ getProjection() { const snapshot = rejectDriver.getSnapshot(); const review = snapshot.suspendedReview; return snapshot.state === "awaiting-review" && review ? Object.freeze({ state: "active", reviewId: review.reviewId, revision: review.revision, capabilityId: review.capabilityId, beforeValue: review.beforeValue, proposedValue: review.params.opacity, outcome: null }) : Object.freeze({ state: "inactive", reviewId: null, revision: null, capabilityId: null, beforeValue: null, proposedValue: null, outcome: null }); }, resolve(input) { return rejectDriver.resolveReview(input); } }));
+    const rejectReview = await rejectDriver.startObjective({ message: "Set the selected layer opacity to 47%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" }); const rejectedReview = rejectReview.suspendedReview; const rejectedIntent = composerTracker.semantics[composerTracker.semantics.length - 1].intent;
+    await rejectClaimHarness.runtime.rejectActiveCandidate();
+    const rejectedContinuation = await rejectPort.continueApprovedReview({ objectiveId: rejectedReview.objectiveId, taskId: rejectedReview.taskId, sessionId: rejectedReview.sessionId, turnId: rejectedReview.turnId, taskPlanId: rejectedReview.taskPlanId, taskPlanRevision: rejectedReview.taskPlanRevision, stepId: rejectedReview.stepId, capabilityIntent: rejectedIntent, localExpectation: rejectedReview.localExpectation, reviewId: rejectedReview.reviewId, reviewRevision: rejectedReview.revision, reviewCorrelation: rejectedReview.reviewCorrelation });
+    check(rejectedContinuation.state === "blocked" && composerTracker.composes === 0 && rejectClaimHarness.calls.filter((call) => call.kind === "execution").length === 0, "Reject deletes the Runtime-private review record and cannot create claimable approval, TaskRun, or Host activity.");
+
+    const lifecycleClaimHarness = makeHarness(); lifecycleClaimHarness.state.proposalOpacity = 47; await lifecycleClaimHarness.runtime.initialize();
+    const lifecycleClaim = await directBarrier(lifecycleClaimHarness, "lifecycle_claim", 1); await lifecycleClaim.port.continueApprovedReview(lifecycleClaim.input);
+    const createsBeforeSuspend = composerTracker.creates; check(lifecycleClaimHarness.runtime.suspend() === true && privateClaim(lifecycleClaim).claimed === false, "Suspend invalidates a claimable record.");
+    check(lifecycleClaimHarness.runtime.resume() === true && composerTracker.creates === createsBeforeSuspend + 1, "Resume creates a fresh Runtime-private Composer after suspended lifecycle disposal.");
+    const disposesBeforeReset = composerTracker.disposes; check(lifecycleClaimHarness.runtime.resetSession() === true && composerTracker.disposes === disposesBeforeReset + 1, "Session reset disposes the old Composer before creating a fresh instance.");
+    const disposesBeforeDispose = composerTracker.disposes; check(lifecycleClaimHarness.runtime.dispose() === true && composerTracker.disposes === disposesBeforeDispose + 1, "Runtime dispose closes the private Composer before downstream references are lost.");
 
     const cancelBarrier = makeHarness(); cancelBarrier.state.proposalOpacity = 47; await cancelBarrier.runtime.initialize();
     let cancelBarrierTurn = 0;
