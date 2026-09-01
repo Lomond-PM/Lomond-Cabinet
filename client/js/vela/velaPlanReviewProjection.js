@@ -46,7 +46,7 @@
                 }) });
                 planning.assertAuthorizedPlanNoTrustedBinding(rebuilt);
             } catch (error) { fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "AuthorizedPlan validation failed."); }
-            if (protocol.canonicalStringify(rebuilt, { allowDangerousPaths: ["steps.*.candidateId"] }) !== protocol.canonicalStringify(value, { allowDangerousPaths: ["steps.*.candidateId"] })) {
+            if (protocol.canonicalStringify(rebuilt, { allowDangerousPaths: ["steps.*.candidateId", "steps.*.policyDecision.provenance.candidateId"] }) !== protocol.canonicalStringify(value, { allowDangerousPaths: ["steps.*.candidateId", "steps.*.policyDecision.provenance.candidateId"] })) {
                 fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "AuthorizedPlan is not canonical.");
             }
             return rebuilt;
