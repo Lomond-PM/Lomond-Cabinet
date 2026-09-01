@@ -36,7 +36,7 @@ function hostContextError(request, code, reason) { const error = { code, message
 function hostExecution(request, digest) { return JSON.stringify({ protocol: "vela.host-execution-result.v1", schemaVersion: "1.0", requestId: request.requestId, sessionId: request.sessionId, operation: "executeCapability", ok: true, hostExecutionRevision: "vela-execution-host-v1", result: { capabilityId: "set-opacity-v1", valueKind: "number", resultingValueDigest: digest } }); }
 function makeHarness() {
     let now = 1700000000000;
-    const state = { value: 25, selectionCount: 1, nativeLayerId: 45, layerIndex: 3, generation: 3, epoch: 1, error: null, executionError: null, providerMode: "proposal", proposalOpacity: 57.5, groundingUnavailableOnce: false, contextHostErrorOnce: null, contextHostReasonOnce: null, advanceLayerIdAfterCapture: false, deferProviderResponse: false, pendingProviderReads: [], cancelledProviderRequestIds: [], baselineReadError: null, propertyCaptureCount: 0 };
+    const state = { value: 25, selectionCount: 1, nativeLayerId: 45, layerIndex: 3, generation: 3, epoch: 1, error: null, executionError: null, providerMode: "proposal", proposalOpacity: 57.5, groundingUnavailableOnce: false, contextHostErrorOnce: null, contextHostReasonOnce: null, advanceLayerIdAfterCapture: false, deferProviderResponse: false, pendingProviderReads: [], cancelledProviderRequestIds: [], deferContextCapture: false, pendingContextCaptures: [], baselineReadError: null, propertyCaptureCount: 0 };
     const calls = [];
     const providerBodies = [];
     const environment = Object.assign({}, nodeRuntime, {
@@ -64,7 +64,7 @@ function makeHarness() {
         if (call.kind === "execution") { if (state.executionError) { callback(JSON.stringify({ protocol: "vela.host-execution-result.v1", schemaVersion: "1.0", requestId: call.request.requestId, sessionId: call.request.sessionId, operation: "executeCapability", ok: false, hostExecutionRevision: "vela-execution-host-v1", error: { code: state.executionError, message: "bounded" } })); return; } state.value = call.request.scope.params.opacity; callback(hostExecution(call.request, digestContext.digestPropertyValue("number", state.value))); return; }
         if (call.request.operation === "getCapabilities") { callback(hostContext(call.request, { hostInstanceId: HOST, hostReloadEpoch: state.epoch, tier: 0, capabilities: { maxTier: 3, nativeLayerIdAvailable: true, bindingContextAvailable: true, hostAdapterRevision: "vela-context-host-v4" } })); return; }
         if (state.error) { callback(hostContextError(call.request, state.error)); return; }
-        if (call.request.operation === "captureContext") { if (state.contextHostErrorOnce) { const code = state.contextHostErrorOnce; const reason = state.contextHostReasonOnce; state.contextHostErrorOnce = null; state.contextHostReasonOnce = null; callback(hostContextError(call.request, code, reason)); return; } if (state.groundingUnavailableOnce) { state.groundingUnavailableOnce = false; callback(hostContextError(call.request, "HOST_CONTEXT_UNAVAILABLE", "no-actionable-target")); return; } callback(hostContext(call.request, { hostInstanceId: HOST, hostReloadEpoch: state.epoch, tier: 1, projectGeneration: state.generation, activeComp: { itemId: 12, projectGeneration: state.generation, type: "CompItem", width: 1920, height: 1080, duration: 10, frameRate: 30 }, selection: { count: state.selectionCount, identityQuality: "native-layer-id", items: state.selectionCount === 1 ? [{ nativeLayerId: state.nativeLayerId, layerIndex: state.layerIndex, selectedOrder: 0, matchName: "ADBE AV Layer", type: "av" }] : [] } })); if (state.advanceLayerIdAfterCapture) { state.advanceLayerIdAfterCapture = false; state.nativeLayerId += 1; } return; }
+        if (call.request.operation === "captureContext") { if (state.contextHostErrorOnce) { const code = state.contextHostErrorOnce; const reason = state.contextHostReasonOnce; state.contextHostErrorOnce = null; state.contextHostReasonOnce = null; callback(hostContextError(call.request, code, reason)); return; } if (state.groundingUnavailableOnce) { state.groundingUnavailableOnce = false; callback(hostContextError(call.request, "HOST_CONTEXT_UNAVAILABLE", "no-actionable-target")); return; } const complete = () => { callback(hostContext(call.request, { hostInstanceId: HOST, hostReloadEpoch: state.epoch, tier: 1, projectGeneration: state.generation, activeComp: { itemId: 12, projectGeneration: state.generation, type: "CompItem", width: 1920, height: 1080, duration: 10, frameRate: 30 }, selection: { count: state.selectionCount, identityQuality: "native-layer-id", items: state.selectionCount === 1 ? [{ nativeLayerId: state.nativeLayerId, layerIndex: state.layerIndex, selectedOrder: 0, matchName: "ADBE AV Layer", type: "av" }] : [] } })); if (state.advanceLayerIdAfterCapture) { state.advanceLayerIdAfterCapture = false; state.nativeLayerId += 1; } }; if (state.deferContextCapture) { state.pendingContextCaptures.push({ requestId: call.request.requestId, release: complete }); return; } complete(); return; }
         state.propertyCaptureCount += 1;
         if (state.baselineReadError && state.propertyCaptureCount > 1) { callback(hostContextError(call.request, state.baselineReadError)); return; }
         callback(hostContext(call.request, { hostInstanceId: HOST, hostReloadEpoch: state.epoch, projectGeneration: state.generation, sampleTime: 1, tier: 3, targets: call.request.scope.targets.map((target, index) => ({ targetOrdinal: index, nativeLayerId: target.nativeLayerId, layerIndex: target.layerIndex, propertyPath: target.propertyPath, propertyMatchName: "ADBE Opacity", value: { kind: "number", data: state.value } })) }));
@@ -113,7 +113,7 @@ async function run() {
     cancelRace.state.deferProviderResponse = false; cancelRace.state.value = 100; cancelRace.state.proposalOpacity = 47;
     const recoveredObjective = await cancelRaceDriver.startObjective({ message: "Set the selected layer opacity to 47%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
     const recoveredRequestId = /Use requestId (req_[a-z0-9]+)/.exec(JSON.parse(cancelRace.providerBodies[1].messages[1].content).turnResponseContract)[1];
-    check(recoveredRequestId !== cancelledRequestId && recoveredObjective.state === "awaiting-review" && recoveredObjective.terminal === null && recoveredObjective.suspendedReview.beforeValue === 100 && recoveredObjective.suspendedReview.params.opacity === 47, "objective two uses fresh correlation and retains the distinct trusted 100 to 47 presentation baseline without LIFECYCLE_BLOCKED.");
+    check(recoveredRequestId !== cancelledRequestId && recoveredObjective.state === "awaiting-review" && recoveredObjective.terminal === null && recoveredObjective.suspendedReview.beforeValue === 100 && recoveredObjective.suspendedReview.params.opacity === 47, "objective two uses fresh correlation and retains the distinct trusted 100 to 47 presentation baseline without LIFECYCLE_BLOCKED: " + JSON.stringify(recoveredObjective.terminal));
     check(cancelRace.runtime.getConfirmationSurfaceState().state === "confirmation-ready" && cancelRace.runtime.getConfirmationSurfaceState().beforeValue === 100 && cancelRace.runtime.getConfirmationSurfaceState().proposedValue === 47, "the fresh objective alone owns the bounded 100 to 47 Confirmation presentation.");
     check(cancelRaceDriver.cancel() && cancelRace.runtime.getConfirmationSurfaceState().state === "idle", "true awaiting-review cancellation remains terminal and restores idle Confirmation.");
     check(cancelRace.state.cancelledProviderRequestIds.length === 1, "awaiting-review cancellation does not target an already-settled or unrelated Provider request.");
@@ -126,9 +126,80 @@ async function run() {
     const baselineFailureDriver = agentDriverModule.createAgentDriver({ beginTurn() { baselineFailureTurn += 1; return Object.freeze({ sessionId: baselineFailure.session.getSessionId(), turnId: "baseline_failure_turn_" + baselineFailureTurn }); }, observe() { return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: "baseline_failure_observation_" + baselineFailureTurn }); }, appendSessionEvent() {}, onListenerError() {} });
     check(baselineFailureDriver.attachRuntimePort(baselineFailure.runtime.getAgentDriverRuntimePort()), "baseline-failure Driver attaches the production Runtime port once.");
     const nullableBaseline = await baselineFailureDriver.startObjective({ message: "Set the selected layer opacity to 47%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
-    check(nullableBaseline.state === "awaiting-review" && nullableBaseline.suspendedReview.beforeValue === null && nullableBaseline.suspendedReview.params.opacity === 47 && baselineFailure.runtime.getProviderUiState().state === "local-proposal-handled", "a trusted baseline capture failure degrades only presentation to null while REVIEW_REQUIRED terminal-settles Provider ownership.");
-    check(baselineFailure.calls.filter((call) => call.kind === "execution").length === 0 && baselineFailure.runtime.getAuthorityProjection().remainingActions === null, "baseline capture failure performs no Host mutation and consumes no authority.");
+    check(nullableBaseline.terminal && nullableBaseline.terminal.outcome === "blocked" && nullableBaseline.terminal.code === "CONTEXT_VALUE_EVALUATION_DISALLOWED" && baselineFailure.runtime.getProviderUiState().state === "local-proposal-handled", "barrier evidence failure blocks rather than creating a non-resumable review while Provider remains terminal-settled.");
+    check(baselineFailure.calls.filter((call) => call.kind === "execution").length === 0 && baselineFailure.runtime.getAuthorityProjection().remainingActions === null, "barrier evidence failure performs no Host mutation and consumes no authority.");
     baselineFailureDriver.cancel();
+    async function directBarrier(harness, label, serial) {
+        const port = harness.runtime.getAgentDriverRuntimePort();
+        const reason = await port.reason({ message: "Set the selected layer opacity to 47%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+        const intent = planningModule.createCapabilityIntent({ intentId: "intent_direct_" + label + "_" + serial, capabilityId: reason.capabilityId, requestedOperation: "mutate", params: reason.params });
+        const identity = { objectiveId: "objective_direct_" + label + "_" + serial, sessionId: harness.session.getSessionId(), turnId: "turn_direct_" + label + "_" + serial, taskId: "task_direct_" + label + "_" + serial, taskPlanId: "plan_direct_" + label + "_" + serial, taskPlanRevision: 0, stepId: "step_direct_" + label + "_" + serial, reviewRevision: serial, capabilityIntent: intent };
+        const outcome = await port.submitIntent(identity);
+        check(outcome.state === "review-required" && typeof outcome.reviewCorrelation === "string", label + " direct setup establishes a valid Runtime barrier correlation.");
+        return { port, outcome, input: Object.freeze(Object.assign({}, identity, { localExpectation: Object.freeze({ opacity: 47 }), reviewId: "review_direct_" + label + "_" + serial, reviewCorrelation: outcome.reviewCorrelation })) };
+    }
+    const correlationHarness = makeHarness(); correlationHarness.state.proposalOpacity = 47; await correlationHarness.runtime.initialize();
+    const firstCorrelation = await directBarrier(correlationHarness, "correlation", 1);
+    const providerCountBeforeContinuation = correlationHarness.providerBodies.length;
+    const firstContinuation = await firstCorrelation.port.continueApprovedReview(firstCorrelation.input);
+    check(firstContinuation.state === "ready", "first direct continuation consumes the valid correlation once.");
+    const duplicateContinuation = await firstCorrelation.port.continueApprovedReview(firstCorrelation.input);
+    check(duplicateContinuation.state === "blocked" && duplicateContinuation.code === "LIFECYCLE_BLOCKED", "duplicate direct continuation fails closed after one-shot consumption.");
+    const secondCorrelation = await directBarrier(correlationHarness, "correlation", 2);
+    check(secondCorrelation.outcome.reviewCorrelation !== firstCorrelation.outcome.reviewCorrelation, "a fresh objective receives a distinct Runtime correlation.");
+    const historicalInput = Object.assign({}, secondCorrelation.input, { reviewCorrelation: firstCorrelation.outcome.reviewCorrelation });
+    const historicalResult = await secondCorrelation.port.continueApprovedReview(historicalInput);
+    check(historicalResult.state === "blocked", "historical correlation cannot bind to a fresh objective.");
+    const wrongIdentity = Object.assign({}, secondCorrelation.input, { objectiveId: "objective_cross_scope" });
+    const wrongIdentityResult = await secondCorrelation.port.continueApprovedReview(wrongIdentity);
+    check(wrongIdentityResult.state === "blocked", "valid correlation with wrong logical identity fails closed without consuming the valid binding.");
+    const secondContinuation = await secondCorrelation.port.continueApprovedReview(secondCorrelation.input);
+    check(secondContinuation.state === "ready" && correlationHarness.providerBodies.length === providerCountBeforeContinuation + 1 && correlationHarness.calls.filter((call) => call.kind === "execution").length === 0, "valid fresh identity remains usable once with no continuation Provider request or Host mutation.");
+
+    const cancelBarrier = makeHarness(); cancelBarrier.state.proposalOpacity = 47; await cancelBarrier.runtime.initialize();
+    let cancelBarrierTurn = 0;
+    const cancelBarrierDriver = agentDriverModule.createAgentDriver({ beginTurn() { cancelBarrierTurn += 1; return Object.freeze({ sessionId: cancelBarrier.session.getSessionId(), turnId: "cancel_barrier_turn_" + cancelBarrierTurn }); }, observe() { return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: "cancel_barrier_observation_" + cancelBarrierTurn }); }, appendSessionEvent() {}, onListenerError() {} });
+    check(cancelBarrierDriver.attachRuntimePort(cancelBarrier.runtime.getAgentDriverRuntimePort()), "pending-capture cancel Driver attaches the production Runtime port.");
+    const cancelBarrierReview = await cancelBarrierDriver.startObjective({ message: "Set the selected layer opacity to 47%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+    const cancelledCorrelation = cancelBarrierReview.suspendedReview.reviewCorrelation;
+    const cancelProviderCount = cancelBarrier.providerBodies.length;
+    cancelBarrier.state.deferContextCapture = true;
+    const pendingCancelContinuation = cancelBarrierDriver.resolveReview({ reviewId: cancelBarrierReview.suspendedReview.reviewId, revision: cancelBarrierReview.suspendedReview.revision, outcome: "approved" });
+    await flushUntil(() => cancelBarrier.state.pendingContextCaptures.length === 1, "approved continuation reaches a deferred fresh barrier capture.");
+    check(cancelBarrierDriver.cancel(), "Driver cancel terminalizes while continuation capture is pending.");
+    cancelBarrier.state.deferContextCapture = false; cancelBarrier.state.pendingContextCaptures.shift().release();
+    const cancelledContinuation = await pendingCancelContinuation;
+    check(cancelledContinuation.terminal && cancelledContinuation.terminal.outcome === "cancelled", "late capture cannot replace Driver cancellation truth.");
+    const afterCancelReview = await cancelBarrierDriver.startObjective({ message: "Set the selected layer opacity to 47%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+    check(afterCancelReview.state === "awaiting-review" && afterCancelReview.suspendedReview.reviewCorrelation !== cancelledCorrelation && cancelBarrier.providerBodies.length === cancelProviderCount + 1, "fresh objective after pending-capture cancel receives a fresh correlation and normal review lifecycle.");
+    cancelBarrierDriver.cancel();
+
+    const disposeBarrier = makeHarness(); disposeBarrier.state.proposalOpacity = 47; await disposeBarrier.runtime.initialize();
+    const disposable = await directBarrier(disposeBarrier, "dispose", 1);
+    const disposeProviderCount = disposeBarrier.providerBodies.length;
+    disposeBarrier.state.deferContextCapture = true;
+    const pendingDisposeContinuation = disposable.port.continueApprovedReview(disposable.input);
+    await flushUntil(() => disposeBarrier.state.pendingContextCaptures.length === 1, "direct continuation reaches a deferred capture before Runtime disposal.");
+    check(disposeBarrier.runtime.dispose() && disposeBarrier.runtime.getStatus().state === "disposed", "Runtime dispose invalidates both reasoning and review continuation lifecycle domains.");
+    disposeBarrier.state.pendingContextCaptures.shift().release();
+    const disposedContinuation = await pendingDisposeContinuation;
+    check(disposedContinuation.state === "cancelled" && disposeBarrier.providerBodies.length === disposeProviderCount && disposeBarrier.calls.filter((call) => call.kind === "execution").length === 0, "late capture after dispose settles bounded cancelled with no Provider or Host activity.");
+    async function barrierDrift(label, mutate) {
+        const harness = makeHarness(); harness.state.proposalOpacity = 47; await harness.runtime.initialize();
+        let turn = 0;
+        const driver = agentDriverModule.createAgentDriver({ beginTurn() { turn += 1; return Object.freeze({ sessionId: harness.session.getSessionId(), turnId: "barrier_" + label + "_turn_" + turn }); }, observe() { return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: "barrier_" + label }); }, appendSessionEvent() {}, onListenerError() {} });
+        check(driver.attachRuntimePort(harness.runtime.getAgentDriverRuntimePort()), label + " Driver attaches the production Runtime port.");
+        const pending = await driver.startObjective({ message: "Set the selected layer opacity to 47%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+        const providerCount = harness.providerBodies.length;
+        check(pending.state === "awaiting-review" && typeof pending.suspendedReview.reviewCorrelation === "string" && !Object.prototype.hasOwnProperty.call(pending.suspendedReview, "valueDigest"), label + " establishes only opaque Driver correlation without barrier evidence leakage: " + JSON.stringify(pending.terminal));
+        mutate(harness.state);
+        const result = await driver.resolveReview({ reviewId: pending.suspendedReview.reviewId, revision: pending.suspendedReview.revision, outcome: "approved" });
+        check(result.terminal && result.terminal.outcome === "blocked" && result.terminal.code === "CONTEXT_STALE", label + " drift blocks the same objective through the Runtime-private barrier.");
+        check(harness.calls.filter((call) => call.kind === "execution").length === 0 && harness.providerBodies.length === providerCount, label + " drift performs no Host mutation and no second Provider request.");
+    }
+    await barrierDrift("selection", (state) => { state.nativeLayerId += 1; });
+    await barrierDrift("composition", (state) => { state.generation += 1; });
+    await barrierDrift("opacity", (state) => { state.value = 65; });
     sequence.state.proposalOpacity = 63;
     const sequenceFirst = await sequenceDriver.startObjective({ message: "Set the selected layer opacity to 63%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
     check(sequenceFirst.terminal.outcome === "completed" && sequence.state.value === 63 && sequence.calls.filter((call) => call.kind === "execution").length === 1, "sequence objective one consumes the grant through exactly one real Host mutation and fresh verification.");

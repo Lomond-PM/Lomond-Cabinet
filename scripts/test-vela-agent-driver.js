@@ -9,7 +9,7 @@ async function code(operation, expected, message) { let failure = null; try { aw
 function harness(settings) {
     const options = settings || {};
     const events = [];
-    const calls = { reason: 0, submit: 0, verify: 0, cancel: 0, observe: 0 };
+    const calls = { reason: 0, submit: 0, continue: 0, verify: 0, cancel: 0, observe: 0 };
     let observation = null;
     const driver = driverModule.createAgentDriver({
         beginTurn() { return Object.freeze({ sessionId: "session_driver", turnId: "turn_driver" }); },
@@ -21,6 +21,7 @@ function harness(settings) {
     const port = {
         reason() { calls.reason += 1; return Promise.resolve({ capabilityId: "set-opacity-v1", params: { opacity: options.opacity === undefined ? 42 : options.opacity } }); },
         submitIntent(input) { calls.submit += 1; calls.intent = input; return options.executionError ? Promise.reject(Object.assign(new Error(options.executionError), { code: options.executionError })) : Promise.resolve(options.outcome || { state: "executed", committed: true, transcriptSettled: options.transcriptSettled !== false }); },
+        continueApprovedReview(input) { calls.continue += 1; calls.continuation = input; return options.continuationError ? Promise.reject(Object.assign(new Error(options.continuationError), { code: options.continuationError })) : Promise.resolve(options.continuation || { state: "ready", code: null }); },
         verifyOpacity() { calls.verify += 1; return options.verifyError ? Promise.reject(Object.assign(new Error(options.verifyError), { code: options.verifyError })) : Promise.resolve(options.verification || { fresh: true, matches: true, opacity: options.opacity === undefined ? 42 : options.opacity }); },
         cancel() { calls.cancel += 1; return true; }
     };
@@ -59,7 +60,7 @@ async function run() {
     equal(settled.calls.submit, 1, "transcript settlement failure never replays mutation");
     const denied = harness({ outcome: { state: "denied", committed: false, code: "PERMISSION_DENIED" } });
     equal((await denied.driver.startObjective({ message: "set", endpoint: "e", model: "m" })).terminal.code, "PERMISSION_DENIED", "DENY blocks without replan");
-    const review = harness({ opacity: 47, outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: 100 } });
+    const review = harness({ opacity: 47, outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: 100, reviewCorrelation: "opaque_review_correlation_1" } });
     const suspended = await review.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
     equal(suspended.state, "awaiting-review", "REVIEW_REQUIRED suspends the active objective");
     equal(suspended.objectiveId, "objective_agent_1", "suspension preserves objective identity");
@@ -68,24 +69,28 @@ async function run() {
     equal(suspended.suspendedReview.beforeValue, 100, "suspension retains only the trusted numeric presentation baseline");
     equal(suspended.suspendedReview.params.opacity, 47, "the requested opacity remains distinct from the presentation baseline");
     check(Object.isFrozen(suspended.suspendedReview) && Object.isFrozen(suspended.suspendedReview.params) && Object.isFrozen(suspended.suspendedReview.localExpectation), "suspended review record is deeply immutable at every owned nested value");
-    check(["authorizedPlan", "boundPlan", "nonce", "executionContext", "executionReservation", "taskRun", "hostPayload", "targetBinding", "nativeLayerId", "valueDigest", "binding", "observation"].every((key) => !Object.prototype.hasOwnProperty.call(suspended.suspendedReview, key)), "suspended review contains no execution, binding, digest, observation, or Host authority object");
+    equal(suspended.suspendedReview.reviewCorrelation, "opaque_review_correlation_1", "suspended review holds only the opaque Runtime correlation");
+    check(["authorizedPlan", "boundPlan", "nonce", "executionContext", "executionReservation", "taskRun", "hostPayload", "targetBinding", "nativeLayerId", "valueDigest", "binding", "observation", "contextFingerprint"].every((key) => !Object.prototype.hasOwnProperty.call(suspended.suspendedReview, key)), "suspended review contains no execution, binding, digest, observation, or Host authority object");
     equal(review.events.filter((event) => event.kind === "task/review-required").length, 1, "review-required lifecycle evidence is appended exactly once");
     equal(review.calls.verify, 0, "suspension invokes no verification or mutation continuation");
     await code(() => review.driver.startObjective({ message: "second", endpoint: "e", model: "m" }), "AGENT_DRIVER_BUSY", "a suspended objective excludes a second objective");
     await code(() => Promise.resolve().then(() => review.driver.resolveReview({ reviewId: "stale", revision: suspended.suspendedReview.revision, outcome: "approved" })), "AGENT_DRIVER_REVIEW_INVALID", "stale review identity fails closed");
     await code(() => Promise.resolve().then(() => review.driver.resolveReview({ reviewId: suspended.suspendedReview.reviewId, revision: suspended.suspendedReview.revision + 1, outcome: "approved" })), "AGENT_DRIVER_REVIEW_INVALID", "stale review revision fails closed");
-    const approved = review.driver.resolveReview({ reviewId: suspended.suspendedReview.reviewId, revision: suspended.suspendedReview.revision, outcome: "approved" });
+    const approved = await review.driver.resolveReview({ reviewId: suspended.suspendedReview.reviewId, revision: suspended.suspendedReview.revision, outcome: "approved" });
     equal(approved.state, "awaiting-outcome", "approved B1 review waits for a future owner continuation");
     equal(approved.objectiveId, suspended.objectiveId, "approval preserves the same objective");
     equal(approved.taskPlan, suspended.taskPlan, "approval preserves the immutable TaskPlan reference");
     equal(approved.suspendedReview, null, "approval consumes the suspended record");
     check(Object.isFrozen(approved.reviewResolution) && approved.reviewResolution.outcome === "approved", "approval creates one immutable closed resolution result");
     equal(review.calls.submit, 1, "approval does not resubmit or compile an action");
+    equal(review.calls.continue, 1, "approval invokes one bounded Runtime continuation");
+    equal(review.calls.continuation.objectiveId, suspended.objectiveId, "continuation preserves the objective identity");
+    equal(review.calls.continuation.reviewCorrelation, "opaque_review_correlation_1", "continuation returns the opaque Runtime correlation only");
     equal(review.calls.verify, 0, "approval does not execute or verify");
     await code(() => Promise.resolve().then(() => review.driver.resolveReview({ reviewId: suspended.suspendedReview.reviewId, revision: suspended.suspendedReview.revision, outcome: "approved" })), "AGENT_DRIVER_REVIEW_INVALID", "duplicate approval fails closed");
     await code(() => Promise.resolve().then(() => review.driver.resolveReview({ reviewId: suspended.suspendedReview.reviewId, revision: suspended.suspendedReview.revision, outcome: "rejected" })), "AGENT_DRIVER_REVIEW_INVALID", "approval followed by rejection fails closed");
 
-    const rejectedReview = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED" } });
+    const rejectedReview = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "opaque_review_correlation_2" } });
     const rejectedPending = await rejectedReview.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
     const rejected = rejectedReview.driver.resolveReview({ reviewId: rejectedPending.suspendedReview.reviewId, revision: rejectedPending.suspendedReview.revision, outcome: "rejected" });
     equal(rejected.terminal.outcome, "rejected", "user rejection has a distinct terminal outcome");
@@ -97,19 +102,19 @@ async function run() {
     await code(() => Promise.resolve().then(() => rejectedReview.driver.resolveReview({ reviewId: rejectedPending.suspendedReview.reviewId, revision: rejectedPending.suspendedReview.revision, outcome: "approved" })), "AGENT_DRIVER_REVIEW_INVALID", "a previous objective token cannot affect a replacement objective");
     check(replacement.objectiveId !== rejectedPending.objectiveId, "replacement objective has fresh identity");
 
-    const cancelledReview = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED" } });
+    const cancelledReview = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "opaque_review_correlation_3" } });
     const cancelledPending = await cancelledReview.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
     check(cancelledReview.driver.cancel(), "a suspended review can be cancelled");
     equal(cancelledReview.driver.getSnapshot().terminal.outcome, "cancelled", "cancel terminalizes the suspended objective");
     await code(() => Promise.resolve().then(() => cancelledReview.driver.resolveReview({ reviewId: cancelledPending.suspendedReview.reviewId, revision: cancelledPending.suspendedReview.revision, outcome: "approved" })), "AGENT_DRIVER_REVIEW_INVALID", "cancelled review cannot be approved late");
 
-    const disposedReview = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED" } });
+    const disposedReview = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "opaque_review_correlation_4" } });
     const disposedPending = await disposedReview.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
     check(disposedReview.driver.dispose(), "Driver disposes while review is suspended");
     await code(() => Promise.resolve().then(() => disposedReview.driver.resolveReview({ reviewId: disposedPending.suspendedReview.reviewId, revision: disposedPending.suspendedReview.revision, outcome: "rejected" })), "AGENT_DRIVER_DISPOSED", "disposed Driver rejects late review resolution");
 
     let reviewListenerFailures = 0;
-    const listenerReview = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED" }, onListenerError() { reviewListenerFailures += 1; } });
+    const listenerReview = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "opaque_review_correlation_5" }, onListenerError() { reviewListenerFailures += 1; } });
     listenerReview.driver.subscribe((snapshot) => { if (snapshot.state === "awaiting-review" || snapshot.state === "terminal") throw new Error("listener"); });
     const listenerPending = await listenerReview.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
     const listenerRejected = listenerReview.driver.resolveReview({ reviewId: listenerPending.suspendedReview.reviewId, revision: listenerPending.suspendedReview.revision, outcome: "rejected" });
@@ -121,7 +126,7 @@ async function run() {
 
     let release;
     const cancelling = driverModule.createAgentDriver({ beginTurn() { return { sessionId: "s", turnId: "t" }; }, observe() { return new Promise((resolve) => { release = resolve; }); }, getObservation() { return null; }, appendSessionEvent() {} });
-    const cancellingPort = { reason() { throw new Error("unreachable"); }, submitIntent() { throw new Error("unreachable"); }, verifyOpacity() { throw new Error("unreachable"); }, cancel() { return true; } };
+    const cancellingPort = { reason() { throw new Error("unreachable"); }, submitIntent() { throw new Error("unreachable"); }, continueApprovedReview() { throw new Error("unreachable"); }, verifyOpacity() { throw new Error("unreachable"); }, cancel() { return true; } };
     cancelling.attachRuntimePort(cancellingPort);
     const pending = cancelling.startObjective({ message: "set", endpoint: "e", model: "m" });
     check(cancelling.cancel(), "in-flight observation can be cancelled"); release(null);
