@@ -46,6 +46,11 @@ function run() {
     check(eight.stepCount === 8 && eight.steps.every(function (item, index) { return item.index === index; }), "Eight-step projection preserves exact indices.");
     const revisionPlan = authorized([33]); const revisionProjection = projector.project(revisionPlan, materialized(revisionPlan));
     check(revisionProjection.revision === revisionPlan.revision, "Projection retains exact AuthorizedPlan revision.");
+    const relationBase = authorized([44]); const relationStep = relationBase.steps[0];
+    const relationPlan = planning.createAuthorizedPlan({ planId: "authority_relation", revision: 0, steps: [Object.assign({}, relationStep, { policyDecision: { decision: "REVIEW_REQUIRED", reasonCode: "mutation", issuedBy: "local-authority", provenance: { rule: "mutation", capabilityId: "set-opacity-v1", requestedOperation: "mutate", candidateId: relationStep.candidateId } } })] });
+    check(projector.project(relationPlan, materialized(relationPlan)).stepCount === 1, "Matching PolicyDecision candidate provenance is canonical and projectable.");
+    const mismatchPlan = planning.createAuthorizedPlan({ planId: "authority_relation_bad", revision: 0, steps: [Object.assign({}, relationStep, { policyDecision: { decision: "REVIEW_REQUIRED", reasonCode: "mutation", issuedBy: "local-authority", provenance: { rule: "mutation", capabilityId: "set-opacity-v1", requestedOperation: "mutate", candidateId: "different_candidate" } } })] });
+    expectCode(function () { projector.project(mismatchPlan, materialized(mismatchPlan)); }, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Mismatched PolicyDecision candidate provenance fails closed.");
 
     const pair = authorized([20, 30]);
     expectCode(function () { projector.project(pair, materialized(pair, { authorizedPlanId: "authority_plan_other" })); }, protocol.ERROR_CODES.PLAN_INVALID, "Mismatched AuthorizedPlan identity is rejected.");

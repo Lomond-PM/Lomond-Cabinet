@@ -116,6 +116,9 @@ expectCode(() => validAuthorized({ layerId: 3 }), "AUTHORITY_CONTRACT_INVALID", 
 expectCode(() => p.createAuthorizedPlan({ planId: "x", revision: 0, steps: [{ candidateId: "c", capabilityId: "x-v1", kind: "tool", risk: "read", params: {}, targetScope: { type: "selected-layer", layerId: 3 }, requiresConfirmation: false }] }), "PLANNING_CONTRACT_FORBIDDEN_FIELD", "AuthorizedPlan targetScope cannot carry a native binding");
 // Host payload is rejected.
 expectCode(() => p.createAuthorizedPlan({ planId: "x", revision: 0, steps: [{ candidateId: "c", capabilityId: "x-v1", kind: "tool", risk: "read", params: {}, targetScope: { type: "current-comp" }, requiresConfirmation: false, hostPayload: "evil" }] }), "AUTHORITY_CONTRACT_INVALID", "AuthorizedPlan step cannot carry a Host payload");
+const matchingPolicyCandidate = validAuthorized({ policyDecision: { decision: "REVIEW_REQUIRED", reasonCode: "mutation", issuedBy: "local-authority", provenance: { rule: "mutation", candidateId: "cand_1" } } });
+p.assertAuthorizedPlanNoTrustedBinding(matchingPolicyCandidate); assertions += 1;
+expectCode(() => p.assertAuthorizedPlanNoTrustedBinding(validAuthorized({ policyDecision: { decision: "REVIEW_REQUIRED", reasonCode: "mutation", issuedBy: "local-authority", provenance: { rule: "mutation", candidateId: "different_candidate" } } })), "AUTHORITY_CONTRACT_INVALID", "AuthorizedPlan rejects mismatched PolicyDecision candidate provenance");
 
 // ===========================================================================
 // E. invalid PolicyDecision rejected.
