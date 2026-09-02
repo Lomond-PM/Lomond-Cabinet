@@ -207,6 +207,7 @@ async function run() {
     check(harness.currentCalls === 1, "Bound plan creation must read current execution binding exactly once.");
     const confirmed = await confirm(harness, plan);
     check(confirmed.state === "confirmed", "Bound plan confirmation must succeed with matching current bindings.");
+    check(harness.events.slice(-3).join(",") === "tier1,tier3,current", "Confirmation must establish its canonical value baseline after the fresh Tier 1 binding capture and before final current-binding confirmation.");
     harness.events.length = 0;
     const execution = await harness.preflight.executeStep({ planId: plan.planId, stepIndex: 0 });
     check(execution.candidate.state === "consumed" && execution.result.ok === true && harness.executorCalls === 1, "Same-state preflight must reserve once and execute the fake executor once.");
@@ -249,14 +250,23 @@ async function run() {
     await expectCode(nonProperty.preflight.createBoundPlan({ proposal: proposal(nonPropertySeed.fingerprint, nonProperty.valueDigest(50), { target: { contextFingerprint: nonPropertySeed.fingerprint, layerId: "ae-project-3-item-12-layer-45" } }), selectionOrderMeaningful: true }), protocol.ERROR_CODES.UNKNOWN_TARGET, "Non-property targets must be rejected before any plan registration.");
 
     const valueDrift = makeHarness();
+    valueDrift.state.value = 83;
     const valuePlan = await seedAndCreate(valueDrift);
     await confirm(valueDrift, valuePlan);
-    valueDrift.state.value = 51;
-    // Review observation is presentation evidence. For absolute set-opacity, the
-    // step-due capture becomes the current CAS baseline while the Tier 1 target
-    // anchor, Host CAS, and result verification remain mandatory.
-    check((await valueDrift.preflight.executeStep({ planId: valuePlan.planId, stepIndex: 0 })).candidate.state === "consumed", "Absolute set-opacity must JIT-bind the current value instead of treating review value drift as stale.");
-    check(valueDrift.executorCalls === 1, "JIT-rebased absolute set-opacity must execute exactly once.");
+    valueDrift.state.value = 60;
+    await expectCode(valueDrift.preflight.executeStep({ planId: valuePlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.CONTEXT_STALE, "A property value changed after confirmation must fail closed instead of rebasing the Host CAS baseline.");
+    check(valueDrift.executorCalls === 0 && valueDrift.store.getCandidate(valuePlan.candidateIds[0]).state === "stale", "Confirm-to-run value drift must stale the candidate before reservation or executor access.");
+    valueDrift.state.value = 83;
+    await expectCode(valueDrift.preflight.executeStep({ planId: valuePlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.CANDIDATE_NOT_FOUND, "A stale confirmed baseline must remain spent and cannot be overwritten by a later matching capture.");
+    check(valueDrift.executorCalls === 0, "Confirm-to-run value drift must remain non-retryable and never invoke the executor.");
+
+    const stableValue = makeHarness();
+    stableValue.state.value = 83;
+    const stableValuePlan = await seedAndCreate(stableValue);
+    await confirm(stableValue, stableValuePlan);
+    stableValue.state.value = 83.0;
+    check((await stableValue.preflight.executeStep({ planId: stableValuePlan.planId, stepIndex: 0 })).candidate.state === "consumed", "Equivalent canonical numeric values must preserve the confirmed baseline and execute once.");
+    check(stableValue.executorCalls === 1, "An unchanged confirm-time value baseline must reach the executor exactly once.");
 
     const timeDrift = makeHarness();
     const timePlan = await seedAndCreate(timeDrift);
@@ -318,6 +328,12 @@ async function run() {
     contextDrift.state.selectionExtra = true;
     await expectCode(contextDrift.preflight.confirmBoundPlan({ planId: contextPlan.planId }), protocol.ERROR_CODES.CONTEXT_STALE, "Tier 1 context drift must reject confirmation and stale the private binding.");
     check(contextDrift.executorCalls === 0 && contextDrift.store.getCandidate(contextPlan.candidateIds[0]).state === "stale", "Confirmation context drift must not leave an executable candidate.");
+
+    const confirmTargetMissing = makeHarness();
+    const confirmTargetMissingPlan = await seedAndCreate(confirmTargetMissing);
+    confirmTargetMissing.state.targetMissing = true;
+    await expectCode(confirmTargetMissing.preflight.confirmBoundPlan({ planId: confirmTargetMissingPlan.planId }), protocol.ERROR_CODES.UNKNOWN_TARGET, "Confirmation must fail closed when no canonical property value baseline can be captured.");
+    check(confirmTargetMissing.store.getCandidate(confirmTargetMissingPlan.candidateIds[0]).state === "pending-confirmation" && confirmTargetMissing.executorCalls === 0, "A failed confirmation value capture must not arm, reserve or execute the mutation candidate.");
 
     const executorThrow = makeHarness();
     const throwPlan = await seedAndCreate(executorThrow);

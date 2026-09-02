@@ -364,8 +364,9 @@
                             review: review,
                             contextFingerprint: bindingCapture.fingerprint,
                             lifecycle: "pending-confirmation",
+                            confirmedBaselineValidated: false,
                             steps: actions.map(function (action, index) {
-                                return { candidateId: plan.candidateIds[index], propertyPath: action.target.propertyPath, propertyMatchName: action.target.propertyMatchName, transient: null };
+                                return { candidateId: plan.candidateIds[index], propertyPath: action.target.propertyPath, propertyMatchName: action.target.propertyMatchName, confirmedValueDigest: null, transient: null };
                             })
                         };
                         try { recordsByPlanId.set(plan.planId, record); }
@@ -401,14 +402,33 @@
                         markStale(record, record.steps[0].candidateId, "context-drift-before-confirmation");
                         throw protocolError(protocol, protocol.ERROR_CODES.CONTEXT_STALE);
                     }
-                    var current = cloneCurrentBinding();
-                    var confirmed = planStore.confirmPlan(planId, {
-                        contextFingerprint: fresh.fingerprint,
-                        settingsFingerprint: current.settingsFingerprint,
-                        permissionSnapshot: current.permissionSnapshot
+                    var layerId = selectedLayerId(fresh);
+                    return Promise.all(record.steps.map(function (step) {
+                        return contextBridge.capturePropertyValues(fresh, [{ layerId: layerId, propertyPath: step.propertyPath }]).then(function (valueCapture) {
+                            var item = valueCapture.snapshot && valueCapture.snapshot.targets && valueCapture.snapshot.targets[0];
+                            if (!item) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Confirmation value capture is invalid."); }
+                            protocol.assertFingerprint(item.valueDigest, "executionPreflight.confirmedValueDigest");
+                            assertValueCapture(valueCapture, {
+                                layerId: layerId,
+                                propertyPath: step.propertyPath,
+                                propertyMatchName: step.propertyMatchName,
+                                propertyValueDigest: item.valueDigest
+                            });
+                            return item.valueDigest;
+                        });
+                    })).then(function (confirmedValueDigests) {
+                        var current = cloneCurrentBinding();
+                        var confirmed = planStore.confirmPlan(planId, {
+                            contextFingerprint: fresh.fingerprint,
+                            settingsFingerprint: current.settingsFingerprint,
+                            permissionSnapshot: current.permissionSnapshot
+                        });
+                        confirmedValueDigests.forEach(function (digest, index) {
+                            record.steps[index].confirmedValueDigest = digest;
+                        });
+                        record.lifecycle = "confirmed";
+                        return confirmed;
                     });
-                    record.lifecycle = "confirmed";
-                    return confirmed;
                 });
             });
         }
@@ -498,22 +518,80 @@
                 return freshBinding(record.selectionOrderMeaningful).then(function (freshBindingCapture) {
                     if (freshBindingCapture.fingerprint !== record.contextFingerprint) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "The reviewed target selection is stale."); }
                     var layerId = selectedLayerId(freshBindingCapture);
-                    return contextBridge.capturePropertyValues(freshBindingCapture, [{ layerId: layerId, propertyPath: stepRecord.propertyPath }]).then(function (freshValueCapture) {
-                        var item = freshValueCapture.snapshot && freshValueCapture.snapshot.targets && freshValueCapture.snapshot.targets[0];
-                        if (!item) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Step value capture is invalid."); }
-                        var boundTarget = {
-                            contextFingerprint: freshBindingCapture.fingerprint,
-                            contextTier: 3,
-                            layerId: layerId,
-                            propertyPath: stepRecord.propertyPath,
-                            propertyMatchName: stepRecord.propertyMatchName,
-                            propertyValueDigest: item.valueDigest
-                        };
-                        assertValueCapture(freshValueCapture, boundTarget);
+                    function captureStepValue(capturedStep) {
+                        return contextBridge.capturePropertyValues(freshBindingCapture, [{ layerId: layerId, propertyPath: capturedStep.propertyPath }]).then(function (freshValueCapture) {
+                            var item = freshValueCapture.snapshot && freshValueCapture.snapshot.targets && freshValueCapture.snapshot.targets[0];
+                            if (!item) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Step value capture is invalid."); }
+                            var capturedTarget = {
+                                contextFingerprint: freshBindingCapture.fingerprint,
+                                contextTier: 3,
+                                layerId: layerId,
+                                propertyPath: capturedStep.propertyPath,
+                                propertyMatchName: capturedStep.propertyMatchName,
+                                propertyValueDigest: item.valueDigest
+                            };
+                            assertValueCapture(freshValueCapture, capturedTarget);
+                            return { bindingCapture: freshBindingCapture, valueCapture: freshValueCapture, item: item, boundTarget: capturedTarget };
+                        });
+                    }
+                    var baselineValidation = record.authorityMode !== "delegated" && record.confirmedBaselineValidated !== true;
+                    var uniqueBaselineTargets = [];
+                    var baselineTargetIndexes = [];
+                    if (baselineValidation) {
+                        var baselineTargetKeys = Object.create(null);
+                        record.steps.forEach(function (capturedStep) {
+                            var key = layerId + ":" + protocol.canonicalStringify(capturedStep.propertyPath);
+                            if (baselineTargetKeys[key] === undefined) {
+                                baselineTargetKeys[key] = uniqueBaselineTargets.length;
+                                uniqueBaselineTargets.push({ layerId: layerId, propertyPath: capturedStep.propertyPath });
+                            }
+                            baselineTargetIndexes.push(baselineTargetKeys[key]);
+                        });
+                    }
+                    var captures = baselineValidation ? contextBridge.capturePropertyValues(freshBindingCapture, uniqueBaselineTargets).then(function (freshValueCapture) {
+                        var targets = freshValueCapture.snapshot && freshValueCapture.snapshot.targets;
+                        if (!freshValueCapture || !Object.isFrozen(freshValueCapture) || freshValueCapture.tier !== 3 || freshValueCapture.purpose !== "property-value-binding" || freshValueCapture.executable !== true ||
+                                !Array.isArray(targets) || targets.length !== uniqueBaselineTargets.length) {
+                            protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Confirmed baseline capture is invalid.");
+                        }
+                        protocol.assertFingerprint(freshValueCapture.fingerprint, "executionPreflight.valueCapture.fingerprint");
+                        return record.steps.map(function (capturedStep, index) {
+                            var item = targets[baselineTargetIndexes[index]];
+                            if (!item || item.layerId !== layerId || protocol.canonicalStringify(item.propertyPath) !== protocol.canonicalStringify(capturedStep.propertyPath) || item.propertyMatchName !== capturedStep.propertyMatchName) {
+                                protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Confirmed baseline target is invalid.");
+                            }
+                            protocol.assertFingerprint(item.valueDigest, "executionPreflight.valueCapture.valueDigest");
+                            return {
+                                bindingCapture: freshBindingCapture,
+                                valueCapture: freshValueCapture,
+                                item: item,
+                                boundTarget: {
+                                    contextFingerprint: freshBindingCapture.fingerprint,
+                                    contextTier: 3,
+                                    layerId: layerId,
+                                    propertyPath: capturedStep.propertyPath,
+                                    propertyMatchName: capturedStep.propertyMatchName,
+                                    propertyValueDigest: item.valueDigest
+                                }
+                            };
+                        });
+                    }) : captureStepValue(stepRecord).then(function (capture) { return [capture]; });
+                    return captures.then(function (capturedValues) {
+                        var selectedCapture = baselineValidation ? capturedValues[stepIndex] : capturedValues[0];
+                        if (baselineValidation) {
+                            capturedValues.forEach(function (capture, index) {
+                                var confirmedDigest = record.steps[index].confirmedValueDigest;
+                                if (typeof confirmedDigest !== "string") { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Confirmed value baseline is unavailable."); }
+                                protocol.assertFingerprint(confirmedDigest, "executionPreflight.confirmedValueDigest");
+                                if (capture.item.valueDigest !== confirmedDigest) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "The confirmed property value is stale."); }
+                            });
+                        }
+                        var freshValueCapture = selectedCapture.valueCapture;
+                        var boundTarget = selectedCapture.boundTarget;
                         var validatedBound = actionValidator.validateActionProposal(rawAction(candidate.action, boundTarget, candidate.action.providerActionId + ":jit:" + stepIndex), { expectedContextFingerprint: freshBindingCapture.fingerprint });
                         if (!validatedBound || !actionValidator.authority.isValidatedAction(validatedBound.action)) { protocol.fail(protocol.ERROR_CODES.VALIDATION_AUTHORITY_REQUIRED, "JIT-bound action provenance is invalid."); }
                         stepRecord.transient = { action: validatedBound.action, bindingCapture: freshBindingCapture, valueCapture: freshValueCapture };
-                        return { bindingCapture: freshBindingCapture, valueCapture: freshValueCapture };
+                        return { bindingCapture: freshBindingCapture, valueCapture: freshValueCapture, baselineValidation: baselineValidation };
                     });
                 }).then(function (fresh) {
                     var freshBindingCapture = fresh.bindingCapture;
@@ -535,6 +613,7 @@
                     var checked = guard.check(record.planId, stepIndex, current);
                     if (!checked.ok) { throw protocolError(protocol, checked.error.code); }
                     var reserved = guard.reserve(record.planId, stepIndex, current);
+                    if (fresh.baselineValidation) { record.confirmedBaselineValidated = true; }
                     record.lifecycle = "executing";
                     var terminalized = false;
                     var action = stepRecord.transient.action;
