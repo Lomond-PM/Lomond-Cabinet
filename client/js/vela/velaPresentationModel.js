@@ -45,6 +45,10 @@
         var confirmation = confirmationState && typeof confirmationState.state === "string" ? confirmationState.state : "idle";
         var state = "idle";
         if (experimentalEnabled !== true) { state = experimentalState === "configuring" || experimentalState === "checking" || experimentalState === "unavailable" ? "experimental-" + experimentalState : experimentalState === "disabled" || experimentalState === "ready" ? "experimental-disabled" : experimentalState || "experimental-disabled"; }
+        else if (provider === "objective-blocked") { state = "blocked"; }
+        else if (provider === "failed" || provider === "intent-rejected") { state = "error"; }
+        else if (provider === "cancelled") { state = "cancelled"; }
+        else if (provider === "completed" || provider === "local-proposal-handled") { state = "completed"; }
         else if (confirmation === "executing") { state = "executing"; }
         else if (confirmation === "confirmation-ready") { state = "awaiting-confirmation"; }
         else if (confirmation === "review-approved") { state = "awaiting-continuation"; }
@@ -53,10 +57,6 @@
         else if (confirmation === "rejected") { state = "cancelled"; }
         else if (provider === "pending") { state = "requesting"; }
         else if (provider === "proposal-ready" || provider === "proposal-reviewing") { state = "reviewing"; }
-        else if (provider === "objective-blocked") { state = "blocked"; }
-        else if (provider === "failed" || provider === "intent-rejected") { state = "error"; }
-        else if (provider === "cancelled") { state = "cancelled"; }
-        else if (provider === "completed" || provider === "local-proposal-handled") { state = "completed"; }
         else if (typeof composerValue === "string" && /\S/.test(composerValue)) { state = "composing"; }
         return Object.freeze({
             state: state,

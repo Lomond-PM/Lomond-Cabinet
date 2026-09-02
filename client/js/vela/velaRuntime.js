@@ -226,6 +226,7 @@
         var activeAgentReasoning = null;
         var reviewBarrierGeneration = 0;
         var reviewBarriers = new Map();
+        var activeProductionContinuation = null;
         var authorityState = "inactive";
         var authorityErrorCode = null;
         var activePilot = null;
@@ -262,6 +263,48 @@
         }
         function makeAuthorityId(kind) { authorityIdSerial += 1; return kind + "_" + authorityIdSerial; }
         function invalidateReviewBarriers() { reviewBarrierGeneration += 1; reviewBarriers.clear(); return true; }
+        function invalidateProductionVerification(record) {
+            var planId = record && record.verificationPlanId;
+            if (!planId || !preflight) { return false; }
+            record.verificationPlanId = null;
+            try { return preflight.invalidateCommittedVerification({ planId: planId }); }
+            catch (ignored) { return false; }
+        }
+        function closeProductionContinuation(record) {
+            if (!record) { return false; }
+            invalidateProductionVerification(record);
+            record.phase = "terminal";
+            if (activeProductionContinuation === record) { activeProductionContinuation = null; }
+            return true;
+        }
+        function invalidateProductionContinuation() {
+            var record = activeProductionContinuation;
+            if (record) { closeProductionContinuation(record); }
+            if (preflight) { try { preflight.invalidateAllCommittedVerifications(); } catch (ignored) {} }
+            return Boolean(record);
+        }
+        function ownCommittedVerification(association) {
+            var record = activeProductionContinuation;
+            if (!record || record.phase !== "executing" || record.generation !== reviewBarrierGeneration || disposed || state !== "ready" || !association || typeof association.planId !== "string" || association.planId.length === 0 || record.verificationPlanId !== null) { throw safeError("LIFECYCLE_BLOCKED"); }
+            record.verificationPlanId = association.planId;
+        }
+        function verifyCommittedAction(input) {
+            var record = activeProductionContinuation;
+            var planId;
+            if (!input || typeof input.objectiveId !== "string" || typeof input.taskId !== "string" || typeof input.expectedOpacity !== "number" || !isFinite(input.expectedOpacity) || !record || record.phase !== "awaiting-verification" || record.generation !== reviewBarrierGeneration || input.objectiveId !== record.objectiveId || input.taskId !== record.taskId || input.expectedOpacity !== record.expectedOpacity || !record.verificationPlanId || disposed || state !== "ready") { return Promise.resolve(Object.freeze({ state: "blocked", code: record && !record.verificationPlanId ? "VERIFICATION_UNAVAILABLE" : "LIFECYCLE_BLOCKED" })); }
+            planId = record.verificationPlanId;
+            record.verificationPlanId = null;
+            record.phase = "verifying";
+            return preflight.verifyCommittedOpacity({ planId: planId, expectedOpacity: record.expectedOpacity }).then(function (verification) {
+                if (activeProductionContinuation !== record || record.generation !== reviewBarrierGeneration || disposed || state !== "ready") { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
+                closeProductionContinuation(record);
+                return Object.freeze({ state: verification && verification.matches === true ? "verified" : "unverified", code: verification && verification.matches === true ? null : "AGENT_DRIVER_TASK_UNVERIFIED" });
+            }, function (error) {
+                if (activeProductionContinuation !== record || record.generation !== reviewBarrierGeneration || disposed || state !== "ready") { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
+                closeProductionContinuation(record);
+                return Object.freeze({ state: "blocked", code: stableErrorCode(error) === "AGENT_DRIVER_CANCELLED" ? "AGENT_DRIVER_CANCELLED" : "VERIFICATION_UNAVAILABLE" });
+            });
+        }
         function claimApprovedReview(input) {
             var record = input && typeof input.reviewCorrelation === "string" ? reviewBarriers.get(input.reviewCorrelation) : null;
             var identityMatches = false;
@@ -331,7 +374,59 @@
                 if (!current || current !== record || disposed || state !== "ready" || reviewBarrierGeneration !== capturedGeneration) { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
                 if (!captures.bindingCapture || captures.bindingCapture.fingerprint !== record.contextFingerprint || !target || target.valueDigest !== record.valueDigest) { record.state = "terminal"; reviewBarriers.delete(input.reviewCorrelation); return Object.freeze({ state: "blocked", code: "CONTEXT_STALE" }); }
                 record.state = "claimable";
-                return Object.freeze({ state: "ready", code: null });
+                if (activeProductionContinuation) { record.state = "terminal"; reviewBarriers.delete(input.reviewCorrelation); return Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED" }); }
+                activeProductionContinuation = {
+                    generation: capturedGeneration,
+                    objectiveId: record.objectiveId,
+                    taskId: record.taskId,
+                    expectedOpacity: record.capabilityIntent.params.opacity,
+                    phase: "composing",
+                    verificationPlanId: null,
+                    committed: false
+                };
+                var continuation = activeProductionContinuation;
+                return confirmedAuthorityComposer.compose({
+                    capabilityIntent: record.capabilityIntent,
+                    reviewedSemantics: record.reviewedSemantics,
+                    reviewPolicySemantics: record.reviewedPolicySemantics,
+                    review: {
+                        reviewId: record.reviewId,
+                        reviewRevision: record.reviewRevision,
+                        reviewCorrelation: record.reviewCorrelation,
+                        objectiveId: record.objectiveId,
+                        taskId: record.taskId,
+                        sessionId: record.sessionId,
+                        turnId: record.turnId,
+                        taskPlanId: record.taskPlanId,
+                        taskPlanRevision: record.taskPlanRevision,
+                        stepId: record.stepId
+                    },
+                    policyContext: { sessionId: record.sessionId, taskId: record.taskId }
+                }).then(function (composition) {
+                    if (activeProductionContinuation !== continuation || continuation.generation !== reviewBarrierGeneration || disposed || state !== "ready") { closeProductionContinuation(continuation); return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
+                    if (!composition || composition.state !== "authority-ready") { closeProductionContinuation(continuation); return Object.freeze({ state: composition && composition.state === "cancelled" ? "cancelled" : "blocked", code: composition && composition.code || "LIFECYCLE_BLOCKED" }); }
+                    continuation.phase = "executing";
+                    return confirmedAuthorityComposer.executeConfirmed().then(function (execution) {
+                        var cancelled = execution && execution.state === "cancelled";
+                        if (activeProductionContinuation !== continuation || continuation.generation !== reviewBarrierGeneration || disposed || state !== "ready") { closeProductionContinuation(continuation); return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
+                        continuation.committed = execution && execution.committed === true ? true : execution && execution.committed === false ? false : null;
+                        if (cancelled) { closeProductionContinuation(continuation); return Object.freeze({ state: "cancelled", code: execution.code || "AGENT_DRIVER_CANCELLED" }); }
+                        if (continuation.committed === true) {
+                            if (!continuation.verificationPlanId) { closeProductionContinuation(continuation); return Object.freeze({ state: "blocked", code: "VERIFICATION_UNAVAILABLE" }); }
+                            continuation.phase = "awaiting-verification";
+                            return Object.freeze({ state: "verification-required", code: null });
+                        }
+                        closeProductionContinuation(continuation);
+                        return Object.freeze({ state: "blocked", code: execution && execution.code || "PLAN_FAILED" });
+                    });
+                }).then(function (result) {
+                    if (result.state !== "verification-required") { reviewBarriers.delete(record.reviewCorrelation); }
+                    return result;
+                }, function (error) {
+                    closeProductionContinuation(continuation);
+                    reviewBarriers.delete(record.reviewCorrelation);
+                    return Object.freeze({ state: "blocked", code: stableErrorCode(error) });
+                });
             }, function (error) {
                 reviewBarriers.delete(input.reviewCorrelation);
                 if (reviewBarrierGeneration !== capturedGeneration || disposed || state !== "ready") { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
@@ -437,7 +532,8 @@
                 contextBridge: bridge,
                 reviewPort: reviewPort,
                 getCurrentExecutionBinding: function () { return { settingsFingerprint: contextApi.fingerprintSettings({}), permissionSnapshot: { mode: "confirm-every-action", grants: [], policyRevision: MODULE_REVISION }, lifecycle: "ready", hasVerifier: true }; },
-                executeValidatedAction: executionAdapter.executeValidatedAction
+                executeValidatedAction: executionAdapter.executeValidatedAction,
+                onCommittedVerificationAvailable: ownCommittedVerification
             });
             authorizedPlanMaterializer = materializerModule.createAuthorizedPlanMaterializer({ protocol: protocol, planningContracts: planningContracts, capabilityContracts: capabilityContracts, preflight: preflight });
             planReviewProjection = planReviewProjectionModule.createPlanReviewProjection({ protocol: protocol, planningContracts: planningContracts, capabilityContracts: capabilityContracts });
@@ -631,6 +727,7 @@
                         return Object.freeze({ fresh: observation.fresh === true, opacity: observation.opacity, matches: observation.opacity === input.expectedOpacity, observationRevision: observation.observationId });
                     });
                 },
+                verifyCommittedAction: verifyCommittedAction,
                 continueApprovedReview: continueApprovedReview,
                 cancel: function () {
                     var providerState;
@@ -638,6 +735,7 @@
                     agentReasoningGeneration += 1;
                     activeAgentReasoning = null;
                     invalidateReviewBarriers();
+                    invalidateProductionContinuation();
                     if (confirmedAuthorityComposer) { try { confirmedAuthorityComposer.cancel(); } catch (ignoredComposer) {} }
                     if (agentDriverProposal && authorityPlane) { try { settleAgentDriverProposal("failed", "AGENT_DRIVER_CANCELLED", false); } catch (ignored) {} }
                     if (providerController && cancelledReasoning) {
@@ -678,6 +776,7 @@
         function suspend() {
             if (disposed || state !== "ready") { return false; }
             invalidateReviewBarriers();
+            invalidateProductionContinuation();
             if (controller) { controller.invalidate("stale"); }
             if (providerController) { providerController.invalidate("idle"); }
             if (reviewRuntimePort) { reviewRuntimePort.invalidateAll(); }
@@ -702,6 +801,7 @@
         function resetSession() {
             if (disposed || state !== "ready" || !bridge) { return false; }
             invalidateReviewBarriers();
+            invalidateProductionContinuation();
             if (controller) { controller.invalidate("idle"); }
             if (providerController) { providerController.invalidate("idle"); }
             if (reviewRuntimePort) { reviewRuntimePort.invalidateAll(); }
@@ -720,6 +820,7 @@
             if (disposed) { return false; }
             epoch += 1;
             invalidateReviewBarriers();
+            invalidateProductionContinuation();
             disposeConfirmedAuthorityComposer();
             if (bridge) { try { bridge.suspend(); } catch (ignored) {} }
             cancelActiveDelegatedTask();
@@ -729,7 +830,7 @@
             if (reviewRuntimePort) { try { reviewRuntimePort.invalidateAll(); } catch (ignoredReviews) {} }
             if (objectiveReviewRuntimePort) { try { objectiveReviewRuntimePort.invalidate(); } catch (ignoredObjectiveReview) {} }
             if (planController) { try { planController.dispose(); } catch (ignoredPlans) {} }
-            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; reviewPort = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; authorizedPlanMaterializer = null; planReviewProjection = null; planController = null; confirmedAuthorityComposer = null; reviewRuntimePort = null; objectiveReviewRuntimePort = null; protocolClock = null; agentDriverRuntimePort = null; agentDriverProposal = null; agentReasoningGeneration += 1; activeAgentReasoning = null; opacityVerificationPort = null;
+            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; reviewPort = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; authorizedPlanMaterializer = null; planReviewProjection = null; planController = null; confirmedAuthorityComposer = null; reviewRuntimePort = null; objectiveReviewRuntimePort = null; protocolClock = null; agentDriverRuntimePort = null; agentDriverProposal = null; agentReasoningGeneration += 1; activeAgentReasoning = null; activeProductionContinuation = null; opacityVerificationPort = null;
             initialized = false; suspended = false; disposed = true; state = "disposed";
             return true;
         }

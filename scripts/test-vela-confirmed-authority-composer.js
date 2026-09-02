@@ -215,7 +215,7 @@ async function run() {
 
     const runtimeSource = fs.readFileSync(require.resolve("../client/js/vela/velaRuntime"), "utf8");
     const driverSource = fs.readFileSync(require.resolve("../client/js/vela/velaAgentDriver"), "utf8");
-    check(/createConfirmedAuthorityComposer/.test(runtimeSource) && !/\.compose\s*\(/.test(runtimeSource) && !/\.executeConfirmed\s*\(/.test(runtimeSource) && !/ConfirmedAuthorityComposer|confirmedAuthorityComposer/.test(driverSource), "Runtime privately owns production Composer while Driver continuation remains unattached from compose and executeConfirmed.");
+    check(/createConfirmedAuthorityComposer/.test(runtimeSource) && /confirmedAuthorityComposer\.compose\s*\(/.test(runtimeSource) && /confirmedAuthorityComposer\.executeConfirmed\s*\(/.test(runtimeSource) && !/ConfirmedAuthorityComposer|confirmedAuthorityComposer/.test(driverSource), "Runtime privately attaches production compose and execute while Driver remains isolated from Composer ownership.");
     check(/planController\.run\(record\.executionPlanId\)/.test(source) && !/executeStep/.test(source) && !/materializeDelegated|AuthorizedPlanAuthorityProducer|AtomicActivationCoordinator/.test(source), "Composer uses only PlanController.run and introduces no second execution or delegation path.");
     console.log("PASS Vela Confirmed Authority Composer E2: " + assertions + " assertions.");
 }

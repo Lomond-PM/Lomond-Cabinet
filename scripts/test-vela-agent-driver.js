@@ -9,7 +9,7 @@ async function code(operation, expected, message) { let failure = null; try { aw
 function harness(settings) {
     const options = settings || {};
     const events = [];
-    const calls = { reason: 0, submit: 0, continue: 0, verify: 0, cancel: 0, observe: 0 };
+    const calls = { reason: 0, submit: 0, continue: 0, committedVerify: 0, verify: 0, cancel: 0, observe: 0 };
     let observation = null;
     const driver = driverModule.createAgentDriver({
         beginTurn() { return Object.freeze({ sessionId: "session_driver", turnId: "turn_driver" }); },
@@ -21,7 +21,8 @@ function harness(settings) {
     const port = {
         reason() { calls.reason += 1; return Promise.resolve({ capabilityId: "set-opacity-v1", params: { opacity: options.opacity === undefined ? 42 : options.opacity } }); },
         submitIntent(input) { calls.submit += 1; calls.intent = input; return options.executionError ? Promise.reject(Object.assign(new Error(options.executionError), { code: options.executionError })) : Promise.resolve(options.outcome || { state: "executed", committed: true, transcriptSettled: options.transcriptSettled !== false }); },
-        continueApprovedReview(input) { calls.continue += 1; calls.continuation = input; return options.continuationError ? Promise.reject(Object.assign(new Error(options.continuationError), { code: options.continuationError })) : Promise.resolve(options.continuation || { state: "ready", code: null }); },
+        continueApprovedReview(input) { calls.continue += 1; calls.continuation = input; if (options.deferContinuation) return new Promise((resolve) => { calls.releaseContinuation = resolve; }); return options.continuationError ? Promise.reject(Object.assign(new Error(options.continuationError), { code: options.continuationError })) : Promise.resolve(options.continuation || { state: "verification-required", code: null }); },
+        verifyCommittedAction(input) { calls.committedVerify += 1; calls.committedVerificationInput = input; if (options.deferCommittedVerification) return new Promise((resolve) => { calls.releaseCommittedVerification = resolve; }); return Promise.resolve(options.committedVerification || { state: "verified", code: null }); },
         verifyOpacity() { calls.verify += 1; return options.verifyError ? Promise.reject(Object.assign(new Error(options.verifyError), { code: options.verifyError })) : Promise.resolve(options.verification || { fresh: true, matches: true, opacity: options.opacity === undefined ? 42 : options.opacity }); },
         cancel() { calls.cancel += 1; return true; }
     };
@@ -77,7 +78,8 @@ async function run() {
     await code(() => Promise.resolve().then(() => review.driver.resolveReview({ reviewId: "stale", revision: suspended.suspendedReview.revision, outcome: "approved" })), "AGENT_DRIVER_REVIEW_INVALID", "stale review identity fails closed");
     await code(() => Promise.resolve().then(() => review.driver.resolveReview({ reviewId: suspended.suspendedReview.reviewId, revision: suspended.suspendedReview.revision + 1, outcome: "approved" })), "AGENT_DRIVER_REVIEW_INVALID", "stale review revision fails closed");
     const approved = await review.driver.resolveReview({ reviewId: suspended.suspendedReview.reviewId, revision: suspended.suspendedReview.revision, outcome: "approved" });
-    equal(approved.state, "awaiting-outcome", "approved B1 review waits for a future owner continuation");
+    equal(approved.state, "terminal", "approved production execution completes after committed-target verification");
+    equal(approved.terminal.outcome, "completed", "verified committed target completes the reviewed objective");
     equal(approved.objectiveId, suspended.objectiveId, "approval preserves the same objective");
     equal(approved.taskPlan, suspended.taskPlan, "approval preserves the immutable TaskPlan reference");
     equal(approved.suspendedReview, null, "approval consumes the suspended record");
@@ -86,9 +88,74 @@ async function run() {
     equal(review.calls.continue, 1, "approval invokes one bounded Runtime continuation");
     equal(review.calls.continuation.objectiveId, suspended.objectiveId, "continuation preserves the objective identity");
     equal(review.calls.continuation.reviewCorrelation, "opaque_review_correlation_1", "continuation returns the opaque Runtime correlation only");
-    equal(review.calls.verify, 0, "approval does not execute or verify");
+    equal(review.calls.verify, 0, "A1 production continuation never falls back to legacy current-selection verification");
+    equal(review.calls.committedVerify, 1, "reviewed production execution invokes committed-target verification exactly once");
+    check(review.calls.committedVerificationInput.objectiveId === suspended.objectiveId && review.calls.committedVerificationInput.taskId === suspended.taskId && review.calls.committedVerificationInput.expectedOpacity === 47 && !Object.prototype.hasOwnProperty.call(review.calls.committedVerificationInput, "planId"), "Driver passes only logical identity and expectation to committed verification");
+    equal(review.events.filter((event) => event.kind === "tool/result" && event.payload.committed === true).length, 1, "A1 reuses the existing committed tool-result event without expanding Driver projection data");
     await code(() => Promise.resolve().then(() => review.driver.resolveReview({ reviewId: suspended.suspendedReview.reviewId, revision: suspended.suspendedReview.revision, outcome: "approved" })), "AGENT_DRIVER_REVIEW_INVALID", "duplicate approval fails closed");
     await code(() => Promise.resolve().then(() => review.driver.resolveReview({ reviewId: suspended.suspendedReview.reviewId, revision: suspended.suspendedReview.revision, outcome: "rejected" })), "AGENT_DRIVER_REVIEW_INVALID", "approval followed by rejection fails closed");
+
+    const blockedContinuation = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "opaque_review_correlation_blocked" }, continuation: { state: "blocked", code: "CONTEXT_STALE" } });
+    const blockedPending = await blockedContinuation.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
+    const blockedApproved = await blockedContinuation.driver.resolveReview({ reviewId: blockedPending.suspendedReview.reviewId, revision: blockedPending.suspendedReview.revision, outcome: "approved" });
+    equal(blockedApproved.terminal.outcome, "blocked", "a blocked production continuation terminalizes the objective without verification");
+    equal(blockedApproved.terminal.code, "CONTEXT_STALE", "a blocked continuation preserves its canonical code");
+    equal(blockedContinuation.calls.verify, 0, "a blocked continuation never invokes legacy verification");
+
+    const cancelledContinuation = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "opaque_review_correlation_cancelled" }, continuation: { state: "cancelled", code: "AGENT_DRIVER_CANCELLED" } });
+    const continuationPending = await cancelledContinuation.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
+    const continuationCancelled = await cancelledContinuation.driver.resolveReview({ reviewId: continuationPending.suspendedReview.reviewId, revision: continuationPending.suspendedReview.revision, outcome: "approved" });
+    equal(continuationCancelled.terminal.outcome, "cancelled", "a cancelled production continuation preserves cancelled lifecycle truth");
+    equal(cancelledContinuation.calls.verify, 0, "a cancelled continuation never invokes legacy verification");
+
+    const mismatchedCommitted = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "opaque_review_correlation_mismatch" }, committedVerification: { state: "unverified", code: "AGENT_DRIVER_TASK_UNVERIFIED" } });
+    const mismatchPending = await mismatchedCommitted.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
+    const mismatchTerminal = await mismatchedCommitted.driver.resolveReview({ reviewId: mismatchPending.suspendedReview.reviewId, revision: mismatchPending.suspendedReview.revision, outcome: "approved" });
+    equal(mismatchTerminal.terminal.code, "AGENT_DRIVER_TASK_UNVERIFIED", "committed-target mismatch blocks with the existing unverified code");
+    equal(mismatchedCommitted.calls.verify, 0, "committed-target mismatch never falls back to legacy verification");
+
+    const unavailableCommitted = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "opaque_review_correlation_unavailable" }, committedVerification: { state: "blocked", code: "VERIFICATION_UNAVAILABLE" } });
+    const unavailablePending = await unavailableCommitted.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
+    const unavailableTerminal = await unavailableCommitted.driver.resolveReview({ reviewId: unavailablePending.suspendedReview.reviewId, revision: unavailablePending.suspendedReview.revision, outcome: "approved" });
+    equal(unavailableTerminal.terminal.code, "VERIFICATION_UNAVAILABLE", "committed-target unavailable preserves the canonical blocked code");
+
+    const pendingCommitted = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "opaque_review_correlation_pending" }, deferCommittedVerification: true });
+    const pendingCommittedReview = await pendingCommitted.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
+    const pendingCommittedResult = pendingCommitted.driver.resolveReview({ reviewId: pendingCommittedReview.suspendedReview.reviewId, revision: pendingCommittedReview.suspendedReview.revision, outcome: "approved" });
+    await Promise.resolve(); await Promise.resolve();
+    equal(pendingCommitted.driver.getSnapshot().state, "verifying", "Driver remains verifying while committed-target observation is pending");
+    await code(() => pendingCommitted.driver.startObjective({ message: "busy", endpoint: "e", model: "m" }), "AGENT_DRIVER_BUSY", "a pending committed-target Verify keeps the objective busy");
+    check(pendingCommitted.driver.cancel(), "cancel wins while committed-target Verify is pending");
+    pendingCommitted.calls.releaseCommittedVerification({ state: "verified", code: null });
+    equal((await pendingCommittedResult).terminal.outcome, "cancelled", "late committed-target success cannot resurrect a cancelled objective");
+    equal(pendingCommitted.events.filter((event) => event.kind === "task/cancelled").length, 1, "late committed-target success cannot duplicate the cancelled terminal event");
+    equal(pendingCommitted.events.filter((event) => event.kind === "task/completed" || event.kind === "task/blocked").length, 0, "late committed-target success emits no conflicting terminal event");
+
+    for (const lateVerification of [{ state: "unverified", code: "AGENT_DRIVER_TASK_UNVERIFIED" }, { state: "blocked", code: "VERIFICATION_UNAVAILABLE" }]) {
+        const late = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "opaque_review_late_" + lateVerification.state }, deferCommittedVerification: true });
+        const lateReview = await late.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
+        const lateResult = late.driver.resolveReview({ reviewId: lateReview.suspendedReview.reviewId, revision: lateReview.suspendedReview.revision, outcome: "approved" });
+        await Promise.resolve(); await Promise.resolve();
+        check(late.driver.cancel(), "cancel wins before late committed-target " + lateVerification.state + " settlement");
+        late.calls.releaseCommittedVerification(lateVerification);
+        equal((await lateResult).terminal.outcome, "cancelled", "late committed-target " + lateVerification.state + " cannot replace cancelled truth");
+        equal(late.calls.committedVerify, 1, "late committed-target " + lateVerification.state + " performs at most one Verify call");
+        equal(late.calls.verify, 0, "late committed-target " + lateVerification.state + " never falls back to current-selection Verify");
+        equal(late.events.filter((event) => /^task\/(completed|blocked|cancelled)$/.test(event.kind)).length, 1, "late committed-target " + lateVerification.state + " preserves exactly one terminal event");
+    }
+
+    const pendingContinuation = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "opaque_review_pending_continuation" }, deferContinuation: true });
+    const pendingContinuationReview = await pendingContinuation.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
+    const pendingContinuationResult = pendingContinuation.driver.resolveReview({ reviewId: pendingContinuationReview.suspendedReview.reviewId, revision: pendingContinuationReview.suspendedReview.revision, outcome: "approved" });
+    await Promise.resolve();
+    equal(pendingContinuation.driver.getSnapshot().state, "awaiting-outcome", "Driver remains busy while approved production continuation is pending");
+    await code(() => pendingContinuation.driver.startObjective({ message: "busy", endpoint: "e", model: "m" }), "AGENT_DRIVER_BUSY", "pending continuation excludes a second objective");
+    await code(() => Promise.resolve().then(() => pendingContinuation.driver.resolveReview({ reviewId: pendingContinuationReview.suspendedReview.reviewId, revision: pendingContinuationReview.suspendedReview.revision, outcome: "approved" })), "AGENT_DRIVER_REVIEW_INVALID", "duplicate Approve is rejected while the first continuation is pending");
+    check(pendingContinuation.driver.cancel(), "cancel terminalizes a pending approved continuation");
+    pendingContinuation.calls.releaseContinuation({ state: "verification-required", code: null });
+    equal((await pendingContinuationResult).terminal.outcome, "cancelled", "late committed continuation cannot resurrect a cancelled Driver");
+    equal(pendingContinuation.calls.continue, 1, "duplicate Approve cannot create a second continuation");
+    equal(pendingContinuation.calls.committedVerify, 0, "cancelled pending continuation cannot start committed-target Verify");
 
     const rejectedReview = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "opaque_review_correlation_2" } });
     const rejectedPending = await rejectedReview.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
@@ -126,7 +193,7 @@ async function run() {
 
     let release;
     const cancelling = driverModule.createAgentDriver({ beginTurn() { return { sessionId: "s", turnId: "t" }; }, observe() { return new Promise((resolve) => { release = resolve; }); }, getObservation() { return null; }, appendSessionEvent() {} });
-    const cancellingPort = { reason() { throw new Error("unreachable"); }, submitIntent() { throw new Error("unreachable"); }, continueApprovedReview() { throw new Error("unreachable"); }, verifyOpacity() { throw new Error("unreachable"); }, cancel() { return true; } };
+    const cancellingPort = { reason() { throw new Error("unreachable"); }, submitIntent() { throw new Error("unreachable"); }, continueApprovedReview() { throw new Error("unreachable"); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyOpacity() { throw new Error("unreachable"); }, cancel() { return true; } };
     cancelling.attachRuntimePort(cancellingPort);
     const pending = cancelling.startObjective({ message: "set", endpoint: "e", model: "m" });
     check(cancelling.cancel(), "in-flight observation can be cancelled"); release(null);
