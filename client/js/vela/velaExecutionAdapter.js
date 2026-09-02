@@ -30,13 +30,14 @@
         return descriptor.value;
     }
     function quote(value) { return bridgeModule.quoteForExtendScript(value); }
-    function error(protocol, code) { return new protocol.VelaProtocolError(code, undefined, { stage: "execution-adapter" }); }
+    function error(protocol, code, committed) { var value = new protocol.VelaProtocolError(code, undefined, { stage: "execution-adapter" }); value.committed = committed === true ? true : committed === false ? false : null; return value; }
     function mapHostCode(protocol, code) {
         if (code === "HOST_EXECUTION_AUTHORITY_MISMATCH" || code === "HOST_EXECUTION_VALUE_MISMATCH") { return protocol.ERROR_CODES.CONTEXT_STALE; }
         if (code === "HOST_EXECUTION_TARGET_NOT_FOUND") { return protocol.ERROR_CODES.UNKNOWN_TARGET; }
         if (code === "HOST_EXECUTION_EXPRESSION_ENABLED") { return protocol.ERROR_CODES.CONTEXT_VALUE_EVALUATION_DISALLOWED; }
         if (code === "HOST_EXECUTION_UNAVAILABLE" || code === "HOST_EXECUTION_READ_FAILED") { return protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE; }
-        if (code === "HOST_EXECUTION_MUTATION_FAILED" || code === "HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE") { return protocol.ERROR_CODES.PLAN_FAILED; }
+        if (code === "HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE") { return protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE; }
+        if (code === "HOST_EXECUTION_MUTATION_FAILED") { return protocol.ERROR_CODES.PLAN_FAILED; }
         return protocol.ERROR_CODES.PLAN_FAILED;
     }
     function createExecutionAdapter(options) {
@@ -62,26 +63,26 @@
             } catch (cause) { return Promise.reject(cause instanceof protocol.VelaProtocolError ? cause : error(protocol, protocol.ERROR_CODES.PLAN_FAILED)); }
             return new Promise(function (resolve, reject) {
                 var settled = false;
-                function settleFailure(code) { if (!settled) { settled = true; reject(error(protocol, code)); } }
+                function settleFailure(code, committed) { if (!settled) { settled = true; reject(error(protocol, code, committed)); } }
                 function callback(raw) {
                     var result;
                     var hostError;
                     if (settled) { return; }
                     try {
-                        if (typeof raw !== "string") { settleFailure(protocol.ERROR_CODES.PLAN_FAILED); return; }
+                        if (typeof raw !== "string") { settleFailure(protocol.ERROR_CODES.PLAN_FAILED, null); return; }
                         result = JSON.parse(raw);
-                        protocol.assertSafeJson(result);
+                        protocol.assertSafeJson(result, { allowDangerousPaths: ["error.code"] });
                         protocol.assertNoUnknownKeys(result, ["protocol", "schemaVersion", "requestId", "sessionId", "operation", "ok", "hostExecutionRevision", "result", "error"], "executionAdapter.hostResult");
-                        if (result.protocol !== HOST_RESULT_PROTOCOL || result.schemaVersion !== "1.0" || result.requestId !== request.requestId || result.sessionId !== request.sessionId || result.operation !== "executeCapability" || result.hostExecutionRevision !== HOST_REVISION || typeof result.ok !== "boolean") { settleFailure(protocol.ERROR_CODES.PLAN_FAILED); return; }
-                        if (!result.ok) { hostError = result.error && result.error.code; settleFailure(mapHostCode(protocol, hostError)); return; }
+                        if (result.protocol !== HOST_RESULT_PROTOCOL || result.schemaVersion !== "1.0" || result.requestId !== request.requestId || result.sessionId !== request.sessionId || result.operation !== "executeCapability" || result.hostExecutionRevision !== HOST_REVISION || typeof result.ok !== "boolean") { settleFailure(protocol.ERROR_CODES.PLAN_FAILED, null); return; }
+                        if (!result.ok) { protocol.assertNoUnknownKeys(result.error, ["code", "message", "mutationCommitted"], "executionAdapter.hostResult.error"); if (result.error.mutationCommitted !== true && result.error.mutationCommitted !== false && result.error.mutationCommitted !== null) { settleFailure(protocol.ERROR_CODES.PLAN_FAILED, null); return; } hostError = result.error && result.error.code; settleFailure(mapHostCode(protocol, hostError), result.error.mutationCommitted); return; }
                         protocol.assertNoUnknownKeys(result.result, ["capabilityId", "valueKind", "resultingValueDigest"], "executionAdapter.hostResult.result");
-                        if (result.result.capabilityId !== "set-opacity-v1" || result.result.valueKind !== "number" || result.result.resultingValueDigest !== expectedResultDigest) { settleFailure(protocol.ERROR_CODES.PLAN_FAILED); return; }
+                        if (result.result.capabilityId !== "set-opacity-v1" || result.result.valueKind !== "number" || result.result.resultingValueDigest !== expectedResultDigest) { settleFailure(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, true); return; }
                         settled = true;
-                        resolve(protocol.deepFreeze({ ok: true, summary: { capabilityId: "set-opacity-v1", resultingValueDigest: result.result.resultingValueDigest } }));
-                    } catch (ignored) { settleFailure(protocol.ERROR_CODES.PLAN_FAILED); }
+                        resolve(protocol.deepFreeze({ ok: true, committed: true, summary: { capabilityId: "set-opacity-v1", resultingValueDigest: result.result.resultingValueDigest } }));
+                    } catch (ignored) { settleFailure(protocol.ERROR_CODES.PLAN_FAILED, null); }
                 }
                 try { invokeHost(FIXED_FACADE_PREFIX + quote(JSON.stringify(request)) + ")", callback); }
-                catch (ignoredInvoke) { settleFailure(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE); }
+                catch (ignoredInvoke) { settleFailure(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, null); }
             });
         }
         var adapter = Object.freeze({ executeValidatedAction: executeValidatedAction });

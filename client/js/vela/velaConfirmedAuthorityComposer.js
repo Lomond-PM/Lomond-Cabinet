@@ -8,7 +8,7 @@
     } else if (typeof module === "object" && module.exports) { module.exports = exported; }
 }(typeof self !== "undefined" ? self : this, function (planning) {
     "use strict";
-    var MODULE_REVISION = "vela-confirmed-authority-composer-0.3.7-c2-d1-f1-v1";
+    var MODULE_REVISION = "vela-confirmed-authority-composer-0.3.7-c3-e2-v1";
     function fail(code) { var error = new Error(code); error.code = code; throw error; }
     function plain(value) { var prototype; if (!value || Object.prototype.toString.call(value) !== "[object Object]") { return false; } prototype = Object.getPrototypeOf(value); return prototype === Object.prototype || prototype === null; }
     function validateCanonical(value, stack) {
@@ -59,7 +59,7 @@
         var generation = 0;
         var activeRecord = null;
         var disposed = false;
-        if (!planning || !plain(options) || !compiler || typeof compiler.compile !== "function" || !policyEngine || typeof policyEngine.evaluate !== "function" || !planController || typeof planController.accept !== "function" || typeof planController.confirm !== "function" || typeof planController.cancel !== "function" || typeof resolveRegisteredAction !== "function" || typeof makePlanId !== "function" || typeof getRuntimeGeneration !== "function" || typeof claimApprovedReview !== "function") { fail("RUNTIME_CAPABILITY_UNAVAILABLE"); }
+        if (!planning || !plain(options) || !compiler || typeof compiler.compile !== "function" || !policyEngine || typeof policyEngine.evaluate !== "function" || !planController || typeof planController.accept !== "function" || typeof planController.confirm !== "function" || typeof planController.run !== "function" || typeof planController.cancel !== "function" || typeof resolveRegisteredAction !== "function" || typeof makePlanId !== "function" || typeof getRuntimeGeneration !== "function" || typeof claimApprovedReview !== "function") { fail("RUNTIME_CAPABILITY_UNAVAILABLE"); }
         function reviewedSnapshot(value) {
             var keys = ["capabilityId", "requestedOperation", "operationKind", "kind", "risk", "params", "targetScope", "targetProperty", "requiresConfirmation", "registeredAction", "provenance"];
             if (!plain(value) || Object.keys(value).sort().join(",") !== keys.slice().sort().join(",") || value.targetProperty !== "opacity") { fail("LIFECYCLE_BLOCKED"); }
@@ -97,7 +97,7 @@
                 if (decision.decision !== "REVIEW_REQUIRED" || !same(createReviewedPolicySemantics(decision), input.reviewPolicySemantics)) { return Promise.resolve(Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED" })); }
             } catch (error) { return Promise.resolve(Object.freeze({ state: "blocked", code: stableCode(error) })); }
             generation += 1;
-            record = { generation: generation, runtimeGeneration: getRuntimeGeneration(), cancelled: false, claimed: false, executionPlanId: null, phase: "claim-pending", terminalized: false, cancellationErrorCode: null };
+            record = { generation: generation, runtimeGeneration: getRuntimeGeneration(), cancelled: false, claimed: false, executionPlanId: null, phase: "claim-pending", runAttempted: false, terminalized: false, cancellationErrorCode: null };
             activeRecord = record; state = "composing";
             return Promise.resolve().then(function () {
                 if (!current(record)) { return cancelledResult(); }
@@ -124,9 +124,36 @@
                 });
             }).then(function (result) { if (result && result.state === "cancelled" && record.executionPlanId === null) { finish(record); } return result; }, function (error) { if (!record.executionPlanId || officialCancel(record, "composition-failed")) { finish(record); } else { state = disposed ? "disposed" : "cancellation-failed"; } return Object.freeze({ state: record.cancelled || disposed ? "cancelled" : "blocked", code: record.cancelled || disposed ? "AGENT_DRIVER_CANCELLED" : stableCode(error) }); });
         }
-        function cancel() { var record = activeRecord; if (disposed || !record) { return false; } generation += 1; record.cancelled = true; if (record.phase === "claim-pending") { finish(record); return true; } if (officialCancel(record, "cancelled")) { finish(record); return true; } state = "cancellation-failed"; return false; }
+        function executeConfirmed() {
+            var record = activeRecord;
+            var running;
+            if (disposed || state !== "authority-ready" || !record || record.phase !== "authority-ready" || record.runAttempted === true || !record.executionPlanId) { return Promise.resolve(Object.freeze({ state: "blocked", committed: record && record.runAttempted === true ? null : false, code: "LIFECYCLE_BLOCKED" })); }
+            record.runAttempted = true;
+            record.phase = "executing";
+            state = "executing";
+            try { running = planController.run(record.executionPlanId); }
+            catch (error) { running = Promise.reject(error); }
+            return Promise.resolve(running).then(function (progress) {
+                var receipt = progress && progress.executionReceipt;
+                var committed = receipt && receipt.committed === true ? true : receipt && receipt.committed === false ? false : null;
+                var cancelled = record.cancelled === true || disposed || progress && progress.taskState === "cancelled";
+                record.terminalized = true;
+                finish(record);
+                if (cancelled) { return Object.freeze({ state: "cancelled", committed: committed, code: "AGENT_DRIVER_CANCELLED" }); }
+                if (!progress || progress.taskState !== "completed" || progress.executionArmed !== false || committed !== true) { return Object.freeze({ state: "failed", committed: committed, code: progress && progress.terminalErrorCode || "PLAN_FAILED" }); }
+                return Object.freeze({ state: "executed", committed: true, code: null });
+            }, function (error) {
+                var receipt = error && error.executionReceipt;
+                var committed = receipt && receipt.committed === true ? true : receipt && receipt.committed === false ? false : null;
+                var cancelled = record.cancelled === true || disposed;
+                record.terminalized = true;
+                finish(record);
+                return Object.freeze({ state: cancelled ? "cancelled" : "blocked", committed: committed, code: cancelled ? "AGENT_DRIVER_CANCELLED" : stableCode(error) });
+            });
+        }
+        function cancel() { var record = activeRecord; if (disposed || !record) { return false; } generation += 1; record.cancelled = true; if (record.phase === "claim-pending") { finish(record); return true; } if (officialCancel(record, "cancelled")) { if (record.phase !== "executing") { finish(record); } else { state = "cancelling"; } return true; } state = "cancellation-failed"; return false; }
         function dispose() { if (disposed) { return false; } var record = activeRecord; disposed = true; generation += 1; state = "disposed"; if (record) { record.cancelled = true; if (record.phase === "claim-pending" || officialCancel(record, "disposed")) { activeRecord = null; } } return true; }
-        return Object.freeze({ compose: compose, cancel: cancel, dispose: dispose });
+        return Object.freeze({ compose: compose, executeConfirmed: executeConfirmed, cancel: cancel, dispose: dispose });
     }
     return Object.freeze({ MODULE_REVISION: MODULE_REVISION, createReviewedSemantics: createReviewedSemantics, createReviewedPolicySemantics: createReviewedPolicySemantics, sameReviewedSemantics: same, createConfirmedAuthorityComposer: createConfirmedAuthorityComposer });
 }));

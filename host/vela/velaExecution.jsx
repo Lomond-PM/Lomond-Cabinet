@@ -145,10 +145,10 @@ var AEToolbox = AEToolbox || {};
             catch (ignoredSerialize) { if (mutationCommitted) { throw hostError("HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE"); } throw ignoredSerialize; }
         } catch (error) {
             code = error && typeof error.code === "string" ? error.code : "HOST_EXECUTION_FAILED";
-            try { result = base(request, false); result.error = { code: code, message: "The Vela Host execution request was rejected." }; return serialize(result); }
+            try { result = base(request, false); result.error = { code: code, message: "The Vela Host execution request was rejected.", mutationCommitted: mutationCommitted ? true : code === "HOST_EXECUTION_MUTATION_FAILED" ? null : false }; return serialize(result); }
             catch (ignoredResult) {
                 code = code === "HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE" ? code : "HOST_EXECUTION_FAILED";
-                return "{\"error\":{\"code\":\"" + code + "\",\"message\":\"The Vela Host execution request was rejected.\"},\"hostExecutionRevision\":\"vela-execution-host-v1\",\"ok\":false,\"operation\":\"executeCapability\",\"protocol\":\"vela.host-execution-result.v1\",\"requestId\":\"unknown\",\"schemaVersion\":\"1.0\",\"sessionId\":\"unknown\"}";
+                return "{\"error\":{\"code\":\"" + code + "\",\"message\":\"The Vela Host execution request was rejected.\",\"mutationCommitted\":" + (mutationCommitted ? "true" : code === "HOST_EXECUTION_MUTATION_FAILED" ? "null" : "false") + "},\"hostExecutionRevision\":\"vela-execution-host-v1\",\"ok\":false,\"operation\":\"executeCapability\",\"protocol\":\"vela.host-execution-result.v1\",\"requestId\":\"unknown\",\"schemaVersion\":\"1.0\",\"sessionId\":\"unknown\"}";
             }
         }
     }
