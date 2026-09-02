@@ -108,15 +108,20 @@
             var capturedGeneration = generation;
             var capturedRecordGeneration = record.generation;
             var chain = Promise.resolve();
+            var executionReceipt = null;
             var index;
             for (index = 0; index < protocol.HARD_LIMITS.maxPlanSteps; index += 1) {
                 chain = chain.then(function () {
                     var currentTask = record.taskRun.snapshot();
-                    if (disposed || generation !== capturedGeneration || record.generation !== capturedRecordGeneration || currentTask.state !== "active" || currentTask.executionArmed !== true) { return null; }
+                    if (disposed || generation !== capturedGeneration || record.generation !== capturedRecordGeneration || currentTask.state !== "active" || currentTask.executionArmed !== true) {
+                        if (!executionReceipt && currentTask.state === "cancelled") { executionReceipt = protocol.deepFreeze({ committed: false, code: "AGENT_DRIVER_CANCELLED" }); }
+                        return null;
+                    }
                     var view = planStore.getPlanView(executionPlanId);
                     if (view.state === "consumed") { record.taskRun.complete(); return null; }
                     if (view.nextStep >= view.actionCount) { protocol.fail(protocol.ERROR_CODES.PLAN_FAILED, "Execution plan did not reach a terminal state."); }
-                    return Promise.resolve(preflight.executeStep({ planId: executionPlanId, stepIndex: view.nextStep })).then(function () {
+                    return Promise.resolve(preflight.executeStep({ planId: executionPlanId, stepIndex: view.nextStep })).then(function (stepOutcome) {
+                        executionReceipt = protocol.deepFreeze({ committed: Boolean(stepOutcome && stepOutcome.result && stepOutcome.result.committed === true), code: null });
                         var completedView = planStore.getPlanView(executionPlanId);
                         if (completedView.state === "consumed" && record.taskRun.snapshot().state === "active") { record.taskRun.complete(); }
                         return null;
@@ -127,10 +132,14 @@
                 record.running = false;
                 var finalView = planStore.getPlanView(executionPlanId);
                 if (record.taskRun.snapshot().state === "active" && finalView.state !== "consumed") { record.taskRun.block(protocol.ERROR_CODES.PLAN_FAILED); }
-                return progress(record);
+                var finalProgress = progress(record);
+                return protocol.deepFreeze({ taskRunId: finalProgress.taskRunId, authorizedPlanId: finalProgress.authorizedPlanId, executionPlanId: finalProgress.executionPlanId, taskState: finalProgress.taskState, executionArmed: finalProgress.executionArmed, actionCount: finalProgress.actionCount, nextStep: finalProgress.nextStep, candidateStates: finalProgress.candidateStates, terminalErrorCode: finalProgress.terminalErrorCode, cancelReason: finalProgress.cancelReason, executionReceipt: executionReceipt });
             }, function (error) {
+                var errorCommitted;
                 record.running = false;
                 if (record.taskRun.snapshot().state === "active") { record.taskRun.block(stableCode(error)); }
+                errorCommitted = executionReceipt && executionReceipt.committed === true ? true : error && Object.prototype.hasOwnProperty.call(error, "committed") ? (error.committed === true ? true : error.committed === false ? false : null) : false;
+                error.executionReceipt = protocol.deepFreeze({ committed: errorCommitted, code: stableCode(error) });
                 throw error;
             });
         }

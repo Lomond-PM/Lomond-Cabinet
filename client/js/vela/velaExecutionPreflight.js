@@ -469,10 +469,13 @@
         function normalizeExecutorResult(value) {
             protocol.assertSafeJson(value);
             if (!protocol.isPlainObject(value)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Executor result is invalid."); }
-            protocol.assertNoUnknownKeys(value, ["ok", "summary"], "executionPreflight.executorResult");
+            protocol.assertNoUnknownKeys(value, ["ok", "committed", "summary"], "executionPreflight.executorResult");
             if (typeof protocol.getOwnDataProperty(value, "ok") !== "boolean") { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Executor result is invalid."); }
+            if (value.committed !== undefined && typeof protocol.getOwnDataProperty(value, "committed") !== "boolean") { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Executor commit truth is invalid."); }
             if (value.summary !== undefined) { protocol.assertJsonBudget(value.summary, { maxBytes: protocol.HARD_LIMITS.maxErrorDetailsJsonBytes }); }
-            return protocol.deepFreeze(protocol.cloneJson(value, { maxBytes: protocol.HARD_LIMITS.maxErrorDetailsJsonBytes }));
+            var normalized = protocol.cloneJson(value, { maxBytes: protocol.HARD_LIMITS.maxErrorDetailsJsonBytes });
+            if (normalized.committed === undefined) { normalized.committed = normalized.ok === true; }
+            return protocol.deepFreeze(normalized);
         }
 
         function executeStep(input) {

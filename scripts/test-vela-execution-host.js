@@ -118,15 +118,15 @@ function run() {
     const setThrow = makeRealm({ failSetValue: true });
     const setThrowAuthority = authority(setThrow.realm);
     const setThrowResult = result(setThrow.realm.AEToolbox.VelaExecution, request(setThrowAuthority, setThrow.realm.AEToolbox.__velaPropertyValueDigestV1(57.5), 70));
-    check(setThrowResult.ok === false && setThrowResult.error.code === "HOST_EXECUTION_MUTATION_FAILED" && setThrow.getSetCalls() === 1 && setThrow.getUndoBegins() === 1 && setThrow.getUndoEnds() === 1, "setValue failure is a non-retryable mutation failure with a closed Undo group.");
+    check(setThrowResult.ok === false && setThrowResult.error.code === "HOST_EXECUTION_MUTATION_FAILED" && setThrowResult.error.mutationCommitted === null && setThrow.getSetCalls() === 1 && setThrow.getUndoBegins() === 1 && setThrow.getUndoEnds() === 1, "setValue failure is a non-retryable mutation failure with unknown commit truth and a closed Undo group.");
     const postRead = makeRealm({ failReadAfterSet: true });
     const postReadAuthority = authority(postRead.realm);
     const postReadResult = result(postRead.realm.AEToolbox.VelaExecution, request(postReadAuthority, postRead.realm.AEToolbox.__velaPropertyValueDigestV1(57.5), 70));
-    check(postReadResult.ok === false && postReadResult.error.code === "HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE" && !postReadResult.result && postRead.getSetCalls() === 1 && postRead.getUndoBegins() === 1 && postRead.getUndoEnds() === 1, "Post-write digest read failure is committed-result unavailable and returns no success result.");
+    check(postReadResult.ok === false && postReadResult.error.code === "HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE" && postReadResult.error.mutationCommitted === true && !postReadResult.result && postRead.getSetCalls() === 1 && postRead.getUndoBegins() === 1 && postRead.getUndoEnds() === 1, "Post-write digest read failure is committed-result unavailable with committed truth and returns no success result.");
     const postSerialize = makeRealm({ failSerializeAfterSet: true });
     const postSerializeAuthority = authority(postSerialize.realm);
     const postSerializeResult = result(postSerialize.realm.AEToolbox.VelaExecution, request(postSerializeAuthority, postSerialize.realm.AEToolbox.__velaPropertyValueDigestV1(57.5), 70));
-    check(postSerializeResult.ok === false && postSerializeResult.error.code === "HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE" && !postSerializeResult.result && postSerialize.getSetCalls() === 1 && postSerialize.getUndoBegins() === 1 && postSerialize.getUndoEnds() === 1, "Post-write envelope serialization failure preserves committed-result unavailable semantics.");
+    check(postSerializeResult.ok === false && postSerializeResult.error.code === "HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE" && postSerializeResult.error.mutationCommitted === true && !postSerializeResult.result && postSerialize.getSetCalls() === 1 && postSerialize.getUndoBegins() === 1 && postSerialize.getUndoEnds() === 1, "Post-write envelope serialization failure preserves committed-result unavailable and committed truth.");
     console.log("test-vela-execution-host: " + assertions + " assertions passed.");
 }
 try { run(); } catch (error) { console.error(error && error.stack ? error.stack : error); process.exitCode = 1; }

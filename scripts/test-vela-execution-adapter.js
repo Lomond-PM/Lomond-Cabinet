@@ -54,8 +54,11 @@ function decodeExecutionSource(source) {
     assert.ok(source.startsWith(prefix) && source.endsWith(")"), "Unexpected execution Host facade.");
     return JSON.parse(JSON.parse(source.slice(prefix.length, -1)));
 }
-function hostError(request, code) {
-    return JSON.stringify({ protocol: "vela.host-execution-result.v1", schemaVersion: "1.0", requestId: request.requestId, sessionId: request.sessionId, operation: "executeCapability", ok: false, hostExecutionRevision: "vela-execution-host-v1", error: { code, message: "The Vela Host execution request was rejected." } });
+function hostError(request, code, mutationCommitted) {
+    return JSON.stringify({ protocol: "vela.host-execution-result.v1", schemaVersion: "1.0", requestId: request.requestId, sessionId: request.sessionId, operation: "executeCapability", ok: false, hostExecutionRevision: "vela-execution-host-v1", error: { code, message: "The Vela Host execution request was rejected.", mutationCommitted } });
+}
+function hostSuccess(request) {
+    return JSON.stringify({ protocol: "vela.host-execution-result.v1", schemaVersion: "1.0", requestId: request.requestId, sessionId: request.sessionId, operation: "executeCapability", ok: true, hostExecutionRevision: "vela-execution-host-v1", result: { capabilityId: "set-opacity-v1", valueKind: "number", resultingValueDigest: "sha256:" + "a".repeat(64) } });
 }
 function run() {
     const protocol = protocolModule.createProtocol(runtime());
@@ -70,11 +73,20 @@ function run() {
     check(!/\beval\s*\(|\bFunction\s*\(/.test(require("fs").readFileSync(require("path").join(__dirname, "..", "client", "js", "vela", "velaExecutionAdapter.js"), "utf8")), "Execution adapter contains no dynamic-code path.");
     return makeExecutionHarness((source, callback) => {
         const request = decodeExecutionSource(source);
-        callback(hostError(request, "HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE"));
-        callback(hostError(request, "HOST_EXECUTION_READ_FAILED"));
+        callback(hostError(request, "HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE", true));
+        callback(hostError(request, "HOST_EXECUTION_READ_FAILED", false));
     }).then(async (harness) => {
-        await expectRejectCode(harness.adapter.executeValidatedAction(harness.action, Object.freeze({}), harness.trustedExecutionContext), harness.protocol.ERROR_CODES.PLAN_FAILED, "Committed-result unavailable maps to PLAN_FAILED.");
+        await assert.rejects(harness.adapter.executeValidatedAction(harness.action, Object.freeze({}), harness.trustedExecutionContext), (error) => { check(error.code === harness.protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE && error.committed === true, "Committed-result unavailable maps to VERIFICATION_UNAVAILABLE with committed true."); return true; });
         check(harness.hostCalls.length === 1, "Adapter must invoke Host at most once and ignore duplicate callbacks.");
+        const mutationFailed = await makeExecutionHarness((source, callback) => { callback(hostError(decodeExecutionSource(source), "HOST_EXECUTION_MUTATION_FAILED", null)); });
+        await assert.rejects(mutationFailed.adapter.executeValidatedAction(mutationFailed.action, Object.freeze({}), mutationFailed.trustedExecutionContext), (error) => { check(error.code === mutationFailed.protocol.ERROR_CODES.PLAN_FAILED && error.committed === null, "Mutation failure preserves unknown commit truth."); return true; });
+        const precommit = await makeExecutionHarness((source, callback) => { callback(hostError(decodeExecutionSource(source), "HOST_EXECUTION_TARGET_NOT_FOUND", false)); });
+        await assert.rejects(precommit.adapter.executeValidatedAction(precommit.action, Object.freeze({}), precommit.trustedExecutionContext), (error) => { check(error.code === precommit.protocol.ERROR_CODES.UNKNOWN_TARGET && error.committed === false, "Target missing preserves committed false."); return true; });
+        const unknown = await makeExecutionHarness(() => { throw new Error("transport"); });
+        await assert.rejects(unknown.adapter.executeValidatedAction(unknown.action, Object.freeze({}), unknown.trustedExecutionContext), (error) => { check(error.code === unknown.protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE && error.committed === null, "Host dispatch transport failure preserves committed null."); return true; });
+        const success = await makeExecutionHarness((source, callback) => { callback(hostSuccess(decodeExecutionSource(source))); });
+        const successResult = await success.adapter.executeValidatedAction(success.action, Object.freeze({}), success.trustedExecutionContext);
+        check(successResult.ok === true && successResult.committed === true && Object.isFrozen(successResult), "Successful Adapter result carries bounded committed true.");
         console.log("test-vela-execution-adapter: " + assertions + " assertions passed.");
     });
 }
