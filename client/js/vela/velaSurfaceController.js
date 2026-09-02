@@ -78,7 +78,7 @@
             catch (error) { reportAgentProjectionError(error, "unsubscribe"); }
             return true;
         }
-        function projectedStatusText(state) {
+        function projectedStatusText(state, errorCode) {
             var keys = {
                 "experimental-unavailable": "vela.surfaceStatusExperimentalUnavailable",
                 "experimental-disabled": "vela.surfaceStatusExperimentalDisabled",
@@ -102,6 +102,12 @@
                 "blocked": "vela.surfaceStatusBlocked",
                 "error": "vela.surfaceStatusFailed"
             };
+            if (state === "blocked") {
+                if (errorCode === "CONTEXT_STALE") { return t("vela.surfaceStatusContextStale"); }
+                if (errorCode === "VERIFICATION_UNAVAILABLE") { return t("vela.surfaceContextUnavailable"); }
+                if (errorCode === "UNKNOWN_TARGET") { return t("vela.surfaceNoActionableTarget"); }
+                if (errorCode !== "REVIEW_REQUIRED" && errorCode !== "PERMISSION_DENIED") { return t("vela.surfaceStatusFailed"); }
+            }
             return t(keys[state] || "vela.surfaceStatusFailed");
         }
         function synchronizeStatusAccessibility() {
@@ -148,7 +154,7 @@
                 authorityButton.textContent = t(authorityActive ? "vela.surfaceRevokeOpacityConsent" : "vela.surfaceGrantOpacityConsent");
                 authorityButton.setAttribute("aria-label", authorityButton.textContent);
             }
-            elements.statusText.textContent = authorityState && ["active", "executing", "consumed", "revoked", "expired", "failed"].indexOf(authorityState.state) !== -1 ? t("vela.surfaceAuthorityStatus." + authorityState.state) : projectedStatusText(projection.state);
+            elements.statusText.textContent = authorityState && ["active", "executing", "consumed", "revoked", "expired", "failed"].indexOf(authorityState.state) !== -1 && projection.state !== "blocked" && projection.state !== "cancelled" && projection.state !== "completed" && projection.state !== "error" ? t("vela.surfaceAuthorityStatus." + authorityState.state) : projectedStatusText(projection.state, providerState && providerState.errorCode);
             elements.root.setAttribute("data-vela-surface-state", projection.state);
             elements.statusSlot.setAttribute("data-tone", projection.tone);
             elements.statusSlot.setAttribute("data-vela-provider-state", providerState && providerState.state || "idle");

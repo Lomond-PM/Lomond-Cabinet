@@ -1,6 +1,8 @@
 "use strict";
 
 const assert = require("assert");
+const fs = require("fs");
+const vm = require("vm");
 const PresentationModel = require("../client/js/vela/velaPresentationModel.js").VelaPresentationModel;
 const TranscriptView = require("../client/js/vela/velaTranscriptView.js").VelaTranscriptView;
 const ComposerView = require("../client/js/vela/velaComposerView.js").VelaComposerView;
@@ -50,11 +52,14 @@ function fixture(options) {
         getState() { return Object.freeze(Object.assign({}, confirmationState)); }
     };
     const controller = SurfaceController.create({ surface: { getElementsForTest: () => elements }, provider, confirmation, authority, t: options.t || ((key) => "t:" + key), PresentationModel, TranscriptView, ComposerView, ConfirmationView, ActivationPolicy, agentProjection: options.agentProjection || null, onAgentProjectionError: options.onAgentProjectionError });
-    return { controller, elements, request, confirmationRequest, calls, setProvider(next) { providerState = next; }, setConfirmation(next) { confirmationState = next; } };
+    return { controller, elements, request, confirmationRequest, calls, setProvider(next) { providerState = next; }, setConfirmation(next) { confirmationState = next; }, setAuthority(next) { authorityState = next; } };
 }
 async function flush() { await Promise.resolve(); await Promise.resolve(); }
 async function mountEnabled(test) { check(test.controller.mount(), "controller mounts before explicit experimental opt-in"); test.controller.configureExperimental({ endpoint: "http://127.0.0.1:1234", model: "configured-model", acknowledged: true }); await test.controller.enableExperimental(); equal(test.controller.getExperimentalState().enabled, true, "explicit readiness enables only the current experimental session"); return test; }
 async function run() {
+    const i18nSandbox = { window: {}, console }; vm.runInNewContext(fs.readFileSync(require.resolve("../client/js/i18n.js"), "utf8"), i18nSandbox);
+    equal(i18nSandbox.window.I18n.dictionaries.en["vela.surfaceStatusContextStale"], "Context changed. Start the action again", "CONTEXT_STALE status has concise English copy");
+    equal(i18nSandbox.window.I18n.dictionaries["zh-CN"]["vela.surfaceStatusContextStale"], "上下文已变化，请重新操作", "CONTEXT_STALE status has accurate Chinese copy");
     equal(PresentationModel.errorDisplayKey("VERIFICATION_UNAVAILABLE"), "vela.surfaceContextUnavailable", "AE context error is localized");
     equal(PresentationModel.errorDisplayKey("PROVIDER_CONNECTION_FAILED"), "vela.surfaceProviderConnection", "connection error is localized");
     equal(PresentationModel.errorDisplayKey("PROVIDER_TIMEOUT"), "vela.surfaceProviderTimeout", "timeout error is localized");
@@ -70,6 +75,11 @@ async function run() {
     equal(PresentationModel.projectSurfaceState({ state: "idle" }, { state: "executing" }, "", true).state, "executing", "local execution projects executing");
     equal(PresentationModel.projectSurfaceState({ state: "cancelled" }, { state: "idle" }, "", true).state, "cancelled", "trusted cancellation projects cancelled");
     equal(PresentationModel.projectSurfaceState({ state: "failed", text: "completed" }, { state: "idle" }, "", true).state, "error", "trusted failure projects error regardless of model text");
+    equal(PresentationModel.projectSurfaceState({ state: "objective-blocked", errorCode: "CONTEXT_STALE" }, { state: "review-approved" }, "", true).state, "blocked", "terminal CONTEXT_STALE blocks before historical approved review presentation");
+    equal(PresentationModel.projectSurfaceState({ state: "completed" }, { state: "review-approved" }, "", true).state, "completed", "completed terminal state wins over historical approved review presentation");
+    equal(PresentationModel.projectSurfaceState({ state: "cancelled" }, { state: "review-approved" }, "", true).state, "cancelled", "cancelled terminal state wins over historical approved review presentation");
+    equal(PresentationModel.projectSurfaceState({ state: "objective-blocked", errorCode: "VERIFICATION_UNAVAILABLE" }, { state: "review-approved" }, "", true).state, "blocked", "verification terminal state wins over historical approved review presentation");
+    equal(PresentationModel.projectSurfaceState({ state: "pending" }, { state: "review-approved" }, "", true).state, "awaiting-continuation", "nonterminal approved review retains awaiting-continuation presentation");
     equal(PresentationModel.statusTone("experimental-disabled"), "warning", "trusted disabled enum maps to warning without display-text matching");
     equal(PresentationModel.statusTone("idle"), "idle", "idle retains its existing semantic tone");
     equal(PresentationModel.statusTone("requesting"), "processing", "requesting retains processing semantics");
@@ -132,6 +142,25 @@ async function run() {
     const blocked = fixture({ authority: true }); await mountEnabled(blocked); const blockedActions = blocked.elements.actionSlot.children; blocked.elements.composer.value = "opacity 47"; blockedActions[0].emit("click"); blocked.setProvider({ state: "objective-blocked", text: null, errorCode: "REVIEW_REQUIRED" }); blocked.request.resolve(); await flush();
     check(!blockedActions[0].hidden && blockedActions[1].hidden && blockedActions[3].hidden && blockedActions[4].hidden && blockedActions[5].hidden && !blockedActions[6].hidden, "A1 REVIEW_REQUIRED restores Send and delegation while keeping Review, Approve, and Reject hidden");
     equal(blocked.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceReviewRequired", "A1 REVIEW_REQUIRED renders the bounded authorization notice");
+    const staleTerminal = fixture({ authority: true }); await mountEnabled(staleTerminal);
+    staleTerminal.setProvider({ state: "objective-blocked", text: null, errorCode: "CONTEXT_STALE" });
+    staleTerminal.setConfirmation({ state: "review-approved", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" });
+    staleTerminal.setAuthority({ state: "failed", active: false }); staleTerminal.controller.refreshLocale();
+    equal(staleTerminal.elements.root.getAttribute("data-vela-surface-state"), "blocked", "terminal CONTEXT_STALE suppresses historical approved review and authority metadata");
+    equal(staleTerminal.elements.statusText.textContent, "t:vela.surfaceStatusContextStale", "CONTEXT_STALE uses the stale-context status semantic");
+    check(staleTerminal.elements.statusText.textContent !== "t:vela.surfaceStatusBlocked" && staleTerminal.elements.statusText.textContent !== "t:vela.surfaceAuthorityStatus.failed", "CONTEXT_STALE never falls back to authorization status");
+    for (const terminalCase of [
+        { code: "VERIFICATION_UNAVAILABLE", key: "vela.surfaceContextUnavailable" },
+        { code: "UNKNOWN_TARGET", key: "vela.surfaceNoActionableTarget" },
+        { code: "AGENT_DRIVER_TASK_UNVERIFIED", key: "vela.surfaceStatusFailed" },
+        { code: "PLAN_FAILED", key: "vela.surfaceStatusFailed" },
+        { code: "LIFECYCLE_BLOCKED", key: "vela.surfaceStatusFailed" }
+    ]) {
+        staleTerminal.setProvider({ state: "objective-blocked", text: null, errorCode: terminalCase.code }); staleTerminal.controller.refreshLocale();
+        equal(staleTerminal.elements.statusText.textContent, "t:" + terminalCase.key, terminalCase.code + " terminal does not fall back to authorization status");
+    }
+    staleTerminal.setProvider({ state: "objective-blocked", text: null, errorCode: "PERMISSION_DENIED" }); staleTerminal.controller.refreshLocale();
+    equal(staleTerminal.elements.statusText.textContent, "t:vela.surfaceStatusBlocked", "PERMISSION_DENIED retains the canonical authorization status");
     matrix.setProvider({ state: "cancelled", text: null, errorCode: "PROVIDER_REQUEST_ABORTED" }); matrix.controller.refreshLocale();
     check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "provider cancellation terminal exposes only Send");
     matrix.setProvider({ state: "intent-rejected", text: null, errorCode: null }); matrix.controller.refreshLocale();

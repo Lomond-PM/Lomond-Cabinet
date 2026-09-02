@@ -117,13 +117,23 @@
             captured = generation;
             return Promise.resolve(runtimePort.continueApprovedReview({ objectiveId: review.objectiveId, taskId: review.taskId, sessionId: review.sessionId, turnId: review.turnId, taskPlanId: review.taskPlanId, taskPlanRevision: review.taskPlanRevision, stepId: review.stepId, capabilityIntent: active.intent, localExpectation: review.localExpectation, reviewId: review.reviewId, reviewRevision: review.revision, reviewCorrelation: review.reviewCorrelation })).then(function (continuation) {
                 if (!current(captured)) { return snapshot(); }
-                if (continuation && continuation.state === "ready") { return snapshot(); }
+                if (continuation && continuation.state === "verification-required") {
+                    active.committed = true; event("tool/result", { taskId: active.taskId, capabilityId: "set-opacity-v1", committed: true }); transition("verifying");
+                    return runtimePort.verifyCommittedAction({ objectiveId: active.objectiveId, taskId: active.taskId, expectedOpacity: active.intent.params.opacity }).then(function (verification) {
+                        if (!current(captured) || state !== "verifying") { return snapshot(); }
+                        active.observations += 1;
+                        event("ae/state-observed", { taskId: active.taskId, phase: "post-action", fresh: verification && verification.state === "verified", observedOpacity: null });
+                        if (verification && verification.state === "verified") { return terminal("completed", null); }
+                        if (verification && verification.state === "cancelled") { return terminal("cancelled", verification.code || "AGENT_DRIVER_CANCELLED"); }
+                        return terminal("blocked", verification && verification.code || ERROR_CODES.AGENT_DRIVER_TASK_UNVERIFIED);
+                    }, function (failure) { return fail(captured, failure); });
+                }
                 if (continuation && continuation.state === "cancelled") { return terminal("cancelled", continuation.code || "AGENT_DRIVER_CANCELLED"); }
                 return terminal("blocked", continuation && continuation.code || ERROR_CODES.AGENT_DRIVER_EXECUTION_FAILED);
             }, function (failure) { return fail(captured, failure); });
         }
         function cancel() { generation += 1; if (disposed || !active || active.terminal || state === "idle" || state === "terminal") { return false; } try { if (runtimePort && typeof runtimePort.cancel === "function") { runtimePort.cancel(); } } catch (ignored) {} terminal("cancelled", "AGENT_DRIVER_CANCELLED"); return true; }
-        function attachRuntimePort(port) { if (disposed || runtimePort || !port || typeof port.reason !== "function" || typeof port.submitIntent !== "function" || typeof port.continueApprovedReview !== "function" || typeof port.verifyOpacity !== "function") { return false; } runtimePort = port; return true; }
+        function attachRuntimePort(port) { if (disposed || runtimePort || !port || typeof port.reason !== "function" || typeof port.submitIntent !== "function" || typeof port.continueApprovedReview !== "function" || typeof port.verifyCommittedAction !== "function" || typeof port.verifyOpacity !== "function") { return false; } runtimePort = port; return true; }
         function dispose() { if (disposed) { return false; } if (active && !active.terminal && state !== "idle") { cancel(); } disposed = true; generation += 1; runtimePort = null; listeners = []; return true; }
         return Object.freeze({ attachRuntimePort: attachRuntimePort, startObjective: startObjective, resolveReview: resolveReview, cancel: cancel, dispose: dispose, getSnapshot: snapshot, subscribe: function (listener) { var subscribed = true; if (typeof listener !== "function" || disposed) { throw error(ERROR_CODES.AGENT_DRIVER_DISPOSED); } listeners.push(listener); try { listener(snapshot()); } catch (listenerError) { try { onListenerError(listenerError, Object.freeze({ phase: "driver-listener" })); } catch (ignored) {} } return Object.freeze({ unsubscribe: function () { var index; if (!subscribed) { return; } subscribed = false; index = listeners.indexOf(listener); if (index !== -1) { listeners.splice(index, 1); } } }); } });
     }

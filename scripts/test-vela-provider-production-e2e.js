@@ -3,7 +3,7 @@
 const assert = require("assert");
 const composerPath = require.resolve("../client/js/vela/velaConfirmedAuthorityComposer");
 const realComposerModule = require(composerPath);
-const composerTracker = { creates: 0, composes: 0, cancels: 0, disposes: 0, instances: [], semantics: [], policies: [] };
+const composerTracker = { creates: 0, composes: 0, executes: 0, cancels: 0, disposes: 0, instances: [], semantics: [], policies: [], deferExecuteSettlement: false, pendingExecuteSettlements: [] };
 require.cache[composerPath].exports = Object.freeze({
     MODULE_REVISION: realComposerModule.MODULE_REVISION,
     createReviewedSemantics(intent, candidate, resolver) { const value = realComposerModule.createReviewedSemantics(intent, candidate, resolver); composerTracker.semantics.push({ intent, candidate, value }); return value; },
@@ -14,7 +14,7 @@ require.cache[composerPath].exports = Object.freeze({
         const real = realComposerModule.createConfirmedAuthorityComposer(options);
         const record = { options, real };
         composerTracker.instances.push(record);
-        return Object.freeze({ compose(input) { composerTracker.composes += 1; return real.compose(input); }, cancel() { composerTracker.cancels += 1; return real.cancel(); }, dispose() { composerTracker.disposes += 1; return real.dispose(); } });
+        return Object.freeze({ compose(input) { composerTracker.composes += 1; return real.compose(input); }, executeConfirmed() { composerTracker.executes += 1; return Promise.resolve(real.executeConfirmed()).then((result) => composerTracker.deferExecuteSettlement ? new Promise((resolve) => { composerTracker.pendingExecuteSettlements.push({ result, release() { resolve(result); } }); }) : result); }, cancel() { composerTracker.cancels += 1; return real.cancel(); }, dispose() { composerTracker.disposes += 1; return real.dispose(); } });
     }
 });
 const runtimeModule = require("../client/js/vela/velaRuntime");
@@ -39,7 +39,7 @@ let assertions = 0;
 const HOST = "host_0123456789abcdef0123456789abcdef0123456789abcdef";
 function check(value, message) { assert.ok(value, message); assertions += 1; }
 async function expectCode(value, code, message) { await assert.rejects(Promise.resolve(value), (error) => error && (Array.isArray(code) ? code.indexOf(error.code) !== -1 : error.code === code), message); assertions += 1; }
-async function flushUntil(predicate, message) { let index; for (index = 0; index < 20 && !predicate(); index += 1) { await Promise.resolve(); } check(predicate(), message); }
+async function flushUntil(predicate, message) { let index; for (index = 0; index < 40 && !predicate(); index += 1) { await Promise.resolve(); if (index % 5 === 4) await new Promise((resolve) => setImmediate(resolve)); } check(predicate(), message); }
 function decode(source) {
     const contextPrefix = "AEToolbox.VelaContext.handle(";
     const executionPrefix = "AEToolbox.VelaExecution.handle(";
@@ -52,7 +52,7 @@ function hostContextError(request, code, reason) { const error = { code, message
 function hostExecution(request, digest) { return JSON.stringify({ protocol: "vela.host-execution-result.v1", schemaVersion: "1.0", requestId: request.requestId, sessionId: request.sessionId, operation: "executeCapability", ok: true, hostExecutionRevision: "vela-execution-host-v1", result: { capabilityId: "set-opacity-v1", valueKind: "number", resultingValueDigest: digest } }); }
 function makeHarness() {
     let now = 1700000000000;
-    const state = { value: 25, selectionCount: 1, nativeLayerId: 45, layerIndex: 3, generation: 3, epoch: 1, error: null, executionError: null, providerMode: "proposal", proposalOpacity: 57.5, groundingUnavailableOnce: false, contextHostErrorOnce: null, contextHostReasonOnce: null, advanceLayerIdAfterCapture: false, deferProviderResponse: false, pendingProviderReads: [], cancelledProviderRequestIds: [], deferContextCapture: false, pendingContextCaptures: [], baselineReadError: null, propertyCaptureCount: 0 };
+    const state = { value: 25, selectionCount: 1, nativeLayerId: 45, layerIndex: 3, generation: 3, epoch: 1, error: null, executionError: null, executionMutationCommitted: undefined, deferExecutionSettlement: false, pendingExecutionSettlements: [], committedObservationError: null, deferCommittedObservation: false, pendingCommittedObservations: [], providerMode: "proposal", proposalOpacity: 57.5, groundingUnavailableOnce: false, contextHostErrorOnce: null, contextHostReasonOnce: null, advanceLayerIdAfterCapture: false, deferProviderResponse: false, pendingProviderReads: [], cancelledProviderRequestIds: [], deferContextCapture: false, pendingContextCaptures: [], baselineReadError: null, propertyCaptureCount: 0 };
     const calls = [];
     const providerBodies = [];
     const environment = Object.assign({}, nodeRuntime, {
@@ -77,10 +77,11 @@ function makeHarness() {
     const session = sessionRuntime.createSessionLog();
     const runtime = runtimeModule.createRuntime({ activationPolicy, environment, exactAgentSession: session, invokeHost(source, callback) {
         const call = decode(source); calls.push(call);
-        if (call.kind === "execution") { if (state.executionError) { callback(JSON.stringify({ protocol: "vela.host-execution-result.v1", schemaVersion: "1.0", requestId: call.request.requestId, sessionId: call.request.sessionId, operation: "executeCapability", ok: false, hostExecutionRevision: "vela-execution-host-v1", error: { code: state.executionError, message: "bounded" } })); return; } state.value = call.request.scope.params.opacity; callback(hostExecution(call.request, digestContext.digestPropertyValue("number", state.value))); return; }
+        if (call.kind === "execution") { const complete = () => { if (state.executionError) { const error = { code: state.executionError, message: "bounded" }; if (typeof state.executionMutationCommitted === "boolean") error.mutationCommitted = state.executionMutationCommitted; if (state.executionMutationCommitted === true) state.value = call.request.scope.params.opacity; callback(JSON.stringify({ protocol: "vela.host-execution-result.v1", schemaVersion: "1.0", requestId: call.request.requestId, sessionId: call.request.sessionId, operation: "executeCapability", ok: false, hostExecutionRevision: "vela-execution-host-v1", error })); return; } state.value = call.request.scope.params.opacity; callback(hostExecution(call.request, digestContext.digestPropertyValue("number", state.value))); }; if (state.deferExecutionSettlement) { state.pendingExecutionSettlements.push({ release: complete }); return; } complete(); return; }
         if (call.request.operation === "getCapabilities") { callback(hostContext(call.request, { hostInstanceId: HOST, hostReloadEpoch: state.epoch, tier: 0, capabilities: { maxTier: 3, nativeLayerIdAvailable: true, bindingContextAvailable: true, hostAdapterRevision: "vela-context-host-v4" } })); return; }
         if (state.error) { callback(hostContextError(call.request, state.error)); return; }
         if (call.request.operation === "captureContext") { if (state.contextHostErrorOnce) { const code = state.contextHostErrorOnce; const reason = state.contextHostReasonOnce; state.contextHostErrorOnce = null; state.contextHostReasonOnce = null; callback(hostContextError(call.request, code, reason)); return; } if (state.groundingUnavailableOnce) { state.groundingUnavailableOnce = false; callback(hostContextError(call.request, "HOST_CONTEXT_UNAVAILABLE", "no-actionable-target")); return; } const complete = () => { callback(hostContext(call.request, { hostInstanceId: HOST, hostReloadEpoch: state.epoch, tier: 1, projectGeneration: state.generation, activeComp: { itemId: 12, projectGeneration: state.generation, type: "CompItem", width: 1920, height: 1080, duration: 10, frameRate: 30 }, selection: { count: state.selectionCount, identityQuality: "native-layer-id", items: state.selectionCount === 1 ? [{ nativeLayerId: state.nativeLayerId, layerIndex: state.layerIndex, selectedOrder: 0, matchName: "ADBE AV Layer", type: "av" }] : [] } })); if (state.advanceLayerIdAfterCapture) { state.advanceLayerIdAfterCapture = false; state.nativeLayerId += 1; } }; if (state.deferContextCapture) { state.pendingContextCaptures.push({ requestId: call.request.requestId, release: complete }); return; } complete(); return; }
+        if (call.request.operation === "observeCommittedPropertyValue") { const complete = () => { if (state.committedObservationError) callback(hostContextError(call.request, state.committedObservationError)); else callback(hostContext(call.request, { hostInstanceId: HOST, hostReloadEpoch: state.epoch, projectGeneration: state.generation, tier: 3, target: Object.assign({}, call.request.scope.target, { value: { kind: "number", data: state.value } }) })); }; if (state.deferCommittedObservation) { state.pendingCommittedObservations.push({ release: complete }); return; } complete(); return; }
         state.propertyCaptureCount += 1;
         if (state.baselineReadError && state.propertyCaptureCount > 1) { callback(hostContextError(call.request, state.baselineReadError)); return; }
         callback(hostContext(call.request, { hostInstanceId: HOST, hostReloadEpoch: state.epoch, projectGeneration: state.generation, sampleTime: 1, tier: 3, targets: call.request.scope.targets.map((target, index) => ({ targetOrdinal: index, nativeLayerId: target.nativeLayerId, layerIndex: target.layerIndex, propertyPath: target.propertyPath, propertyMatchName: "ADBE Opacity", value: { kind: "number", data: state.value } })) }));
@@ -165,13 +166,24 @@ async function run() {
     const correlationHarness = makeHarness(); correlationHarness.state.proposalOpacity = 47; await correlationHarness.runtime.initialize();
     const firstCorrelation = await directBarrier(correlationHarness, "correlation", 1);
     const providerCountBeforeContinuation = correlationHarness.providerBodies.length;
+    const composesBeforeContinuation = composerTracker.composes;
+    const executesBeforeContinuation = composerTracker.executes;
     const firstContinuation = await firstCorrelation.port.continueApprovedReview(firstCorrelation.input);
-    check(firstContinuation.state === "ready", "first direct continuation consumes the valid correlation once.");
+    check(firstContinuation.state === "verification-required", "first direct continuation composes, executes and reaches the A1 checkpoint once: " + JSON.stringify(firstContinuation));
     check(Object.isFrozen(firstCorrelation.semantic.value) && Object.isFrozen(firstCorrelation.policy.value) && firstCorrelation.semantic.intent === firstCorrelation.input.capabilityIntent && firstCorrelation.policy.decision.decision === "REVIEW_REQUIRED", "Runtime stores canonical immutable reviewed semantics and real REVIEW_REQUIRED policy truth from the initial candidate path.");
-    check(privateClaim(firstCorrelation).claimed === true, "Runtime-private claim consumes the claimable approved continuation exactly once.");
-    check(privateClaim(firstCorrelation).claimed === false, "A duplicate Runtime-private claim fails closed without minting another approval.");
+    check(privateClaim(firstCorrelation).claimed === false && composerTracker.composes === composesBeforeContinuation + 1 && composerTracker.executes === executesBeforeContinuation + 1 && correlationHarness.calls.filter((call) => call.kind === "execution").length === 1, "Runtime continuation consumes approval internally and performs exactly one compose, execute and Host mutation.");
     const duplicateContinuation = await firstCorrelation.port.continueApprovedReview(firstCorrelation.input);
-    check(duplicateContinuation.state === "blocked" && duplicateContinuation.code === "LIFECYCLE_BLOCKED", "duplicate direct continuation fails closed after one-shot consumption.");
+    check(duplicateContinuation.state === "blocked" && duplicateContinuation.code === "LIFECYCLE_BLOCKED" && composerTracker.composes === composesBeforeContinuation + 1 && composerTracker.executes === executesBeforeContinuation + 1 && correlationHarness.calls.filter((call) => call.kind === "execution").length === 1, "duplicate direct continuation fails closed without a second compose, execute or Host mutation.");
+    const committedReadsBeforeIdentityProbe = correlationHarness.calls.filter((call) => call.request && call.request.operation === "observeCommittedPropertyValue").length;
+    const wrongVerifyIdentity = await firstCorrelation.port.verifyCommittedAction({ objectiveId: "objective_wrong_verify", taskId: firstCorrelation.input.taskId, expectedOpacity: 47 });
+    check(wrongVerifyIdentity.state === "blocked" && correlationHarness.calls.filter((call) => call.request && call.request.operation === "observeCommittedPropertyValue").length === committedReadsBeforeIdentityProbe, "wrong Verify identity fails closed without consuming or reading the correct committed target.");
+    const wrongVerifyTask = await firstCorrelation.port.verifyCommittedAction({ objectiveId: firstCorrelation.input.objectiveId, taskId: "task_wrong_verify", expectedOpacity: 47 });
+    const wrongVerifyExpectation = await firstCorrelation.port.verifyCommittedAction({ objectiveId: firstCorrelation.input.objectiveId, taskId: firstCorrelation.input.taskId, expectedOpacity: 48 });
+    check(wrongVerifyTask.state === "blocked" && wrongVerifyExpectation.state === "blocked" && correlationHarness.calls.filter((call) => call.request && call.request.operation === "observeCommittedPropertyValue").length === committedReadsBeforeIdentityProbe, "wrong task or expected opacity fails closed without consuming another objective's committed capability.");
+    const firstVerified = await firstCorrelation.port.verifyCommittedAction({ objectiveId: firstCorrelation.input.objectiveId, taskId: firstCorrelation.input.taskId, expectedOpacity: 47 });
+    check(firstVerified.state === "verified" && correlationHarness.calls.filter((call) => call.request && call.request.operation === "observeCommittedPropertyValue").length === committedReadsBeforeIdentityProbe + 1, "correct logical identity consumes the private association and verifies the committed target once.");
+    const duplicateVerify = await firstCorrelation.port.verifyCommittedAction({ objectiveId: firstCorrelation.input.objectiveId, taskId: firstCorrelation.input.taskId, expectedOpacity: 47 });
+    check(duplicateVerify.state === "blocked" && correlationHarness.calls.filter((call) => call.request && call.request.operation === "observeCommittedPropertyValue").length === committedReadsBeforeIdentityProbe + 1, "duplicate committed Verify fails closed without a second Host read.");
     const secondCorrelation = await directBarrier(correlationHarness, "correlation", 2);
     check(secondCorrelation.outcome.reviewCorrelation !== firstCorrelation.outcome.reviewCorrelation, "a fresh objective receives a distinct Runtime correlation.");
     const historicalInput = Object.assign({}, secondCorrelation.input, { reviewCorrelation: firstCorrelation.outcome.reviewCorrelation });
@@ -181,32 +193,122 @@ async function run() {
     const wrongIdentityResult = await secondCorrelation.port.continueApprovedReview(wrongIdentity);
     check(wrongIdentityResult.state === "blocked", "valid correlation with wrong logical identity fails closed without consuming the valid binding.");
     const secondContinuation = await secondCorrelation.port.continueApprovedReview(secondCorrelation.input);
-    check(secondContinuation.state === "ready" && correlationHarness.providerBodies.length === providerCountBeforeContinuation + 1 && correlationHarness.calls.filter((call) => call.kind === "execution").length === 0, "valid fresh identity remains usable once with no continuation Provider request or Host mutation.");
-    check(privateClaim(secondCorrelation, { objectiveId: "objective_wrong_claim" }).claimed === false && privateClaim(secondCorrelation).claimed === false, "A wrong trusted claim identity terminalizes the approval and prevents a later valid probe.");
-    async function claimMismatch(label, override) {
+    check(secondContinuation.state === "verification-required" && correlationHarness.providerBodies.length === providerCountBeforeContinuation + 1 && correlationHarness.calls.filter((call) => call.kind === "execution").length === 2, "valid fresh identity performs one new production execution without a continuation Provider request.");
+    correlationHarness.state.nativeLayerId = 99;
+    const selectionDriftVerified = await secondCorrelation.port.verifyCommittedAction({ objectiveId: secondCorrelation.input.objectiveId, taskId: secondCorrelation.input.taskId, expectedOpacity: 47 });
+    const selectionDriftRequest = correlationHarness.calls.filter((call) => call.request && call.request.operation === "observeCommittedPropertyValue").slice(-1)[0];
+    check(selectionDriftVerified.state === "verified" && selectionDriftRequest.request.scope.target.nativeLayerId === 45, "post-commit selection drift still verifies the original execute-time native target without current-selection fallback.");
+
+    const mismatchHarness = makeHarness(); mismatchHarness.state.proposalOpacity = 47; await mismatchHarness.runtime.initialize();
+    const mismatchBarrier = await directBarrier(mismatchHarness, "post_commit_mismatch", 1); check((await mismatchBarrier.port.continueApprovedReview(mismatchBarrier.input)).state === "verification-required", "mismatch fixture commits before verification.");
+    mismatchHarness.state.value = 60;
+    check((await mismatchBarrier.port.verifyCommittedAction({ objectiveId: mismatchBarrier.input.objectiveId, taskId: mismatchBarrier.input.taskId, expectedOpacity: 47 })).state === "unverified" && mismatchHarness.calls.filter((call) => call.kind === "execution").length === 1, "external post-commit target change maps to unverified without mutation retry.");
+
+    const missingTargetHarness = makeHarness(); missingTargetHarness.state.proposalOpacity = 47; await missingTargetHarness.runtime.initialize();
+    const missingTargetBarrier = await directBarrier(missingTargetHarness, "post_commit_missing", 1); await missingTargetBarrier.port.continueApprovedReview(missingTargetBarrier.input); missingTargetHarness.state.committedObservationError = "HOST_CONTEXT_TARGET_NOT_FOUND";
+    check((await missingTargetBarrier.port.verifyCommittedAction({ objectiveId: missingTargetBarrier.input.objectiveId, taskId: missingTargetBarrier.input.taskId, expectedOpacity: 47 })).code === "VERIFICATION_UNAVAILABLE", "missing committed target blocks with canonical verification unavailable and no fallback.");
+
+    const lateVerifyHarness = makeHarness(); lateVerifyHarness.state.proposalOpacity = 47; await lateVerifyHarness.runtime.initialize();
+    const lateVerifyBarrier = await directBarrier(lateVerifyHarness, "late_verify", 1); await lateVerifyBarrier.port.continueApprovedReview(lateVerifyBarrier.input); lateVerifyHarness.state.deferCommittedObservation = true;
+    const lateVerifyPromise = lateVerifyBarrier.port.verifyCommittedAction({ objectiveId: lateVerifyBarrier.input.objectiveId, taskId: lateVerifyBarrier.input.taskId, expectedOpacity: 47 });
+    await flushUntil(() => lateVerifyHarness.state.pendingCommittedObservations.length === 1, "committed-target Verify reaches an in-flight Host read.");
+    lateVerifyBarrier.port.cancel(); lateVerifyHarness.state.deferCommittedObservation = false; lateVerifyHarness.state.pendingCommittedObservations.shift().release();
+    check((await lateVerifyPromise).state === "cancelled" && (await lateVerifyBarrier.port.verifyCommittedAction({ objectiveId: lateVerifyBarrier.input.objectiveId, taskId: lateVerifyBarrier.input.taskId, expectedOpacity: 47 })).state === "blocked", "cancelled in-flight Verify ignores late success and cannot reacquire the consumed capability.");
+
+    async function lateVerifyLifecycle(label, lifecycle, lateMode) {
         const harness = makeHarness(); harness.state.proposalOpacity = 47; await harness.runtime.initialize();
         const barrier = await directBarrier(harness, label, 1); await barrier.port.continueApprovedReview(barrier.input);
-        check(privateClaim(barrier, override(barrier)).claimed === false && privateClaim(barrier).claimed === false, label + " mismatch terminalizes the private approval record exactly once.");
-        harness.runtime.dispose();
+        harness.state.deferCommittedObservation = true;
+        const pending = barrier.port.verifyCommittedAction({ objectiveId: barrier.input.objectiveId, taskId: barrier.input.taskId, expectedOpacity: 47 });
+        await flushUntil(() => harness.state.pendingCommittedObservations.length === 1, label + " reaches one in-flight committed-target read.");
+        if (lifecycle === "reset") check(harness.runtime.resetSession(), label + " resets Runtime while Verify is pending.");
+        else if (lifecycle === "dispose") check(harness.runtime.dispose(), label + " disposes Runtime while Verify is pending.");
+        else barrier.port.cancel();
+        if (lateMode === "false") harness.state.value = 60;
+        if (lateMode === "unavailable") harness.state.committedObservationError = "HOST_CONTEXT_TARGET_NOT_FOUND";
+        harness.state.deferCommittedObservation = false; harness.state.pendingCommittedObservations.shift().release();
+        const result = await pending;
+        const reads = harness.calls.filter((call) => call.request && call.request.operation === "observeCommittedPropertyValue").length;
+        check(result.state === "cancelled" && reads === 1, label + " ignores late " + lateMode + " settlement without a second committed-target read.");
+        check((await barrier.port.verifyCommittedAction({ objectiveId: barrier.input.objectiveId, taskId: barrier.input.taskId, expectedOpacity: 47 })).state === "blocked", label + " leaves the consumed association unavailable.");
     }
-    await claimMismatch("review revision", () => ({ reviewRevision: 99 }));
-    await claimMismatch("CapabilityIntent identity", (barrier) => ({ capabilityIntent: planningModule.createCapabilityIntent({ intentId: "intent_wrong_claim_identity", capabilityId: barrier.input.capabilityIntent.capabilityId, requestedOperation: "mutate", params: barrier.input.capabilityIntent.params }) }));
-    await claimMismatch("session", () => ({ sessionId: "session_wrong_claim" }));
-    await claimMismatch("Runtime generation", (barrier) => ({ runtimeGeneration: barrier.composer.options.getRuntimeGeneration() + 1 }));
+    await lateVerifyLifecycle("cancel_verify_false", "cancel", "false");
+    await lateVerifyLifecycle("cancel_verify_unavailable", "cancel", "unavailable");
+    await lateVerifyLifecycle("reset_verify_true", "reset", "true");
+    await lateVerifyLifecycle("dispose_verify_true", "dispose", "true");
 
-    const cancelClaimHarness = makeHarness(); cancelClaimHarness.state.proposalOpacity = 47; await cancelClaimHarness.runtime.initialize();
-    const cancelClaim = await directBarrier(cancelClaimHarness, "cancel_claim", 1); check((await cancelClaim.port.continueApprovedReview(cancelClaim.input)).state === "ready", "Cancel fixture reaches claimable after the C1 barrier.");
-    cancelClaim.port.cancel();
-    check(privateClaim(cancelClaim).claimed === false && composerTracker.composes === 0 && cancelClaimHarness.calls.filter((call) => call.kind === "execution").length === 0, "Cancel invalidates claimable approval and still performs no compose or Host execution.");
+    async function lateExecutionLifecycle(label, lifecycle, mutationCommitted) {
+        const harness = makeHarness(); harness.state.proposalOpacity = 47; harness.state.deferExecutionSettlement = true; harness.state.executionError = "HOST_EXECUTION_RESULT_UNAVAILABLE"; harness.state.executionMutationCommitted = mutationCommitted; await harness.runtime.initialize();
+        const barrier = await directBarrier(harness, label, 1);
+        const pending = barrier.port.continueApprovedReview(barrier.input);
+        await flushUntil(() => harness.state.pendingExecutionSettlements.length === 1, label + " reaches one dispatched Host mutation.");
+        if (lifecycle === "reset") check(harness.runtime.resetSession(), label + " resets Runtime after Host dispatch.");
+        else if (lifecycle === "dispose") check(harness.runtime.dispose(), label + " disposes Runtime after Host dispatch.");
+        else if (lifecycle === "suspend") check(harness.runtime.suspend(), label + " suspends Runtime after Host dispatch.");
+        else barrier.port.cancel();
+        harness.state.deferExecutionSettlement = false; harness.state.pendingExecutionSettlements.shift().release();
+        const result = await pending;
+        check(result.state === "cancelled" && harness.calls.filter((call) => call.kind === "execution").length === 1, label + " keeps lifecycle cancelled after one late Host settlement.");
+        check(harness.calls.filter((call) => call.request && call.request.operation === "observeCommittedPropertyValue").length === 0, label + " never verifies a late post-cancel commit.");
+        check((await barrier.port.verifyCommittedAction({ objectiveId: barrier.input.objectiveId, taskId: barrier.input.taskId, expectedOpacity: 47 })).state === "blocked", label + " cannot reuse an old verification association.");
+        if (lifecycle === "suspend") check(harness.runtime.resume(), label + " resumes only with a fresh Composer lifecycle.");
+        if (lifecycle !== "dispose") {
+            harness.state.executionError = null; harness.state.executionMutationCommitted = undefined;
+            const fresh = await directBarrier(harness, label + "_fresh", 2);
+            const freshContinuation = await fresh.port.continueApprovedReview(fresh.input);
+            const freshVerification = await fresh.port.verifyCommittedAction({ objectiveId: fresh.input.objectiveId, taskId: fresh.input.taskId, expectedOpacity: 47 });
+            check(freshContinuation.state === "verification-required" && freshVerification.state === "verified", label + " permits a fresh objective after old late settlement.");
+            check(harness.calls.filter((call) => call.kind === "execution").length === 2 && harness.calls.filter((call) => call.request && call.request.operation === "observeCommittedPropertyValue").length === 1, label + " isolates the fresh objective to one new Host mutation and one new committed-target Verify.");
+        }
+    }
+    await lateExecutionLifecycle("cancel_post_dispatch_true", "cancel", true);
+    await lateExecutionLifecycle("cancel_post_dispatch_null", "cancel", undefined);
+    await lateExecutionLifecycle("reset_post_dispatch_true", "reset", true);
+    await lateExecutionLifecycle("dispose_post_dispatch_true", "dispose", true);
+    await lateExecutionLifecycle("suspend_post_dispatch_true", "suspend", true);
+
+    async function callbackBeforeSettlementLifecycle(label, lifecycle) {
+        const harness = makeHarness(); harness.state.proposalOpacity = 47; await harness.runtime.initialize();
+        const barrier = await directBarrier(harness, label, 1);
+        composerTracker.deferExecuteSettlement = true;
+        const pending = barrier.port.continueApprovedReview(barrier.input);
+        await flushUntil(() => composerTracker.pendingExecuteSettlements.length === 1, label + " owns committed verification before execute Promise settlement.");
+        if (lifecycle === "reset") check(harness.runtime.resetSession(), label + " resets after callback ownership.");
+        else if (lifecycle === "dispose") check(harness.runtime.dispose(), label + " disposes after callback ownership.");
+        else barrier.port.cancel();
+        composerTracker.deferExecuteSettlement = false; composerTracker.pendingExecuteSettlements.shift().release();
+        const result = await pending;
+        check(result.state === "cancelled" && harness.calls.filter((call) => call.kind === "execution").length === 1, label + " late execute settlement cannot revive the continuation.");
+        check(harness.calls.filter((call) => call.request && call.request.operation === "observeCommittedPropertyValue").length === 0, label + " invalidates the callback-created capability before any Verify read.");
+        check((await barrier.port.verifyCommittedAction({ objectiveId: barrier.input.objectiveId, taskId: barrier.input.taskId, expectedOpacity: 47 })).state === "blocked", label + " leaves no orphan committed verification entry.");
+    }
+    await callbackBeforeSettlementLifecycle("callback_cancel", "cancel");
+    await callbackBeforeSettlementLifecycle("callback_reset", "reset");
+    await callbackBeforeSettlementLifecycle("callback_dispose", "dispose");
+
+    async function executionTruth(label, mutationCommitted) {
+        const harness = makeHarness(); harness.state.proposalOpacity = 47; harness.state.executionError = "HOST_EXECUTION_RESULT_UNAVAILABLE"; harness.state.executionMutationCommitted = mutationCommitted; await harness.runtime.initialize();
+        const barrier = await directBarrier(harness, label, 1);
+        const result = await barrier.port.continueApprovedReview(barrier.input);
+        return { harness, barrier, result };
+    }
+    const committedUnavailable = await executionTruth("committed_unavailable", true);
+    check(committedUnavailable.result.state === "verification-required" && committedUnavailable.harness.calls.filter((call) => call.kind === "execution").length === 1, "committed:true plus unavailable execution result still reaches the future committed-target verification checkpoint.");
+    check((await committedUnavailable.barrier.port.verifyCommittedAction({ objectiveId: committedUnavailable.barrier.input.objectiveId, taskId: committedUnavailable.barrier.input.taskId, expectedOpacity: 47 })).state === "verified", "committed:true plus unavailable execution result can complete through independent committed-target verification.");
+    const confirmedNoncommit = await executionTruth("confirmed_noncommit", false);
+    check(confirmedNoncommit.result.state === "blocked" && confirmedNoncommit.harness.calls.filter((call) => call.kind === "execution").length === 1, "committed:false terminal-blocks without verification or execution retry.");
+    const uncertainCommit = await executionTruth("uncertain_commit", undefined);
+    check(uncertainCommit.result.state === "blocked" && uncertainCommit.harness.calls.filter((call) => call.kind === "execution").length === 1, "committed:null fails closed without verification or execution retry.");
 
     const rejectClaimHarness = makeHarness(); rejectClaimHarness.state.proposalOpacity = 47; await rejectClaimHarness.runtime.initialize(); let rejectTurn = 0;
     const rejectDriver = agentDriverModule.createAgentDriver({ beginTurn() { rejectTurn += 1; return Object.freeze({ sessionId: rejectClaimHarness.session.getSessionId(), turnId: "reject_claim_turn_" + rejectTurn }); }, observe() { return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: "reject_claim_observation_" + rejectTurn }); }, appendSessionEvent() {}, onListenerError() {} });
     const rejectPort = rejectClaimHarness.runtime.getAgentDriverRuntimePort(); rejectDriver.attachRuntimePort(rejectPort);
     rejectClaimHarness.runtime.attachObjectiveReviewPort(Object.freeze({ getProjection() { const snapshot = rejectDriver.getSnapshot(); const review = snapshot.suspendedReview; return snapshot.state === "awaiting-review" && review ? Object.freeze({ state: "active", reviewId: review.reviewId, revision: review.revision, capabilityId: review.capabilityId, beforeValue: review.beforeValue, proposedValue: review.params.opacity, outcome: null }) : Object.freeze({ state: "inactive", reviewId: null, revision: null, capabilityId: null, beforeValue: null, proposedValue: null, outcome: null }); }, resolve(input) { return rejectDriver.resolveReview(input); } }));
     const rejectReview = await rejectDriver.startObjective({ message: "Set the selected layer opacity to 47%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" }); const rejectedReview = rejectReview.suspendedReview; const rejectedIntent = composerTracker.semantics[composerTracker.semantics.length - 1].intent;
+    const composesBeforeReject = composerTracker.composes;
     await rejectClaimHarness.runtime.rejectActiveCandidate();
     const rejectedContinuation = await rejectPort.continueApprovedReview({ objectiveId: rejectedReview.objectiveId, taskId: rejectedReview.taskId, sessionId: rejectedReview.sessionId, turnId: rejectedReview.turnId, taskPlanId: rejectedReview.taskPlanId, taskPlanRevision: rejectedReview.taskPlanRevision, stepId: rejectedReview.stepId, capabilityIntent: rejectedIntent, localExpectation: rejectedReview.localExpectation, reviewId: rejectedReview.reviewId, reviewRevision: rejectedReview.revision, reviewCorrelation: rejectedReview.reviewCorrelation });
-    check(rejectedContinuation.state === "blocked" && composerTracker.composes === 0 && rejectClaimHarness.calls.filter((call) => call.kind === "execution").length === 0, "Reject deletes the Runtime-private review record and cannot create claimable approval, TaskRun, or Host activity.");
+    check(rejectedContinuation.state === "blocked" && composerTracker.composes === composesBeforeReject && rejectClaimHarness.calls.filter((call) => call.kind === "execution").length === 0, "Reject deletes the Runtime-private review record and cannot create claimable approval, TaskRun, or Host activity.");
 
     const lifecycleClaimHarness = makeHarness(); lifecycleClaimHarness.state.proposalOpacity = 47; await lifecycleClaimHarness.runtime.initialize();
     const lifecycleClaim = await directBarrier(lifecycleClaimHarness, "lifecycle_claim", 1); await lifecycleClaim.port.continueApprovedReview(lifecycleClaim.input);
@@ -278,18 +380,17 @@ async function run() {
     check(sequence.runtime.attachObjectiveReviewPort(Object.freeze({ getProjection() { const snapshot = sequenceDriver.getSnapshot(); const review = snapshot.suspendedReview; const resolution = snapshot.reviewResolution; return snapshot.state === "awaiting-review" && review ? Object.freeze({ state: "active", reviewId: review.reviewId, revision: review.revision, capabilityId: review.capabilityId, beforeValue: review.beforeValue, proposedValue: review.params.opacity, outcome: null }) : snapshot.state === "awaiting-outcome" && resolution && resolution.outcome === "approved" ? Object.freeze({ state: "resolved", reviewId: resolution.reviewId, revision: resolution.revision, capabilityId: null, beforeValue: null, proposedValue: null, outcome: resolution.outcome }) : snapshot.state === "terminal" && snapshot.terminal && snapshot.terminal.outcome === "rejected" && resolution && resolution.outcome === "rejected" ? Object.freeze({ state: "resolved", reviewId: resolution.reviewId, revision: resolution.revision, capabilityId: null, beforeValue: null, proposedValue: null, outcome: resolution.outcome }) : Object.freeze({ state: "inactive", reviewId: null, revision: null, capabilityId: null, beforeValue: null, proposedValue: null, outcome: null }); }, resolve(input) { return sequenceDriver.resolveReview(input); } })) === true, "production Runtime accepts the bounded Owner-style objective review port once.");
     check(sequence.runtime.getConfirmationSurfaceState().state === "confirmation-ready" && sequence.runtime.getConfirmationSurfaceState().beforeValue === 63 && sequence.runtime.getConfirmationSurfaceState().proposedValue === 47, "real suspended Driver review reaches Confirmation with distinct bounded baseline and proposal values.");
     const sequenceApproved = await sequence.runtime.approveActiveCandidate();
-    check(sequenceApproved.state === "awaiting-outcome" && sequenceApproved.objectiveId === sequenceSecond.objectiveId && sequence.runtime.getConfirmationSurfaceState().state === "review-approved", "real approve routing preserves the same objective and closes review without execution.");
-    check(sequence.state.value === 63 && sequence.calls.filter((call) => call.kind === "execution").length === 1 && sequence.runtime.getAuthorityProjection().remainingActions === 0, "B2 approve performs no Host mutation and consumes no authority.");
-    check(sequenceDriver.cancel(), "approved B2 objective can be safely cancelled while awaiting its future continuation.");
-    check(sequenceDriver.getSnapshot().terminal.outcome === "cancelled" && sequenceDriver.getSnapshot().reviewResolution.outcome === "approved", "cancel terminal truth preserves bounded historical approval evidence.");
-    check(sequence.runtime.getConfirmationSurfaceState().state === "idle", "cancelled Driver terminal truth converges Runtime Confirmation to idle.");
-    check(!sequenceDriver.cancel() && sequenceEvents.filter((event) => event.kind === "task/cancelled").length === 1, "duplicate cancel is inert and appends no second terminal event.");
+    check(sequenceApproved.state === "terminal" && sequenceApproved.terminal.outcome === "completed" && sequenceApproved.objectiveId === sequenceSecond.objectiveId && sequence.runtime.getConfirmationSurfaceState().state === "idle", "real approve routing preserves the same objective and completes through committed-target verification.");
+    check(sequence.state.value === 47 && sequence.calls.filter((call) => call.kind === "execution").length === 2 && sequence.calls.filter((call) => call.request && call.request.operation === "observeCommittedPropertyValue").length === 1 && sequence.runtime.getAuthorityProjection().remainingActions === 0, "A2 approve performs one Host mutation and one exact committed-target observation without delegated fallback.");
+    check(!sequenceDriver.cancel() && sequenceDriver.getSnapshot().reviewResolution.outcome === "approved", "completed committed verification cannot be cancelled or reinterpret historical approval evidence.");
+    check(sequence.runtime.getConfirmationSurfaceState().state === "idle", "completed Driver terminal truth converges Runtime Confirmation to idle.");
+    check(sequenceEvents.filter((event) => event.kind === "task/completed").length === 2, "reviewed production completion appends exactly one additional completed event.");
     await expectCode(sequence.runtime.approveActiveCandidate(), "CANDIDATE_STATE_INVALID", "late approve fails closed after approved continuation cancellation.");
     await expectCode(sequence.runtime.rejectActiveCandidate(), "CANDIDATE_STATE_INVALID", "late reject fails closed after approved continuation cancellation.");
     check(sequence.runtime.getProviderUiState().state !== "proposal-ready" && sequence.runtime.getProviderUiState().state !== "proposal-reviewing", "cancel convergence never revives Provider review ownership.");
     await sequence.runtime.grantNextOpacityMutation(); sequence.state.proposalOpacity = 47;
     const sequenceThird = await sequenceDriver.startObjective({ message: "Set the selected layer opacity to 47%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
-    check(sequenceThird.terminal.outcome === "completed" && sequenceThird.objectiveId !== sequenceSecond.objectiveId && sequence.state.value === 47 && sequence.calls.filter((call) => call.kind === "execution").length === 2, "a new grant permits a fresh third objective and exactly one additional Host mutation.");
+    check(sequenceThird.terminal.outcome === "completed" && sequenceThird.objectiveId !== sequenceSecond.objectiveId && sequence.state.value === 47 && sequence.calls.filter((call) => call.kind === "execution").length === 3, "a new grant permits a fresh third objective and exactly one additional Host mutation.");
     const precommit = makeHarness(); precommit.state.selectionCount = 0; precommit.state.proposalOpacity = 58; await precommit.runtime.initialize(); await precommit.runtime.grantNextOpacityMutation();
     let precommitTurn = 0;
     const precommitDriver = agentDriverModule.createAgentDriver({ beginTurn() { precommitTurn += 1; return Object.freeze({ sessionId: precommit.session.getSessionId(), turnId: "precommit_turn_" + precommitTurn }); }, observe() { return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: "precommit_observation_" + precommitTurn }); }, appendSessionEvent() {}, onListenerError() {} });
