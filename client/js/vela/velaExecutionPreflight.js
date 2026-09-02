@@ -26,7 +26,7 @@
         if (!guardDependency || typeof guardDependency.createExecutionGuard !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaExecutionPreflight requires VelaExecutionGuard.");
         }
-        if (!bridgeDependency || typeof bridgeDependency.isTrustedContextBridgeForProtocol !== "function" || typeof bridgeDependency.isTrustedReviewPortForProtocol !== "function") {
+        if (!bridgeDependency || typeof bridgeDependency.isTrustedContextBridgeForProtocol !== "function" || typeof bridgeDependency.isTrustedReviewPortForProtocol !== "function" || typeof bridgeDependency.createCommittedTargetVerificationPort !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaExecutionPreflight requires VelaContextBridge.");
         }
         return { protocol: protocolDependency, capabilityContracts: capabilityContractsDependency, validator: validatorDependency, plan: planDependency, guard: guardDependency, bridge: bridgeDependency };
@@ -78,7 +78,7 @@
             throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
         }
         if (!protocol.isPlainObject(options)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Execution preflight options must be an object."); }
-        protocol.assertNoUnknownKeys(options, ["protocol", "actionValidator", "planStore", "contextBridge", "reviewPort", "getCurrentExecutionBinding", "executeValidatedAction"], "executionPreflight.options");
+        protocol.assertNoUnknownKeys(options, ["protocol", "actionValidator", "planStore", "contextBridge", "reviewPort", "getCurrentExecutionBinding", "executeValidatedAction", "onCommittedVerificationAvailable"], "executionPreflight.options");
 
         var actionValidator = protocol.getOwnDataProperty(options, "actionValidator");
         var planStore = protocol.getOwnDataProperty(options, "planStore");
@@ -99,8 +99,13 @@
         if (!bridgeModule.isTrustedReviewPortForProtocol(reviewPort, protocol)) {
             protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Execution preflight requires a trusted review port.");
         }
+        var committedTargetVerificationPort = bridgeModule.createCommittedTargetVerificationPort(contextBridge, protocol);
+        if (!bridgeModule.isTrustedCommittedTargetVerificationPortForProtocol(committedTargetVerificationPort, protocol)) {
+            protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Execution preflight requires a trusted committed-target verification port.");
+        }
         var getCurrentExecutionBinding = requireOwnFunction(protocol, options, "getCurrentExecutionBinding");
         var executeValidatedAction = requireOwnFunction(protocol, options, "executeValidatedAction");
+        var onCommittedVerificationAvailable = options.onCommittedVerificationAvailable === undefined ? null : requireOwnFunction(protocol, options, "onCommittedVerificationAvailable");
         var guard = guardModule.createExecutionGuard(planStore);
         if (!guard || typeof guard.check !== "function" || typeof guard.reserve !== "function" || typeof guard.complete !== "function" || typeof guard.fail !== "function" || typeof guard.abort !== "function") {
             protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Execution guard terminalization is unavailable.");
@@ -108,6 +113,7 @@
         var recordsByPlanId = new Map();
         var delegatedActivationPorts = new WeakMap();
         var executionCommitPorts = new WeakMap();
+        var committedVerificationsByPlanId = new Map();
         var active = false;
 
         function summarizeReview(bindingCapture, valueCapture) {
@@ -591,7 +597,14 @@
                         var validatedBound = actionValidator.validateActionProposal(rawAction(candidate.action, boundTarget, candidate.action.providerActionId + ":jit:" + stepIndex), { expectedContextFingerprint: freshBindingCapture.fingerprint });
                         if (!validatedBound || !actionValidator.authority.isValidatedAction(validatedBound.action)) { protocol.fail(protocol.ERROR_CODES.VALIDATION_AUTHORITY_REQUIRED, "JIT-bound action provenance is invalid."); }
                         stepRecord.transient = { action: validatedBound.action, bindingCapture: freshBindingCapture, valueCapture: freshValueCapture };
-                        return { bindingCapture: freshBindingCapture, valueCapture: freshValueCapture, baselineValidation: baselineValidation };
+                        var trustedExecutionContext = Object.freeze({ bindingCapture: freshBindingCapture, valueCapture: freshValueCapture });
+                        var supportsCommittedOpacityVerification = validatedBound.action && validatedBound.action.payload && validatedBound.action.payload.toolId === "vela" && validatedBound.action.payload.actionId === "set-opacity-v1";
+                        return {
+                            bindingCapture: freshBindingCapture,
+                            valueCapture: freshValueCapture,
+                            baselineValidation: baselineValidation,
+                            verificationCandidate: supportsCommittedOpacityVerification ? committedTargetVerificationPort.prepare(validatedBound.action, trustedExecutionContext) : null
+                        };
                     });
                 }).then(function (fresh) {
                     var freshBindingCapture = fresh.bindingCapture;
@@ -622,6 +635,23 @@
                        value is never cloned, serialized, returned, or stored by
                        PlanStore; the execution adapter must validate it again. */
                     var trustedExecutionContext = Object.freeze({ bindingCapture: stepRecord.transient.bindingCapture, valueCapture: stepRecord.transient.valueCapture });
+                    var verificationCandidate = fresh.verificationCandidate;
+
+                    function settleVerification(committed) {
+                        var previous = committedVerificationsByPlanId.get(record.planId);
+                        if (previous) { committedTargetVerificationPort.discard(previous); committedVerificationsByPlanId.delete(record.planId); }
+                        if (committed === true && verificationCandidate && onCommittedVerificationAvailable) {
+                            committedTargetVerificationPort.activate(verificationCandidate);
+                            committedVerificationsByPlanId.set(record.planId, verificationCandidate);
+                            try { onCommittedVerificationAvailable(Object.freeze({ planId: record.planId })); }
+                            catch (ownerError) {
+                                committedVerificationsByPlanId.delete(record.planId);
+                                committedTargetVerificationPort.discard(verificationCandidate);
+                            }
+                        } else if (verificationCandidate) {
+                            committedTargetVerificationPort.discard(verificationCandidate);
+                        }
+                    }
 
                     if (record.authorityMode === "delegated") {
                         var commitPort = input.commitPort;
@@ -638,6 +668,7 @@
                     function failTerminal(error) {
                         var stableError = stableExecutorError(error);
                         if (terminalized) { throw stableError; }
+                        settleVerification(error && error.committed === true ? true : null);
                         try {
                             guard.fail(reserved.reservation, stableError);
                             terminalized = true;
@@ -662,6 +693,7 @@
                         if (terminalized) { throw protocolError(protocol, protocol.ERROR_CODES.PLAN_FAILED); }
                         try {
                             var candidate = guard.complete(reserved.reservation, result);
+                            settleVerification(result.committed === true ? true : result.committed === false ? false : null);
                             terminalized = true;
                             stepRecord.transient = null;
                             var completedPlan = planStore.getPlanView(record.planId);
@@ -699,8 +731,46 @@
             var reason = protocol.getOwnDataProperty(input, "reason");
             if (reason !== undefined && typeof reason !== "string") { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Bound plan discard reason is invalid."); }
             var view = planStore.discardPlan(planId, reason);
+            var verification = committedVerificationsByPlanId.get(planId);
+            if (verification) { committedTargetVerificationPort.discard(verification); committedVerificationsByPlanId.delete(planId); }
             clearRecord(record, "discarded");
             return view;
+        }
+
+        function verifyCommittedOpacity(input) {
+            if (!protocol.isPlainObject(input)) { return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED)); }
+            try { protocol.assertNoUnknownKeys(input, ["planId", "expectedOpacity"], "executionPreflight.verifyCommittedOpacity"); }
+            catch (error) { return Promise.reject(error); }
+            var planId;
+            try {
+                planId = protocol.assertNonEmptyString(input.planId, "executionPreflight.planId", protocol.HARD_LIMITS.maxLocalIdBytes);
+                protocol.assertFiniteNumber(input.expectedOpacity, "executionPreflight.expectedOpacity");
+                if (input.expectedOpacity < 0 || input.expectedOpacity > 100) { protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Expected opacity is invalid."); }
+            } catch (error) { return Promise.reject(error); }
+            var verification = committedVerificationsByPlanId.get(planId);
+            committedVerificationsByPlanId.delete(planId);
+            if (!verification) { return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE)); }
+            return committedTargetVerificationPort.observe(verification).then(function (observation) {
+                return protocol.deepFreeze({ fresh: observation.fresh === true, opacity: observation.opacity, matches: observation.opacity === input.expectedOpacity, observationRevision: observation.observationId, code: null });
+            });
+        }
+
+        function invalidateCommittedVerification(input) {
+            var planId = protocol.assertNonEmptyString(input && input.planId, "executionPreflight.planId", protocol.HARD_LIMITS.maxLocalIdBytes);
+            var verification = committedVerificationsByPlanId.get(planId);
+            committedVerificationsByPlanId.delete(planId);
+            if (verification) { committedTargetVerificationPort.discard(verification); }
+            return Boolean(verification);
+        }
+
+        function invalidateAllCommittedVerifications() {
+            var invalidated = 0;
+            committedVerificationsByPlanId.forEach(function (verification) {
+                committedTargetVerificationPort.discard(verification);
+                invalidated += 1;
+            });
+            committedVerificationsByPlanId.clear();
+            return invalidated;
         }
 
         return Object.freeze({
@@ -710,6 +780,9 @@
             createExecutionCommitPort: createExecutionCommitPort,
             confirmBoundPlan: confirmBoundPlan,
             executeStep: executeStep,
+            verifyCommittedOpacity: verifyCommittedOpacity,
+            invalidateCommittedVerification: invalidateCommittedVerification,
+            invalidateAllCommittedVerifications: invalidateAllCommittedVerifications,
             discardBoundPlan: discardBoundPlan
         });
     }

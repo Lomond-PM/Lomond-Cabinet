@@ -111,6 +111,8 @@
     var providerContextPortProtocols = new WeakMap();
     var opacityVerificationPorts = new WeakMap();
     var opacityVerificationPortProtocols = new WeakMap();
+    var committedTargetVerificationPorts = new WeakMap();
+    var committedTargetVerificationPortProtocols = new WeakMap();
     var OPACITY_PROPERTY_PATH = Object.freeze(["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0]);
 
     function isTrustedContextBridge(bridge) {
@@ -169,6 +171,18 @@
         port = opacityVerificationPorts.get(bridge);
         if (!port) { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
         return port;
+    }
+
+    function createCommittedTargetVerificationPort(bridge, protocol) {
+        var port;
+        if (!isTrustedContextBridgeForProtocol(bridge, protocol)) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
+        port = committedTargetVerificationPorts.get(bridge);
+        if (!port) { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
+        return port;
+    }
+
+    function isTrustedCommittedTargetVerificationPortForProtocol(port, protocol) {
+        return Boolean(port && protocolModule.isTrustedProtocol(protocol) && committedTargetVerificationPortProtocols.get(port) === protocol);
     }
 
     function protocolError(protocol, code, stage) {
@@ -251,6 +265,7 @@
         var active = null;
         var ownedCaptureHandles = new WeakMap();
         var failureDetails = new WeakMap();
+        var committedTargetRecords = new WeakMap();
         var contextDiagnostics = Object.freeze({ lastContextOperation: null, lastContextDisposition: null, lastContextFailureStage: null, lastContextHostErrorCode: null, lastContextHostFailureStage: null, lastContextErrorCode: null, lastContextUnavailableReason: null });
 
         function closedOperation(request) {
@@ -1328,6 +1343,92 @@
             });
         }
 
+        function prepareCommittedTarget(action, trustedExecutionContext) {
+            var executionRequest = createPrivateExecutionRequest(action, trustedExecutionContext);
+            var target = executionRequest.scope.target;
+            var handle = Object.freeze({});
+            committedTargetRecords.set(handle, {
+                state: "prepared",
+                sessionId: sessionId,
+                bridgeLifecycleEpoch: bridgeLifecycleEpoch,
+                hostInstanceId: executionRequest.scope.expectedHostInstanceId,
+                hostReloadEpoch: executionRequest.scope.expectedHostReloadEpoch,
+                projectGeneration: executionRequest.scope.expectedProjectGeneration,
+                itemId: target.itemId,
+                nativeLayerId: target.nativeLayerId,
+                layerIndex: target.layerIndex,
+                propertyPath: target.propertyPath,
+                propertyMatchName: target.propertyMatchName
+            });
+            return handle;
+        }
+
+        function activateCommittedTarget(handle) {
+            var record = committedTargetRecords.get(handle);
+            if (!record || record.state !== "prepared") { throw protocolError(protocol, protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
+            record.state = "available";
+            return handle;
+        }
+
+        function discardCommittedTarget(handle) {
+            var record = committedTargetRecords.get(handle);
+            if (record) { record.state = "terminal"; committedTargetRecords.delete(handle); }
+        }
+
+        function observeCommittedTarget(handle) {
+            var record = committedTargetRecords.get(handle);
+            if (!record || record.state !== "available" || state !== "idle" || record.sessionId !== sessionId || record.bridgeLifecycleEpoch !== bridgeLifecycleEpoch || !currentHostAuthority ||
+                    record.hostInstanceId !== currentHostAuthority.hostInstanceId || record.hostReloadEpoch !== currentHostAuthority.hostReloadEpoch) {
+                discardCommittedTarget(handle);
+                return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE));
+            }
+            record.state = "verifying";
+            committedTargetRecords.delete(handle);
+            var request = {
+                protocol: REQUEST_PROTOCOL,
+                schemaVersion: SCHEMA_VERSION,
+                requestId: nextRequestId(),
+                sessionId: sessionId,
+                operation: "observeCommittedPropertyValue",
+                tier: 3,
+                scope: {
+                    purpose: "verification",
+                    expectedHostInstanceId: record.hostInstanceId,
+                    expectedHostReloadEpoch: record.hostReloadEpoch,
+                    expectedProjectGeneration: record.projectGeneration,
+                    target: {
+                        itemId: record.itemId,
+                        nativeLayerId: record.nativeLayerId,
+                        layerIndex: record.layerIndex,
+                        propertyPath: record.propertyPath,
+                        propertyMatchName: record.propertyMatchName
+                    }
+                }
+            };
+            return startRequest(request, function (result, hostRequest) {
+                var raw = result.snapshot;
+                var authority;
+                var descriptor;
+                if (!protocol.isPlainObject(raw)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Committed target observation is invalid."); }
+                protocol.assertNoUnknownKeys(raw, ["hostInstanceId", "hostReloadEpoch", "projectGeneration", "tier", "target"], "hostContext.committedTargetSnapshot");
+                authority = normalizeHostAuthority(raw);
+                if (raw.tier !== 3 || raw.projectGeneration !== record.projectGeneration || authority.hostInstanceId !== record.hostInstanceId || authority.hostReloadEpoch !== record.hostReloadEpoch || !protocol.isPlainObject(raw.target)) {
+                    protocol.fail(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "Committed target authority is unavailable.");
+                }
+                protocol.assertNoUnknownKeys(raw.target, ["itemId", "nativeLayerId", "layerIndex", "propertyPath", "propertyMatchName", "value"], "hostContext.committedTarget");
+                if (raw.target.itemId !== record.itemId || raw.target.nativeLayerId !== record.nativeLayerId || raw.target.layerIndex !== record.layerIndex || raw.target.propertyMatchName !== record.propertyMatchName ||
+                        protocol.canonicalStringify(raw.target.propertyPath) !== protocol.canonicalStringify(record.propertyPath) || !protocol.isPlainObject(raw.target.value)) {
+                    protocol.fail(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "Committed target identity changed.");
+                }
+                protocol.assertNoUnknownKeys(raw.target.value, ["kind", "data"], "hostContext.committedTarget.value");
+                descriptor = contextApi.describePropertyValue(raw.target.value.kind, raw.target.value.data);
+                if (record.propertyMatchName !== "ADBE Opacity" || descriptor.valueKind !== "number" || typeof raw.target.value.data !== "number" || !Number.isFinite(raw.target.value.data)) {
+                    protocol.fail(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "Committed opacity is unavailable.");
+                }
+                return protocol.deepFreeze({ fresh: true, opacity: raw.target.value.data, valueDigest: descriptor.valueDigest, observationId: hostRequest.requestId });
+            }, false).catch(function () { throw protocolError(protocol, protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE); });
+        }
+
         function createPrivateReviewSummary(bindingCapture, valueCapture) {
             var bindingRecord = trustedBindingRecord(bindingCapture);
             var valueRecord = captureRecords.get(valueCapture);
@@ -1595,6 +1696,14 @@
         });
         opacityVerificationPorts.set(bridge, opacityVerificationPort);
         opacityVerificationPortProtocols.set(opacityVerificationPort, protocol);
+        var committedTargetVerificationPort = Object.freeze({
+            prepare: prepareCommittedTarget,
+            activate: activateCommittedTarget,
+            discard: discardCommittedTarget,
+            observe: observeCommittedTarget
+        });
+        committedTargetVerificationPorts.set(bridge, committedTargetVerificationPort);
+        committedTargetVerificationPortProtocols.set(committedTargetVerificationPort, protocol);
         return bridge;
     }
 
@@ -1609,6 +1718,8 @@
         createProviderContextPort: createProviderContextPort,
         isTrustedProviderContextPortForProtocol: isTrustedProviderContextPortForProtocol,
         createOpacityVerificationPort: createOpacityVerificationPort,
+        createCommittedTargetVerificationPort: createCommittedTargetVerificationPort,
+        isTrustedCommittedTargetVerificationPortForProtocol: isTrustedCommittedTargetVerificationPortForProtocol,
         quoteForExtendScript: quoteForExtendScript
     });
 }));

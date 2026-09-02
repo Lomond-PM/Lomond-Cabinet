@@ -53,7 +53,7 @@ function hostError(request, code, reason) {
 
 function bindingSnapshot(state) {
     const first = { nativeLayerId: 45, layerIndex: state.layerIndex, selectedOrder: 0, matchName: "ADBE AV Layer", type: "av" };
-    const items = [first];
+    const items = state.selectionEmpty ? [] : [first];
     if (state.selectionExtra) items.push({ nativeLayerId: 46, layerIndex: 4, selectedOrder: 1, matchName: "ADBE AV Layer", type: "av" });
     return {
         hostInstanceId: state.hostInstanceId,
@@ -104,9 +104,10 @@ function proposal(fingerprint, digest, overrides) {
     }, overrides || {});
 }
 
-function makeHarness() {
+function makeHarness(options) {
+    options = options || {};
     const harnessId = ++harnessCount;
-    const state = { hostInstanceId: HOST, hostReloadEpoch: 1, projectGeneration: 3, layerIndex: 3, selectionExtra: false, value: 50, sampleTime: 1, errorCode: null, errorReason: null, targetMissing: false, responsePath: null, responseMatchName: null, deferred: false, clockThrowAfter: null };
+    const state = { hostInstanceId: HOST, hostReloadEpoch: 1, projectGeneration: 3, layerIndex: 3, selectionExtra: false, selectionEmpty: false, value: 50, committedObservationValue: 50, sampleTime: 1, errorCode: null, errorReason: null, targetMissing: false, responsePath: null, responseMatchName: null, deferred: false, clockThrowAfter: null };
     const scheduler = makeScheduler();
     const calls = [];
     const callbacks = [];
@@ -121,6 +122,13 @@ function makeHarness() {
             events.push(request.operation === "captureContext" ? "tier1" : "tier3");
             if (state.deferred) return;
             if (request.operation === "captureContext") callback(success(request, bindingSnapshot(state)));
+            else if (request.operation === "observeCommittedPropertyValue") callback(success(request, {
+                hostInstanceId: state.hostInstanceId,
+                hostReloadEpoch: state.hostReloadEpoch,
+                projectGeneration: state.projectGeneration,
+                tier: 3,
+                target: Object.assign({}, request.scope.target, { value: { kind: "number", data: state.committedObservationValue } })
+            }));
             else if (state.targetMissing) callback(hostError(request, "HOST_CONTEXT_TARGET_NOT_FOUND"));
             else if (state.errorCode) callback(hostError(request, state.errorCode, state.errorReason));
             else callback(success(request, valueSnapshot(request, state)));
@@ -143,7 +151,8 @@ function makeHarness() {
     let executorCalls = 0;
     let executorMode = "success";
     let currentCalls = 0;
-    const preflight = preflightModule.createExecutionPreflight({
+    const verificationAssociations = [];
+    const preflightOptions = {
         protocol,
         actionValidator: validator,
         planStore: store,
@@ -163,6 +172,8 @@ function makeHarness() {
             if (executorMode === "reject") return Promise.reject(new Error("executor rejection"));
             if (executorMode === "committed-result-unavailable") return Promise.reject(new protocol.VelaProtocolError(protocol.ERROR_CODES.PLAN_FAILED));
             if (executorMode === "failed-result") return { ok: false, summary: { reason: "fake" } };
+            if (executorMode === "noncommit") return { ok: false, committed: false, summary: { reason: "not-committed" } };
+            if (executorMode === "committed-unavailable") { const error = new protocol.VelaProtocolError(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE); error.committed = true; throw error; }
             if (executorMode === "invalid-result") return { ok: true, summary: { source: "unsafe" } };
             if (executorMode === "accessor-result") { const value = { ok: true }; Object.defineProperty(value, "summary", { enumerable: true, get() { throw new Error("accessor"); } }); return value; }
             if (executorMode === "resolve-twice") return { then(resolve) { resolve({ ok: true, summary: { executed: true } }); resolve({ ok: false }); } };
@@ -170,9 +181,13 @@ function makeHarness() {
             if (executorMode === "reject-then-resolve") return { then(resolve, reject) { reject(new Error("first")); resolve({ ok: true }); } };
             return { ok: true, summary: { executed: true } };
         }
-    });
+    };
+    if (options.verificationOwner !== false) {
+        preflightOptions.onCommittedVerificationAvailable = function (association) { verificationAssociations.push(association); };
+    }
+    const preflight = preflightModule.createExecutionPreflight(preflightOptions);
     return {
-        state, scheduler, calls, callbacks, events, bridge, validator, store, preflight,
+        state, scheduler, calls, callbacks, events, bridge, validator, store, preflight, verificationAssociations,
         valueDigest(value) { return contextApi.describePropertyValue("number", value).valueDigest; },
         get executorCalls() { return executorCalls; }, get currentCalls() { return currentCalls; },
         set settings(value) { settingsFingerprint = value; }, set permission(value) { permissionSnapshot = value; }, set executorMode(value) { executorMode = value; }
@@ -230,6 +245,141 @@ async function run() {
     localHarness.state.value = 30;
     const editedLocalPlan = await localHarness.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 80 } }, selectionOrderMeaningful: true });
     check(editedLocalPlan.review.beforeValue === 30 && editedLocalPlan.candidateIds[0] !== localPlan.candidateIds[0], "A new local proposal must create a new candidate with a fresh beforeValue; edit invalidation remains Controller-owned.");
+
+    const committedTarget = makeHarness();
+    committedTarget.state.value = 83;
+    committedTarget.state.committedObservationValue = 47;
+    const committedTargetPlan = await committedTarget.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 47 } }, selectionOrderMeaningful: true });
+    await confirm(committedTarget, committedTargetPlan);
+    await committedTarget.preflight.executeStep({ planId: committedTargetPlan.planId, stepIndex: 0 });
+    committedTarget.state.selectionExtra = true;
+    const committedObservation = await committedTarget.preflight.verifyCommittedOpacity({ planId: committedTargetPlan.planId, expectedOpacity: 47 });
+    check(committedObservation.matches === true && committedObservation.opacity === 47, "Committed-target verification must read the executed target independently from current selection.");
+    const committedRequest = committedTarget.calls.filter((request) => request.operation === "observeCommittedPropertyValue")[0];
+    check(committedRequest && committedRequest.scope.target.itemId === 12 && committedRequest.scope.target.nativeLayerId === 45 && committedRequest.scope.target.layerIndex === 3 && committedRequest.scope.target.propertyMatchName === "ADBE Opacity", "Committed-target observation must use the execute-time trusted native identity.");
+    await expectCode(committedTarget.preflight.verifyCommittedOpacity({ planId: committedTargetPlan.planId, expectedOpacity: 47 }), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "Committed-target verification correlation must be one-shot.");
+
+    const emptySelectionTarget = makeHarness();
+    emptySelectionTarget.state.committedObservationValue = 47;
+    const emptySelectionPlan = await emptySelectionTarget.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 47 } }, selectionOrderMeaningful: true });
+    await confirm(emptySelectionTarget, emptySelectionPlan);
+    await emptySelectionTarget.preflight.executeStep({ planId: emptySelectionPlan.planId, stepIndex: 0 });
+    emptySelectionTarget.state.selectionEmpty = true;
+    check((await emptySelectionTarget.preflight.verifyCommittedOpacity({ planId: emptySelectionPlan.planId, expectedOpacity: 47 })).matches === true, "Committed-target verification must remain independent when current selection is empty.");
+    check(emptySelectionTarget.calls.filter((request) => request.operation === "observeCommittedPropertyValue")[0].scope.target.nativeLayerId === 45, "Selection-empty verification must still trace the original committed native target.");
+
+    const committedMismatch = makeHarness();
+    committedMismatch.state.committedObservationValue = 60;
+    const committedMismatchPlan = await committedMismatch.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 47 } }, selectionOrderMeaningful: true });
+    await confirm(committedMismatch, committedMismatchPlan);
+    await committedMismatch.preflight.executeStep({ planId: committedMismatchPlan.planId, stepIndex: 0 });
+    check((await committedMismatch.preflight.verifyCommittedOpacity({ planId: committedMismatchPlan.planId, expectedOpacity: 47 })).matches === false, "A successful read of the correct committed target must report mismatch without becoming unavailable.");
+
+    const committedHostReloadDrift = makeHarness();
+    const committedHostReloadPlan = await committedHostReloadDrift.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 47 } }, selectionOrderMeaningful: true });
+    await confirm(committedHostReloadDrift, committedHostReloadPlan);
+    await committedHostReloadDrift.preflight.executeStep({ planId: committedHostReloadPlan.planId, stepIndex: 0 });
+    check(committedHostReloadDrift.verificationAssociations.length === 1, "committed:true must make the Host-reload regression capability available before authority drift.");
+    const hostReloadCommittedCalls = committedHostReloadDrift.calls.filter((request) => request.operation === "observeCommittedPropertyValue").length;
+    const hostReloadSelectionCalls = committedHostReloadDrift.calls.filter((request) => request.operation === "capturePropertyValues").length;
+    committedHostReloadDrift.state.hostReloadEpoch = 2;
+    await expectCode(committedHostReloadDrift.preflight.verifyCommittedOpacity({ planId: committedHostReloadPlan.planId, expectedOpacity: 47 }), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "Host reload epoch drift must make committed-target verification unavailable rather than report a value mismatch.");
+    check(committedHostReloadDrift.calls.filter((request) => request.operation === "observeCommittedPropertyValue").length === hostReloadCommittedCalls + 1 &&
+        committedHostReloadDrift.calls.filter((request) => request.operation === "capturePropertyValues").length === hostReloadSelectionCalls, "Host reload drift may attempt only the committed-target observer and must never fall back to current-selection observation.");
+    await expectCode(committedHostReloadDrift.preflight.verifyCommittedOpacity({ planId: committedHostReloadPlan.planId, expectedOpacity: 47 }), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "Host reload drift must terminalize the one-shot capability without a verification retry.");
+    check(committedHostReloadDrift.calls.filter((request) => request.operation === "observeCommittedPropertyValue").length === hostReloadCommittedCalls + 1 &&
+        committedHostReloadDrift.preflight.invalidateCommittedVerification({ planId: committedHostReloadPlan.planId }) === false &&
+        committedHostReloadDrift.preflight.invalidateAllCommittedVerifications() === 0, "Host reload drift settlement must leave no available Preflight registry entry or reusable Bridge capability.");
+
+    const committedProjectDrift = makeHarness();
+    const committedProjectPlan = await committedProjectDrift.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 47 } }, selectionOrderMeaningful: true });
+    await confirm(committedProjectDrift, committedProjectPlan);
+    await committedProjectDrift.preflight.executeStep({ planId: committedProjectPlan.planId, stepIndex: 0 });
+    check(committedProjectDrift.verificationAssociations.length === 1, "committed:true must make the project-generation regression capability available before authority drift.");
+    const projectCommittedCalls = committedProjectDrift.calls.filter((request) => request.operation === "observeCommittedPropertyValue").length;
+    const projectSelectionCalls = committedProjectDrift.calls.filter((request) => request.operation === "capturePropertyValues").length;
+    committedProjectDrift.state.projectGeneration = 4;
+    await expectCode(committedProjectDrift.preflight.verifyCommittedOpacity({ planId: committedProjectPlan.planId, expectedOpacity: 47 }), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "Project generation drift must make committed-target verification unavailable rather than report a value mismatch.");
+    check(committedProjectDrift.state.hostReloadEpoch === 1 && committedProjectDrift.calls.filter((request) => request.operation === "observeCommittedPropertyValue").length === projectCommittedCalls + 1 &&
+        committedProjectDrift.calls.filter((request) => request.operation === "capturePropertyValues").length === projectSelectionCalls, "Project generation drift must remain isolated from Host reload and must never fall back to current-selection observation.");
+    await expectCode(committedProjectDrift.preflight.verifyCommittedOpacity({ planId: committedProjectPlan.planId, expectedOpacity: 47 }), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "Project generation drift must terminalize the one-shot capability without a verification retry.");
+    check(committedProjectDrift.calls.filter((request) => request.operation === "observeCommittedPropertyValue").length === projectCommittedCalls + 1 &&
+        committedProjectDrift.preflight.invalidateCommittedVerification({ planId: committedProjectPlan.planId }) === false &&
+        committedProjectDrift.preflight.invalidateAllCommittedVerifications() === 0, "Project generation drift settlement must leave no available Preflight registry entry or reusable Bridge capability.");
+
+    const noncommitTarget = makeHarness();
+    const noncommitTargetPlan = await noncommitTarget.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 47 } }, selectionOrderMeaningful: true });
+    await confirm(noncommitTarget, noncommitTargetPlan);
+    noncommitTarget.executorMode = "noncommit";
+    await noncommitTarget.preflight.executeStep({ planId: noncommitTargetPlan.planId, stepIndex: 0 });
+    await expectCode(noncommitTarget.preflight.verifyCommittedOpacity({ planId: noncommitTargetPlan.planId, expectedOpacity: 47 }), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "committed:false must never activate a verification correlation.");
+
+    const uncertainTarget = makeHarness();
+    const uncertainTargetPlan = await uncertainTarget.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 47 } }, selectionOrderMeaningful: true });
+    await confirm(uncertainTarget, uncertainTargetPlan);
+    uncertainTarget.executorMode = "committed-result-unavailable";
+    await expectCode(uncertainTarget.preflight.executeStep({ planId: uncertainTargetPlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.PLAN_FAILED, "An uncertain execution result must preserve committed:null semantics.");
+    await expectCode(uncertainTarget.preflight.verifyCommittedOpacity({ planId: uncertainTargetPlan.planId, expectedOpacity: 47 }), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "committed:null must never activate target verification.");
+
+    const invalidatedTarget = makeHarness();
+    const invalidatedTargetPlan = await invalidatedTarget.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 47 } }, selectionOrderMeaningful: true });
+    await confirm(invalidatedTarget, invalidatedTargetPlan);
+    await invalidatedTarget.preflight.executeStep({ planId: invalidatedTargetPlan.planId, stepIndex: 0 });
+    check(invalidatedTarget.preflight.invalidateCommittedVerification({ planId: invalidatedTargetPlan.planId }) === true, "Cancel/dispose/reset ownership may explicitly invalidate an available committed-target correlation.");
+    await expectCode(invalidatedTarget.preflight.verifyCommittedOpacity({ planId: invalidatedTargetPlan.planId, expectedOpacity: 47 }), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "An invalidated committed-target correlation must never verify later.");
+
+    const wrongPlanTarget = makeHarness();
+    const wrongPlanTargetPlan = await wrongPlanTarget.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 47 } }, selectionOrderMeaningful: true });
+    await confirm(wrongPlanTarget, wrongPlanTargetPlan);
+    await wrongPlanTarget.preflight.executeStep({ planId: wrongPlanTargetPlan.planId, stepIndex: 0 });
+    check(wrongPlanTarget.preflight.invalidateCommittedVerification({ planId: localId("plan", 999999) }) === false, "Wrong-plan invalidation must not remove another plan's verification capability.");
+    check((await wrongPlanTarget.preflight.verifyCommittedOpacity({ planId: wrongPlanTargetPlan.planId, expectedOpacity: 50 })).matches === true, "The correct plan must retain its capability after wrong-plan invalidation.");
+
+    const allTargets = makeHarness();
+    const allTargetPlans = [];
+    for (const opacity of [41, 42]) {
+        const ownedPlan = await allTargets.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity } }, selectionOrderMeaningful: true });
+        await confirm(allTargets, ownedPlan);
+        await allTargets.preflight.executeStep({ planId: ownedPlan.planId, stepIndex: 0 });
+        allTargetPlans.push(ownedPlan);
+    }
+    check(allTargets.verificationAssociations.length === 2 && allTargets.preflight.invalidateAllCommittedVerifications() === 2, "All-correlation invalidation must terminalize two independently owned plan capabilities.");
+    check(allTargets.preflight.invalidateAllCommittedVerifications() === 0, "Repeated all-correlation invalidation must be idempotent.");
+    for (const ownedPlan of allTargetPlans) {
+        await expectCode(allTargets.preflight.verifyCommittedOpacity({ planId: ownedPlan.planId, expectedOpacity: 50 }), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "All invalidated plan correlations must remain unavailable.");
+    }
+
+    const noOwnerTarget = makeHarness({ verificationOwner: false });
+    const noOwnerPlan = await noOwnerTarget.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 47 } }, selectionOrderMeaningful: true });
+    await confirm(noOwnerTarget, noOwnerPlan);
+    await noOwnerTarget.preflight.executeStep({ planId: noOwnerPlan.planId, stepIndex: 0 });
+    await expectCode(noOwnerTarget.preflight.verifyCommittedOpacity({ planId: noOwnerPlan.planId, expectedOpacity: 50 }), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "A committed execution without an explicit verification owner must discard its prepared capability instead of creating an orphan.");
+
+    const verifyingInvalidation = makeHarness();
+    const verifyingInvalidationPlan = await verifyingInvalidation.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 47 } }, selectionOrderMeaningful: true });
+    await confirm(verifyingInvalidation, verifyingInvalidationPlan);
+    await verifyingInvalidation.preflight.executeStep({ planId: verifyingInvalidationPlan.planId, stepIndex: 0 });
+    verifyingInvalidation.state.deferred = true;
+    const inFlightObservation = verifyingInvalidation.preflight.verifyCommittedOpacity({ planId: verifyingInvalidationPlan.planId, expectedOpacity: 50 });
+    check(verifyingInvalidation.preflight.invalidateAllCommittedVerifications() === 0, "A verifying correlation must already be atomically removed from the available registry.");
+    const inFlightRequest = verifyingInvalidation.calls[verifyingInvalidation.calls.length - 1];
+    verifyingInvalidation.callbacks[verifyingInvalidation.callbacks.length - 1](success(inFlightRequest, {
+        hostInstanceId: verifyingInvalidation.state.hostInstanceId,
+        hostReloadEpoch: verifyingInvalidation.state.hostReloadEpoch,
+        projectGeneration: verifyingInvalidation.state.projectGeneration,
+        tier: 3,
+        target: Object.assign({}, inFlightRequest.scope.target, { value: { kind: "number", data: 50 } })
+    }));
+    check((await inFlightObservation).matches === true, "An already in-flight read may settle without restoring its consumed correlation.");
+    await expectCode(verifyingInvalidation.preflight.verifyCommittedOpacity({ planId: verifyingInvalidationPlan.planId, expectedOpacity: 50 }), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "A late in-flight result must not restore a terminalized correlation.");
+
+    const committedUnavailableTarget = makeHarness();
+    committedUnavailableTarget.state.committedObservationValue = 47;
+    const committedUnavailableTargetPlan = await committedUnavailableTarget.preflight.createBoundPlan({ localProposal: { capabilityId: "set-opacity-v1", params: { opacity: 47 } }, selectionOrderMeaningful: true });
+    await confirm(committedUnavailableTarget, committedUnavailableTargetPlan);
+    committedUnavailableTarget.executorMode = "committed-unavailable";
+    await expectCode(committedUnavailableTarget.preflight.executeStep({ planId: committedUnavailableTargetPlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "A committed execution with unavailable result must retain committed truth.");
+    check((await committedUnavailableTarget.preflight.verifyCommittedOpacity({ planId: committedUnavailableTargetPlan.planId, expectedOpacity: 47 })).matches === true, "committed:true must activate independent target verification even when the execution result is unavailable.");
 
     const invalidTier = makeHarness();
     const invalidSeed = await invalidTier.bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
