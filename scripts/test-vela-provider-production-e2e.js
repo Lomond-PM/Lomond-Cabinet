@@ -370,12 +370,75 @@ async function run() {
         check(pending.state === "awaiting-review" && typeof pending.suspendedReview.reviewCorrelation === "string" && !Object.prototype.hasOwnProperty.call(pending.suspendedReview, "valueDigest"), label + " establishes only opaque Driver correlation without barrier evidence leakage: " + JSON.stringify(pending.terminal));
         mutate(harness.state);
         const result = await driver.resolveReview({ reviewId: pending.suspendedReview.reviewId, revision: pending.suspendedReview.revision, outcome: "approved" });
-        check(result.terminal && result.terminal.outcome === "blocked" && result.terminal.code === "CONTEXT_STALE", label + " drift blocks the same objective through the Runtime-private barrier.");
-        check(harness.calls.filter((call) => call.kind === "execution").length === 0 && harness.providerBodies.length === providerCount, label + " drift performs no Host mutation and no second Provider request.");
+        check(result.state === "awaiting-review" && result.objectiveId === pending.objectiveId && result.turn.turnId !== pending.turn.turnId && result.suspendedReview.reviewId !== pending.suspendedReview.reviewId && result.suspendedReview.reviewCorrelation !== pending.suspendedReview.reviewCorrelation && result.taskPlan.planId !== pending.taskPlan.planId && result.counters.replans === 1, label + " precommit drift starts one fresh bounded iteration and Review without reusing old ownership.");
+        check(harness.calls.filter((call) => call.kind === "execution").length === 0 && harness.providerBodies.length === providerCount + 1, label + " drift performs no Host mutation and dispatches exactly one fresh Provider request.");
+        const rejected = driver.resolveReview({ reviewId: result.suspendedReview.reviewId, revision: result.suspendedReview.revision, outcome: "rejected" });
+        check(rejected.terminal.outcome === "rejected" && harness.calls.filter((call) => call.kind === "execution").length === 0, label + " fresh Review remains mandatory and rejection cannot execute either iteration.");
     }
     await barrierDrift("selection", (state) => { state.nativeLayerId += 1; });
     await barrierDrift("composition", (state) => { state.generation += 1; });
     await barrierDrift("opacity", (state) => { state.value = 65; });
+    function providerRequestId(body) { return body.response_format.json_schema.schema.properties.requestId.enum[0]; }
+    const replanSuccess = makeHarness(); replanSuccess.state.proposalOpacity = 47; await replanSuccess.runtime.initialize();
+    let replanSuccessTurn = 0;
+    const replanSuccessEvents = [];
+    const replanSuccessDriver = agentDriverModule.createAgentDriver({ beginTurn() { replanSuccessTurn += 1; return Object.freeze({ sessionId: replanSuccess.session.getSessionId(), turnId: "replan_success_turn_" + replanSuccessTurn }); }, observe() { return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: "replan_success_observation_" + replanSuccessTurn }); }, appendSessionEvent(event) { replanSuccessEvents.push(event); return event; }, onListenerError() {} });
+    check(replanSuccessDriver.attachRuntimePort(replanSuccess.runtime.getAgentDriverRuntimePort()), "successful replan Driver attaches the production Runtime port.");
+    const replanReviewA = await replanSuccessDriver.startObjective({ message: "Set the selected layer opacity to 47%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+    const replanPlanA = replanReviewA.taskPlan;
+    const replanSuspendedA = replanReviewA.suspendedReview;
+    const replanRequestA = providerRequestId(replanSuccess.providerBodies[0]);
+    replanSuccess.state.nativeLayerId += 1;
+    const replanReviewB = await replanSuccessDriver.resolveReview({ reviewId: replanSuspendedA.reviewId, revision: replanSuspendedA.revision, outcome: "approved" });
+    const replanRequestB = providerRequestId(replanSuccess.providerBodies[1]);
+    check(replanReviewB.state === "awaiting-review" && replanReviewB.objectiveId === replanReviewA.objectiveId && replanReviewB.turn.turnId !== replanReviewA.turn.turnId && replanReviewB.suspendedReview.reviewId !== replanSuspendedA.reviewId && replanReviewB.suspendedReview.reviewCorrelation !== replanSuspendedA.reviewCorrelation && replanRequestB !== replanRequestA && replanReviewB.taskPlan.planId !== replanPlanA.planId && replanReviewB.taskPlan.steps[0].capabilityIntent.intentId !== replanPlanA.steps[0].capabilityIntent.intentId, "successful production replan creates fresh turn, Provider request, TaskPlan, intent, and Review identities.");
+    check(replanSuccess.calls.filter((call) => call.kind === "execution").length === 0 && replanReviewB.counters.replans === 1 && replanReviewB.loop.iterationIndex === 1 && replanReviewB.loop.budgets.iterationsUsed === 2 && replanReviewB.loop.budgets.providerCallsUsed === 2 && replanReviewB.loop.budgets.actionAttemptsUsed === 1, "iteration zero CONTEXT_STALE is committed false, mutates no Host, and exposes exact bounded accounting.");
+    await expectCode(Promise.resolve().then(() => replanSuccessDriver.resolveReview({ reviewId: replanSuspendedA.reviewId, revision: replanSuspendedA.revision, outcome: "approved" })), "AGENT_DRIVER_REVIEW_INVALID", "iteration-one Review rejects the stale iteration-zero approval.");
+    check(replanSuccessDriver.getSnapshot().state === "awaiting-review" && replanSuccess.calls.filter((call) => call.kind === "execution").length === 0, "stale approval cannot alter Review B or create Host authority.");
+    const replanCompleted = await replanSuccessDriver.resolveReview({ reviewId: replanReviewB.suspendedReview.reviewId, revision: replanReviewB.suspendedReview.revision, outcome: "approved" });
+    check(replanCompleted.terminal.outcome === "completed" && replanSuccess.providerBodies.length === 2 && replanSuccess.calls.filter((call) => call.kind === "execution").length === 1 && replanSuccess.calls.filter((call) => call.request && call.request.operation === "observeCommittedPropertyValue").length === 1 && replanCompleted.counters.replans === 1, "second iteration executes one Host mutation, verifies the committed target once, and completes without a third iteration.");
+    check(replanSuccessEvents.filter((event) => event.kind === "task/started").length === 1 && replanSuccessEvents.filter((event) => event.kind === "task/review-required").length === 2 && replanSuccessEvents.filter((event) => event.kind === "task/completed").length === 1, "successful replan emits one objective start, two real Reviews, and one terminal event.");
+
+    const replanExhausted = makeHarness(); replanExhausted.state.proposalOpacity = 47; await replanExhausted.runtime.initialize();
+    let replanExhaustedTurn = 0;
+    const replanExhaustedDriver = agentDriverModule.createAgentDriver({ beginTurn() { replanExhaustedTurn += 1; return Object.freeze({ sessionId: replanExhausted.session.getSessionId(), turnId: "replan_exhausted_turn_" + replanExhaustedTurn }); }, observe() { return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: "replan_exhausted_observation_" + replanExhaustedTurn }); }, appendSessionEvent() {}, onListenerError() {} });
+    replanExhaustedDriver.attachRuntimePort(replanExhausted.runtime.getAgentDriverRuntimePort());
+    const exhaustedReviewA = await replanExhaustedDriver.startObjective({ message: "Set the selected layer opacity to 47%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+    replanExhausted.state.nativeLayerId += 1;
+    const exhaustedReviewB = await replanExhaustedDriver.resolveReview({ reviewId: exhaustedReviewA.suspendedReview.reviewId, revision: exhaustedReviewA.suspendedReview.revision, outcome: "approved" });
+    replanExhausted.state.nativeLayerId += 1;
+    const exhaustedTerminal = await replanExhaustedDriver.resolveReview({ reviewId: exhaustedReviewB.suspendedReview.reviewId, revision: exhaustedReviewB.suspendedReview.revision, outcome: "approved" });
+    check(exhaustedTerminal.terminal.outcome === "blocked" && exhaustedTerminal.terminal.code === "AGENT_DRIVER_REPLAN_EXHAUSTED" && exhaustedTerminal.counters.replans === 1 && exhaustedTerminal.loop.iterationIndex === 1 && exhaustedTerminal.loop.budgets.iterationsUsed === 2 && exhaustedTerminal.loop.noProgressCount === 1, "second production CONTEXT_STALE terminates with canonical exhaustion and no-progress truth.");
+    check(replanExhausted.providerBodies.length === 2 && replanExhausted.calls.filter((call) => call.kind === "execution").length === 0 && replanExhausted.calls.filter((call) => call.request && call.request.operation === "observeCommittedPropertyValue").length === 0, "second stale creates no third Provider, Review, Host mutation, or Verify.");
+
+    const replanCancel = makeHarness(); replanCancel.state.proposalOpacity = 47; await replanCancel.runtime.initialize();
+    let replanCancelTurn = 0;
+    let releaseReplanObserve;
+    const replanCancelEvents = [];
+    const replanCancelDriver = agentDriverModule.createAgentDriver({ beginTurn() { replanCancelTurn += 1; return Object.freeze({ sessionId: replanCancel.session.getSessionId(), turnId: "replan_cancel_turn_" + replanCancelTurn }); }, observe() { return replanCancelTurn === 1 ? Promise.resolve() : new Promise((resolve) => { releaseReplanObserve = resolve; }); }, getObservation() { return Object.freeze({ observationRevision: "replan_cancel_observation_" + replanCancelTurn }); }, appendSessionEvent(event) { replanCancelEvents.push(event); return event; }, onListenerError() {} });
+    replanCancelDriver.attachRuntimePort(replanCancel.runtime.getAgentDriverRuntimePort());
+    const cancelReviewA = await replanCancelDriver.startObjective({ message: "Set the selected layer opacity to 47%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+    replanCancel.state.nativeLayerId += 1;
+    const cancelTransition = replanCancelDriver.resolveReview({ reviewId: cancelReviewA.suspendedReview.reviewId, revision: cancelReviewA.suspendedReview.revision, outcome: "approved" });
+    await flushUntil(() => typeof releaseReplanObserve === "function", "production replan reaches the deferred second-iteration Observe.");
+    check(replanCancelDriver.cancel(), "cancel wins during production second-iteration Observe.");
+    releaseReplanObserve();
+    const cancelledReplan = await cancelTransition;
+    check(cancelledReplan.terminal.outcome === "cancelled" && replanCancel.providerBodies.length === 1 && replanCancel.calls.filter((call) => call.kind === "execution").length === 0 && replanCancelEvents.filter((event) => event.kind === "task/cancelled").length === 1, "cancelled production replan dispatches no Provider two or Review two, mutates no Host, and emits one terminal event.");
+
+    async function iterationOneTerminal(mode, expectedOutcome, expectedCode) {
+        const harness = makeHarness(); harness.state.proposalOpacity = 47; await harness.runtime.initialize();
+        let turn = 0;
+        const events = [];
+        const driver = agentDriverModule.createAgentDriver({ beginTurn() { turn += 1; return Object.freeze({ sessionId: harness.session.getSessionId(), turnId: "iteration_one_" + mode + "_turn_" + turn }); }, observe() { return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: turn }); }, appendSessionEvent(event) { events.push(event); return event; }, onListenerError() {} });
+        driver.attachRuntimePort(harness.runtime.getAgentDriverRuntimePort());
+        const first = await driver.startObjective({ message: "Set the selected layer opacity to 47%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
+        harness.state.nativeLayerId += 1; harness.state.providerMode = mode;
+        const result = await driver.resolveReview({ reviewId: first.suspendedReview.reviewId, revision: first.suspendedReview.revision, outcome: "approved" });
+        check(result.terminal.outcome === expectedOutcome && result.terminal.code === expectedCode && result.counters.replans === 1 && harness.providerBodies.length === 2, "iteration-one " + mode + " settles once without a third Provider: " + JSON.stringify({ terminal: result.terminal, counters: result.counters, providerCalls: harness.providerBodies.length }));
+        check(harness.calls.filter((call) => call.kind === "execution").length === 0 && events.filter((event) => event.kind === "task/review-required").length === 1 && events.filter((event) => /^task\/(?:completed|blocked|cancelled|review-rejected)$/.test(event.kind)).length === 1, "iteration-one " + mode + " creates no Review B, Host mutation, retry, or duplicate terminal event.");
+    }
+    await iterationOneTerminal("error", "blocked", "PROVIDER_RESPONSE_INVALID");
     sequence.state.proposalOpacity = 63;
     const sequenceFirst = await sequenceDriver.startObjective({ message: "Set the selected layer opacity to 63%", endpoint: "http://127.0.0.1:1234/v1/chat/completions", model: "m" });
     check(sequenceFirst.terminal.outcome === "completed" && sequence.state.value === 63 && sequence.calls.filter((call) => call.kind === "execution").length === 1, "sequence objective one consumes the grant through exactly one real Host mutation and fresh verification.");

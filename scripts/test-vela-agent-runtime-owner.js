@@ -108,8 +108,8 @@ async function coldStartRegression() {
     check(coldOwner.getObservationRuntime(), "late attachment creates the real ObservationRuntime");
     check(coldOwner.attachAgentDriverRuntimePort(Object.freeze({
         reason() { reasons += 1; return Promise.resolve(Object.freeze({ capabilityId: "set-opacity-v1", params: Object.freeze({ opacity: 63 }) })); },
-        submitIntent() { submissions += 1; return Promise.resolve(Object.freeze(submissionMode === "review" ? { state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: 100, reviewCorrelation: "owner_review_correlation" } : submissionMode === "denied" ? { state: "denied", committed: false, code: "PERMISSION_DENIED" } : { state: "executed", committed: true })); },
-        continueApprovedReview() { return Promise.resolve(Object.freeze(continuationMode === "stale" ? { state: "blocked", code: "CONTEXT_STALE" } : { state: "verification-required", code: null })); },
+        submitIntent() { submissions += 1; return Promise.resolve(Object.freeze(submissionMode === "review" ? { state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: 100, reviewCorrelation: "owner_review_correlation_" + submissions } : submissionMode === "denied" ? { state: "denied", committed: false, code: "PERMISSION_DENIED" } : { state: "executed", committed: true })); },
+        continueApprovedReview() { return Promise.resolve(Object.freeze(continuationMode === "stale" ? { state: "blocked", code: "CONTEXT_STALE", committed: false, observation: Object.freeze({ targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:owner_stale" }) } : { state: "verification-required", code: null })); },
         verifyCommittedAction() { return Promise.resolve(Object.freeze({ state: "verified", code: null })); },
         verifyOpacity() { return Promise.resolve(Object.freeze({ fresh: true, matches: true, opacity: 63 })); },
         cancel() { return false; }
@@ -150,12 +150,14 @@ async function coldStartRegression() {
     continuationMode = "stale";
     const staleReview = await coldOwner.startObjective({ message: "Review stale opacity 63", endpoint: "http://127.0.0.1:1234", model: "m" });
     const staleProjection = ownerReviewPort.getProjection();
-    const staleBlocked = await ownerReviewPort.resolve({ reviewId: staleProjection.reviewId, revision: staleProjection.revision, outcome: "approved" });
-    equal(staleBlocked.terminal.outcome, "blocked", "CONTEXT_STALE continuation preserves blocked Driver terminal lifecycle");
-    equal(staleBlocked.terminal.code, "CONTEXT_STALE", "CONTEXT_STALE survives in the Driver terminal snapshot");
-    equal(staleBlocked.reviewResolution.outcome, "approved", "historical approved review remains available after stale terminalization");
-    equal(ownerReviewPort.getProjection().state, "inactive", "terminal blocked lifecycle suppresses historical approved review projection");
-    check(staleBlocked.objectiveId === staleReview.objectiveId, "stale terminal remains attached to the reviewed objective");
+    const staleReplanned = await ownerReviewPort.resolve({ reviewId: staleProjection.reviewId, revision: staleProjection.revision, outcome: "approved" });
+    check(staleReplanned.state === "awaiting-review" && staleReplanned.objectiveId === staleReview.objectiveId && staleReplanned.turn.turnId !== staleReview.turn.turnId && staleReplanned.counters.replans === 1 && captures >= 2 && reasons >= 2, "Owner wiring gives CONTEXT_STALE replan the same objective, a fresh turn, fresh Observe, and fresh Reason");
+    const staleSecondProjection = ownerReviewPort.getProjection();
+    check(staleSecondProjection.state === "active" && staleSecondProjection.reviewId !== staleProjection.reviewId, "Owner projects only the fresh second-iteration Review");
+    continuationMode = "verified";
+    const staleCompleted = await ownerReviewPort.resolve({ reviewId: staleSecondProjection.reviewId, revision: staleSecondProjection.revision, outcome: "approved" });
+    equal(staleCompleted.terminal.outcome, "completed", "second iteration completes through the existing committed-target verification wiring");
+    equal(ownerReviewPort.getProjection().state, "inactive", "completed bounded replan closes the Owner review projection");
     submissionMode = "denied";
     continuationMode = "verified";
     const blocked = await coldOwner.startObjective({ message: "Denied opacity objective", endpoint: "http://127.0.0.1:1234", model: "m" });

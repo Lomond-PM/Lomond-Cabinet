@@ -30,12 +30,46 @@ function harness(settings) {
     return { driver, events, calls };
 }
 async function run() {
+    const limits = driverModule.LOOP_DEFAULT_LIMITS;
+    check(Object.isFrozen(limits) && limits.maxIterations === 2 && limits.maxProviderCalls === 2 && limits.maxActionAttempts === 2 && limits.maxConsecutiveNoProgress === 1, "Driver owns immutable bounded default loop limits");
+    const MAY = driverModule.REPLAN_CLASSIFICATIONS.MAY_REPLAN;
+    const NEVER = driverModule.REPLAN_CLASSIFICATIONS.NEVER_REPLAN;
+    const SUCCESS = driverModule.REPLAN_CLASSIFICATIONS.SUCCESS;
+    function classify(code, committed, verificationState) { return driverModule.classifyReplanEligibility({ code, committed, verificationState }).classification; }
+    equal(classify("CONTEXT_STALE", false, null), MAY, "CONTEXT_STALE is eligible only for a future fresh iteration");
+    equal(classify("UNKNOWN_TARGET", false, null), MAY, "confirmed noncommitted UNKNOWN_TARGET may replan");
+    equal(classify("UNKNOWN_TARGET", null, null), NEVER, "uncertain UNKNOWN_TARGET fails closed");
+    equal(classify("PLAN_FAILED", false, null), MAY, "allowlisted confirmed noncommitted PLAN_FAILED may replan");
+    equal(classify("PLAN_FAILED", null, null), NEVER, "uncertain PLAN_FAILED fails closed");
+    equal(classify("AGENT_DRIVER_TASK_UNVERIFIED", true, "mismatch"), MAY, "committed verification mismatch may replan through fresh observation");
+    equal(classify("AGENT_DRIVER_TASK_UNVERIFIED", true, null), NEVER, "unclassified committed verification state fails closed");
+    ["PERMISSION_DENIED", "LIFECYCLE_BLOCKED", "REVIEW_REJECTED", "AGENT_DRIVER_CANCELLED", "PROVIDER_TIMEOUT", "PROVIDER_CONNECTION_FAILED", "PROVIDER_RESPONSE_INVALID", "VERIFICATION_UNAVAILABLE", "BUDGET_EXHAUSTED", "NO_PROGRESS", "UNKNOWN_FAILURE"].forEach((failureCode) => equal(classify(failureCode, false, null), NEVER, failureCode + " never replans by default"));
+    equal(classify(null, true, "matches"), SUCCESS, "matching verification is terminal success");
+    equal(classify(null, false, "text-completed"), SUCCESS, "bounded text completion is terminal success");
+    const observationA = driverModule.createObservationSignature({ targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:aaa", observationRevision: 1, nativeLayerId: 7, requestId: "req_a" });
+    const observationAWithDifferentIds = driverModule.createObservationSignature({ observedOpacityDigest: "sha256:aaa", targetClass: "layer-opacity", targetAvailable: true, observationRevision: 99, nativeLayerId: 88, requestId: "req_b" });
+    const observationB = driverModule.createObservationSignature({ targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:bbb" });
+    equal(observationA, observationAWithDifferentIds, "observation signature ignores revisions, native ids, and request ids");
+    check(observationA !== observationB && observationA === "{\"observedOpacityDigest\":\"sha256:aaa\",\"targetAvailable\":true,\"targetClass\":\"layer-opacity\"}", "observation signature is canonical and changes only with trusted bounded semantics");
+    const intentA = driverModule.createIntentSignature({ intentId: "intent_a", capabilityId: "set-opacity-v1", requestedOperation: "mutate", canonicalParams: { opacity: 47 }, targetScope: ["layer", "property"], candidateId: "candidate_a", planId: "plan_a" });
+    const intentAWithDifferentIds = driverModule.createIntentSignature({ planId: "plan_b", targetScope: ["layer", "property"], canonicalParams: { opacity: 47 }, requestedOperation: "mutate", capabilityId: "set-opacity-v1", intentId: "intent_b", reviewId: "review_b" });
+    const intentB = driverModule.createIntentSignature({ capabilityId: "set-opacity-v1", requestedOperation: "mutate", canonicalParams: { opacity: 48 }, targetScope: ["layer", "property"] });
+    equal(intentA, intentAWithDifferentIds, "intent signature ignores identity and preserves canonical object order");
+    check(intentA !== intentB, "intent signature changes when effective canonical params change");
+    const repeated = driverModule.evaluateNoProgress({ observationSignature: observationA, intentSignature: intentA, failureClass: "PLAN_FAILED", noProgressCount: 0 }, { observationSignature: observationAWithDifferentIds, intentSignature: intentAWithDifferentIds, failureClass: "PLAN_FAILED", requestId: "different", errorText: "different words" }, limits.maxConsecutiveNoProgress);
+    check(repeated.noProgressCount === 1 && repeated.replanAllowed === false && repeated.reason === "no-progress", "one consecutive semantic repeat reaches the frozen no-progress threshold");
+    const changedObservation = driverModule.evaluateNoProgress({ observationSignature: observationA, intentSignature: intentA, failureClass: "PLAN_FAILED", noProgressCount: 1 }, { observationSignature: observationB, intentSignature: intentA, failureClass: "PLAN_FAILED" }, limits.maxConsecutiveNoProgress);
+    const changedIntent = driverModule.evaluateNoProgress({ observationSignature: observationA, intentSignature: intentA, failureClass: "PLAN_FAILED", noProgressCount: 1 }, { observationSignature: observationA, intentSignature: intentB, failureClass: "PLAN_FAILED" }, limits.maxConsecutiveNoProgress);
+    const changedFailure = driverModule.evaluateNoProgress({ observationSignature: observationA, intentSignature: intentA, failureClass: "PLAN_FAILED", noProgressCount: 1 }, { observationSignature: observationA, intentSignature: intentA, failureClass: "UNKNOWN_TARGET" }, limits.maxConsecutiveNoProgress);
+    check([changedObservation, changedIntent, changedFailure].every((result) => result.noProgressCount === 0 && result.replanAllowed === true), "any trusted semantic dimension change resets no-progress");
     const good = harness();
     let listenerFailures = 0;
     good.driver.subscribe(() => { if (good.driver.getSnapshot().state === "reasoning") { throw new Error("listener"); } });
     const completed = await good.driver.startObjective({ message: "Set opacity to 42", endpoint: "http://127.0.0.1:1234", model: "m" });
     equal(completed.state, "terminal", "objective reaches terminal");
     equal(completed.terminal.outcome, "completed", "matching fresh verification completes objective");
+    check(Object.isFrozen(completed.loop) && Object.isFrozen(completed.loop.budgets) && completed.loop.iterationIndex === 0 && completed.loop.budgets.iterationsUsed === 1 && completed.loop.budgets.providerCallsUsed === 1 && completed.loop.budgets.actionAttemptsUsed === 1 && completed.loop.noProgressCount === 0, "snapshot exposes only bounded first-iteration counters");
+    check(completed.loop.budgets.iterationsUsed <= limits.maxIterations && completed.loop.budgets.providerCallsUsed <= limits.maxProviderCalls && completed.loop.budgets.actionAttemptsUsed <= limits.maxActionAttempts, "production counters cannot exceed immutable limits");
     check(Object.isFrozen(completed.taskPlan) && completed.taskPlan.contractType === "task-plan", "Driver produces an immutable formal TaskPlan");
     equal(completed.taskPlan.steps.length, 1, "TaskPlan has exactly one step");
     equal(completed.taskPlan.steps[0].kind, "operate", "TaskPlan contains exactly one operate step");
@@ -50,6 +84,7 @@ async function run() {
     const textCompleted = await text.driver.startObjective({ message: "hello", endpoint: "e", model: "m" });
     equal(textCompleted.terminal.outcome, "completed", "bounded text completes the objective without entering the action path");
     equal(textCompleted.taskPlan, null, "bounded text creates no TaskPlan");
+    check(textCompleted.loop.iterationIndex === 0 && textCompleted.loop.budgets.iterationsUsed === 1 && textCompleted.loop.budgets.providerCallsUsed === 1 && textCompleted.loop.budgets.actionAttemptsUsed === 0, "text consumes one iteration and Provider call but no action attempt");
     equal(text.calls.submit, 0, "bounded text submits no mutation intent");
     equal(text.calls.verify, 0, "bounded text performs no action verification");
     check(["ae/state-observed", "agent/action-performed", "task/review-required", "tool/result"].every((kind) => text.events.every((event) => event.kind !== kind)), "bounded text fabricates no action or AE observation events");
@@ -57,7 +92,9 @@ async function run() {
     equal(textNext.objectiveId, "objective_agent_2", "a fresh objective starts after bounded text completion");
 
     const mismatch = harness({ verification: { fresh: true, matches: false, opacity: 41 } });
-    equal((await mismatch.driver.startObjective({ message: "set", endpoint: "e", model: "m" })).terminal.code, "AGENT_DRIVER_TASK_UNVERIFIED", "fresh mismatch blocks objective");
+    const mismatchResult = await mismatch.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
+    equal(mismatchResult.terminal.code, "AGENT_DRIVER_TASK_UNVERIFIED", "fresh mismatch blocks objective");
+    check(mismatchResult.state === "terminal" && mismatchResult.counters.replans === 0 && mismatch.calls.reason === 1 && mismatch.calls.submit === 1, "eligible mismatch remains terminal with no real B1 replan");
     equal(mismatch.calls.submit, 1, "mismatch never retries mutation");
     const unavailable = harness({ verifyError: "VERIFICATION_UNAVAILABLE" });
     equal((await unavailable.driver.startObjective({ message: "set", endpoint: "e", model: "m" })).terminal.outcome, "blocked", "verification unavailable blocks objective");
@@ -74,6 +111,7 @@ async function run() {
     const review = harness({ opacity: 47, outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: 100, reviewCorrelation: "opaque_review_correlation_1" } });
     const suspended = await review.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
     equal(suspended.state, "awaiting-review", "REVIEW_REQUIRED suspends the active objective");
+    equal(suspended.loop.budgets.actionAttemptsUsed, 0, "waiting for human Review consumes no action-attempt budget");
     equal(suspended.objectiveId, "objective_agent_1", "suspension preserves objective identity");
     equal(suspended.suspendedReview.taskPlanId, suspended.taskPlan.planId, "suspension preserves TaskPlan identity");
     equal(suspended.suspendedReview.taskPlanRevision, suspended.taskPlan.revision, "suspension binds the exact TaskPlan revision");
@@ -90,6 +128,7 @@ async function run() {
     const approved = await review.driver.resolveReview({ reviewId: suspended.suspendedReview.reviewId, revision: suspended.suspendedReview.revision, outcome: "approved" });
     equal(approved.state, "terminal", "approved production execution completes after committed-target verification");
     equal(approved.terminal.outcome, "completed", "verified committed target completes the reviewed objective");
+    equal(approved.loop.budgets.actionAttemptsUsed, 1, "approved continuation establishes exactly one execution-attempt ownership");
     equal(approved.objectiveId, suspended.objectiveId, "approval preserves the same objective");
     equal(approved.taskPlan, suspended.taskPlan, "approval preserves the immutable TaskPlan reference");
     equal(approved.suspendedReview, null, "approval consumes the suspended record");
@@ -109,8 +148,51 @@ async function run() {
     const blockedPending = await blockedContinuation.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
     const blockedApproved = await blockedContinuation.driver.resolveReview({ reviewId: blockedPending.suspendedReview.reviewId, revision: blockedPending.suspendedReview.revision, outcome: "approved" });
     equal(blockedApproved.terminal.outcome, "blocked", "a blocked production continuation terminalizes the objective without verification");
-    equal(blockedApproved.terminal.code, "CONTEXT_STALE", "a blocked continuation preserves its canonical code");
+    equal(blockedApproved.terminal.code, "AGENT_DRIVER_REPLAN_EXHAUSTED", "CONTEXT_STALE without trusted committed truth fails closed without replan");
     equal(blockedContinuation.calls.verify, 0, "a blocked continuation never invokes legacy verification");
+
+    let boundedTurn = 0;
+    let boundedObserve = 0;
+    let boundedReason = 0;
+    let boundedSubmit = 0;
+    let boundedContinue = 0;
+    let boundedVerify = 0;
+    const boundedEvents = [];
+    const boundedDriver = driverModule.createAgentDriver({ beginTurn() { boundedTurn += 1; return Object.freeze({ sessionId: "bounded_session", turnId: "bounded_turn_" + boundedTurn }); }, observe() { boundedObserve += 1; return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: boundedObserve }); }, appendSessionEvent(event) { boundedEvents.push(event); return event; } });
+    boundedDriver.attachRuntimePort({ reason() { boundedReason += 1; return Promise.resolve({ capabilityId: "set-opacity-v1", params: { opacity: boundedReason === 1 ? 47 : 48 } }); }, submitIntent() { boundedSubmit += 1; return Promise.resolve({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: 100, reviewCorrelation: "bounded_correlation_" + boundedSubmit }); }, continueApprovedReview() { boundedContinue += 1; return Promise.resolve(boundedContinue === 1 ? { state: "blocked", code: "CONTEXT_STALE", committed: false, observation: { targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:iteration_a" } } : { state: "verification-required", code: null }); }, verifyCommittedAction() { boundedVerify += 1; return Promise.resolve({ state: "verified", code: null }); }, verifyOpacity() { throw new Error("unreachable"); }, cancel() { return true; } });
+    const boundedFirst = await boundedDriver.startObjective({ message: "set", endpoint: "e", model: "m" });
+    const boundedFirstReview = boundedFirst.suspendedReview;
+    const boundedSecond = await boundedDriver.resolveReview({ reviewId: boundedFirstReview.reviewId, revision: boundedFirstReview.revision, outcome: "approved" });
+    check(boundedSecond.state === "awaiting-review" && boundedSecond.objectiveId === boundedFirst.objectiveId && boundedSecond.turn.turnId !== boundedFirst.turn.turnId, "eligible precommit CONTEXT_STALE starts iteration one with the same objective and a fresh owner turn");
+    check(boundedSecond.loop.iterationIndex === 1 && boundedSecond.loop.budgets.iterationsUsed === 2 && boundedSecond.loop.budgets.providerCallsUsed === 2 && boundedSecond.loop.budgets.actionAttemptsUsed === 1 && boundedSecond.counters.replans === 1, "second iteration reflects exact bounded accounting");
+    check(boundedObserve === 2 && boundedReason === 2 && boundedSubmit === 2 && boundedFirstReview.reviewId !== boundedSecond.suspendedReview.reviewId && boundedFirstReview.reviewCorrelation !== boundedSecond.suspendedReview.reviewCorrelation && boundedFirst.taskPlan.planId !== boundedSecond.taskPlan.planId && boundedFirst.taskPlan.steps[0].capabilityIntent.intentId !== boundedSecond.taskPlan.steps[0].capabilityIntent.intentId, "replan performs fresh Observe, Provider reasoning, TaskPlan, intent, and Review ownership");
+    await code(() => Promise.resolve().then(() => boundedDriver.resolveReview({ reviewId: boundedFirstReview.reviewId, revision: boundedFirstReview.revision, outcome: "approved" })), "AGENT_DRIVER_REVIEW_INVALID", "old approval is permanently invalid during iteration one");
+    equal(boundedDriver.getSnapshot().state, "awaiting-review", "stale approval cannot affect the fresh Review");
+    const boundedCompleted = await boundedDriver.resolveReview({ reviewId: boundedSecond.suspendedReview.reviewId, revision: boundedSecond.suspendedReview.revision, outcome: "approved" });
+    check(boundedCompleted.terminal.outcome === "completed" && boundedVerify === 1 && boundedCompleted.loop.budgets.actionAttemptsUsed === 2, "second iteration can execute and complete through exactly one committed-target Verify");
+    check(boundedEvents.filter((event) => event.kind === "task/started").length === 1 && boundedEvents.filter((event) => event.kind === "task/completed").length === 1, "bounded replan emits one objective start and one terminal event");
+
+    let exhaustedReason = 0;
+    let exhaustedSubmit = 0;
+    const exhausted = driverModule.createAgentDriver({ beginTurn() { return { sessionId: "exhausted_session", turnId: "exhausted_turn_" + (exhaustedReason + 1) }; }, observe() { return Promise.resolve(); }, getObservation() { return { observationRevision: exhaustedReason + 1 }; }, appendSessionEvent() {} });
+    exhausted.attachRuntimePort({ reason() { exhaustedReason += 1; return Promise.resolve({ capabilityId: "set-opacity-v1", params: { opacity: 47 } }); }, submitIntent() { exhaustedSubmit += 1; return Promise.resolve({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "exhausted_correlation_" + exhaustedSubmit }); }, continueApprovedReview() { return Promise.resolve({ state: "blocked", code: "CONTEXT_STALE", committed: false, observation: { targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:same" } }); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyOpacity() { throw new Error("unreachable"); }, cancel() { return true; } });
+    const exhaustedFirst = await exhausted.startObjective({ message: "set", endpoint: "e", model: "m" });
+    const exhaustedSecond = await exhausted.resolveReview({ reviewId: exhaustedFirst.suspendedReview.reviewId, revision: exhaustedFirst.suspendedReview.revision, outcome: "approved" });
+    const exhaustedTerminal = await exhausted.resolveReview({ reviewId: exhaustedSecond.suspendedReview.reviewId, revision: exhaustedSecond.suspendedReview.revision, outcome: "approved" });
+    check(exhaustedTerminal.terminal.code === "AGENT_DRIVER_REPLAN_EXHAUSTED" && exhaustedTerminal.loop.noProgressCount === 1 && exhaustedTerminal.counters.replans === 1 && exhaustedReason === 2 && exhaustedSubmit === 2, "same second CONTEXT_STALE terminates on no-progress and budget without a third Provider or Review");
+
+    let transitionObserve = 0;
+    let releaseTransitionObserve;
+    let transitionReason = 0;
+    const transitionCancel = driverModule.createAgentDriver({ beginTurn() { return { sessionId: "cancel_session", turnId: "cancel_turn_" + (transitionObserve + 1) }; }, observe() { transitionObserve += 1; return transitionObserve === 1 ? Promise.resolve() : new Promise((resolve) => { releaseTransitionObserve = resolve; }); }, getObservation() { return { observationRevision: transitionObserve }; }, appendSessionEvent() {} });
+    transitionCancel.attachRuntimePort({ reason() { transitionReason += 1; return Promise.resolve({ capabilityId: "set-opacity-v1", params: { opacity: 47 } }); }, submitIntent() { return Promise.resolve({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "cancel_transition_review" }); }, continueApprovedReview() { return Promise.resolve({ state: "blocked", code: "CONTEXT_STALE", committed: false, observation: { targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:cancel" } }); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyOpacity() { throw new Error("unreachable"); }, cancel() { return true; } });
+    const transitionFirst = await transitionCancel.startObjective({ message: "set", endpoint: "e", model: "m" });
+    const transitionPending = transitionCancel.resolveReview({ reviewId: transitionFirst.suspendedReview.reviewId, revision: transitionFirst.suspendedReview.revision, outcome: "approved" });
+    await Promise.resolve(); await Promise.resolve();
+    check(transitionCancel.getSnapshot().state === "observing" && transitionCancel.cancel(), "cancel wins while the second-iteration fresh Observe is pending");
+    releaseTransitionObserve();
+    const transitionCancelled = await transitionPending;
+    check(transitionCancelled.terminal.outcome === "cancelled" && transitionReason === 1 && transitionCancel.getSnapshot().counters.replans === 1, "cancel prevents Provider request two, Review two, and lifecycle resurrection");
 
     const cancelledContinuation = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "opaque_review_correlation_cancelled" }, continuation: { state: "cancelled", code: "AGENT_DRIVER_CANCELLED" } });
     const continuationPending = await cancelledContinuation.driver.startObjective({ message: "set", endpoint: "e", model: "m" });

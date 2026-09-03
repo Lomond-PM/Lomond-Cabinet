@@ -372,7 +372,7 @@
                 var current = reviewBarriers.get(input.reviewCorrelation);
                 var target = captures.valueCapture && captures.valueCapture.snapshot && captures.valueCapture.snapshot.targets && captures.valueCapture.snapshot.targets[0];
                 if (!current || current !== record || disposed || state !== "ready" || reviewBarrierGeneration !== capturedGeneration) { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
-                if (!captures.bindingCapture || captures.bindingCapture.fingerprint !== record.contextFingerprint || !target || target.valueDigest !== record.valueDigest) { record.state = "terminal"; reviewBarriers.delete(input.reviewCorrelation); return Object.freeze({ state: "blocked", code: "CONTEXT_STALE" }); }
+                if (!captures.bindingCapture || captures.bindingCapture.fingerprint !== record.contextFingerprint || !target || target.valueDigest !== record.valueDigest) { record.state = "terminal"; reviewBarriers.delete(input.reviewCorrelation); return Object.freeze({ state: "blocked", code: "CONTEXT_STALE", committed: false, observation: Object.freeze({ targetAvailable: Boolean(target), targetClass: target ? "layer-opacity" : null, observedOpacityDigest: record.valueDigest }) }); }
                 record.state = "claimable";
                 if (activeProductionContinuation) { record.state = "terminal"; reviewBarriers.delete(input.reviewCorrelation); return Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED" }); }
                 activeProductionContinuation = {
@@ -679,6 +679,7 @@
                         if (result && result.state === "completed" && typeof result.text === "string" && /\S/.test(result.text)) {
                             return Object.freeze({ type: "text", text: result.text });
                         }
+                        if (result && result.state === "failed" && typeof result.errorCode === "string") { throw safeError(result.errorCode); }
                         proposal = authorityPlane && authorityPlane.proposalPort.beginReview();
                         if (!proposal || proposal.capabilityId !== "set-opacity-v1") { throw safeError("PROVIDER_RESPONSE_INVALID"); }
                         agentDriverProposal = proposal;
