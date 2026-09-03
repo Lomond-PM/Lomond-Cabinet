@@ -19,7 +19,7 @@ function harness(settings) {
         onListenerError: options.onListenerError
     });
     const port = {
-        reason() { calls.reason += 1; return Promise.resolve({ capabilityId: "set-opacity-v1", params: { opacity: options.opacity === undefined ? 42 : options.opacity } }); },
+        reason() { calls.reason += 1; return Promise.resolve(options.reason || { capabilityId: "set-opacity-v1", params: { opacity: options.opacity === undefined ? 42 : options.opacity } }); },
         submitIntent(input) { calls.submit += 1; calls.intent = input; return options.executionError ? Promise.reject(Object.assign(new Error(options.executionError), { code: options.executionError })) : Promise.resolve(options.outcome || { state: "executed", committed: true, transcriptSettled: options.transcriptSettled !== false }); },
         continueApprovedReview(input) { calls.continue += 1; calls.continuation = input; if (options.deferContinuation) return new Promise((resolve) => { calls.releaseContinuation = resolve; }); return options.continuationError ? Promise.reject(Object.assign(new Error(options.continuationError), { code: options.continuationError })) : Promise.resolve(options.continuation || { state: "verification-required", code: null }); },
         verifyCommittedAction(input) { calls.committedVerify += 1; calls.committedVerificationInput = input; if (options.deferCommittedVerification) return new Promise((resolve) => { calls.releaseCommittedVerification = resolve; }); return Promise.resolve(options.committedVerification || { state: "verified", code: null }); },
@@ -45,6 +45,16 @@ async function run() {
     equal(good.events.filter((event) => event.kind === "task/completed").length, 1, "completed terminal is appended exactly once");
     const next = await good.driver.startObjective({ message: "another objective", endpoint: "e", model: "m" });
     equal(next.objectiveId, "objective_agent_2", "terminal objective cannot restart and a subsequent objective receives fresh identity");
+
+    const text = harness({ reason: { type: "text", text: "safe text" } });
+    const textCompleted = await text.driver.startObjective({ message: "hello", endpoint: "e", model: "m" });
+    equal(textCompleted.terminal.outcome, "completed", "bounded text completes the objective without entering the action path");
+    equal(textCompleted.taskPlan, null, "bounded text creates no TaskPlan");
+    equal(text.calls.submit, 0, "bounded text submits no mutation intent");
+    equal(text.calls.verify, 0, "bounded text performs no action verification");
+    check(["ae/state-observed", "agent/action-performed", "task/review-required", "tool/result"].every((kind) => text.events.every((event) => event.kind !== kind)), "bounded text fabricates no action or AE observation events");
+    const textNext = await text.driver.startObjective({ message: "hello again", endpoint: "e", model: "m" });
+    equal(textNext.objectiveId, "objective_agent_2", "a fresh objective starts after bounded text completion");
 
     const mismatch = harness({ verification: { fresh: true, matches: false, opacity: 41 } });
     equal((await mismatch.driver.startObjective({ message: "set", endpoint: "e", model: "m" })).terminal.code, "AGENT_DRIVER_TASK_UNVERIFIED", "fresh mismatch blocks objective");

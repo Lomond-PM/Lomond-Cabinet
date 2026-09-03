@@ -111,7 +111,9 @@ function observedHarness(options) {
             const responseEnvelope = schema.properties.envelope;
             const requestedKind = options.responseKind ? options.responseKind(userMessage, body) : (!responseEnvelope.properties || responseEnvelope.properties.type.enum[0] === "text" ? "text" : "localProposal");
             const envelope = requestedKind === "text" ? { type: "text", text: options.responseText || "safe" } : { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: typeof options.responseOpacity === "number" ? options.responseOpacity : 50 } } };
-            const response = JSON.stringify({ id: "x", object: "chat.completion", created: 1, model: "m", choices: [{ index: 0, message: { role: "assistant", content: JSON.stringify({ protocol: p.PROTOCOLS.RESPONSE, schemaVersion: p.SCHEMA_VERSION, requestId, provider: "lmstudio", model: "m", envelope }), reasoning_content: "", tool_calls: [] }, finish_reason: "stop" }], usage: {} });
+            const canonicalContent = JSON.stringify({ protocol: p.PROTOCOLS.RESPONSE, schemaVersion: p.SCHEMA_VERSION, requestId, provider: "lmstudio", model: "m", envelope });
+            const message = options.responseMessage ? options.responseMessage(canonicalContent) : { role: "assistant", content: canonicalContent, reasoning_content: "", tool_calls: [] };
+            const response = JSON.stringify({ id: "x", object: "chat.completion", created: 1, model: "m", choices: [{ index: 0, message, finish_reason: "stop" }], usage: options.responseUsage || {} });
             let sent = false;
             return Promise.resolve({ status: 200, redirected: false, url, headers: { get: () => "application/json" }, body: { getReader() { return { read() { if (sent) return Promise.resolve({ done: true }); sent = true; return Promise.resolve({ done: false, value: new TextEncoder().encode(response) }); }, cancel() {} }; } } });
         },
@@ -285,6 +287,31 @@ async function runRequestProfileLifecycleTests() {
     check(typeof providerCancelledRequestId === "string" && providerCancelled.controller.cancel({ requestId: providerCancelledRequestId }) === true, "Cancel accepts the exact issued Provider request id while transport is pending.");
     await providerCancelledPromise;
     check(providerCancelled.controller.getDiagnostics().lastTerminalRequestId === providerCancelledRequestId && providerCancelled.controller.getDiagnostics().lastTerminalDisposition === "cancelled" && providerCancelled.controller.getDiagnostics().lastTerminalFailureBoundary === null && providerCancelled.controller.getDiagnostics().lastTerminalErrorCode === "PROVIDER_REQUEST_ABORTED", "Provider-phase cancellation correlates its request id without fabricating a failure boundary.");
+    const sentinel = "A3_REASONING_SECRET_SENTINEL_94827";
+    const reasoningHeavy = observedHarness({ responseOpacity: 47, responseMessage(content) { return { role: "assistant", content, reasoning_content: sentinel, tool_calls: [] }; }, responseUsage: { completion_tokens_details: { reasoning_tokens: 321 } } });
+    const reasoningHeavyState = await reasoningHeavy.controller.send({ message: "Set opacity to 47%", endpoint, model: "m" });
+    check(reasoningHeavyState.state === "proposal-ready" && reasoningHeavyState.suggestedOpacity === 47 && reasoningHeavy.observed.intentInputs.length === 1, "Controller consumes structured final content from a reasoning-heavy wrapper and reaches the normal proposal path.");
+    check(!JSON.stringify(reasoningHeavyState).includes(sentinel) && !/reasoning_content|reasoning_tokens/.test(JSON.stringify(reasoningHeavyState)) && !JSON.stringify(reasoningHeavy.controller.getDiagnostics()).includes(sentinel), "Controller state and diagnostics discard reasoning text and token metadata.");
+    const noReasoning = observedHarness({ responseOpacity: 47, responseMessage(content) { return { role: "assistant", content, tool_calls: [] }; } });
+    const noReasoningState = await noReasoning.controller.send({ message: "Set opacity to 47%", endpoint, model: "m" });
+    check(noReasoningState.state === reasoningHeavyState.state && noReasoningState.proposalCapabilityId === reasoningHeavyState.proposalCapabilityId && noReasoningState.suggestedOpacity === reasoningHeavyState.suggestedOpacity && noReasoning.observed.intentInputs[0].proposedOpacity === reasoningHeavy.observed.intentInputs[0].proposedOpacity, "The same canonical content has equivalent proposal and Intent Gate semantics with or without reasoning metadata.");
+    const controllerFailures = [
+        ["reasoning-only-empty", (content) => ({ role: "assistant", content: "", reasoning_content: sentinel, tool_calls: [] }), {}],
+        ["reasoning-only-null", (content) => ({ role: "assistant", content: null, reasoning_content: sentinel, tool_calls: [] }), {}],
+        ["reasoning-only-missing", (content) => ({ role: "assistant", reasoning_content: sentinel, tool_calls: [] }), {}],
+        ["reasoning-object", (content) => ({ role: "assistant", content, reasoning_content: { secret: sentinel }, tool_calls: [] }), {}],
+        ["reasoning-array", (content) => ({ role: "assistant", content, reasoning_content: [sentinel], tool_calls: [] }), {}],
+        ["reasoning-number", (content) => ({ role: "assistant", content, reasoning_content: 7, tool_calls: [] }), {}],
+        ["unknown-reasoning", (content) => ({ role: "assistant", content, reasoning: sentinel, tool_calls: [] }), {}],
+        ["negative-reasoning-tokens", (content) => ({ role: "assistant", content, reasoning_content: sentinel, tool_calls: [] }), { completion_tokens_details: { reasoning_tokens: -1 } }],
+        ["fractional-reasoning-tokens", (content) => ({ role: "assistant", content, reasoning_content: sentinel, tool_calls: [] }), { completion_tokens_details: { reasoning_tokens: 1.5 } }]
+    ];
+    for (const fixture of controllerFailures) {
+        const invalid = observedHarness({ responseOpacity: 47, responseMessage: fixture[1], responseUsage: fixture[2] });
+        const invalidState = await invalid.controller.send({ message: "Set opacity to 47%", endpoint, model: "m" });
+        check(invalidState.state === "failed" && invalidState.errorCode === "PROVIDER_RESPONSE_INVALID" && invalid.observed.intentInputs.length === 0 && invalid.observed.transportBodies.length === 1 && invalid.controller.getUiState().proposalCapabilityId === null, fixture[0] + " fails closed once before proposal or retry.");
+        check(!JSON.stringify(invalid.controller.getDiagnostics()).includes(sentinel), fixture[0] + " diagnostics do not stringify auxiliary reasoning payloads.");
+    }
     const restarted = rapid.controller.send({ message: chineseMessage, endpoint, model: "m" }); await flush();
     rapid.resolveNext(); await flush();
     rapid.resolveNext(); await restarted; await flush();

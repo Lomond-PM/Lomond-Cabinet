@@ -60,6 +60,7 @@
         function startObjective(input) {
             var captured;
             var reasonInput;
+            var reasonObservationRevision;
             if (disposed) { return Promise.reject(error(ERROR_CODES.AGENT_DRIVER_DISPOSED)); }
             if (state === "terminal") { state = "idle"; active = null; }
             if (state !== "idle") { return Promise.reject(error(ERROR_CODES.AGENT_DRIVER_BUSY)); }
@@ -71,13 +72,15 @@
             transition("observing");
             return Promise.resolve(observe()).then(function () {
                 if (!current(captured)) { return snapshot(); }
-                active.observations += 1; event("ae/state-observed", { taskId: active.taskId, phase: "pre-action", observationRevision: getObservation() && getObservation().observationRevision || null });
+                active.observations += 1; reasonObservationRevision = getObservation() && getObservation().observationRevision || null;
                 transition("reasoning"); active.reasoningTurns += 1;
                 reasonInput = { message: input.message, endpoint: input.endpoint, model: input.model };
                 return runtimePort.reason(reasonInput);
             }).then(function (reason) {
                 var intent;
                 if (!current(captured) || !reason) { return snapshot(); }
+                if (plain(reason) && reason.type === "text" && typeof reason.text === "string" && /\S/.test(reason.text)) { return terminal("completed", null); }
+                event("ae/state-observed", { taskId: active.taskId, phase: "pre-action", observationRevision: reasonObservationRevision });
                 intent = buildPlan(reason); transition("awaiting-outcome"); active.actions += 1;
                 event("agent/action-performed", { taskId: active.taskId, taskPlanId: active.taskPlan.planId, stepId: active.taskPlan.steps[0].stepId, capabilityId: intent.capabilityId, phase: "submitted" });
                 return runtimePort.submitIntent({ objectiveId: active.objectiveId, sessionId: active.turn.sessionId, turnId: active.turn.turnId, taskId: active.taskId, taskPlanId: active.taskPlan.planId, taskPlanRevision: active.taskPlan.revision, stepId: active.taskPlan.steps[0].stepId, reviewRevision: captured, capabilityIntent: intent });

@@ -31,6 +31,11 @@ async function run() {
     check((await badType.sendJson({ url: "http://localhost:1234/v1/chat/completions", method: "POST", headers: { "Content-Type": "application/json" }, body: {}, signal: {}, allowRedirects: false, maxRequestBytes: 1024, maxResponseBytes: 1024 })).contentType === "text/html", "Transport preserves only bounded normalized content type for adapter validation.");
     const oversized = transportModule.createLocalTransport({ protocol, fetch() { return Promise.resolve(response("x".repeat(20))); }, TextDecoder });
     await assert.rejects(oversized.sendJson({ url: "http://[::1]:1234/v1/chat/completions", method: "POST", headers: { "Content-Type": "application/json" }, body: {}, signal: {}, allowRedirects: false, maxRequestBytes: 1024, maxResponseBytes: 4 }), (error) => error.code === "PROVIDER_RESPONSE_TOO_LARGE"); assertions += 1;
+    const boundedContent = JSON.stringify({ choices: [{ message: { content: "{}", reasoning_content: "r".repeat(80) } }] });
+    const reasoningBudgetTransport = transportModule.createLocalTransport({ protocol, fetch() { return Promise.resolve(response(boundedContent)); }, TextDecoder });
+    await assert.rejects(reasoningBudgetTransport.sendJson({ url: "http://127.0.0.1:1234/v1/chat/completions", method: "POST", headers: { "Content-Type": "application/json" }, body: {}, signal: {}, allowRedirects: false, maxRequestBytes: 1024, maxResponseBytes: Buffer.byteLength(boundedContent, "utf8") - 1 }), (error) => error.code === "PROVIDER_RESPONSE_TOO_LARGE"); assertions += 1;
+    const underBudget = await reasoningBudgetTransport.sendJson({ url: "http://127.0.0.1:1234/v1/chat/completions", method: "POST", headers: { "Content-Type": "application/json" }, body: {}, signal: {}, allowRedirects: false, maxRequestBytes: 1024, maxResponseBytes: Buffer.byteLength(boundedContent, "utf8") });
+    check(underBudget.bodyText === boundedContent, "Raw reasoning-heavy response bytes are accepted exactly at the transport limit without a reasoning-specific length rule.");
     let deepBody = {};
     let cursor = deepBody;
     for (let index = 0; index < 9; index += 1) { cursor.next = {}; cursor = cursor.next; }

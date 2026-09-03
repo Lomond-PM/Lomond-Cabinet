@@ -666,7 +666,7 @@
                     agentReasoningGeneration += 1;
                     capturedGeneration = agentReasoningGeneration;
                     activeAgentReasoning = Object.freeze({ generation: capturedGeneration });
-                    return Promise.resolve(providerController.send(input)).then(function () {
+                    return Promise.resolve(providerController.send(input)).then(function (result) {
                         var proposal;
                         if (disposed || state !== "ready" || !activeAgentReasoning || activeAgentReasoning.generation !== capturedGeneration || agentReasoningGeneration !== capturedGeneration) {
                             if (authorityPlane && providerController.getUiState().state === "proposal-ready") {
@@ -676,6 +676,9 @@
                             throw safeError("LIFECYCLE_BLOCKED");
                         }
                         activeAgentReasoning = null;
+                        if (result && result.state === "completed" && typeof result.text === "string" && /\S/.test(result.text)) {
+                            return Object.freeze({ type: "text", text: result.text });
+                        }
                         proposal = authorityPlane && authorityPlane.proposalPort.beginReview();
                         if (!proposal || proposal.capabilityId !== "set-opacity-v1") { throw safeError("PROVIDER_RESPONSE_INVALID"); }
                         agentDriverProposal = proposal;
