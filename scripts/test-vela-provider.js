@@ -354,8 +354,9 @@ async function run() {
         (value) => { value.choices[0].logprobs = "tokens"; },
         (value) => { value.stats = { queue: 1 }; },
         (value) => { value.stats = []; },
-        (value) => { value.usage.completion_tokens_details = { reasoning_tokens: 1 }; },
         (value) => { value.usage.completion_tokens_details = { reasoning_tokens: -1 }; },
+        (value) => { value.usage.completion_tokens_details = { reasoning_tokens: 1.5 }; },
+        (value) => { value.usage.completion_tokens_details = { reasoning_tokens: "1" }; },
         (value) => { value.usage.completion_tokens_details = { reasoning_tokens: 0, extra: true }; },
         (value) => { value.usage.prompt_tokens = "239"; },
         (value) => { value.system_fingerprint = {}; },
@@ -378,7 +379,7 @@ async function run() {
         equal(response.envelope.type, "text", "Empty LM Studio wrapper extensions must be inert.");
         check(JSON.stringify(response).indexOf("reasoning_content") === -1 && JSON.stringify(response).indexOf("tool_calls") === -1, "Inert wrapper extensions must not enter canonical output.");
     }
-    for (const extension of [{ reasoning_content: "hidden reasoning" }, { tool_calls: [{}] }, { function_call: null }, { unknown_extension: true }]) {
+    for (const extension of [{ reasoning_content: {} }, { reasoning_content: [] }, { reasoning_content: 1 }, { tool_calls: [{}] }, { function_call: null }, { reasoning: "hidden reasoning" }, { thinking: "hidden reasoning" }, { analysis: "hidden reasoning" }, { unknown_extension: true }]) {
         const harness = createHarness({ responder: (request) => {
             const body = JSON.parse(wrapper(canonicalContent(base.protocol, request)));
             Object.assign(body.choices[0].message, extension);
@@ -386,6 +387,44 @@ async function run() {
         } });
         equal((await harness.provider.start(input()).promise).envelope.error.code, base.protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "Non-inert wrapper extensions must fail closed.");
     }
+
+    const auxiliaryReasoning = "arbitrary auxiliary reasoning text that must never enter canonical output";
+    for (const reasoningTokens of [0, 17]) {
+        const harness = createHarness({ responder: (request) => {
+            const body = realLmStudioWrapper(base.protocol, request);
+            body.choices[0].message.reasoning_content = auxiliaryReasoning;
+            body.usage.completion_tokens_details.reasoning_tokens = reasoningTokens;
+            return Promise.resolve(transportResult(JSON.stringify(body)));
+        } });
+        const response = await harness.provider.start(input()).promise;
+        equal(response.envelope.type, "text", "Nonempty auxiliary reasoning with reasoning_tokens " + reasoningTokens + " preserves valid final content.");
+        check(!JSON.stringify(response).includes(auxiliaryReasoning) && !JSON.stringify(response).includes("reasoning_content") && !JSON.stringify(response).includes("reasoning_tokens"), "Auxiliary reasoning text and metadata are absent from canonical output.");
+        check(!JSON.stringify(harness.provider.getDiagnostics()).includes(auxiliaryReasoning) && !JSON.stringify(harness.provider.getDiagnostics()).includes("reasoning"), "Auxiliary reasoning is absent from Provider diagnostics.");
+    }
+    const structuredReasoningHarness = createHarness({ requestProfile: requestBranchPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE, responder: (request) => {
+        const content = canonicalContent(base.protocol, request, { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 47 } } });
+        const body = JSON.parse(wrapper(content));
+        body.choices[0].message.reasoning_content = "prose before structured final output";
+        return Promise.resolve(transportResult(JSON.stringify(body)));
+    } });
+    const structuredReasoningResponse = await structuredReasoningHarness.provider.start(input()).promise;
+    check(structuredReasoningResponse.envelope.type === "localProposal" && structuredReasoningResponse.envelope.proposal.params.opacity === 47, "Structured proposal parsing consumes only final content when prose reasoning is present.");
+    for (const finalContent of ["", null, undefined]) {
+        const harness = createHarness({ responder: (request) => {
+            const body = JSON.parse(wrapper(canonicalContent(base.protocol, request)));
+            if (finalContent === undefined) delete body.choices[0].message.content;
+            else body.choices[0].message.content = finalContent;
+            body.choices[0].message.reasoning_content = "valid-looking reasoning";
+            return Promise.resolve(transportResult(JSON.stringify(body)));
+        } });
+        equal((await harness.provider.start(input()).promise).envelope.error.code, base.protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "Reasoning-only response cannot replace missing, null, or empty final content.");
+    }
+    const malformedFinalWithReasoning = createHarness({ responder: () => {
+        const body = JSON.parse(wrapper("not canonical Vela JSON"));
+        body.choices[0].message.reasoning_content = "valid auxiliary reasoning";
+        return Promise.resolve(transportResult(JSON.stringify(body)));
+    } });
+    equal((await malformedFinalWithReasoning.provider.start(input()).promise).envelope.error.code, base.protocol.ERROR_CODES.JSON_PARSE_FAILED, "Valid auxiliary reasoning cannot rescue malformed final content or change parser taxonomy.");
 
     const invalidWrappers = [
         ["not-json", "malformed wrapper"], ["<html>bad</html>", "HTML wrapper"], ["```json\n{}\n```", "fenced wrapper"],

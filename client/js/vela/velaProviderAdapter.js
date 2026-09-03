@@ -239,9 +239,8 @@
                 details = ownDataValue(protocol, usage, "completion_tokens_details");
                 if (!protocol.isPlainObject(details)) { responseFailure(protocol, "The OpenAI response completion details are invalid."); }
                 protocol.assertNoUnknownKeys(details, OPENAI_COMPLETION_DETAILS_KEYS, "provider.openAiCompletionDetails");
-                if (!hasOwn(details, "reasoning_tokens") || ownDataValue(protocol, details, "reasoning_tokens") !== 0) {
-                    responseFailure(protocol, "The OpenAI response reasoning details are unsupported.");
-                }
+                if (!hasOwn(details, "reasoning_tokens")) { responseFailure(protocol, "The OpenAI response reasoning details are invalid."); }
+                assertNonNegativeSafeInteger(protocol, ownDataValue(protocol, details, "reasoning_tokens"), "The OpenAI response reasoning details are invalid.");
             }
         }
         if (hasOwn(wrapper, "system_fingerprint")) {
@@ -697,8 +696,8 @@
             if (!protocol.isPlainObject(message)) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant message is invalid."); }
             protocol.assertNoUnknownKeys(message, OPENAI_MESSAGE_KEYS, "provider.openAiMessage");
             if (Object.prototype.hasOwnProperty.call(message, "function_call")) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant message contains unsupported calls."); }
-            if (Object.prototype.hasOwnProperty.call(message, "reasoning_content") && message.reasoning_content !== "" && message.reasoning_content !== null) {
-                protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant reasoning is unsupported.");
+            if (Object.prototype.hasOwnProperty.call(message, "reasoning_content") && message.reasoning_content !== null && typeof message.reasoning_content !== "string") {
+                protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant reasoning metadata is invalid.");
             }
             if (Object.prototype.hasOwnProperty.call(message, "tool_calls") && (!Array.isArray(message.tool_calls) || message.tool_calls.length !== 0)) {
                 protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant message contains unsupported calls.");
