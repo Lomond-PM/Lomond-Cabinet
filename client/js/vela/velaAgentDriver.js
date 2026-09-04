@@ -34,8 +34,10 @@
         throw error(ERROR_CODES.AGENT_DRIVER_INVALID_OPTIONS);
     }
     function createObservationSignature(input) {
-        if (!plain(input) || typeof input.targetAvailable !== "boolean" || (input.targetClass !== null && typeof input.targetClass !== "string") || (input.observedOpacityDigest !== null && typeof input.observedOpacityDigest !== "string")) { throw error(ERROR_CODES.AGENT_DRIVER_INVALID_OPTIONS); }
-        return canonical({ observedOpacityDigest: input.observedOpacityDigest, targetAvailable: input.targetAvailable, targetClass: input.targetClass });
+        var digest = input && Object.prototype.hasOwnProperty.call(input, "observedValueDigest") ? input.observedValueDigest : input && input.observedOpacityDigest;
+        var kind = input && Object.prototype.hasOwnProperty.call(input, "observedValueKind") ? input.observedValueKind : "number";
+        if (!plain(input) || typeof input.targetAvailable !== "boolean" || (input.targetClass !== null && typeof input.targetClass !== "string") || (digest !== null && typeof digest !== "string") || (kind !== null && kind !== "number" && kind !== "string")) { throw error(ERROR_CODES.AGENT_DRIVER_INVALID_OPTIONS); }
+        return canonical({ observedValueDigest: digest, observedValueKind: kind, targetAvailable: input.targetAvailable, targetClass: input.targetClass });
     }
     function createIntentSignature(input) {
         var params;
@@ -84,13 +86,17 @@
         function terminal(outcome, code) { if (!active || active.terminal) { return snapshot(); } active.suspendedReview = null; active.terminal = Object.freeze({ outcome: outcome, code: code || null }); transition("terminal"); event(outcome === "completed" ? "task/completed" : outcome === "cancelled" ? "task/cancelled" : outcome === "rejected" ? "task/review-rejected" : "task/blocked", { taskId: active.taskId, taskPlanId: active.taskPlan ? active.taskPlan.planId : null, code: code || null }); return snapshot(); }
         function current(captured) { return !disposed && active && !active.terminal && generation === captured; }
         function buildPlan(reason) {
-            var opacity;
+            var params;
+            var capabilityId;
+            var semantic;
             var intent;
-            if (!plain(reason) || reason.capabilityId !== "set-opacity-v1" || !plain(reason.params)) { throw error(ERROR_CODES.AGENT_DRIVER_REASON_INVALID); }
-            opacity = reason.params.opacity;
-            if (typeof opacity !== "number" || !isFinite(opacity) || opacity < 0 || opacity > 100) { throw error(ERROR_CODES.AGENT_DRIVER_REASON_INVALID); }
-            intent = planning.createCapabilityIntent({ intentId: "intent_agent_" + serial + "_" + active.loopHealth.iterationIndex, capabilityId: "set-opacity-v1", requestedOperation: "mutate", params: { opacity: opacity } });
-            active.taskPlan = planning.createTaskPlan({ planId: "task_plan_agent_" + serial + "_" + active.loopHealth.iterationIndex, taskId: active.taskId, revision: 0, steps: [{ stepId: "operate_opacity_" + serial + "_" + active.loopHealth.iterationIndex, kind: "operate", capabilityIntent: { intentId: intent.intentId, capabilityId: intent.capabilityId, requestedOperation: intent.requestedOperation, params: { opacity: opacity } }, rationale: "Apply the bounded opacity objective.", metadata: { expectedOpacity: opacity } }] });
+            if (!plain(reason) || !plain(reason.params)) { throw error(ERROR_CODES.AGENT_DRIVER_REASON_INVALID); }
+            capabilityId = reason.capabilityId;
+            if (capabilityId === "set-opacity-v1" && Object.keys(reason.params).join(",") === "opacity" && typeof reason.params.opacity === "number" && isFinite(reason.params.opacity) && reason.params.opacity >= 0 && reason.params.opacity <= 100) { params = { opacity: reason.params.opacity }; semantic = "opacity"; }
+            else if (capabilityId === "set-layer-name-v1" && Object.keys(reason.params).join(",") === "name" && typeof reason.params.name === "string" && reason.params.name.length > 0) { params = { name: reason.params.name }; semantic = "layer_name"; }
+            else { throw error(ERROR_CODES.AGENT_DRIVER_REASON_INVALID); }
+            intent = planning.createCapabilityIntent({ intentId: "intent_agent_" + serial + "_" + active.loopHealth.iterationIndex, capabilityId: capabilityId, requestedOperation: "mutate", params: params });
+            active.taskPlan = planning.createTaskPlan({ planId: "task_plan_agent_" + serial + "_" + active.loopHealth.iterationIndex, taskId: active.taskId, revision: 0, steps: [{ stepId: "operate_" + semantic + "_" + serial + "_" + active.loopHealth.iterationIndex, kind: "operate", capabilityIntent: { intentId: intent.intentId, capabilityId: intent.capabilityId, requestedOperation: intent.requestedOperation, params: params }, rationale: "Apply the bounded single-step mutation objective.", metadata: { expectedValue: capabilityId === "set-opacity-v1" ? { kind: "number", data: params.opacity } : { kind: "string", data: params.name } } }] });
             planning.assertTaskPlanNotExecutable(active.taskPlan);
             active.intent = intent;
             active.currentIntentSignature = createIntentSignature({ capabilityId: intent.capabilityId, requestedOperation: intent.requestedOperation, canonicalParams: intent.params, targetScope: ["layer", "property"] });
@@ -121,18 +127,18 @@
             }).then(function (outcome) {
                 if (!current(captured) || !outcome) { return snapshot(); }
                 if (outcome.state === "review-required") {
-                    var beforeValue = typeof outcome.beforeValue === "number" && isFinite(outcome.beforeValue) && outcome.beforeValue >= 0 && outcome.beforeValue <= 100 ? outcome.beforeValue : null;
+                    var beforeValue = typeof outcome.beforeValue === "number" && isFinite(outcome.beforeValue) || typeof outcome.beforeValue === "string" ? outcome.beforeValue : null;
                     active.loopHealth.actionAttemptsUsed -= 1;
                     if (typeof outcome.reviewCorrelation !== "string" || outcome.reviewCorrelation.length === 0) { return terminal("blocked", ERROR_CODES.AGENT_DRIVER_EXECUTION_FAILED); }
-                    active.suspendedReview = Object.freeze({ objectiveId: active.objectiveId, taskId: active.taskId, sessionId: active.turn.sessionId, turnId: active.turn.turnId, taskPlanId: active.taskPlan.planId, taskPlanRevision: active.taskPlan.revision, stepId: active.taskPlan.steps[0].stepId, capabilityId: active.intent.capabilityId, params: Object.freeze({ opacity: active.intent.params.opacity }), localExpectation: Object.freeze({ opacity: active.intent.params.opacity }), beforeValue: beforeValue, reviewId: "agent_review_" + serial + "_" + generation + "_" + active.loopHealth.iterationIndex, revision: generation, reviewCorrelation: outcome.reviewCorrelation });
+                    active.suspendedReview = Object.freeze({ objectiveId: active.objectiveId, taskId: active.taskId, sessionId: active.turn.sessionId, turnId: active.turn.turnId, taskPlanId: active.taskPlan.planId, taskPlanRevision: active.taskPlan.revision, stepId: active.taskPlan.steps[0].stepId, capabilityId: active.intent.capabilityId, params: active.intent.params, localExpectation: active.intent.params, beforeValue: beforeValue, reviewId: "agent_review_" + serial + "_" + generation + "_" + active.loopHealth.iterationIndex, revision: generation, reviewCorrelation: outcome.reviewCorrelation });
                     transition("awaiting-review");
                     event("task/review-required", { taskId: active.taskId, taskPlanId: active.taskPlan.planId, stepId: active.taskPlan.steps[0].stepId, reviewId: active.suspendedReview.reviewId, reviewRevision: active.suspendedReview.revision, code: outcome.code || "REVIEW_REQUIRED" });
                     return snapshot();
                 }
                 if (outcome.state === "denied") { active.loopHealth.actionAttemptsUsed -= 1; return terminal("blocked", outcome.code || "PERMISSION_DENIED"); }
                 if (outcome.state !== "executed" || outcome.committed !== true) { return terminal("blocked", outcome.code || ERROR_CODES.AGENT_DRIVER_EXECUTION_FAILED); }
-                active.committed = true; event("tool/result", { taskId: active.taskId, capabilityId: "set-opacity-v1", committed: true }); transition("verifying");
-                return runtimePort.verifyOpacity({ taskId: active.taskId, expectedOpacity: active.intent.params.opacity });
+                active.committed = true; event("tool/result", { taskId: active.taskId, capabilityId: active.intent.capabilityId, committed: true }); transition("verifying");
+                return runtimePort.verifyAction({ taskId: active.taskId, capabilityId: active.intent.capabilityId, expectedValue: active.intent.capabilityId === "set-opacity-v1" ? { kind: "number", data: active.intent.params.opacity } : { kind: "string", data: active.intent.params.name } });
             }).then(function (verification) {
                 if (!current(captured) || state !== "verifying") { return snapshot(); }
                 active.observations += 1; event("ae/state-observed", { taskId: active.taskId, phase: "post-action", fresh: verification && verification.fresh === true, observedOpacity: verification && typeof verification.opacity === "number" ? verification.opacity : null });
@@ -200,8 +206,8 @@
             return Promise.resolve(runtimePort.continueApprovedReview({ objectiveId: review.objectiveId, taskId: review.taskId, sessionId: review.sessionId, turnId: review.turnId, taskPlanId: review.taskPlanId, taskPlanRevision: review.taskPlanRevision, stepId: review.stepId, capabilityIntent: active.intent, localExpectation: review.localExpectation, reviewId: review.reviewId, reviewRevision: review.revision, reviewCorrelation: review.reviewCorrelation })).then(function (continuation) {
                 if (!current(captured)) { return snapshot(); }
                 if (continuation && continuation.state === "verification-required") {
-                    active.committed = true; event("tool/result", { taskId: active.taskId, capabilityId: "set-opacity-v1", committed: true }); transition("verifying");
-                    return runtimePort.verifyCommittedAction({ objectiveId: active.objectiveId, taskId: active.taskId, expectedOpacity: active.intent.params.opacity }).then(function (verification) {
+                    active.committed = true; event("tool/result", { taskId: active.taskId, capabilityId: active.intent.capabilityId, committed: true }); transition("verifying");
+                    return runtimePort.verifyCommittedAction({ objectiveId: active.objectiveId, taskId: active.taskId, capabilityId: active.intent.capabilityId, expectedValue: active.intent.capabilityId === "set-opacity-v1" ? { kind: "number", data: active.intent.params.opacity } : { kind: "string", data: active.intent.params.name } }).then(function (verification) {
                         if (!current(captured) || state !== "verifying") { return snapshot(); }
                         active.observations += 1;
                         event("ae/state-observed", { taskId: active.taskId, phase: "post-action", fresh: verification && verification.state === "verified", observedOpacity: null });
@@ -216,7 +222,7 @@
             }, function (failure) { return fail(captured, failure); });
         }
         function cancel() { generation += 1; if (disposed || !active || active.terminal || state === "idle" || state === "terminal") { return false; } try { if (runtimePort && typeof runtimePort.cancel === "function") { runtimePort.cancel(); } } catch (ignored) {} terminal("cancelled", "AGENT_DRIVER_CANCELLED"); return true; }
-        function attachRuntimePort(port) { if (disposed || runtimePort || !port || typeof port.reason !== "function" || typeof port.submitIntent !== "function" || typeof port.continueApprovedReview !== "function" || typeof port.verifyCommittedAction !== "function" || typeof port.verifyOpacity !== "function") { return false; } runtimePort = port; return true; }
+        function attachRuntimePort(port) { if (disposed || runtimePort || !port || typeof port.reason !== "function" || typeof port.submitIntent !== "function" || typeof port.continueApprovedReview !== "function" || typeof port.verifyCommittedAction !== "function" || (typeof port.verifyAction !== "function" && typeof port.verifyOpacity !== "function")) { return false; } if (typeof port.verifyAction !== "function") { port = Object.freeze(Object.assign({}, port, { verifyAction: function (input) { return port.verifyOpacity({ taskId: input.taskId, expectedOpacity: input.expectedValue.data }); } })); } runtimePort = port; return true; }
         function dispose() { if (disposed) { return false; } if (active && !active.terminal && state !== "idle") { cancel(); } disposed = true; generation += 1; runtimePort = null; listeners = []; return true; }
         return Object.freeze({ attachRuntimePort: attachRuntimePort, startObjective: startObjective, resolveReview: resolveReview, cancel: cancel, dispose: dispose, getSnapshot: snapshot, subscribe: function (listener) { var subscribed = true; if (typeof listener !== "function" || disposed) { throw error(ERROR_CODES.AGENT_DRIVER_DISPOSED); } listeners.push(listener); try { listener(snapshot()); } catch (listenerError) { try { onListenerError(listenerError, Object.freeze({ phase: "driver-listener" })); } catch (ignored) {} } return Object.freeze({ unsubscribe: function () { var index; if (!subscribed) { return; } subscribed = false; index = listeners.indexOf(listener); if (index !== -1) { listeners.splice(index, 1); } } }); } });
     }

@@ -49,6 +49,23 @@ async function makeExecutionHarness(hostResponder) {
     const adapter = adapterModule.createExecutionAdapter({ protocol, contextApi, contextBridge: bridge, executionPort: port, invokeHost(source, callback) { hostCalls.push(source); hostResponder(source, callback); } });
     return { protocol, contextApi, adapter, action, trustedExecutionContext: Object.freeze({ bindingCapture: binding, valueCapture }), hostCalls, contextCalls };
 }
+async function makeRenameExecutionHarness(hostResponder) {
+    const protocol = protocolModule.createProtocol(runtime());
+    const contextApi = contextModule.createContextApi(protocol);
+    const hostCalls = [];
+    const bridge = bridgeModule.createContextBridge({ protocol, contextApi, invokeHost(source, callback) {
+        const request = decodeContextSource(source);
+        const snapshot = request.operation === "captureContext" ? bindingSnapshot() : { hostInstanceId: "host_0123456789abcdef0123456789abcdef0123456789abcdef", hostReloadEpoch: 1, projectGeneration: 3, tier: 3, target: { itemId: 12, nativeLayerId: 45, layerIndex: 3, targetKind: "layer-attribute", attribute: "name", value: { kind: "string", data: "Layer A" } } };
+        callback(contextSuccess(request, snapshot));
+    }, runtime: { setTimeout() { return 1; }, clearTimeout() {}, timeoutMs: 10 } });
+    const binding = await bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
+    const layerId = binding.snapshot.selection[0].layerId;
+    const valueCapture = await bridge.captureLayerAttributeValue(binding, { layerId, targetKind: "layer-attribute", attribute: "name" });
+    const action = protocol.deepFreeze({ kind: "tool", target: { contextFingerprint: binding.fingerprint, contextTier: 3, layerId, targetKind: "layer-attribute", attribute: "name", propertyValueDigest: valueCapture.snapshot.target.valueDigest }, payload: { toolId: "vela", actionId: "set-layer-name-v1", params: { name: " 主标题 " } } });
+    const port = bridgeModule.createExecutionPort(bridge, protocol);
+    const adapter = adapterModule.createExecutionAdapter({ protocol, contextApi, contextBridge: bridge, executionPort: port, invokeHost(source, callback) { hostCalls.push(source); hostResponder(source, callback, contextApi); } });
+    return { protocol, adapter, action, trustedExecutionContext: Object.freeze({ bindingCapture: binding, valueCapture }), hostCalls };
+}
 function decodeExecutionSource(source) {
     const prefix = "AEToolbox.VelaExecution.handle(";
     assert.ok(source.startsWith(prefix) && source.endsWith(")"), "Unexpected execution Host facade.");
@@ -87,6 +104,13 @@ function run() {
         const success = await makeExecutionHarness((source, callback) => { callback(hostSuccess(decodeExecutionSource(source))); });
         const successResult = await success.adapter.executeValidatedAction(success.action, Object.freeze({}), success.trustedExecutionContext);
         check(successResult.ok === true && successResult.committed === true && Object.isFrozen(successResult), "Successful Adapter result carries bounded committed true.");
+        const rename = await makeRenameExecutionHarness((source, callback, contextApi) => {
+            const request = decodeExecutionSource(source);
+            check(request.capabilityId === "set-layer-name-v1" && request.scope.target.targetKind === "layer-attribute" && request.scope.params.name === " 主标题 ", "Adapter emits one closed exact-target rename request without recanonicalizing the name.");
+            callback(JSON.stringify({ protocol: "vela.host-execution-result.v1", schemaVersion: "1.0", requestId: request.requestId, sessionId: request.sessionId, operation: "executeCapability", ok: true, hostExecutionRevision: "vela-execution-host-v1", result: { capabilityId: "set-layer-name-v1", valueKind: "string", resultingValueDigest: contextApi.digestPropertyValue("string", " 主标题 ") } }));
+        });
+        const renameResult = await rename.adapter.executeValidatedAction(rename.action, Object.freeze({}), rename.trustedExecutionContext);
+        check(renameResult.ok === true && renameResult.committed === true && renameResult.summary.capabilityId === "set-layer-name-v1" && rename.hostCalls.length === 1, "Adapter preserves rename committed true and invokes Host exactly once.");
         console.log("test-vela-execution-adapter: " + assertions + " assertions passed.");
     });
 }

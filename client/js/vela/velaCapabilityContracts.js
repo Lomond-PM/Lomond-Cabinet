@@ -225,10 +225,37 @@
     function validateCapabilityParams(projection, params) {
         var schema;
         if (!isPlainObject(projection)) { fail("Capability projection is invalid."); }
+        if (ownData(projection, "capabilityId") === "set-layer-name-v1") { return validateLayerNameParams(params); }
         assertSafeValue(projection, "projection", []);
         schema = canonicalSchema(ownData(projection, "parameters"), "projection.parameters");
         assertSafeValue(params, "params", []);
         return deepFreeze(validateSchemaValue(schema, params, "params"));
+    }
+    function utf8ByteLengthExact(value) {
+        var index;
+        var code;
+        var next;
+        var bytes = 0;
+        for (index = 0; index < value.length; index += 1) {
+            code = value.charCodeAt(index);
+            if (code < 0x80) { bytes += 1; }
+            else if (code < 0x800) { bytes += 2; }
+            else if (code >= 0xD800 && code <= 0xDBFF) {
+                next = value.charCodeAt(index + 1);
+                if (next < 0xDC00 || next > 0xDFFF) { fail("Layer name contains an invalid Unicode scalar."); }
+                bytes += 4; index += 1;
+            } else if (code >= 0xDC00 && code <= 0xDFFF) { fail("Layer name contains an invalid Unicode scalar."); }
+            else { bytes += 3; }
+        }
+        return bytes;
+    }
+    function validateLayerNameParams(params) {
+        var name;
+        if (!isPlainObject(params) || Object.keys(params).length !== 1 || !hasOwn(params, "name")) { fail("Layer name parameters must contain exactly name."); }
+        name = ownData(params, "name");
+        if (typeof name !== "string" || name.length === 0 || /^\s+$/.test(name) || /[\u0000-\u001f\u007f-\u009f]/.test(name)) { fail("Layer name is invalid."); }
+        if (utf8ByteLengthExact(name) > 256) { fail("Layer name exceeds its UTF-8 byte limit."); }
+        return deepFreeze({ name: name });
     }
     function createRegistry(definitions, options) {
         var values;
@@ -247,6 +274,20 @@
         modelPolicy: { responseType: "localProposal", branchPolicy: "direct-single-target-edit-only", modelMaySupply: ["params.opacity"], groundingField: "selection.selectedLayerOpacity", unavailableBehavior: "respond-with-text-without-guessing" },
         localPolicy: { parameterValidatorId: "opacity-percent-v1", intentValidatorId: "set-opacity-direct-edit-v1", routerId: "set-opacity-v1" },
         registeredAction: { toolId: "vela", actionId: "set-opacity-v1" }
+    }, {
+        capabilityId: "set-layer-name-v1", revision: "vela-capability-contract-v1",
+        parameters: { type: "object", additionalProperties: false, required: ["name"], properties: { name: { type: "string" } } },
+        modelPolicy: { responseType: "localProposal", branchPolicy: "direct-single-target-edit-only", modelMaySupply: ["params.name"], groundingField: "selection.selectedLayerName", unavailableBehavior: "respond-with-text-without-guessing" },
+        localPolicy: { parameterValidatorId: "layer-name-bounded-v1", intentValidatorId: "set-layer-name-direct-edit-v1", routerId: "set-layer-name-v1" },
+        registeredAction: { toolId: "vela", actionId: "set-layer-name-v1" }
     }]);
-    return Object.freeze({ MODULE_REVISION: MODULE_REVISION, createRegistry: createRegistry, validateCapabilityParams: validateCapabilityParams, getContract: productionRegistry.getContract, getModelProjection: productionRegistry.getModelProjection, getLocalProjection: productionRegistry.getLocalProjection, listCapabilityIds: productionRegistry.listCapabilityIds, resolveRegisteredAction: productionRegistry.resolveRegisteredAction });
+    function getRepresentationContract(id) { return productionRegistry.getContract(id); }
+    function getRepresentationModelProjection(id) { return productionRegistry.getModelProjection(id); }
+    function getRepresentationLocalProjection(id) { return productionRegistry.getLocalProjection(id); }
+    function validateRepresentationCapabilityParams(id, params) {
+        var projection = getRepresentationLocalProjection(id);
+        if (!projection) { fail("Representation capability is unavailable."); }
+        return id === "set-layer-name-v1" ? validateLayerNameParams(params) : validateCapabilityParams(projection, params);
+    }
+    return Object.freeze({ MODULE_REVISION: MODULE_REVISION, createRegistry: createRegistry, validateCapabilityParams: validateCapabilityParams, validateRepresentationCapabilityParams: validateRepresentationCapabilityParams, getContract: productionRegistry.getContract, getModelProjection: productionRegistry.getModelProjection, getLocalProjection: productionRegistry.getLocalProjection, listCapabilityIds: productionRegistry.listCapabilityIds, resolveRegisteredAction: productionRegistry.resolveRegisteredAction, getRepresentationContract: getRepresentationContract, getRepresentationModelProjection: getRepresentationModelProjection, getRepresentationLocalProjection: getRepresentationLocalProjection });
 }));

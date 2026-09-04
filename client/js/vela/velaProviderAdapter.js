@@ -24,7 +24,7 @@
         return dependency;
     }
     function assertCapabilityContracts(dependency) {
-        if (!dependency || typeof dependency.getModelProjection !== "function") {
+        if (!dependency || typeof dependency.getModelProjection !== "function" || typeof dependency.getRepresentationModelProjection !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaProviderAdapter requires VelaCapabilityContracts.");
         }
         return dependency;
@@ -311,6 +311,36 @@
         if (!capability || !capability.parameters) { throw new Error("CAPABILITY_RESPONSE_SCHEMA_INVALID"); }
         return copySchema(capability.parameters);
     }
+    function freezeRepresentation(value) {
+        if (!value || typeof value !== "object" || Object.isFrozen(value)) { return value; }
+        Object.keys(value).forEach(function (key) { freezeRepresentation(value[key]); });
+        return Object.freeze(value);
+    }
+    function buildDormantLocalProposalRepresentationSchema() {
+        var opacity = capabilityContracts.getRepresentationModelProjection("set-opacity-v1");
+        var layerName = capabilityContracts.getRepresentationModelProjection("set-layer-name-v1");
+        function variant(capability) {
+            return {
+                type: "object",
+                additionalProperties: false,
+                required: ["type", "proposal"],
+                properties: {
+                    type: { type: "string", enum: ["localProposal"] },
+                    proposal: {
+                        type: "object",
+                        additionalProperties: false,
+                        required: ["capabilityId", "params"],
+                        properties: {
+                            capabilityId: { type: "string", enum: [capability.capabilityId] },
+                            params: buildCapabilityParametersForResponse(capability)
+                        }
+                    }
+                }
+            };
+        }
+        if (!opacity || !layerName) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "Dormant local proposal representation is unavailable."); }
+        return freezeRepresentation({ oneOf: [variant(opacity), variant(layerName)] });
+    }
 
     function createLocalOpenAICompatibleProvider(options) {
         options = options || {};
@@ -544,24 +574,7 @@
                     text: { type: "string", minLength: 1, maxLength: LMSTUDIO_TEXT_GENERATION_MAX_CHARS }
                 }
             };
-            var localProposalEnvelope = {
-                type: "object",
-                description: "Only a direct explicit current or selected layer opacity command with one 0–100 target; never questions, suggestions, hypotheticals, negations, or ambiguity. It does not execute.",
-                additionalProperties: false,
-                required: ["type", "proposal"],
-                properties: {
-                    type: enumString(protocol.ENVELOPE_TYPES.LOCAL_PROPOSAL),
-                    proposal: {
-                        type: "object",
-                        additionalProperties: false,
-                        required: ["capabilityId", "params"],
-                        properties: {
-                            capabilityId: enumString(capability.capabilityId),
-                            params: buildCapabilityParametersForResponse(capability)
-                        }
-                    }
-                }
-            };
+            var localProposalEnvelope = buildDormantLocalProposalRepresentationSchema();
             var envelope = requestProfile === REQUEST_PROFILES.TEXT_ONLY ? textEnvelope : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? localProposalEnvelope : { oneOf: [textEnvelope, localProposalEnvelope] });
             return protocol.deepFreeze({
                 name: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? "vela_text_response" : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? "vela_local_proposal_response" : "vela_bounded_union_response"),
@@ -885,6 +898,7 @@
     return Object.freeze({
         createLocalOpenAICompatibleProvider: createLocalOpenAICompatibleProvider,
         buildCapabilityParametersForResponse: buildCapabilityParametersForResponse,
+        buildDormantLocalProposalRepresentationSchema: buildDormantLocalProposalRepresentationSchema,
         isTrustedOutboundBodyForTransport: isTrustedOutboundBodyForTransport
     });
 }));

@@ -37,7 +37,8 @@ function harness() {
     const preflight = { createBoundPlan(input) {
         calls.push(input);
         const number = ++executionCounter;
-        return Promise.resolve({ planId: "execution_plan_" + number, planRevision: number, actionCount: input.steps.length, review: { valueKind: "number", beforeValue: 100 }, candidateIds: input.steps.map(function (_, index) { return "execution_cand_" + number + "_" + index; }) });
+        const source = input.steps || [input.localProposal];
+        return Promise.resolve({ planId: "execution_plan_" + number, planRevision: number, actionCount: source.length, review: { valueKind: source[0].capabilityId === "set-layer-name-v1" ? "string" : "number", beforeValue: source[0].capabilityId === "set-layer-name-v1" ? "Layer A" : 100 }, candidateIds: source.map(function (_, index) { return "execution_cand_" + number + "_" + index; }) });
     } };
     return { calls, materializer: moduleApi.createAuthorizedPlanMaterializer({ protocol, planningContracts: planning, capabilityContracts: capabilities, preflight }) };
 }
@@ -53,6 +54,12 @@ async function run() {
     check(one.authorityCandidateIds[0] === onePlan.steps[0].candidateId && one.authorityCandidateIds[0] !== "execution_cand_" + one.executionPlanRevision + "_0", "Authority candidate identity is preserved as provenance and never reused for execution identity.");
     check(oneHarness.calls.length === 1 && oneHarness.calls[0].steps[0].targetScope.type === "selected-layer", "Semantic selected-layer scope is preserved.");
     check(!/layerId|nativeLayerId|propertyValueDigest|confirmationNonce/.test(JSON.stringify(oneHarness.calls[0])), "Materialization creates no native binding, CAS digest, or nonce.");
+    const renameHarness = harness();
+    const renamePolicy = { decision: "REVIEW_REQUIRED", reasonCode: "mutation", issuedBy: "legacy-policy", provenance: { rule: "mutation", capabilityId: "set-layer-name-v1", requestedOperation: "mutate" } };
+    const renamePlan = planning.createAuthorizedPlan({ planId: "authority_plan_rename", revision: 1, steps: [{ candidateId: "authority_cand_rename", capabilityId: "set-layer-name-v1", kind: "tool", risk: "write", params: { name: " Hero " }, targetScope: { type: "selected-layer", attribute: "name" }, requiresConfirmation: true, policyDecision: renamePolicy }] });
+    const renameEnvelope = await renameHarness.materializer.materialize(renamePlan, { selectionOrderMeaningful: true });
+    check(renameEnvelope.actionCount === 1 && renameEnvelope.review.valueKind === "string" && renameHarness.calls[0].localProposal.capabilityId === "set-layer-name-v1" && renameHarness.calls[0].localProposal.params.name === " Hero ", "Dormant AuthorizedPlan materializes one closed rename localProposal without native target authority.");
+    check(!Object.prototype.hasOwnProperty.call(renameHarness.calls[0], "steps") && renameHarness.calls[0].localProposal.targetScope.attribute === "name", "Dormant rename materialization remains single-action and does not enter multi-step wiring.");
 
     const twoHarness = harness();
     const twoPlan = authorized(2);

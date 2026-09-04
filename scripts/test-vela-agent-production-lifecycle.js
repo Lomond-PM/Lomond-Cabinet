@@ -66,8 +66,8 @@ check(!/suspendedReview|reviewResolution|resolveObjectiveReview|resolveReview/.t
 const driverSource = read("client/js/vela/velaAgentDriver.js");
 check(!/PlanController|ExecutionAdapter|confirmBoundPlan|executeStep|TaskRun|Host payload/.test(driverSource), "AgentDriver review contract imports no execution or Host authority owner");
 const runtimeSource = read("client/js/vela/velaRuntime.js");
-check(/verifyCommittedAction:\s*verifyCommittedAction/.test(runtimeSource) && /preflight\.verifyCommittedOpacity/.test(runtimeSource), "production Runtime privately routes the semantic Driver operation to committed-target verification.");
-check(/runtimePort\.verifyCommittedAction\(\{ objectiveId: active\.objectiveId, taskId: active\.taskId, expectedOpacity: active\.intent\.params\.opacity \}\)/.test(driverSource) && !/nativeLayerId|propertyPath/.test(driverSource), "Driver passes only logical identity and expectation and owns no committed-target execution identity.");
+check(/verifyCommittedAction:\s*verifyCommittedAction/.test(runtimeSource) && /preflight\.verifyCommittedValue/.test(runtimeSource), "production Runtime privately routes the semantic Driver operation to typed committed-target verification.");
+check(/runtimePort\.verifyCommittedAction\(\{ objectiveId: active\.objectiveId, taskId: active\.taskId, capabilityId: active\.intent\.capabilityId, expectedValue:/.test(driverSource) && !/nativeLayerId|propertyPath/.test(driverSource), "Driver passes only logical identity and typed expectation and owns no committed-target execution identity.");
 check(!/verifyCommittedAction[\s\S]{0,900}opacityVerificationPort\.observe/.test(runtimeSource), "committed-target production verification has no local current-selection fallback.");
 const surfaceSource = read("client/js/vela/velaSurfaceController.js");
 check(!/AgentDriver|resolveObjectiveReview|resolveReview|suspendedReview|reviewId|reviewRevision/.test(surfaceSource), "Surface references no Driver or objective review identity internals.");

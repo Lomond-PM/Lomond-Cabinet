@@ -343,15 +343,16 @@
                 if (envelope.type === "localProposal") {
                     var proposal = ownData(envelope, "proposal");
                     var capabilityId = ownData(proposal, "capabilityId");
-                    var opacity = ownData(ownData(proposal, "params"), "opacity");
-                    var intent = intentGateModule.evaluate({ message: values.message, capabilityId: capabilityId, proposedOpacity: opacity });
+                    var params = ownData(proposal, "params");
+                    var opacity = ownData(params, "opacity");
+                    var intent = intentGateModule.evaluate({ message: values.message, capabilityId: capabilityId, params: params, proposedOpacity: opacity });
                     updateDiagnostics({ intentAllowed: !!(intent && intent.allowed === true), intentReason: intent && typeof intent.reason === "string" ? intent.reason : null });
                     if (!intent || intent.allowed !== true) {
                         activeProposal = null;
                         recordTerminal(publicState.requestId, "completed", null, null);
                         return publish("intent-rejected", publicState.requestId, null, null, values.model, null, intent.reason);
                     }
-                    activeProposal = protocol.deepFreeze({ requestId: publicState.requestId, generation: capturedGeneration, capabilityId: capabilityId, opacity: opacity });
+                    activeProposal = protocol.deepFreeze({ requestId: publicState.requestId, generation: capturedGeneration, capabilityId: capabilityId, params: params, opacity: opacity });
                     recordTerminal(publicState.requestId, "completed", null, null);
                     return publish("proposal-ready", publicState.requestId, null, null, values.model, { capabilityId: capabilityId, opacity: opacity });
                 }

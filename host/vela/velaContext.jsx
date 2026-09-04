@@ -274,6 +274,14 @@ var AEToolbox = AEToolbox || {};
         }
     }
 
+    function assertLayerAttributeTarget(target) {
+        assertKeys(target, ["itemId", "nativeLayerId", "layerIndex", "targetKind", "attribute"]);
+        assertFiniteNumber(target.itemId, true, 1, MAX_NUMBER_ABS);
+        assertFiniteNumber(target.nativeLayerId, true, 1, MAX_NUMBER_ABS);
+        assertFiniteNumber(target.layerIndex, true, 1, MAX_NUMBER_ABS);
+        if (target.targetKind !== "layer-attribute" || target.attribute !== "name") { fail("HOST_CONTEXT_REQUEST_INVALID"); }
+    }
+
     function validateRequest(value) {
         var operation;
         assertKeys(value, ["protocol", "schemaVersion", "requestId", "sessionId", "operation", "tier", "scope"]);
@@ -283,7 +291,7 @@ var AEToolbox = AEToolbox || {};
         assertLocalId(value.requestId, "req");
         assertLocalId(value.sessionId, "session");
         operation = value.operation;
-        if (operation !== "getCapabilities" && operation !== "captureContext" && operation !== "captureLayerDetails" && operation !== "resolvePropertyTargets" && operation !== "capturePropertyValues" && operation !== "observeCommittedPropertyValue") {
+        if (operation !== "getCapabilities" && operation !== "captureContext" && operation !== "captureLayerDetails" && operation !== "resolvePropertyTargets" && operation !== "capturePropertyValues" && operation !== "observeCommittedPropertyValue" && operation !== "captureLayerAttributeValue" && operation !== "observeCommittedLayerAttributeValue") {
             fail("HOST_CONTEXT_OPERATION_UNSUPPORTED");
         }
         if ((operation === "getCapabilities" && value.tier !== 0) ||
@@ -291,16 +299,18 @@ var AEToolbox = AEToolbox || {};
                 (operation === "captureLayerDetails" && value.tier !== 2) ||
                 (operation === "resolvePropertyTargets" && value.tier !== 3) ||
                 (operation === "capturePropertyValues" && value.tier !== 3) ||
-                (operation === "observeCommittedPropertyValue" && value.tier !== 3)) {
+                (operation === "observeCommittedPropertyValue" && value.tier !== 3) ||
+                (operation === "captureLayerAttributeValue" && value.tier !== 3) ||
+                (operation === "observeCommittedLayerAttributeValue" && value.tier !== 3)) {
             fail("HOST_CONTEXT_REQUEST_INVALID");
         }
         assertKeys(value.scope, operation === "captureLayerDetails" ? ["purpose", "selectionOrderMeaningful", "details"] :
-            (operation === "observeCommittedPropertyValue" ? ["purpose", "expectedHostInstanceId", "expectedHostReloadEpoch", "expectedProjectGeneration", "target"] :
+            ((operation === "observeCommittedPropertyValue" || operation === "captureLayerAttributeValue" || operation === "observeCommittedLayerAttributeValue") ? ["purpose", "expectedHostInstanceId", "expectedHostReloadEpoch", "expectedProjectGeneration", "target"] :
             ((operation === "resolvePropertyTargets" || operation === "capturePropertyValues") ? ["purpose", "expectedHostInstanceId", "expectedHostReloadEpoch", "expectedProjectGeneration", "targets"] : ["purpose", "selectionOrderMeaningful"])));
         if (value.scope.purpose !== "display" && value.scope.purpose !== "binding" && value.scope.purpose !== "verification") {
             fail("HOST_CONTEXT_REQUEST_INVALID");
         }
-        if (operation !== "resolvePropertyTargets" && operation !== "capturePropertyValues" && operation !== "observeCommittedPropertyValue" && typeof value.scope.selectionOrderMeaningful !== "boolean") {
+        if (operation !== "resolvePropertyTargets" && operation !== "capturePropertyValues" && operation !== "observeCommittedPropertyValue" && operation !== "captureLayerAttributeValue" && operation !== "observeCommittedLayerAttributeValue" && typeof value.scope.selectionOrderMeaningful !== "boolean") {
             fail("HOST_CONTEXT_REQUEST_INVALID");
         }
         if (operation === "captureLayerDetails") {
@@ -319,11 +329,17 @@ var AEToolbox = AEToolbox || {};
             assertFiniteNumber(value.scope.expectedProjectGeneration, true, 1, MAX_NUMBER_ABS);
             assertCommittedPropertyTarget(value.scope.target);
         }
+        if (operation === "captureLayerAttributeValue" || operation === "observeCommittedLayerAttributeValue") {
+            if (value.scope.purpose !== (operation === "captureLayerAttributeValue" ? "binding" : "verification")) { fail("HOST_CONTEXT_REQUEST_INVALID"); }
+            assertHostAuthority(value.scope.expectedHostInstanceId, value.scope.expectedHostReloadEpoch);
+            assertFiniteNumber(value.scope.expectedProjectGeneration, true, 1, MAX_NUMBER_ABS);
+            assertLayerAttributeTarget(value.scope.target);
+        }
         return value;
     }
 
     function makeBase(request, ok) {
-        var safeOperation = request && (request.operation === "getCapabilities" || request.operation === "captureContext" || request.operation === "captureLayerDetails" || request.operation === "resolvePropertyTargets" || request.operation === "capturePropertyValues" || request.operation === "observeCommittedPropertyValue") ? request.operation : "unknown";
+        var safeOperation = request && (request.operation === "getCapabilities" || request.operation === "captureContext" || request.operation === "captureLayerDetails" || request.operation === "resolvePropertyTargets" || request.operation === "capturePropertyValues" || request.operation === "observeCommittedPropertyValue" || request.operation === "captureLayerAttributeValue" || request.operation === "observeCommittedLayerAttributeValue") ? request.operation : "unknown";
         return {
             protocol: RESULT_PROTOCOL,
             schemaVersion: SCHEMA_VERSION,
@@ -1247,6 +1263,44 @@ var AEToolbox = AEToolbox || {};
         };
     }
 
+    function readLayerAttributeValue(request, committed) {
+        var project;
+        var item = null;
+        var target = request.scope.target;
+        var layer;
+        var name;
+        var i;
+        if (sessionResetRequired) { fail("HOST_CONTEXT_SESSION_RESET_REQUIRED"); }
+        try { project = app && app.project ? app.project : null; }
+        catch (ignoredProject) { fail("HOST_CONTEXT_READ_FAILED"); }
+        observeProject(project);
+        if (!project || request.scope.expectedHostInstanceId !== hostInstanceId || request.scope.expectedHostReloadEpoch !== hostReloadEpoch || request.scope.expectedProjectGeneration !== projectGeneration) { fail("HOST_CONTEXT_AUTHORITY_MISMATCH"); }
+        if (!committed) {
+            try { item = project.activeItem; }
+            catch (ignoredActive) { fail("HOST_CONTEXT_READ_FAILED"); }
+            if (!item || item.id !== target.itemId) { fail("HOST_CONTEXT_AUTHORITY_MISMATCH"); }
+        } else {
+            try {
+                if (typeof project.itemByID === "function") { item = project.itemByID(target.itemId); }
+                if (!item) { for (i = 1; i <= project.numItems; i++) { if (project.item(i) && project.item(i).id === target.itemId) { item = project.item(i); break; } } }
+            } catch (ignoredItem) { fail("HOST_CONTEXT_TARGET_NOT_FOUND"); }
+        }
+        if (!item || typeof CompItem === "undefined" || !(item instanceof CompItem) || item.id !== target.itemId) { fail("HOST_CONTEXT_TARGET_NOT_FOUND"); }
+        try { layer = item.layer(target.layerIndex); }
+        catch (ignoredLayer) { fail("HOST_CONTEXT_TARGET_NOT_FOUND"); }
+        if (!layer || layer.index !== target.layerIndex || readNativeLayerId(layer) !== target.nativeLayerId) { fail("HOST_CONTEXT_TARGET_NOT_FOUND"); }
+        try { name = layer.name; }
+        catch (ignoredName) { fail("HOST_CONTEXT_READ_FAILED"); }
+        if (typeof name !== "string" || json.utf8ByteLength(name) > MAX_PROPERTY_VALUE_BYTES) { fail("HOST_CONTEXT_VALUE_INVALID"); }
+        return {
+            hostInstanceId: hostInstanceId,
+            hostReloadEpoch: hostReloadEpoch,
+            projectGeneration: projectGeneration,
+            tier: 3,
+            target: { itemId: target.itemId, nativeLayerId: target.nativeLayerId, layerIndex: target.layerIndex, targetKind: "layer-attribute", attribute: "name", value: { kind: "string", data: name } }
+        };
+    }
+
     function handle(requestJson) {
         var request = null;
         var result;
@@ -1260,7 +1314,7 @@ var AEToolbox = AEToolbox || {};
                 maxObjectProperties: 64
             });
             validateRequest(request);
-            if ((request.operation === "resolvePropertyTargets" || request.operation === "capturePropertyValues" || request.operation === "observeCommittedPropertyValue") && json.utf8ByteLength(requestJson) > 8 * 1024) {
+            if ((request.operation === "resolvePropertyTargets" || request.operation === "capturePropertyValues" || request.operation === "observeCommittedPropertyValue" || request.operation === "captureLayerAttributeValue" || request.operation === "observeCommittedLayerAttributeValue") && json.utf8ByteLength(requestJson) > 8 * 1024) {
                 fail("HOST_CONTEXT_BUDGET_EXCEEDED");
             }
             result = makeBase(request, true);
@@ -1274,6 +1328,10 @@ var AEToolbox = AEToolbox || {};
                 result.snapshot = readTierThree(request);
             } else if (request.operation === "observeCommittedPropertyValue") {
                 result.snapshot = observeCommittedPropertyValue(request);
+            } else if (request.operation === "captureLayerAttributeValue") {
+                result.snapshot = readLayerAttributeValue(request, false);
+            } else if (request.operation === "observeCommittedLayerAttributeValue") {
+                result.snapshot = readLayerAttributeValue(request, true);
             } else {
                 result.snapshot = readPropertyValues(request);
             }

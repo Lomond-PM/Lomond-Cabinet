@@ -109,7 +109,7 @@ function observedHarness(options) {
             const requestId = schema.properties.requestId.enum[0];
             const userMessage = body.messages[2].content;
             const responseEnvelope = schema.properties.envelope;
-            const requestedKind = options.responseKind ? options.responseKind(userMessage, body) : (!responseEnvelope.properties || responseEnvelope.properties.type.enum[0] === "text" ? "text" : "localProposal");
+            const requestedKind = options.responseKind ? options.responseKind(userMessage, body) : (body.response_format.json_schema.name === "vela_local_proposal_response" ? "localProposal" : "text");
             const envelope = requestedKind === "text" ? { type: "text", text: options.responseText || "safe" } : { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: typeof options.responseOpacity === "number" ? options.responseOpacity : 50 } } };
             const canonicalContent = JSON.stringify({ protocol: p.PROTOCOLS.RESPONSE, schemaVersion: p.SCHEMA_VERSION, requestId, provider: "lmstudio", model: "m", envelope });
             const message = options.responseMessage ? options.responseMessage(canonicalContent) : { role: "assistant", content: canonicalContent, reasoning_content: "", tool_calls: [] };
@@ -393,7 +393,7 @@ async function run() {
     check(requestBody.response_format.json_schema.schema.properties.requestId.enum[0] === state.requestId && requestBody.response_format.json_schema.schema.properties.model.enum[0] === "m", "The production schema must bind the local request id and configured model.");
     const outputSchema = requestBody.response_format.json_schema.schema;
     const outputEnvelope = outputSchema.properties.envelope;
-    check(outputEnvelope.oneOf.length === 2 && outputEnvelope.oneOf[0].properties.text.maxLength === 1024 && outputEnvelope.oneOf[0].properties.type.enum[0] === "text" && outputEnvelope.oneOf[1].properties.type.enum[0] === "localProposal", "The union payload permits exactly bounded text or set-opacity-v1 localProposal.");
+    check(outputEnvelope.oneOf.length === 2 && outputEnvelope.oneOf[0].properties.text.maxLength === 1024 && outputEnvelope.oneOf[0].properties.type.enum[0] === "text" && outputEnvelope.oneOf[1].oneOf.length === 2 && outputEnvelope.oneOf[1].oneOf.every((variant) => variant.properties.type.enum[0] === "localProposal"), "The union payload permits bounded text or exactly one of two closed localProposal variants.");
     check(outputSchema.required.length === 6 && !JSON.stringify(requestBody.response_format).includes("\"error\"") && requestBody.stream === false && requestBody.model === "m", "The final payload must retain full required fields, one model-authorized envelope, stream:false and the configured model.");
     check(!JSON.stringify(requestBody.response_format).includes("json_object"), "The production controller must not request the unsupported json_object mode.");
     check(!JSON.stringify(state).includes("host_") && !JSON.stringify(state).includes("sha256:"), "Public provider state does not leak authority or fingerprint.");

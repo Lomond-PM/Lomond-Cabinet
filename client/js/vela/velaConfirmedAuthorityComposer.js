@@ -44,8 +44,9 @@
     function createReviewedPolicySemantics(decision) { var provenance = decision && decision.provenance || {}; return Object.freeze({ decision: decision && decision.decision, reasonCode: decision && decision.reasonCode || null, issuedBy: decision && decision.issuedBy || null, rule: provenance.rule || null, capabilityId: provenance.capabilityId || null, requestedOperation: provenance.requestedOperation || null, authoritySource: provenance.authoritySource || null }); }
     function createReviewedSemantics(intent, candidate, resolveRegisteredAction) {
         var action = typeof resolveRegisteredAction === "function" ? resolveRegisteredAction(candidate && candidate.capabilityId) : null;
+        var targetProperty = candidate && candidate.capabilityId === "set-layer-name-v1" ? "name" : "opacity";
         if (!planning || !planning.isCapabilityIntent(intent) || !candidate || !action || typeof action.toolId !== "string" || typeof action.actionId !== "string") { fail("LIFECYCLE_BLOCKED"); }
-        return Object.freeze({ capabilityId: candidate.capabilityId, requestedOperation: intent.requestedOperation, operationKind: candidate.operationKind, kind: candidate.kind, risk: candidate.risk, params: candidate.params, targetScope: candidate.targetScope, targetProperty: "opacity", requiresConfirmation: candidate.requiresConfirmation, registeredAction: Object.freeze({ toolId: action.toolId, actionId: action.actionId }), provenance: candidate.provenance });
+        return Object.freeze({ capabilityId: candidate.capabilityId, requestedOperation: intent.requestedOperation, operationKind: candidate.operationKind, kind: candidate.kind, risk: candidate.risk, params: candidate.params, targetScope: candidate.targetScope, targetProperty: targetProperty, requiresConfirmation: candidate.requiresConfirmation, registeredAction: Object.freeze({ toolId: action.toolId, actionId: action.actionId }), provenance: candidate.provenance });
     }
     function createConfirmedAuthorityComposer(options) {
         var compiler = options && options.compiler;
@@ -62,7 +63,7 @@
         if (!planning || !plain(options) || !compiler || typeof compiler.compile !== "function" || !policyEngine || typeof policyEngine.evaluate !== "function" || !planController || typeof planController.accept !== "function" || typeof planController.confirm !== "function" || typeof planController.run !== "function" || typeof planController.cancel !== "function" || typeof resolveRegisteredAction !== "function" || typeof makePlanId !== "function" || typeof getRuntimeGeneration !== "function" || typeof claimApprovedReview !== "function") { fail("RUNTIME_CAPABILITY_UNAVAILABLE"); }
         function reviewedSnapshot(value) {
             var keys = ["capabilityId", "requestedOperation", "operationKind", "kind", "risk", "params", "targetScope", "targetProperty", "requiresConfirmation", "registeredAction", "provenance"];
-            if (!plain(value) || Object.keys(value).sort().join(",") !== keys.slice().sort().join(",") || value.targetProperty !== "opacity") { fail("LIFECYCLE_BLOCKED"); }
+            if (!plain(value) || Object.keys(value).sort().join(",") !== keys.slice().sort().join(",") || (value.targetProperty !== "opacity" && value.targetProperty !== "name")) { fail("LIFECYCLE_BLOCKED"); }
             validateCanonical(value, []);
             return value;
         }
@@ -107,7 +108,7 @@
                 if (!current(record)) { return cancelledResult(); }
                 if (!claim || claim.claimed !== true) { finish(record); return Object.freeze({ state: "blocked", code: claim && claim.code || "LIFECYCLE_BLOCKED" }); }
                 record.claimed = true;
-                plan = planning.createAuthorizedPlan({ planId: makePlanId("confirmedPlan"), revision: 0, steps: [{ candidateId: freshCandidate.candidateId, capabilityId: freshCandidate.capabilityId, kind: freshCandidate.kind, risk: freshCandidate.risk, params: freshCandidate.params, targetScope: { type: freshCandidate.targetScope.type, property: "opacity" }, requiresConfirmation: freshCandidate.requiresConfirmation, policyDecision: { decision: decision.decision, reasonCode: decision.reasonCode, provenance: decision.provenance, issuedBy: decision.issuedBy } }] });
+                plan = planning.createAuthorizedPlan({ planId: makePlanId("confirmedPlan"), revision: 0, steps: [{ candidateId: freshCandidate.candidateId, capabilityId: freshCandidate.capabilityId, kind: freshCandidate.kind, risk: freshCandidate.risk, params: freshCandidate.params, targetScope: freshCandidate.capabilityId === "set-layer-name-v1" ? { type: freshCandidate.targetScope.type, attribute: "name" } : { type: freshCandidate.targetScope.type, property: "opacity" }, requiresConfirmation: freshCandidate.requiresConfirmation, policyDecision: { decision: decision.decision, reasonCode: decision.reasonCode, provenance: decision.provenance, issuedBy: decision.issuedBy } }] });
                 record.phase = "accept-pending";
                 return Promise.resolve(planController.accept(plan, { selectionOrderMeaningful: true })).then(function (waiting) {
                     record.executionPlanId = waiting && waiting.executionPlanId || null;

@@ -6,7 +6,7 @@
   "promptBuilderRevision": "vela-capability-prompt-builder-v4",
   "requestBranchPolicyRevision": "vela-provider-request-branch-policy-v1",
   "capabilityId": "set-opacity-v1",
-  "promptSha256": "ab47128d80e9cc6df52cc8dd94030bc912744a7808051c77ae24f0e81f707c4c",
-  "responseFormatSha256": "85c73c951633f36b49794f4d356add7b0e5e2ab55f0261c8d8762d57e0060080",
-  "stableRequestBodySha256": "9b0080aeb71f035d7835c0a61eefbb64458552736e580749294ac1d2ed66a316"
+  "promptSha256": "6e5fdad1f948ce54ecb74fbb981ed04bb21169168a20b6428e44f9594902732f",
+  "responseFormatSha256": "7d36bec42dfbb9a3befea5ff7c83adb0f10b5137a467c492b45c5afe645edf5e",
+  "stableRequestBodySha256": "219468eb2b5f97e1226c942284542ef2bf987498d26198af85a5bf3006a1cd31"
 }

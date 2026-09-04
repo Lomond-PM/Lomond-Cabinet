@@ -73,8 +73,8 @@ async function run() {
     equal(metrics(baseline).responseFormatSha256, "85813dd8950079ab9c9542612aa0ad14b82c98e3f3e71f3a370561669e64cdf8", "Text response schema hash remains unchanged from historical v1.");
     const explicitBody = await capture(Object.assign({}, base, { profile: profiles.EXPLICIT_EDIT_ELIGIBLE }));
     const unionBody = await capture(Object.assign({}, base, { profile: profiles.PROPOSAL_CAPABLE_UNION }));
-    equal(metrics(explicitBody).responseFormatSha256, "509230d09996e81eb3d4baddd332f3730707badd37d6b4d28b4499b6e6ca6b2f", "Explicit-edit response schema hash remains unchanged from historical v1.");
-    equal(metrics(unionBody).responseFormatSha256, "85c73c951633f36b49794f4d356add7b0e5e2ab55f0261c8d8762d57e0060080", "Union response schema hash remains unchanged from historical v1.");
+    equal(metrics(explicitBody).responseFormatSha256, "2d49c9fe90803334b15c92ece839c785852550e96876a38e331799ad167ce258", "Explicit-edit response schema hash freezes the closed two-capability union.");
+    equal(metrics(unionBody).responseFormatSha256, "7d36bec42dfbb9a3befea5ff7c83adb0f10b5137a467c492b45c5afe645edf5e", "Union response schema hash freezes text plus the closed two-capability proposal union.");
 
     console.log(JSON.stringify({ sharedGlobalPrefixBytes: Buffer.byteLength(promptBuilder.GLOBAL_STATIC_CONTRACT), actualThreeProfileCommonPrefixBytes: commonPrefixBytes([textSystem, explicitSystem, unionSystem]), baseline: metrics(baseline), requestIdChanged: metrics(requestIdChanged), groundingChanged: metrics(groundingChanged), userChanged: metrics(userChanged), modelChanged: metrics(modelChanged) }));
     console.log("PASS Vela prompt stability: " + assertions + " assertions.");

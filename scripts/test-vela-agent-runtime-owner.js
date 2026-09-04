@@ -126,7 +126,7 @@ async function coldStartRegression() {
     equal(suspended.state, "awaiting-review", "Owner preserves the Driver suspended review state");
     const ownerReviewPort = coldOwner.getObjectiveReviewPort();
     const reviewProjection = ownerReviewPort.getProjection();
-    check(Object.isFrozen(ownerReviewPort) && Object.isFrozen(reviewProjection) && Object.keys(reviewProjection).sort().join(",") === "beforeValue,capabilityId,outcome,proposedValue,reviewId,revision,state", "Owner exposes only a frozen bounded objective review port and projection");
+    check(Object.isFrozen(ownerReviewPort) && Object.isFrozen(reviewProjection) && Object.keys(reviewProjection).sort().join(",") === "beforeValue,capabilityId,outcome,proposedValue,reviewId,revision,state,valueKind", "Owner exposes only a frozen bounded typed objective review port and projection");
     equal(reviewProjection.reviewId, suspended.suspendedReview.reviewId, "Owner projection correlates the exact Driver review identity");
     equal(reviewProjection.beforeValue, 100, "Owner projects the Driver-owned scalar presentation baseline without reading AE");
     const approved = await ownerReviewPort.resolve({ reviewId: reviewProjection.reviewId, revision: reviewProjection.revision, outcome: "approved" });

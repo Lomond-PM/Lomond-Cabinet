@@ -26,6 +26,7 @@
                 typeof planning.assertAuthorizedPlanNoTrustedBinding !== "function" || typeof planning.assertPolicyDecisionClosed !== "function" ||
                 typeof planning.assertTrustedDecisionSource !== "function" || typeof capabilities.getLocalProjection !== "function" ||
                 typeof capabilities.resolveRegisteredAction !== "function" || typeof capabilities.validateCapabilityParams !== "function" ||
+                typeof capabilities.getRepresentationLocalProjection !== "function" || typeof capabilities.validateRepresentationCapabilityParams !== "function" ||
                 typeof preflight.createBoundPlan !== "function") {
             throw new Error("RUNTIME_CAPABILITY_UNAVAILABLE");
         }
@@ -71,14 +72,15 @@
             if (canonical.steps.length < 1 || canonical.steps.length > protocol.HARD_LIMITS.maxPlanSteps) { fail(protocol.ERROR_CODES.CAPABILITY_BUDGET_EXCEEDED, "AuthorizedPlan step count is outside the execution budget."); }
             var authorityCandidateIds = [];
             var steps = canonical.steps.map(function (step) {
-                var projection = capabilities.getLocalProjection(step.capabilityId);
-                var registeredAction = capabilities.resolveRegisteredAction(step.capabilityId);
+                var dormantLayerName = step.capabilityId === "set-layer-name-v1";
+                var projection = dormantLayerName ? capabilities.getRepresentationLocalProjection(step.capabilityId) : capabilities.getLocalProjection(step.capabilityId);
+                var registeredAction = dormantLayerName && projection ? projection.registeredAction : capabilities.resolveRegisteredAction(step.capabilityId);
                 var params;
                 if (!projection || !registeredAction || registeredAction.actionId !== step.capabilityId) { fail(protocol.ERROR_CODES.UNKNOWN_TOOL_ACTION, "Authorized capability is not registered for mutation execution."); }
-                try { params = capabilities.validateCapabilityParams(projection, step.params); }
+                try { params = dormantLayerName ? capabilities.validateRepresentationCapabilityParams(step.capabilityId, step.params) : capabilities.validateCapabilityParams(projection, step.params); }
                 catch (error) { fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Authorized capability parameters are invalid."); }
                 if (step.kind !== "tool" || step.risk !== "write" || step.requiresConfirmation !== true ||
-                        !step.targetScope || step.targetScope.type !== "selected-layer" || (!delegated && step.targetScope.property !== "opacity") || (delegated && step.targetScope.property !== undefined && step.targetScope.property !== "opacity")) {
+                        !step.targetScope || step.targetScope.type !== "selected-layer" || (dormantLayerName ? (delegated || step.targetScope.attribute !== "name" || step.targetScope.property !== undefined) : ((!delegated && step.targetScope.property !== "opacity") || (delegated && step.targetScope.property !== undefined && step.targetScope.property !== "opacity")))) {
                     fail(protocol.ERROR_CODES.PERMISSION_DENIED, "Authorized mutation semantics do not match the local registry subset.");
                 }
                 if (!step.policyDecision) { fail(protocol.ERROR_CODES.PERMISSION_DENIED, "A local review policy decision is required."); }
@@ -89,9 +91,10 @@
                 } catch (error) { fail(protocol.ERROR_CODES.PERMISSION_DENIED, "Authorized mutation policy evidence is invalid."); }
                 if ((!delegated && step.policyDecision.decision !== "REVIEW_REQUIRED") || (delegated && step.policyDecision.decision !== "ALLOW")) { fail(protocol.ERROR_CODES.PERMISSION_DENIED, delegated ? "Delegated mutation requires trusted ALLOW authority." : "Mutation execution requires local review authority."); }
                 authorityCandidateIds.push(step.candidateId);
-                return { capabilityId: step.capabilityId, params: params, targetScope: { type: "selected-layer", property: "opacity" } };
+                return { capabilityId: step.capabilityId, params: params, targetScope: dormantLayerName ? { type: "selected-layer", attribute: "name" } : { type: "selected-layer", property: "opacity" } };
             });
-            return Promise.resolve(preflight.createBoundPlan({ steps: steps, selectionOrderMeaningful: executionInput.selectionOrderMeaningful })).then(function (executionPlan) {
+            var preflightInput = steps.length === 1 && steps[0].capabilityId === "set-layer-name-v1" ? { localProposal: steps[0], selectionOrderMeaningful: executionInput.selectionOrderMeaningful } : { steps: steps, selectionOrderMeaningful: executionInput.selectionOrderMeaningful };
+            return Promise.resolve(preflight.createBoundPlan(preflightInput)).then(function (executionPlan) {
                 if (!executionPlan || executionPlan.actionCount !== steps.length || executionPlan.planId === canonical.planId) { fail(protocol.ERROR_CODES.PLAN_INVALID, "Execution plan materialization failed."); }
                 var envelope = {
                     authorizedPlanId: canonical.planId,

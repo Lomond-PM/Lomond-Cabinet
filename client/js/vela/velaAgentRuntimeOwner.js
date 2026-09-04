@@ -114,7 +114,7 @@
             review = snapshot.suspendedReview;
             resolution = snapshot.reviewResolution;
             if (snapshot.state === "awaiting-review" && review) {
-                return Object.freeze({ state: "active", reviewId: review.reviewId, revision: review.revision, capabilityId: review.capabilityId, beforeValue: review.beforeValue, proposedValue: review.params.opacity, outcome: null });
+                return Object.freeze({ state: "active", reviewId: review.reviewId, revision: review.revision, capabilityId: review.capabilityId, valueKind: review.capabilityId === "set-layer-name-v1" ? "string" : "number", beforeValue: review.beforeValue, proposedValue: review.capabilityId === "set-layer-name-v1" ? review.params.name : review.params.opacity, outcome: null });
             }
             if (snapshot.state === "awaiting-outcome" && resolution && resolution.outcome === "approved") {
                 return Object.freeze({ state: "resolved", reviewId: resolution.reviewId, revision: resolution.revision, capabilityId: null, beforeValue: null, proposedValue: null, outcome: resolution.outcome });
