@@ -9,6 +9,7 @@ const vm = require("vm");
 const protocolModule = require("../client/js/vela/velaProtocol");
 const providerModule = require("../client/js/vela/velaProviderAdapter");
 const requestBranchPolicy = require("../client/js/vela/velaProviderRequestBranchPolicy");
+const logicalPlanContracts = require("../client/js/vela/velaLogicalPlanContracts");
 
 let assertions = 0;
 let protocolSeed = 0;
@@ -175,6 +176,7 @@ function createHarness(options) {
         responseFormatMode: options.responseFormatMode === undefined ? "json-schema" : options.responseFormatMode,
         runtime: runtimeBundle.runtime
     };
+    if (config.requestProfile === requestBranchPolicy.PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE) { clock.protocol.attachLogicalPlanContracts(logicalPlanContracts); }
     if (config.endpoint === undefined) delete config.endpoint;
     const provider = providerModule.createLocalOpenAICompatibleProvider(config);
     return { provider, protocol: clock.protocol, advance: clock.advance, scheduler, runtimeBundle, calls, config, transport };
@@ -292,12 +294,20 @@ async function run() {
         { envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } }, profile: requestBranchPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE },
         { envelope: { type: "text", text: "ok" }, profile: requestBranchPolicy.PROFILES.PROPOSAL_CAPABLE_UNION },
         { envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } }, profile: requestBranchPolicy.PROFILES.PROPOSAL_CAPABLE_UNION }
+        ,{ envelope: { type: "logicalPlanProposal", steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 47 } }, { capabilityId: "set-layer-name-v1", params: { name: "Hero" } }] }, profile: requestBranchPolicy.PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE }
     ];
     for (const item of envelopes) {
         const envelope = item.envelope;
         const harness = createHarness({ requestProfile: item.profile, responder: (request) => Promise.resolve(transportResult(wrapper(canonicalContent(base.protocol, request, envelope)))) });
         const response = await harness.provider.start(input()).promise;
         equal(response.envelope.type, envelope.type, envelope.type + " envelopes must pass through the parser.");
+        if (item.profile === requestBranchPolicy.PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE) {
+            const stepsSchema = harness.calls[0].body.response_format.json_schema.schema.properties.envelope.properties.steps;
+            check(!Object.prototype.hasOwnProperty.call(stepsSchema, "prefixItems") && typeof stepsSchema.items === "object" && stepsSchema.items !== null, "Bounded logical schema uses an LM Studio-compatible object items schema without tuple prefixItems or a boolean items schema.");
+            check(stepsSchema.minItems === 2 && stepsSchema.maxItems === 2 && Array.isArray(stepsSchema.items.oneOf) && stepsSchema.items.oneOf.length === 2, "Constrained decoding keeps exactly two structurally bounded steps.");
+            const schemaCapabilityIds = stepsSchema.items.oneOf.map((variant) => variant.properties.capabilityId.enum[0]).sort();
+            check(JSON.stringify(schemaCapabilityIds) === JSON.stringify(["set-layer-name-v1", "set-opacity-v1"]), "Constrained decoding permits only the two frozen C1 capability IDs.");
+        }
     }
     for (const envelope of [
         { type: "localProposal", proposal: { capabilityId: "unknown-capability", params: { opacity: 50 } } },

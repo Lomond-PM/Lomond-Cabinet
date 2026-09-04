@@ -7,6 +7,7 @@
         { name: "VelaProtocol", file: "velaProtocol.js" },
         { name: "VelaResponseParser", file: "velaResponseParser.js" },
         { name: "VelaCapabilityContracts", file: "velaCapabilityContracts.js" },
+        { name: "VelaLogicalPlanContracts", file: "velaLogicalPlanContracts.js" },
         { name: "VelaProviderRequestBranchPolicy", file: "velaProviderRequestBranchPolicy.js" },
         { name: "VelaCapabilityPromptBuilder", file: "velaCapabilityPromptBuilder.js" },
         { name: "VelaProviderAdapter", file: "velaProviderAdapter.js" },
@@ -133,6 +134,7 @@
         var textOnlyDescriptor;
         var explicitDescriptor;
         var unionDescriptor;
+        var logicalDescriptor;
         try {
             if (!value || typeof value !== "object" || !Object.isFrozen(value)) { return false; }
             profilesDescriptor = ownDescriptor(value, "PROFILES");
@@ -143,13 +145,14 @@
             if (!profiles || typeof profiles !== "object" || !Object.isFrozen(profiles)) { return false; }
             names = Object.getOwnPropertyNames(profiles).sort();
             symbols = typeof Object.getOwnPropertySymbols === "function" ? Object.getOwnPropertySymbols(profiles) : [];
-            if (symbols.length !== 0 || names.join("\u0000") !== "EXPLICIT_EDIT_ELIGIBLE\u0000PROPOSAL_CAPABLE_UNION\u0000TEXT_ONLY") { return false; }
+            if (symbols.length !== 0 || names.join("\u0000") !== "BOUNDED_LOGICAL_PLAN_ELIGIBLE\u0000EXPLICIT_EDIT_ELIGIBLE\u0000PROPOSAL_CAPABLE_UNION\u0000TEXT_ONLY") { return false; }
             textOnlyDescriptor = ownDescriptor(profiles, "TEXT_ONLY");
             explicitDescriptor = ownDescriptor(profiles, "EXPLICIT_EDIT_ELIGIBLE");
             unionDescriptor = ownDescriptor(profiles, "PROPOSAL_CAPABLE_UNION");
-            return isFrozenOwnDataProperty(profiles, "TEXT_ONLY") && isFrozenOwnDataProperty(profiles, "EXPLICIT_EDIT_ELIGIBLE") && isFrozenOwnDataProperty(profiles, "PROPOSAL_CAPABLE_UNION") &&
-                textOnlyDescriptor.enumerable === true && explicitDescriptor.enumerable === true && unionDescriptor.enumerable === true &&
-                textOnlyDescriptor.value === "text-only" && explicitDescriptor.value === "explicit-edit-eligible" && unionDescriptor.value === "proposal-capable-union";
+            logicalDescriptor = ownDescriptor(profiles, "BOUNDED_LOGICAL_PLAN_ELIGIBLE");
+            return isFrozenOwnDataProperty(profiles, "TEXT_ONLY") && isFrozenOwnDataProperty(profiles, "EXPLICIT_EDIT_ELIGIBLE") && isFrozenOwnDataProperty(profiles, "PROPOSAL_CAPABLE_UNION") && isFrozenOwnDataProperty(profiles, "BOUNDED_LOGICAL_PLAN_ELIGIBLE") &&
+                textOnlyDescriptor.enumerable === true && explicitDescriptor.enumerable === true && unionDescriptor.enumerable === true && logicalDescriptor.enumerable === true &&
+                textOnlyDescriptor.value === "text-only" && explicitDescriptor.value === "explicit-edit-eligible" && unionDescriptor.value === "proposal-capable-union" && logicalDescriptor.value === "bounded-logical-plan-eligible";
         } catch (error) {
             return false;
         }
@@ -171,10 +174,11 @@
         if (name === "VelaProtocol") { return typeof value.createProtocol === "function" && typeof value.isTrustedProtocol === "function" && value.ERROR_CODES; }
         if (name === "VelaResponseParser") { return typeof value.createResponseParser === "function"; }
         if (name === "VelaCapabilityContracts") { return typeof value.getModelProjection === "function" && typeof value.getLocalProjection === "function" && typeof value.resolveRegisteredAction === "function" && typeof value.validateCapabilityParams === "function" && typeof value.createRegistry === "function"; }
+        if (name === "VelaLogicalPlanContracts") { return value.MODULE_REVISION === "vela-logical-plan-contracts-v1" && value.MAX_LOGICAL_STEPS === 2 && typeof value.validateLogicalPlanProposal === "function" && typeof value.isValidatedLogicalPlan === "function"; }
         if (name === "VelaProviderRequestBranchPolicy") { return isRequestBranchPolicyShape(value); }
         if (name === "VelaCapabilityPromptBuilder") { return typeof value.buildSystemPrompt === "function" && typeof value.buildTurnContract === "function"; }
         if (name === "VelaProviderAdapter") { return typeof value.createLocalOpenAICompatibleProvider === "function"; }
-        if (name === "VelaProviderIntentGate") { return typeof value.evaluate === "function"; }
+        if (name === "VelaProviderIntentGate") { return typeof value.evaluate === "function" && typeof value.evaluateLogicalPlan === "function"; }
         if (name === "VelaLocalTransport") { return typeof value.createLocalTransport === "function" && typeof value.isTrustedLocalTransportForProtocol === "function"; }
         if (name === "VelaContext") { return typeof value.createContextApi === "function" && typeof value.isTrustedContextApiForProtocol === "function"; }
         if (name === "VelaValidator") { return typeof value.createActionValidator === "function" && typeof value.isTrustedActionValidatorForProtocol === "function"; }

@@ -87,6 +87,7 @@
         PLAN: "plan",
         ACTION_CANDIDATE: "actionCandidate",
         LOCAL_PROPOSAL: "localProposal",
+        LOGICAL_PLAN_PROPOSAL: "logicalPlanProposal",
         ERROR: "error"
     });
     var ACTION_KINDS = Object.freeze(["tool", "expression", "script"]);
@@ -288,6 +289,14 @@
         var sha256HexProvider = runtime.sha256Hex;
         var randomIdProvider = runtime.randomId;
         var nowProvider = runtime.now;
+        var logicalPlanValidator = null;
+        function attachLogicalPlanContracts(module) {
+            if (!module || !Object.isFrozen(module) || module.MODULE_REVISION !== "vela-logical-plan-contracts-v1" || typeof module.validateLogicalPlanProposal !== "function" || typeof module.isValidatedLogicalPlan !== "function") { throw makeRuntimeError(); }
+            if (logicalPlanValidator === module.validateLogicalPlanProposal) { return true; }
+            if (logicalPlanValidator) { throw makeRuntimeError(); }
+            logicalPlanValidator = module.validateLogicalPlanProposal;
+            return true;
+        }
         function utf8ByteLength(value) {
             if (typeof value !== "string") {
                 throw makeRuntimeError();
@@ -931,6 +940,11 @@
                 if (schemaVersion !== SCHEMA_VERSION) { fail(ERROR_CODES.SCHEMA_VERSION_UNSUPPORTED, SAFE_ERROR_MESSAGES.SCHEMA_VERSION_UNSUPPORTED); }
                 assertNoUnknownKeys(envelope, ["type", "proposal"], "response.envelope");
                 validateLocalProposal(envelope.proposal);
+            } else if (envelope.type === ENVELOPE_TYPES.LOGICAL_PLAN_PROPOSAL) {
+                if (schemaVersion !== SCHEMA_VERSION) { fail(ERROR_CODES.SCHEMA_VERSION_UNSUPPORTED, SAFE_ERROR_MESSAGES.SCHEMA_VERSION_UNSUPPORTED); }
+                if (!logicalPlanValidator) { fail(ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, SAFE_ERROR_MESSAGES.RUNTIME_CAPABILITY_UNAVAILABLE); }
+                try { logicalPlanValidator(envelope); }
+                catch (logicalPlanError) { fail(ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Logical plan proposal is invalid."); }
             } else if (envelope.type === ENVELOPE_TYPES.ERROR) {
                 assertNoUnknownKeys(envelope, ["type", "error"], "response.envelope");
                 validateStructuredError(envelope.error);
@@ -1087,6 +1101,7 @@
             assertSafeJson: assertSafeJson,
             assertSchemaVersion: assertSchemaVersion,
             assertString: assertString,
+            attachLogicalPlanContracts: attachLogicalPlanContracts,
             canonicalStringify: canonicalStringify,
             cloneJson: cloneJson,
             createCanonicalErrorResponse: createCanonicalErrorResponse,

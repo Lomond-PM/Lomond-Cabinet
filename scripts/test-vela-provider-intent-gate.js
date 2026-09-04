@@ -35,5 +35,10 @@ check(evaluate("Adjust opacity to 50.0%", "set-opacity-v1", 50).allowed === true
 check(evaluate("Set opacity to 50", "unknown-capability-v1", 50).reason === "unsupported-capability", "Unregistered capabilities fail closed.");
 check(evaluate("Set opacity to 50", "set-opacity-v1", NaN).reason === "invalid-proposal", "Non-finite model proposal values fail closed.");
 check(evaluate("Set opacity to 50", "set-opacity-v1", -0).reason === "invalid-proposal", "Negative zero model proposal values fail closed.");
+const exactLogical = { declaredStepCount: 2, steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 47 } }, { capabilityId: "set-layer-name-v1", params: { name: "Hero" } }] };
+check(gate.evaluateLogicalPlan({ message: "把当前图层透明度改成47%，然后把它命名为Hero", logicalPlanProposal: exactLogical }).allowed === true, "Exact grounded logical declaration passes Intent Gate.");
+check(gate.evaluateLogicalPlan({ message: "把当前图层透明度改成47%，然后把它命名为Hero", logicalPlanProposal: { steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 30 } }, exactLogical.steps[1]] } }).reason === "target-mismatch", "Provider opacity drift fails closed.");
+check(gate.evaluateLogicalPlan({ message: "把当前图层透明度改成47%，然后把它命名为Hero", logicalPlanProposal: { steps: [exactLogical.steps[0], { capabilityId: "set-layer-name-v1", params: { name: "Banner" } }] } }).reason === "target-mismatch", "Provider name drift fails closed.");
+check(gate.evaluateLogicalPlan({ message: "把当前图层透明度改成47%，然后把它命名为Hero", logicalPlanProposal: { steps: exactLogical.steps.concat([{ capabilityId: "set-opacity-v1", params: { opacity: 1 } }]) } }).allowed === false, "Provider-added third action fails closed.");
 
 console.log("test-vela-provider-intent-gate: " + assertions + " assertions passed.");

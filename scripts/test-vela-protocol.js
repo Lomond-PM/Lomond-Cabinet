@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 const protocolModule = require("../client/js/vela/velaProtocol");
+const logicalPlanContracts = require("../client/js/vela/velaLogicalPlanContracts");
 const parserModule = require("../client/js/vela/velaResponseParser");
 const runtime = require("./velaNodeRuntime");
 
@@ -85,6 +86,19 @@ function run() {
     expectCode(() => protocol.validateCanonicalResponse(makeResponse({ envelope: { type: "localProposal", proposal: { capabilityId: "set-layer-name-v1", params: { name: "x".repeat(257) } } } })), protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED, "Layer-name proposal enforces the UTF-8 byte limit.");
     expectCode(() => protocol.validateCanonicalResponse(makeResponse({ envelope: { type: "localProposal", proposal: { capabilityId: "unknown-v1", params: { name: "Hero" } } } })), protocol.ERROR_CODES.UNKNOWN_TOOL_ACTION, "Unknown localProposal capability remains fail-closed.");
     expectCode(() => protocol.validateCanonicalResponse(makeResponse({ envelope: { type: "localProposal", proposal: { capabilityId: "set-layer-name-v1", params: { name: "Hero" }, steps: [] } } })), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Layer-name proposal rejects steps and remains single-action.");
+    protocol.attachLogicalPlanContracts(logicalPlanContracts);
+    const exactLogical = { type: "logicalPlanProposal", steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 47 } }, { capabilityId: "set-layer-name-v1", params: { name: "Hero" } }] };
+    check(protocol.validateCanonicalResponse(makeResponse({ envelope: exactLogical })).envelope.type === "logicalPlanProposal", "Protocol delegates the exact logical declaration to B1 validation.");
+    [
+        { type: "logicalPlanProposal", steps: exactLogical.steps.slice().reverse() },
+        { type: "logicalPlanProposal", steps: [exactLogical.steps[0], exactLogical.steps[0]] },
+        { type: "logicalPlanProposal", steps: [exactLogical.steps[1], exactLogical.steps[1]] },
+        { type: "logicalPlanProposal", steps: exactLogical.steps.concat([{ capabilityId: "set-opacity-v1", params: { opacity: 1 } }]) },
+        { type: "logicalPlanProposal", steps: [{ capabilityId: "unknown-v1", params: {} }, exactLogical.steps[1]] },
+        { type: "logicalPlanProposal", steps: [{ capabilityId: "set-opacity-v1", params: { name: "wrong" } }, exactLogical.steps[1]] },
+        { type: "logicalPlanProposal", steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 47 }, extra: true }, exactLogical.steps[1]] },
+        { type: "logicalPlanProposal", steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 101 } }, exactLogical.steps[1]] }
+    ].forEach((envelope) => expectCode(() => protocol.validateCanonicalResponse(makeResponse({ envelope })), protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Malformed logical declaration fails closed through the B1 owner."));
     const errorResponse = makeResponse({ envelope: { type: "error", error: { code: protocol.ERROR_CODES.UNKNOWN_TOOL, stage: "action-validate", retryable: false, message: "Unknown local tool.", details: { toolId: "not-loaded" } } } });
     const parsedErrorResponse = parser.parseProviderResponse(JSON.stringify(errorResponse));
     check(parsedErrorResponse.ok === true, "The structured error envelope should parse.");

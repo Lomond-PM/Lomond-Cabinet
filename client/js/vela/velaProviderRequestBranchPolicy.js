@@ -28,7 +28,7 @@
     var CAPABILITY_ID = "set-opacity-v1";
     var RENAME_CAPABILITY_ID = "set-layer-name-v1";
     var CAPABILITY_REVISION = "vela-capability-contract-v1";
-    var PROFILES = Object.freeze({ TEXT_ONLY: "text-only", EXPLICIT_EDIT_ELIGIBLE: "explicit-edit-eligible", PROPOSAL_CAPABLE_UNION: "proposal-capable-union" });
+    var PROFILES = Object.freeze({ TEXT_ONLY: "text-only", EXPLICIT_EDIT_ELIGIBLE: "explicit-edit-eligible", PROPOSAL_CAPABLE_UNION: "proposal-capable-union", BOUNDED_LOGICAL_PLAN_ELIGIBLE: "bounded-logical-plan-eligible" });
     var canonicalProjection = capabilityContracts.getModelProjection(CAPABILITY_ID);
     var renameProjection = capabilityContracts.getModelProjection(RENAME_CAPABILITY_ID);
 
@@ -105,20 +105,32 @@
         return match && match[1] !== "" ? match[1] : null;
     }
     function hasMultipleActions(message) {
-        var opacity = /不透明度|\bopacity\b/i.test(message);
-        var rename = /重命名|改名|名称改为|\brename\b|\bname\s+of\b/i.test(message);
+        var opacity = /不透明度|透明度|\bopacity\b/i.test(message);
+        var rename = /命名为|重命名|改名|名称改为|\brename\b|\bname\s+of\b/i.test(message);
         return opacity && rename;
+    }
+    function groundBoundedLogicalRequest(message) {
+        var chinese = /^\s*(?:\u8bf7|\u9ebb\u70e6)?\s*(?:\u5c06|\u628a)?\s*(?:(?:\u5f53\u524d\u9009\u4e2d|\u5f53\u524d|\u9009\u4e2d|\u6240\u9009)\s*)?(?:\u56fe\u5c42|\u5c42)\s*(?:\u7684)?\s*(?:\u4e0d\u900f\u660e\u5ea6|\u900f\u660e\u5ea6|opacity)\s*(?:\u8bbe\u4e3a|\u8bbe\u7f6e\u4e3a|\u8bbe\u7f6e\u6210|\u6539\u4e3a|\u8c03\u6574\u4e3a|\u8c03\u5230|\u6539\u6210)\s*((?:0|[1-9]\d*)(?:\.\d+)?%?)\s*[,\uff0c]?\s*(?:\u7136\u540e|\u518d)\s*(?:\u5c06|\u628a)?\s*(?:\u5b83|(?:(?:\u5f53\u524d\u9009\u4e2d|\u5f53\u524d|\u9009\u4e2d|\u6240\u9009)\s*)?(?:\u56fe\u5c42|\u5c42))\s*(?:\u547d\u540d\u4e3a|\u91cd\u547d\u540d\u4e3a|\u6539\u540d\u4e3a|\u540d\u79f0\u6539\u4e3a)\s*(.+?)\s*[\u3002.!\uff01]?\s*$/i;
+        var english = /^\s*(?:please\s+)?(?:set|change|adjust)\s+(?:(?:the\s+)?(?:(?:current(?:ly)?|selected)\s+)?layer\s+)?opacity\s+(?:to|at)\s*((?:0|[1-9]\d*)(?:\.\d+)?%?)\s*,?\s*(?:then|and\s+then)\s+(?:(?:rename\s+(?:(?:the\s+)?(?:same|current|selected)\s+layer|it))|(?:change\s+(?:its|the\s+layer)\s+name))\s+(?:to\s+)?(.+?)\s*[.!]?\s*$/i;
+        var match = chinese.exec(message) || english.exec(message);
+        var opacity;
+        var name;
+        if (!match) { return null; }
+        opacity = parseTarget(match[1]);
+        name = match[2];
+        if (opacity === null || typeof name !== "string" || !name.length || /^\s+$/.test(name) || /[\u0000-\u001f\u007f-\u009f]/.test(name)) { return null; }
+        return Object.freeze({ opacity: opacity, name: name });
     }
     function createRequestBranchPolicy(capabilityProjection) {
         assertProjection(capabilityProjection);
         return Object.freeze({
             classify: function (currentUserMessage) {
                 assertMessage(currentUserMessage);
-                if (hasMultipleActions(currentUserMessage)) { return PROFILES.TEXT_ONLY; }
+                if (hasMultipleActions(currentUserMessage)) { return groundBoundedLogicalRequest(currentUserMessage) ? PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE : PROFILES.TEXT_ONLY; }
                 return explicitTarget(currentUserMessage) === null && explicitRenameTarget(currentUserMessage) === null ? PROFILES.TEXT_ONLY : PROFILES.EXPLICIT_EDIT_ELIGIBLE;
             }
         });
     }
 
-    return Object.freeze({ MODULE_REVISION: MODULE_REVISION, PROFILES: PROFILES, createRequestBranchPolicy: createRequestBranchPolicy });
+    return Object.freeze({ MODULE_REVISION: MODULE_REVISION, PROFILES: PROFILES, groundBoundedLogicalRequest: groundBoundedLogicalRequest, createRequestBranchPolicy: createRequestBranchPolicy });
 }));

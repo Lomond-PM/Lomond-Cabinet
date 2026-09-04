@@ -99,7 +99,7 @@ function policyModuleSource(expression) {
 async function expectPolicyShapeFailure(expression, message) {
     const browser = makeBrowser({ moduleSources: { "velaProviderRequestBranchPolicy.js": policyModuleSource(expression) } });
     await expectCode(browser.context.VelaCepModuleLoader.load(), "MODULE_BOOTSTRAP_CONFLICT", message);
-    check(browser.getAppendCount() === 4 && browser.context.VelaCapabilityPromptBuilder === undefined && browser.context.VelaProviderAdapter === undefined, message + " stops before dependent modules.");
+    check(browser.getAppendCount() === 5 && browser.context.VelaCapabilityPromptBuilder === undefined && browser.context.VelaProviderAdapter === undefined, message + " stops before dependent modules.");
     return browser;
 }
 
@@ -125,9 +125,10 @@ async function run() {
     check(result.ok === true && result.state === "ready", "Loader reaches ready state.");
     check(Object.isFrozen(browser.context.VelaCepModuleLoader.getStatus()) && browser.context.VelaCepModuleLoader.getStatus().state === "ready" && browser.context.VelaCepModuleLoader.getStatus().lastErrorCode === null, "Loader exposes only a frozen ready diagnostic snapshot.");
     check(Object.isFrozen(result) && Object.isFrozen(result.modules), "Loader result is frozen.");
-    check(result.modules.length === 33 && result.modules[18] === "VelaCapabilityCompiler" && result.modules[23] === "VelaConfirmedAuthorityComposer" && result.modules.slice(-8).join(",") === "VelaDelegationGrantStore,VelaDelegationPolicyEngine,VelaAuthorityEvidenceResolver,VelaDelegationAuthorityCoordinator,VelaAuthorizedPlanAuthorityProducer,VelaAuthorityActivationGate,VelaAtomicActivationCoordinator,VelaRuntime", "Loader returns the canonical Composer and Authority dependency order with Runtime last.");
+    check(result.modules.length === 34 && result.modules[19] === "VelaCapabilityCompiler" && result.modules[24] === "VelaConfirmedAuthorityComposer" && result.modules.slice(-8).join(",") === "VelaDelegationGrantStore,VelaDelegationPolicyEngine,VelaAuthorityEvidenceResolver,VelaDelegationAuthorityCoordinator,VelaAuthorizedPlanAuthorityProducer,VelaAuthorityActivationGate,VelaAtomicActivationCoordinator,VelaRuntime", "Loader returns the canonical logical-plan, Composer, and Authority dependency order with Runtime last.");
     check(browser.context.__velaProtocolCoreBootstrapV1.getModule("VelaProtocol") === browser.context.VelaProtocol, "Protocol uses the browser bootstrap identity.");
     check(browser.context.__velaProtocolCoreBootstrapV1.getModule("VelaRuntime") === browser.context.VelaRuntime, "Runtime uses the browser bootstrap identity.");
+    check(browser.context.__velaProtocolCoreBootstrapV1.getModule("VelaLogicalPlanContracts") === browser.context.VelaLogicalPlanContracts && browser.context.VelaLogicalPlanContracts.MAX_LOGICAL_STEPS === 2, "Dormant logical-plan owner is available to the late-bound AgentDriver seam.");
     check(Object.isFrozen(browser.context.VelaRuntime), "Runtime browser module is frozen.");
     vm.runInContext("(function(){ var s=VelaSessionRuntime.createSessionLog({sessionId:'session_loader_canonical'}); var st=VelaDelegationGrantStore.createDelegationGrantStore({now:function(){return 1000;},idFactory:function(){return 'grant_loader';}}); var er=VelaAuthorityEvidenceResolver.createAuthorityEvidenceResolver({session:s}); var cr=VelaCapabilityCompiler.createCapabilityViewResolver({legacyContracts:VelaCapabilityContracts}); var c=VelaCapabilityCompiler.createCapabilityCompiler({resolveCapability:cr.resolveCapability,makeId:function(){return 'candidate_loader';}}); var candidate=c.compile(VelaPlanningContracts.createCapabilityIntent({intentId:'intent_loader',capabilityId:'set-opacity-v1',requestedOperation:'mutate',params:{opacity:50}})); var p=VelaDelegationPolicyEngine.createDelegationPolicyEngine({grantStore:st,resolveCapability:cr.resolveCapability,sessionId:s.getSessionId()}); var producer=VelaAuthorizedPlanAuthorityProducer.createAuthorizedPlanAuthorityProducer({policyEngine:p,grantStore:st,evidenceResolver:er,makePlanId:function(){return 'plan_loader';}}); var gate=VelaAuthorityActivationGate.createAuthorityActivationGate({producer:producer,grantStore:st,sessionId:s.getSessionId(),makeActivationId:function(){return 'activation_loader';}}); window.__canonicalDecision=p.evaluate(candidate,{sessionId:s.getSessionId()}).decision; window.__canonicalGraph=VelaAuthorizedPlanAuthorityProducer.isTrustedAuthorityProducerFor(producer,st,s.getSessionId())&&VelaAuthorityActivationGate.isTrustedAuthorityActivationGate(gate); window.__canonicalPolicy=p; window.__canonicalSessionId=s.getSessionId(); }());", browser.sandbox);
     check(browser.context.__canonicalDecision === "REVIEW_REQUIRED", "Production Compiler candidate is accepted by the canonical PolicyEngine and remains ungranted.");
@@ -141,7 +142,7 @@ async function run() {
     const policyExport = browser.context.VelaProviderRequestBranchPolicy;
     const policyProfiles = Object.getOwnPropertyDescriptor(policyExport, "PROFILES").value;
     check(Object.isFrozen(policyExport) && Object.isFrozen(policyProfiles) && Object.getOwnPropertyDescriptor(policyExport, "PROFILES").writable === false && Object.getOwnPropertyDescriptor(policyExport, "PROFILES").configurable === false && typeof Object.getOwnPropertyDescriptor(policyExport, "createRequestBranchPolicy").value === "function" && Object.getOwnPropertyDescriptor(policyExport, "createRequestBranchPolicy").writable === false && Object.getOwnPropertyDescriptor(policyExport, "createRequestBranchPolicy").configurable === false, "The production Request Branch Policy export has frozen own data descriptors.");
-    check(JSON.stringify(Object.getOwnPropertyNames(policyProfiles).sort()) === JSON.stringify(["EXPLICIT_EDIT_ELIGIBLE", "PROPOSAL_CAPABLE_UNION", "TEXT_ONLY"]) && Object.getOwnPropertySymbols(policyProfiles).length === 0 && Object.getOwnPropertyDescriptor(policyProfiles, "TEXT_ONLY").value === "text-only" && Object.getOwnPropertyDescriptor(policyProfiles, "EXPLICIT_EDIT_ELIGIBLE").value === "explicit-edit-eligible" && Object.getOwnPropertyDescriptor(policyProfiles, "PROPOSAL_CAPABLE_UNION").value === "proposal-capable-union", "The production Request Branch Policy profiles have exactly the frozen supported constants.");
+    check(JSON.stringify(Object.getOwnPropertyNames(policyProfiles).sort()) === JSON.stringify(["BOUNDED_LOGICAL_PLAN_ELIGIBLE", "EXPLICIT_EDIT_ELIGIBLE", "PROPOSAL_CAPABLE_UNION", "TEXT_ONLY"]) && Object.getOwnPropertySymbols(policyProfiles).length === 0 && Object.getOwnPropertyDescriptor(policyProfiles, "TEXT_ONLY").value === "text-only" && Object.getOwnPropertyDescriptor(policyProfiles, "EXPLICIT_EDIT_ELIGIBLE").value === "explicit-edit-eligible" && Object.getOwnPropertyDescriptor(policyProfiles, "PROPOSAL_CAPABLE_UNION").value === "proposal-capable-union" && Object.getOwnPropertyDescriptor(policyProfiles, "BOUNDED_LOGICAL_PLAN_ELIGIBLE").value === "bounded-logical-plan-eligible", "The production Request Branch Policy profiles have exactly the frozen supported constants.");
     check(browser.context.module === moduleSentinel && browser.context.module.exports === exportsSentinel, "module identity is restored.");
     check(browser.context.exports === exportsSentinel, "exports identity is restored.");
     check(browser.context.require === beforeRequire.value, "require identity is restored.");
@@ -151,12 +152,13 @@ async function run() {
     check(await browser.context.VelaCepModuleLoader.load() === result, "Ready loader calls return the same result.");
     check(Object.getOwnPropertyDescriptor(browser.context, "CSInterface") === undefined, "Loader does not create CSInterface state.");
     check(Object.getOwnPropertyDescriptor(browser.context, "__adobe_cep__") === undefined, "Loader does not create Adobe CEP state.");
-    check(browser.getAppendCount() === 33, "Loader injects each protected module exactly once.");
+    check(browser.getAppendCount() === 34, "Loader injects each protected module exactly once.");
     check(browser.requestedUrls[0] === "file:///C:/extension/client/js/vela/velaProtocol.js?v=test", "The captured loader base and cache query produce VelaProtocol as the first request after currentScript is cleared.");
     check(JSON.stringify(browser.requestedUrls) === JSON.stringify([
         "file:///C:/extension/client/js/vela/velaProtocol.js?v=test",
         "file:///C:/extension/client/js/vela/velaResponseParser.js?v=test",
         "file:///C:/extension/client/js/vela/velaCapabilityContracts.js?v=test",
+        "file:///C:/extension/client/js/vela/velaLogicalPlanContracts.js?v=test",
         "file:///C:/extension/client/js/vela/velaProviderRequestBranchPolicy.js?v=test",
         "file:///C:/extension/client/js/vela/velaCapabilityPromptBuilder.js?v=test",
         "file:///C:/extension/client/js/vela/velaProviderAdapter.js?v=test",
@@ -205,7 +207,7 @@ async function run() {
 
     const missingPolicy = makeBrowser({ failFile: "velaProviderRequestBranchPolicy.js" });
     await expectCode(missingPolicy.context.VelaCepModuleLoader.load(), "RUNTIME_CAPABILITY_UNAVAILABLE", "A missing Request Branch Policy fails closed before Prompt Builder loading.");
-    check(missingPolicy.getAppendCount() === 4 && missingPolicy.context.VelaCapabilityPromptBuilder === undefined, "A missing Request Branch Policy never proceeds to dependent modules.");
+    check(missingPolicy.getAppendCount() === 5 && missingPolicy.context.VelaCapabilityPromptBuilder === undefined, "A missing Request Branch Policy never proceeds to dependent modules.");
     const missingReviewPort = makeBrowser({ failFile: "velaReviewRuntimePort.js" });
     await expectCode(missingReviewPort.context.VelaCepModuleLoader.load(), "RUNTIME_CAPABILITY_UNAVAILABLE", "A missing ReviewRuntimePort fails closed before Runtime.");
     check(missingReviewPort.context.VelaRuntime === undefined, "Missing H1 module cannot silently fall back to a partial Runtime.");
@@ -218,7 +220,7 @@ async function run() {
     const wrongGrantRevision = makeBrowser({ moduleSources: { "velaDelegationGrantStore.js": wrongGrantRevisionSource } });
     await expectCode(wrongGrantRevision.context.VelaCepModuleLoader.load(), "MODULE_BOOTSTRAP_CONFLICT", "Wrong Authority module revision fails closed before Runtime.");
     check(wrongGrantRevision.context.VelaRuntime === undefined, "Wrong Authority revision cannot produce a partially delegated-capable Runtime.");
-    const inertFactory = makeBrowser({ moduleSources: { "velaProviderRequestBranchPolicy.js": policyModuleSource("Object.freeze({ PROFILES: Object.freeze({ TEXT_ONLY: 'text-only', EXPLICIT_EDIT_ELIGIBLE: 'explicit-edit-eligible', PROPOSAL_CAPABLE_UNION: 'proposal-capable-union' }), createRequestBranchPolicy: function () { window.__policyFactoryCalls = (window.__policyFactoryCalls || 0) + 1; } })") } });
+    const inertFactory = makeBrowser({ moduleSources: { "velaProviderRequestBranchPolicy.js": policyModuleSource("Object.freeze({ PROFILES: Object.freeze({ TEXT_ONLY: 'text-only', EXPLICIT_EDIT_ELIGIBLE: 'explicit-edit-eligible', PROPOSAL_CAPABLE_UNION: 'proposal-capable-union', BOUNDED_LOGICAL_PLAN_ELIGIBLE: 'bounded-logical-plan-eligible' }), groundBoundedLogicalRequest: function () { return null; }, createRequestBranchPolicy: function () { window.__policyFactoryCalls = (window.__policyFactoryCalls || 0) + 1; } })") } });
     await inertFactory.context.VelaCepModuleLoader.load();
     check((inertFactory.context.__policyFactoryCalls || 0) === 0, "Loader validates a legal Policy export without creating a Policy instance.");
     await expectPolicyShapeFailure("Object.freeze({})", "A Request Branch Policy missing PROFILES and factory fails closed.");
