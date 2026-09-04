@@ -7,6 +7,7 @@ const agentRuntime = require("../client/js/vela/velaAgentRuntime");
 const capabilityRuntime = require("../client/js/vela/velaAgentCapabilityRuntime");
 const activeCompositionCapability = require("../client/js/vela/velaActiveCompositionCapability");
 const observationRuntime = require("../client/js/vela/velaAgentObservationRuntime");
+const logicalPlanContracts = require("../client/js/vela/velaLogicalPlanContracts");
 
 let assertions = 0;
 function check(value, message) { assertions += 1; assert.ok(value, message); }
@@ -83,6 +84,7 @@ async function coldStartRegression() {
     let submissions = 0;
     let submissionMode = "executed";
     let continuationMode = "verified";
+    let reasonMode = "single";
     const coldOwner = ownerModule.createOwner({
         AgentCapabilityRuntime: capabilityRuntime,
         ActiveCompositionCapability: activeCompositionCapability,
@@ -107,8 +109,8 @@ async function coldStartRegression() {
     check(coldOwner.attachObservationReadPort(readPort), "late Runtime read port attaches after cold Owner creation");
     check(coldOwner.getObservationRuntime(), "late attachment creates the real ObservationRuntime");
     check(coldOwner.attachAgentDriverRuntimePort(Object.freeze({
-        reason() { reasons += 1; return Promise.resolve(Object.freeze({ capabilityId: "set-opacity-v1", params: Object.freeze({ opacity: 63 }) })); },
-        submitIntent() { submissions += 1; return Promise.resolve(Object.freeze(submissionMode === "review" ? { state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: 100, reviewCorrelation: "owner_review_correlation_" + submissions } : submissionMode === "denied" ? { state: "denied", committed: false, code: "PERMISSION_DENIED" } : { state: "executed", committed: true })); },
+        reason() { reasons += 1; return Promise.resolve(reasonMode === "logical" ? logicalPlanContracts.validateLogicalPlanProposal({ type: "logicalPlanProposal", steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 47 } }, { capabilityId: "set-layer-name-v1", params: { name: "Hero" } }] }) : Object.freeze({ capabilityId: "set-opacity-v1", params: Object.freeze({ opacity: 63 }) })); },
+        submitIntent(input) { submissions += 1; return Promise.resolve(Object.freeze(submissionMode === "review" ? { state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: input.capabilityIntent.capabilityId === "set-layer-name-v1" ? "Layer A" : 100, reviewCorrelation: "owner_review_correlation_" + submissions } : submissionMode === "denied" ? { state: "denied", committed: false, code: "PERMISSION_DENIED" } : { state: "executed", committed: true })); },
         continueApprovedReview() { return Promise.resolve(Object.freeze(continuationMode === "stale" ? { state: "blocked", code: "CONTEXT_STALE", committed: false, observation: Object.freeze({ targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:owner_stale" }) } : { state: "verification-required", code: null })); },
         verifyCommittedAction() { return Promise.resolve(Object.freeze({ state: "verified", code: null })); },
         verifyOpacity() { return Promise.resolve(Object.freeze({ fresh: true, matches: true, opacity: 63 })); },
@@ -158,6 +160,18 @@ async function coldStartRegression() {
     const staleCompleted = await ownerReviewPort.resolve({ reviewId: staleSecondProjection.reviewId, revision: staleSecondProjection.revision, outcome: "approved" });
     equal(staleCompleted.terminal.outcome, "completed", "second iteration completes through the existing committed-target verification wiring");
     equal(ownerReviewPort.getProjection().state, "inactive", "completed bounded replan closes the Owner review projection");
+    reasonMode = "logical";
+    submissionMode = "review";
+    continuationMode = "verified";
+    const logicalStep0 = await coldOwner.startObjective({ message: "Set opacity to 47 then rename to Hero", endpoint: "http://127.0.0.1:1234", model: "m" });
+    const logicalProjection0 = ownerReviewPort.getProjection();
+    check(logicalStep0.logicalPlan.currentStepIndex === 0 && logicalProjection0.state === "active" && logicalProjection0.capabilityId === "set-opacity-v1" && logicalProjection0.valueKind === "number" && logicalProjection0.proposedValue === 47, "Owner Review projection exposes exact step 0 opacity semantics from the current Driver review");
+    const logicalStep1 = await ownerReviewPort.resolve({ reviewId: logicalProjection0.reviewId, revision: logicalProjection0.revision, outcome: "approved" });
+    const logicalProjection1 = ownerReviewPort.getProjection();
+    check(logicalStep1.logicalPlan.currentStepIndex === 1 && logicalProjection1.state === "active" && logicalProjection1.capabilityId === "set-layer-name-v1" && logicalProjection1.valueKind === "string" && logicalProjection1.proposedValue === "Hero" && logicalProjection1.reviewId !== logicalProjection0.reviewId, "Owner Review projection switches to exact step 1 rename semantics and a fresh review identity");
+    const logicalRejected = ownerReviewPort.resolve({ reviewId: logicalProjection1.reviewId, revision: logicalProjection1.revision, outcome: "rejected" });
+    check(logicalRejected.terminal.outcome === "rejected" && logicalRejected.logicalPlan.completedStepCount === 1 && logicalRejected.logicalPlan.partialCompletion === true, "step 1 rejection retains deterministic partial-completion truth without stale step 0 projection");
+    reasonMode = "single";
     submissionMode = "denied";
     continuationMode = "verified";
     const blocked = await coldOwner.startObjective({ message: "Denied opacity objective", endpoint: "http://127.0.0.1:1234", model: "m" });

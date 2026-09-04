@@ -76,7 +76,7 @@
         var textOnly;
         var explicitEdit;
         if (!Object.isFrozen(profiles) || Object.getPrototypeOf(profiles) !== Object.prototype ||
-            Object.getOwnPropertyNames(profiles).sort().join("\u0000") !== "EXPLICIT_EDIT_ELIGIBLE\u0000PROPOSAL_CAPABLE_UNION\u0000TEXT_ONLY" ||
+            Object.getOwnPropertyNames(profiles).sort().join("\u0000") !== "BOUNDED_LOGICAL_PLAN_ELIGIBLE\u0000EXPLICIT_EDIT_ELIGIBLE\u0000PROPOSAL_CAPABLE_UNION\u0000TEXT_ONLY" ||
             (typeof Object.getOwnPropertySymbols === "function" && Object.getOwnPropertySymbols(profiles).length !== 0)) { fail("request profile export is invalid."); }
         textOnly = Object.getOwnPropertyDescriptor(profiles, "TEXT_ONLY");
         explicitEdit = Object.getOwnPropertyDescriptor(profiles, "EXPLICIT_EDIT_ELIGIBLE");
@@ -87,7 +87,7 @@
     }
     var PROFILES = assertProfileExport();
     function assertRequestProfile(value) {
-        if (value !== PROFILES.TEXT_ONLY && value !== PROFILES.EXPLICIT_EDIT_ELIGIBLE && value !== PROFILES.PROPOSAL_CAPABLE_UNION) { fail("requestProfile is invalid."); }
+        if (value !== PROFILES.TEXT_ONLY && value !== PROFILES.EXPLICIT_EDIT_ELIGIBLE && value !== PROFILES.PROPOSAL_CAPABLE_UNION && value !== PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE) { fail("requestProfile is invalid."); }
         return value;
     }
     var GLOBAL_STATIC_CONTRACT = [
@@ -107,6 +107,12 @@
         var projection;
         projection = assertProjection(modelProjection);
         requestProfile = assertRequestProfile(requestProfile);
+        if (requestProfile === PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE) { return [
+            "Return exactly one complete JSON object and nothing else. Use protocol " + RESPONSE_PROTOCOL + " and schemaVersion " + RESPONSE_SCHEMA_VERSION + ". Every response must use the closed Vela response envelope selected for this request; never add unknown fields.",
+            "This request is bounded-logical-plan-eligible. Return only one logicalPlanProposal envelope with exactly two ordered steps: step 0 must be set-opacity-v1 with exactly params.opacity from the user's request, and step 1 must be set-layer-name-v1 with exactly params.name from the user's request.",
+            "The logicalPlanProposal is a declaration only. It is not a TaskPlan, executable plan, review, target binding, Host payload, or authority. Trusted local validation, per-step review, authority, execution, and verification happen later.",
+            "Never add, remove, reorder, nest, or dynamically append steps. Never include target identity, layer or comp ids, confirmation, nonce, authority, review state, Host payload, arbitrary code, tool_calls, or extra fields."
+        ].join(" "); }
         if (requestProfile === PROFILES.TEXT_ONLY) { return [
             GLOBAL_STATIC_CONTRACT,
             "This request is text-only. Return only a text envelope; a localProposal is invalid for this request.",
@@ -138,6 +144,12 @@
         exampleParams = {};
         exampleParams[ownData(projection, "modelPolicy").modelMaySupply[0].slice("params.".length)] = 57.5;
         proposal57Example = rootEnvelope(requestId, model, { type: "localProposal", proposal: { capabilityId: projection.capabilityId, params: exampleParams } });
+        if (requestProfile === PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE) { return [
+            "Turn response contract: profile " + requestProfile + ".",
+            "Use requestId " + requestId + ", provider " + PROVIDER_ID + ", and model " + model + ".",
+            "Concrete valid response example: " + rootEnvelope(requestId, model, { type: "logicalPlanProposal", steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 47 } }, { capabilityId: "set-layer-name-v1", params: { name: "Hero" } }] }),
+            "Replace only opacity and name with the exact values stated by the current user. The two steps, order, capability IDs, and all field names are fixed."
+        ].join(" "); }
         if (requestProfile === PROFILES.TEXT_ONLY) { return [
             "Turn response contract: profile " + requestProfile + ".",
             "Use requestId " + requestId + ", provider " + PROVIDER_ID + ", and model " + model + ".",

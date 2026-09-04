@@ -11,17 +11,18 @@
         bootstrap = target[BOOTSTRAP_NAME];
         if (!bootstrap || !Object.isFrozen(bootstrap) || typeof bootstrap.registerModule !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
         var capabilities = bootstrap.getModule("VelaCapabilityContracts");
-        if (!capabilities || typeof capabilities.getLocalProjection !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
-        exported = Object.freeze(create(capabilities));
+        var requestPolicy = bootstrap.getModule("VelaProviderRequestBranchPolicy");
+        if (!capabilities || typeof capabilities.getLocalProjection !== "function" || !requestPolicy || typeof requestPolicy.groundBoundedLogicalRequest !== "function") { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
+        exported = Object.freeze(create(capabilities, requestPolicy));
         bootstrap.registerModule(name, exported);
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        module.exports = Object.freeze(factory(require("./velaCapabilityContracts")));
+        module.exports = Object.freeze(factory(require("./velaCapabilityContracts"), require("./velaProviderRequestBranchPolicy")));
     }
-}(typeof self !== "undefined" ? self : this, function (capabilityContracts) {
+}(typeof self !== "undefined" ? self : this, function (capabilityContracts, requestBranchPolicy) {
     "use strict";
 
     var MODULE_REVISION = "vela-provider-intent-gate-v1";
@@ -99,5 +100,18 @@
         return result(true, REASONS.ALLOWED);
     }
 
-    return Object.freeze({ evaluate: evaluate, MODULE_REVISION: MODULE_REVISION });
+    function evaluateLogicalPlan(input) {
+        var grounded;
+        var plan;
+        var steps;
+        if (!input || typeof input.message !== "string" || !input.logicalPlanProposal) { return result(false, REASONS.INVALID_INPUT); }
+        grounded = requestBranchPolicy.groundBoundedLogicalRequest(input.message);
+        plan = input.logicalPlanProposal;
+        steps = plan && plan.steps;
+        if (!grounded || !Array.isArray(steps) || steps.length !== 2 || steps[0].capabilityId !== "set-opacity-v1" || steps[1].capabilityId !== "set-layer-name-v1" || !steps[0].params || !steps[1].params) { return result(false, REASONS.MISSING_ACTION); }
+        if (steps[0].params.opacity !== grounded.opacity || steps[1].params.name !== grounded.name) { return result(false, REASONS.TARGET_MISMATCH); }
+        return result(true, REASONS.ALLOWED);
+    }
+
+    return Object.freeze({ evaluate: evaluate, evaluateLogicalPlan: evaluateLogicalPlan, MODULE_REVISION: MODULE_REVISION });
 }));

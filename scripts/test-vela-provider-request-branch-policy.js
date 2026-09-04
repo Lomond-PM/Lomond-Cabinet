@@ -87,6 +87,11 @@ function run() {
     rejected(() => policyModule.createRequestBranchPolicy(setterProjection), "Setter-backed Capability fields are rejected.");
     check(setterCalls === 0, "Capability validation never invokes setter-backed fields.");
 
+    check(policy.classify("把当前图层透明度改成47%，然后把它命名为Hero") === profiles.BOUNDED_LOGICAL_PLAN_ELIGIBLE, "Exact opacity then rename request enters the bounded logical-plan profile.");
+    check(policy.classify("把当前图层命名为Hero，然后把透明度改成47%") === profiles.TEXT_ONLY, "Wrong logical action order remains text-only.");
+    check(policy.classify("把当前图层透明度改成47%，然后删除它") === profiles.TEXT_ONLY, "Unrelated compound action does not enter the bounded logical-plan profile.");
+    const groundedLogical = policyModule.groundBoundedLogicalRequest("把当前图层透明度改成47%，然后把它命名为Hero");
+    check(Object.isFrozen(groundedLogical) && groundedLogical.opacity === 47 && groundedLogical.name === "Hero", "Exact logical request grounding is frozen and deterministic.");
     console.log("test-vela-provider-request-branch-policy: " + assertions + " assertions passed.");
 }
 

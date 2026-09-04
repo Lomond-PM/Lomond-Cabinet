@@ -107,7 +107,7 @@
             }
             pending = false;
             terminalGeneration += 1;
-            if (state === "completed" && text) { append("assistant", text, null); }
+            if (state === "completed") { if (text) { append("assistant", text, null); } /* A validated structured result may be consumed by the Agent without assistant text. */ }
             else if (state === "local-proposal-handled") { /* Trusted local handling needs no fabricated assistant text. */ }
             else if (state === "proposal-ready") { proposalReviewPending = true; append("notice", "", "vela.surfaceLocalProposalNotice"); }
             else if (state === "intent-rejected") { append("notice", "", intentReason === "target-mismatch" ? "vela.surfaceIntentTargetMismatch" : "vela.surfaceIntentRejected"); }

@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 "use strict";
 const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
+const vm = require("vm");
 const driverModule = require("../client/js/vela/velaAgentDriver");
+const logicalPlanContracts = require("../client/js/vela/velaLogicalPlanContracts");
 let assertions = 0;
 function check(value, message) { assertions += 1; assert.ok(value, message); }
 function equal(actual, expected, message) { assertions += 1; assert.strictEqual(actual, expected, message); }
@@ -9,10 +13,11 @@ async function code(operation, expected, message) { let failure = null; try { aw
 function harness(settings) {
     const options = settings || {};
     const events = [];
-    const calls = { reason: 0, submit: 0, continue: 0, committedVerify: 0, verify: 0, cancel: 0, observe: 0 };
+    const calls = { reason: 0, submit: 0, continue: 0, committedVerify: 0, verify: 0, cancel: 0, observe: 0, intents: [], continuations: [], committedVerifications: [] };
     let observation = null;
+    let turnCount = 0;
     const driver = driverModule.createAgentDriver({
-        beginTurn() { return Object.freeze({ sessionId: "session_driver", turnId: "turn_driver" }); },
+        beginTurn() { turnCount += 1; return Object.freeze({ sessionId: "session_driver", turnId: "turn_driver_" + turnCount }); },
         observe() { calls.observe += 1; if (options.observeError) return Promise.reject(Object.assign(new Error(options.observeError), { code: options.observeError })); observation = Object.freeze({ observationRevision: calls.observe }); return Promise.resolve(observation); },
         getObservation() { return observation; },
         appendSessionEvent(event) { events.push(event); return event; },
@@ -20,16 +25,55 @@ function harness(settings) {
     });
     const port = {
         reason() { calls.reason += 1; return Promise.resolve(options.reason || { capabilityId: "set-opacity-v1", params: { opacity: options.opacity === undefined ? 42 : options.opacity } }); },
-        submitIntent(input) { calls.submit += 1; calls.intent = input; return options.executionError ? Promise.reject(Object.assign(new Error(options.executionError), { code: options.executionError })) : Promise.resolve(options.outcome || { state: "executed", committed: true, transcriptSettled: options.transcriptSettled !== false }); },
-        continueApprovedReview(input) { calls.continue += 1; calls.continuation = input; if (options.deferContinuation) return new Promise((resolve) => { calls.releaseContinuation = resolve; }); return options.continuationError ? Promise.reject(Object.assign(new Error(options.continuationError), { code: options.continuationError })) : Promise.resolve(options.continuation || { state: "verification-required", code: null }); },
-        verifyCommittedAction(input) { calls.committedVerify += 1; calls.committedVerificationInput = input; if (options.deferCommittedVerification) return new Promise((resolve) => { calls.releaseCommittedVerification = resolve; }); return Promise.resolve(options.committedVerification || { state: "verified", code: null }); },
+        submitIntent(input) { calls.submit += 1; calls.intent = input; calls.intents.push(input); return options.executionError ? Promise.reject(Object.assign(new Error(options.executionError), { code: options.executionError })) : Promise.resolve(options.outcome || { state: "executed", committed: true, transcriptSettled: options.transcriptSettled !== false }); },
+        continueApprovedReview(input) { calls.continue += 1; calls.continuation = input; calls.continuations.push(input); if (options.deferContinuation) return new Promise((resolve) => { calls.releaseContinuation = resolve; }); return options.continuationError ? Promise.reject(Object.assign(new Error(options.continuationError), { code: options.continuationError })) : Promise.resolve(options.continuation || { state: "verification-required", code: null }); },
+        verifyCommittedAction(input) { calls.committedVerify += 1; calls.committedVerificationInput = input; calls.committedVerifications.push(input); if (options.deferCommittedVerification) return new Promise((resolve) => { calls.releaseCommittedVerification = resolve; }); return Promise.resolve(options.committedVerification || { state: "verified", code: null }); },
         verifyOpacity() { calls.verify += 1; return options.verifyError ? Promise.reject(Object.assign(new Error(options.verifyError), { code: options.verifyError })) : Promise.resolve(options.verification || { fresh: true, matches: true, opacity: options.opacity === undefined ? 42 : options.opacity }); },
         cancel() { calls.cancel += 1; return true; }
     };
     check(driver.attachRuntimePort(port), "runtime port attaches once");
     return { driver, events, calls };
 }
+function logicalReplanHarness(logicalPlanProposal, continuationResults, settings) {
+    const options = settings || {};
+    const calls = { observe: 0, submit: 0, continue: 0, verify: 0, submissions: [], continuations: [] };
+    let turn = 0;
+    const driver = driverModule.createAgentDriver({
+        beginTurn() { turn += 1; return Object.freeze({ sessionId: "logical_replan_session", turnId: "logical_replan_turn_" + turn }); },
+        observe() { calls.observe += 1; if (options.deferObserveAt === calls.observe) return new Promise((resolve) => { calls.releaseObserve = resolve; }); return Promise.resolve(); },
+        getObservation() { return Object.freeze({ observationRevision: calls.observe }); },
+        appendSessionEvent() {}
+    });
+    driver.attachRuntimePort({
+        reason() { throw new Error("unreachable"); },
+        submitIntent(input) { calls.submit += 1; calls.submissions.push(input); return Promise.resolve({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "logical_replan_review_" + calls.submit }); },
+        continueApprovedReview(input) { calls.continue += 1; calls.continuations.push(input); return Promise.resolve(continuationResults[calls.continue - 1]); },
+        verifyCommittedAction() { calls.verify += 1; return Promise.resolve({ state: "verified", code: null }); },
+        verifyOpacity() { throw new Error("unreachable"); },
+        cancel() { return true; }
+    });
+    return { driver, calls, proposal: logicalPlanProposal };
+}
 async function run() {
+    const logicalPlanProposal = Object.freeze({ type: "logicalPlanProposal", steps: Object.freeze([
+        Object.freeze({ capabilityId: "set-opacity-v1", params: Object.freeze({ opacity: 47 }) }),
+        Object.freeze({ capabilityId: "set-layer-name-v1", params: Object.freeze({ name: "Hero" }) })
+    ]) });
+    let browserRequireCalls = 0;
+    const browser = { console, Promise, setTimeout, clearTimeout, module: { exports: { cepSentinel: true } }, exports: { cepSentinel: true }, require() { browserRequireCalls += 1; throw new Error("CEP must not use CommonJS resolution"); } };
+    browser.self = browser; browser.window = browser;
+    const browserRealm = vm.createContext(browser);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "client", "js", "vela", "velaPlanningContracts.js"), "utf8"), browserRealm, { filename: "velaPlanningContracts.js" });
+    vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "client", "js", "vela", "velaAgentDriver.js"), "utf8"), browserRealm, { filename: "velaAgentDriver.js" });
+    ["velaProtocol.js", "velaCapabilityContracts.js", "velaLogicalPlanContracts.js"].forEach(function (filename) { vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "client", "js", "vela", filename), "utf8"), browserRealm, { filename: filename }); });
+    browser.__validatedPlan = vm.runInContext("VelaLogicalPlanContracts.validateLogicalPlanProposal({type:'logicalPlanProposal',steps:[{capabilityId:'set-opacity-v1',params:{opacity:47}},{capabilityId:'set-layer-name-v1',params:{name:'Hero'}}]})", browserRealm);
+    browser.__beginTurn = function () { return Object.freeze({ sessionId: "session_cep", turnId: "turn_cep" }); }; browser.__observe = function () { return Promise.resolve(); }; browser.__getObservation = function () { return Object.freeze({ observationRevision: 1 }); }; browser.__appendSessionEvent = function () {};
+    const browserDriver = vm.runInContext("VelaAgentDriver.createAgentDriver({beginTurn:__beginTurn,observe:__observe,getObservation:__getObservation,appendSessionEvent:__appendSessionEvent})", browserRealm);
+    let browserSubmits = 0;
+    browserDriver.attachRuntimePort({ reason() { return Promise.resolve(browser.__validatedPlan); }, submitIntent() { browserSubmits += 1; return Promise.resolve({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: browserSubmits === 1 ? 100 : "Layer A", reviewCorrelation: "cep_review_" + browserSubmits }); }, continueApprovedReview() { return Promise.resolve({ state: "verification-required" }); }, verifyCommittedAction() { return Promise.resolve({ state: "verified" }); }, verifyAction() { return Promise.resolve({ fresh: true, matches: true }); }, cancel() { return true; } });
+    browser.__driver = browserDriver;
+    const browserReview = await vm.runInContext("__driver.startObjective({message:'把当前图层透明度改成47%，然后把它命名为Hero',endpoint:'e',model:'m'})", browserRealm);
+    check(browserRequireCalls === 0 && browserReview.state === "awaiting-review" && browserReview.logicalPlan.currentStepIndex === 0 && browserReview.suspendedReview.capabilityId === "set-opacity-v1" && browserReview.suspendedReview.params.opacity === 47 && browserSubmits === 1, "CEP browser wiring ignores CommonJS-like globals, adopts the browser-owned validated plan, and reaches exact step 0 Review without mutation or step 1 materialization.");
     const limits = driverModule.LOOP_DEFAULT_LIMITS;
     check(Object.isFrozen(limits) && limits.maxIterations === 2 && limits.maxProviderCalls === 2 && limits.maxActionAttempts === 2 && limits.maxConsecutiveNoProgress === 1, "Driver owns immutable bounded default loop limits");
     const MAY = driverModule.REPLAN_CLASSIFICATIONS.MAY_REPLAN;
@@ -62,6 +106,133 @@ async function run() {
     const changedIntent = driverModule.evaluateNoProgress({ observationSignature: observationA, intentSignature: intentA, failureClass: "PLAN_FAILED", noProgressCount: 1 }, { observationSignature: observationA, intentSignature: intentB, failureClass: "PLAN_FAILED" }, limits.maxConsecutiveNoProgress);
     const changedFailure = driverModule.evaluateNoProgress({ observationSignature: observationA, intentSignature: intentA, failureClass: "PLAN_FAILED", noProgressCount: 1 }, { observationSignature: observationA, intentSignature: intentA, failureClass: "UNKNOWN_TARGET" }, limits.maxConsecutiveNoProgress);
     check([changedObservation, changedIntent, changedFailure].every((result) => result.noProgressCount === 0 && result.replanAllowed === true), "any trusted semantic dimension change resets no-progress");
+
+    const logical = harness({ opacity: 47 });
+    const logicalTerminal = await logical.driver.startObjective({ message: "bounded logical objective", endpoint: "e", model: "m", logicalPlanProposal });
+    const logicalMetadata = logicalTerminal.logicalPlan;
+    equal(logicalTerminal.terminal.outcome, "completed", "both verified logical steps complete the objective");
+    check(logical.calls.reason === 0 && logical.calls.submit === 2 && logical.calls.verify === 2 && logical.calls.observe === 2, "two logical steps reuse the one-step pipeline with one fresh Observe per step and no Provider call");
+    check(logical.calls.intents[0].capabilityIntent.capabilityId === "set-opacity-v1" && logical.calls.intents[1].capabilityIntent.capabilityId === "set-layer-name-v1", "declared logical steps materialize once in order");
+    check(logicalMetadata.currentStepIndex === 1 && logicalMetadata.stepCount === 2 && logicalMetadata.completedStepCount === 2 && logicalMetadata.remainingStepCount === 0, "bounded projection advances only through both verified steps");
+    check(Object.isFrozen(logicalMetadata) && Object.keys(logicalMetadata).sort().join(",") === "completedStepCount,currentStepId,currentStepIndex,logicalPlanId,materializedStepId,materializedTaskPlanId,partialCompletion,planSemanticSignature,remainingStepCount,status,stepCount", "logical cursor projection is frozen, closed, and excludes private plan state");
+    equal(logicalMetadata.partialCompletion, false, "fully completed logical objective is not partial completion");
+    const productionReason = harness({ reason: logicalPlanContracts.validateLogicalPlanProposal(logicalPlanProposal), opacity: 47 });
+    const productionReasonTerminal = await productionReason.driver.startObjective({ message: "把当前图层透明度改成47%，然后把它命名为Hero", endpoint: "e", model: "m" });
+    check(productionReason.calls.reason === 1 && productionReason.calls.submit === 2 && productionReasonTerminal.terminal.outcome === "completed", "validated production reason result is adopted into the existing Driver cursor and completes both steps.");
+    check(logicalMetadata.logicalPlanId !== logicalMetadata.currentStepId && logicalMetadata.currentStepId !== logicalMetadata.materializedStepId && logicalMetadata.materializedTaskPlanId !== logicalMetadata.materializedStepId, "logical plan, logical step, TaskPlan, and materialized step identities remain distinct");
+    equal(logicalMetadata.status, "completed", "terminal projection remains read-only after private cursor ownership is cleared");
+    equal(logicalTerminal.counters.actions, 2, "B3 performs exactly the two declared logical actions");
+    check(logical.calls.intents[0].taskPlanId !== logical.calls.intents[1].taskPlanId && logical.calls.intents[0].stepId !== logical.calls.intents[1].stepId && logical.calls.intents[0].turnId !== logical.calls.intents[1].turnId, "step 1 receives fresh TaskPlan, materialized step, and turn identities");
+
+    const logicalReview = harness({ outcome: { state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "logical_review" } });
+    const logicalReview0 = await logicalReview.driver.startObjective({ message: "reviewed logical objective", endpoint: "e", model: "m", logicalPlanProposal });
+    const oldReviewToken = { reviewId: logicalReview0.suspendedReview.reviewId, revision: logicalReview0.suspendedReview.revision, outcome: "approved" };
+    const logicalReview1 = await logicalReview.driver.resolveReview(oldReviewToken);
+    check(logicalReview1.state === "awaiting-review" && logicalReview1.logicalPlan.currentStepIndex === 1, "verified reviewed step 0 advances to a fresh step 1 review");
+    check(logicalReview1.suspendedReview.reviewId !== logicalReview0.suspendedReview.reviewId && logicalReview1.suspendedReview.taskPlanId !== logicalReview0.suspendedReview.taskPlanId && logicalReview1.reviewResolution === null, "step 1 does not inherit step 0 review resolution or TaskPlan identity");
+    await code(() => Promise.resolve().then(() => logicalReview.driver.resolveReview(oldReviewToken)), "AGENT_DRIVER_REVIEW_INVALID", "previous-step review settlement cannot resolve the current step review");
+    const logicalReviewedTerminal = await logicalReview.driver.resolveReview({ reviewId: logicalReview1.suspendedReview.reviewId, revision: logicalReview1.suspendedReview.revision, outcome: "approved" });
+    check(logicalReviewedTerminal.terminal.outcome === "completed" && logicalReview.calls.continue === 2 && logicalReview.calls.committedVerify === 2, "each logical step receives independent review continuation and committed-target Verify");
+
+    const logicalVerifyFailure = harness({ opacity: 47, verification: { fresh: true, matches: false, opacity: 47 } });
+    const logicalVerifyBlocked = await logicalVerifyFailure.driver.startObjective({ message: "logical verify failure", endpoint: "e", model: "m", logicalPlanProposal });
+    check(logicalVerifyBlocked.terminal.code === "AGENT_DRIVER_TASK_UNVERIFIED" && logicalVerifyFailure.calls.submit === 1 && logicalVerifyFailure.calls.observe === 1, "step 0 Verify failure makes step 1 unreachable");
+    const logicalDenied = harness({ outcome: { state: "denied", committed: false, code: "PERMISSION_DENIED" } });
+    const logicalDeniedTerminal = await logicalDenied.driver.startObjective({ message: "logical denied", endpoint: "e", model: "m", logicalPlanProposal });
+    check(logicalDeniedTerminal.terminal.code === "PERMISSION_DENIED" && logicalDenied.calls.submit === 1 && logicalDenied.calls.observe === 1, "step 0 authority denial terminalizes without reaching step 1");
+
+    const staleA = { state: "blocked", code: "CONTEXT_STALE", committed: false, observation: { targetAvailable: true, targetClass: "layer-opacity", observedValueKind: "number", observedValueDigest: "sha256:logical_a" } };
+    const verifiedContinuation = { state: "verification-required", code: null };
+    const sharedReplan = logicalReplanHarness(logicalPlanProposal, [staleA, verifiedContinuation, verifiedContinuation]);
+    const sharedStep0Attempt0 = await sharedReplan.driver.startObjective({ message: "shared replan completes", endpoint: "e", model: "m", logicalPlanProposal });
+    const sharedStep0Token0 = { reviewId: sharedStep0Attempt0.suspendedReview.reviewId, revision: sharedStep0Attempt0.suspendedReview.revision, outcome: "approved" };
+    const sharedStep0Attempt1 = await sharedReplan.driver.resolveReview(sharedStep0Token0);
+    check(sharedStep0Attempt1.state === "awaiting-review" && sharedStep0Attempt1.logicalPlan.currentStepId === sharedStep0Attempt0.logicalPlan.currentStepId && sharedStep0Attempt1.logicalPlan.currentStepIndex === 0, "current-step replan preserves declared logical step identity and ordinal");
+    check(sharedStep0Attempt1.taskPlan.planId !== sharedStep0Attempt0.taskPlan.planId && sharedStep0Attempt1.taskPlan.steps[0].stepId !== sharedStep0Attempt0.taskPlan.steps[0].stepId && sharedStep0Attempt1.suspendedReview.reviewId !== sharedStep0Attempt0.suspendedReview.reviewId && sharedStep0Attempt1.turn.turnId !== sharedStep0Attempt0.turn.turnId, "current-step replan receives fresh materialized, TaskPlan, Review, and turn identities");
+    await code(() => Promise.resolve().then(() => sharedReplan.driver.resolveReview(sharedStep0Token0)), "AGENT_DRIVER_REVIEW_INVALID", "old materialization review settlement cannot affect the rematerialized current step");
+    const sharedStep1 = await sharedReplan.driver.resolveReview({ reviewId: sharedStep0Attempt1.suspendedReview.reviewId, revision: sharedStep0Attempt1.suspendedReview.revision, outcome: "approved" });
+    check(sharedStep1.state === "awaiting-review" && sharedStep1.logicalPlan.currentStepIndex === 1 && sharedStep1.logicalPlan.completedStepCount === 1, "verified rematerialized step 0 progresses through fresh Observe to step 1");
+    const sharedComplete = await sharedReplan.driver.resolveReview({ reviewId: sharedStep1.suspendedReview.reviewId, revision: sharedStep1.suspendedReview.revision, outcome: "approved" });
+    check(sharedComplete.terminal.outcome === "completed" && sharedComplete.counters.replans === 1 && sharedComplete.loop.budgets.iterationsUsed === 2 && sharedComplete.loop.budgets.actionAttemptsUsed === 2, "one objective-shared replan allowance supports two committed logical steps within existing hard bounds");
+    check(sharedReplan.calls.submissions.map((input) => input.capabilityIntent.capabilityId).join(",") === "set-opacity-v1,set-opacity-v1,set-layer-name-v1", "step 0 rematerialization never rewrites trajectory or replays a completed step");
+
+    const sharedExhaustion = logicalReplanHarness(logicalPlanProposal, [staleA, verifiedContinuation, { state: "blocked", code: "CONTEXT_STALE", committed: false, observation: { targetAvailable: true, targetClass: "layer-name", observedValueKind: "string", observedValueDigest: "sha256:logical_b" } }]);
+    const exhaustedLogical0 = await sharedExhaustion.driver.startObjective({ message: "shared replan exhausted", endpoint: "e", model: "m", logicalPlanProposal });
+    const exhaustedLogical0Retry = await sharedExhaustion.driver.resolveReview({ reviewId: exhaustedLogical0.suspendedReview.reviewId, revision: exhaustedLogical0.suspendedReview.revision, outcome: "approved" });
+    const exhaustedLogical1 = await sharedExhaustion.driver.resolveReview({ reviewId: exhaustedLogical0Retry.suspendedReview.reviewId, revision: exhaustedLogical0Retry.suspendedReview.revision, outcome: "approved" });
+    const exhaustedLogicalTerminal = await sharedExhaustion.driver.resolveReview({ reviewId: exhaustedLogical1.suspendedReview.reviewId, revision: exhaustedLogical1.suspendedReview.revision, outcome: "approved" });
+    check(exhaustedLogicalTerminal.terminal.code === "AGENT_DRIVER_REPLAN_EXHAUSTED" && exhaustedLogicalTerminal.counters.replans === 1 && sharedExhaustion.calls.submit === 3, "step 1 receives no second replan allowance after step 0 consumed the objective-shared budget");
+    check(exhaustedLogicalTerminal.logicalPlan.completedStepCount === 1 && exhaustedLogicalTerminal.logicalPlan.currentStepIndex === 1 && exhaustedLogicalTerminal.logicalPlan.status === "blocked", "completed step 0 remains immutable when step 1 terminates blocked");
+
+    const repeatedStale = logicalReplanHarness(logicalPlanProposal, [staleA, staleA]);
+    const repeatedStale0 = await repeatedStale.driver.startObjective({ message: "logical no progress", endpoint: "e", model: "m", logicalPlanProposal });
+    const repeatedStale1 = await repeatedStale.driver.resolveReview({ reviewId: repeatedStale0.suspendedReview.reviewId, revision: repeatedStale0.suspendedReview.revision, outcome: "approved" });
+    const repeatedStaleTerminal = await repeatedStale.driver.resolveReview({ reviewId: repeatedStale1.suspendedReview.reviewId, revision: repeatedStale1.suspendedReview.revision, outcome: "approved" });
+    check(repeatedStaleTerminal.terminal.code === "AGENT_DRIVER_REPLAN_EXHAUSTED" && repeatedStaleTerminal.loop.noProgressCount === 1 && repeatedStale.calls.submit === 2, "repeated same-step stale settlement deterministically blocks without a third materialization");
+
+    const cancelReplan = logicalReplanHarness(logicalPlanProposal, [staleA], { deferObserveAt: 2 });
+    const cancelReplan0 = await cancelReplan.driver.startObjective({ message: "cancel logical replan", endpoint: "e", model: "m", logicalPlanProposal });
+    const cancelReplanPending = cancelReplan.driver.resolveReview({ reviewId: cancelReplan0.suspendedReview.reviewId, revision: cancelReplan0.suspendedReview.revision, outcome: "approved" });
+    for (let microtask = 0; microtask < 20 && !cancelReplan.calls.releaseObserve; microtask += 1) await Promise.resolve();
+    check(cancelReplan.driver.getSnapshot().state === "observing" && cancelReplan.driver.cancel(), "cancel wins during current-step replan fresh Observe");
+    cancelReplan.calls.releaseObserve();
+    const cancelReplanTerminal = await cancelReplanPending;
+    check(cancelReplanTerminal.terminal.outcome === "cancelled" && cancelReplan.calls.submit === 1 && cancelReplanTerminal.logicalPlan.currentStepIndex === 0, "late replan Observe settlement cannot restore cursor or rematerialize the cancelled step");
+
+    const cancelStep1Review = logicalReplanHarness(logicalPlanProposal, [verifiedContinuation]);
+    const cancelStep1Review0 = await cancelStep1Review.driver.startObjective({ message: "cancel step 1 review", endpoint: "e", model: "m", logicalPlanProposal });
+    const cancelStep1Pending = await cancelStep1Review.driver.resolveReview({ reviewId: cancelStep1Review0.suspendedReview.reviewId, revision: cancelStep1Review0.suspendedReview.revision, outcome: "approved" });
+    const cancelStep1Token = { reviewId: cancelStep1Pending.suspendedReview.reviewId, revision: cancelStep1Pending.suspendedReview.revision, outcome: "approved" };
+    check(cancelStep1Review.driver.cancel(), "step 1 awaiting Review can be cancelled deterministically");
+    await code(() => Promise.resolve().then(() => cancelStep1Review.driver.resolveReview(cancelStep1Token)), "AGENT_DRIVER_REVIEW_INVALID", "cancelled step 1 review token cannot resurrect the objective");
+    check(cancelStep1Review.driver.getSnapshot().logicalPlan.completedStepCount === 1 && cancelStep1Review.driver.getSnapshot().logicalPlan.status === "cancelled", "step 0 remains completed after step 1 review cancellation");
+
+    let pendingStepSubmitCount = 0;
+    let releasePendingStep1Submit;
+    const pendingStep1Driver = driverModule.createAgentDriver({ beginTurn() { return Object.freeze({ sessionId: "pending_step_session", turnId: "pending_step_turn_" + (pendingStepSubmitCount + 1) }); }, observe() { return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: pendingStepSubmitCount + 1 }); }, appendSessionEvent() {} });
+    pendingStep1Driver.attachRuntimePort({ reason() { throw new Error("unreachable"); }, submitIntent() { pendingStepSubmitCount += 1; if (pendingStepSubmitCount === 2) return new Promise((resolve) => { releasePendingStep1Submit = resolve; }); return Promise.resolve({ state: "executed", committed: true }); }, continueApprovedReview() { throw new Error("unreachable"); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyOpacity() { return Promise.resolve({ fresh: true, matches: true, opacity: 47 }); }, cancel() { return true; } });
+    const pendingStep1Result = pendingStep1Driver.startObjective({ message: "cancel materialized step 1", endpoint: "e", model: "m", logicalPlanProposal });
+    for (let microtask = 0; microtask < 30 && !releasePendingStep1Submit; microtask += 1) await Promise.resolve();
+    check(pendingStep1Driver.getSnapshot().logicalPlan.currentStepIndex === 1 && pendingStep1Driver.getSnapshot().state === "awaiting-outcome", "step 1 can be cancelled after materialization while submission is unsettled");
+    check(pendingStep1Driver.cancel(), "cancel wins before materialized step 1 receives a Review outcome");
+    releasePendingStep1Submit({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "late_step_1_review" });
+    const pendingStep1Cancelled = await pendingStep1Result;
+    check(pendingStep1Cancelled.terminal.outcome === "cancelled" && pendingStep1Cancelled.suspendedReview === null && pendingStep1Cancelled.logicalPlan.completedStepCount === 1, "late step 1 submission settlement cannot restore Review or rewrite completed step 0");
+
+    const malformedLogical = harness();
+    await code(() => malformedLogical.driver.startObjective({ message: "invalid logical objective", endpoint: "e", model: "m", logicalPlanProposal: { type: "logicalPlanProposal", steps: [logicalPlanProposal.steps[1], logicalPlanProposal.steps[0]] } }), "AGENT_DRIVER_LOGICAL_PLAN_INVALID", "invalid logical plan is rejected before private cursor ownership begins");
+    check(malformedLogical.driver.getSnapshot().state === "idle" && malformedLogical.driver.getSnapshot().logicalPlan === null && malformedLogical.calls.observe === 0, "invalid logical plan cannot enter Driver state or Observe");
+
+    let releaseLogicalObservation;
+    let lifecycleObservations = 0;
+    const lifecycleEvents = [];
+    const lifecycleDriver = driverModule.createAgentDriver({ beginTurn() { return Object.freeze({ sessionId: "logical_session", turnId: "logical_turn_" + lifecycleObservations }); }, observe() { lifecycleObservations += 1; if (lifecycleObservations === 1) { return new Promise((resolve) => { releaseLogicalObservation = resolve; }); } return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: lifecycleObservations }); }, appendSessionEvent(event) { lifecycleEvents.push(event); } });
+    let lifecycleSubmit = 0;
+    lifecycleDriver.attachRuntimePort({ reason() { return Promise.resolve({ capabilityId: "set-opacity-v1", params: { opacity: 42 } }); }, submitIntent() { lifecycleSubmit += 1; return Promise.resolve({ state: "executed", committed: true }); }, continueApprovedReview() { throw new Error("unreachable"); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyOpacity() { return Promise.resolve({ fresh: true, matches: true, opacity: 42 }); }, cancel() { return true; } });
+    const cancelledLogicalPending = lifecycleDriver.startObjective({ message: "cancel logical", endpoint: "e", model: "m", logicalPlanProposal });
+    check(lifecycleDriver.cancel(), "cancel clears active logical cursor ownership while Observe is pending");
+    const replacementLogical = lifecycleDriver.startObjective({ message: "replacement single step", endpoint: "e", model: "m" });
+    releaseLogicalObservation();
+    const replacementLogicalTerminal = await replacementLogical;
+    const cancelledLogicalSettlement = await cancelledLogicalPending;
+    check(replacementLogicalTerminal.terminal.outcome === "completed" && replacementLogicalTerminal.logicalPlan === null, "replacement objective owns fresh single-step state without prior logical cursor leakage");
+    equal(cancelledLogicalSettlement.objectiveId, replacementLogicalTerminal.objectiveId, "late cancelled settlement can only observe the current snapshot and cannot restore the previous objective");
+    equal(lifecycleSubmit, 1, "cancelled logical objective never submits step 0 or step 1 after late Observe settlement");
+    equal(lifecycleEvents.filter((event) => event.kind === "task/cancelled").length, 1, "cancelled logical objective emits one terminal lifecycle event");
+
+    let transitionObserveCount = 0;
+    let releaseLogicalTransition;
+    let transitionSubmitCount = 0;
+    const logicalTransitionDriver = driverModule.createAgentDriver({ beginTurn() { return Object.freeze({ sessionId: "transition_session", turnId: "transition_turn_" + (transitionObserveCount + 1) }); }, observe() { transitionObserveCount += 1; if (transitionObserveCount === 2) { return new Promise((resolve) => { releaseLogicalTransition = resolve; }); } return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: transitionObserveCount }); }, appendSessionEvent() {} });
+    logicalTransitionDriver.attachRuntimePort({ reason() { throw new Error("unreachable"); }, submitIntent() { transitionSubmitCount += 1; return Promise.resolve({ state: "executed", committed: true }); }, continueApprovedReview() { throw new Error("unreachable"); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyOpacity() { return Promise.resolve({ fresh: true, matches: true, opacity: 47 }); }, cancel() { return true; } });
+    const logicalTransitionPending = logicalTransitionDriver.startObjective({ message: "cancel between logical steps", endpoint: "e", model: "m", logicalPlanProposal });
+    for (let microtask = 0; microtask < 20 && !releaseLogicalTransition; microtask += 1) await Promise.resolve();
+    check(logicalTransitionDriver.getSnapshot().state === "observing" && logicalTransitionDriver.getSnapshot().logicalPlan.status === "observing-next", "step 0 Verify enters the fresh-Observe transition before cursor advance");
+    check(logicalTransitionDriver.cancel(), "cancel wins during fresh Observe before step 1 materialization");
+    releaseLogicalTransition();
+    const logicalTransitionCancelled = await logicalTransitionPending;
+    check(logicalTransitionCancelled.terminal.outcome === "cancelled" && transitionSubmitCount === 1 && logicalTransitionCancelled.logicalPlan.currentStepIndex === 0, "cancelled transition cannot advance cursor or materialize step 1");
+
     const good = harness();
     let listenerFailures = 0;
     good.driver.subscribe(() => { if (good.driver.getSnapshot().state === "reasoning") { throw new Error("listener"); } });

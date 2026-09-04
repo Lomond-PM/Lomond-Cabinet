@@ -87,6 +87,18 @@ async function run() {
     equal(PresentationModel.statusTone("completed"), "success", "completed maps to shared success semantics");
     equal(PresentationModel.statusTone("error"), "error", "error retains its existing semantic tone");
     equal(PresentationModel.statusTone("experimental-disabled", "user-disabled"), "disabled", "explicit user disable is distinct from qualification warning");
+    const consumedStructured = PresentationModel.create(); consumedStructured.begin("two-step objective"); consumedStructured.apply({ state: "pending", text: null, errorCode: null });
+    const consumedStructuredSnapshot = consumedStructured.apply({ state: "completed", text: null, errorCode: null });
+    check(consumedStructuredSnapshot.pending === false && consumedStructuredSnapshot.items.length === 1 && consumedStructuredSnapshot.items[0].kind === "user", "validated structured completion without assistant text is consumed successfully without a fabricated Provider error");
+    const consumedRejected = PresentationModel.create(); consumedRejected.begin("reject objective"); consumedRejected.apply({ state: "pending", text: null, errorCode: null }); consumedRejected.apply({ state: "completed", text: null, errorCode: null });
+    const consumedRejectedSnapshot = consumedRejected.applyConfirmation({ state: "rejected" });
+    check(consumedRejectedSnapshot.items.length === 2 && consumedRejectedSnapshot.items[1].displayTextKey === "vela.surfaceConfirmationRejected" && !consumedRejectedSnapshot.items.some((item) => item.kind === "error"), "structured completion followed by Review rejection renders only the bounded rejection notice");
+    const malformedStructured = PresentationModel.create(); malformedStructured.begin("malformed objective"); malformedStructured.apply({ state: "pending", text: null, errorCode: null });
+    const malformedStructuredSnapshot = malformedStructured.apply({ state: "failed", text: null, errorCode: "PROVIDER_RESPONSE_INVALID" });
+    check(malformedStructuredSnapshot.items.length === 2 && malformedStructuredSnapshot.items[1].kind === "error" && malformedStructuredSnapshot.items[1].displayTextKey === "vela.surfaceProviderResponse", "genuine malformed Provider failure retains the existing unusable-response presentation");
+    const textCompletion = PresentationModel.create(); textCompletion.begin("single-step text"); textCompletion.apply({ state: "pending", text: null, errorCode: null });
+    const textCompletionSnapshot = textCompletion.apply({ state: "completed", text: "bounded answer", errorCode: null });
+    check(textCompletionSnapshot.items.length === 2 && textCompletionSnapshot.items[1].kind === "assistant" && textCompletionSnapshot.items[1].text === "bounded answer", "existing single-step text completion still appends its assistant response");
     const unavailable = fixture({ experimentalEnabled: false }); unavailable.controller.mount();
     equal(unavailable.elements.statusSlot.getAttribute("data-vela-provider-state"), "idle", "unavailable projection retains the trusted provider diagnostic state");
     equal(unavailable.elements.root.getAttribute("data-vela-surface-state"), "experimental-disabled", "production default projects the fixed experimental-disabled state");

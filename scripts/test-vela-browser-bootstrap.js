@@ -13,6 +13,7 @@ const MODULES = [
     "velaProtocol.js",
     "velaResponseParser.js",
     "velaCapabilityContracts.js",
+    "velaLogicalPlanContracts.js",
     "velaProviderRequestBranchPolicy.js",
     "velaCapabilityPromptBuilder.js",
     "velaProviderAdapter.js",
@@ -111,7 +112,8 @@ function providerControllerDependencyBrowser(fault) {
         VelaProviderRequestBranchPolicy: Object.freeze({ createRequestBranchPolicy() {} }),
         VelaProviderAdapter: Object.freeze({ createLocalOpenAICompatibleProvider() {} }),
         VelaLocalTransport: Object.freeze({ isTrustedLocalTransportForProtocol() {} }),
-        VelaProviderIntentGate: Object.freeze({ evaluate() {} })
+        VelaProviderIntentGate: Object.freeze({ evaluate() {}, evaluateLogicalPlan() {} }),
+        VelaLogicalPlanContracts: Object.freeze({ validateLogicalPlanProposal() {} })
     };
     Object.keys(exportsByName).forEach((name) => {
         registry[name] = exportsByName[name];
@@ -144,7 +146,7 @@ function run() {
     MODULES.forEach((filename) => runBrowserModule(browser, filename));
     const bootstrap = browser.context.__velaProtocolCoreBootstrapV1;
     check(bootstrap && Object.isFrozen(bootstrap), "A self-referential browser global creates the exact Vela bootstrap even when CommonJS globals exist.");
-    ["VelaProtocol", "VelaResponseParser", "VelaCapabilityContracts", "VelaProviderRequestBranchPolicy", "VelaCapabilityPromptBuilder", "VelaProviderAdapter", "VelaProviderIntentGate", "VelaLocalTransport", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaProviderController", "VelaProviderProposalRouter", "VelaRuntime"].forEach((name) => {
+    ["VelaProtocol", "VelaResponseParser", "VelaCapabilityContracts", "VelaLogicalPlanContracts", "VelaProviderRequestBranchPolicy", "VelaCapabilityPromptBuilder", "VelaProviderAdapter", "VelaProviderIntentGate", "VelaLocalTransport", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaProviderController", "VelaProviderProposalRouter", "VelaRuntime"].forEach((name) => {
         check(bootstrap.getModule(name) === browser.context[name] && Object.isFrozen(browser.context[name]), name + " registers through the browser bootstrap.");
     });
     ["VelaAuthorizedPlanMaterializer", "VelaTaskRun", "VelaPlanReviewProjection", "VelaPlanController", "VelaConfirmedAuthorityComposer", "VelaReviewRuntimePort"].forEach((name) => { check(Object.isFrozen(browser.context[name]), name + " registers as a frozen CEP browser global before Runtime."); });

@@ -224,6 +224,8 @@
         var authorityPlane = null;
         var agentDriverRuntimePort = null;
         var agentDriverProposal = null;
+        var agentDriverLogicalAdmission = null;
+        var agentDriverLogicalObjectiveId = null;
         var agentReasoningGeneration = 0;
         var activeAgentReasoning = null;
         var reviewBarrierGeneration = 0;
@@ -675,6 +677,8 @@
                 reason: function (input) {
                     var capturedGeneration;
                     if (disposed || state !== "ready" || !providerController || agentDriverProposal) { return Promise.reject(safeError("LIFECYCLE_BLOCKED")); }
+                    agentDriverLogicalAdmission = null;
+                    agentDriverLogicalObjectiveId = null;
                     agentReasoningGeneration += 1;
                     capturedGeneration = agentReasoningGeneration;
                     activeAgentReasoning = Object.freeze({ generation: capturedGeneration });
@@ -692,6 +696,10 @@
                             return Object.freeze({ type: "text", text: result.text });
                         }
                         if (result && result.state === "failed" && typeof result.errorCode === "string") { throw safeError(result.errorCode); }
+                        if (result && result.state === "logical-plan-ready" && result.logicalPlanProposal) {
+                            agentDriverLogicalAdmission = Object.freeze({ generation: capturedGeneration, plan: result.logicalPlanProposal });
+                            return result.logicalPlanProposal;
+                        }
                         proposal = authorityPlane && authorityPlane.proposalPort.beginReview();
                         if (!proposal || (proposal.capabilityId !== "set-opacity-v1" && proposal.capabilityId !== "set-layer-name-v1") || !proposal.params) { throw safeError("PROVIDER_RESPONSE_INVALID"); }
                         agentDriverProposal = proposal;
@@ -706,22 +714,29 @@
                     var decision;
                     var plan;
                     var proposal = agentDriverProposal;
-                    if (disposed || state !== "ready" || !authorityPlane || !proposal || !planningContracts.isCapabilityIntent(input && input.capabilityIntent) || input.sessionId !== exactAgentSession.getSessionId() || input.capabilityIntent.capabilityId !== proposal.capabilityId || (input.capabilityIntent.capabilityId !== "set-opacity-v1" && input.capabilityIntent.capabilityId !== "set-layer-name-v1")) { settleAgentDriverProposal("failed", "LIFECYCLE_BLOCKED", false); return Promise.reject(safeError("LIFECYCLE_BLOCKED")); }
+                    var logicalAdmission = false;
+                    if (!proposal && agentDriverLogicalAdmission && planningContracts.isCapabilityIntent(input && input.capabilityIntent)) {
+                        logicalAdmission = agentDriverLogicalAdmission.plan.steps.some(function (step) { return step.capabilityId === input.capabilityIntent.capabilityId && JSON.stringify(step.params) === JSON.stringify(input.capabilityIntent.params); });
+                        if (logicalAdmission && agentDriverLogicalObjectiveId === null) { agentDriverLogicalObjectiveId = input.objectiveId; }
+                        logicalAdmission = logicalAdmission && agentDriverLogicalObjectiveId === input.objectiveId;
+                        if (logicalAdmission) { proposal = Object.freeze({ capabilityId: input.capabilityIntent.capabilityId, params: input.capabilityIntent.params }); }
+                    }
+                    if (disposed || state !== "ready" || !authorityPlane || !proposal || !planningContracts.isCapabilityIntent(input && input.capabilityIntent) || input.sessionId !== exactAgentSession.getSessionId() || input.capabilityIntent.capabilityId !== proposal.capabilityId || (input.capabilityIntent.capabilityId !== "set-opacity-v1" && input.capabilityIntent.capabilityId !== "set-layer-name-v1")) { if (!logicalAdmission) { settleAgentDriverProposal("failed", "LIFECYCLE_BLOCKED", false); } return Promise.reject(safeError("LIFECYCLE_BLOCKED")); }
                     try {
                         candidate = authorityPlane.compiler.compile(input.capabilityIntent);
                         decision = authorityPlane.policyEngine.evaluate(candidate, { sessionId: exactAgentSession.getSessionId(), taskId: activePilot ? activePilot.taskId : input.taskId });
                         latestAuthorityDecision = Object.freeze({ decision: decision.decision, reasonCode: decision.reasonCode, candidateId: candidate.candidateId });
                         if (decision.decision === "REVIEW_REQUIRED") {
-                            settleAgentDriverProposal("completed", null, true);
+                            if (!logicalAdmission) { settleAgentDriverProposal("completed", null, true); }
                             return captureReviewBarrier(input, candidate, decision).then(function (barrier) { return input.capabilityIntent.capabilityId === "set-layer-name-v1" ? Object.freeze({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: barrier.beforeValue, reviewCorrelation: barrier.reviewCorrelation }) : captureReviewPresentationBaseline().then(function (beforeValue) { return Object.freeze({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: beforeValue, reviewCorrelation: barrier.reviewCorrelation }); }); });
                         }
                         if (decision.decision !== "ALLOW") {
-                            settleAgentDriverProposal("failed", "PERMISSION_DENIED", false);
+                            if (!logicalAdmission) { settleAgentDriverProposal("failed", "PERMISSION_DENIED", false); }
                             return Promise.resolve(Object.freeze({ state: "denied", committed: false, code: "PERMISSION_DENIED" }));
                         }
                         if (!activePilot) { throw safeError("LIFECYCLE_BLOCKED"); }
                         plan = authorityPlane.producer.produce({ candidate: candidate, context: { sessionId: exactAgentSession.getSessionId(), taskId: activePilot.taskId }, delegationGrantedEvidence: activePilot.evidence });
-                    } catch (error) { settleAgentDriverProposal("failed", stableErrorCode(error), false); return Promise.reject(error); }
+                    } catch (error) { if (!logicalAdmission) { settleAgentDriverProposal("failed", stableErrorCode(error), false); } return Promise.reject(error); }
                     authorityState = "executing";
                     return authorityPlane.atomicCoordinator.activate(plan, { selectionOrderMeaningful: false }).then(function (handle) {
                         activeDelegatedTask = handle;
@@ -729,7 +744,7 @@
                         return authorityPlane.atomicCoordinator.run(handle).then(function (result) {
                             var settlementSucceeded = true;
                             activeDelegatedTask = null; activePilot = null; authorityRemainingActions = 0; authorityState = "consumed";
-                            try { settleAgentDriverProposal("completed", null, true); }
+                            try { if (!logicalAdmission) { settleAgentDriverProposal("completed", null, true); } }
                             catch (ignoredSettlement) { settlementSucceeded = false; }
                             return Object.freeze({ state: "executed", committed: true, executionResult: result, transcriptSettled: settlementSucceeded });
                         }, function (runError) {
@@ -758,6 +773,8 @@
                     invalidateProductionContinuation();
                     if (confirmedAuthorityComposer) { try { confirmedAuthorityComposer.cancel(); } catch (ignoredComposer) {} }
                     if (agentDriverProposal && authorityPlane) { try { settleAgentDriverProposal("failed", "AGENT_DRIVER_CANCELLED", false); } catch (ignored) {} }
+                    agentDriverLogicalAdmission = null;
+                    agentDriverLogicalObjectiveId = null;
                     if (providerController && cancelledReasoning) {
                         try {
                             providerState = providerController.getUiState();
@@ -850,7 +867,7 @@
             if (reviewRuntimePort) { try { reviewRuntimePort.invalidateAll(); } catch (ignoredReviews) {} }
             if (objectiveReviewRuntimePort) { try { objectiveReviewRuntimePort.invalidate(); } catch (ignoredObjectiveReview) {} }
             if (planController) { try { planController.dispose(); } catch (ignoredPlans) {} }
-            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; reviewPort = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; authorizedPlanMaterializer = null; planReviewProjection = null; planController = null; confirmedAuthorityComposer = null; reviewRuntimePort = null; objectiveReviewRuntimePort = null; protocolClock = null; agentDriverRuntimePort = null; agentDriverProposal = null; agentReasoningGeneration += 1; activeAgentReasoning = null; activeProductionContinuation = null; opacityVerificationPort = null;
+            protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; reviewPort = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; authorizedPlanMaterializer = null; planReviewProjection = null; planController = null; confirmedAuthorityComposer = null; reviewRuntimePort = null; objectiveReviewRuntimePort = null; protocolClock = null; agentDriverRuntimePort = null; agentDriverProposal = null; agentDriverLogicalAdmission = null; agentDriverLogicalObjectiveId = null; agentReasoningGeneration += 1; activeAgentReasoning = null; activeProductionContinuation = null; opacityVerificationPort = null;
             initialized = false; suspended = false; disposed = true; state = "disposed";
             return true;
         }

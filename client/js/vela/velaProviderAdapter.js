@@ -144,7 +144,7 @@
     var DEFAULT_ENDPOINT = "http://127.0.0.1:1234/v1/chat/completions";
     var PROVIDER_ID = "lmstudio";
     var PROVIDER_KIND = "openai-compatible";
-    var RESPONSE_SCHEMA_IDS = Object.freeze({ TEXT_ONLY: "vela-text-response.v1", EXPLICIT_EDIT_ELIGIBLE: "vela-local-proposal-response.v1", PROPOSAL_CAPABLE_UNION: "vela-bounded-union-response.v1" });
+    var RESPONSE_SCHEMA_IDS = Object.freeze({ TEXT_ONLY: "vela-text-response.v1", EXPLICIT_EDIT_ELIGIBLE: "vela-local-proposal-response.v1", PROPOSAL_CAPABLE_UNION: "vela-bounded-union-response.v1", BOUNDED_LOGICAL_PLAN_ELIGIBLE: "vela-bounded-logical-plan-response.v1" });
     var MODEL_ERROR_NOT_AUTHORIZED = "MODEL_ERROR_NOT_AUTHORIZED";
     var RESPONSE_FORMAT_MODE = "json-schema";
     var LMSTUDIO_TEXT_GENERATION_MAX_CHARS = 1024;
@@ -166,20 +166,22 @@
         var profiles;
         var text;
         var explicit;
-        var union;
+            var union;
+            var logical;
         try {
             profiles = Object.getOwnPropertyDescriptor(requestBranchPolicy, "PROFILES");
             if (!profiles || profiles.get || profiles.set || !Object.prototype.hasOwnProperty.call(profiles, "value") || !Object.isFrozen(profiles.value)) { throw new Error(); }
             text = Object.getOwnPropertyDescriptor(profiles.value, "TEXT_ONLY");
             explicit = Object.getOwnPropertyDescriptor(profiles.value, "EXPLICIT_EDIT_ELIGIBLE");
             union = Object.getOwnPropertyDescriptor(profiles.value, "PROPOSAL_CAPABLE_UNION");
-            if (!text || !explicit || !union || text.get || text.set || explicit.get || explicit.set || union.get || union.set || text.writable !== false || text.configurable !== false || explicit.writable !== false || explicit.configurable !== false || union.writable !== false || union.configurable !== false || text.value !== "text-only" || explicit.value !== "explicit-edit-eligible" || union.value !== "proposal-capable-union") { throw new Error(); }
+            logical = Object.getOwnPropertyDescriptor(profiles.value, "BOUNDED_LOGICAL_PLAN_ELIGIBLE");
+            if (!text || !explicit || !union || !logical || text.get || text.set || explicit.get || explicit.set || union.get || union.set || logical.get || logical.set || text.writable !== false || text.configurable !== false || explicit.writable !== false || explicit.configurable !== false || union.writable !== false || union.configurable !== false || logical.writable !== false || logical.configurable !== false || text.value !== "text-only" || explicit.value !== "explicit-edit-eligible" || union.value !== "proposal-capable-union" || logical.value !== "bounded-logical-plan-eligible") { throw new Error(); }
             return profiles.value;
         } catch (error) { throw configFailure(); }
     }
     var REQUEST_PROFILES = getRequestProfiles();
     function assertRequestProfile(value) {
-        if (value !== REQUEST_PROFILES.TEXT_ONLY && value !== REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE && value !== REQUEST_PROFILES.PROPOSAL_CAPABLE_UNION) { throw configFailure(); }
+        if (value !== REQUEST_PROFILES.TEXT_ONLY && value !== REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE && value !== REQUEST_PROFILES.PROPOSAL_CAPABLE_UNION && value !== REQUEST_PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE) { throw configFailure(); }
         return value;
     }
 
@@ -340,6 +342,13 @@
         }
         if (!opacity || !layerName) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "Dormant local proposal representation is unavailable."); }
         return freezeRepresentation({ oneOf: [variant(opacity), variant(layerName)] });
+    }
+    function buildBoundedLogicalPlanRepresentationSchema() {
+        var opacity = capabilityContracts.getRepresentationModelProjection("set-opacity-v1");
+        var layerName = capabilityContracts.getRepresentationModelProjection("set-layer-name-v1");
+        function step(capability) { return { type: "object", additionalProperties: false, required: ["capabilityId", "params"], properties: { capabilityId: { type: "string", enum: [capability.capabilityId] }, params: buildCapabilityParametersForResponse(capability) } }; }
+        if (!opacity || !layerName) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "Bounded logical plan representation is unavailable."); }
+        return freezeRepresentation({ type: "object", additionalProperties: false, required: ["type", "steps"], properties: { type: { type: "string", enum: ["logicalPlanProposal"] }, steps: { type: "array", minItems: 2, maxItems: 2, items: { oneOf: [step(opacity), step(layerName)] } } } });
     }
 
     function createLocalOpenAICompatibleProvider(options) {
@@ -575,9 +584,10 @@
                 }
             };
             var localProposalEnvelope = buildDormantLocalProposalRepresentationSchema();
-            var envelope = requestProfile === REQUEST_PROFILES.TEXT_ONLY ? textEnvelope : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? localProposalEnvelope : { oneOf: [textEnvelope, localProposalEnvelope] });
+            var logicalPlanEnvelope = buildBoundedLogicalPlanRepresentationSchema();
+            var envelope = requestProfile === REQUEST_PROFILES.TEXT_ONLY ? textEnvelope : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? localProposalEnvelope : (requestProfile === REQUEST_PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE ? logicalPlanEnvelope : { oneOf: [textEnvelope, localProposalEnvelope] }));
             return protocol.deepFreeze({
-                name: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? "vela_text_response" : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? "vela_local_proposal_response" : "vela_bounded_union_response"),
+                name: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? "vela_text_response" : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? "vela_local_proposal_response" : (requestProfile === REQUEST_PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE ? "vela_bounded_logical_plan_response" : "vela_bounded_union_response")),
                 strict: true,
                 schema: {
                     type: "object",
@@ -640,7 +650,7 @@
                 requestId: requestId,
                 model: model,
                 messages: assembleMessages(messages, contract),
-                responseFormat: { type: "json_object", schemaId: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? RESPONSE_SCHEMA_IDS.TEXT_ONLY : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? RESPONSE_SCHEMA_IDS.EXPLICIT_EDIT_ELIGIBLE : RESPONSE_SCHEMA_IDS.PROPOSAL_CAPABLE_UNION) },
+                responseFormat: { type: "json_object", schemaId: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? RESPONSE_SCHEMA_IDS.TEXT_ONLY : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? RESPONSE_SCHEMA_IDS.EXPLICIT_EDIT_ELIGIBLE : (requestProfile === REQUEST_PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE ? RESPONSE_SCHEMA_IDS.BOUNDED_LOGICAL_PLAN_ELIGIBLE : RESPONSE_SCHEMA_IDS.PROPOSAL_CAPABLE_UNION)) },
                 context: context
             };
             protocol.validateCanonicalRequest(request);
@@ -738,7 +748,8 @@
                 return { response: canonicalError(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, requestId), parserErrorCode: MODEL_ERROR_NOT_AUTHORIZED };
             }
             if ((requestProfile === REQUEST_PROFILES.TEXT_ONLY && parsed.response.envelope.type !== protocol.ENVELOPE_TYPES.TEXT) ||
-                (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE && parsed.response.envelope.type !== protocol.ENVELOPE_TYPES.LOCAL_PROPOSAL)) {
+                (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE && parsed.response.envelope.type !== protocol.ENVELOPE_TYPES.LOCAL_PROPOSAL) ||
+                (requestProfile === REQUEST_PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE && parsed.response.envelope.type !== protocol.ENVELOPE_TYPES.LOGICAL_PLAN_PROPOSAL)) {
                 setFailureBoundary("profile-validation");
                 return { response: canonicalError(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, requestId), parserErrorCode: protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID };
             }
