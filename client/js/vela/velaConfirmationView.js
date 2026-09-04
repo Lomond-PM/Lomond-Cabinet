@@ -29,7 +29,7 @@
             approve.disabled = actionState !== "confirm";
             reject.disabled = actionState !== "confirm";
             summary.hidden = !showSummary;
-            if (showSummary) { summary.textContent = t("vela.surfaceConfirmationValue", { before: state && state.beforeValue !== null ? state.beforeValue : "-", proposed: state && state.proposedValue !== null ? state.proposedValue : "-" }); }
+            if (showSummary) { summary.textContent = t(state && state.valueKind === "string" ? "vela.surfaceConfirmationLayerName" : "vela.surfaceConfirmationValue", { before: state && state.beforeValue !== null ? state.beforeValue : "-", proposed: state && state.proposedValue !== null ? state.proposedValue : "-" }); }
         }
         summary = documentRef.createElement("span"); summary.className = "vela-confirmation-summary";
         review = documentRef.createElement("button"); review.type = "button"; review.className = "panel-button utility-action vela-surface-action vela-compact-action";

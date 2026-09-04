@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 461 |
+| A | Core / Global; keep | 464 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 3 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -623,6 +623,8 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | tools.registryControlLab.fields.colorAlphaField | tools.registryControlLab | Color + Alpha | 颜色 + 透明度 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
 | tools.registryControlLab.fields.shadowField | tools.registryControlLab | Shadow | 阴影 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
 | tools.registryControlLab.sections.coreUiDirect | tools.registryControlLab | CoreUI Direct | CoreUI 直接路径 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
+| vela.planReviewCapabilitySetLayerName | vela | Rename layer | 重命名图层 | client/js/vela/velaPlanReviewProjection.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.planReviewParameterLayerName | vela | Layer name | 图层名称 | client/js/vela/velaPlanReviewProjection.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceApprove | vela | Approve | 批准 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceAuthorityStatus.active | vela | The next opacity change is allowed | 已允许下一次不透明度修改 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceAuthorityStatus.consumed | vela | The one-time automatic change permission was used | 本次自动修改权限已使用 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -633,6 +635,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.surfaceCancel | vela | Cancel | 取消 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceComposerLabel | vela | Vela message | Vela 消息 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceComposerPlaceholder | vela | Message Vela | 输入给 Vela 的消息 | client/js/vela/velaComposerView.js, client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceConfirmationLayerName | vela | Layer name: {before} → {proposed} | 图层名称：{before} → {proposed} | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceConfirmationReady | vela | A local opacity change is ready for confirmation. | 一个本地不透明度更改已准备待确认。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceConfirmationRejected | vela | The local action suggestion was rejected. No change was made. | 已拒绝本地操作建议。未发生更改。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceConfirmationValue | vela | Opacity {before}% → {proposed}% | 不透明度 {before}% → {proposed}% | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |

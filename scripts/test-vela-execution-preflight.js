@@ -86,7 +86,10 @@ function valueSnapshot(request, state) {
 function capabilities() {
     return { registry: {
         local: { id: "local", actions: { mutate: { id: "mutate", executable: true, risk: "write", targetScope: ["property"], capabilityRevision: "v1", paramsSchema: { type: "object", additionalProperties: false, properties: {} } } } },
-        vela: { id: "vela", actions: { "set-opacity-v1": { id: "set-opacity-v1", executable: true, risk: "write", targetScope: ["layer", "property"], capabilityRevision: "set-opacity-v1", paramsSchema: { type: "object", additionalProperties: false, required: ["opacity"], properties: { opacity: { type: "number", minimum: 0, maximum: 100 } } } } } }
+        vela: { id: "vela", actions: {
+            "set-opacity-v1": { id: "set-opacity-v1", executable: true, risk: "write", targetScope: ["layer", "property"], capabilityRevision: "set-opacity-v1", paramsSchema: { type: "object", additionalProperties: false, required: ["opacity"], properties: { opacity: { type: "number", minimum: 0, maximum: 100 } } } },
+            "set-layer-name-v1": { id: "set-layer-name-v1", executable: true, risk: "write", targetScope: ["layer"], capabilityRevision: "set-layer-name-v1", paramsSchema: { type: "object", additionalProperties: false, required: ["name"], properties: { name: { type: "string", minByteLength: 1, maxByteLength: 256 } } } }
+        } }
     } };
 }
 
@@ -107,7 +110,7 @@ function proposal(fingerprint, digest, overrides) {
 function makeHarness(options) {
     options = options || {};
     const harnessId = ++harnessCount;
-    const state = { hostInstanceId: HOST, hostReloadEpoch: 1, projectGeneration: 3, layerIndex: 3, selectionExtra: false, selectionEmpty: false, value: 50, committedObservationValue: 50, sampleTime: 1, errorCode: null, errorReason: null, targetMissing: false, responsePath: null, responseMatchName: null, deferred: false, clockThrowAfter: null };
+    const state = { hostInstanceId: HOST, hostReloadEpoch: 1, projectGeneration: 3, layerIndex: 3, selectionExtra: false, selectionEmpty: false, value: 50, name: "Layer A", committedObservationValue: 50, committedObservationName: "Hero", sampleTime: 1, errorCode: null, errorReason: null, targetMissing: false, responsePath: null, responseMatchName: null, deferred: false, clockThrowAfter: null };
     const scheduler = makeScheduler();
     const calls = [];
     const callbacks = [];
@@ -128,6 +131,10 @@ function makeHarness(options) {
                 projectGeneration: state.projectGeneration,
                 tier: 3,
                 target: Object.assign({}, request.scope.target, { value: { kind: "number", data: state.committedObservationValue } })
+            }));
+            else if (request.operation === "captureLayerAttributeValue" || request.operation === "observeCommittedLayerAttributeValue") callback(success(request, {
+                hostInstanceId: state.hostInstanceId, hostReloadEpoch: state.hostReloadEpoch, projectGeneration: state.projectGeneration, tier: 3,
+                target: Object.assign({}, request.scope.target, { value: { kind: "string", data: request.operation === "captureLayerAttributeValue" ? state.name : state.committedObservationName } })
             }));
             else if (state.targetMissing) callback(hostError(request, "HOST_CONTEXT_TARGET_NOT_FOUND"));
             else if (state.errorCode) callback(hostError(request, state.errorCode, state.errorReason));
@@ -179,6 +186,7 @@ function makeHarness(options) {
             if (executorMode === "resolve-twice") return { then(resolve) { resolve({ ok: true, summary: { executed: true } }); resolve({ ok: false }); } };
             if (executorMode === "resolve-then-reject") return { then(resolve, reject) { resolve({ ok: true, summary: { executed: true } }); reject(new Error("late")); } };
             if (executorMode === "reject-then-resolve") return { then(resolve, reject) { reject(new Error("first")); resolve({ ok: true }); } };
+            if (action.payload && action.payload.actionId === "set-layer-name-v1") { state.name = action.payload.params.name; state.committedObservationName = action.payload.params.name; }
             return { ok: true, summary: { executed: true } };
         }
     };
@@ -189,6 +197,7 @@ function makeHarness(options) {
     return {
         state, scheduler, calls, callbacks, events, bridge, validator, store, preflight, verificationAssociations,
         valueDigest(value) { return contextApi.describePropertyValue("number", value).valueDigest; },
+        stringDigest(value) { return contextApi.describePropertyValue("string", value).valueDigest; },
         get executorCalls() { return executorCalls; }, get currentCalls() { return currentCalls; },
         set settings(value) { settingsFingerprint = value; }, set permission(value) { permissionSnapshot = value; }, set executorMode(value) { executorMode = value; }
     };
@@ -610,6 +619,36 @@ async function run() {
     check(timeout.store.getCandidate(timeoutPlan.candidateIds[0]).state === "confirmed", "Late Host callbacks after timeout must not consume or stale the candidate.");
     timeout.state.deferred = false;
     check((await timeout.preflight.executeStep({ planId: timeoutPlan.planId, stepIndex: 0 })).candidate.state === "consumed", "A transient timeout must allow a later fully fresh execution.");
+
+    const rename = makeHarness();
+    const renamePlan = await rename.preflight.createBoundPlan({ localProposal: { capabilityId: "set-layer-name-v1", params: { name: " Hero " }, targetScope: { type: "selected-layer", attribute: "name" } }, selectionOrderMeaningful: true });
+    check(renamePlan.actionCount === 1 && renamePlan.review.valueKind === "string" && renamePlan.review.beforeValue === "Layer A" && renamePlan.candidates[0].action.payload.params.name === " Hero ", "Dormant rename materializes as one exact canonical single-action plan with a trusted before-name review value.");
+    await confirm(rename, renamePlan);
+    const renameExecution = await rename.preflight.executeStep({ planId: renamePlan.planId, stepIndex: 0 });
+    check(renameExecution.result.committed === true && rename.executorCalls === 1 && rename.state.name === " Hero " && rename.verificationAssociations.length === 1, "Fresh rename executes exactly once and activates committed-target verification only after committed true.");
+    rename.state.selectionEmpty = true;
+    const renameVerification = await rename.preflight.verifyCommittedValue({ planId: renamePlan.planId, capabilityId: "set-layer-name-v1", expectedValue: " Hero " });
+    check(renameVerification.fresh === true && renameVerification.valueKind === "string" && renameVerification.value === " Hero " && renameVerification.matches === true && renameVerification.valueDigest === rename.stringDigest(" Hero "), "Committed rename verification is selection-independent and compares the exact string without trimming.");
+
+    const staleName = makeHarness();
+    const staleNamePlan = await staleName.preflight.createBoundPlan({ localProposal: { capabilityId: "set-layer-name-v1", params: { name: "Hero" }, targetScope: { type: "selected-layer", attribute: "name" } }, selectionOrderMeaningful: true });
+    await confirm(staleName, staleNamePlan);
+    staleName.state.name = "External";
+    await expectCode(staleName.preflight.executeStep({ planId: staleNamePlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.CONTEXT_STALE, "External before-name drift rejects the old rename at JIT freshness.");
+    check(staleName.executorCalls === 0, "Stale before-name drift reaches neither executor nor Host.");
+
+    const renameSelectionDrift = makeHarness();
+    const renameSelectionPlan = await renameSelectionDrift.preflight.createBoundPlan({ localProposal: { capabilityId: "set-layer-name-v1", params: { name: "Hero" }, targetScope: { type: "selected-layer", attribute: "name" } }, selectionOrderMeaningful: true });
+    await confirm(renameSelectionDrift, renameSelectionPlan);
+    renameSelectionDrift.state.selectionEmpty = true;
+    await expectCode(renameSelectionDrift.preflight.executeStep({ planId: renameSelectionPlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.CONTEXT_STALE, "Selection drift rejects dormant rename before execution.");
+    check(renameSelectionDrift.executorCalls === 0, "Rename selection drift causes zero executor or Host calls.");
+
+    const renameNoOp = makeHarness();
+    const renameNoOpPlan = await renameNoOp.preflight.createBoundPlan({ localProposal: { capabilityId: "set-layer-name-v1", params: { name: "Layer A" }, targetScope: { type: "selected-layer", attribute: "name" } }, selectionOrderMeaningful: true });
+    await confirm(renameNoOp, renameNoOpPlan);
+    await expectCode(renameNoOp.preflight.executeStep({ planId: renameNoOpPlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.PLAN_FAILED, "Exact-equal rename is terminalized as a no-op before Host mutation.");
+    check(renameNoOp.executorCalls === 0, "Rename no-op performs no executor or Host mutation.");
 
     const strictInput = makeHarness();
     const strictPlan = await seedAndCreate(strictInput);

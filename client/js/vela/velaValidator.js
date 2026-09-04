@@ -91,6 +91,7 @@
     }
 
     function targetType(target) {
+        if (target.targetKind === "layer-attribute" && target.attribute === "name") { return "layer"; }
         if (target.propertyPath || target.propertyMatchName) { return "property"; }
         if (target.layerId || target.layerIndex || target.layerIds || target.layerIndices) { return "layer"; }
         if (target.compId) { return "comp"; }

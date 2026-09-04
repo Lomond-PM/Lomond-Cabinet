@@ -30,6 +30,8 @@ const compiler = compilerModule.createCapabilityCompiler({ resolveCapability: re
 
 // A compiler with a deterministic id for the determinism test.
 const fixedCompiler = compilerModule.createCapabilityCompiler({ resolveCapability: resolver.resolveCapability, makeId: () => "cand_fixed", now: () => 5000 });
+const dormantResolver = compilerModule.createCapabilityViewResolver({ legacyContracts: { getContract: legacyContracts.getRepresentationContract } });
+const dormantCompiler = compilerModule.createCapabilityCompiler({ resolveCapability: dormantResolver.resolveCapability, makeId: () => "cand_name", now: () => 5000 });
 
 function readIntent(overrides) {
     return Object.assign({ intentId: "intent_r", capabilityId: "observe-active-composition-v1", requestedOperation: "read", params: {} }, overrides || {});
@@ -170,6 +172,9 @@ check(planning.legacyAuthorityPolicy({ capabilityId: "set-opacity-v1", requested
 // Even with a valid DelegationGrant, no mutation authority is granted.
 const grant = planning.createDelegationGrant({ grantId: "grant_1", capabilityFamily: "mutation", capabilityId: "set-opacity-v1", targetScope: { type: "current-comp" }, riskCeiling: "write" });
 check(planning.grantAllowsMutation(grant) === false, "a valid DelegationGrant still does not authorize the mutation");
+const nameCandidate = dormantCompiler.compile(planning.createCapabilityIntent({ intentId: "intent_name", capabilityId: "set-layer-name-v1", requestedOperation: "mutate", params: { name: " Hero " } }));
+check(nameCandidate.capabilityId === "set-layer-name-v1" && nameCandidate.params.name === " Hero " && nameCandidate.kind === "tool" && nameCandidate.risk === "write" && nameCandidate.requiresConfirmation === true, "Dormant trusted layer-name definition compiles to one exact non-authoritative mutation candidate.");
+expectCode(() => dormantCompiler.compile(planning.createCapabilityIntent({ intentId: "intent_name_bad", capabilityId: "set-layer-name-v1", requestedOperation: "mutate", params: { name: "Hero", hostPayload: "forged" } })), "PLANNING_CONTRACT_FORBIDDEN_FIELD", "Dormant layer-name compile rejects forged Host payload.");
 
 // ===========================================================================
 // Extra: no compiler output is executable in the spine sense (structural).

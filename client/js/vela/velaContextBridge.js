@@ -462,6 +462,16 @@
                 targetOrderMeaningful: details.targetOrderMeaningful === true,
                 nativeBindings: nativeBindings,
                 valueTargets: valueTargets,
+                layerAttributeTarget: details.layerAttributeTarget ? Object.freeze({
+                    layerId: details.layerAttributeTarget.layerId,
+                    nativeLayerId: details.layerAttributeTarget.nativeLayerId,
+                    layerIndex: details.layerAttributeTarget.layerIndex,
+                    targetKind: details.layerAttributeTarget.targetKind,
+                    attribute: details.layerAttributeTarget.attribute,
+                    valueKind: details.layerAttributeTarget.valueKind,
+                    value: details.layerAttributeTarget.value,
+                    valueDigest: details.layerAttributeTarget.valueDigest
+                }) : null,
                 publicCanonical: protocol.canonicalStringify(capture)
             });
         }
@@ -1274,6 +1284,43 @@
             return beginOwnedPropertyValueCapture(bindingCapture, targets).promise;
         }
 
+        function captureLayerAttributeValue(bindingCapture, target) {
+            try {
+                var bindingRecord = trustedBindingRecord(bindingCapture);
+                if (!protocol.isPlainObject(target)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Layer attribute target is invalid."); }
+                protocol.assertNoUnknownKeys(target, ["layerId", "targetKind", "attribute"], "contextBridge.layerAttributeTarget");
+                var layerId = protocol.assertNonEmptyString(target.layerId, "contextBridge.layerAttributeTarget.layerId", 256);
+                if (target.targetKind !== "layer-attribute" || target.attribute !== "name") { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "Layer attribute target is unsupported."); }
+                var nativeBinding = bindingRecord.nativeBindings.filter(function (item) { return item.layerId === layerId; })[0];
+                if (!nativeBinding) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "Layer attribute target is not bound to the current selection."); }
+                var request = {
+                    protocol: REQUEST_PROTOCOL, schemaVersion: SCHEMA_VERSION, requestId: nextRequestId(), sessionId: sessionId,
+                    operation: "captureLayerAttributeValue", tier: 3,
+                    scope: {
+                        purpose: "binding", expectedHostInstanceId: bindingRecord.hostInstanceId, expectedHostReloadEpoch: bindingRecord.hostReloadEpoch,
+                        expectedProjectGeneration: bindingRecord.projectGeneration,
+                        target: { itemId: bindingRecord.itemId, nativeLayerId: nativeBinding.nativeLayerId, layerIndex: nativeBinding.layerIndex, targetKind: "layer-attribute", attribute: "name" }
+                    }
+                };
+                return startRequest(request, function (result, hostRequest) {
+                    var raw = result.snapshot;
+                    var authority;
+                    var descriptor;
+                    if (!protocol.isPlainObject(raw)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Layer attribute context is invalid."); }
+                    protocol.assertNoUnknownKeys(raw, ["hostInstanceId", "hostReloadEpoch", "projectGeneration", "tier", "target"], "hostContext.layerAttributeSnapshot");
+                    authority = normalizeHostAuthority(raw);
+                    if (raw.tier !== 3 || raw.projectGeneration !== bindingRecord.projectGeneration || authority.hostInstanceId !== bindingRecord.hostInstanceId || authority.hostReloadEpoch !== bindingRecord.hostReloadEpoch || !protocol.isPlainObject(raw.target)) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Layer attribute authority changed."); }
+                    protocol.assertNoUnknownKeys(raw.target, ["itemId", "nativeLayerId", "layerIndex", "targetKind", "attribute", "value"], "hostContext.layerAttributeTarget");
+                    if (raw.target.itemId !== bindingRecord.itemId || raw.target.nativeLayerId !== nativeBinding.nativeLayerId || raw.target.layerIndex !== nativeBinding.layerIndex || raw.target.targetKind !== "layer-attribute" || raw.target.attribute !== "name" || !protocol.isPlainObject(raw.target.value)) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Layer attribute target changed."); }
+                    protocol.assertNoUnknownKeys(raw.target.value, ["kind", "data"], "hostContext.layerAttributeTarget.value");
+                    descriptor = contextApi.describePropertyValue(raw.target.value.kind, raw.target.value.data);
+                    if (descriptor.valueKind !== "string" || typeof raw.target.value.data !== "string") { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Layer name value is invalid."); }
+                    var capture = protocol.deepFreeze({ contextId: hostRequest.requestId, requestId: hostRequest.requestId, sessionId: sessionId, tier: 3, purpose: "layer-attribute-value-binding", executable: true, fingerprint: descriptor.valueDigest, hostAdapterRevision: HOST_ADAPTER_REVISION, snapshot: { hostInstanceId: authority.hostInstanceId, hostReloadEpoch: authority.hostReloadEpoch, projectGeneration: bindingRecord.projectGeneration, activeComp: { compId: bindingRecord.compId }, target: { layerId: layerId, targetKind: "layer-attribute", attribute: "name", valueKind: "string", value: raw.target.value.data, valueDigest: descriptor.valueDigest } } });
+                    return registerCapture(capture, { hostInstanceId: authority.hostInstanceId, hostReloadEpoch: authority.hostReloadEpoch, purpose: "layer-attribute-value-binding", projectGeneration: bindingRecord.projectGeneration, itemId: bindingRecord.itemId, compId: bindingRecord.compId, bindingFingerprint: bindingRecord.fingerprint, selectionOrderMeaningful: bindingRecord.selectionOrderMeaningful, layerAttributeTarget: { layerId: layerId, nativeLayerId: nativeBinding.nativeLayerId, layerIndex: nativeBinding.layerIndex, targetKind: "layer-attribute", attribute: "name", valueKind: "string", value: raw.target.value.data, valueDigest: descriptor.valueDigest } });
+                });
+            } catch (error) { return Promise.reject(error); }
+        }
+
         function createPrivateExecutionRequest(action, trustedExecutionContext) {
             var bindingDescriptor;
             var valueDescriptor;
@@ -1297,7 +1344,7 @@
             valueCapture = valueDescriptor.value;
             bindingRecord = trustedBindingRecord(bindingCapture);
             valueRecord = captureRecords.get(valueCapture);
-            if (!valueRecord || valueRecord.bridgeToken !== bridgeToken || valueRecord.protocol !== protocol || valueRecord.purpose !== "property-value-binding" ||
+            if (!valueRecord || valueRecord.bridgeToken !== bridgeToken || valueRecord.protocol !== protocol || (valueRecord.purpose !== "property-value-binding" && valueRecord.purpose !== "layer-attribute-value-binding") ||
                     valueRecord.bindingFingerprint !== bindingRecord.fingerprint || valueRecord.sessionId !== sessionId ||
                     valueRecord.bridgeLifecycleEpoch !== bridgeLifecycleEpoch || !currentHostAuthority ||
                     bindingRecord.hostInstanceId !== currentHostAuthority.hostInstanceId || bindingRecord.hostReloadEpoch !== currentHostAuthority.hostReloadEpoch) {
@@ -1306,10 +1353,23 @@
             if (!protocol.isPlainObject(action) || action.kind !== "tool") { throw protocolError(protocol, protocol.ERROR_CODES.ACTION_NOT_EXECUTABLE); }
             target = protocol.getOwnDataProperty(action, "target");
             payload = protocol.getOwnDataProperty(action, "payload");
-            if (!protocol.isPlainObject(target) || !protocol.isPlainObject(payload) || payload.toolId !== "vela" || payload.actionId !== "set-opacity-v1" ||
-                    !protocol.isPlainObject(payload.params) || typeof protocol.getOwnDataProperty(payload.params, "opacity") !== "number") {
+            if (!protocol.isPlainObject(target) || !protocol.isPlainObject(payload) || payload.toolId !== "vela" || !protocol.isPlainObject(payload.params)) {
                 throw protocolError(protocol, protocol.ERROR_CODES.ACTION_NOT_EXECUTABLE);
             }
+            if (payload.actionId === "set-layer-name-v1") {
+                valueTarget = valueRecord.layerAttributeTarget;
+                if (valueRecord.purpose !== "layer-attribute-value-binding" || !valueTarget || target.layerId !== valueTarget.layerId || target.targetKind !== "layer-attribute" || target.attribute !== "name" || target.propertyValueDigest !== valueTarget.valueDigest || typeof payload.params.name !== "string") { throw protocolError(protocol, protocol.ERROR_CODES.CONTEXT_STALE); }
+                return protocol.deepFreeze({
+                    protocol: "vela.host-execution-request.v1", schemaVersion: "1.0", requestId: nextRequestId(), sessionId: sessionId,
+                    operation: "executeCapability", capabilityId: "set-layer-name-v1",
+                    scope: {
+                        expectedHostInstanceId: bindingRecord.hostInstanceId, expectedHostReloadEpoch: bindingRecord.hostReloadEpoch, expectedProjectGeneration: bindingRecord.projectGeneration,
+                        target: { itemId: bindingRecord.itemId, nativeLayerId: valueTarget.nativeLayerId, layerIndex: valueTarget.layerIndex, targetKind: "layer-attribute", attribute: "name", expectedValueDigest: valueTarget.valueDigest },
+                        params: { name: payload.params.name }
+                    }
+                });
+            }
+            if (payload.actionId !== "set-opacity-v1" || valueRecord.purpose !== "property-value-binding" || typeof protocol.getOwnDataProperty(payload.params, "opacity") !== "number") { throw protocolError(protocol, protocol.ERROR_CODES.ACTION_NOT_EXECUTABLE); }
             for (index = 0; index < valueRecord.valueTargets.length; index += 1) {
                 if (valueRecord.valueTargets[index].layerId === target.layerId && valueRecord.valueTargets[index].propertyMatchName === target.propertyMatchName &&
                         protocol.canonicalStringify(valueRecord.valueTargets[index].propertyPath) === protocol.canonicalStringify(target.propertyPath) &&
@@ -1357,8 +1417,10 @@
                 itemId: target.itemId,
                 nativeLayerId: target.nativeLayerId,
                 layerIndex: target.layerIndex,
-                propertyPath: target.propertyPath,
-                propertyMatchName: target.propertyMatchName
+                targetKind: executionRequest.capabilityId === "set-layer-name-v1" ? "layer-attribute" : "property",
+                attribute: target.attribute || null,
+                propertyPath: target.propertyPath || null,
+                propertyMatchName: target.propertyMatchName || null
             });
             return handle;
         }
@@ -1389,7 +1451,7 @@
                 schemaVersion: SCHEMA_VERSION,
                 requestId: nextRequestId(),
                 sessionId: sessionId,
-                operation: "observeCommittedPropertyValue",
+                operation: record.targetKind === "layer-attribute" ? "observeCommittedLayerAttributeValue" : "observeCommittedPropertyValue",
                 tier: 3,
                 scope: {
                     purpose: "verification",
@@ -1400,11 +1462,15 @@
                         itemId: record.itemId,
                         nativeLayerId: record.nativeLayerId,
                         layerIndex: record.layerIndex,
+                        targetKind: record.targetKind,
+                        attribute: record.attribute,
                         propertyPath: record.propertyPath,
                         propertyMatchName: record.propertyMatchName
                     }
                 }
             };
+            if (record.targetKind === "layer-attribute") { delete request.scope.target.propertyPath; delete request.scope.target.propertyMatchName; }
+            else { delete request.scope.target.targetKind; delete request.scope.target.attribute; }
             return startRequest(request, function (result, hostRequest) {
                 var raw = result.snapshot;
                 var authority;
@@ -1415,17 +1481,19 @@
                 if (raw.tier !== 3 || raw.projectGeneration !== record.projectGeneration || authority.hostInstanceId !== record.hostInstanceId || authority.hostReloadEpoch !== record.hostReloadEpoch || !protocol.isPlainObject(raw.target)) {
                     protocol.fail(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "Committed target authority is unavailable.");
                 }
-                protocol.assertNoUnknownKeys(raw.target, ["itemId", "nativeLayerId", "layerIndex", "propertyPath", "propertyMatchName", "value"], "hostContext.committedTarget");
-                if (raw.target.itemId !== record.itemId || raw.target.nativeLayerId !== record.nativeLayerId || raw.target.layerIndex !== record.layerIndex || raw.target.propertyMatchName !== record.propertyMatchName ||
-                        protocol.canonicalStringify(raw.target.propertyPath) !== protocol.canonicalStringify(record.propertyPath) || !protocol.isPlainObject(raw.target.value)) {
+                protocol.assertNoUnknownKeys(raw.target, record.targetKind === "layer-attribute" ? ["itemId", "nativeLayerId", "layerIndex", "targetKind", "attribute", "value"] : ["itemId", "nativeLayerId", "layerIndex", "propertyPath", "propertyMatchName", "value"], "hostContext.committedTarget");
+                if (raw.target.itemId !== record.itemId || raw.target.nativeLayerId !== record.nativeLayerId || raw.target.layerIndex !== record.layerIndex ||
+                        (record.targetKind === "layer-attribute" ? (raw.target.targetKind !== "layer-attribute" || raw.target.attribute !== "name") : (raw.target.propertyMatchName !== record.propertyMatchName || protocol.canonicalStringify(raw.target.propertyPath) !== protocol.canonicalStringify(record.propertyPath))) || !protocol.isPlainObject(raw.target.value)) {
                     protocol.fail(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "Committed target identity changed.");
                 }
                 protocol.assertNoUnknownKeys(raw.target.value, ["kind", "data"], "hostContext.committedTarget.value");
                 descriptor = contextApi.describePropertyValue(raw.target.value.kind, raw.target.value.data);
-                if (record.propertyMatchName !== "ADBE Opacity" || descriptor.valueKind !== "number" || typeof raw.target.value.data !== "number" || !Number.isFinite(raw.target.value.data)) {
-                    protocol.fail(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "Committed opacity is unavailable.");
+                if (record.targetKind === "layer-attribute") {
+                    if (record.attribute !== "name" || descriptor.valueKind !== "string" || typeof raw.target.value.data !== "string") { protocol.fail(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "Committed layer name is unavailable."); }
+                    return protocol.deepFreeze({ fresh: true, valueKind: "string", value: raw.target.value.data, valueDigest: descriptor.valueDigest, observationId: hostRequest.requestId });
                 }
-                return protocol.deepFreeze({ fresh: true, opacity: raw.target.value.data, valueDigest: descriptor.valueDigest, observationId: hostRequest.requestId });
+                if (record.propertyMatchName !== "ADBE Opacity" || descriptor.valueKind !== "number" || typeof raw.target.value.data !== "number" || !Number.isFinite(raw.target.value.data)) { protocol.fail(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, "Committed opacity is unavailable."); }
+                return protocol.deepFreeze({ fresh: true, valueKind: "number", value: raw.target.value.data, opacity: raw.target.value.data, valueDigest: descriptor.valueDigest, observationId: hostRequest.requestId });
             }, false).catch(function () { throw protocolError(protocol, protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE); });
         }
 
@@ -1647,6 +1715,7 @@
             beginOwnedCapture: beginOwnedCapture,
             captureLayerDetails: captureLayerDetails,
             capturePropertyValues: capturePropertyValues,
+            captureLayerAttributeValue: captureLayerAttributeValue,
             beginOwnedPropertyValueCapture: beginOwnedPropertyValueCapture,
             resolvePropertyTargets: resolvePropertyTargets,
             cancel: cancel,

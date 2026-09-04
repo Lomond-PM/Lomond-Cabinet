@@ -26,11 +26,13 @@
 
     var MODULE_REVISION = "vela-provider-request-branch-policy-v1";
     var CAPABILITY_ID = "set-opacity-v1";
+    var RENAME_CAPABILITY_ID = "set-layer-name-v1";
     var CAPABILITY_REVISION = "vela-capability-contract-v1";
     var PROFILES = Object.freeze({ TEXT_ONLY: "text-only", EXPLICIT_EDIT_ELIGIBLE: "explicit-edit-eligible", PROPOSAL_CAPABLE_UNION: "proposal-capable-union" });
     var canonicalProjection = capabilityContracts.getModelProjection(CAPABILITY_ID);
+    var renameProjection = capabilityContracts.getModelProjection(RENAME_CAPABILITY_ID);
 
-    if (!canonicalProjection || !Object.isFrozen(canonicalProjection)) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
+    if (!canonicalProjection || !Object.isFrozen(canonicalProjection) || !renameProjection || !Object.isFrozen(renameProjection)) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
 
     function fail(message) { throw new Error("REQUEST_BRANCH_POLICY_INVALID: " + message); }
     function sameNames(left, right) {
@@ -96,12 +98,24 @@
         target = parseTarget(match[1]);
         return target === null ? null : target;
     }
+    function explicitRenameTarget(message) {
+        var chinese = /^\s*(?:请|麻烦)?\s*(?:将|把)?\s*(?:(?:当前选中|当前|选中|所选)\s*)?(?:图层|层)\s*(?:重命名为|改名为|名称改为)\s*(.+?)\s*[。.!！]?\s*$/;
+        var english = /^\s*(?:please\s+)?(?:rename|change\s+(?:the\s+)?name\s+of)\s+(?:(?:the\s+)?(?:(?:current(?:ly)?|selected)\s+)?layer\s+)?(?:to\s+)?(.+?)\s*[.!]?\s*$/i;
+        var match = chinese.exec(message) || english.exec(message);
+        return match && match[1] !== "" ? match[1] : null;
+    }
+    function hasMultipleActions(message) {
+        var opacity = /不透明度|\bopacity\b/i.test(message);
+        var rename = /重命名|改名|名称改为|\brename\b|\bname\s+of\b/i.test(message);
+        return opacity && rename;
+    }
     function createRequestBranchPolicy(capabilityProjection) {
         assertProjection(capabilityProjection);
         return Object.freeze({
             classify: function (currentUserMessage) {
                 assertMessage(currentUserMessage);
-                return explicitTarget(currentUserMessage) === null ? PROFILES.TEXT_ONLY : PROFILES.EXPLICIT_EDIT_ELIGIBLE;
+                if (hasMultipleActions(currentUserMessage)) { return PROFILES.TEXT_ONLY; }
+                return explicitTarget(currentUserMessage) === null && explicitRenameTarget(currentUserMessage) === null ? PROFILES.TEXT_ONLY : PROFILES.EXPLICIT_EDIT_ELIGIBLE;
             }
         });
     }

@@ -1120,6 +1120,32 @@ async function runPropertyValueLateCallbackAndResponseDriftTests() {
     check(firstCapture.fingerprint === fingerprint && firstCapture.snapshot.targets[0].valueDigest === digest && twiceHarness.bridge.compareCaptures(firstCapture, firstCapture).fresh === true, "A second callback after successful property-value capture must be ignored and cannot alter the registered capture.");
 }
 
+async function runLayerAttributeBridgeTests() {
+    let name = "Layer A";
+    const requests = [];
+    const harness = makeHarness((source, callback) => {
+        const req = decodeSource(source);
+        requests.push(req);
+        if (req.operation === "captureContext") { callback(successResult(req, tierOneSnapshot())); return; }
+        callback(successResult(req, { hostInstanceId: HOST_A, hostReloadEpoch: 1, projectGeneration: 3, tier: 3, target: { itemId: 12, nativeLayerId: 45, layerIndex: 3, targetKind: "layer-attribute", attribute: "name", value: { kind: "string", data: name } } }));
+    });
+    const binding = await harness.bridge.capture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
+    const layerId = binding.snapshot.selection[0].layerId;
+    const captured = await harness.bridge.captureLayerAttributeValue(binding, { layerId, targetKind: "layer-attribute", attribute: "name" });
+    check(captured.snapshot.target.value === "Layer A" && captured.snapshot.target.valueKind === "string" && /^sha256:[a-f0-9]{64}$/.test(captured.snapshot.target.valueDigest), "Bridge captures one exact typed layer-name value and canonical digest.");
+    const action = protocol.deepFreeze({ kind: "tool", target: { contextFingerprint: binding.fingerprint, contextTier: 3, layerId, targetKind: "layer-attribute", attribute: "name", propertyValueDigest: captured.snapshot.target.valueDigest }, payload: { toolId: "vela", actionId: "set-layer-name-v1", params: { name: " Hero " } } });
+    const executionPort = bridgeModule.createExecutionPort(harness.bridge, protocol);
+    const built = executionPort.buildRequest(action, Object.freeze({ bindingCapture: binding, valueCapture: captured }));
+    check(built.capabilityId === "set-layer-name-v1" && built.scope.target.targetKind === "layer-attribute" && built.scope.target.nativeLayerId === 45 && built.scope.params.name === " Hero " && !Object.prototype.hasOwnProperty.call(built.scope.target, "propertyPath"), "Private execution request binds rename to exact native identity without a fake property path.");
+    const verificationPort = bridgeModule.createCommittedTargetVerificationPort(harness.bridge, protocol);
+    const verification = verificationPort.prepare(action, Object.freeze({ bindingCapture: binding, valueCapture: captured }));
+    verificationPort.activate(verification);
+    name = " Hero ";
+    const observation = await verificationPort.observe(verification);
+    check(observation.valueKind === "string" && observation.value === " Hero " && observation.valueDigest === contextApi.describePropertyValue("string", " Hero ").valueDigest, "Committed-target observation reads the exact original layer name independently through typed string verification.");
+    check(requests[2].operation === "observeCommittedLayerAttributeValue" && requests[2].scope.target.nativeLayerId === 45, "Committed rename verification uses the original native target association.");
+}
+
 function runQuoteAndModuleTests() {
     const quoted = bridgeModule.quoteForExtendScript('"\\\r\n\u2028\u2029中🙂');
     check(quoted.indexOf("\\\"") !== -1 && quoted.indexOf("\\\\") !== -1 && quoted.indexOf("\\u2028") !== -1 && quoted.indexOf("\\u2029") !== -1, "Quote helper must escape quotes, slashes and line separators.");
@@ -1179,6 +1205,7 @@ async function run() {
         await runPropertyValueSelectionFreshnessInvariantTests();
         await runPropertyValueBudgetBoundaryTests();
         await runPropertyValueLateCallbackAndResponseDriftTests();
+        await runLayerAttributeBridgeTests();
         runQuoteAndModuleTests();
         await new Promise((resolve) => setImmediate(resolve));
         check(unhandled.length === 0, "Bridge tests must not produce unhandled Promise rejections.");

@@ -696,6 +696,25 @@ function runTierTwoTests() {
     check(boundsOnly.ok === true && forbiddenNameReads === 0 && forbiddenTextPathReads === 0 && allowedBoundsReads === 1, "Tier 2 must perform zero forbidden optional reads and exactly one requested bounds read.");
 }
 
+function runLayerAttributeValueTests() {
+    const ae = makeAeRealm({ name: "Layer A" });
+    const binding = parseResult(ae.facade.handle(JSON.stringify(request({ scope: { purpose: "binding", selectionOrderMeaningful: true } }))));
+    const target = { itemId: 12, nativeLayerId: 45, layerIndex: 3, targetKind: "layer-attribute", attribute: "name" };
+    function attributeRequest(operation, purpose) {
+        return { protocol: "vela.host-context-request.v1", schemaVersion: "1.0", requestId: "req_" + (purpose === "binding" ? "a" : "b").repeat(32), sessionId: "session_" + "c".repeat(32), operation, tier: 3, scope: { purpose, expectedHostInstanceId: binding.snapshot.hostInstanceId, expectedHostReloadEpoch: binding.snapshot.hostReloadEpoch, expectedProjectGeneration: binding.snapshot.projectGeneration, target } };
+    }
+    const captured = parseResult(ae.facade.handle(JSON.stringify(attributeRequest("captureLayerAttributeValue", "binding"))));
+    check(captured.ok === true && captured.snapshot.target.targetKind === "layer-attribute" && captured.snapshot.target.attribute === "name" && captured.snapshot.target.value.kind === "string" && captured.snapshot.target.value.data === "Layer A", "Host captures the exact selected layer name as one typed layer attribute without a fake property path.");
+    ae.comp.selectedLayers = [];
+    ae.layer.name = " Hero ";
+    const observed = parseResult(ae.facade.handle(JSON.stringify(attributeRequest("observeCommittedLayerAttributeValue", "verification"))));
+    check(observed.ok === true && observed.snapshot.target.nativeLayerId === 45 && observed.snapshot.target.value.data === " Hero ", "Committed layer-name observation resolves the original native layer independently of current selection and preserves exact whitespace.");
+    const staleIdentity = attributeRequest("observeCommittedLayerAttributeValue", "verification");
+    staleIdentity.scope.target = Object.assign({}, target, { nativeLayerId: 46 });
+    const stale = parseResult(ae.facade.handle(JSON.stringify(staleIdentity)));
+    check(stale.ok === false && stale.error.code === "HOST_CONTEXT_TARGET_NOT_FOUND", "Committed layer-name observation fails closed on native identity drift.");
+}
+
 function runStaticTests() {
     const combined = jsonSource + "\n" + contextSource;
     const forbiddenCalls = [
@@ -1097,6 +1116,7 @@ try {
     runTierTwoTests();
     runTierThreeTests();
     runPropertyValueTests();
+    runLayerAttributeValueTests();
     runStaticTests();
     runRuntimeReloadTests();
     console.log("PASS Vela context Host: " + assertions + " assertions.");

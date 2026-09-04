@@ -169,7 +169,7 @@ async function run() {
         equal(sha256(captureResult.stableBodyBytes), expected.stableRequestBodySha256, label + " stable body SHA matches fixture.");
         equal(captureResult.body.model, fixture.fixedModelIdentifier, label + " root model metadata is fixed.");
         equal(captureResult.body.messages.map((message) => message.role).join("→"), fixture.messageRoleOrder.join("→"), label + " message order is system → assistant → user.");
-        check(!containsUnion(captureResult.body.response_format), label + " Schema contains no oneOf, anyOf, allOf, or union fallback.");
+        check(label === "explicit-edit-eligible" ? captureResult.body.response_format.json_schema.schema.properties.envelope.oneOf.length === 2 : !containsUnion(captureResult.body.response_format), label + " Schema retains only its closed profile-specific alternatives.");
         assertClosedObjects(captureResult.body.response_format);
     });
     check(textA.prompt !== extractionA.prompt && fixture.textOnly.promptSha256 !== fixture.explicitEditEligible.promptSha256, "Profile Prompt SHA values differ.");
@@ -192,7 +192,7 @@ async function run() {
     const textSchema = textA.body.response_format.json_schema.schema;
     const extractionSchema = extractionA.body.response_format.json_schema.schema;
     equal(textSchema.properties.envelope.properties.type.enum.join("|"), "text", "text-only Schema permits only the text envelope.");
-    equal(extractionSchema.properties.envelope.properties.type.enum.join("|"), "localProposal", "explicit-edit-eligible Schema permits only the localProposal envelope.");
+    check(extractionSchema.properties.envelope.oneOf.length === 2 && extractionSchema.properties.envelope.oneOf.every((variant) => variant.properties.type.enum.join("|") === "localProposal"), "explicit-edit-eligible Schema permits only one of the two closed localProposal variants.");
     ["protocol", "schemaVersion", "requestId", "provider", "model"].forEach((key) => {
         equal(textSchema.properties[key].enum[0], extractionSchema.properties[key].enum[0], "Root metadata " + key + " is identical across Profiles.");
     });

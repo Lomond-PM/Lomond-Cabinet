@@ -5,7 +5,8 @@ var AEToolbox = AEToolbox || {};
     var RESULT_PROTOCOL = "vela.host-execution-result.v1";
     var SCHEMA_VERSION = "1.0";
     var HOST_EXECUTION_REVISION = "vela-execution-host-v1";
-    var CAPABILITY_ID = "set-opacity-v1";
+    var OPACITY_CAPABILITY_ID = "set-opacity-v1";
+    var LAYER_NAME_CAPABILITY_ID = "set-layer-name-v1";
     var OPACITY_PATH = ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0];
     var json = AEToolbox.VelaJson;
     var propertyValueDigest = VelaPropertyValueDigest;
@@ -41,23 +42,27 @@ var AEToolbox = AEToolbox || {};
         var params;
         assertKeys(request, ["protocol", "schemaVersion", "requestId", "sessionId", "operation", "capabilityId", "scope"]);
         if (request.protocol !== REQUEST_PROTOCOL || request.schemaVersion !== SCHEMA_VERSION || !isSafeId(request.requestId, "req") || !isSafeId(request.sessionId, "session") ||
-                request.operation !== "executeCapability" || request.capabilityId !== CAPABILITY_ID) { throw hostError("HOST_EXECUTION_REQUEST_INVALID"); }
+                request.operation !== "executeCapability" || (request.capabilityId !== OPACITY_CAPABILITY_ID && request.capabilityId !== LAYER_NAME_CAPABILITY_ID)) { throw hostError("HOST_EXECUTION_REQUEST_INVALID"); }
         scope = request.scope;
         assertKeys(scope, ["expectedHostInstanceId", "expectedHostReloadEpoch", "expectedProjectGeneration", "target", "params"]);
         target = scope.target;
         params = scope.params;
-        assertKeys(target, ["itemId", "nativeLayerId", "layerIndex", "propertyPath", "propertyMatchName", "expectedValueDigest"]);
-        assertKeys(params, ["opacity"]);
+        assertKeys(target, request.capabilityId === LAYER_NAME_CAPABILITY_ID ? ["itemId", "nativeLayerId", "layerIndex", "targetKind", "attribute", "expectedValueDigest"] : ["itemId", "nativeLayerId", "layerIndex", "propertyPath", "propertyMatchName", "expectedValueDigest"]);
+        assertKeys(params, request.capabilityId === LAYER_NAME_CAPABILITY_ID ? ["name"] : ["opacity"]);
         if (typeof scope.expectedHostInstanceId !== "string" || typeof scope.expectedHostReloadEpoch !== "number" || typeof scope.expectedProjectGeneration !== "number" ||
                 typeof target.itemId !== "number" || !isFinite(target.itemId) || Math.floor(target.itemId) !== target.itemId || target.itemId < 1 ||
                 typeof target.nativeLayerId !== "number" || !isFinite(target.nativeLayerId) || Math.floor(target.nativeLayerId) !== target.nativeLayerId || target.nativeLayerId < 1 ||
                 typeof target.layerIndex !== "number" || !isFinite(target.layerIndex) || Math.floor(target.layerIndex) !== target.layerIndex || target.layerIndex < 1 ||
-                target.propertyMatchName !== "ADBE Opacity" || typeof target.expectedValueDigest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(target.expectedValueDigest) ||
-                typeof params.opacity !== "number" || !isFinite(params.opacity) || isNegativeZero(params.opacity) || params.opacity < 0 || params.opacity > 100) {
+                typeof target.expectedValueDigest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(target.expectedValueDigest)) {
             throw hostError("HOST_EXECUTION_REQUEST_INVALID");
         }
+        if (request.capabilityId === LAYER_NAME_CAPABILITY_ID) {
+            if (target.targetKind !== "layer-attribute" || target.attribute !== "name" || typeof params.name !== "string" || !params.name.length || /^\s+$/.test(params.name) || /[\u0000-\u001f\u007f-\u009f]/.test(params.name) || json.utf8ByteLength(params.name) > 256) { throw hostError("HOST_EXECUTION_REQUEST_INVALID"); }
+            return { capabilityId: LAYER_NAME_CAPABILITY_ID, scope: scope, target: target, valueKind: "string", value: params.name };
+        }
+        if (target.propertyMatchName !== "ADBE Opacity" || typeof params.opacity !== "number" || !isFinite(params.opacity) || isNegativeZero(params.opacity) || params.opacity < 0 || params.opacity > 100) { throw hostError("HOST_EXECUTION_REQUEST_INVALID"); }
         assertExactPath(target.propertyPath);
-        return { scope: scope, target: target, opacity: params.opacity };
+        return { capabilityId: OPACITY_CAPABILITY_ID, scope: scope, target: target, valueKind: "number", value: params.opacity };
     }
     function readNativeLayerId(layer) {
         var id;
@@ -80,6 +85,13 @@ var AEToolbox = AEToolbox || {};
         catch (ignoredOpacity) { throw hostError("HOST_EXECUTION_TARGET_NOT_FOUND"); }
         if (!opacity || !isPropertyType(opacity.propertyType, "PROPERTY") || opacity.matchName !== "ADBE Opacity") { throw hostError("HOST_EXECUTION_TARGET_NOT_FOUND"); }
         return opacity;
+    }
+    function resolveLayer(activeItem, target) {
+        var layer;
+        try { layer = activeItem.layer(target.layerIndex); }
+        catch (ignoredLayer) { throw hostError("HOST_EXECUTION_TARGET_NOT_FOUND"); }
+        if (!layer || layer.index !== target.layerIndex || readNativeLayerId(layer) !== target.nativeLayerId) { throw hostError("HOST_EXECUTION_TARGET_NOT_FOUND"); }
+        return layer;
     }
     function assertExpressionDisabled(property) {
         var canSet;
@@ -110,6 +122,7 @@ var AEToolbox = AEToolbox || {};
         var authority;
         var activeItem;
         var property;
+        var layer;
         var beforeDigest;
         var resultingDigest;
         var undoOpen = false;
@@ -124,23 +137,34 @@ var AEToolbox = AEToolbox || {};
             try { activeItem = app && app.project && app.project.activeItem; }
             catch (ignoredActive) { throw hostError("HOST_EXECUTION_READ_FAILED"); }
             if (!activeItem || typeof CompItem === "undefined" || !(activeItem instanceof CompItem) || activeItem.id !== normalized.target.itemId) { throw hostError("HOST_EXECUTION_AUTHORITY_MISMATCH"); }
-            property = resolveOpacity(activeItem, normalized.target);
-            assertExpressionDisabled(property);
-            beforeDigest = readDigest(property, false);
+            if (normalized.capabilityId === LAYER_NAME_CAPABILITY_ID) {
+                layer = resolveLayer(activeItem, normalized.target);
+                try { beforeDigest = propertyValueDigest(layer.name); }
+                catch (ignoredNameRead) { throw hostError("HOST_EXECUTION_READ_FAILED"); }
+            } else {
+                property = resolveOpacity(activeItem, normalized.target);
+                assertExpressionDisabled(property);
+                beforeDigest = readDigest(property, false);
+            }
             if (beforeDigest !== normalized.target.expectedValueDigest) { throw hostError("HOST_EXECUTION_VALUE_MISMATCH"); }
             try {
-                app.beginUndoGroup("Vela: Set Opacity");
+                app.beginUndoGroup(normalized.capabilityId === LAYER_NAME_CAPABILITY_ID ? "Vela: Rename Layer" : "Vela: Set Opacity");
                 undoOpen = true;
-                try { property.setValue(normalized.opacity); }
-                catch (ignoredSetValue) { throw hostError("HOST_EXECUTION_MUTATION_FAILED"); }
+                try {
+                    if (normalized.capabilityId === LAYER_NAME_CAPABILITY_ID) { layer.name = normalized.value; }
+                    else { property.setValue(normalized.value); }
+                } catch (ignoredSetValue) { throw hostError("HOST_EXECUTION_MUTATION_FAILED"); }
                 mutationCommitted = true;
-                resultingDigest = readDigest(property, true);
+                if (normalized.capabilityId === LAYER_NAME_CAPABILITY_ID) {
+                    try { resultingDigest = propertyValueDigest(layer.name); }
+                    catch (ignoredNameResult) { throw hostError("HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE"); }
+                } else { resultingDigest = readDigest(property, true); }
             }
             finally {
                 if (undoOpen) { try { app.endUndoGroup(); } catch (ignoredUndoEnd) { if (mutationCommitted) { throw hostError("HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE"); } } }
             }
             result = base(request, true);
-            result.result = { capabilityId: CAPABILITY_ID, valueKind: "number", resultingValueDigest: resultingDigest };
+            result.result = { capabilityId: normalized.capabilityId, valueKind: normalized.valueKind, resultingValueDigest: resultingDigest };
             try { return serialize(result); }
             catch (ignoredSerialize) { if (mutationCommitted) { throw hostError("HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE"); } throw ignoredSerialize; }
         } catch (error) {

@@ -57,9 +57,13 @@
         function executeValidatedAction(action, metadata, trustedExecutionContext) {
             var request;
             var expectedResultDigest;
+            var expectedCapabilityId;
+            var expectedValueKind;
             try {
                 request = executionPort.buildRequest(action, trustedExecutionContext);
-                expectedResultDigest = contextApi.digestPropertyValue("number", protocol.getOwnDataProperty(protocol.getOwnDataProperty(action, "payload"), "params").opacity);
+                expectedCapabilityId = request.capabilityId;
+                expectedValueKind = expectedCapabilityId === "set-layer-name-v1" ? "string" : "number";
+                expectedResultDigest = contextApi.digestPropertyValue(expectedValueKind, expectedValueKind === "string" ? request.scope.params.name : request.scope.params.opacity);
             } catch (cause) { return Promise.reject(cause instanceof protocol.VelaProtocolError ? cause : error(protocol, protocol.ERROR_CODES.PLAN_FAILED)); }
             return new Promise(function (resolve, reject) {
                 var settled = false;
@@ -76,9 +80,9 @@
                         if (result.protocol !== HOST_RESULT_PROTOCOL || result.schemaVersion !== "1.0" || result.requestId !== request.requestId || result.sessionId !== request.sessionId || result.operation !== "executeCapability" || result.hostExecutionRevision !== HOST_REVISION || typeof result.ok !== "boolean") { settleFailure(protocol.ERROR_CODES.PLAN_FAILED, null); return; }
                         if (!result.ok) { protocol.assertNoUnknownKeys(result.error, ["code", "message", "mutationCommitted"], "executionAdapter.hostResult.error"); if (result.error.mutationCommitted !== true && result.error.mutationCommitted !== false && result.error.mutationCommitted !== null) { settleFailure(protocol.ERROR_CODES.PLAN_FAILED, null); return; } hostError = result.error && result.error.code; settleFailure(mapHostCode(protocol, hostError), result.error.mutationCommitted); return; }
                         protocol.assertNoUnknownKeys(result.result, ["capabilityId", "valueKind", "resultingValueDigest"], "executionAdapter.hostResult.result");
-                        if (result.result.capabilityId !== "set-opacity-v1" || result.result.valueKind !== "number" || result.result.resultingValueDigest !== expectedResultDigest) { settleFailure(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, true); return; }
+                        if (result.result.capabilityId !== expectedCapabilityId || result.result.valueKind !== expectedValueKind || result.result.resultingValueDigest !== expectedResultDigest) { settleFailure(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, true); return; }
                         settled = true;
-                        resolve(protocol.deepFreeze({ ok: true, committed: true, summary: { capabilityId: "set-opacity-v1", resultingValueDigest: result.result.resultingValueDigest } }));
+                        resolve(protocol.deepFreeze({ ok: true, committed: true, summary: { capabilityId: expectedCapabilityId, resultingValueDigest: result.result.resultingValueDigest } }));
                     } catch (ignored) { settleFailure(protocol.ERROR_CODES.PLAN_FAILED, null); }
                 }
                 try { invokeHost(FIXED_FACADE_PREFIX + quote(JSON.stringify(request)) + ")", callback); }

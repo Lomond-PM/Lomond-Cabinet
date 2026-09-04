@@ -22,8 +22,8 @@ function identifierContract(identifier) {
 }
 async function run() {
     const opacity = contracts.getContract("set-opacity-v1");
-    check(Object.isFrozen(opacity) && opacity.capabilityId === "set-opacity-v1", "Production Registry exposes one frozen opacity contract.");
-    check(JSON.stringify(contracts.listCapabilityIds()) === JSON.stringify(["set-opacity-v1"]), "Production Registry contains only set-opacity-v1.");
+    check(Object.isFrozen(opacity) && opacity.capabilityId === "set-opacity-v1", "Production Registry exposes the frozen opacity contract.");
+    check(JSON.stringify(contracts.listCapabilityIds()) === JSON.stringify(["set-layer-name-v1", "set-opacity-v1"]), "Production Registry contains exactly the two closed single-step mutation capabilities.");
     check(contracts.getContract("SET-OPACITY-V1") === null && contracts.getContract("missing") === null, "Capability lookup is exact and fail-closed.");
     const model = contracts.getModelProjection("set-opacity-v1"); const local = contracts.getLocalProjection("set-opacity-v1");
     check(Object.isFrozen(model) && Object.isFrozen(local) && !Object.prototype.hasOwnProperty.call(model, "localPolicy") && !Object.prototype.hasOwnProperty.call(local, "modelPolicy"), "Model and local projections are separated and frozen.");
@@ -37,6 +37,20 @@ async function run() {
     check(model.parameters.properties.opacity.minimum === 0 && model.parameters.properties.opacity.maximum === 100 && local.localPolicy.intentValidatorId === "set-opacity-direct-edit-v1", "Production projections retain the existing opacity boundary and local validator identity.");
     assert.throws(() => { model.parameters.properties.opacity.minimum = 99; }, TypeError, "Frozen projections reject mutation in strict mode."); assertions += 1;
     check(contracts.getModelProjection("set-opacity-v1").parameters.properties.opacity.minimum === 0, "Projection mutation cannot contaminate the Registry.");
+    const dormantName = contracts.getRepresentationContract("set-layer-name-v1");
+    check(Object.isFrozen(dormantName) && dormantName.capabilityId === "set-layer-name-v1" && dormantName.parameters.required.join(",") === "name", "Dormant representation Registry exposes the closed layer-name contract.");
+    check(contracts.getContract("set-layer-name-v1").capabilityId === dormantName.capabilityId && contracts.getContract("set-layer-name-v1").parameters.required.join(",") === "name", "Layer-name representation is activated in the production capability Registry without changing its closed contract.");
+    check(contracts.getRepresentationLocalProjection("set-layer-name-v1").registeredAction.actionId === "set-layer-name-v1" && contracts.getRepresentationModelProjection("set-layer-name-v1").modelPolicy.modelMaySupply.join(",") === "params.name", "Dormant local/model projections retain one closed name parameter and mapping.");
+    ["Hero", "主标题", " Hero ", "x".repeat(256), "中".repeat(85)].forEach((name) => {
+        const validated = contracts.validateRepresentationCapabilityParams("set-layer-name-v1", { name });
+        check(validated.name === name && Object.isFrozen(validated), "Valid layer name is preserved exactly: " + JSON.stringify(name.slice(0, 12)));
+    });
+    ["", "   ", "Hero\nTwo", "Hero\tTwo", "Hero\u0000", "Hero\u007f", "x".repeat(257), "中".repeat(86)].forEach((name) => rejects(() => contracts.validateRepresentationCapabilityParams("set-layer-name-v1", { name }), "Invalid or over-budget layer name is rejected."));
+    rejects(() => contracts.validateRepresentationCapabilityParams("set-layer-name-v1", { name: "Hero", extra: true }), "Layer-name params reject extra keys.");
+    rejects(() => contracts.validateRepresentationCapabilityParams("set-layer-name-v1", { name: { nested: true } }), "Layer-name params reject nested values.");
+    const dormantSchema = adapterModule.buildDormantLocalProposalRepresentationSchema();
+    check(Object.isFrozen(dormantSchema) && dormantSchema.oneOf.length === 2 && dormantSchema.oneOf[0].properties.proposal.properties.capabilityId.enum[0] === "set-opacity-v1" && dormantSchema.oneOf[1].properties.proposal.properties.capabilityId.enum[0] === "set-layer-name-v1", "ProviderAdapter exposes an isolated closed two-variant localProposal representation schema.");
+    check(dormantSchema.oneOf[1].properties.proposal.properties.params.additionalProperties === false && dormantSchema.oneOf[1].properties.proposal.properties.params.required.join(",") === "name", "Dormant rename Provider schema permits only required params.name.");
 
     const rotation = contract("set-rotation-test-v1", { type: "object", additionalProperties: false, required: ["angle"], properties: { angle: { type: "number", minimum: -36000, maximum: 36000, unit: "degrees" } } });
     const color = contract("set-color-test-v1", { type: "object", additionalProperties: false, required: ["color"], properties: { color: { type: "object", additionalProperties: false, required: ["r", "g", "b", "a"], properties: { r: { type: "number", minimum: 0, maximum: 1 }, g: { type: "number", minimum: 0, maximum: 1 }, b: { type: "number", minimum: 0, maximum: 1 }, a: { type: "number", minimum: 0, maximum: 1 } } } } });
@@ -141,7 +155,7 @@ async function run() {
     const profileFixtureBytes = fs.readFileSync(profileFixturePath);
     const profileMetadata = await qualification.profileQualificationMetadata({ model: "baseline-model", quantization: "operator-unspecified", reasoningMode: "operator-unspecified", runs: 5 });
     check(profileMetadata.metadataRevision === "vela-provider-model-qualification-metadata-c4-v2" && profileMetadata.profileFixtureSha256 === crypto.createHash("sha256").update(profileFixtureBytes).digest("hex") && profileMetadata.caseProfileFingerprint === qualification.caseProfileFingerprint() && profileMetadata.caseCount === 12 && profileMetadata.runsPerCase === 5, "C4 qualification metadata binds the current committed Profile fixture bytes and independent frozen case matrix.");
-    check(profileMetadata.textOnlyContract.promptSha256 === "1b9cdddc0947ea79ead0db83f6ed93f2962e21f99ec08ccbe35b0cef8db6f5b2" && profileMetadata.textOnlyContract.responseFormatSha256 === "85813dd8950079ab9c9542612aa0ad14b82c98e3f3e71f3a370561669e64cdf8" && profileMetadata.textOnlyContract.stableRequestBodySha256 === "64b794d240e85b8fa4f9af03a2cba9d46e448b46644e62bbaa2dc61cd4406d42" && profileMetadata.explicitEditEligibleContract.promptSha256 === "8fb06e5b8798f58847045d36628391cf35879b70f9bfcf8d6fb6c5000bc1801a" && profileMetadata.explicitEditEligibleContract.responseFormatSha256 === "509230d09996e81eb3d4baddd332f3730707badd37d6b4d28b4499b6e6ca6b2f" && profileMetadata.explicitEditEligibleContract.stableRequestBodySha256 === "09c61d0aeadaec868c826fae905ed4ed767401664084845f05e7cfc541347f3f", "C4 qualification metadata binds independently recaptured current Prompt, unchanged response_format, and stable body SHA values for both Profiles.");
+    check(profileMetadata.textOnlyContract.promptSha256 === "c23f2768d2e4df9a1ebbfad23565da877d19bb227cfc15f6b5916f2a45c9e88c" && profileMetadata.textOnlyContract.responseFormatSha256 === "85813dd8950079ab9c9542612aa0ad14b82c98e3f3e71f3a370561669e64cdf8" && profileMetadata.textOnlyContract.stableRequestBodySha256 === "0b289b451e6787ff86b96493901f2f33ec5b130effd6c6922ab38d430635e9cc" && profileMetadata.explicitEditEligibleContract.promptSha256 === "0eeefc0440e0281f2c2da20245cebf7a9fbc6cf8adb5b08a271bf93c57f1d8c3" && profileMetadata.explicitEditEligibleContract.responseFormatSha256 === "2d49c9fe90803334b15c92ece839c785852550e96876a38e331799ad167ce258" && profileMetadata.explicitEditEligibleContract.stableRequestBodySha256 === "33b60eecf513814ee4e6d5b2075cfda0544d72f82066f8ecea12395ebc7d4315", "Qualification metadata binds independently recaptured current Prompt, response_format, and stable body SHA values for both Profiles.");
     console.log("test-vela-capability-contracts: " + assertions + " assertions passed.");
 }
 run().catch((error) => { console.error("FAIL Vela capability contracts - " + error.message); process.exitCode = 1; });
