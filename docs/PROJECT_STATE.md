@@ -2,9 +2,9 @@
 
 ## Vela development milestone
 
-**0.3.9 — Streaming Response & Reasoning Surface: COMPLETE / SEALED / merged into dev**, PR #182, merge commit `91005f2`. **0.3.10 — Context Architecture: IN DESIGN**; A0 read-only audit complete, A1 contract recorded, A2–A6 implementation not started.
+**0.3.9 — Streaming Response & Reasoning Surface: COMPLETE / SEALED / merged into dev**, PR #182, merge commit `91005f2`. **0.3.10 — Context Architecture: IN PROGRESS**; A0 audit and A1 contract complete, A2 evidence seam implemented locally, A3–A6 not started.
 
-[0.3.10-A1 Context Taxonomy, Ownership & Lifecycle Contract](design/vela-context-architecture-0.3.10-a1.md) records the design baseline and deferred decisions. `currentContext` is classified as a compatibility/read-only Observation projection; its API and behavior remain unchanged. Next focused slice: A2 Provider Context Assembly Evidence Seam, preserving current messages and capture path. No Context assembly, history selection, trajectory store or multi-conversation runtime has been implemented by A1.
+[0.3.10-A1 Context Taxonomy, Ownership & Lifecycle Contract](design/vela-context-architecture-0.3.10-a1.md) records the design baseline and deferred decisions. `currentContext` remains a compatibility/read-only Observation projection with unchanged API/behavior. [A2 implementation evidence](reports/vela-0.3.10-a2-context-evidence.md) describes the opt-in local Controller/Adapter input snapshot and stateless Transport serialization projection. Current messages, captures, admission and execution semantics remain unchanged. No history selection, trajectory store or multi-conversation runtime is implemented. Next focused slice: A3 budget contract/policy, including unresolved model capacity.
 
 This file owns current implementation status and handoff facts. [VELA_ROADMAP](VELA_ROADMAP.md) is the only current roadmap. [Agent architecture](design/vela-agent-architecture.md) remains FROZEN FOR 0.3.x, architecture amendment NONE. The [C2 closure](reports/vela-0.3.9-c2-closure.md) is final historical evidence: 171/171 offline suites PASS, 0 skipped, USER-MANUAL REAL AE ACCEPTANCE PASS, no unresolved 0.3.9 correctness blocker. Codex did not operate or observe AE.
 

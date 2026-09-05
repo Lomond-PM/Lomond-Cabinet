@@ -1,0 +1,510 @@
+{
+  "baseline": "d0a0d4884b8cd361e4a8dc3bd6cc839720dc3b07",
+  "cases": {
+    "text": {
+      "wireJson": "{\"messages\":[{\"content\":\"This is ordinary conversation. Answer directly in natural language, following the user's language. Answer normal conversation, current-value queries, advice, explanations, ambiguity, and unavailable grounding as text. Trusted context is a fact only; never guess a missing current value. Do not claim an edit was performed, will be performed, or that a proposal was created. Do not describe a proposal.\",\"role\":\"system\"},{\"content\":\"{\\\"turnResponseContract\\\":\\\"Answer the current user naturally. Use trusted grounding only as facts; do not invent unavailable values. Do not create proposals or claim that After Effects changes have occurred or will occur.\\\",\\\"trustedGrounding\\\":\\\"Trusted request context: active composition type CompItem; selected layers 1; first selected layer type AVLayer; selected layer opacity 57.5.\\\"}\",\"role\":\"assistant\"},{\"content\":\"hello\",\"role\":\"user\"}],\"model\":\"m\",\"stream\":false}",
+      "hostRequests": [
+        {
+          "protocol": "vela.host-context-request.v1",
+          "schemaVersion": "1.0",
+          "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2",
+          "sessionId": "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+          "operation": "captureContext",
+          "tier": 1,
+          "scope": {
+            "purpose": "binding",
+            "selectionOrderMeaningful": true
+          }
+        },
+        {
+          "protocol": "vela.host-context-request.v1",
+          "schemaVersion": "1.0",
+          "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3",
+          "sessionId": "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+          "operation": "capturePropertyValues",
+          "tier": 3,
+          "scope": {
+            "purpose": "binding",
+            "expectedHostInstanceId": "host_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expectedHostReloadEpoch": 1,
+            "expectedProjectGeneration": 1,
+            "targets": [
+              {
+                "targetOrdinal": 0,
+                "itemId": 1,
+                "nativeLayerId": 2,
+                "layerIndex": 1,
+                "propertyPath": [
+                  "named",
+                  "ADBE Transform Group",
+                  0,
+                  "named",
+                  "ADBE Opacity",
+                  0
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "result": {
+        "state": "completed",
+        "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4",
+        "text": "safe",
+        "errorCode": null,
+        "intentReason": null,
+        "proposalCapabilityId": null,
+        "suggestedOpacity": null,
+        "providerId": "lmstudio",
+        "modelId": "m",
+        "moduleRevision": "vela-provider-controller-v2"
+      }
+    },
+    "proposal": {
+      "wireJson": "{\"messages\":[{\"content\":\"Return exactly one complete JSON object and nothing else. Use protocol vela.model-response.v1 and schemaVersion 1.1. Every response must use the closed Vela response envelope selected for this request; never add unknown fields. Trusted context is a fact only; never guess a missing current value. A localProposal is only a bounded candidate and does not modify After Effects. Trusted local intent validation, target binding, review, confirmation, preflight, and execution happen later. The supported single-step proposal capabilities are set-opacity-v1 with exactly params.opacity from 0 through 100, and set-layer-name-v1 with exactly params.name. Return at most one localProposal and never return steps, multiStepProposal, multiple actions, or tool_calls as an execution source. Never include target identity, layer or comp ids, confirmation, nonce, Host payload, arbitrary code, or extra fields. This request is explicit-edit-eligible. Return only a localProposal envelope; text is invalid for this request. Extract exactly one supported edit from the current user message. Use set-opacity-v1 with only params.opacity, or set-layer-name-v1 with only params.name. The value must come from the current user message, never trusted context, history, or a fallback. Your role is to propose this supported edit. Trusted local review and approval happen later; do not add text, explanations, or extra fields.\",\"role\":\"system\"},{\"content\":\"{\\\"turnResponseContract\\\":\\\"Turn response contract: profile explicit-edit-eligible. Use requestId req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4, provider lmstudio, and model m. Concrete valid response example: {\\\\\\\"protocol\\\\\\\":\\\\\\\"vela.model-response.v1\\\\\\\",\\\\\\\"schemaVersion\\\\\\\":\\\\\\\"1.1\\\\\\\",\\\\\\\"requestId\\\\\\\":\\\\\\\"req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4\\\\\\\",\\\\\\\"provider\\\\\\\":\\\\\\\"lmstudio\\\\\\\",\\\\\\\"model\\\\\\\":\\\\\\\"m\\\\\\\",\\\\\\\"envelope\\\\\\\":{\\\\\\\"type\\\\\\\":\\\\\\\"localProposal\\\\\\\",\\\\\\\"proposal\\\\\\\":{\\\\\\\"capabilityId\\\\\\\":\\\\\\\"set-opacity-v1\\\\\\\",\\\\\\\"params\\\\\\\":{\\\\\\\"opacity\\\\\\\":57.5}}}}\\\",\\\"trustedGrounding\\\":\\\"Trusted request context: active composition type CompItem; selected layers 1; first selected layer type AVLayer; selected layer opacity 57.5.\\\"}\",\"role\":\"assistant\"},{\"content\":\"Set opacity to 50%\",\"role\":\"user\"}],\"model\":\"m\",\"response_format\":{\"json_schema\":{\"name\":\"vela_local_proposal_response\",\"schema\":{\"additionalProperties\":false,\"properties\":{\"envelope\":{\"oneOf\":[{\"additionalProperties\":false,\"properties\":{\"proposal\":{\"additionalProperties\":false,\"properties\":{\"capabilityId\":{\"enum\":[\"set-opacity-v1\"],\"type\":\"string\"},\"params\":{\"additionalProperties\":false,\"properties\":{\"opacity\":{\"maximum\":100,\"minimum\":0,\"type\":\"number\"}},\"required\":[\"opacity\"],\"type\":\"object\"}},\"required\":[\"capabilityId\",\"params\"],\"type\":\"object\"},\"type\":{\"enum\":[\"localProposal\"],\"type\":\"string\"}},\"required\":[\"type\",\"proposal\"],\"type\":\"object\"},{\"additionalProperties\":false,\"properties\":{\"proposal\":{\"additionalProperties\":false,\"properties\":{\"capabilityId\":{\"enum\":[\"set-layer-name-v1\"],\"type\":\"string\"},\"params\":{\"additionalProperties\":false,\"properties\":{\"name\":{\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"}},\"required\":[\"capabilityId\",\"params\"],\"type\":\"object\"},\"type\":{\"enum\":[\"localProposal\"],\"type\":\"string\"}},\"required\":[\"type\",\"proposal\"],\"type\":\"object\"}]},\"model\":{\"enum\":[\"m\"],\"type\":\"string\"},\"protocol\":{\"enum\":[\"vela.model-response.v1\"],\"type\":\"string\"},\"provider\":{\"enum\":[\"lmstudio\"],\"type\":\"string\"},\"requestId\":{\"enum\":[\"req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4\"],\"type\":\"string\"},\"schemaVersion\":{\"enum\":[\"1.1\"],\"type\":\"string\"}},\"required\":[\"protocol\",\"schemaVersion\",\"requestId\",\"provider\",\"model\",\"envelope\"],\"type\":\"object\"},\"strict\":true},\"type\":\"json_schema\"},\"stream\":false}",
+      "hostRequests": [
+        {
+          "protocol": "vela.host-context-request.v1",
+          "schemaVersion": "1.0",
+          "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2",
+          "sessionId": "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+          "operation": "captureContext",
+          "tier": 1,
+          "scope": {
+            "purpose": "binding",
+            "selectionOrderMeaningful": true
+          }
+        },
+        {
+          "protocol": "vela.host-context-request.v1",
+          "schemaVersion": "1.0",
+          "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3",
+          "sessionId": "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+          "operation": "capturePropertyValues",
+          "tier": 3,
+          "scope": {
+            "purpose": "binding",
+            "expectedHostInstanceId": "host_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expectedHostReloadEpoch": 1,
+            "expectedProjectGeneration": 1,
+            "targets": [
+              {
+                "targetOrdinal": 0,
+                "itemId": 1,
+                "nativeLayerId": 2,
+                "layerIndex": 1,
+                "propertyPath": [
+                  "named",
+                  "ADBE Transform Group",
+                  0,
+                  "named",
+                  "ADBE Opacity",
+                  0
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "result": {
+        "state": "proposal-ready",
+        "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4",
+        "text": null,
+        "errorCode": null,
+        "intentReason": null,
+        "proposalCapabilityId": "set-opacity-v1",
+        "suggestedOpacity": 50,
+        "providerId": "lmstudio",
+        "modelId": "m",
+        "moduleRevision": "vela-provider-controller-v2"
+      }
+    },
+    "logical": {
+      "wireJson": "{\"messages\":[{\"content\":\"Return exactly one complete JSON object and nothing else. Use protocol vela.model-response.v1 and schemaVersion 1.1. Every response must use the closed Vela response envelope selected for this request; never add unknown fields. This request is bounded-logical-plan-eligible. Return only one logicalPlanProposal envelope with exactly two ordered steps: step 0 must be set-opacity-v1 with exactly params.opacity from the user's request, and step 1 must be set-layer-name-v1 with exactly params.name from the user's request. The logicalPlanProposal is a declaration only. It is not a TaskPlan, executable plan, review, target binding, Host payload, or authority. Trusted local validation, per-step review, authority, execution, and verification happen later. Never add, remove, reorder, nest, or dynamically append steps. Never include target identity, layer or comp ids, confirmation, nonce, authority, review state, Host payload, arbitrary code, tool_calls, or extra fields.\",\"role\":\"system\"},{\"content\":\"{\\\"turnResponseContract\\\":\\\"Turn response contract: profile bounded-logical-plan-eligible. Use requestId req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4, provider lmstudio, and model m. Concrete valid response example: {\\\\\\\"protocol\\\\\\\":\\\\\\\"vela.model-response.v1\\\\\\\",\\\\\\\"schemaVersion\\\\\\\":\\\\\\\"1.1\\\\\\\",\\\\\\\"requestId\\\\\\\":\\\\\\\"req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4\\\\\\\",\\\\\\\"provider\\\\\\\":\\\\\\\"lmstudio\\\\\\\",\\\\\\\"model\\\\\\\":\\\\\\\"m\\\\\\\",\\\\\\\"envelope\\\\\\\":{\\\\\\\"type\\\\\\\":\\\\\\\"logicalPlanProposal\\\\\\\",\\\\\\\"steps\\\\\\\":[{\\\\\\\"capabilityId\\\\\\\":\\\\\\\"set-opacity-v1\\\\\\\",\\\\\\\"params\\\\\\\":{\\\\\\\"opacity\\\\\\\":47}},{\\\\\\\"capabilityId\\\\\\\":\\\\\\\"set-layer-name-v1\\\\\\\",\\\\\\\"params\\\\\\\":{\\\\\\\"name\\\\\\\":\\\\\\\"Hero\\\\\\\"}}]}} Replace only opacity and name with the exact values stated by the current user. The two steps, order, capability IDs, and all field names are fixed.\\\",\\\"trustedGrounding\\\":\\\"Trusted request context: active composition type CompItem; selected layers 1; first selected layer type AVLayer; selected layer opacity 57.5.\\\"}\",\"role\":\"assistant\"},{\"content\":\"把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test\",\"role\":\"user\"}],\"model\":\"m\",\"response_format\":{\"json_schema\":{\"name\":\"vela_bounded_logical_plan_response\",\"schema\":{\"additionalProperties\":false,\"properties\":{\"envelope\":{\"additionalProperties\":false,\"properties\":{\"steps\":{\"items\":{\"oneOf\":[{\"additionalProperties\":false,\"properties\":{\"capabilityId\":{\"enum\":[\"set-opacity-v1\"],\"type\":\"string\"},\"params\":{\"additionalProperties\":false,\"properties\":{\"opacity\":{\"maximum\":100,\"minimum\":0,\"type\":\"number\"}},\"required\":[\"opacity\"],\"type\":\"object\"}},\"required\":[\"capabilityId\",\"params\"],\"type\":\"object\"},{\"additionalProperties\":false,\"properties\":{\"capabilityId\":{\"enum\":[\"set-layer-name-v1\"],\"type\":\"string\"},\"params\":{\"additionalProperties\":false,\"properties\":{\"name\":{\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"}},\"required\":[\"capabilityId\",\"params\"],\"type\":\"object\"}]},\"maxItems\":2,\"minItems\":2,\"type\":\"array\"},\"type\":{\"enum\":[\"logicalPlanProposal\"],\"type\":\"string\"}},\"required\":[\"type\",\"steps\"],\"type\":\"object\"},\"model\":{\"enum\":[\"m\"],\"type\":\"string\"},\"protocol\":{\"enum\":[\"vela.model-response.v1\"],\"type\":\"string\"},\"provider\":{\"enum\":[\"lmstudio\"],\"type\":\"string\"},\"requestId\":{\"enum\":[\"req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4\"],\"type\":\"string\"},\"schemaVersion\":{\"enum\":[\"1.1\"],\"type\":\"string\"}},\"required\":[\"protocol\",\"schemaVersion\",\"requestId\",\"provider\",\"model\",\"envelope\"],\"type\":\"object\"},\"strict\":true},\"type\":\"json_schema\"},\"stream\":false}",
+      "hostRequests": [
+        {
+          "protocol": "vela.host-context-request.v1",
+          "schemaVersion": "1.0",
+          "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2",
+          "sessionId": "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+          "operation": "captureContext",
+          "tier": 1,
+          "scope": {
+            "purpose": "binding",
+            "selectionOrderMeaningful": true
+          }
+        },
+        {
+          "protocol": "vela.host-context-request.v1",
+          "schemaVersion": "1.0",
+          "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3",
+          "sessionId": "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+          "operation": "capturePropertyValues",
+          "tier": 3,
+          "scope": {
+            "purpose": "binding",
+            "expectedHostInstanceId": "host_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expectedHostReloadEpoch": 1,
+            "expectedProjectGeneration": 1,
+            "targets": [
+              {
+                "targetOrdinal": 0,
+                "itemId": 1,
+                "nativeLayerId": 2,
+                "layerIndex": 1,
+                "propertyPath": [
+                  "named",
+                  "ADBE Transform Group",
+                  0,
+                  "named",
+                  "ADBE Opacity",
+                  0
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "result": {
+        "state": "logical-plan-ready",
+        "logicalPlanProposal": {
+          "declaredStepCount": 2,
+          "steps": [
+            {
+              "ordinal": 0,
+              "capabilityId": "set-opacity-v1",
+              "params": {
+                "opacity": 60
+              },
+              "operation": "mutate",
+              "targetScopeKind": "selected-layer",
+              "semanticSignature": "{\"capabilityId\":\"set-opacity-v1\",\"params\":{\"opacity\":60},\"targetScopeKind\":\"selected-layer\"}"
+            },
+            {
+              "ordinal": 1,
+              "capabilityId": "set-layer-name-v1",
+              "params": {
+                "name": "Vela Stream Test"
+              },
+              "operation": "mutate",
+              "targetScopeKind": "selected-layer",
+              "semanticSignature": "{\"capabilityId\":\"set-layer-name-v1\",\"params\":{\"name\":\"Vela Stream Test\"},\"targetScopeKind\":\"selected-layer\"}"
+            }
+          ],
+          "planSemanticSignature": "{\"declaredStepCount\":2,\"stepSemanticSignatures\":[\"{\\\"capabilityId\\\":\\\"set-opacity-v1\\\",\\\"params\\\":{\\\"opacity\\\":60},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\",\"{\\\"capabilityId\\\":\\\"set-layer-name-v1\\\",\\\"params\\\":{\\\"name\\\":\\\"Vela Stream Test\\\"},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\"]}"
+        }
+      }
+    },
+    "thinking-text": {
+      "wireJson": "{\"max_tokens\":8192,\"messages\":[{\"content\":\"This is ordinary conversation. Answer directly in natural language, following the user's language. Answer normal conversation, current-value queries, advice, explanations, ambiguity, and unavailable grounding as text. Trusted context is a fact only; never guess a missing current value. Do not claim an edit was performed, will be performed, or that a proposal was created. Do not describe a proposal.\",\"role\":\"system\"},{\"content\":\"{\\\"turnResponseContract\\\":\\\"Answer the current user naturally. Use trusted grounding only as facts; do not invent unavailable values. Do not create proposals or claim that After Effects changes have occurred or will occur.\\\",\\\"trustedGrounding\\\":\\\"Trusted request context: active composition type CompItem; selected layers 1; first selected layer type AVLayer; selected layer opacity 57.5.\\\"}\",\"role\":\"assistant\"},{\"content\":\"hello\",\"role\":\"user\"}],\"model\":\"qwen3.5-4b\",\"stream\":true,\"thinking_budget_tokens\":6144}",
+      "hostRequests": [
+        {
+          "protocol": "vela.host-context-request.v1",
+          "schemaVersion": "1.0",
+          "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2",
+          "sessionId": "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+          "operation": "captureContext",
+          "tier": 1,
+          "scope": {
+            "purpose": "binding",
+            "selectionOrderMeaningful": true
+          }
+        },
+        {
+          "protocol": "vela.host-context-request.v1",
+          "schemaVersion": "1.0",
+          "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3",
+          "sessionId": "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+          "operation": "capturePropertyValues",
+          "tier": 3,
+          "scope": {
+            "purpose": "binding",
+            "expectedHostInstanceId": "host_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expectedHostReloadEpoch": 1,
+            "expectedProjectGeneration": 1,
+            "targets": [
+              {
+                "targetOrdinal": 0,
+                "itemId": 1,
+                "nativeLayerId": 2,
+                "layerIndex": 1,
+                "propertyPath": [
+                  "named",
+                  "ADBE Transform Group",
+                  0,
+                  "named",
+                  "ADBE Opacity",
+                  0
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "result": {
+        "state": "completed",
+        "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4",
+        "text": "safe",
+        "errorCode": null,
+        "intentReason": null,
+        "proposalCapabilityId": null,
+        "suggestedOpacity": null,
+        "providerId": "lmstudio",
+        "modelId": "qwen3.5-4b",
+        "moduleRevision": "vela-provider-controller-v2"
+      }
+    },
+    "thinking-proposal": {
+      "wireJson": "{\"max_tokens\":4096,\"messages\":[{\"content\":\"Return exactly one complete JSON object and nothing else. Use protocol vela.model-response.v1 and schemaVersion 1.1. Every response must use the closed Vela response envelope selected for this request; never add unknown fields. Trusted context is a fact only; never guess a missing current value. A localProposal is only a bounded candidate and does not modify After Effects. Trusted local intent validation, target binding, review, confirmation, preflight, and execution happen later. The supported single-step proposal capabilities are set-opacity-v1 with exactly params.opacity from 0 through 100, and set-layer-name-v1 with exactly params.name. Return at most one localProposal and never return steps, multiStepProposal, multiple actions, or tool_calls as an execution source. Never include target identity, layer or comp ids, confirmation, nonce, Host payload, arbitrary code, or extra fields. This request is explicit-edit-eligible. Return only a localProposal envelope; text is invalid for this request. Extract exactly one supported edit from the current user message. Use set-opacity-v1 with only params.opacity, or set-layer-name-v1 with only params.name. The value must come from the current user message, never trusted context, history, or a fallback. Your role is to propose this supported edit. Trusted local review and approval happen later; do not add text, explanations, or extra fields.\",\"role\":\"system\"},{\"content\":\"{\\\"turnResponseContract\\\":\\\"Turn response contract: profile explicit-edit-eligible. Use requestId req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4, provider lmstudio, and model qwen3.5-4b. Concrete valid response example: {\\\\\\\"protocol\\\\\\\":\\\\\\\"vela.model-response.v1\\\\\\\",\\\\\\\"schemaVersion\\\\\\\":\\\\\\\"1.1\\\\\\\",\\\\\\\"requestId\\\\\\\":\\\\\\\"req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4\\\\\\\",\\\\\\\"provider\\\\\\\":\\\\\\\"lmstudio\\\\\\\",\\\\\\\"model\\\\\\\":\\\\\\\"qwen3.5-4b\\\\\\\",\\\\\\\"envelope\\\\\\\":{\\\\\\\"type\\\\\\\":\\\\\\\"localProposal\\\\\\\",\\\\\\\"proposal\\\\\\\":{\\\\\\\"capabilityId\\\\\\\":\\\\\\\"set-opacity-v1\\\\\\\",\\\\\\\"params\\\\\\\":{\\\\\\\"opacity\\\\\\\":57.5}}}}\\\",\\\"trustedGrounding\\\":\\\"Trusted request context: active composition type CompItem; selected layers 1; first selected layer type AVLayer; selected layer opacity 57.5.\\\"}\",\"role\":\"assistant\"},{\"content\":\"Set opacity to 50%\",\"role\":\"user\"}],\"model\":\"qwen3.5-4b\",\"response_format\":{\"json_schema\":{\"name\":\"vela_local_proposal_response\",\"schema\":{\"additionalProperties\":false,\"properties\":{\"envelope\":{\"oneOf\":[{\"additionalProperties\":false,\"properties\":{\"proposal\":{\"additionalProperties\":false,\"properties\":{\"capabilityId\":{\"enum\":[\"set-opacity-v1\"],\"type\":\"string\"},\"params\":{\"additionalProperties\":false,\"properties\":{\"opacity\":{\"maximum\":100,\"minimum\":0,\"type\":\"number\"}},\"required\":[\"opacity\"],\"type\":\"object\"}},\"required\":[\"capabilityId\",\"params\"],\"type\":\"object\"},\"type\":{\"enum\":[\"localProposal\"],\"type\":\"string\"}},\"required\":[\"type\",\"proposal\"],\"type\":\"object\"},{\"additionalProperties\":false,\"properties\":{\"proposal\":{\"additionalProperties\":false,\"properties\":{\"capabilityId\":{\"enum\":[\"set-layer-name-v1\"],\"type\":\"string\"},\"params\":{\"additionalProperties\":false,\"properties\":{\"name\":{\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"}},\"required\":[\"capabilityId\",\"params\"],\"type\":\"object\"},\"type\":{\"enum\":[\"localProposal\"],\"type\":\"string\"}},\"required\":[\"type\",\"proposal\"],\"type\":\"object\"}]},\"model\":{\"enum\":[\"qwen3.5-4b\"],\"type\":\"string\"},\"protocol\":{\"enum\":[\"vela.model-response.v1\"],\"type\":\"string\"},\"provider\":{\"enum\":[\"lmstudio\"],\"type\":\"string\"},\"requestId\":{\"enum\":[\"req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4\"],\"type\":\"string\"},\"schemaVersion\":{\"enum\":[\"1.1\"],\"type\":\"string\"}},\"required\":[\"protocol\",\"schemaVersion\",\"requestId\",\"provider\",\"model\",\"envelope\"],\"type\":\"object\"},\"strict\":true},\"type\":\"json_schema\"},\"stream\":true,\"thinking_budget_tokens\":2048}",
+      "hostRequests": [
+        {
+          "protocol": "vela.host-context-request.v1",
+          "schemaVersion": "1.0",
+          "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2",
+          "sessionId": "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+          "operation": "captureContext",
+          "tier": 1,
+          "scope": {
+            "purpose": "binding",
+            "selectionOrderMeaningful": true
+          }
+        },
+        {
+          "protocol": "vela.host-context-request.v1",
+          "schemaVersion": "1.0",
+          "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3",
+          "sessionId": "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+          "operation": "capturePropertyValues",
+          "tier": 3,
+          "scope": {
+            "purpose": "binding",
+            "expectedHostInstanceId": "host_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expectedHostReloadEpoch": 1,
+            "expectedProjectGeneration": 1,
+            "targets": [
+              {
+                "targetOrdinal": 0,
+                "itemId": 1,
+                "nativeLayerId": 2,
+                "layerIndex": 1,
+                "propertyPath": [
+                  "named",
+                  "ADBE Transform Group",
+                  0,
+                  "named",
+                  "ADBE Opacity",
+                  0
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "result": {
+        "state": "proposal-ready",
+        "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4",
+        "text": null,
+        "errorCode": null,
+        "intentReason": null,
+        "proposalCapabilityId": "set-opacity-v1",
+        "suggestedOpacity": 50,
+        "providerId": "lmstudio",
+        "modelId": "qwen3.5-4b",
+        "moduleRevision": "vela-provider-controller-v2"
+      }
+    },
+    "thinking-logical": {
+      "wireJson": "{\"max_tokens\":4096,\"messages\":[{\"content\":\"Return exactly one complete JSON object and nothing else. Use protocol vela.model-response.v1 and schemaVersion 1.1. Every response must use the closed Vela response envelope selected for this request; never add unknown fields. This request is bounded-logical-plan-eligible. Return only one logicalPlanProposal envelope with exactly two ordered steps: step 0 must be set-opacity-v1 with exactly params.opacity from the user's request, and step 1 must be set-layer-name-v1 with exactly params.name from the user's request. The logicalPlanProposal is a declaration only. It is not a TaskPlan, executable plan, review, target binding, Host payload, or authority. Trusted local validation, per-step review, authority, execution, and verification happen later. Never add, remove, reorder, nest, or dynamically append steps. Never include target identity, layer or comp ids, confirmation, nonce, authority, review state, Host payload, arbitrary code, tool_calls, or extra fields.\",\"role\":\"system\"},{\"content\":\"{\\\"turnResponseContract\\\":\\\"Turn response contract: profile bounded-logical-plan-eligible. Use requestId req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4, provider lmstudio, and model qwen3.5-4b. Concrete valid response example: {\\\\\\\"protocol\\\\\\\":\\\\\\\"vela.model-response.v1\\\\\\\",\\\\\\\"schemaVersion\\\\\\\":\\\\\\\"1.1\\\\\\\",\\\\\\\"requestId\\\\\\\":\\\\\\\"req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4\\\\\\\",\\\\\\\"provider\\\\\\\":\\\\\\\"lmstudio\\\\\\\",\\\\\\\"model\\\\\\\":\\\\\\\"qwen3.5-4b\\\\\\\",\\\\\\\"envelope\\\\\\\":{\\\\\\\"type\\\\\\\":\\\\\\\"logicalPlanProposal\\\\\\\",\\\\\\\"steps\\\\\\\":[{\\\\\\\"capabilityId\\\\\\\":\\\\\\\"set-opacity-v1\\\\\\\",\\\\\\\"params\\\\\\\":{\\\\\\\"opacity\\\\\\\":47}},{\\\\\\\"capabilityId\\\\\\\":\\\\\\\"set-layer-name-v1\\\\\\\",\\\\\\\"params\\\\\\\":{\\\\\\\"name\\\\\\\":\\\\\\\"Hero\\\\\\\"}}]}} Replace only opacity and name with the exact values stated by the current user. The two steps, order, capability IDs, and all field names are fixed.\\\",\\\"trustedGrounding\\\":\\\"Trusted request context: active composition type CompItem; selected layers 1; first selected layer type AVLayer; selected layer opacity 57.5.\\\"}\",\"role\":\"assistant\"},{\"content\":\"把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test\",\"role\":\"user\"}],\"model\":\"qwen3.5-4b\",\"response_format\":{\"json_schema\":{\"name\":\"vela_bounded_logical_plan_response\",\"schema\":{\"additionalProperties\":false,\"properties\":{\"envelope\":{\"additionalProperties\":false,\"properties\":{\"steps\":{\"items\":{\"oneOf\":[{\"additionalProperties\":false,\"properties\":{\"capabilityId\":{\"enum\":[\"set-opacity-v1\"],\"type\":\"string\"},\"params\":{\"additionalProperties\":false,\"properties\":{\"opacity\":{\"maximum\":100,\"minimum\":0,\"type\":\"number\"}},\"required\":[\"opacity\"],\"type\":\"object\"}},\"required\":[\"capabilityId\",\"params\"],\"type\":\"object\"},{\"additionalProperties\":false,\"properties\":{\"capabilityId\":{\"enum\":[\"set-layer-name-v1\"],\"type\":\"string\"},\"params\":{\"additionalProperties\":false,\"properties\":{\"name\":{\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"}},\"required\":[\"capabilityId\",\"params\"],\"type\":\"object\"}]},\"maxItems\":2,\"minItems\":2,\"type\":\"array\"},\"type\":{\"enum\":[\"logicalPlanProposal\"],\"type\":\"string\"}},\"required\":[\"type\",\"steps\"],\"type\":\"object\"},\"model\":{\"enum\":[\"qwen3.5-4b\"],\"type\":\"string\"},\"protocol\":{\"enum\":[\"vela.model-response.v1\"],\"type\":\"string\"},\"provider\":{\"enum\":[\"lmstudio\"],\"type\":\"string\"},\"requestId\":{\"enum\":[\"req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4\"],\"type\":\"string\"},\"schemaVersion\":{\"enum\":[\"1.1\"],\"type\":\"string\"}},\"required\":[\"protocol\",\"schemaVersion\",\"requestId\",\"provider\",\"model\",\"envelope\"],\"type\":\"object\"},\"strict\":true},\"type\":\"json_schema\"},\"stream\":true,\"thinking_budget_tokens\":2048}",
+      "hostRequests": [
+        {
+          "protocol": "vela.host-context-request.v1",
+          "schemaVersion": "1.0",
+          "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2",
+          "sessionId": "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+          "operation": "captureContext",
+          "tier": 1,
+          "scope": {
+            "purpose": "binding",
+            "selectionOrderMeaningful": true
+          }
+        },
+        {
+          "protocol": "vela.host-context-request.v1",
+          "schemaVersion": "1.0",
+          "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3",
+          "sessionId": "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+          "operation": "capturePropertyValues",
+          "tier": 3,
+          "scope": {
+            "purpose": "binding",
+            "expectedHostInstanceId": "host_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expectedHostReloadEpoch": 1,
+            "expectedProjectGeneration": 1,
+            "targets": [
+              {
+                "targetOrdinal": 0,
+                "itemId": 1,
+                "nativeLayerId": 2,
+                "layerIndex": 1,
+                "propertyPath": [
+                  "named",
+                  "ADBE Transform Group",
+                  0,
+                  "named",
+                  "ADBE Opacity",
+                  0
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "result": {
+        "state": "logical-plan-ready",
+        "logicalPlanProposal": {
+          "declaredStepCount": 2,
+          "steps": [
+            {
+              "ordinal": 0,
+              "capabilityId": "set-opacity-v1",
+              "params": {
+                "opacity": 60
+              },
+              "operation": "mutate",
+              "targetScopeKind": "selected-layer",
+              "semanticSignature": "{\"capabilityId\":\"set-opacity-v1\",\"params\":{\"opacity\":60},\"targetScopeKind\":\"selected-layer\"}"
+            },
+            {
+              "ordinal": 1,
+              "capabilityId": "set-layer-name-v1",
+              "params": {
+                "name": "Vela Stream Test"
+              },
+              "operation": "mutate",
+              "targetScopeKind": "selected-layer",
+              "semanticSignature": "{\"capabilityId\":\"set-layer-name-v1\",\"params\":{\"name\":\"Vela Stream Test\"},\"targetScopeKind\":\"selected-layer\"}"
+            }
+          ],
+          "planSemanticSignature": "{\"declaredStepCount\":2,\"stepSemanticSignatures\":[\"{\\\"capabilityId\\\":\\\"set-opacity-v1\\\",\\\"params\\\":{\\\"opacity\\\":60},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\",\"{\\\"capabilityId\\\":\\\"set-layer-name-v1\\\",\\\"params\\\":{\\\"name\\\":\\\"Vela Stream Test\\\"},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\"]}"
+        }
+      }
+    },
+    "no-selection": {
+      "wireJson": "{\"messages\":[{\"content\":\"This is ordinary conversation. Answer directly in natural language, following the user's language. Answer normal conversation, current-value queries, advice, explanations, ambiguity, and unavailable grounding as text. Trusted context is a fact only; never guess a missing current value. Do not claim an edit was performed, will be performed, or that a proposal was created. Do not describe a proposal.\",\"role\":\"system\"},{\"content\":\"{\\\"turnResponseContract\\\":\\\"Answer the current user naturally. Use trusted grounding only as facts; do not invent unavailable values. Do not create proposals or claim that After Effects changes have occurred or will occur.\\\",\\\"trustedGrounding\\\":\\\"Trusted request context: active composition type CompItem; selected layers 0; first selected layer type none; selected layer opacity unavailable.\\\"}\",\"role\":\"assistant\"},{\"content\":\"hello\",\"role\":\"user\"}],\"model\":\"m\",\"stream\":false}",
+      "hostRequests": [
+        {
+          "protocol": "vela.host-context-request.v1",
+          "schemaVersion": "1.0",
+          "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2",
+          "sessionId": "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+          "operation": "captureContext",
+          "tier": 1,
+          "scope": {
+            "purpose": "binding",
+            "selectionOrderMeaningful": true
+          }
+        }
+      ],
+      "result": {
+        "state": "completed",
+        "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3",
+        "text": "safe",
+        "errorCode": null,
+        "intentReason": null,
+        "proposalCapabilityId": null,
+        "suggestedOpacity": null,
+        "providerId": "lmstudio",
+        "modelId": "m",
+        "moduleRevision": "vela-provider-controller-v2"
+      }
+    },
+    "unavailable": {
+      "wireJson": "{\"messages\":[{\"content\":\"This is ordinary conversation. Answer directly in natural language, following the user's language. Answer normal conversation, current-value queries, advice, explanations, ambiguity, and unavailable grounding as text. Trusted context is a fact only; never guess a missing current value. Do not claim an edit was performed, will be performed, or that a proposal was created. Do not describe a proposal.\",\"role\":\"system\"},{\"content\":\"{\\\"turnResponseContract\\\":\\\"Answer the current user naturally. Use trusted grounding only as facts; do not invent unavailable values. Do not create proposals or claim that After Effects changes have occurred or will occur.\\\",\\\"trustedGrounding\\\":\\\"Trusted request context: active composition type none; selected layers 0; first selected layer type none; selected layer opacity unavailable.\\\"}\",\"role\":\"assistant\"},{\"content\":\"hello\",\"role\":\"user\"}],\"model\":\"m\",\"stream\":false}",
+      "hostRequests": [
+        {
+          "protocol": "vela.host-context-request.v1",
+          "schemaVersion": "1.0",
+          "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2",
+          "sessionId": "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+          "operation": "captureContext",
+          "tier": 1,
+          "scope": {
+            "purpose": "binding",
+            "selectionOrderMeaningful": true
+          }
+        }
+      ],
+      "result": {
+        "state": "completed",
+        "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3",
+        "text": "safe",
+        "errorCode": null,
+        "intentReason": null,
+        "proposalCapabilityId": null,
+        "suggestedOpacity": null,
+        "providerId": "lmstudio",
+        "modelId": "m",
+        "moduleRevision": "vela-provider-controller-v2"
+      }
+    },
+    "property-unavailable": {
+      "wireJson": "{\"messages\":[{\"content\":\"This is ordinary conversation. Answer directly in natural language, following the user's language. Answer normal conversation, current-value queries, advice, explanations, ambiguity, and unavailable grounding as text. Trusted context is a fact only; never guess a missing current value. Do not claim an edit was performed, will be performed, or that a proposal was created. Do not describe a proposal.\",\"role\":\"system\"},{\"content\":\"{\\\"turnResponseContract\\\":\\\"Answer the current user naturally. Use trusted grounding only as facts; do not invent unavailable values. Do not create proposals or claim that After Effects changes have occurred or will occur.\\\",\\\"trustedGrounding\\\":\\\"Trusted request context: active composition type none; selected layers 0; first selected layer type none; selected layer opacity unavailable.\\\"}\",\"role\":\"assistant\"},{\"content\":\"hello\",\"role\":\"user\"}],\"model\":\"m\",\"stream\":false}",
+      "hostRequests": [
+        {
+          "protocol": "vela.host-context-request.v1",
+          "schemaVersion": "1.0",
+          "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2",
+          "sessionId": "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+          "operation": "captureContext",
+          "tier": 1,
+          "scope": {
+            "purpose": "binding",
+            "selectionOrderMeaningful": true
+          }
+        },
+        {
+          "protocol": "vela.host-context-request.v1",
+          "schemaVersion": "1.0",
+          "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3",
+          "sessionId": "session_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+          "operation": "capturePropertyValues",
+          "tier": 3,
+          "scope": {
+            "purpose": "binding",
+            "expectedHostInstanceId": "host_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expectedHostReloadEpoch": 1,
+            "expectedProjectGeneration": 1,
+            "targets": [
+              {
+                "targetOrdinal": 0,
+                "itemId": 1,
+                "nativeLayerId": 2,
+                "layerIndex": 1,
+                "propertyPath": [
+                  "named",
+                  "ADBE Transform Group",
+                  0,
+                  "named",
+                  "ADBE Opacity",
+                  0
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "result": {
+        "state": "completed",
+        "requestId": "req_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4",
+        "text": "safe",
+        "errorCode": null,
+        "intentReason": null,
+        "proposalCapabilityId": null,
+        "suggestedOpacity": null,
+        "providerId": "lmstudio",
+        "modelId": "m",
+        "moduleRevision": "vela-provider-controller-v2"
+      }
+    }
+  }
+}

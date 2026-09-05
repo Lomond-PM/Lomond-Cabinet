@@ -13,7 +13,7 @@ Version numbers follow architecture completion boundaries, not a fixed minor-ver
 | 0.3.7 — Agent Loop Foundation | COMPLETE |
 | 0.3.8 — Multi-step Agent | COMPLETE |
 | 0.3.9 — Streaming Response & Reasoning Surface | COMPLETE / SEALED / merged into dev; 171/171 offline PASS, user-manual real AE PASS, architecture amendment NONE, no unresolved correctness blocker |
-| 0.3.10 — Context Architecture | IN DESIGN; A0 audit complete, A1 taxonomy/ownership/lifecycle contract recorded; A2–A6 implementation not started |
+| 0.3.10 — Context Architecture | IN PROGRESS; A0/A1 complete; A2 local input-evidence seam implemented; A3–A6 not started |
 | 0.3.11 — Multi-conversation Foundation | Planned |
 | 0.3.12 — Capability Model Generalization | Planned |
 | 0.3.13+ — AE Capability Completeness Program | Planned, continuing until formal AE Action Coverage Matrix closure; no artificial version ceiling |
@@ -27,6 +27,8 @@ Version numbers follow architecture completion boundaries, not a fixed minor-ver
 0.3.10 scope includes context item typing/ownership, assembly, bounded selection, budgeting, trusted/untrusted boundaries, Provider/Agent/conversation context relationships and generation budgets with long context. This roadmap does not choose schemas, APIs or implementation algorithms.
 
 [0.3.10-A1 Context contract](design/vela-context-architecture-0.3.10-a1.md) records domain ownership, separate freshness/trust classes, lifecycle eligibility, invocation snapshot requirements, budget ownership and the A0 deferred-decision ledger. It defines focused A2–A6 slices; A2 is the Provider Context Assembly Evidence Seam. This is a design contract, not implemented context assembly or a change to current Provider/Observation/execution behavior.
+
+[A2 implementation evidence](reports/vela-0.3.10-a2-context-evidence.md) records the opt-in, immutable local input projection and exact pre-A2 request/capture equivalence tests. It adds no history, selection policy or capture substitution. A3 owns the next budget/capacity policy decisions; A4–A6 retain the A1 boundaries.
 
 Raw Provider reasoning must not directly enter LLM context by default. It is not Observation, a trusted fact, Authority input or execution justification. Any future treatment requires its own reviewed design; history display never grants authority.
 
