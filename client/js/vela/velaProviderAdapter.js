@@ -445,6 +445,38 @@
         var usedRequestIds = new Set();
         var diagnostics = Object.freeze({ providerId: PROVIDER_ID, modelId: model, requestId: null, state: state, elapsedMs: 0, httpStatus: null, errorCode: null, terminalFailureBoundary: null });
         var terminalDebugEvidence = null;
+        var contextEvidenceEnabled = options.debugContextEvidence === true;
+        var contextEvidence = null;
+
+        // Local, opt-in construction evidence. Never fed back to request/admission owners.
+        function recordContextEvidence(requestId, request, body, error) {
+            if (!contextEvidenceEnabled) { return; }
+            try {
+                var canonicalJson = request && body ? JSON.stringify(request) : null;
+                var serializeEvidence = ownDataFunction(transport, "getSerializedRequestEvidence");
+                var wireJson = body && serializeEvidence ? serializeEvidence(body) : null;
+                var budgetFailure = error && (error.code === protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED);
+                var projected = {
+                    schema: "vela.provider-input-evidence.v1",
+                    authorityCapable: false,
+                    closure: body ? "closed" : budgetFailure ? "budget-rejected" : "construction-failed",
+                    correlation: { requestId: requestId, providerGeneration: generation + 1, model: model, profile: requestProfile, runtimeInvocationId: null, objectiveId: null, sessionId: null, turnId: null, unavailableReason: "not-supplied-through-local-wiring" },
+                    freshnessClass: "B-invocation-selected",
+                    canonicalRequestJson: canonicalJson,
+                    wireRequestJson: wireJson,
+                    wireEvidenceUnavailableReason: wireJson === null ? "transport-projection-unavailable-or-input-not-closed" : null,
+                    budget: { canonicalUtf8Bytes: canonicalJson === null ? null : protocol.utf8ByteLength(canonicalJson), wireUtf8Bytes: wireJson === null ? null : protocol.utf8ByteLength(wireJson), messageContentUtf8Bytes: request && body ? request.messages.map(function (message) { return protocol.utf8ByteLength(message.content); }) : null, requestByteCeiling: protocol.HARD_LIMITS.maxRequestJsonBytes, messageByteCeiling: protocol.HARD_LIMITS.maxMessageBytes, tokenCost: null, modelContextCapacity: null, unknownReason: "not-measured-by-byte-budget" },
+                    sources: body ? [
+                        { domain: "local-instruction", producer: "VelaCapabilityPromptBuilder.buildSystemPrompt", representation: "canonical.messages[0]", selectionReason: "current-profile-instructions", trustClass: "local-control-record", sourceFreshnessClass: null },
+                        { domain: "local-response-contract", producer: "VelaProviderAdapter.assembleMessages", representation: "canonical.messages[1]", selectionReason: "current-turn-contract-and-grounding-envelope", trustClass: "derived-record", sourceFreshnessClass: null },
+                        { domain: "user-input", producer: "VelaProviderAdapter.buildRequest", representation: "canonical.messages[2..]", selectionReason: "caller-supplied-current-input", trustClass: "untrusted-content", sourceFreshnessClass: null }
+                    ] : [],
+                    errorCode: error && typeof error.code === "string" ? error.code : null
+                };
+                if (protocol.utf8ByteLength(JSON.stringify(projected)) > 512 * 1024) { contextEvidence = null; return; }
+                contextEvidence = protocol.deepFreeze(projected);
+            } catch (ignoredEvidence) { contextEvidence = null; }
+        }
 
         function getCapabilityModelSpec() {
             var capability = capabilityContracts.getModelProjection("set-opacity-v1");
@@ -881,8 +913,11 @@
                 protocol.fail(protocol.ERROR_CODES.PROVIDER_REQUEST_IN_FLIGHT, "A local provider request is already in flight.", { stage: "provider" });
             }
             var requestId = issueUniqueRequestId();
-            var request = buildRequest(input, requestId);
-            var body = buildOpenAiBody(request);
+            var request;
+            var body;
+            try { request = buildRequest(input, requestId); body = buildOpenAiBody(request); }
+            catch (constructionError) { recordContextEvidence(requestId, null, null, constructionError); throw constructionError; }
+            recordContextEvidence(requestId, request, body, null);
             var startedAt = readNowMs();
             var controller;
             try { controller = validateAbortController(createAbortController()); }
@@ -1057,6 +1092,7 @@
             start: start,
             cancel: cancel,
             getState: getState,
+            getContextEvidence: function () { return contextEvidence; },
             getDiagnostics: getDiagnostics
         });
     }

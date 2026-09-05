@@ -88,7 +88,7 @@
         if (!protocolModule.isTrustedProtocol(protocol) || !bridgeModule.isTrustedContextBridgeForProtocol(bridge, protocol) || !transportModule.isTrustedLocalTransportForProtocol(transport, protocol) || !intentGateModule || typeof intentGateModule.evaluate !== "function" || !protocol.isPlainObject(options)) {
             throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
         }
-        protocol.assertNoUnknownKeys(options, ["protocol", "contextBridge", "transport", "runtime", "streaming"], "providerController.options");
+        protocol.assertNoUnknownKeys(options, ["protocol", "contextBridge", "transport", "runtime", "streaming", "debugContextEvidence"], "providerController.options");
         try { protocol.attachLogicalPlanContracts(logicalPlanContracts); } catch (logicalAttachError) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
         if (!providerRuntime || typeof ownData(providerRuntime, "setTimeout") !== "function" || typeof ownData(providerRuntime, "clearTimeout") !== "function" || typeof ownData(providerRuntime, "createAbortController") !== "function" || typeof ownData(providerRuntime, "parseUrl") !== "function" || typeof ownData(providerRuntime, "nowMs") !== "function") {
             protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Provider runtime dependencies are unavailable.");
@@ -115,6 +115,38 @@
         var generation = 1;
         var streamingEnabled = ownData(options, "streaming") === true;
         var streamListeners = [];
+        var contextEvidenceEnabled = ownData(options, "debugContextEvidence") === true;
+        var contextEvidence = null;
+        var constructingEvidence = null;
+        function newSourceEvidence(operation, order) {
+            return { domain: "trusted-capture-projection", producer: "VelaProviderController.send/" + operation, samplingBoundary: { operation: operation, order: order, attempted: false, captureId: null, hostInstanceId: null, hostReloadEpoch: null, projectGeneration: null, aeSampleTime: null, sampledAt: null, atomicWithOtherReads: false }, disposition: "not-collected", selectionReason: "current-independent-controller-read", trustClass: null, sourceFreshnessClass: null, selectedRepresentation: null, selectedUtf8Bytes: null, omittedCount: null, errorCode: null, unavailableReason: null };
+        }
+        function captureEvidence(source, capture) {
+            if (!source) { return; }
+            source.disposition = "not-selected-by-current-construction";
+            source.trustClass = "observed-fact";
+            source.sourceFreshnessClass = "A-last-successful-observation";
+            source.samplingBoundary.captureId = capture.contextId;
+            source.samplingBoundary.hostInstanceId = capture.snapshot.hostInstanceId;
+            source.samplingBoundary.hostReloadEpoch = capture.snapshot.hostReloadEpoch;
+            source.samplingBoundary.projectGeneration = typeof capture.snapshot.projectGeneration === "number" ? capture.snapshot.projectGeneration : null;
+            source.samplingBoundary.aeSampleTime = typeof capture.snapshot.sampleTime === "number" ? capture.snapshot.sampleTime : null;
+        }
+        function failedSourceEvidence(source, error) {
+            if (!source) { return; }
+            source.disposition = mayContinueWithoutContext(error) ? "upstream-unavailable" : "source-capture-failed";
+            source.trustClass = "local-control-record";
+            source.sourceFreshnessClass = null;
+            source.errorCode = safeCode(protocol, error);
+            source.unavailableReason = bridge.getDiagnostics().lastContextUnavailableReason;
+        }
+        function publishContextEvidence(record, closure, adapterEvidence) {
+            if (!record || record.generation !== generation || record.closed) { return; }
+            try {
+                contextEvidence = protocol.deepFreeze({ schema: "vela.provider-context-evidence.v1", authorityCapable: false, controllerGeneration: record.generation, closure: closure, input: adapterEvidence || null, sources: JSON.parse(JSON.stringify(record.sources)), exclusions: ["agent-observation", "currentContext", "session-records", "transcript", "prior-assistant-text", "raw-reasoning", "verified-trajectory"].map(function (domain) { return { domain: domain, disposition: "not-collected", selectionReason: "excluded-by-current-construction", omittedCount: null }; }) });
+                record.closed = true;
+            } catch (ignoredEvidence) { contextEvidence = null; }
+        }
         var publicState = protocol.deepFreeze({ state: state, requestId: null, text: null, errorCode: null, intentReason: null, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: MODULE_REVISION });
         function publish(nextState, requestId, text, errorCode, model, proposal, intentReason) {
             state = nextState;
@@ -302,6 +334,10 @@
             diagnostics = Object.freeze({ moduleRevision: MODULE_REVISION, provisionalProfile: provisionalProfile, contextUnionEligible: false, finalProfile: null, responseSchemaName: null, parsedResponseType: null, intentAllowed: null, intentReason: null, lastTerminalRequestId: diagnostics.lastTerminalRequestId, lastTerminalDisposition: diagnostics.lastTerminalDisposition, lastTerminalFailureBoundary: diagnostics.lastTerminalFailureBoundary, lastTerminalErrorCode: diagnostics.lastTerminalErrorCode, lastContextOperation: diagnostics.lastContextOperation, lastContextDisposition: diagnostics.lastContextDisposition, lastContextFailureStage: diagnostics.lastContextFailureStage, lastContextHostErrorCode: diagnostics.lastContextHostErrorCode, lastContextHostFailureStage: diagnostics.lastContextHostFailureStage, lastContextErrorCode: diagnostics.lastContextErrorCode, lastContextUnavailableReason: diagnostics.lastContextUnavailableReason });
             capturedGeneration = generation + 1;
             generation = capturedGeneration;
+            var evidence = contextEvidenceEnabled ? { generation: capturedGeneration, closed: false, sources: [newSourceEvidence("captureContext", 1), newSourceEvidence("capturePropertyValues", 2)] } : null;
+            constructingEvidence = evidence;
+            contextEvidence = null;
+            if (evidence) { evidence.sources[0].samplingBoundary.attempted = true; }
             publish("pending", null, null, null, values.model);
             var bindingStart = bridge.beginOwnedCapture({ tier: 1, purpose: "binding", selectionOrderMeaningful: true });
             active = { generation: capturedGeneration, requestId: null, provider: null, captureHandle: bindingStart.handle, requestProfile: requestProfile };
@@ -312,24 +348,29 @@
                 var valueStart;
                 if (capturedGeneration !== generation || state !== "pending") { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
                 clearActiveCapture(capturedGeneration);
+                if (evidence) { captureEvidence(evidence.sources[0], capture); }
                 target = selectionTarget(capture);
                 if (!target) { return { projection: providerContextPort.project(capture, null), requestContext: { contextId: capture.contextId, fingerprint: capture.fingerprint, tier: 1 } }; }
+                if (evidence) { evidence.sources[1].samplingBoundary.attempted = true; }
                 valueStart = bridge.beginOwnedPropertyValueCapture(capture, [target]);
                 if (!active || active.generation !== capturedGeneration) { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
                 active.captureHandle = valueStart.handle;
                 return valueStart.promise.then(function (valueCapture) {
                     if (capturedGeneration !== generation || state !== "pending") { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
                     clearActiveCapture(capturedGeneration);
+                    if (evidence) { captureEvidence(evidence.sources[1], valueCapture); }
                     return { projection: providerContextPort.project(capture, valueCapture), requestContext: { contextId: capture.contextId, fingerprint: capture.fingerprint, tier: 1 } };
                 }, function (error) {
                     if (capturedGeneration !== generation || state !== "pending") { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
                     clearActiveCapture(capturedGeneration);
+                    if (evidence) { failedSourceEvidence(evidence.sources[1], error); }
                     if (!mayContinueWithoutContext(error)) { throw error; }
                     return unavailableGrounding(capturedGeneration);
                 });
             }, function (error) {
                 if (capturedGeneration !== generation || state !== "pending") { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
                 clearActiveCapture(capturedGeneration);
+                if (evidence) { failedSourceEvidence(evidence.sources[0], error); }
                 if (!mayContinueWithoutContext(error)) { throw error; }
                 return unavailableGrounding(capturedGeneration);
             }).then(function (grounded) {
@@ -341,8 +382,16 @@
                 contextUnionEligible = isUnionEligible(grounded.projection);
                 if (provisionalProfile === requestPolicyProfiles.TEXT_ONLY) { requestProfile = requestPolicyProfiles.TEXT_ONLY; }
                 updateDiagnostics({ contextUnionEligible: contextUnionEligible, finalProfile: requestProfile, responseSchemaName: schemaNameForProfile(requestProfile) });
-                provider = adapterModule.createLocalOpenAICompatibleProvider({ protocol: protocol, transport: transport, runtime: providerRuntime, endpoint: values.endpoint, model: values.model, requestProfile: requestProfile, streaming: streamingEnabled, onStreamEvent: streamingEnabled ? dispatchStreamEvent : null });
-                started = provider.start({ messages: [{ role: "assistant", content: summaryFromProjection(grounded.projection) }, { role: "user", content: values.message }], context: grounded.requestContext });
+                if (evidence && grounded.requestContext.tier === 1) {
+                    evidence.sources[0].disposition = "selected";
+                    evidence.sources[0].selectedRepresentation = { activeCompositionType: grounded.projection.activeCompositionType, selectedLayerCount: grounded.projection.selectedLayerCount, firstSelectedLayerType: grounded.projection.firstSelectedLayerType };
+                    if (grounded.projection.selectedLayerOpacity.available) { evidence.sources[1].disposition = "selected"; evidence.sources[1].selectedRepresentation = { selectedLayerOpacity: grounded.projection.selectedLayerOpacity.value }; }
+                    evidence.sources.forEach(function (source) { if (source.selectedRepresentation !== null) { source.selectedUtf8Bytes = protocol.utf8ByteLength(JSON.stringify(source.selectedRepresentation)); } });
+                }
+                provider = adapterModule.createLocalOpenAICompatibleProvider({ protocol: protocol, transport: transport, runtime: providerRuntime, endpoint: values.endpoint, model: values.model, requestProfile: requestProfile, streaming: streamingEnabled, onStreamEvent: streamingEnabled ? dispatchStreamEvent : null, debugContextEvidence: contextEvidenceEnabled });
+                try { started = provider.start({ messages: [{ role: "assistant", content: summaryFromProjection(grounded.projection) }, { role: "user", content: values.message }], context: grounded.requestContext }); }
+                catch (constructionError) { publishContextEvidence(evidence, constructionError.code === protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED ? "budget-rejected" : "construction-failed", contextEvidenceEnabled ? provider.getContextEvidence() : null); throw constructionError; }
+                publishContextEvidence(evidence, "closed", contextEvidenceEnabled ? provider.getContextEvidence() : null);
                 active = { generation: capturedGeneration, requestId: started.requestId, provider: provider, captureHandle: null, requestProfile: requestProfile };
                 publish("pending", started.requestId, null, null, values.model);
                 return started.promise;
@@ -391,6 +440,7 @@
             }, function (error) {
                 if (capturedGeneration !== generation || state !== "pending") { return publicState; }
                 syncContextDiagnostics();
+                publishContextEvidence(evidence, "source-capture-failed", null);
                 recordTerminal(publicState.requestId, "failed", active && active.provider ? "controller-correlation" : "context-capture", safeCode(protocol, error));
                 active = null;
                 return publish("failed", publicState.requestId, null, safeCode(protocol, error), values.model);
@@ -406,6 +456,7 @@
             }
             catch (error) { return false; }
             if (!active || state !== "pending" || active.requestId !== requestId) { return false; }
+            publishContextEvidence(constructingEvidence, "cancelled-before-construction-closure", null);
             generation += 1;
             cancelActiveCapture();
             if (active.provider) { active.provider.cancel(requestId); }
@@ -415,6 +466,7 @@
             return true;
         }
         function invalidate(nextState) {
+            publishContextEvidence(constructingEvidence, "cancelled-before-construction-closure", null);
             generation += 1;
             cancelActiveCapture();
             if (active && active.provider) { try { active.provider.cancel(active.requestId); } catch (ignored) {} }
@@ -454,7 +506,7 @@
                 return true;
             }
         });
-        var controller = Object.freeze({ send: send, cancel: cancel, invalidate: invalidate, checkReadiness: checkReadiness, subscribeStreamEvents: subscribeStreamEvents, getUiState: function () { return publicState; }, getDiagnostics: function () { return diagnostics; } });
+        var controller = Object.freeze({ send: send, cancel: cancel, invalidate: invalidate, checkReadiness: checkReadiness, subscribeStreamEvents: subscribeStreamEvents, getContextEvidence: function () { return contextEvidence; }, getUiState: function () { return publicState; }, getDiagnostics: function () { return diagnostics; } });
         trustedControllers.add(controller);
         controllerProtocols.set(controller, protocol);
         controllerProposalPorts.set(controller, proposalPort);

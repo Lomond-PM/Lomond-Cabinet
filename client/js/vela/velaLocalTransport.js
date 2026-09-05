@@ -311,7 +311,12 @@
                 throw protocolError(protocol, responseStarted ? protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID : protocol.ERROR_CODES.PROVIDER_CONNECTION_FAILED);
             });
         }
-        var transport = Object.freeze({ sendJson: sendJson, readStream: readStream, readJson: readJson });
+        // Read-only projection of the existing wire serializer; no dispatch or retention.
+        function getSerializedRequestEvidence(body) {
+            if (providerAdapterModule.isTrustedOutboundBodyForTransport(body, transport, protocol) !== true) { return null; }
+            return trustedSerialize(body, protocol, [], 0);
+        }
+        var transport = Object.freeze({ sendJson: sendJson, readStream: readStream, readJson: readJson, getSerializedRequestEvidence: getSerializedRequestEvidence });
         trustedTransports.add(transport);
         transportProtocols.set(transport, protocol);
         return transport;
