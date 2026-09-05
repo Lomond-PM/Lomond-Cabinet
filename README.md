@@ -11,6 +11,8 @@ Lomond Cabinet is an After Effects CEP extension that combines a registry-driven
 
 Version 0.3.6 is the release candidate for Vela Delegated Authority. The latest published baseline remains immutable `v0.3.5` until final AE smoke and publication. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default.
 
+Current Vela milestone: **0.3.9 — Streaming Response & Reasoning Surface, COMPLETE / SEALED / merged into dev**. Next: **0.3.10 — Context Architecture**. These are development milestones, separate from package release metadata above. See the [canonical roadmap](docs/VELA_ROADMAP.md), [current project state](docs/PROJECT_STATE.md) and [0.3.9 acceptance evidence](docs/reports/vela-0.3.9-c2-closure.md).
+
 ## Runtime architecture
 
 Lomond Cabinet is not a conventional web application. It has two runtimes:
@@ -109,36 +111,11 @@ The optional LM Studio Provider is:
 
 Readiness means only that the configured local model instance is loaded. It is **not** qualification. No model is qualified, recommended, or selected as the production default in 0.3.6.
 
-The trusted activation policy keeps production activation locked. A model proposal cannot execute directly. With actionable Context, the transitional `proposal-capable-union` profile may return conversational text or a bounded `set-opacity-v1` proposal, but every mutation still crosses Review, Confirmation, freshness and permission checks, Preflight, ExecutionAdapter, and Host validation.
+The trusted activation policy keeps production activation locked. The opt-in Agent path supports bounded opacity and rename proposals and an ordered two-step logical plan. Every candidate remains subject to local validation and the existing Review/Authority/Preflight/Host/Verify boundaries. Fresh already-satisfied steps skip mutation and Undo but still Verify before progressing.
 
-Version 0.3.5 adds the Planning + Authority Contracts Foundation:
+0.3.9 enables native assistant streaming for TEXT_ONLY, strict structured proposal/logical output, and an independent untrusted reasoning surface. Partial structured output never enters Agent execution. Current-turn reasoning disclosure is supported; raw reasoning is not model context, and old raw reasoning is cleared on the next objective.
 
-- Planning / Authority contracts, CapabilityCompiler, and Legacy Authority Bridge compatibility;
-- ordered one-to-eight-step PlanStore and per-step JIT target/value binding foundations;
-- AuthorizedPlanMaterializer, TaskRun-owned `executionArmed`, and dormant PlanController orchestration;
-- immutable review-safe PlanReviewProjection and a correlation-only ReviewRuntimePort;
-- production runtime ownership on the existing shared PlanStore / ExecutionPreflight safety spine;
-- lifecycle-safe suspend, reset-session, and dispose invalidation;
-- preservation of the existing legacy single-step production mutation path.
-
-Version 0.3.6 adds explicit process-local delegation and a single production pilot for one-shot `set-opacity-v1`. Consent is explicit; policy evaluates exact Session/task, scope, risk, budget, expiry and provenance; absent or exhausted authority falls back to human review. The grant is never persisted. Generic multi-step delegated execution and autonomous Agent behavior remain dormant or deferred.
-
-The core architecture boundary is:
-
-```text
-Capability Definition
-≠ Capability Availability
-≠ Registered Action
-≠ Execution Authority
-```
-
-See:
-
-- [`docs/design/vela-agent-architecture.md`](docs/design/vela-agent-architecture.md) — frozen 0.3.x architecture baseline;
-- [`docs/design/vela-agent-0.3.4-closure.md`](docs/design/vela-agent-0.3.4-closure.md) — 0.3.4 implementation closure;
-- [`docs/design/vela-agent-0.3.6-closure.md`](docs/design/vela-agent-0.3.6-closure.md) — 0.3.6 delegated-authority closure and release boundaries;
-- [`docs/design/vela-agent-0.3.3-closure.md`](docs/design/vela-agent-0.3.3-closure.md) — historical Runtime Foundation closure;
-- [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) — accepted limitations.
+Full current defaults and limitations are owned by [PROJECT_STATE](docs/PROJECT_STATE.md); future work is owned only by [VELA_ROADMAP](docs/VELA_ROADMAP.md). The [frozen Agent architecture](docs/design/vela-agent-architecture.md) remains normative. Historical 0.3.6 release decisions remain in [its closure](docs/design/vela-agent-0.3.6-closure.md).
 
 ## Development installation
 
@@ -203,7 +180,7 @@ docs/HANDOFF.md
 
 ## Version and release status
 
-The current release candidate is **0.3.6**; the latest published release remains immutable **`v0.3.5`** until final AE release smoke and publication. Host `projectVersion` reports `0.3.6`. The bounded one-shot opacity delegation is production-reachable; autonomous and generic multi-step delegation remain deferred.
+The current release candidate is **0.3.6**; the latest published release remains immutable **`v0.3.5`** until final AE release smoke and publication. Host `projectVersion` reports `0.3.6`. This package metadata does not describe the full feature scope now on dev; current Agent implementation is recorded in [PROJECT_STATE](docs/PROJECT_STATE.md).
 
 Keep these synchronized for future releases:
 
@@ -217,7 +194,7 @@ Keep these synchronized for future releases:
 
 `AEToolbox.hostApiVersion` is an independent Host contract version and remains `1.0.0`; it is not the product version.
 
-The next architectural work after this release is **0.3.7+** and remains separately scoped. AgentDriver, Observe → Reason → Act, Verify/Replan, autonomous retry, persistent or generic multi-capability grants, multi-step delegated budgeting, Session intelligence and a generic N-step Plan Review producer/surface are not part of 0.3.6.
+Vela development has advanced through sealed 0.3.9 on dev. The next milestone is 0.3.10 Context Architecture, as recorded in the [canonical roadmap](docs/VELA_ROADMAP.md). This does not publish a package release or change the historical 0.3.6 release scope.
 
 ## Known issues and release history
 

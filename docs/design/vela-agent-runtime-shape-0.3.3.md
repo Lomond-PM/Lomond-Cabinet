@@ -1,5 +1,7 @@
 # Vela Agent — 0.3.3-B Agent / AgentScope Runtime Shape
 
+> Historical 0.3.3 implementation/staging record. Statements about current, next or deferred scope below refer to that stage, not current dev. See the [canonical roadmap](../VELA_ROADMAP.md) and [current project state](../PROJECT_STATE.md); the frozen architecture remains normative.
+
 ```text
 Status: IMPLEMENTATION CONTRACT (NOT an Architecture Amendment)
 Applies to: 0.3.3-B — Agent / AgentScope Runtime Shape

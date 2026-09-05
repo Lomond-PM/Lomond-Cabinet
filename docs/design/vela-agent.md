@@ -1,6 +1,8 @@
 # Lomond Cabinet 0.3.0: AE Agent Vela Architecture
 
-## Status
+> SUPERSEDED as a current architecture/phase plan — see the [canonical roadmap](../VELA_ROADMAP.md), [current project state](../PROJECT_STATE.md) and [frozen normative architecture](vela-agent-architecture.md). This file preserves 0.3.0–0.3.2 design and qualification decisions, including historical failures and then-current contracts; it is not a statement of present Provider behavior.
+
+## Historical status
 
 This document is an architecture plan for the next development target, 0.3.0.
 It is documentation only. It does not change `VERSION`, `CSXS/manifest.xml`,

@@ -1,5 +1,7 @@
 # Vela C4 Profile Pilot Results
 
+> Historical evidence: observations and execution/assessment status below describe that run or checkpoint. Current state is [PROJECT_STATE](../PROJECT_STATE.md); current planning is [VELA_ROADMAP](../VELA_ROADMAP.md). Vela 0.3.9 is now sealed and merged into dev (PR #182); this pointer does not change historical qualification outcomes or claim a new package release.
+
 ## Contract and evidence
 
 - Rubric revision: `vela-provider-profile-qualification-rubric-c4-v1`
