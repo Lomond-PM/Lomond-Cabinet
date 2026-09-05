@@ -2,7 +2,9 @@
 
 ## Vela development milestone
 
-**0.3.9 — Streaming Response & Reasoning Surface: COMPLETE / SEALED / merged into dev**, PR #182, merge commit `91005f2`. **0.3.10 — Context Architecture: IN PROGRESS**; A0/A1 complete, A2 evidence seam merged into dev, A3a capacity/budget policy recorded; A3b pure normalization/conditional disposition implemented and focused offline validated; A4–A6 not started.
+**0.3.9 — Streaming Response & Reasoning Surface: COMPLETE / SEALED / merged into dev**, PR #182, merge commit `91005f2`. **0.3.10 — Context Architecture: IN PROGRESS**; A0/A1/A2 and A3a/A3b complete; A4a execution/Verify evidence audit and projection contract complete; A4b implementation and A5–A6 not started.
+
+[A4a Verified Trajectory Source & Projection Contract](design/vela-verified-trajectory-0.3.10-a4a.md) audits exact execution/Verify sources and Session information loss. It defines separate intent/attempt, mutation, commit, verification and completion dimensions, with explicit unknowns and no retroactive upgrade. Future A4b assembles safe evidence at existing Runtime/execution/Verify seams and retains a bounded active/last-terminal projection under AgentRuntimeOwner; it is not implemented. Current Session tool/result committed:true can include already-satisfied, and Runtime reduces rich Verify results. No trajectory is injected into Provider input; A5 owns future selection. A4a changed docs only; 15 existing suites / 1,798 assertions PASS. Targeted real AE projection smoke is required for future A4b, not for this audit.
 
 [0.3.10-A1 Context Taxonomy, Ownership & Lifecycle Contract](design/vela-context-architecture-0.3.10-a1.md) records the design baseline and deferred decisions. `currentContext` remains a compatibility/read-only Observation projection with unchanged API/behavior. [A2 implementation evidence](reports/vela-0.3.10-a2-context-evidence.md) describes the opt-in local Controller/Adapter input snapshot and stateless Transport serialization projection. Current messages, captures, admission and execution semantics remain unchanged. No history selection, trajectory store or multi-conversation runtime is implemented.
 
