@@ -1,5 +1,7 @@
 # Vela Agent Observation / Context Plumbing Contract — 0.3.3-E
 
+> Historical 0.3.3 implementation/staging record. Statements about current, next or deferred scope below refer to that stage, not current dev. See the [canonical roadmap](../VELA_ROADMAP.md) and [current project state](../PROJECT_STATE.md); the frozen architecture remains normative.
+
 Status: project-local Runtime plumbing substage. The frozen architecture remains unchanged.
 
 ## Stage boundary

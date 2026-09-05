@@ -1,5 +1,7 @@
 # Vela Agent — 0.3.4 Deferred Implementation Constraints
 
+> Historical 0.3.4 implementation constraint record, not the current stage plan. Current scheduling belongs to the [canonical roadmap](../VELA_ROADMAP.md); context scope is now planned under 0.3.10. The design reasoning below is preserved, not asserted to be a completed 0.3.10 design.
+
 ```text
 Status: DEFERRED (implementation note, NOT architecture)
 Applies to: 0.3.4 — Observation & Capability

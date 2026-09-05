@@ -1,35 +1,42 @@
-# PROJECT_STATE.md
+# Current Project State
 
-## Current release candidate — 0.3.6
+## Vela development milestone
 
-Version **0.3.6 Delegated Authority** is release-prepared pending final AE release smoke. Product metadata and Host `projectVersion` are `0.3.6`. The latest published release/tag remains immutable `0.3.5` / `v0.3.5` until publication.
+**0.3.9 — Streaming Response & Reasoning Surface: COMPLETE / SEALED / merged into dev**, PR #182, merge commit `91005f2`. Next: **0.3.10 — Context Architecture** (scope only, implementation not started).
 
-The normative [`vela-agent-architecture.md`](design/vela-agent-architecture.md) remains **FROZEN FOR 0.3.x** with zero release-reconciliation changes. The implementation record is [`vela-agent-0.3.6-closure.md`](design/vela-agent-0.3.6-closure.md).
+This file owns current implementation status and handoff facts. [VELA_ROADMAP](VELA_ROADMAP.md) is the only current roadmap. [Agent architecture](design/vela-agent-architecture.md) remains FROZEN FOR 0.3.x, architecture amendment NONE. The [C2 closure](reports/vela-0.3.9-c2-closure.md) is final historical evidence: 171/171 offline suites PASS, 0 skipped, USER-MANUAL REAL AE ACCEPTANCE PASS, no unresolved 0.3.9 correctness blocker. Codex did not operate or observe AE.
 
-## Production behavior
+## Package release metadata is separate
 
-0.3.6 adds explicit, bounded, process-local delegation. The only production pilot is one-shot `set-opacity-v1`: `mutate`, semantic `selected-layer`, risk ceiling `write`, one action, 60-second expiry, exact current Session and Runtime-owned task, `local-user` provenance, and no persistence.
+VERSION, both manifest fields and Host projectVersion remain **0.3.6**, release-prepared but unpublished; latest recorded published tag is **v0.3.5**. Sealing the Vela 0.3.9 feature milestone does not publish 0.3.6 or 0.3.9, alter CHANGELOG release sections, or authorize main/tag operations. Historical release scope remains in [0.3.6 closure](design/vela-agent-0.3.6-closure.md).
 
-The canonical Authority Plane owns one DelegationGrantStore, DelegationPolicyEngine, AuthorityEvidenceResolver, DelegationAuthorityCoordinator, AuthorizedPlanAuthorityProducer, AuthorityActivationGate and AtomicActivationCoordinator. Compiler output enters trusted Policy routing. A valid grant may produce `ALLOW`; absent, invalid, expired, exhausted or revoked authority falls back to human review or fails closed.
+## Current Provider and presentation behavior
 
-`ALLOW` is not execution authority. Every mutation retains fresh JIT binding → Guard → PlanStore reservation → authority consumption → ExecutionAdapter → Host validation/CAS. Model and Provider cannot issue grants, forge trusted authority objects, or call Host directly.
+| Area | Implemented state |
+| --- | --- |
+| Activation | Experimental Preview; production activation blocked by no-qualified-default-model. Local Provider opt-in is session-only, disabled by default; endpoint/model configuration may persist. Readiness is not qualification. |
+| Streaming | Production Runtime streaming enabled; explicit nonstream fallback retained. |
+| TEXT_ONLY | Native assistant prose streaming; model generates no Vela JSON envelope. Adapter owns internal canonicalization. |
+| Structured | Explicit opacity/rename proposals and supported two-step logical plan use strict json_schema. Partial JSON is not presentation prose; partial output never enters Agent. Wrong structured output fails, without successful text fallback. |
+| Reasoning | Independent untrusted presentation-only channel; Provider reasoning ON/OFF supported. Current-turn disclosure and user/terminal anchoring; terminal default collapsed. A new objective clears prior raw reasoning. No raw reasoning in LLM context, Observation, Authority or execution justification. |
+| Transport | Valid SSE [DONE] ends protocol reading without waiting for CEP physical EOF. Terminal schema/finish validation still required; stream-completed is not authoritative success. Pre-DONE errors and finish_reason=length fail closed. |
+| Limits | Streaming ceiling 4 MiB includes reasoning/content/SSE framing. Nonstream/canonical JSON remains a separate 256 KiB limit. |
+| Exact qwen3.5-4b policy | Ordinary thinking 6144 / total max_tokens 8192; structured 2048 / 4096. Other model ids do not inherit these fields. |
 
-## Lifecycle and budget
+## Agent execution and authority
 
-Issue, revoke, expiry, consume, reset, suspend, dispose and AE restart fail closed. Grants are never persisted or reconstructed from Session history. AuthorityEvidence is trusted historical evidence, not live authority. The Session event whitelist is unchanged.
+Agent Loop Foundation and bounded Multi-step Agent are complete. Current acceptance capabilities include set-opacity-v1 and set-layer-name-v1, including the ordered opacity-then-rename logical plan. This is not complete AE capability coverage or generic multi-capability delegated authority.
 
-One delegated action slot is one Host mutation attempt that crosses the execution commit boundary. Precommit failure does not consume; postcommit failure consumes and is never refunded.
+Validated candidate → local Review/Authority → fresh Preflight → Host mutation when needed → fresh Verify remains the control path. Fresh actual==desired is already-satisfied: no unnecessary Host mutation or Undo, but fresh Verify is still required before the step completes and the logical cursor advances. Current capability-aware Undo labels are Vela: Set Opacity and Vela: Rename Layer; metadata generalization is future work.
 
-The accepted semantic `selected-layer` target binds current selection at the fresh binding boundary. This differs from a stale native binding, which must fail closed. Manual value drift cannot reliably hit the short Host CAS window; release acceptance relies on Tier-3 capture, Preflight, Host CAS and Adapter/Host witness regressions.
+The explicit one-shot opacity delegation retains process-local Session/task/scope/risk/budget/expiry/provenance ownership. Policy ALLOW is not Host permission; model output and Session history cannot forge or restore live authority. Lifecycle invalidation and stale-target/CAS protections remain. Authority details are normative in the frozen architecture and historical in the 0.3.6 closure, not redefined here.
 
-## Runtime closure
+## Accepted observations and future work
 
-Successful delegated `localProposal` settles as `local-proposal-handled` without fabricated assistant text. Stale Runtime initialization cannot report an old `LIFECYCLE_BLOCKED` into the current Core generation. Retryable Registry failure publishes `retrying`; exhausted retry remains terminal and diagnostic.
+Historical workstation ordinary/multi-step refusal is NON-REPRODUCED HISTORICAL OBSERVATION, not a current blocker. F9 real Provider evidence accepted 22/22 requests including 12/12 exact logical plans; user-manual AE acceptance confirmed reasoning OFF/ON, no-op progression, real mutation, correct second Review and objective completion.
 
-## Deferred beyond 0.3.6
+qwen3.5 verbosity/repetition is model/provider tuning, not Vela correctness failure. Cross-turn reasoning UI history and model-context consumption are separate future decisions. Context budgeting, conversation foundations, capability generalization/completeness, mixed response, cards/activity, telemetry and rendering refinements are assigned in the [roadmap](VELA_ROADMAP.md), not 0.3.9 TODOs.
 
-AgentDriver, Observe → Reason → Act, Verify/Replan, autonomous retry, no-progress detection, generic Delegation Sheet, persistent grants, multi-capability delegation, multi-step delegated budgeting, autonomous task production, Session intelligence/compaction and a generic N-step Plan Review producer/surface remain deferred to 0.3.7+ or later focused work.
+## Verification and ownership
 
-## Verification baseline
-
-Release preparation runs every `scripts/test-*.js` suite plus JavaScript syntax, i18n report freshness, project/version consistency, frozen-architecture diff and `git diff --check`. This Windows checkout has a known `core.autocrlf=true` CRLF checkout mismatch for a frozen LF JSON fixture; the fixture, hash and line-ending architecture are not changed during 0.3.6 release work.
+Latest full feature baseline: 171/171 suites PASS, 0 skipped. Documentation-only reconciliation runs project consistency, i18n freshness and internal-link/diff checks; it does not rerun production or AE acceptance. Generated i18n content is owned by its script. [HANDOFF](HANDOFF.md) is a concise navigation entry; [KNOWN_ISSUES](KNOWN_ISSUES.md) owns accepted issues; CHANGELOG/release documents own package release history.

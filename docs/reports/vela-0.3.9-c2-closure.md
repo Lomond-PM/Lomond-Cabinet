@@ -1,5 +1,7 @@
 # Vela 0.3.9-C2 — Final Integration, Regression & Closure
 
+> Historical evidence: observations and execution/assessment status below describe that run or checkpoint. Current state is [PROJECT_STATE](../PROJECT_STATE.md); current planning is [VELA_ROADMAP](../VELA_ROADMAP.md). Vela 0.3.9 is now sealed and merged into dev (PR #182); this pointer does not change historical qualification outcomes or claim a new package release.
+
 Date: 2026-09-05. **PASS / READY FOR PR** (feature checkpoint targeting dev; not a release).
 
 Architecture amendment: **NONE**. No unresolved 0.3.9 correctness blocker. No commit, push, merge, pull, rebase, reset, tag, release publication, AE automation, or repeat AE acceptance performed in C2.
