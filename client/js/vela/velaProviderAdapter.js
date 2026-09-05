@@ -24,7 +24,7 @@
         return dependency;
     }
     function assertCapabilityContracts(dependency) {
-        if (!dependency || typeof dependency.getModelProjection !== "function") {
+        if (!dependency || typeof dependency.getModelProjection !== "function" || typeof dependency.getRepresentationModelProjection !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaProviderAdapter requires VelaCapabilityContracts.");
         }
         return dependency;
@@ -144,9 +144,20 @@
     var DEFAULT_ENDPOINT = "http://127.0.0.1:1234/v1/chat/completions";
     var PROVIDER_ID = "lmstudio";
     var PROVIDER_KIND = "openai-compatible";
-    var RESPONSE_SCHEMA_IDS = Object.freeze({ TEXT_ONLY: "vela-text-response.v1", EXPLICIT_EDIT_ELIGIBLE: "vela-local-proposal-response.v1", PROPOSAL_CAPABLE_UNION: "vela-bounded-union-response.v1" });
+    var RESPONSE_SCHEMA_IDS = Object.freeze({ TEXT_ONLY: "vela-text-response.v1", EXPLICIT_EDIT_ELIGIBLE: "vela-local-proposal-response.v1", PROPOSAL_CAPABLE_UNION: "vela-bounded-union-response.v1", BOUNDED_LOGICAL_PLAN_ELIGIBLE: "vela-bounded-logical-plan-response.v1" });
     var MODEL_ERROR_NOT_AUTHORIZED = "MODEL_ERROR_NOT_AUTHORIZED";
     var RESPONSE_FORMAT_MODE = "json-schema";
+    // SSE includes per-token JSON metadata and framing, unlike canonical terminal JSON.
+    // F6 observed upper range: 1,491,362 bytes; 4 MiB leaves 2.81x headroom.
+    var RESOURCE_POLICY = Object.freeze({ maxStreamResponseBytes: 4 * 1024 * 1024 });
+    var QWEN35_4B_ASSISTANT_POLICY = Object.freeze({ thinkingBudgetTokens: 6144, maxOutputTokens: 8192 });
+    var QWEN35_4B_STRUCTURED_POLICY = Object.freeze({ thinkingBudgetTokens: 2048, maxOutputTokens: 4096 });
+    function getGenerationPolicy(modelId, requestProfile) {
+        // Calibrated LM Studio model identity only; unknown/non-reasoning providers inherit their own defaults.
+        if (modelId !== "qwen3.5-4b") { return null; }
+        assertRequestProfile(requestProfile);
+        return requestProfile === REQUEST_PROFILES.TEXT_ONLY ? QWEN35_4B_ASSISTANT_POLICY : QWEN35_4B_STRUCTURED_POLICY;
+    }
     var LMSTUDIO_TEXT_GENERATION_MAX_CHARS = 1024;
     var MIN_TIMEOUT_MS = 1000;
     var MAX_TIMEOUT_MS = 300000;
@@ -161,25 +172,40 @@
     var OPENAI_USAGE_KEYS = ["prompt_tokens", "completion_tokens", "total_tokens", "completion_tokens_details"];
     var OPENAI_COMPLETION_DETAILS_KEYS = ["reasoning_tokens"];
     var MAX_SYSTEM_FINGERPRINT_CODE_UNITS = 256;
+    var MAX_DEBUG_TERMINAL_CONTENT_CODE_UNITS = 4096;
 
     function getRequestProfiles() {
         var profiles;
         var text;
         var explicit;
-        var union;
+            var union;
+            var logical;
         try {
             profiles = Object.getOwnPropertyDescriptor(requestBranchPolicy, "PROFILES");
             if (!profiles || profiles.get || profiles.set || !Object.prototype.hasOwnProperty.call(profiles, "value") || !Object.isFrozen(profiles.value)) { throw new Error(); }
             text = Object.getOwnPropertyDescriptor(profiles.value, "TEXT_ONLY");
             explicit = Object.getOwnPropertyDescriptor(profiles.value, "EXPLICIT_EDIT_ELIGIBLE");
             union = Object.getOwnPropertyDescriptor(profiles.value, "PROPOSAL_CAPABLE_UNION");
-            if (!text || !explicit || !union || text.get || text.set || explicit.get || explicit.set || union.get || union.set || text.writable !== false || text.configurable !== false || explicit.writable !== false || explicit.configurable !== false || union.writable !== false || union.configurable !== false || text.value !== "text-only" || explicit.value !== "explicit-edit-eligible" || union.value !== "proposal-capable-union") { throw new Error(); }
+            logical = Object.getOwnPropertyDescriptor(profiles.value, "BOUNDED_LOGICAL_PLAN_ELIGIBLE");
+            if (!text || !explicit || !union || !logical || text.get || text.set || explicit.get || explicit.set || union.get || union.set || logical.get || logical.set || text.writable !== false || text.configurable !== false || explicit.writable !== false || explicit.configurable !== false || union.writable !== false || union.configurable !== false || logical.writable !== false || logical.configurable !== false || text.value !== "text-only" || explicit.value !== "explicit-edit-eligible" || union.value !== "proposal-capable-union" || logical.value !== "bounded-logical-plan-eligible") { throw new Error(); }
             return profiles.value;
         } catch (error) { throw configFailure(); }
     }
     var REQUEST_PROFILES = getRequestProfiles();
+    // Current compatibility strategies; allowed outputs can compose in future transports.
+    function getOutputDecision(profile) {
+        assertRequestProfile(profile);
+        var nativeText = profile === REQUEST_PROFILES.TEXT_ONLY;
+        return Object.freeze({
+            allowedOutputs: Object.freeze(nativeText ? ["assistant-text"] :
+                (profile === REQUEST_PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE ? ["structured-logical-plan"] :
+                (profile === REQUEST_PROFILES.PROPOSAL_CAPABLE_UNION ? ["assistant-text", "structured-proposal"] : ["structured-proposal"]))),
+            transportMode: nativeText ? "native-assistant" : "strict-structured",
+            presentationMode: nativeText ? "assistant-text" : "structured"
+        });
+    }
     function assertRequestProfile(value) {
-        if (value !== REQUEST_PROFILES.TEXT_ONLY && value !== REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE && value !== REQUEST_PROFILES.PROPOSAL_CAPABLE_UNION) { throw configFailure(); }
+        if (value !== REQUEST_PROFILES.TEXT_ONLY && value !== REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE && value !== REQUEST_PROFILES.PROPOSAL_CAPABLE_UNION && value !== REQUEST_PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE) { throw configFailure(); }
         return value;
     }
 
@@ -239,9 +265,8 @@
                 details = ownDataValue(protocol, usage, "completion_tokens_details");
                 if (!protocol.isPlainObject(details)) { responseFailure(protocol, "The OpenAI response completion details are invalid."); }
                 protocol.assertNoUnknownKeys(details, OPENAI_COMPLETION_DETAILS_KEYS, "provider.openAiCompletionDetails");
-                if (!hasOwn(details, "reasoning_tokens") || ownDataValue(protocol, details, "reasoning_tokens") !== 0) {
-                    responseFailure(protocol, "The OpenAI response reasoning details are unsupported.");
-                }
+                if (!hasOwn(details, "reasoning_tokens")) { responseFailure(protocol, "The OpenAI response reasoning details are invalid."); }
+                assertNonNegativeSafeInteger(protocol, ownDataValue(protocol, details, "reasoning_tokens"), "The OpenAI response reasoning details are invalid.");
             }
         }
         if (hasOwn(wrapper, "system_fingerprint")) {
@@ -312,6 +337,43 @@
         if (!capability || !capability.parameters) { throw new Error("CAPABILITY_RESPONSE_SCHEMA_INVALID"); }
         return copySchema(capability.parameters);
     }
+    function freezeRepresentation(value) {
+        if (!value || typeof value !== "object" || Object.isFrozen(value)) { return value; }
+        Object.keys(value).forEach(function (key) { freezeRepresentation(value[key]); });
+        return Object.freeze(value);
+    }
+    function buildDormantLocalProposalRepresentationSchema() {
+        var opacity = capabilityContracts.getRepresentationModelProjection("set-opacity-v1");
+        var layerName = capabilityContracts.getRepresentationModelProjection("set-layer-name-v1");
+        function variant(capability) {
+            return {
+                type: "object",
+                additionalProperties: false,
+                required: ["type", "proposal"],
+                properties: {
+                    type: { type: "string", enum: ["localProposal"] },
+                    proposal: {
+                        type: "object",
+                        additionalProperties: false,
+                        required: ["capabilityId", "params"],
+                        properties: {
+                            capabilityId: { type: "string", enum: [capability.capabilityId] },
+                            params: buildCapabilityParametersForResponse(capability)
+                        }
+                    }
+                }
+            };
+        }
+        if (!opacity || !layerName) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "Dormant local proposal representation is unavailable."); }
+        return freezeRepresentation({ oneOf: [variant(opacity), variant(layerName)] });
+    }
+    function buildBoundedLogicalPlanRepresentationSchema() {
+        var opacity = capabilityContracts.getRepresentationModelProjection("set-opacity-v1");
+        var layerName = capabilityContracts.getRepresentationModelProjection("set-layer-name-v1");
+        function step(capability) { return { type: "object", additionalProperties: false, required: ["capabilityId", "params"], properties: { capabilityId: { type: "string", enum: [capability.capabilityId] }, params: buildCapabilityParametersForResponse(capability) } }; }
+        if (!opacity || !layerName) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "Bounded logical plan representation is unavailable."); }
+        return freezeRepresentation({ type: "object", additionalProperties: false, required: ["type", "steps"], properties: { type: { type: "string", enum: ["logicalPlanProposal"] }, steps: { type: "array", minItems: 2, maxItems: 2, items: { oneOf: [step(opacity), step(layerName)] } } } });
+    }
 
     function createLocalOpenAICompatibleProvider(options) {
         options = options || {};
@@ -324,6 +386,15 @@
         var runtime = options.runtime;
         if (!transport || !runtime) { throw configFailure(); }
         var sendJson = ownDataFunction(transport, "sendJson");
+        var readStream = options.streaming === true ? ownDataFunction(transport, "readStream") : null;
+        var streamAssembler = null;
+        var streamEvents = null;
+        var onStreamEvent = typeof options.onStreamEvent === "function" ? options.onStreamEvent : null;
+        var debugTerminalDiagnostics = options.debugTerminalDiagnostics === true;
+        if (options.streaming === true) {
+            try { streamAssembler = typeof VelaProviderStreamAssembler !== "undefined" ? VelaProviderStreamAssembler : module["require"]("./velaProviderStreamAssembler"); } catch (streamRequireError) { throw configFailure("The streaming assembler is unavailable.", "provider-stream-assembler"); }
+            try { streamEvents = typeof VelaProviderStreamEvents !== "undefined" ? VelaProviderStreamEvents : module["require"]("./velaProviderStreamEvents"); } catch (eventRequireError) { throw configFailure("The stream event contract is unavailable.", "provider-stream-events"); }
+        }
         var setTimer = ownDataFunction(runtime, "setTimeout");
         var clearTimer = ownDataFunction(runtime, "clearTimeout");
         var createAbortController = ownDataFunction(runtime, "createAbortController");
@@ -333,7 +404,9 @@
         var endpoint = options.endpoint === undefined ? DEFAULT_ENDPOINT : options.endpoint;
         var model = options.model;
         var requestProfile = assertRequestProfile(ownDataOption(options, "requestProfile"));
+        var outputDecision = getOutputDecision(requestProfile);
         var timeoutMs = options.timeoutMs === undefined ? DEFAULT_TIMEOUT_MS : options.timeoutMs;
+        // Legacy configuration validation only. The profile-owned output decision selects transport.
         var responseFormatMode = options.responseFormatMode === undefined ? RESPONSE_FORMAT_MODE : options.responseFormatMode;
         if (typeof endpoint !== "string" || typeof model !== "string" || responseFormatMode !== RESPONSE_FORMAT_MODE ||
             !Number.isInteger(timeoutMs) || timeoutMs < MIN_TIMEOUT_MS || timeoutMs > MAX_TIMEOUT_MS) {
@@ -365,12 +438,13 @@
         try { validateAbortController(createAbortController()); }
         catch (error) { throw configFailure(); }
 
-        var capabilities = Object.freeze({ chat: true, jsonSchema: true, streaming: false, cancellation: true });
+        var capabilities = Object.freeze({ chat: true, jsonSchema: true, streaming: options.streaming === true, cancellation: true });
         var state = "idle";
         var activeRequest = null;
         var generation = 0;
         var usedRequestIds = new Set();
         var diagnostics = Object.freeze({ providerId: PROVIDER_ID, modelId: model, requestId: null, state: state, elapsedMs: 0, httpStatus: null, errorCode: null, terminalFailureBoundary: null });
+        var terminalDebugEvidence = null;
 
         function getCapabilityModelSpec() {
             var capability = capabilityContracts.getModelProjection("set-opacity-v1");
@@ -456,6 +530,47 @@
             });
         }
 
+        function recordTerminalDebugEvidence(record, fields) {
+            var terminalContent = null;
+            var parsedTerminal = null;
+            var actualEnvelopeType = null;
+            var actualProtocol = null;
+            var actualSchemaVersion = null;
+            if (!debugTerminalDiagnostics || !record) { return; }
+            fields = fields || {};
+            if (fields.parserOutcome === "rejected" && typeof fields.assembledContent === "string") {
+                terminalContent = fields.assembledContent.slice(0, MAX_DEBUG_TERMINAL_CONTENT_CODE_UNITS);
+                try { parsedTerminal = responseParser.parseProviderJson(fields.assembledContent); }
+                catch (ignoredParse) { parsedTerminal = null; }
+                if (protocol.isPlainObject(parsedTerminal)) {
+                    actualEnvelopeType = typeof parsedTerminal.envelope === "object" && parsedTerminal.envelope !== null && typeof parsedTerminal.envelope.type === "string" ? parsedTerminal.envelope.type : null;
+                    actualProtocol = typeof parsedTerminal.protocol === "string" ? parsedTerminal.protocol : null;
+                    actualSchemaVersion = typeof parsedTerminal.schemaVersion === "string" ? parsedTerminal.schemaVersion : null;
+                }
+            }
+            terminalDebugEvidence = Object.freeze({
+                requestProfile: requestProfile,
+                outputDecision: outputDecision,
+                responseSchemaPresent: record.responseSchemaPresent === true,
+                transportMode: options.streaming === true ? "stream" : "json",
+                streamDone: fields.streamDone === true,
+                assembledTextChars: Number.isSafeInteger(fields.assembledTextChars) && fields.assembledTextChars >= 0 ? fields.assembledTextChars : null,
+                assembledReasoningChars: Number.isSafeInteger(fields.assembledReasoningChars) && fields.assembledReasoningChars >= 0 ? fields.assembledReasoningChars : null,
+                assembledStructuredChars: Number.isSafeInteger(fields.assembledStructuredChars) && fields.assembledStructuredChars >= 0 ? fields.assembledStructuredChars : null,
+                parserOutcome: fields.parserOutcome === "accepted" || fields.parserOutcome === "rejected" ? fields.parserOutcome : null,
+                expectedEnvelopeType: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? "text" : (requestProfile === REQUEST_PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE ? "logicalPlanProposal" : "localProposal"),
+                actualEnvelopeType: actualEnvelopeType,
+                actualProtocol: actualProtocol,
+                actualSchemaVersion: actualSchemaVersion,
+                terminalContentPreview: terminalContent,
+                terminalContentTruncated: terminalContent !== null && fields.assembledContent.length > terminalContent.length,
+                markdownFencePresent: terminalContent !== null && /```/.test(terminalContent)
+                ,transportDiagnostics: fields.transportDiagnostics || null
+                ,assemblerFinishEntered: record.assemblerFinishEntered === true
+                ,terminalParserEntered: record.terminalParserEntered === true
+            });
+        }
+
         function canonicalError(code, requestId) {
             try {
                 return protocol.createCanonicalErrorResponse(new protocol.VelaProtocolError(code, undefined, { stage: "provider" }), {
@@ -491,6 +606,7 @@
         function finishRequest(record, capturedGeneration, nextState, response, fields) {
             if (!isCurrentPending(record, capturedGeneration)) { return false; }
             fields = fields || {};
+            finishPresentation(record, nextState === "completed" ? "stream-completed" : nextState === "cancelled" ? "stream-cancelled" : "stream-failed", nextState === "completed" || nextState === "cancelled" ? null : fields.errorCode, fields.failureBoundary);
             record.state = nextState;
             record.settled = true;
             state = nextState;
@@ -498,6 +614,7 @@
             var timerId = record.timerId;
             record.timerId = null;
             diagnostics = makeDiagnostics(record, nextState, fields.httpStatus, fields.errorCode, undefined, fields.failureBoundary);
+            recordTerminalDebugEvidence(record, fields.debugEvidence || record.debugEvidence);
             if (timerId !== null) {
                 try { clearTimer(timerId); } catch (error) { /* terminal state remains authoritative */ }
             }
@@ -505,6 +622,22 @@
                 try { record.controller.abort.call(record.controller.receiver); } catch (error) { /* terminal state remains authoritative */ }
             }
             try { record.resolve(response); } catch (error) { /* Promise resolve is treated as non-observable */ }
+            return true;
+        }
+
+        function emitStreamEvent(record, type, errorCode, failureBoundary, text) {
+            var value;
+            if (!onStreamEvent || !record || options.streaming !== true) { return; }
+            value = { type: type, requestId: record.requestId, generation: record.generation, providerId: PROVIDER_ID, modelId: model };
+            if (type === "text-delta" || type === "reasoning-delta") { value.text = text; }
+            if (type === "stream-failed") { value.errorCode = errorCode || protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID; if (failureBoundary) { value.failureBoundary = failureBoundary; } }
+            try { onStreamEvent(streamEvents.canonicalize(value)); } catch (ignoredListener) { /* presentation listeners are non-authoritative */ }
+        }
+
+        function finishPresentation(record, type, errorCode, failureBoundary) {
+            if (options.streaming !== true || record.presentationTerminal) { return false; }
+            record.presentationTerminal = true;
+            emitStreamEvent(record, type, errorCode, failureBoundary);
             return true;
         }
 
@@ -545,27 +678,11 @@
                     text: { type: "string", minLength: 1, maxLength: LMSTUDIO_TEXT_GENERATION_MAX_CHARS }
                 }
             };
-            var localProposalEnvelope = {
-                type: "object",
-                description: "Only a direct explicit current or selected layer opacity command with one 0–100 target; never questions, suggestions, hypotheticals, negations, or ambiguity. It does not execute.",
-                additionalProperties: false,
-                required: ["type", "proposal"],
-                properties: {
-                    type: enumString(protocol.ENVELOPE_TYPES.LOCAL_PROPOSAL),
-                    proposal: {
-                        type: "object",
-                        additionalProperties: false,
-                        required: ["capabilityId", "params"],
-                        properties: {
-                            capabilityId: enumString(capability.capabilityId),
-                            params: buildCapabilityParametersForResponse(capability)
-                        }
-                    }
-                }
-            };
-            var envelope = requestProfile === REQUEST_PROFILES.TEXT_ONLY ? textEnvelope : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? localProposalEnvelope : { oneOf: [textEnvelope, localProposalEnvelope] });
+            var localProposalEnvelope = buildDormantLocalProposalRepresentationSchema();
+            var logicalPlanEnvelope = buildBoundedLogicalPlanRepresentationSchema();
+            var envelope = requestProfile === REQUEST_PROFILES.TEXT_ONLY ? textEnvelope : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? localProposalEnvelope : (requestProfile === REQUEST_PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE ? logicalPlanEnvelope : { oneOf: [textEnvelope, localProposalEnvelope] }));
             return protocol.deepFreeze({
-                name: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? "vela_text_response" : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? "vela_local_proposal_response" : "vela_bounded_union_response"),
+                name: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? "vela_text_response" : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? "vela_local_proposal_response" : (requestProfile === REQUEST_PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE ? "vela_bounded_logical_plan_response" : "vela_bounded_union_response")),
                 strict: true,
                 schema: {
                     type: "object",
@@ -628,7 +745,8 @@
                 requestId: requestId,
                 model: model,
                 messages: assembleMessages(messages, contract),
-                responseFormat: { type: "json_object", schemaId: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? RESPONSE_SCHEMA_IDS.TEXT_ONLY : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? RESPONSE_SCHEMA_IDS.EXPLICIT_EDIT_ELIGIBLE : RESPONSE_SCHEMA_IDS.PROPOSAL_CAPABLE_UNION) },
+                // Internal canonical contract; this is not the model's transport format.
+                responseFormat: { type: "json_object", schemaId: requestProfile === REQUEST_PROFILES.TEXT_ONLY ? RESPONSE_SCHEMA_IDS.TEXT_ONLY : (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE ? RESPONSE_SCHEMA_IDS.EXPLICIT_EDIT_ELIGIBLE : (requestProfile === REQUEST_PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE ? RESPONSE_SCHEMA_IDS.BOUNDED_LOGICAL_PLAN_ELIGIBLE : RESPONSE_SCHEMA_IDS.PROPOSAL_CAPABLE_UNION)) },
                 context: context
             };
             protocol.validateCanonicalRequest(request);
@@ -639,12 +757,21 @@
             var body = {
                 model: model,
                 messages: request.messages,
-                stream: false,
-                response_format: {
+                stream: false
+            };
+            if (outputDecision.transportMode === "strict-structured") {
+                body.response_format = {
                     type: "json_schema",
                     json_schema: buildResponseJsonSchema(request.requestId)
-                }
-            };
+                };
+            }
+            if (options.streaming === true) { body.stream = true; }
+            var generationPolicy = getGenerationPolicy(model, requestProfile);
+            if (generationPolicy) {
+                // Preserve the operator's reasoning on/off choice. max_tokens is shared by thinking and final output.
+                body.thinking_budget_tokens = generationPolicy.thinkingBudgetTokens;
+                body.max_tokens = generationPolicy.maxOutputTokens;
+            }
             var serialized = JSON.stringify(body);
             if (typeof serialized !== "string" || protocol.utf8ByteLength(serialized) > protocol.HARD_LIMITS.maxRequestJsonBytes) {
                 protocol.fail(protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED, "The local provider request exceeds its size limit.");
@@ -692,13 +819,16 @@
             var choice = wrapper.choices[0];
             if (!protocol.isPlainObject(choice)) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI choice is invalid."); }
             protocol.assertNoUnknownKeys(choice, OPENAI_CHOICE_KEYS, "provider.openAiChoice");
+            if (typeof choice.finish_reason === "string" && choice.finish_reason !== "stop") {
+                responseFailure(protocol, "The provider did not complete its response normally.");
+            }
             validateInertWrapperMetadata(protocol, wrapper, choice);
             var message = choice.message;
             if (!protocol.isPlainObject(message)) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant message is invalid."); }
             protocol.assertNoUnknownKeys(message, OPENAI_MESSAGE_KEYS, "provider.openAiMessage");
             if (Object.prototype.hasOwnProperty.call(message, "function_call")) { protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant message contains unsupported calls."); }
-            if (Object.prototype.hasOwnProperty.call(message, "reasoning_content") && message.reasoning_content !== "" && message.reasoning_content !== null) {
-                protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant reasoning is unsupported.");
+            if (Object.prototype.hasOwnProperty.call(message, "reasoning_content") && message.reasoning_content !== null && typeof message.reasoning_content !== "string") {
+                protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant reasoning metadata is invalid.");
             }
             if (Object.prototype.hasOwnProperty.call(message, "tool_calls") && (!Array.isArray(message.tool_calls) || message.tool_calls.length !== 0)) {
                 protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant message contains unsupported calls.");
@@ -707,6 +837,9 @@
                 protocol.fail(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "The OpenAI assistant content is invalid.");
             }
             setFailureBoundary("content-response");
+            if (outputDecision.transportMode === "native-assistant") {
+                return normalizeAssistantTextResponse(message.content, requestId);
+            }
             var rawCanonical;
             try { rawCanonical = responseParser.parseProviderJson(message.content); }
             catch (error) { rawCanonical = null; }
@@ -726,7 +859,8 @@
                 return { response: canonicalError(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, requestId), parserErrorCode: MODEL_ERROR_NOT_AUTHORIZED };
             }
             if ((requestProfile === REQUEST_PROFILES.TEXT_ONLY && parsed.response.envelope.type !== protocol.ENVELOPE_TYPES.TEXT) ||
-                (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE && parsed.response.envelope.type !== protocol.ENVELOPE_TYPES.LOCAL_PROPOSAL)) {
+                (requestProfile === REQUEST_PROFILES.EXPLICIT_EDIT_ELIGIBLE && parsed.response.envelope.type !== protocol.ENVELOPE_TYPES.LOCAL_PROPOSAL) ||
+                (requestProfile === REQUEST_PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE && parsed.response.envelope.type !== protocol.ENVELOPE_TYPES.LOGICAL_PLAN_PROPOSAL)) {
                 setFailureBoundary("profile-validation");
                 return { response: canonicalError(protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, requestId), parserErrorCode: protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID };
             }
@@ -764,7 +898,12 @@
                 timerId: null,
                 controller: controller,
                 resolve: resolvePromise,
-                settled: false
+                settled: false,
+                presentationTerminal: false,
+                responseSchemaPresent: body.response_format && body.response_format.type === "json_schema",
+                assemblerFinishEntered: false,
+                terminalParserEntered: false,
+                debugEvidence: null
             };
             var transportInput = protocol.deepFreeze({
                 url: endpoint,
@@ -772,10 +911,11 @@
                 headers: protocol.deepFreeze({ "Content-Type": "application/json" }),
                 body: body,
                 maxRequestBytes: protocol.HARD_LIMITS.maxRequestJsonBytes,
-                maxResponseBytes: protocol.HARD_LIMITS.maxResponseJsonBytes,
+                maxResponseBytes: options.streaming === true ? RESOURCE_POLICY.maxStreamResponseBytes : protocol.HARD_LIMITS.maxResponseJsonBytes,
                 allowRedirects: false
             });
-            var requestForTransport = Object.freeze({
+            var privateAssembler = options.streaming === true ? streamAssembler.create({ onDelta: function (channel, deltaText) { if (isCurrentPending(record, capturedGeneration)) { emitStreamEvent(record, channel === "reasoning" ? "reasoning-delta" : "text-delta", null, null, deltaText); } } }) : null;
+            var requestForTransportValue = {
                 url: transportInput.url,
                 method: transportInput.method,
                 headers: transportInput.headers,
@@ -784,7 +924,21 @@
                 maxRequestBytes: transportInput.maxRequestBytes,
                 maxResponseBytes: transportInput.maxResponseBytes,
                 allowRedirects: transportInput.allowRedirects
-            });
+            };
+            if (options.streaming === true) {
+                requestForTransportValue.onChunk = function (decodedText) {
+                    if (!isCurrentPending(record, capturedGeneration)) { return false; }
+                    privateAssembler.feed(decodedText);
+                    return privateAssembler.getState().done === true;
+                };
+                if (debugTerminalDiagnostics) {
+                    requestForTransportValue.onTransportDiagnostic = function (transportDiagnostic) {
+                        var assemblerState = privateAssembler.getState();
+                        record.debugEvidence = { transportDiagnostics: Object.freeze({ requestId: record.requestId, generation: record.generation, httpStatus: transportDiagnostic.httpStatus, contentType: transportDiagnostic.contentType, bytesRead: transportDiagnostic.bytesRead, decodedChunkCount: transportDiagnostic.decodedChunkCount, sseFrameCount: assemblerState.frameCount, assemblerDone: assemblerState.done, doneObserved: assemblerState.done, finishReasonObserved: assemblerState.finishReasonObserved, lastValidFrameType: assemblerState.lastValidFrameType, trailingBufferLength: assemblerState.trailingBufferLength, readerErrorName: transportDiagnostic.readerErrorName, readerErrorMessage: transportDiagnostic.readerErrorMessage, abortSignaled: transportDiagnostic.abortSignaled, requestState: record.state, earlyStopped: transportDiagnostic.earlyStopped }) };
+                    };
+                }
+            }
+            var requestForTransport = Object.freeze(requestForTransportValue);
             var pendingDiagnostics = makeDiagnostics(record, "pending", null, null, 0, null);
 
             generation = nextGeneration;
@@ -810,7 +964,8 @@
             Promise.resolve().then(function () {
                 if (!isCurrentPending(record, capturedGeneration)) { return undefined; }
                 var pending;
-                try { pending = sendJson(requestForTransport); }
+                if (options.streaming === true) { emitStreamEvent(record, "stream-started"); }
+                try { pending = options.streaming === true ? readStream(requestForTransport) : sendJson(requestForTransport); }
                 finally { trustedOutboundBodies.delete(body); }
                 if (!pending || (typeof pending !== "object" && typeof pending !== "function") || typeof pending.then !== "function") {
                     throw new Error("The transport did not return a Promise-like value.");
@@ -826,7 +981,19 @@
                 }
                 var result;
                 var failureBoundary = "outer-response";
-                try { result = validateTransportResponse(snapshot, requestId, function (value) { failureBoundary = value; }); }
+                if (options.streaming === true) {
+                    try {
+                        record.assemblerFinishEntered = true;
+                        var streamResult = privateAssembler.finish();
+                        var assemblerState = privateAssembler.getState();
+                        snapshot = Object.freeze({ status: snapshot.status, contentType: "application/json", bodyText: JSON.stringify({ choices: [{ message: { role: "assistant", content: streamResult.text, reasoning_content: streamResult.reasoning || null }, finish_reason: assemblerState.finishReasonObserved || "stop" }] }), redirected: snapshot.redirected, finalUrl: snapshot.finalUrl });
+                        finishPresentation(record, "stream-completed");
+                    } catch (streamError) {
+                        finishWithError(record, capturedGeneration, "failed", protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, snapshot.status, false, "stream-assembly");
+                        return;
+                    }
+                }
+                try { record.terminalParserEntered = true; result = validateTransportResponse(snapshot, requestId, function (value) { failureBoundary = value; }); }
                 catch (error) {
                     var code = error instanceof protocol.VelaProtocolError ? error.code : protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID;
                     if (code !== protocol.ERROR_CODES.PROVIDER_HTTP_ERROR && code !== protocol.ERROR_CODES.PROVIDER_RESPONSE_TOO_LARGE) { code = protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID; }
@@ -834,14 +1001,27 @@
                     return;
                 }
                 if (result.parserErrorCode) {
-                    finishRequest(record, capturedGeneration, "failed", result.response, { errorCode: result.parserErrorCode, httpStatus: 200, failureBoundary: failureBoundary });
+                    finishRequest(record, capturedGeneration, "failed", result.response, { errorCode: result.parserErrorCode, httpStatus: 200, failureBoundary: failureBoundary, debugEvidence: options.streaming === true ? { streamDone: assemblerState.done, assembledTextChars: streamResult.text.length, assembledReasoningChars: streamResult.reasoning.length, assembledStructuredChars: streamResult.structured.length, assembledContent: streamResult.text, parserOutcome: "rejected", transportDiagnostics: record.debugEvidence && record.debugEvidence.transportDiagnostics } : { parserOutcome: "rejected" } });
                 } else {
-                    finishRequest(record, capturedGeneration, "completed", result.response, { errorCode: null, httpStatus: 200 });
+                    finishRequest(record, capturedGeneration, "completed", result.response, { errorCode: null, httpStatus: 200, debugEvidence: options.streaming === true ? { streamDone: assemblerState.done, assembledTextChars: streamResult.text.length, assembledReasoningChars: streamResult.reasoning.length, assembledStructuredChars: streamResult.structured.length, parserOutcome: "accepted", transportDiagnostics: record.debugEvidence && record.debugEvidence.transportDiagnostics } : { parserOutcome: "accepted" } });
                 }
-            }).catch(function () {
-                finishWithError(record, capturedGeneration, "failed", protocol.ERROR_CODES.PROVIDER_CONNECTION_FAILED, null, false, "transport-read");
+            }).catch(function (error) {
+                var transportCode = options.streaming === true && error instanceof protocol.VelaProtocolError ? error.code : protocol.ERROR_CODES.PROVIDER_CONNECTION_FAILED;
+                if (transportCode !== protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID && transportCode !== protocol.ERROR_CODES.PROVIDER_RESPONSE_TOO_LARGE) { transportCode = protocol.ERROR_CODES.PROVIDER_CONNECTION_FAILED; }
+                finishWithError(record, capturedGeneration, "failed", transportCode, null, false, "transport-read");
             });
             return Object.freeze({ requestId: requestId, promise: promise });
+        }
+
+        function normalizeAssistantTextResponse(text, requestId) {
+            if (typeof text !== "string" || !text.trim()) { responseFailure(protocol, "The assistant text is empty or invalid."); }
+            var canonical = {
+                protocol: protocol.PROTOCOLS.RESPONSE, schemaVersion: protocol.SCHEMA_VERSION,
+                requestId: requestId, provider: PROVIDER_ID, model: model,
+                envelope: { type: protocol.ENVELOPE_TYPES.TEXT, text: text }
+            };
+            protocol.validateCanonicalResponse(canonical);
+            return { response: protocol.deepFreeze(protocol.cloneJson(canonical, { maxBytes: protocol.HARD_LIMITS.maxResponseJsonBytes })), parserErrorCode: null };
         }
 
         function cancel(requestId) {
@@ -856,7 +1036,7 @@
 
         function getDiagnostics() {
             if (activeRequest && activeRequest.state === "pending") { diagnostics = makeDiagnostics(activeRequest, "pending", null, null, undefined, null); }
-            return Object.freeze({
+            var value = {
                 providerId: diagnostics.providerId,
                 modelId: diagnostics.modelId,
                 requestId: diagnostics.requestId,
@@ -865,7 +1045,9 @@
                 httpStatus: diagnostics.httpStatus,
                 errorCode: diagnostics.errorCode,
                 terminalFailureBoundary: diagnostics.terminalFailureBoundary
-            });
+            };
+            if (debugTerminalDiagnostics) { value.terminalDebugEvidence = terminalDebugEvidence; }
+            return Object.freeze(value);
         }
 
         return Object.freeze({
@@ -884,8 +1066,12 @@
         return !!record && record.transport === transport && record.protocol === protocol && protocolModule.isTrustedProtocol(protocol);
     }
     return Object.freeze({
+        RESOURCE_POLICY: RESOURCE_POLICY,
+        getGenerationPolicy: getGenerationPolicy,
+        getOutputDecision: getOutputDecision,
         createLocalOpenAICompatibleProvider: createLocalOpenAICompatibleProvider,
         buildCapabilityParametersForResponse: buildCapabilityParametersForResponse,
+        buildDormantLocalProposalRepresentationSchema: buildDormantLocalProposalRepresentationSchema,
         isTrustedOutboundBodyForTransport: isTrustedOutboundBodyForTransport
     });
 }));

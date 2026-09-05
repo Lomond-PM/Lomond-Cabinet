@@ -25,19 +25,23 @@ const modelProjection = contracts.getModelProjection("set-opacity-v1");
 const prompt = build(modelProjection);
 const extractionPrompt = build(modelProjection, undefined, undefined, requestPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE);
 const unionPrompt = build(modelProjection, undefined, undefined, requestPolicy.PROFILES.PROPOSAL_CAPABLE_UNION);
+const logicalPrompt = build(modelProjection, undefined, undefined, requestPolicy.PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE);
+const logicalTurn = buildTurn(modelProjection, REQUEST_ID, MODEL, requestPolicy.PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE);
 const turnContract = buildTurn(modelProjection);
 check(Object.isFrozen(builder) && builder.MODULE_REVISION === "vela-capability-prompt-builder-v4", "Prompt Builder exports one frozen bounded module.");
 check(typeof prompt === "string" && typeof extractionPrompt === "string" && typeof unionPrompt === "string" && prompt !== extractionPrompt && unionPrompt !== prompt && unionPrompt !== extractionPrompt, "Production projection produces three distinct deterministic branch prompts.");
-check(prompt.includes("text-only") && !prompt.includes("localProposal envelope; text is invalid"), "Text profile permits only text.");
+check(prompt.includes("ordinary conversation") && !prompt.includes("localProposal envelope; text is invalid"), "Text profile permits only text.");
 check(extractionPrompt.includes("explicit-edit-eligible") && extractionPrompt.includes("localProposal envelope; text is invalid"), "Extraction profile permits only localProposal.");
 check(unionPrompt.includes("proposal-capable-union") && unionPrompt.includes("either a conversational text envelope or one bounded localProposal") && unionPrompt.includes("does not modify After Effects"), "Transition profile permits only bounded text or set-opacity-v1 proposal without execution authority.");
+check(logicalPrompt.includes("bounded-logical-plan-eligible") && logicalPrompt.includes("exactly two ordered steps") && logicalPrompt.includes("declaration only") && logicalTurn.includes('"type":"logicalPlanProposal"') && logicalTurn.includes('"capabilityId":"set-opacity-v1"') && logicalTurn.includes('"capabilityId":"set-layer-name-v1"'), "Logical profile alone advertises the exact declaration-only two-step contract.");
+check(!prompt.includes("logicalPlanProposal envelope") && !extractionPrompt.includes("logicalPlanProposal envelope") && !unionPrompt.includes("logicalPlanProposal envelope"), "Existing single-step and union prompts do not advertise logical plans.");
 check(!prompt.includes("localProposal uses") && !extractionPrompt.includes("current-value queries"), "Neither branch prompt carries the other branch policy.");
 for (let index = 0; index < 100; index += 1) { check(build(modelProjection) === prompt && build(modelProjection, undefined, undefined, requestPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE) === extractionPrompt && build(modelProjection, undefined, undefined, requestPolicy.PROFILES.PROPOSAL_CAPABLE_UNION) === unionPrompt, "Repeated builder calls are deterministic (" + index + ")."); }
 assert.throws(() => { modelProjection.modelPolicy.modelMaySupply[0] = "params.other"; }, TypeError, "Frozen model projections reject caller mutation."); assertions += 1;
 check(build(contracts.getModelProjection("set-opacity-v1")) === prompt, "A rejected caller mutation cannot contaminate a subsequent prompt.");
-check(turnContract.includes(REQUEST_ID) && turnContract.includes(MODEL) && turnContract.includes('"protocol":"vela.model-response.v1"'), "The turn contract carries concrete response metadata outside the stable system Prompt.");
+check(!turnContract.includes(REQUEST_ID) && !turnContract.includes(MODEL) && !turnContract.includes("envelope"), "The turn contract carries concrete response metadata outside the stable system Prompt.");
 check(buildTurn(modelProjection, undefined, undefined, requestPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE).includes('"capabilityId":"set-opacity-v1"') && buildTurn(modelProjection, undefined, undefined, requestPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE).includes('"opacity":57.5'), "The positive example derives the current Contract capability and model-supplied field.");
-check(prompt.indexOf(builder.GLOBAL_STATIC_CONTRACT) === 0 && extractionPrompt.indexOf(builder.GLOBAL_STATIC_CONTRACT) === 0 && unionPrompt.indexOf(builder.GLOBAL_STATIC_CONTRACT) === 0, "All Profile systems share the exported global static contract byte-for-byte.");
+check(!prompt.includes("schemaVersion") && extractionPrompt.indexOf(builder.GLOBAL_STATIC_CONTRACT) === 0 && unionPrompt.indexOf(builder.GLOBAL_STATIC_CONTRACT) === 0, "All Profile systems share the exported global static contract byte-for-byte.");
 check(!prompt.includes(REQUEST_ID) && !prompt.includes(MODEL) && build(modelProjection, undefined, "different-model") === prompt, "Concrete request and model metadata cannot contaminate a Profile-stable system Prompt.");
 check(!/(?:document|window|localStorage|CSInterface|evalScript|fetch\(|XMLHttpRequest|WebSocket|Date\.|Math\.random|require\([^)]*(?:fs|http|https|net))/i.test(fs.readFileSync(path.join(__dirname, "..", "client", "js", "vela", "velaCapabilityPromptBuilder.js"), "utf8")), "Prompt Builder has no DOM, Host, storage, network, clock, random, or file dependency.");
 

@@ -1,5 +1,7 @@
 # Vela Runtime State Convergence — 0.3.3-F
 
+> Historical 0.3.3 implementation/staging record. Statements about current, next or deferred scope below refer to that stage, not current dev. See the [canonical roadmap](../VELA_ROADMAP.md) and [current project state](../PROJECT_STATE.md); the frozen architecture remains normative.
+
 Status: documentation-only closure for the 0.3.3 Runtime foundation. This document records current implementation ownership, deferred ownership, and frozen-stage gap analysis. It is not an architecture amendment and does not modify `vela-agent-architecture.md`.
 
 ## Closure decision

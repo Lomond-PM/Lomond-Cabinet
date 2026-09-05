@@ -13,8 +13,8 @@
     "use strict";
 
     var LABEL_KEYS = Object.freeze({
-        capabilities: Object.freeze({ "set-opacity-v1": "vela.planReviewCapabilitySetOpacity" }),
-        parameters: Object.freeze({ opacity: "vela.planReviewParameterOpacity" }),
+        capabilities: Object.freeze({ "set-opacity-v1": "vela.planReviewCapabilitySetOpacity", "set-layer-name-v1": "vela.planReviewCapabilitySetLayerName" }),
+        parameters: Object.freeze({ opacity: "vela.planReviewParameterOpacity", name: "vela.planReviewParameterLayerName" }),
         risks: Object.freeze({ write: "vela.planReviewRiskWrite" }),
         targets: Object.freeze({ "selected-layer": "vela.planReviewTargetSelectedLayer" })
     });
@@ -46,7 +46,7 @@
                 }) });
                 planning.assertAuthorizedPlanNoTrustedBinding(rebuilt);
             } catch (error) { fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "AuthorizedPlan validation failed."); }
-            if (protocol.canonicalStringify(rebuilt, { allowDangerousPaths: ["steps.*.candidateId"] }) !== protocol.canonicalStringify(value, { allowDangerousPaths: ["steps.*.candidateId"] })) {
+            if (protocol.canonicalStringify(rebuilt, { allowDangerousPaths: ["steps.*.candidateId", "steps.*.policyDecision.provenance.candidateId"] }) !== protocol.canonicalStringify(value, { allowDangerousPaths: ["steps.*.candidateId", "steps.*.policyDecision.provenance.candidateId"] })) {
                 fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "AuthorizedPlan is not canonical.");
             }
             return rebuilt;
@@ -69,36 +69,38 @@
             var review = protocol.getOwnDataProperty(materialized, "review");
             if (!protocol.isPlainObject(review)) { fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Materialized review observation is invalid."); }
             protocol.assertNoUnknownKeys(review, ["valueKind", "beforeValue"], "planReviewProjection.review");
-            if (protocol.getOwnDataProperty(review, "valueKind") !== "number" || typeof protocol.getOwnDataProperty(review, "beforeValue") !== "number" ||
-                    !Number.isFinite(protocol.getOwnDataProperty(review, "beforeValue")) || Object.is(protocol.getOwnDataProperty(review, "beforeValue"), -0) ||
-                    protocol.getOwnDataProperty(review, "beforeValue") < 0 || protocol.getOwnDataProperty(review, "beforeValue") > 100) {
+            var valueKind = protocol.getOwnDataProperty(review, "valueKind");
+            var value = protocol.getOwnDataProperty(review, "beforeValue");
+            if (!((valueKind === "number" && typeof value === "number" && Number.isFinite(value) && !Object.is(value, -0) && value >= 0 && value <= 100) || (valueKind === "string" && typeof value === "string"))) {
                 fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Materialized review observation is invalid.");
             }
-            return { source: "observed", valueKind: "number", value: protocol.getOwnDataProperty(review, "beforeValue") };
+            return { source: "observed", valueKind: valueKind, value: value };
         }
         function projectStep(step, index, before) {
             var capability;
             var params;
-            var opacitySchema;
-            if (step.capabilityId !== "set-opacity-v1" || !Object.prototype.hasOwnProperty.call(LABEL_KEYS.capabilities, step.capabilityId)) { fail(protocol.ERROR_CODES.UNKNOWN_TOOL_ACTION, "Capability is not review-projectable."); }
+            var parameterName;
+            var parameterSchema;
+            if ((step.capabilityId !== "set-opacity-v1" && step.capabilityId !== "set-layer-name-v1") || !Object.prototype.hasOwnProperty.call(LABEL_KEYS.capabilities, step.capabilityId)) { fail(protocol.ERROR_CODES.UNKNOWN_TOOL_ACTION, "Capability is not review-projectable."); }
             capability = capabilities.getLocalProjection(step.capabilityId);
             if (!capability || !capability.parameters || !capability.parameters.properties) { fail(protocol.ERROR_CODES.UNKNOWN_TOOL_ACTION, "Capability presentation contract is unavailable."); }
             try { params = capabilities.validateCapabilityParams(capability, step.params); } catch (error) { fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Capability parameters are invalid."); }
-            if (Object.keys(params).length !== 1 || typeof params.opacity !== "number") { fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Capability parameters are not review-projectable."); }
-            opacitySchema = capability.parameters.properties.opacity;
-            if (!opacitySchema || opacitySchema.unit !== "percent") { fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Capability unit metadata is invalid."); }
+            parameterName = step.capabilityId === "set-layer-name-v1" ? "name" : "opacity";
+            if (Object.keys(params).length !== 1 || (parameterName === "opacity" ? typeof params.opacity !== "number" : typeof params.name !== "string")) { fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Capability parameters are not review-projectable."); }
+            parameterSchema = capability.parameters.properties[parameterName];
+            if (!parameterSchema || (parameterName === "opacity" && parameterSchema.unit !== "percent")) { fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Capability unit metadata is invalid."); }
             if (step.kind !== "tool" || step.risk !== "write" || step.requiresConfirmation !== true || !step.targetScope ||
-                    step.targetScope.type !== "selected-layer" || step.targetScope.property !== "opacity") { fail(protocol.ERROR_CODES.PERMISSION_DENIED, "Mutation semantics are not review-projectable."); }
+                    step.targetScope.type !== "selected-layer" || (parameterName === "opacity" ? step.targetScope.property !== "opacity" : step.targetScope.attribute !== "name")) { fail(protocol.ERROR_CODES.PERMISSION_DENIED, "Mutation semantics are not review-projectable."); }
             if (!step.policyDecision) { fail(protocol.ERROR_CODES.PERMISSION_DENIED, "Local review authority is required."); }
             try { planning.assertPolicyDecisionClosed(step.policyDecision); planning.assertTrustedDecisionSource(step.policyDecision); }
             catch (errorPolicy) { fail(protocol.ERROR_CODES.PERMISSION_DENIED, "Local review authority is invalid."); }
             if (step.policyDecision.decision !== "REVIEW_REQUIRED") { fail(protocol.ERROR_CODES.PERMISSION_DENIED, "Mutation review is required."); }
             return {
                 index: index,
-                capabilityId: "set-opacity-v1",
-                capabilityLabelKey: LABEL_KEYS.capabilities["set-opacity-v1"],
+                capabilityId: step.capabilityId,
+                capabilityLabelKey: LABEL_KEYS.capabilities[step.capabilityId],
                 target: { scopeType: "selected-layer", labelKey: LABEL_KEYS.targets["selected-layer"] },
-                parameters: [{ key: "opacity", labelKey: LABEL_KEYS.parameters.opacity, value: params.opacity, unit: opacitySchema.unit }],
+                parameters: [{ key: parameterName, labelKey: LABEL_KEYS.parameters[parameterName], value: params[parameterName], unit: parameterSchema.unit || null }],
                 risk: { level: "write", labelKey: LABEL_KEYS.risks.write },
                 requiresConfirmation: true,
                 before: before

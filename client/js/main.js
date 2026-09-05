@@ -4079,13 +4079,15 @@
             ownerOptions = {
                 onListenerError: function (error) { reportVelaAgentRuntimeError(error, "listener"); }
             };
-            if (window.VelaAgentCapabilityRuntime && window.VelaActiveCompositionCapability && window.VelaAgentObservationRuntime && velaRuntimeController && typeof velaRuntimeController.getObservationReadPort === "function") {
-                observationReadPort = velaRuntimeController.getObservationReadPort();
-                if (observationReadPort) {
-                    ownerOptions.AgentCapabilityRuntime = window.VelaAgentCapabilityRuntime;
-                    ownerOptions.ActiveCompositionCapability = window.VelaActiveCompositionCapability;
-                    ownerOptions.AgentObservationRuntime = window.VelaAgentObservationRuntime;
-                    ownerOptions.observationReadPort = observationReadPort;
+            if (window.VelaAgentCapabilityRuntime && window.VelaActiveCompositionCapability && window.VelaAgentObservationRuntime) {
+                ownerOptions.AgentCapabilityRuntime = window.VelaAgentCapabilityRuntime;
+                ownerOptions.ActiveCompositionCapability = window.VelaActiveCompositionCapability;
+                ownerOptions.AgentObservationRuntime = window.VelaAgentObservationRuntime;
+                if (velaRuntimeController && typeof velaRuntimeController.getObservationReadPort === "function") {
+                    observationReadPort = velaRuntimeController.getObservationReadPort();
+                    if (observationReadPort) {
+                        ownerOptions.observationReadPort = observationReadPort;
+                    }
                 }
             }
             owner = window.VelaAgentRuntimeOwner.createOwner(ownerOptions);
@@ -4209,6 +4211,12 @@
             if (velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.attachObservationReadPort === "function") {
                 velaAgentRuntimeOwner.attachObservationReadPort(velaRuntimeController.getObservationReadPort());
             }
+            if (velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.attachAgentDriverRuntimePort === "function" && typeof velaRuntimeController.getAgentDriverRuntimePort === "function") {
+                velaAgentRuntimeOwner.attachAgentDriverRuntimePort(velaRuntimeController.getAgentDriverRuntimePort());
+            }
+            if (velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.getObjectiveReviewPort === "function" && typeof velaRuntimeController.attachObjectiveReviewPort === "function") {
+                velaRuntimeController.attachObjectiveReviewPort(velaAgentRuntimeOwner.getObjectiveReviewPort());
+            }
             initializeVelaSurfaceController();
             configureVelaExperimentalSession();
             refreshVelaExperimentalSettings();
@@ -4276,16 +4284,27 @@
                 ComposerView: window.VelaComposerView,
                 ConfirmationView: window.VelaConfirmationView,
                 ActivationPolicy: window.VelaActivationPolicy,
+                runtime: velaRuntimeController,
                 onExperimentalStateChange: refreshVelaExperimentalSettings,
                 agentProjection: velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.getCurrentProjection === "function" ? velaAgentRuntimeOwner.getCurrentProjection() : null,
                 onAgentProjectionError: function (error, phase) { reportVelaAgentRuntimeError(error, phase || "surface"); },
                 provider: {
                     check: function (config) { return velaRuntimeController.checkProviderReadiness(config); },
                     send: function (message) {
+                        if (velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.startObjective === "function") {
+                            return velaAgentRuntimeOwner.startObjective({ message: message, endpoint: VelaProviderEndpoint, model: VelaProviderModel });
+                        }
                         return velaRuntimeController.sendProviderMessage({ message: message, endpoint: VelaProviderEndpoint, model: VelaProviderModel });
                     },
-                    cancel: function () { return velaRuntimeController.cancelProviderRequest(); },
-                    getState: function () { return velaRuntimeController.getProviderSurfaceState(); }
+                    cancel: function () { return velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.cancelObjective === "function" ? velaAgentRuntimeOwner.cancelObjective() : velaRuntimeController.cancelProviderRequest(); },
+                    getState: function () {
+                        var driver = velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.getAgentDriver === "function" ? velaAgentRuntimeOwner.getAgentDriver() : null;
+                        var driverState = driver && typeof driver.getSnapshot === "function" ? driver.getSnapshot() : null;
+                        if (driverState && driverState.state !== "idle" && driverState.state !== "terminal") { return Object.freeze({ state: "pending", text: null, errorCode: null }); }
+                        if (driverState && driverState.state === "terminal" && driverState.terminal && driverState.terminal.outcome === "blocked") { return Object.freeze({ state: "objective-blocked", text: null, errorCode: driverState.terminal.code }); }
+                        if (driverState && driverState.state === "terminal" && driverState.terminal && driverState.terminal.outcome === "cancelled") { return Object.freeze({ state: "cancelled", text: null, errorCode: null }); }
+                        return velaRuntimeController.getProviderSurfaceState();
+                    }
                 },
                 confirmation: {
                     review: function () { return velaRuntimeController.reviewProviderProposal(); },

@@ -14,15 +14,15 @@ const PROFILE_MISMATCH_REASONS = Object.freeze(["TEXT_ONLY_RECEIVED_LOCAL_PROPOS
 const PROFILE_CONTRACT_KEYS = Object.freeze(["promptSha256", "responseFormatSha256", "stableRequestBodySha256", "messageRoleOrder"]);
 const FROZEN_PROFILE_CONTRACTS = deepFreeze({
     textOnly: {
-        promptSha256: "1b9cdddc0947ea79ead0db83f6ed93f2962e21f99ec08ccbe35b0cef8db6f5b2",
-        responseFormatSha256: "85813dd8950079ab9c9542612aa0ad14b82c98e3f3e71f3a370561669e64cdf8",
-        stableRequestBodySha256: "64b794d240e85b8fa4f9af03a2cba9d46e448b46644e62bbaa2dc61cd4406d42",
+        promptSha256: "a97b9c367790eee8ae679e42005141d15cea7b8e4581fbc97dc0e5fb892f7045",
+        responseFormatSha256: "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+        stableRequestBodySha256: "4e45a9548c79c8a039f7def323a884a91db489a7a455fa5e4f4332ab69817de2",
         messageRoleOrder: ["system", "assistant", "user"]
     },
     explicitEditEligible: {
-        promptSha256: "8fb06e5b8798f58847045d36628391cf35879b70f9bfcf8d6fb6c5000bc1801a",
-        responseFormatSha256: "509230d09996e81eb3d4baddd332f3730707badd37d6b4d28b4499b6e6ca6b2f",
-        stableRequestBodySha256: "09c61d0aeadaec868c826fae905ed4ed767401664084845f05e7cfc541347f3f",
+        promptSha256: "0eeefc0440e0281f2c2da20245cebf7a9fbc6cf8adb5b08a271bf93c57f1d8c3",
+        responseFormatSha256: "2d49c9fe90803334b15c92ece839c785852550e96876a38e331799ad167ce258",
+        stableRequestBodySha256: "33b60eecf513814ee4e6d5b2075cfda0544d72f82066f8ecea12395ebc7d4315",
         messageRoleOrder: ["system", "assistant", "user"]
     }
 });
@@ -56,13 +56,14 @@ async function captureBoundedResponse(response, ceiling) {
         return Object.freeze({ text, oversized: false });
     } catch (error) { return Object.freeze({ text: null, oversized: false }); }
 }
-function responseFacts(rawText, status) {
+function responseFacts(rawText, status, requestProfile) {
     const empty = { httpStatus: Number.isInteger(status) ? status : null, finishReason: null, messageContent: null, reasoningContentNonEmpty: false, reasoningTokens: 0, observedEnvelopeType: null };
     if (typeof rawText !== "string") return empty;
     try {
         const wrapper = JSON.parse(rawText); const choice = wrapper && Array.isArray(wrapper.choices) ? wrapper.choices[0] : null; const message = choice && choice.message ? choice.message : {}; const usage = wrapper && wrapper.usage ? wrapper.usage : {}; const details = usage.completion_tokens_details || {};
         let observedEnvelopeType = "unknown";
-        if (typeof message.content === "string") {
+        if (requestProfile === "text-only" && message.role === "assistant" && typeof message.content === "string" && message.content.trim()) { observedEnvelopeType = "text"; }
+        else if (typeof message.content === "string") {
             try {
                 const canonical = JSON.parse(message.content); const type = canonical && canonical.envelope && canonical.envelope.type;
                 observedEnvelopeType = type === "text" || type === "localProposal" || type === "error" ? type : "unknown";
@@ -84,7 +85,7 @@ async function oneRun(protocol, args, caseDef, attempt, dependencies) {
     const providerOptions = { protocol, transport, runtime: runtime(), endpoint: qualification.ENDPOINT, model: args.model, requestProfile: caseDef.requestProfile, timeoutMs: args.timeout, responseFormatMode: "json-schema" };
     const provider = qualification.providerAdapterModule.createLocalOpenAICompatibleProvider(providerOptions);
     const started = provider.start({ messages: [{ role: "assistant", content: qualification.contextText(fixture) }, { role: "user", content: caseDef.message }], context: { contextId: "qualification-" + fixture.id + "-" + attempt, fingerprint: "sha256:" + "a".repeat(64), tier: 1 } });
-    const began = Date.now(); const output = await started.promise; const durationMs = Date.now() - began; const capture = await observed.capture; const facts = responseFacts(capture.oversized ? null : capture.text, observed.responseStatus);
+    const began = Date.now(); const output = await started.promise; const durationMs = Date.now() - began; const capture = await observed.capture; const facts = responseFacts(capture.oversized ? null : capture.text, observed.responseStatus, caseDef.requestProfile);
     const envelope = output && output.envelope; const providerErrorCode = envelope && envelope.type === "error" && typeof envelope.error.code === "string" ? envelope.error.code : null;
     let result = { kind: "invalid" }; let localOutcome = "provider-failure"; let mismatchReason = null;
     if (providerErrorCode === protocol.ERROR_CODES.PROVIDER_TIMEOUT) { result = { kind: "timeout" }; localOutcome = "timeout"; }

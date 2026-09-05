@@ -17,6 +17,12 @@ The product uses two runtimes:
 
 `CSXS/manifest.xml` loads `client/index.html`. Browser code reaches the host through `CSInterface.evalScript()`; `client/index.html` must not load JSX directly.
 
+## Current Vela milestone
+
+Vela **0.3.9 — Streaming Response & Reasoning Surface** is COMPLETE / SEALED / merged into dev. Full offline regression: 171/171 PASS; user-manual real AE acceptance: PASS; architecture amendment: NONE. Next: **0.3.10 — Context Architecture**, not yet implemented.
+
+Current roadmap: [docs/VELA_ROADMAP.md](docs/VELA_ROADMAP.md). Current implementation/handoff: [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md). Normative architecture: [docs/design/vela-agent-architecture.md](docs/design/vela-agent-architecture.md), frozen and unchanged. Feature milestones are independent of package VERSION/release tags.
+
 ## Current repository structure
 
 ```text
@@ -180,9 +186,9 @@ git config core.hooksPath .githooks
 
 The hook checks report freshness only; it does not modify or stage files.
 
-## Vela 0.3.1 boundaries
+## Vela activation and execution boundaries
 
-Vela ships in 0.3.1 as an **Experimental Preview**. The bounded `proposal-capable-union` profile is a transition mechanism for text or `set-opacity-v1` proposals when actionable Context exists; it is not autonomous Agent execution.
+Vela remains an **Experimental Preview**. Current TEXT_ONLY uses native assistant text; explicit supported edits use strict proposals and supported two-step objectives use strict logical plans. The retained `proposal-capable-union` is a compatibility profile, not the current ordinary-chat route. Streaming/reasoning presentation never creates execution authority.
 
 The trusted activation policy is owned by `client/js/vela/velaActivationPolicy.js` and remains:
 
@@ -198,25 +204,9 @@ The local Provider is disabled by default. Endpoint and Model ID may persist; ac
 
 Do not allow model output, transcript text, Settings values, readiness or local storage to mutate activation policy.
 
-The execution boundary remains:
+Complete structured terminals pass Parser, metadata/profile validation and Intent Gate before local proposal/logical-plan admission. The existing local Review / Authority / fresh Preflight / ExecutionAdapter / Host / Verify boundaries remain separate. Model output cannot execute directly. Models may supply only supported closed parameters (opacity or layer name) and a bounded logical declaration; executable plans, target identity, nonce, digest, authority and Host payload remain local/trusted.
 
-```text
-Provider
--> Parser
--> Profile mismatch check
--> Intent Gate
--> proposal-ready
--> Review
--> private Router
--> local candidate
--> Confirmation
--> Approve
--> Preflight
--> ExecutionAdapter
--> Host
-```
-
-Review, Confirmation and Host authority are separate. A `localProposal` must never execute automatically. The model may supply only the bounded opacity parameter for `set-opacity-v1`; target identity, plan, nonce, digest, authority and Host payload remain local/trusted.
+Raw reasoning is untrusted presentation-only data, not Observation, LLM context, Authority input or execution justification. Partial JSON is never a candidate. Already-satisfied mutation requires fresh local state and fresh Verify, not a model assertion. See [current implementation facts](docs/PROJECT_STATE.md) for exact defaults.
 
 Do not change Prompt, response schemas, Protocol, Parser, Request Branch Policy, Intent Gate, Proposal Router, Confirmation, Preflight, ExecutionAdapter, Host, capability contracts, qualification Rubric or frozen activation values during unrelated work.
 
@@ -257,7 +247,7 @@ AE smoke should verify the active path, not merely file presence. When behavior 
 
 Consult `docs/KNOWN_ISSUES.md` before opportunistic fixes.
 
-The accepted 0.3.1 and 0.3.2 release work is closed. Do not reopen that scope during post-release work without a new focused regression and explicit authorization. The 0.3.3 Runtime Foundation is release-prepared; frozen staging keeps actual Observation + Capability in 0.3.4 and Planning / Authority / TaskRun in 0.3.5+.
+Accepted historical release work and the 0.3.9 feature milestone are closed. Do not reopen those scopes without a new focused regression and explicit authorization. Historical staging remains evidence in closure records; current development sequencing is owned only by the [canonical roadmap](docs/VELA_ROADMAP.md).
 
 Other sensitive areas:
 

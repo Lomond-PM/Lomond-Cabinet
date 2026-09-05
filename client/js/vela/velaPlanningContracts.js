@@ -578,7 +578,10 @@
             step = plan.steps[i];
             assertNoForbiddenKeys(step, "AuthorizedPlan.step", { forbiddenMarkers: FORBIDDEN_AUTHORITY_MARKERS }, ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "authorized-plan");
             assertNoForbiddenKeys(step.targetScope, "AuthorizedPlan.targetScope", { forbiddenMarkers: FORBIDDEN_AUTHORITY_MARKERS }, ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "authorized-plan");
-            if (hasOwn(step, "policyDecision")) { assertPolicyDecisionClosed(step.policyDecision); }
+            if (hasOwn(step, "policyDecision")) {
+                assertPolicyDecisionClosed(step.policyDecision);
+                if (step.policyDecision.provenance && hasOwn(step.policyDecision.provenance, "candidateId") && step.policyDecision.provenance.candidateId !== step.candidateId) { fail(ERROR_CODES.AUTHORITY_CONTRACT_INVALID, "PolicyDecision candidate provenance does not match its AuthorizedPlan step.", { stage: "authorized-plan" }); }
+            }
             if (hasOwn(step, "authorityEvidence")) { assertAuthorityEvidenceNotDerived(step.authorityEvidence); }
         }
         return plan;

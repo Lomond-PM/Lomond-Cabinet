@@ -4,21 +4,24 @@
     var MODULE_NAME = "VelaAgentRuntimeOwner";
     var browserPage = !!(root && root.self === root && root["win" + "dow"] === root);
     var agentRuntime = null;
+    var agentDriver = null;
     var exported;
 
     if (browserPage) {
         agentRuntime = root.VelaAgentRuntime;
+        agentDriver = root.VelaAgentDriver;
     } else if (typeof module === "object" && module.exports) {
         agentRuntime = require("./velaAgentRuntime");
+        agentDriver = require("./velaAgentDriver");
     }
 
-    exported = Object.freeze(factory(agentRuntime));
+    exported = Object.freeze(factory(agentRuntime, agentDriver));
     if (browserPage && !Object.prototype.hasOwnProperty.call(root, MODULE_NAME)) {
         Object.defineProperty(root, MODULE_NAME, { configurable: false, enumerable: true, value: exported, writable: false });
     } else if (typeof module === "object" && module.exports) {
         module.exports = exported;
     }
-}(typeof self !== "undefined" ? self : this, function (defaultAgentRuntime) {
+}(typeof self !== "undefined" ? self : this, function (defaultAgentRuntime, defaultAgentDriver) {
     "use strict";
 
     var MODULE_REVISION = "vela-agent-runtime-owner-0.3.3-v1";
@@ -41,12 +44,14 @@
     function createOwner(options) {
         var settings = isPlainObject(options) ? options : {};
         var runtime = Object.prototype.hasOwnProperty.call(settings, "AgentRuntime") ? settings.AgentRuntime : defaultAgentRuntime;
+        var driverModule = Object.prototype.hasOwnProperty.call(settings, "AgentDriver") ? settings.AgentDriver : defaultAgentDriver;
         var reporter = typeof settings.onListenerError === "function" ? settings.onListenerError : function () {};
         var agent;
         var projection;
         var capabilityRuntime = null;
         var observationRuntime = null;
         var observationRefreshPromise = null;
+        var driver = null;
         var disposed = false;
 
         if (!runtime || typeof runtime.createAgent !== "function") {
@@ -63,6 +68,18 @@
             fail(ERROR_CODES.AGENT_OWNER_RUNTIME_UNAVAILABLE);
         }
         projection = agent.getProjection();
+
+        if (!driverModule || typeof driverModule.createAgentDriver !== "function") { fail(ERROR_CODES.AGENT_OWNER_RUNTIME_UNAVAILABLE); }
+        driver = driverModule.createAgentDriver({
+            beginTurn: function () { return agent.beginTurn(); },
+            observe: function () {
+                if (!observationRuntime) { return Promise.reject(Object.assign(new Error("OBSERVATION_PROVIDER_UNAVAILABLE"), { code: "OBSERVATION_PROVIDER_UNAVAILABLE" })); }
+                return observationRuntime.refresh();
+            },
+            getObservation: function () { return observationRuntime ? observationRuntime.getObservationSnapshot() : null; },
+            appendSessionEvent: function (event) { return agent.getSession().append(event); },
+            onListenerError: function (error, envelope) { try { reporter(error, envelope); } catch (ignored) {} }
+        });
 
         function attachObservationReadPort(observationReadPort) {
             var capability;
@@ -88,11 +105,41 @@
             attachObservationReadPort(settings.observationReadPort);
         }
 
+        function objectiveReviewProjection() {
+            var snapshot;
+            var review;
+            var resolution;
+            if (disposed || !driver) { return Object.freeze({ state: "inactive", reviewId: null, revision: null, capabilityId: null, beforeValue: null, proposedValue: null, outcome: null }); }
+            snapshot = driver.getSnapshot();
+            review = snapshot.suspendedReview;
+            resolution = snapshot.reviewResolution;
+            if (snapshot.state === "awaiting-review" && review) {
+                return Object.freeze({ state: "active", reviewId: review.reviewId, revision: review.revision, capabilityId: review.capabilityId, valueKind: review.capabilityId === "set-layer-name-v1" ? "string" : "number", beforeValue: review.beforeValue, proposedValue: review.capabilityId === "set-layer-name-v1" ? review.params.name : review.params.opacity, outcome: null });
+            }
+            if (snapshot.state === "awaiting-outcome" && resolution && resolution.outcome === "approved") {
+                return Object.freeze({ state: "resolved", reviewId: resolution.reviewId, revision: resolution.revision, capabilityId: null, beforeValue: null, proposedValue: null, outcome: resolution.outcome });
+            }
+            if (snapshot.state === "terminal" && snapshot.terminal && snapshot.terminal.outcome === "rejected" && resolution && resolution.outcome === "rejected") {
+                return Object.freeze({ state: "resolved", reviewId: resolution.reviewId, revision: resolution.revision, capabilityId: null, beforeValue: null, proposedValue: null, outcome: resolution.outcome });
+            }
+            return Object.freeze({ state: "inactive", reviewId: null, revision: null, capabilityId: null, beforeValue: null, proposedValue: null, outcome: null });
+        }
+        var objectiveReviewPort = Object.freeze({
+            getProjection: objectiveReviewProjection,
+            resolve: function (input) { if (disposed || !driver) { throw Object.assign(new Error("AGENT_OWNER_RUNTIME_UNAVAILABLE"), { code: "AGENT_OWNER_RUNTIME_UNAVAILABLE" }); } return driver.resolveReview(input); }
+        });
+
         return Object.freeze({
             getCurrentAgent: function () { return agent; },
             getSessionRuntime: function () { return disposed ? null : agent.getSession(); },
             getCurrentProjection: function () { return projection; },
             getObservationRuntime: function () { return observationRuntime; },
+            getAgentDriver: function () { return disposed ? null : driver; },
+            getObjectiveReviewPort: function () { return disposed ? null : objectiveReviewPort; },
+            attachAgentDriverRuntimePort: function (port) { return !disposed && driver ? driver.attachRuntimePort(port) : false; },
+            startObjective: function (input) { return !disposed && driver ? driver.startObjective(input) : Promise.reject(Object.assign(new Error("AGENT_OWNER_RUNTIME_UNAVAILABLE"), { code: "AGENT_OWNER_RUNTIME_UNAVAILABLE" })); },
+            resolveObjectiveReview: function (input) { if (disposed || !driver) { throw Object.assign(new Error("AGENT_OWNER_RUNTIME_UNAVAILABLE"), { code: "AGENT_OWNER_RUNTIME_UNAVAILABLE" }); } return driver.resolveReview(input); },
+            cancelObjective: function () { return !disposed && driver ? driver.cancel() : false; },
             attachObservationReadPort: attachObservationReadPort,
             activate: function () {
                 if (disposed) { return false; }
@@ -117,6 +164,7 @@
             dispose: function () {
                 if (disposed) { return false; }
                 disposed = true;
+                if (driver) { driver.dispose(); }
                 if (observationRuntime) { observationRuntime.dispose(); }
                 if (capabilityRuntime) { capabilityRuntime.dispose(); }
                 agent.dispose();

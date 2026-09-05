@@ -84,6 +84,10 @@
         control: Object.freeze([
             "task/started",
             "task/paused",
+            "task/review-required",
+            "task/review-rejected",
+            "task/completed",
+            "task/blocked",
             "task/cancelled",
             "permission/requested",
             "permission/decided",

@@ -24,6 +24,9 @@ function makeRealm(options) {
     let readCalls = 0;
     let undoBegins = 0;
     let undoEnds = 0;
+    let layerName = "Layer A";
+    let nameWrites = 0;
+    const undoLabels = [];
     const opacity = {
         propertyType: "property",
         matchName: "ADBE Opacity",
@@ -43,11 +46,11 @@ function makeRealm(options) {
         }
     };
     const transform = { propertyType: "named", matchName: "ADBE Transform Group", property(name) { return name === "ADBE Opacity" ? opacity : null; } };
-    const layer = { id: 17, index: 1, property(name) { return name === "ADBE Transform Group" ? transform : null; } };
+    const layer = { id: 17, index: 1, property(name) { return name === "ADBE Transform Group" ? transform : null; }, get name() { if (options.failNameRead && nameWrites > 0) { throw new Error("name read failed"); } return layerName; }, set name(next) { nameWrites += 1; if (options.failNameWrite) { throw new Error("name write failed"); } layerName = next; } };
     const comp = new CompItem();
     Object.assign(comp, { id: 9, layer(index) { return index === 1 ? layer : null; } });
     const project = { activeItem: comp };
-    const realm = { AEToolbox: {}, CompItem, PropertyType: { PROPERTY: "property", NAMED_GROUP: "named" }, app: { project, beginUndoGroup() { undoBegins += 1; }, endUndoGroup() { undoEnds += 1; } }, console };
+    const realm = { AEToolbox: {}, CompItem, PropertyType: { PROPERTY: "property", NAMED_GROUP: "named" }, app: { project, beginUndoGroup(label) { undoBegins += 1; undoLabels.push(label); }, endUndoGroup() { undoEnds += 1; } }, console };
     vm.createContext(realm);
     vm.runInContext(jsonSource, realm, { filename: "velaJson.jsx" });
     vm.runInContext(contextSource, realm, { filename: "velaContext.jsx" });
@@ -56,7 +59,7 @@ function makeRealm(options) {
         "function serialize(value) { if (AEToolbox.__failSerializeAfterSet === true) { throw hostError(\"HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE\"); } return json.stringifyBounded(value, { maxBytes: 4096, maxStringBytes: 512, maxDepth: 5, maxArrayLength: 16, maxObjectProperties: 16 }); }"
     ) : executionSource;
     vm.runInContext("(function(AEToolbox,VelaPropertyValueDigest,VelaVerifyExecutionAuthority){\n" + testExecutionSource + "\n}(AEToolbox,AEToolbox.__velaPropertyValueDigestV1,AEToolbox.__velaVerifyExecutionAuthorityV1));", realm, { filename: "velaExecution.jsx" });
-    return { realm, comp, layer, opacity, getValue: () => value, getSetCalls: () => setCalls, getReadCalls: () => readCalls, getUndoBegins: () => undoBegins, getUndoEnds: () => undoEnds };
+    return { realm, comp, layer, opacity, getValue: () => value, getSetCalls: () => setCalls, getName: () => layerName, getNameWrites: () => nameWrites, getUndoLabels: () => undoLabels.slice(), getReadCalls: () => readCalls, getUndoBegins: () => undoBegins, getUndoEnds: () => undoEnds };
 }
 function result(facade, request) { return JSON.parse(facade.handle(JSON.stringify(request))); }
 function authority(realm) {
@@ -64,6 +67,9 @@ function authority(realm) {
 }
 function request(authorityValue, digest, opacity) {
     return { protocol: "vela.host-execution-request.v1", schemaVersion: "1.0", requestId: "req_" + "c".repeat(32), sessionId: "session_" + "d".repeat(32), operation: "executeCapability", capabilityId: "set-opacity-v1", scope: { expectedHostInstanceId: authorityValue.hostInstanceId, expectedHostReloadEpoch: authorityValue.hostReloadEpoch, expectedProjectGeneration: 1, target: { itemId: 9, nativeLayerId: 17, layerIndex: 1, propertyPath: ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0], propertyMatchName: "ADBE Opacity", expectedValueDigest: digest }, params: { opacity } } };
+}
+function renameRequest(authorityValue, digest, name) {
+    return { protocol: "vela.host-execution-request.v1", schemaVersion: "1.0", requestId: "req_" + "e".repeat(32), sessionId: "session_" + "f".repeat(32), operation: "executeCapability", capabilityId: "set-layer-name-v1", scope: { expectedHostInstanceId: authorityValue.hostInstanceId, expectedHostReloadEpoch: authorityValue.hostReloadEpoch, expectedProjectGeneration: 1, target: { itemId: 9, nativeLayerId: 17, layerIndex: 1, targetKind: "layer-attribute", attribute: "name", expectedValueDigest: digest }, params: { name } } };
 }
 
 function run() {
@@ -97,6 +103,25 @@ function run() {
     const success = result(realm.AEToolbox.VelaExecution, request(current, digest, 100));
     check(success.ok === true && success.result.resultingValueDigest === realm.AEToolbox.__velaPropertyValueDigestV1(100), "Host executes the exact opacity capability and returns only the resulting digest.");
     check(fixture.getValue() === 100 && fixture.getSetCalls() === 1 && fixture.getUndoBegins() === 1 && fixture.getUndoEnds() === 1, "Successful execution performs exactly one setValue inside one closed Undo group.");
+    const renameFixture = makeRealm();
+    const renameAuthority = authority(renameFixture.realm);
+    const rename = result(renameFixture.realm.AEToolbox.VelaExecution, renameRequest(renameAuthority, renameFixture.realm.AEToolbox.__velaPropertyValueDigestV1("Layer A"), " 主标题 "));
+    check(rename.ok === true && rename.result.capabilityId === "set-layer-name-v1" && rename.result.valueKind === "string" && rename.result.resultingValueDigest === renameFixture.realm.AEToolbox.__velaPropertyValueDigestV1(" 主标题 "), "Host executes the closed layer-name capability and returns the canonical string digest.");
+    check(renameFixture.getName() === " 主标题 " && renameFixture.getNameWrites() === 1 && renameFixture.getUndoLabels().join(",") === "Vela: Rename Layer" && renameFixture.getUndoEnds() === 1, "Host preserves the exact Unicode name and performs one write in one rename Undo group.");
+    const renameStale = result(renameFixture.realm.AEToolbox.VelaExecution, renameRequest(renameAuthority, renameFixture.realm.AEToolbox.__velaPropertyValueDigestV1("Layer A"), "Other"));
+    check(renameStale.ok === false && renameStale.error.code === "HOST_EXECUTION_VALUE_MISMATCH" && renameStale.error.mutationCommitted === false && renameFixture.getNameWrites() === 1, "Layer-name CAS mismatch is a confirmed non-commit with no second write.");
+    const renameWriteFailure = makeRealm({ failNameWrite: true });
+    const renameWriteAuthority = authority(renameWriteFailure.realm);
+    const renameWriteResult = result(renameWriteFailure.realm.AEToolbox.VelaExecution, renameRequest(renameWriteAuthority, renameWriteFailure.realm.AEToolbox.__velaPropertyValueDigestV1("Layer A"), "Hero"));
+    check(renameWriteResult.ok === false && renameWriteResult.error.code === "HOST_EXECUTION_MUTATION_FAILED" && renameWriteResult.error.mutationCommitted === null && renameWriteFailure.getNameWrites() === 1 && renameWriteFailure.getUndoEnds() === 1, "Layer-name assignment failure preserves uncertain commit truth and closes Undo.");
+    const renamePostRead = makeRealm({ failNameRead: true });
+    const renamePostReadAuthority = authority(renamePostRead.realm);
+    const renamePostReadResult = result(renamePostRead.realm.AEToolbox.VelaExecution, renameRequest(renamePostReadAuthority, renamePostRead.realm.AEToolbox.__velaPropertyValueDigestV1("Layer A"), "Hero"));
+    check(renamePostReadResult.ok === false && renamePostReadResult.error.code === "HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE" && renamePostReadResult.error.mutationCommitted === true && renamePostRead.getNameWrites() === 1, "Layer-name post-write readback failure preserves committed true.");
+    const invalidRename = makeRealm();
+    const invalidRenameAuthority = authority(invalidRename.realm);
+    const invalidRenameResult = result(invalidRename.realm.AEToolbox.VelaExecution, renameRequest(invalidRenameAuthority, invalidRename.realm.AEToolbox.__velaPropertyValueDigestV1("Layer A"), "Bad\nName"));
+    check(invalidRenameResult.ok === false && invalidRenameResult.error.code === "HOST_EXECUTION_REQUEST_INVALID" && invalidRenameResult.error.mutationCommitted === false && invalidRename.getNameWrites() === 0, "Host rejects one invalid rename contract wiring case before mutation.");
     const mismatch = result(realm.AEToolbox.VelaExecution, request(current, "sha256:" + "0".repeat(64), 50));
     check(mismatch.ok === false && mismatch.error.code === "HOST_EXECUTION_VALUE_MISMATCH" && fixture.getSetCalls() === 1, "Expected-value digest mismatch fails before another mutation.");
     const drift = makeRealm();
@@ -118,15 +143,15 @@ function run() {
     const setThrow = makeRealm({ failSetValue: true });
     const setThrowAuthority = authority(setThrow.realm);
     const setThrowResult = result(setThrow.realm.AEToolbox.VelaExecution, request(setThrowAuthority, setThrow.realm.AEToolbox.__velaPropertyValueDigestV1(57.5), 70));
-    check(setThrowResult.ok === false && setThrowResult.error.code === "HOST_EXECUTION_MUTATION_FAILED" && setThrow.getSetCalls() === 1 && setThrow.getUndoBegins() === 1 && setThrow.getUndoEnds() === 1, "setValue failure is a non-retryable mutation failure with a closed Undo group.");
+    check(setThrowResult.ok === false && setThrowResult.error.code === "HOST_EXECUTION_MUTATION_FAILED" && setThrowResult.error.mutationCommitted === null && setThrow.getSetCalls() === 1 && setThrow.getUndoBegins() === 1 && setThrow.getUndoEnds() === 1, "setValue failure is a non-retryable mutation failure with unknown commit truth and a closed Undo group.");
     const postRead = makeRealm({ failReadAfterSet: true });
     const postReadAuthority = authority(postRead.realm);
     const postReadResult = result(postRead.realm.AEToolbox.VelaExecution, request(postReadAuthority, postRead.realm.AEToolbox.__velaPropertyValueDigestV1(57.5), 70));
-    check(postReadResult.ok === false && postReadResult.error.code === "HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE" && !postReadResult.result && postRead.getSetCalls() === 1 && postRead.getUndoBegins() === 1 && postRead.getUndoEnds() === 1, "Post-write digest read failure is committed-result unavailable and returns no success result.");
+    check(postReadResult.ok === false && postReadResult.error.code === "HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE" && postReadResult.error.mutationCommitted === true && !postReadResult.result && postRead.getSetCalls() === 1 && postRead.getUndoBegins() === 1 && postRead.getUndoEnds() === 1, "Post-write digest read failure is committed-result unavailable with committed truth and returns no success result.");
     const postSerialize = makeRealm({ failSerializeAfterSet: true });
     const postSerializeAuthority = authority(postSerialize.realm);
     const postSerializeResult = result(postSerialize.realm.AEToolbox.VelaExecution, request(postSerializeAuthority, postSerialize.realm.AEToolbox.__velaPropertyValueDigestV1(57.5), 70));
-    check(postSerializeResult.ok === false && postSerializeResult.error.code === "HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE" && !postSerializeResult.result && postSerialize.getSetCalls() === 1 && postSerialize.getUndoBegins() === 1 && postSerialize.getUndoEnds() === 1, "Post-write envelope serialization failure preserves committed-result unavailable semantics.");
+    check(postSerializeResult.ok === false && postSerializeResult.error.code === "HOST_EXECUTION_COMMITTED_RESULT_UNAVAILABLE" && postSerializeResult.error.mutationCommitted === true && !postSerializeResult.result && postSerialize.getSetCalls() === 1 && postSerialize.getUndoBegins() === 1 && postSerialize.getUndoEnds() === 1, "Post-write envelope serialization failure preserves committed-result unavailable and committed truth.");
     console.log("test-vela-execution-host: " + assertions + " assertions passed.");
 }
 try { run(); } catch (error) { console.error(error && error.stack ? error.stack : error); process.exitCode = 1; }

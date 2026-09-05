@@ -87,6 +87,7 @@
         PLAN: "plan",
         ACTION_CANDIDATE: "actionCandidate",
         LOCAL_PROPOSAL: "localProposal",
+        LOGICAL_PLAN_PROPOSAL: "logicalPlanProposal",
         ERROR: "error"
     });
     var ACTION_KINDS = Object.freeze(["tool", "expression", "script"]);
@@ -167,7 +168,7 @@
     var LOCAL_ID_KINDS = Object.freeze(["session", "plan", "cand", "res", "confirm", "req"]);
     var TARGET_KEYS = Object.freeze([
         "contextFingerprint", "contextTier", "compId", "targetId", "layerId", "layerIndex",
-        "layerIndices", "layerIds", "propertyPath", "propertyMatchName", "propertyValueDigest",
+        "layerIndices", "layerIds", "targetKind", "attribute", "propertyPath", "propertyMatchName", "propertyValueDigest",
         "expressionDigest", "name"
     ]);
     var RAW_ACTION_KEYS = Object.freeze([
@@ -288,6 +289,14 @@
         var sha256HexProvider = runtime.sha256Hex;
         var randomIdProvider = runtime.randomId;
         var nowProvider = runtime.now;
+        var logicalPlanValidator = null;
+        function attachLogicalPlanContracts(module) {
+            if (!module || !Object.isFrozen(module) || module.MODULE_REVISION !== "vela-logical-plan-contracts-v1" || typeof module.validateLogicalPlanProposal !== "function" || typeof module.isValidatedLogicalPlan !== "function") { throw makeRuntimeError(); }
+            if (logicalPlanValidator === module.validateLogicalPlanProposal) { return true; }
+            if (logicalPlanValidator) { throw makeRuntimeError(); }
+            logicalPlanValidator = module.validateLogicalPlanProposal;
+            return true;
+        }
         function utf8ByteLength(value) {
             if (typeof value !== "string") {
                 throw makeRuntimeError();
@@ -735,7 +744,7 @@
             if (target.contextTier !== undefined && (!Number.isInteger(target.contextTier) || target.contextTier < 0 || target.contextTier > 3)) {
                 fail(ERROR_CODES.PARAM_OUT_OF_RANGE, "The target context tier is invalid.");
             }
-            ["compId", "targetId", "layerId", "propertyMatchName", "propertyValueDigest", "expressionDigest", "name"].forEach(function (key) {
+            ["compId", "targetId", "layerId", "targetKind", "attribute", "propertyMatchName", "propertyValueDigest", "expressionDigest", "name"].forEach(function (key) {
                 if (target[key] !== undefined) { assertString(target[key], "target." + key); }
             });
             if (target.layerIndex !== undefined && (!Number.isInteger(target.layerIndex) || target.layerIndex < 1 || target.layerIndex > HARD_LIMITS.maxNumberAbs)) {
@@ -768,7 +777,7 @@
             }
             if (!target.targetId && !target.compId && !target.layerId && !target.layerIndex &&
                 !(target.layerIndices && target.layerIndices.length) && !(target.layerIds && target.layerIds.length) &&
-                !target.propertyPath && !target.propertyMatchName) {
+                !target.propertyPath && !target.propertyMatchName && !(target.targetKind === "layer-attribute" && target.attribute === "name")) {
                 fail(ERROR_CODES.UNKNOWN_TARGET, "The target has no stable explicit reference.");
             }
             return target;
@@ -889,14 +898,23 @@
         }
 
         function validateLocalProposal(proposal) {
+            var name;
             if (!isPlainObject(proposal)) { fail(ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Local proposal is invalid."); }
             assertNoUnknownKeys(proposal, ["capabilityId", "params"], "response.envelope.proposal");
-            if (proposal.capabilityId !== "set-opacity-v1") { fail(ERROR_CODES.UNKNOWN_TOOL_ACTION, "Local proposal capability is unavailable."); }
             if (!isPlainObject(proposal.params)) { fail(ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Local proposal parameters are invalid."); }
-            assertNoUnknownKeys(proposal.params, ["opacity"], "response.envelope.proposal.params");
-            assertFiniteNumber(proposal.params.opacity, "response.envelope.proposal.params.opacity");
-            if (Object.is(proposal.params.opacity, -0) || proposal.params.opacity < 0 || proposal.params.opacity > 100) {
-                fail(ERROR_CODES.PARAM_OUT_OF_RANGE, "Local proposal opacity is out of range.");
+            if (proposal.capabilityId === "set-opacity-v1") {
+                assertNoUnknownKeys(proposal.params, ["opacity"], "response.envelope.proposal.params");
+                if (Object.keys(proposal.params).length !== 1) { fail(ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Local proposal opacity is required."); }
+                assertFiniteNumber(proposal.params.opacity, "response.envelope.proposal.params.opacity");
+                if (Object.is(proposal.params.opacity, -0) || proposal.params.opacity < 0 || proposal.params.opacity > 100) { fail(ERROR_CODES.PARAM_OUT_OF_RANGE, "Local proposal opacity is out of range."); }
+            } else if (proposal.capabilityId === "set-layer-name-v1") {
+                assertNoUnknownKeys(proposal.params, ["name"], "response.envelope.proposal.params");
+                if (Object.keys(proposal.params).length !== 1) { fail(ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Local proposal layer name is required."); }
+                name = getOwnDataProperty(proposal.params, "name");
+                if (typeof name !== "string" || name.length === 0 || /^\s+$/.test(name) || /[\u0000-\u001f\u007f-\u009f]/.test(name)) { fail(ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Local proposal layer name is invalid."); }
+                if (utf8ByteLength(name) > 256) { fail(ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED, "Local proposal layer name exceeds its UTF-8 byte limit."); }
+            } else {
+                fail(ERROR_CODES.UNKNOWN_TOOL_ACTION, "Local proposal capability is unavailable.");
             }
             return proposal;
         }
@@ -922,6 +940,11 @@
                 if (schemaVersion !== SCHEMA_VERSION) { fail(ERROR_CODES.SCHEMA_VERSION_UNSUPPORTED, SAFE_ERROR_MESSAGES.SCHEMA_VERSION_UNSUPPORTED); }
                 assertNoUnknownKeys(envelope, ["type", "proposal"], "response.envelope");
                 validateLocalProposal(envelope.proposal);
+            } else if (envelope.type === ENVELOPE_TYPES.LOGICAL_PLAN_PROPOSAL) {
+                if (schemaVersion !== SCHEMA_VERSION) { fail(ERROR_CODES.SCHEMA_VERSION_UNSUPPORTED, SAFE_ERROR_MESSAGES.SCHEMA_VERSION_UNSUPPORTED); }
+                if (!logicalPlanValidator) { fail(ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, SAFE_ERROR_MESSAGES.RUNTIME_CAPABILITY_UNAVAILABLE); }
+                try { logicalPlanValidator(envelope); }
+                catch (logicalPlanError) { fail(ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Logical plan proposal is invalid."); }
             } else if (envelope.type === ENVELOPE_TYPES.ERROR) {
                 assertNoUnknownKeys(envelope, ["type", "error"], "response.envelope");
                 validateStructuredError(envelope.error);
@@ -1078,6 +1101,7 @@
             assertSafeJson: assertSafeJson,
             assertSchemaVersion: assertSchemaVersion,
             assertString: assertString,
+            attachLogicalPlanContracts: attachLogicalPlanContracts,
             canonicalStringify: canonicalStringify,
             cloneJson: cloneJson,
             createCanonicalErrorResponse: createCanonicalErrorResponse,

@@ -156,6 +156,11 @@ async function run() {
     const one = makeHarness(); const oneRecord = await acceptAndConfirm(one, [40]);
     const oneDone = await one.controller.run(oneRecord.waiting.executionPlanId);
     check(oneDone.taskState === "completed" && oneDone.executionArmed === false && one.state.value === 40 && one.executed.length === 1, "One-step run completes and disarms.");
+    check(Object.isFrozen(oneDone.executionReceipt) && oneDone.executionReceipt.committed === true && oneDone.executionReceipt.code === null, "PlanController.run returns a bounded final committed execution receipt.");
+
+    const noOp = makeHarness(); const noOpRecord = await acceptAndConfirm(noOp, [100]);
+    const noOpDone = await noOp.controller.run(noOpRecord.waiting.executionPlanId);
+    check(noOpDone.taskState === "completed" && noOpDone.executionArmed === false && noOp.executed.length === 0 && noOpDone.executionReceipt.committed === false && noOpDone.executionReceipt.satisfied === true && noOpDone.executionReceipt.code === null, "PlanController records an already-satisfied step as bounded noncommit success without calling the Host executor.");
 
     const two = makeHarness(); const twoRecord = await acceptAndConfirm(two, [50, 25]);
     const twoDone = await two.controller.run(twoRecord.waiting.executionPlanId);
@@ -166,7 +171,8 @@ async function run() {
     check((await eight.controller.run(eightRecord.waiting.executionPlanId)).taskState === "completed" && eight.executed.length === 8, "Bounded max-eight orchestration executes in order.");
 
     const failure = makeHarness(); const failureRecord = await acceptAndConfirm(failure, [50, 25, 10]); failure.state.failAt = 1;
-    await expectCode(failure.controller.run(failureRecord.waiting.executionPlanId), protocol.ERROR_CODES.PLAN_FAILED, "Execution failure rejects the run.");
+    let partialFailure = null; try { await failure.controller.run(failureRecord.waiting.executionPlanId); } catch (error) { partialFailure = error; }
+    check(partialFailure && partialFailure.code === protocol.ERROR_CODES.PLAN_FAILED && partialFailure.executionReceipt.committed === true, "Execution failure rejects while preserving an earlier committed step in the bounded run receipt.");
     const failedProgress = failure.controller.getProgress(failureRecord.waiting.executionPlanId);
     check(failedProgress.taskState === "blocked" && failedProgress.executionArmed === false && failedProgress.terminalErrorCode === protocol.ERROR_CODES.PLAN_FAILED && failure.executed.length === 2, "Failure blocks TaskRun and stops all later scheduling without retry.");
 
@@ -195,6 +201,11 @@ async function run() {
     check(betweenCancelled.taskState === "cancelled", "Cancel race disarms the TaskRun without force-aborting the in-flight step.");
     between.release(); await betweenRun;
     check(between.executed.length === 1 && between.state.value === 50, "In-flight mutation may finish, is not rolled back, and no next step schedules.");
+
+    const beforeDispatch = makeHarness(); const beforeDispatchRecord = await acceptAndConfirm(beforeDispatch, [50]); const beforeDispatchRun = beforeDispatch.controller.run(beforeDispatchRecord.waiting.executionPlanId); const beforeDispatchCancelled = beforeDispatch.controller.cancel(beforeDispatchRecord.waiting.executionPlanId, "cancelled");
+    check(beforeDispatchCancelled.taskState === "cancelled" && beforeDispatchCancelled.executionArmed === false, "Pre-dispatch cancel synchronously disarms TaskRun.");
+    const beforeDispatchDone = await beforeDispatchRun;
+    check(beforeDispatchDone.taskState === "cancelled" && beforeDispatchDone.executionReceipt.committed === false && beforeDispatchDone.executionReceipt.code === "AGENT_DRIVER_CANCELLED" && beforeDispatch.executed.length === 0, "Run skip before executeStep emits bounded noncommit truth with no Host execution.");
 
     const overlap = makeHarness(); const overlapRecord = await acceptAndConfirm(overlap, [50, 25]); overlap.state.deferAt = 0;
     const firstRun = overlap.controller.run(overlapRecord.waiting.executionPlanId); await flush(); await flush();

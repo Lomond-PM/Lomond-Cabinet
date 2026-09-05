@@ -17,7 +17,7 @@
         if (!validatorDependency || typeof validatorDependency.isTrustedActionValidatorForProtocol !== "function" || typeof validatorDependency.isTrustedAuthorityForProtocol !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaExecutionPreflight requires VelaValidator.");
         }
-        if (!capabilityContractsDependency || typeof capabilityContractsDependency.getLocalProjection !== "function" || typeof capabilityContractsDependency.resolveRegisteredAction !== "function" || typeof capabilityContractsDependency.validateCapabilityParams !== "function") {
+        if (!capabilityContractsDependency || typeof capabilityContractsDependency.getLocalProjection !== "function" || typeof capabilityContractsDependency.resolveRegisteredAction !== "function" || typeof capabilityContractsDependency.validateCapabilityParams !== "function" || typeof capabilityContractsDependency.getRepresentationLocalProjection !== "function" || typeof capabilityContractsDependency.validateRepresentationCapabilityParams !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaExecutionPreflight requires VelaCapabilityContracts.");
         }
         if (!planDependency || typeof planDependency.isTrustedPlanStoreForProtocol !== "function") {
@@ -26,7 +26,7 @@
         if (!guardDependency || typeof guardDependency.createExecutionGuard !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaExecutionPreflight requires VelaExecutionGuard.");
         }
-        if (!bridgeDependency || typeof bridgeDependency.isTrustedContextBridgeForProtocol !== "function" || typeof bridgeDependency.isTrustedReviewPortForProtocol !== "function") {
+        if (!bridgeDependency || typeof bridgeDependency.isTrustedContextBridgeForProtocol !== "function" || typeof bridgeDependency.isTrustedReviewPortForProtocol !== "function" || typeof bridgeDependency.createCommittedTargetVerificationPort !== "function") {
             throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE", "VelaExecutionPreflight requires VelaContextBridge.");
         }
         return { protocol: protocolDependency, capabilityContracts: capabilityContractsDependency, validator: validatorDependency, plan: planDependency, guard: guardDependency, bridge: bridgeDependency };
@@ -78,7 +78,7 @@
             throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
         }
         if (!protocol.isPlainObject(options)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Execution preflight options must be an object."); }
-        protocol.assertNoUnknownKeys(options, ["protocol", "actionValidator", "planStore", "contextBridge", "reviewPort", "getCurrentExecutionBinding", "executeValidatedAction"], "executionPreflight.options");
+        protocol.assertNoUnknownKeys(options, ["protocol", "actionValidator", "planStore", "contextBridge", "reviewPort", "getCurrentExecutionBinding", "executeValidatedAction", "onTerminalVerificationAvailable"], "executionPreflight.options");
 
         var actionValidator = protocol.getOwnDataProperty(options, "actionValidator");
         var planStore = protocol.getOwnDataProperty(options, "planStore");
@@ -99,8 +99,13 @@
         if (!bridgeModule.isTrustedReviewPortForProtocol(reviewPort, protocol)) {
             protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Execution preflight requires a trusted review port.");
         }
+        var committedTargetVerificationPort = bridgeModule.createCommittedTargetVerificationPort(contextBridge, protocol);
+        if (!bridgeModule.isTrustedCommittedTargetVerificationPortForProtocol(committedTargetVerificationPort, protocol)) {
+            protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Execution preflight requires a trusted committed-target verification port.");
+        }
         var getCurrentExecutionBinding = requireOwnFunction(protocol, options, "getCurrentExecutionBinding");
         var executeValidatedAction = requireOwnFunction(protocol, options, "executeValidatedAction");
+        var onTerminalVerificationAvailable = options.onTerminalVerificationAvailable === undefined ? null : requireOwnFunction(protocol, options, "onTerminalVerificationAvailable");
         var guard = guardModule.createExecutionGuard(planStore);
         if (!guard || typeof guard.check !== "function" || typeof guard.reserve !== "function" || typeof guard.complete !== "function" || typeof guard.fail !== "function" || typeof guard.abort !== "function") {
             protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Execution guard terminalization is unavailable.");
@@ -108,6 +113,7 @@
         var recordsByPlanId = new Map();
         var delegatedActivationPorts = new WeakMap();
         var executionCommitPorts = new WeakMap();
+        var committedVerificationsByPlanId = new Map();
         var active = false;
 
         function summarizeReview(bindingCapture, valueCapture) {
@@ -246,6 +252,10 @@
             };
         }
 
+        function layerNameSemanticTarget(contextFingerprint) {
+            return { contextFingerprint: contextFingerprint, contextTier: 3, targetKind: "layer-attribute", attribute: "name" };
+        }
+
         function semanticAction(action, contextFingerprint) {
             var target = assertSinglePropertyTarget(action);
             var validated = actionValidator.validateActionProposal(rawAction(action, semanticTarget(contextFingerprint, target.propertyPath, target.propertyMatchName)), { expectedContextFingerprint: contextFingerprint });
@@ -267,23 +277,23 @@
             targetScope = Object.prototype.hasOwnProperty.call(step, "targetScope") ? protocol.getOwnDataProperty(step, "targetScope") : undefined;
             if (targetScope !== undefined) {
                 if (!protocol.isPlainObject(targetScope)) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "Semantic target scope is invalid."); }
-                protocol.assertNoUnknownKeys(targetScope, ["type", "property"], "executionPreflight.step.targetScope");
-                if (targetScope.type !== "selected-layer" || targetScope.property !== "opacity") { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "Only selected-layer opacity scope is supported."); }
+                protocol.assertNoUnknownKeys(targetScope, ["type", "property", "attribute"], "executionPreflight.step.targetScope");
+                if (targetScope.type !== "selected-layer" || !((localCapabilityId === "set-opacity-v1" && targetScope.property === "opacity" && targetScope.attribute === undefined) || (localCapabilityId === "set-layer-name-v1" && targetScope.attribute === "name" && targetScope.property === undefined))) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "The selected-layer target scope is unsupported."); }
             }
-            capability = capabilityContracts.getLocalProjection(localCapabilityId);
-            localProposal = { registeredAction: capabilityContracts.resolveRegisteredAction(localCapabilityId) };
+            capability = localCapabilityId === "set-layer-name-v1" ? capabilityContracts.getRepresentationLocalProjection(localCapabilityId) : capabilityContracts.getLocalProjection(localCapabilityId);
+            localProposal = { registeredAction: localCapabilityId === "set-layer-name-v1" && capability ? capability.registeredAction : capabilityContracts.resolveRegisteredAction(localCapabilityId) };
             if (!capability || !localProposal.registeredAction || !protocol.isPlainObject(params)) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TOOL_ACTION, "Local proposal capability is unavailable."); }
-            try { validatedParams = capabilityContracts.validateCapabilityParams(capability, params); }
+            try { validatedParams = localCapabilityId === "set-layer-name-v1" ? capabilityContracts.validateRepresentationCapabilityParams(localCapabilityId, params) : capabilityContracts.validateCapabilityParams(capability, params); }
             catch (error) { protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Local capability parameters are invalid."); }
             var validated = actionValidator.validateActionProposal({
                 providerActionId: "local:" + localCapabilityId + ":" + requestId + ":" + index,
                 kind: "tool",
-                title: "Set Opacity",
-                rationale: "Local deterministic opacity proposal.",
+                title: localCapabilityId === "set-layer-name-v1" ? "Rename Layer" : "Set Opacity",
+                rationale: localCapabilityId === "set-layer-name-v1" ? "Local deterministic layer-name proposal." : "Local deterministic opacity proposal.",
                 risk: "write",
-                target: semanticTarget(contextFingerprint, ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0], "ADBE Opacity"),
+                target: localCapabilityId === "set-layer-name-v1" ? layerNameSemanticTarget(contextFingerprint) : semanticTarget(contextFingerprint, ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0], "ADBE Opacity"),
                 payload: { toolId: localProposal.registeredAction.toolId, actionId: localProposal.registeredAction.actionId, params: protocol.cloneJson(validatedParams, { maxBytes: protocol.HARD_LIMITS.maxActionPayloadBytes }) },
-                undoGroupLabel: "Vela: Set Opacity",
+                undoGroupLabel: localCapabilityId === "set-layer-name-v1" ? "Vela: Rename Layer" : "Vela: Set Opacity",
                 requiresConfirmation: true
             }, { expectedContextFingerprint: contextFingerprint });
             if (!validated || !actionValidator.authority.isValidatedAction(validated.action)) { protocol.fail(protocol.ERROR_CODES.VALIDATION_AUTHORITY_REQUIRED, "Validated local action provenance is invalid."); }
@@ -302,12 +312,12 @@
             targetScope = Object.prototype.hasOwnProperty.call(step, "targetScope") ? protocol.getOwnDataProperty(step, "targetScope") : undefined;
             if (targetScope !== undefined) {
                 if (!protocol.isPlainObject(targetScope)) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "Semantic target scope is invalid."); }
-                protocol.assertNoUnknownKeys(targetScope, ["type", "property"], "executionPreflight.step.targetScope");
-                if (targetScope.type !== "selected-layer" || targetScope.property !== "opacity") { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "Only selected-layer opacity scope is supported."); }
+                protocol.assertNoUnknownKeys(targetScope, ["type", "property", "attribute"], "executionPreflight.step.targetScope");
+                if (targetScope.type !== "selected-layer" || !((capabilityId === "set-opacity-v1" && targetScope.property === "opacity" && targetScope.attribute === undefined) || (capabilityId === "set-layer-name-v1" && targetScope.attribute === "name" && targetScope.property === undefined))) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TARGET, "The selected-layer target scope is unsupported."); }
             }
-            capability = capabilityContracts.getLocalProjection(capabilityId);
-            if (!capability || !capabilityContracts.resolveRegisteredAction(capabilityId) || !protocol.isPlainObject(params)) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TOOL_ACTION, "Local proposal capability is unavailable."); }
-            try { capabilityContracts.validateCapabilityParams(capability, params); }
+            capability = capabilityId === "set-layer-name-v1" ? capabilityContracts.getRepresentationLocalProjection(capabilityId) : capabilityContracts.getLocalProjection(capabilityId);
+            if (!capability || !(capabilityId === "set-layer-name-v1" ? capability.registeredAction : capabilityContracts.resolveRegisteredAction(capabilityId)) || !protocol.isPlainObject(params)) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TOOL_ACTION, "Local proposal capability is unavailable."); }
+            try { capabilityId === "set-layer-name-v1" ? capabilityContracts.validateRepresentationCapabilityParams(capabilityId, params) : capabilityContracts.validateCapabilityParams(capability, params); }
             catch (error) { protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Local capability parameters are invalid."); }
         }
 
@@ -324,6 +334,7 @@
                 if (steps !== undefined && (!Array.isArray(steps) || steps.length < 1 || steps.length > protocol.HARD_LIMITS.maxPlanSteps)) {
                     protocol.fail(protocol.ERROR_CODES.CAPABILITY_BUDGET_EXCEEDED, "Semantic execution steps exceed the protocol limit.");
                 }
+                if (steps !== undefined && steps.some(function (step) { return step && step.capabilityId === "set-layer-name-v1"; })) { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TOOL_ACTION, "Dormant layer-name execution is single-action only."); }
                 if (localProposal !== undefined) { prevalidateLocalStep(localProposal); }
                 if (steps !== undefined) { steps.forEach(prevalidateLocalStep); }
                 return freshBinding(protocol.getOwnDataProperty(input, "selectionOrderMeaningful")).then(function (bindingCapture) {
@@ -341,14 +352,22 @@
                         if (proposalReviewTarget.layerId !== layerId) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Validated action target is outside the reviewed selection."); }
                         actions = [semanticAction(initiallyValidated.action, bindingCapture.fingerprint)];
                     }
-                    var reviewTarget = { layerId: layerId, propertyPath: actions[0].target.propertyPath, propertyMatchName: actions[0].target.propertyMatchName, propertyValueDigest: null };
-                    return contextBridge.capturePropertyValues(bindingCapture, [{ layerId: layerId, propertyPath: reviewTarget.propertyPath }]).then(function (valueCapture) {
+                    var layerNameAction = actions[0].payload && actions[0].payload.actionId === "set-layer-name-v1";
+                    var reviewTarget = layerNameAction ? { layerId: layerId, targetKind: "layer-attribute", attribute: "name", propertyValueDigest: null } : { layerId: layerId, targetKind: "property", propertyPath: actions[0].target.propertyPath, propertyMatchName: actions[0].target.propertyMatchName, propertyValueDigest: null };
+                    var reviewCapture = layerNameAction ? contextBridge.captureLayerAttributeValue(bindingCapture, { layerId: layerId, targetKind: "layer-attribute", attribute: "name" }) : contextBridge.capturePropertyValues(bindingCapture, [{ layerId: layerId, propertyPath: reviewTarget.propertyPath }]);
+                    return reviewCapture.then(function (valueCapture) {
                         var review;
-                        if (!valueCapture.snapshot || !Array.isArray(valueCapture.snapshot.targets) || valueCapture.snapshot.targets.length !== 1) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Opacity review value capture is invalid."); }
-                        reviewTarget.propertyValueDigest = valueCapture.snapshot.targets[0].valueDigest;
-                        if (proposalReviewTarget) { assertValueCapture(valueCapture, proposalReviewTarget); }
-                        assertValueCapture(valueCapture, reviewTarget);
-                        review = summarizeReview(bindingCapture, valueCapture);
+                        var capturedItem = layerNameAction ? valueCapture.snapshot && valueCapture.snapshot.target : valueCapture.snapshot && valueCapture.snapshot.targets && valueCapture.snapshot.targets[0];
+                        if (!capturedItem) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Review value capture is invalid."); }
+                        reviewTarget.propertyValueDigest = capturedItem.valueDigest;
+                        if (layerNameAction) {
+                            if (capturedItem.layerId !== layerId || capturedItem.targetKind !== "layer-attribute" || capturedItem.attribute !== "name" || capturedItem.valueKind !== "string" || typeof capturedItem.value !== "string") { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Layer-name review value capture is invalid."); }
+                            review = protocol.deepFreeze({ valueKind: "string", beforeValue: capturedItem.value });
+                        } else {
+                            if (proposalReviewTarget) { assertValueCapture(valueCapture, proposalReviewTarget); }
+                            assertValueCapture(valueCapture, reviewTarget);
+                            review = summarizeReview(bindingCapture, valueCapture);
+                        }
                         var current = cloneCurrentBinding();
                         var plan = planStore.createPlan({
                             validatedActions: actions,
@@ -364,8 +383,9 @@
                             review: review,
                             contextFingerprint: bindingCapture.fingerprint,
                             lifecycle: "pending-confirmation",
+                            confirmedBaselineValidated: false,
                             steps: actions.map(function (action, index) {
-                                return { candidateId: plan.candidateIds[index], propertyPath: action.target.propertyPath, propertyMatchName: action.target.propertyMatchName, transient: null };
+                                return action.payload.actionId === "set-layer-name-v1" ? { candidateId: plan.candidateIds[index], targetKind: "layer-attribute", attribute: "name", confirmedValueDigest: null, transient: null } : { candidateId: plan.candidateIds[index], targetKind: "property", propertyPath: action.target.propertyPath, propertyMatchName: action.target.propertyMatchName, confirmedValueDigest: null, transient: null };
                             })
                         };
                         try { recordsByPlanId.set(plan.planId, record); }
@@ -401,14 +421,34 @@
                         markStale(record, record.steps[0].candidateId, "context-drift-before-confirmation");
                         throw protocolError(protocol, protocol.ERROR_CODES.CONTEXT_STALE);
                     }
-                    var current = cloneCurrentBinding();
-                    var confirmed = planStore.confirmPlan(planId, {
-                        contextFingerprint: fresh.fingerprint,
-                        settingsFingerprint: current.settingsFingerprint,
-                        permissionSnapshot: current.permissionSnapshot
+                    var layerId = selectedLayerId(fresh);
+                    return Promise.all(record.steps.map(function (step) {
+                        var capture = step.targetKind === "layer-attribute" ? contextBridge.captureLayerAttributeValue(fresh, { layerId: layerId, targetKind: "layer-attribute", attribute: "name" }) : contextBridge.capturePropertyValues(fresh, [{ layerId: layerId, propertyPath: step.propertyPath }]);
+                        return capture.then(function (valueCapture) {
+                            var item = step.targetKind === "layer-attribute" ? valueCapture.snapshot && valueCapture.snapshot.target : valueCapture.snapshot && valueCapture.snapshot.targets && valueCapture.snapshot.targets[0];
+                            if (!item) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Confirmation value capture is invalid."); }
+                            protocol.assertFingerprint(item.valueDigest, "executionPreflight.confirmedValueDigest");
+                            if (step.targetKind !== "layer-attribute") { assertValueCapture(valueCapture, {
+                                layerId: layerId,
+                                propertyPath: step.propertyPath,
+                                propertyMatchName: step.propertyMatchName,
+                                propertyValueDigest: item.valueDigest
+                            }); }
+                            return item.valueDigest;
+                        });
+                    })).then(function (confirmedValueDigests) {
+                        var current = cloneCurrentBinding();
+                        var confirmed = planStore.confirmPlan(planId, {
+                            contextFingerprint: fresh.fingerprint,
+                            settingsFingerprint: current.settingsFingerprint,
+                            permissionSnapshot: current.permissionSnapshot
+                        });
+                        confirmedValueDigests.forEach(function (digest, index) {
+                            record.steps[index].confirmedValueDigest = digest;
+                        });
+                        record.lifecycle = "confirmed";
+                        return confirmed;
                     });
-                    record.lifecycle = "confirmed";
-                    return confirmed;
                 });
             });
         }
@@ -469,10 +509,31 @@
         function normalizeExecutorResult(value) {
             protocol.assertSafeJson(value);
             if (!protocol.isPlainObject(value)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Executor result is invalid."); }
-            protocol.assertNoUnknownKeys(value, ["ok", "summary"], "executionPreflight.executorResult");
+            protocol.assertNoUnknownKeys(value, ["ok", "committed", "summary"], "executionPreflight.executorResult");
             if (typeof protocol.getOwnDataProperty(value, "ok") !== "boolean") { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Executor result is invalid."); }
+            if (value.committed !== undefined && typeof protocol.getOwnDataProperty(value, "committed") !== "boolean") { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Executor commit truth is invalid."); }
             if (value.summary !== undefined) { protocol.assertJsonBudget(value.summary, { maxBytes: protocol.HARD_LIMITS.maxErrorDetailsJsonBytes }); }
-            return protocol.deepFreeze(protocol.cloneJson(value, { maxBytes: protocol.HARD_LIMITS.maxErrorDetailsJsonBytes }));
+            var normalized = protocol.cloneJson(value, { maxBytes: protocol.HARD_LIMITS.maxErrorDetailsJsonBytes });
+            if (normalized.committed === undefined) { normalized.committed = normalized.ok === true; }
+            return protocol.deepFreeze(normalized);
+        }
+
+        function mutationExpectation(action) {
+            var payload = action && action.payload;
+            if (!payload || payload.toolId !== "vela" || !payload.params) { return null; }
+            if (payload.actionId === "set-opacity-v1") { return { valueKind: "number", value: payload.params.opacity }; }
+            if (payload.actionId === "set-layer-name-v1") { return { valueKind: "string", value: payload.params.name }; }
+            return null;
+        }
+
+        function capturedMutationValue(item, expectation, bindingCapture, valueCapture) {
+            var summary;
+            if (!item || !expectation || item.valueKind !== expectation.valueKind) { return undefined; }
+            if (expectation.valueKind === "string") { return item.value; }
+            if (!valueCapture || !valueCapture.snapshot || !Array.isArray(valueCapture.snapshot.targets) || valueCapture.snapshot.targets.length !== 1) { return undefined; }
+            try { summary = summarizeReview(bindingCapture, valueCapture); }
+            catch (ignored) { return undefined; }
+            return summary.beforeValue;
         }
 
         function executeStep(input) {
@@ -495,22 +556,98 @@
                 return freshBinding(record.selectionOrderMeaningful).then(function (freshBindingCapture) {
                     if (freshBindingCapture.fingerprint !== record.contextFingerprint) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "The reviewed target selection is stale."); }
                     var layerId = selectedLayerId(freshBindingCapture);
-                    return contextBridge.capturePropertyValues(freshBindingCapture, [{ layerId: layerId, propertyPath: stepRecord.propertyPath }]).then(function (freshValueCapture) {
-                        var item = freshValueCapture.snapshot && freshValueCapture.snapshot.targets && freshValueCapture.snapshot.targets[0];
-                        if (!item) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Step value capture is invalid."); }
-                        var boundTarget = {
-                            contextFingerprint: freshBindingCapture.fingerprint,
-                            contextTier: 3,
-                            layerId: layerId,
-                            propertyPath: stepRecord.propertyPath,
-                            propertyMatchName: stepRecord.propertyMatchName,
-                            propertyValueDigest: item.valueDigest
-                        };
-                        assertValueCapture(freshValueCapture, boundTarget);
+                    function captureStepValue(capturedStep) {
+                        var capture = capturedStep.targetKind === "layer-attribute" ? contextBridge.captureLayerAttributeValue(freshBindingCapture, { layerId: layerId, targetKind: "layer-attribute", attribute: "name" }) : contextBridge.capturePropertyValues(freshBindingCapture, [{ layerId: layerId, propertyPath: capturedStep.propertyPath }]);
+                        return capture.then(function (freshValueCapture) {
+                            var item = capturedStep.targetKind === "layer-attribute" ? freshValueCapture.snapshot && freshValueCapture.snapshot.target : freshValueCapture.snapshot && freshValueCapture.snapshot.targets && freshValueCapture.snapshot.targets[0];
+                            if (!item) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Step value capture is invalid."); }
+                            var capturedTarget = capturedStep.targetKind === "layer-attribute" ? {
+                                contextFingerprint: freshBindingCapture.fingerprint,
+                                contextTier: 3,
+                                layerId: layerId,
+                                targetKind: "layer-attribute",
+                                attribute: "name",
+                                propertyValueDigest: item.valueDigest
+                            } : {
+                                contextFingerprint: freshBindingCapture.fingerprint,
+                                contextTier: 3,
+                                layerId: layerId,
+                                propertyPath: capturedStep.propertyPath,
+                                propertyMatchName: capturedStep.propertyMatchName,
+                                propertyValueDigest: item.valueDigest
+                            };
+                            if (capturedStep.targetKind !== "layer-attribute") { assertValueCapture(freshValueCapture, capturedTarget); }
+                            return { bindingCapture: freshBindingCapture, valueCapture: freshValueCapture, item: item, boundTarget: capturedTarget };
+                        });
+                    }
+                    var baselineValidation = record.authorityMode !== "delegated" && record.confirmedBaselineValidated !== true;
+                    var uniqueBaselineTargets = [];
+                    var baselineTargetIndexes = [];
+                    if (baselineValidation) {
+                        var baselineTargetKeys = Object.create(null);
+                        record.steps.forEach(function (capturedStep) {
+                            if (capturedStep.targetKind === "layer-attribute") { return; }
+                            var key = layerId + ":" + protocol.canonicalStringify(capturedStep.propertyPath);
+                            if (baselineTargetKeys[key] === undefined) {
+                                baselineTargetKeys[key] = uniqueBaselineTargets.length;
+                                uniqueBaselineTargets.push({ layerId: layerId, propertyPath: capturedStep.propertyPath });
+                            }
+                            baselineTargetIndexes.push(baselineTargetKeys[key]);
+                        });
+                    }
+                    var captures = baselineValidation && stepRecord.targetKind === "layer-attribute" ? captureStepValue(stepRecord).then(function (capture) { return [capture]; }) : baselineValidation ? contextBridge.capturePropertyValues(freshBindingCapture, uniqueBaselineTargets).then(function (freshValueCapture) {
+                        var targets = freshValueCapture.snapshot && freshValueCapture.snapshot.targets;
+                        if (!freshValueCapture || !Object.isFrozen(freshValueCapture) || freshValueCapture.tier !== 3 || freshValueCapture.purpose !== "property-value-binding" || freshValueCapture.executable !== true ||
+                                !Array.isArray(targets) || targets.length !== uniqueBaselineTargets.length) {
+                            protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Confirmed baseline capture is invalid.");
+                        }
+                        protocol.assertFingerprint(freshValueCapture.fingerprint, "executionPreflight.valueCapture.fingerprint");
+                        return record.steps.map(function (capturedStep, index) {
+                            var item = targets[baselineTargetIndexes[index]];
+                            if (!item || item.layerId !== layerId || protocol.canonicalStringify(item.propertyPath) !== protocol.canonicalStringify(capturedStep.propertyPath) || item.propertyMatchName !== capturedStep.propertyMatchName) {
+                                protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Confirmed baseline target is invalid.");
+                            }
+                            protocol.assertFingerprint(item.valueDigest, "executionPreflight.valueCapture.valueDigest");
+                            return {
+                                bindingCapture: freshBindingCapture,
+                                valueCapture: freshValueCapture,
+                                item: item,
+                                boundTarget: {
+                                    contextFingerprint: freshBindingCapture.fingerprint,
+                                    contextTier: 3,
+                                    layerId: layerId,
+                                    propertyPath: capturedStep.propertyPath,
+                                    propertyMatchName: capturedStep.propertyMatchName,
+                                    propertyValueDigest: item.valueDigest
+                                }
+                            };
+                        });
+                    }) : captureStepValue(stepRecord).then(function (capture) { return [capture]; });
+                    return captures.then(function (capturedValues) {
+                        var selectedCapture = baselineValidation ? capturedValues[stepIndex] : capturedValues[0];
+                        if (baselineValidation) {
+                            capturedValues.forEach(function (capture, index) {
+                                var confirmedDigest = record.steps[index].confirmedValueDigest;
+                                if (typeof confirmedDigest !== "string") { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "Confirmed value baseline is unavailable."); }
+                                protocol.assertFingerprint(confirmedDigest, "executionPreflight.confirmedValueDigest");
+                                if (capture.item.valueDigest !== confirmedDigest) { protocol.fail(protocol.ERROR_CODES.CONTEXT_STALE, "The confirmed property value is stale."); }
+                            });
+                        }
+                        var freshValueCapture = selectedCapture.valueCapture;
+                        var boundTarget = selectedCapture.boundTarget;
                         var validatedBound = actionValidator.validateActionProposal(rawAction(candidate.action, boundTarget, candidate.action.providerActionId + ":jit:" + stepIndex), { expectedContextFingerprint: freshBindingCapture.fingerprint });
                         if (!validatedBound || !actionValidator.authority.isValidatedAction(validatedBound.action)) { protocol.fail(protocol.ERROR_CODES.VALIDATION_AUTHORITY_REQUIRED, "JIT-bound action provenance is invalid."); }
                         stepRecord.transient = { action: validatedBound.action, bindingCapture: freshBindingCapture, valueCapture: freshValueCapture };
-                        return { bindingCapture: freshBindingCapture, valueCapture: freshValueCapture };
+                        var trustedExecutionContext = Object.freeze({ bindingCapture: freshBindingCapture, valueCapture: freshValueCapture });
+                        var expectation = mutationExpectation(validatedBound.action);
+                        var supportsCommittedVerification = Boolean(expectation);
+                        return {
+                            bindingCapture: freshBindingCapture,
+                            valueCapture: freshValueCapture,
+                            baselineValidation: baselineValidation,
+                            verificationCandidate: supportsCommittedVerification ? committedTargetVerificationPort.prepare(validatedBound.action, trustedExecutionContext) : null,
+                            alreadySatisfied: Boolean(expectation && capturedMutationValue(selectedCapture.item, expectation, freshBindingCapture, selectedCapture.valueCapture) === expectation.value)
+                        };
                     });
                 }).then(function (fresh) {
                     var freshBindingCapture = fresh.bindingCapture;
@@ -532,6 +669,7 @@
                     var checked = guard.check(record.planId, stepIndex, current);
                     if (!checked.ok) { throw protocolError(protocol, checked.error.code); }
                     var reserved = guard.reserve(record.planId, stepIndex, current);
+                    if (fresh.baselineValidation) { record.confirmedBaselineValidated = true; }
                     record.lifecycle = "executing";
                     var terminalized = false;
                     var action = stepRecord.transient.action;
@@ -540,6 +678,23 @@
                        value is never cloned, serialized, returned, or stored by
                        PlanStore; the execution adapter must validate it again. */
                     var trustedExecutionContext = Object.freeze({ bindingCapture: stepRecord.transient.bindingCapture, valueCapture: stepRecord.transient.valueCapture });
+                    var verificationCandidate = fresh.verificationCandidate;
+
+                    function settleVerification(available) {
+                        var previous = committedVerificationsByPlanId.get(record.planId);
+                        if (previous) { committedTargetVerificationPort.discard(previous); committedVerificationsByPlanId.delete(record.planId); }
+                        if (available === true && verificationCandidate && onTerminalVerificationAvailable) {
+                            committedTargetVerificationPort.activate(verificationCandidate);
+                            committedVerificationsByPlanId.set(record.planId, verificationCandidate);
+                            try { onTerminalVerificationAvailable(Object.freeze({ planId: record.planId })); }
+                            catch (ownerError) {
+                                committedVerificationsByPlanId.delete(record.planId);
+                                committedTargetVerificationPort.discard(verificationCandidate);
+                            }
+                        } else if (verificationCandidate) {
+                            committedTargetVerificationPort.discard(verificationCandidate);
+                        }
+                    }
 
                     if (record.authorityMode === "delegated") {
                         var commitPort = input.commitPort;
@@ -556,6 +711,7 @@
                     function failTerminal(error) {
                         var stableError = stableExecutorError(error);
                         if (terminalized) { throw stableError; }
+                        settleVerification(error && error.committed === true ? true : null);
                         try {
                             guard.fail(reserved.reservation, stableError);
                             terminalized = true;
@@ -580,6 +736,7 @@
                         if (terminalized) { throw protocolError(protocol, protocol.ERROR_CODES.PLAN_FAILED); }
                         try {
                             var candidate = guard.complete(reserved.reservation, result);
+                            settleVerification(result.ok === true);
                             terminalized = true;
                             stepRecord.transient = null;
                             var completedPlan = planStore.getPlanView(record.planId);
@@ -597,6 +754,8 @@
                         catch (error) { return failTerminal(error); }
                         return completeTerminal(result);
                     }
+
+                    if (fresh.alreadySatisfied) { return completeReturned({ ok: true, committed: false, summary: { disposition: "already-satisfied" } }); }
 
                     var returned;
                     try { returned = executeValidatedAction(action, metadata, trustedExecutionContext); }
@@ -617,8 +776,63 @@
             var reason = protocol.getOwnDataProperty(input, "reason");
             if (reason !== undefined && typeof reason !== "string") { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Bound plan discard reason is invalid."); }
             var view = planStore.discardPlan(planId, reason);
+            var verification = committedVerificationsByPlanId.get(planId);
+            if (verification) { committedTargetVerificationPort.discard(verification); committedVerificationsByPlanId.delete(planId); }
             clearRecord(record, "discarded");
             return view;
+        }
+
+        function verifyCommittedValue(input) {
+            if (!protocol.isPlainObject(input)) { return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED)); }
+            try { protocol.assertNoUnknownKeys(input, ["planId", "capabilityId", "expectedValue"], "executionPreflight.verifyCommittedValue"); }
+            catch (error) { return Promise.reject(error); }
+            var planId;
+            var valueKind;
+            try {
+                planId = protocol.assertNonEmptyString(input.planId, "executionPreflight.planId", protocol.HARD_LIMITS.maxLocalIdBytes);
+                if (input.capabilityId === "set-opacity-v1") {
+                    protocol.assertFiniteNumber(input.expectedValue, "executionPreflight.expectedValue");
+                    if (input.expectedValue < 0 || input.expectedValue > 100) { protocol.fail(protocol.ERROR_CODES.PARAM_OUT_OF_RANGE, "Expected opacity is invalid."); }
+                    valueKind = "number";
+                } else if (input.capabilityId === "set-layer-name-v1") {
+                    capabilityContracts.validateRepresentationCapabilityParams("set-layer-name-v1", { name: input.expectedValue });
+                    valueKind = "string";
+                } else { protocol.fail(protocol.ERROR_CODES.UNKNOWN_TOOL_ACTION, "Committed verification capability is unsupported."); }
+            } catch (error) { return Promise.reject(error); }
+            var verification = committedVerificationsByPlanId.get(planId);
+            committedVerificationsByPlanId.delete(planId);
+            if (!verification) { return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE)); }
+            return committedTargetVerificationPort.observe(verification).then(function (observation) {
+                if (observation.valueKind !== valueKind) { throw protocolError(protocol, protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE); }
+                return protocol.deepFreeze({ fresh: observation.fresh === true, valueKind: valueKind, value: observation.value, valueDigest: observation.valueDigest, matches: observation.value === input.expectedValue, observationRevision: observation.observationId, code: null });
+            });
+        }
+
+        function verifyCommittedOpacity(input) {
+            if (!protocol.isPlainObject(input)) { return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED)); }
+            try { protocol.assertNoUnknownKeys(input, ["planId", "expectedOpacity"], "executionPreflight.verifyCommittedOpacity"); }
+            catch (error) { return Promise.reject(error); }
+            return verifyCommittedValue({ planId: input.planId, capabilityId: "set-opacity-v1", expectedValue: input.expectedOpacity }).then(function (result) {
+                return protocol.deepFreeze({ fresh: result.fresh, opacity: result.value, matches: result.matches, observationRevision: result.observationRevision, code: result.code });
+            });
+        }
+
+        function invalidateCommittedVerification(input) {
+            var planId = protocol.assertNonEmptyString(input && input.planId, "executionPreflight.planId", protocol.HARD_LIMITS.maxLocalIdBytes);
+            var verification = committedVerificationsByPlanId.get(planId);
+            committedVerificationsByPlanId.delete(planId);
+            if (verification) { committedTargetVerificationPort.discard(verification); }
+            return Boolean(verification);
+        }
+
+        function invalidateAllCommittedVerifications() {
+            var invalidated = 0;
+            committedVerificationsByPlanId.forEach(function (verification) {
+                committedTargetVerificationPort.discard(verification);
+                invalidated += 1;
+            });
+            committedVerificationsByPlanId.clear();
+            return invalidated;
         }
 
         return Object.freeze({
@@ -628,6 +842,10 @@
             createExecutionCommitPort: createExecutionCommitPort,
             confirmBoundPlan: confirmBoundPlan,
             executeStep: executeStep,
+            verifyCommittedValue: verifyCommittedValue,
+            verifyCommittedOpacity: verifyCommittedOpacity,
+            invalidateCommittedVerification: invalidateCommittedVerification,
+            invalidateAllCommittedVerifications: invalidateAllCommittedVerifications,
             discardBoundPlan: discardBoundPlan
         });
     }

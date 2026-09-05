@@ -9,6 +9,7 @@ const vm = require("vm");
 const protocolModule = require("../client/js/vela/velaProtocol");
 const providerModule = require("../client/js/vela/velaProviderAdapter");
 const requestBranchPolicy = require("../client/js/vela/velaProviderRequestBranchPolicy");
+const logicalPlanContracts = require("../client/js/vela/velaLogicalPlanContracts");
 
 let assertions = 0;
 let protocolSeed = 0;
@@ -85,6 +86,7 @@ function requestIdFromTransport(request) {
 }
 
 function canonicalContent(protocol, request, envelope, metadata) {
+    if (!request.body.response_format && (!envelope || envelope.type === "text")) return envelope ? envelope.text : "ok";
     metadata = metadata || {};
     return JSON.stringify({
         protocol: metadata.protocol || protocol.PROTOCOLS.RESPONSE,
@@ -170,11 +172,12 @@ function createHarness(options) {
         transport,
         endpoint: options.endpoint,
         model: options.model || "Qwen3.5-4B-Q6_K",
-        requestProfile: options.requestProfile === undefined ? requestBranchPolicy.PROFILES.TEXT_ONLY : options.requestProfile,
+        requestProfile: options.requestProfile === undefined ? requestBranchPolicy.PROFILES.PROPOSAL_CAPABLE_UNION : options.requestProfile,
         timeoutMs: options.timeoutMs === undefined ? 120000 : options.timeoutMs,
         responseFormatMode: options.responseFormatMode === undefined ? "json-schema" : options.responseFormatMode,
         runtime: runtimeBundle.runtime
     };
+    if (config.requestProfile === requestBranchPolicy.PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE) { clock.protocol.attachLogicalPlanContracts(logicalPlanContracts); }
     if (config.endpoint === undefined) delete config.endpoint;
     const provider = providerModule.createLocalOpenAICompatibleProvider(config);
     return { provider, protocol: clock.protocol, advance: clock.advance, scheduler, runtimeBundle, calls, config, transport };
@@ -252,14 +255,14 @@ async function run() {
     check(Object.isFrozen(sent) && Object.isFrozen(sent.headers) && Object.isFrozen(sent.body), "The complete transport request must be frozen.");
     equal(sent.body.response_format.type, "json_schema", "Production requests must use the LM Studio json_schema response format.");
     const responseSchema = sent.body.response_format.json_schema;
-    check(responseSchema && responseSchema.name === "vela_text_response" && responseSchema.strict === true, "The text profile must have the trusted LM Studio wrapper.");
+    check(responseSchema && responseSchema.name === "vela_bounded_union_response" && responseSchema.strict === true, "The text profile must have the trusted LM Studio wrapper.");
     check(responseSchema.schema.type === "object" && responseSchema.schema.additionalProperties === false, "The canonical response root must be closed.");
     equal(responseSchema.schema.properties.protocol.enum[0], normal.protocol.PROTOCOLS.RESPONSE, "Schema protocol metadata must match the trusted protocol.");
     equal(responseSchema.schema.properties.schemaVersion.enum[0], normal.protocol.SCHEMA_VERSION, "Schema version metadata must match the trusted protocol.");
     equal(responseSchema.schema.properties.requestId.enum[0], handle.requestId, "Schema request ids must bind the current local request.");
     equal(responseSchema.schema.properties.provider.enum[0], "lmstudio", "Schema provider metadata must be local.");
     equal(responseSchema.schema.properties.model.enum[0], "Qwen3.5-4B-Q6_K", "Schema model metadata must bind the configured model.");
-    const textVariant = responseSchema.schema.properties.envelope;
+    const textVariant = responseSchema.schema.properties.envelope.oneOf[0];
     check(!Object.prototype.hasOwnProperty.call(textVariant, "oneOf") && textVariant.properties.type.enum[0] === "text" && textVariant.properties.text.minLength === 1, "The text profile schema permits only a closed text envelope.");
     equal(textVariant.properties.text.maxLength, 1024, "LM Studio text generation must use the bounded generation cap.");
     const schemaMaxLengths = collectSchemaValues(responseSchema.schema, "maxLength", []);
@@ -273,7 +276,7 @@ async function run() {
     const prompt = sent.body.messages[0].content;
     const proposal57Example = JSON.stringify({ protocol: normal.protocol.PROTOCOLS.RESPONSE, schemaVersion: normal.protocol.SCHEMA_VERSION, requestId: handle.requestId, provider: "lmstudio", model: "Qwen3.5-4B-Q6_K", envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } } });
     const decisionTable = "DECISION: text by default. Return localProposal only for a direct command to set the current or selected layer opacity to one explicit 0–100 target. Return text for greetings, questions, current-value queries, explanations, suggestions, uncertainty, hypotheticals, negations, relative adjustments, ambiguity, or no one target.";
-    check(prompt.includes("text-only") && prompt.includes("localProposal is invalid") && !prompt.includes("candidateId") && !prompt.includes("planId"), "Text prompt has only its local response authority and no execution architecture.");
+    check(prompt.includes("proposal-capable-union") && prompt.includes("localProposal") && !prompt.includes("candidateId") && !prompt.includes("planId"), "Text prompt has only its local response authority and no execution architecture.");
 
     const rebound = createHarness({ model: "another-local-model" });
     const reboundHandle = rebound.provider.start(input());
@@ -292,12 +295,20 @@ async function run() {
         { envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } }, profile: requestBranchPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE },
         { envelope: { type: "text", text: "ok" }, profile: requestBranchPolicy.PROFILES.PROPOSAL_CAPABLE_UNION },
         { envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } }, profile: requestBranchPolicy.PROFILES.PROPOSAL_CAPABLE_UNION }
+        ,{ envelope: { type: "logicalPlanProposal", steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 47 } }, { capabilityId: "set-layer-name-v1", params: { name: "Hero" } }] }, profile: requestBranchPolicy.PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE }
     ];
     for (const item of envelopes) {
         const envelope = item.envelope;
         const harness = createHarness({ requestProfile: item.profile, responder: (request) => Promise.resolve(transportResult(wrapper(canonicalContent(base.protocol, request, envelope)))) });
         const response = await harness.provider.start(input()).promise;
         equal(response.envelope.type, envelope.type, envelope.type + " envelopes must pass through the parser.");
+        if (item.profile === requestBranchPolicy.PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE) {
+            const stepsSchema = harness.calls[0].body.response_format.json_schema.schema.properties.envelope.properties.steps;
+            check(!Object.prototype.hasOwnProperty.call(stepsSchema, "prefixItems") && typeof stepsSchema.items === "object" && stepsSchema.items !== null, "Bounded logical schema uses an LM Studio-compatible object items schema without tuple prefixItems or a boolean items schema.");
+            check(stepsSchema.minItems === 2 && stepsSchema.maxItems === 2 && Array.isArray(stepsSchema.items.oneOf) && stepsSchema.items.oneOf.length === 2, "Constrained decoding keeps exactly two structurally bounded steps.");
+            const schemaCapabilityIds = stepsSchema.items.oneOf.map((variant) => variant.properties.capabilityId.enum[0]).sort();
+            check(JSON.stringify(schemaCapabilityIds) === JSON.stringify(["set-layer-name-v1", "set-opacity-v1"]), "Constrained decoding permits only the two frozen C1 capability IDs.");
+        }
     }
     for (const envelope of [
         { type: "localProposal", proposal: { capabilityId: "unknown-capability", params: { opacity: 50 } } },
@@ -354,8 +365,9 @@ async function run() {
         (value) => { value.choices[0].logprobs = "tokens"; },
         (value) => { value.stats = { queue: 1 }; },
         (value) => { value.stats = []; },
-        (value) => { value.usage.completion_tokens_details = { reasoning_tokens: 1 }; },
         (value) => { value.usage.completion_tokens_details = { reasoning_tokens: -1 }; },
+        (value) => { value.usage.completion_tokens_details = { reasoning_tokens: 1.5 }; },
+        (value) => { value.usage.completion_tokens_details = { reasoning_tokens: "1" }; },
         (value) => { value.usage.completion_tokens_details = { reasoning_tokens: 0, extra: true }; },
         (value) => { value.usage.prompt_tokens = "239"; },
         (value) => { value.system_fingerprint = {}; },
@@ -378,7 +390,7 @@ async function run() {
         equal(response.envelope.type, "text", "Empty LM Studio wrapper extensions must be inert.");
         check(JSON.stringify(response).indexOf("reasoning_content") === -1 && JSON.stringify(response).indexOf("tool_calls") === -1, "Inert wrapper extensions must not enter canonical output.");
     }
-    for (const extension of [{ reasoning_content: "hidden reasoning" }, { tool_calls: [{}] }, { function_call: null }, { unknown_extension: true }]) {
+    for (const extension of [{ reasoning_content: {} }, { reasoning_content: [] }, { reasoning_content: 1 }, { tool_calls: [{}] }, { function_call: null }, { reasoning: "hidden reasoning" }, { thinking: "hidden reasoning" }, { analysis: "hidden reasoning" }, { unknown_extension: true }]) {
         const harness = createHarness({ responder: (request) => {
             const body = JSON.parse(wrapper(canonicalContent(base.protocol, request)));
             Object.assign(body.choices[0].message, extension);
@@ -386,6 +398,44 @@ async function run() {
         } });
         equal((await harness.provider.start(input()).promise).envelope.error.code, base.protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "Non-inert wrapper extensions must fail closed.");
     }
+
+    const auxiliaryReasoning = "arbitrary auxiliary reasoning text that must never enter canonical output";
+    for (const reasoningTokens of [0, 17]) {
+        const harness = createHarness({ responder: (request) => {
+            const body = realLmStudioWrapper(base.protocol, request);
+            body.choices[0].message.reasoning_content = auxiliaryReasoning;
+            body.usage.completion_tokens_details.reasoning_tokens = reasoningTokens;
+            return Promise.resolve(transportResult(JSON.stringify(body)));
+        } });
+        const response = await harness.provider.start(input()).promise;
+        equal(response.envelope.type, "text", "Nonempty auxiliary reasoning with reasoning_tokens " + reasoningTokens + " preserves valid final content.");
+        check(!JSON.stringify(response).includes(auxiliaryReasoning) && !JSON.stringify(response).includes("reasoning_content") && !JSON.stringify(response).includes("reasoning_tokens"), "Auxiliary reasoning text and metadata are absent from canonical output.");
+        check(!JSON.stringify(harness.provider.getDiagnostics()).includes(auxiliaryReasoning) && !JSON.stringify(harness.provider.getDiagnostics()).includes("reasoning"), "Auxiliary reasoning is absent from Provider diagnostics.");
+    }
+    const structuredReasoningHarness = createHarness({ requestProfile: requestBranchPolicy.PROFILES.EXPLICIT_EDIT_ELIGIBLE, responder: (request) => {
+        const content = canonicalContent(base.protocol, request, { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 47 } } });
+        const body = JSON.parse(wrapper(content));
+        body.choices[0].message.reasoning_content = "prose before structured final output";
+        return Promise.resolve(transportResult(JSON.stringify(body)));
+    } });
+    const structuredReasoningResponse = await structuredReasoningHarness.provider.start(input()).promise;
+    check(structuredReasoningResponse.envelope.type === "localProposal" && structuredReasoningResponse.envelope.proposal.params.opacity === 47, "Structured proposal parsing consumes only final content when prose reasoning is present.");
+    for (const finalContent of ["", null, undefined]) {
+        const harness = createHarness({ responder: (request) => {
+            const body = JSON.parse(wrapper(canonicalContent(base.protocol, request)));
+            if (finalContent === undefined) delete body.choices[0].message.content;
+            else body.choices[0].message.content = finalContent;
+            body.choices[0].message.reasoning_content = "valid-looking reasoning";
+            return Promise.resolve(transportResult(JSON.stringify(body)));
+        } });
+        equal((await harness.provider.start(input()).promise).envelope.error.code, base.protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, "Reasoning-only response cannot replace missing, null, or empty final content.");
+    }
+    const malformedFinalWithReasoning = createHarness({ responder: () => {
+        const body = JSON.parse(wrapper("not canonical Vela JSON"));
+        body.choices[0].message.reasoning_content = "valid auxiliary reasoning";
+        return Promise.resolve(transportResult(JSON.stringify(body)));
+    } });
+    equal((await malformedFinalWithReasoning.provider.start(input()).promise).envelope.error.code, base.protocol.ERROR_CODES.JSON_PARSE_FAILED, "Valid auxiliary reasoning cannot rescue malformed final content or change parser taxonomy.");
 
     const invalidWrappers = [
         ["not-json", "malformed wrapper"], ["<html>bad</html>", "HTML wrapper"], ["```json\n{}\n```", "fenced wrapper"],

@@ -326,7 +326,7 @@ function makeAeRealm(layerOptions) {
     }, layerOptions || {});
     const comp = new CompItem();
     Object.assign(comp, { id: 12, width: 1920, height: 1080, duration: 10, frameRate: 30, selectedLayers: [layer], layer(index) { return index === layer.index ? layer : null; } });
-    const project = { activeItem: comp };
+    const project = { activeItem: comp, numItems: 1, item(index) { return index === 1 ? comp : null; }, itemByID(id) { return id === comp.id ? comp : null; } };
     const realm = makeRealm({ app: { version: "24.0", project }, CompItem, FootageItem, PropertyType: { PROPERTY: "property", NAMED_GROUP: "named", INDEXED_GROUP: "indexed" } });
     loadFacade(realm);
     return { realm, facade: realm.AEToolbox.VelaContext, project, comp, layer };
@@ -696,6 +696,25 @@ function runTierTwoTests() {
     check(boundsOnly.ok === true && forbiddenNameReads === 0 && forbiddenTextPathReads === 0 && allowedBoundsReads === 1, "Tier 2 must perform zero forbidden optional reads and exactly one requested bounds read.");
 }
 
+function runLayerAttributeValueTests() {
+    const ae = makeAeRealm({ name: "Layer A" });
+    const binding = parseResult(ae.facade.handle(JSON.stringify(request({ scope: { purpose: "binding", selectionOrderMeaningful: true } }))));
+    const target = { itemId: 12, nativeLayerId: 45, layerIndex: 3, targetKind: "layer-attribute", attribute: "name" };
+    function attributeRequest(operation, purpose) {
+        return { protocol: "vela.host-context-request.v1", schemaVersion: "1.0", requestId: "req_" + (purpose === "binding" ? "a" : "b").repeat(32), sessionId: "session_" + "c".repeat(32), operation, tier: 3, scope: { purpose, expectedHostInstanceId: binding.snapshot.hostInstanceId, expectedHostReloadEpoch: binding.snapshot.hostReloadEpoch, expectedProjectGeneration: binding.snapshot.projectGeneration, target } };
+    }
+    const captured = parseResult(ae.facade.handle(JSON.stringify(attributeRequest("captureLayerAttributeValue", "binding"))));
+    check(captured.ok === true && captured.snapshot.target.targetKind === "layer-attribute" && captured.snapshot.target.attribute === "name" && captured.snapshot.target.value.kind === "string" && captured.snapshot.target.value.data === "Layer A", "Host captures the exact selected layer name as one typed layer attribute without a fake property path.");
+    ae.comp.selectedLayers = [];
+    ae.layer.name = " Hero ";
+    const observed = parseResult(ae.facade.handle(JSON.stringify(attributeRequest("observeCommittedLayerAttributeValue", "verification"))));
+    check(observed.ok === true && observed.snapshot.target.nativeLayerId === 45 && observed.snapshot.target.value.data === " Hero ", "Committed layer-name observation resolves the original native layer independently of current selection and preserves exact whitespace.");
+    const staleIdentity = attributeRequest("observeCommittedLayerAttributeValue", "verification");
+    staleIdentity.scope.target = Object.assign({}, target, { nativeLayerId: 46 });
+    const stale = parseResult(ae.facade.handle(JSON.stringify(staleIdentity)));
+    check(stale.ok === false && stale.error.code === "HOST_CONTEXT_TARGET_NOT_FOUND", "Committed layer-name observation fails closed on native identity drift.");
+}
+
 function runStaticTests() {
     const combined = jsonSource + "\n" + contextSource;
     const forbiddenCalls = [
@@ -916,6 +935,66 @@ function runPropertyValueTests() {
     check(result.ok === true && JSON.stringify(result).indexOf(sentinel) === -1, "A later successful request must not expose a previous request raw sentinel.");
     const malformed = parseResult(ae.facade.handle(JSON.stringify(requestValues([], {}))));
     check(malformed.ok === false && malformed.error.code === "HOST_CONTEXT_REQUEST_INVALID", "Property-value requests must require one to four targets.");
+
+    installTerminal(47, false, false);
+    function committedRequest(extra) {
+        return {
+            protocol: "vela.host-context-request.v1",
+            schemaVersion: "1.0",
+            requestId: "req_" + "c".repeat(32),
+            sessionId: "session_" + "d".repeat(32),
+            operation: "observeCommittedPropertyValue",
+            tier: 3,
+            scope: {
+                purpose: "verification",
+                expectedHostInstanceId: binding.snapshot.hostInstanceId,
+                expectedHostReloadEpoch: binding.snapshot.hostReloadEpoch,
+                expectedProjectGeneration: binding.snapshot.projectGeneration,
+                target: { itemId: target.itemId, nativeLayerId: target.nativeLayerId, layerIndex: target.layerIndex, propertyPath: target.propertyPath, propertyMatchName: "ADBE Position" }
+            },
+            ...(extra || {})
+        };
+    }
+    const otherComp = new ae.realm.CompItem();
+    Object.assign(otherComp, { id: 99, width: 100, height: 100, duration: 1, frameRate: 24, selectedLayers: [] });
+    ae.project.activeItem = otherComp;
+    result = parseResult(ae.facade.handle(JSON.stringify(committedRequest())));
+    check(result.ok === true && result.snapshot.target.itemId === 12 && result.snapshot.target.nativeLayerId === 45 && result.snapshot.target.value.data === 47, "Committed-target observation must read the trusted original comp and layer after active-comp drift.");
+
+    const originalItemById = ae.project.itemByID;
+    const originalItem = ae.project.item;
+    const originalNumItems = ae.project.numItems;
+    ae.project.itemByID = function () { return null; };
+    ae.project.item = function () { return null; };
+    ae.project.numItems = 0;
+    result = parseResult(ae.facade.handle(JSON.stringify(committedRequest())));
+    check(result.ok === false && result.error.code === "HOST_CONTEXT_TARGET_NOT_FOUND", "Committed-target observation must reject a missing composition without active-comp fallback.");
+    ae.project.itemByID = originalItemById; ae.project.item = originalItem; ae.project.numItems = originalNumItems;
+
+    const originalLayerLookup = ae.comp.layer;
+    ae.comp.layer = function () { return null; };
+    result = parseResult(ae.facade.handle(JSON.stringify(committedRequest())));
+    check(result.ok === false && result.error.code === "HOST_CONTEXT_TARGET_NOT_FOUND", "Committed-target observation must reject a deleted layer without current-selection fallback.");
+    ae.comp.layer = originalLayerLookup;
+
+    ae.layer.id = 46;
+    result = parseResult(ae.facade.handle(JSON.stringify(committedRequest())));
+    check(result.ok === false && result.error.code === "HOST_CONTEXT_TARGET_NOT_FOUND", "Committed-target observation must reject native layer replacement without falling back by index.");
+    ae.layer.id = 45;
+
+    const originalPropertyLookup = ae.layer.property;
+    ae.layer.property = function () { return null; };
+    result = parseResult(ae.facade.handle(JSON.stringify(committedRequest())));
+    check(result.ok === false && result.error.code === "HOST_CONTEXT_TARGET_NOT_FOUND", "Committed-target observation must reject a missing property without fallback.");
+    ae.layer.property = originalPropertyLookup;
+
+    ae.layer.property = function (name) {
+        if (name !== "ADBE Transform Group") { return null; }
+        return { matchName: "ADBE Transform Group", propertyIndex: 0, propertyType: types.NAMED_GROUP, property() { return { matchName: "ADBE Opacity", propertyIndex: 2, propertyType: types.PROPERTY, canSetExpression: false, value: 47 }; } };
+    };
+    result = parseResult(ae.facade.handle(JSON.stringify(committedRequest())));
+    check(result.ok === false && result.error.code === "HOST_CONTEXT_TARGET_NOT_FOUND", "Committed-target observation must reject terminal property matchName drift.");
+    ae.layer.property = originalPropertyLookup;
 }
 
 function runRuntimeReloadTests() {
@@ -1037,6 +1116,7 @@ try {
     runTierTwoTests();
     runTierThreeTests();
     runPropertyValueTests();
+    runLayerAttributeValueTests();
     runStaticTests();
     runRuntimeReloadTests();
     console.log("PASS Vela context Host: " + assertions + " assertions.");

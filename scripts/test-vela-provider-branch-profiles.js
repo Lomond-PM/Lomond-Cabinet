@@ -12,7 +12,7 @@ const requestBranchPolicy = require("../client/js/vela/velaProviderRequestBranch
 const providerAdapter = require("../client/js/vela/velaProviderAdapter");
 
 const ROOT = path.resolve(__dirname, "..");
-const FIXTURE_PATH = path.join(ROOT, "scripts", "fixtures", "vela-capability-contracts", "provider-branch-profiles-v2.json");
+const FIXTURE_PATH = path.join(ROOT, "scripts", "fixtures", "vela-capability-contracts", "provider-branch-profiles-v3.json");
 const UNION_FIXTURE_PATH = path.join(ROOT, "scripts", "fixtures", "vela-capability-contracts", "provider-bounded-union-transition-v2.json");
 const C3_FIXTURE_PATH = path.join(ROOT, "scripts", "fixtures", "vela-capability-contracts", "provider-branch-policy-v2.json");
 const C3_FIXTURE_SHA256 = "8a2968b4e8926ea95a742c4c5e6cc4bdae941c06277d37ddb137b3df6513b8d2";
@@ -51,7 +51,7 @@ function stableBody(body) {
         model: body.model,
         messages: body.messages.map((message) => ({ role: message.role, content: message.content })),
         stream: body.stream,
-        response_format: body.response_format
+        response_format: body.response_format || null
     });
 }
 function byteDiagnostics(label, captured) {
@@ -117,7 +117,7 @@ async function capture(profile, fixture) {
     return Object.freeze({
         body,
         prompt: body.messages[0].content,
-        responseFormatBytes: stable(body.response_format),
+        responseFormatBytes: stable(body.response_format || null),
         stableBodyBytes: stableBody(body)
     });
 }
@@ -132,7 +132,7 @@ async function run() {
     equal(Object.keys(fixture.explicitEditEligible).sort().join("|"), PROFILE_KEYS.slice().sort().join("|"), "explicitEditEligible contains exactly three SHA fields.");
     check(!/(?:qualification|caseProfileFingerprint|runsPerCase|operator|endpoint|timestamp|localPath|modelResponse)/i.test(fixtureText), "Fixture excludes qualification, operator, endpoint, timestamp, path, and model-response metadata.");
     equal(fixture.fixtureType, "vela-provider-branch-profiles", "Fixture type is fixed.");
-    equal(fixture.schemaRevision, "v2", "Current fixture schema revision is fixed.");
+    equal(fixture.schemaRevision, "v3", "Current fixture schema revision is fixed.");
     equal(fixture.promptBuilderRevision, "vela-capability-prompt-builder-v4", "Current fixture binds Prompt Builder v4 identity.");
     equal(fixture.requestBranchPolicyRevision, "vela-provider-request-branch-policy-v1", "Historical fixture retains Request Branch Policy v1 identity.");
     equal(fixture.capabilityId, projection.capabilityId, "Fixture capability id matches production.");
@@ -169,7 +169,7 @@ async function run() {
         equal(sha256(captureResult.stableBodyBytes), expected.stableRequestBodySha256, label + " stable body SHA matches fixture.");
         equal(captureResult.body.model, fixture.fixedModelIdentifier, label + " root model metadata is fixed.");
         equal(captureResult.body.messages.map((message) => message.role).join("→"), fixture.messageRoleOrder.join("→"), label + " message order is system → assistant → user.");
-        check(!containsUnion(captureResult.body.response_format), label + " Schema contains no oneOf, anyOf, allOf, or union fallback.");
+        check(label === "explicit-edit-eligible" ? captureResult.body.response_format.json_schema.schema.properties.envelope.oneOf.length === 2 : !containsUnion(captureResult.body.response_format), label + " Schema retains only its closed profile-specific alternatives.");
         assertClosedObjects(captureResult.body.response_format);
     });
     check(textA.prompt !== extractionA.prompt && fixture.textOnly.promptSha256 !== fixture.explicitEditEligible.promptSha256, "Profile Prompt SHA values differ.");
@@ -189,13 +189,10 @@ async function run() {
     check(containsUnion(unionA.body.response_format) && unionA.body.response_format.json_schema.name === "vela_bounded_union_response", "Union schema alone contains the frozen oneOf transition contract.");
     assertClosedObjects(unionA.body.response_format);
 
-    const textSchema = textA.body.response_format.json_schema.schema;
+    check(!textA.body.response_format, "Native text has no response schema.");
     const extractionSchema = extractionA.body.response_format.json_schema.schema;
-    equal(textSchema.properties.envelope.properties.type.enum.join("|"), "text", "text-only Schema permits only the text envelope.");
-    equal(extractionSchema.properties.envelope.properties.type.enum.join("|"), "localProposal", "explicit-edit-eligible Schema permits only the localProposal envelope.");
-    ["protocol", "schemaVersion", "requestId", "provider", "model"].forEach((key) => {
-        equal(textSchema.properties[key].enum[0], extractionSchema.properties[key].enum[0], "Root metadata " + key + " is identical across Profiles.");
-    });
+    check(extractionSchema.properties.envelope.oneOf.length === 2 && extractionSchema.properties.envelope.oneOf.every((variant) => variant.properties.type.enum.join("|") === "localProposal"), "explicit-edit-eligible Schema permits only one of the two closed localProposal variants.");
+    check(extractionSchema.properties.requestId.enum[0] === fixture.fixedRequestId, "Structured metadata remains locally bound.");
 
     console.log("test-vela-provider-branch-profiles: " + assertions + " assertions passed.");
 }

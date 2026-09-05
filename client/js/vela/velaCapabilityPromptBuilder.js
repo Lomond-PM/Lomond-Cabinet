@@ -32,7 +32,8 @@
     var RESPONSE_SCHEMA_VERSION = "1.1";
     var PROVIDER_ID = "lmstudio";
     var canonicalProjection = capabilityContracts.getModelProjection(CAPABILITY_ID);
-    if (!canonicalProjection || !Object.isFrozen(canonicalProjection)) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
+    var renameProjection = capabilityContracts.getModelProjection("set-layer-name-v1");
+    if (!canonicalProjection || !Object.isFrozen(canonicalProjection) || !renameProjection || !Object.isFrozen(renameProjection)) { throw bootstrapError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
     function fail(message) { throw new Error("CAPABILITY_PROMPT_BUILDER_INVALID: " + message); }
     function ownData(value, key) { var descriptor; try { descriptor = Object.getOwnPropertyDescriptor(value, key); } catch (error) { fail("descriptor inspection failed."); } if (!descriptor || descriptor.get || descriptor.set || !Object.prototype.hasOwnProperty.call(descriptor, "value")) { fail("an own data property is required."); } return descriptor.value; }
     function sameNames(left, right) { var leftNames; var rightNames; var leftSymbols; var rightSymbols; try { leftNames = Object.getOwnPropertyNames(left).sort(); rightNames = Object.getOwnPropertyNames(right).sort(); leftSymbols = typeof Object.getOwnPropertySymbols === "function" ? Object.getOwnPropertySymbols(left) : []; rightSymbols = typeof Object.getOwnPropertySymbols === "function" ? Object.getOwnPropertySymbols(right) : []; } catch (error) { fail("property inspection failed."); } return leftSymbols.length === 0 && rightSymbols.length === 0 && leftNames.join("\u0000") === rightNames.join("\u0000"); }
@@ -75,7 +76,7 @@
         var textOnly;
         var explicitEdit;
         if (!Object.isFrozen(profiles) || Object.getPrototypeOf(profiles) !== Object.prototype ||
-            Object.getOwnPropertyNames(profiles).sort().join("\u0000") !== "EXPLICIT_EDIT_ELIGIBLE\u0000PROPOSAL_CAPABLE_UNION\u0000TEXT_ONLY" ||
+            Object.getOwnPropertyNames(profiles).sort().join("\u0000") !== "BOUNDED_LOGICAL_PLAN_ELIGIBLE\u0000EXPLICIT_EDIT_ELIGIBLE\u0000PROPOSAL_CAPABLE_UNION\u0000TEXT_ONLY" ||
             (typeof Object.getOwnPropertySymbols === "function" && Object.getOwnPropertySymbols(profiles).length !== 0)) { fail("request profile export is invalid."); }
         textOnly = Object.getOwnPropertyDescriptor(profiles, "TEXT_ONLY");
         explicitEdit = Object.getOwnPropertyDescriptor(profiles, "EXPLICIT_EDIT_ELIGIBLE");
@@ -86,7 +87,7 @@
     }
     var PROFILES = assertProfileExport();
     function assertRequestProfile(value) {
-        if (value !== PROFILES.TEXT_ONLY && value !== PROFILES.EXPLICIT_EDIT_ELIGIBLE && value !== PROFILES.PROPOSAL_CAPABLE_UNION) { fail("requestProfile is invalid."); }
+        if (value !== PROFILES.TEXT_ONLY && value !== PROFILES.EXPLICIT_EDIT_ELIGIBLE && value !== PROFILES.PROPOSAL_CAPABLE_UNION && value !== PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE) { fail("requestProfile is invalid."); }
         return value;
     }
     var GLOBAL_STATIC_CONTRACT = [
@@ -96,7 +97,7 @@
         "Trusted context is a fact only; never guess a missing current value.",
         "A localProposal is only a bounded candidate and does not modify After Effects.",
         "Trusted local intent validation, target binding, review, confirmation, preflight, and execution happen later.",
-        "The only supported proposal capability is " + canonicalProjection.capabilityId + "; the model may supply only params.opacity from 0 through 100.",
+        "The supported single-step proposal capabilities are set-opacity-v1 with exactly params.opacity from 0 through 100, and set-layer-name-v1 with exactly params.name. Return at most one localProposal and never return steps, multiStepProposal, multiple actions, or tool_calls as an execution source.",
         "Never include target identity, layer or comp ids, confirmation, nonce, Host payload, arbitrary code, or extra fields."
     ].join(" ");
     function rootEnvelope(requestId, model, envelope) {
@@ -106,23 +107,28 @@
         var projection;
         projection = assertProjection(modelProjection);
         requestProfile = assertRequestProfile(requestProfile);
+        if (requestProfile === PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE) { return [
+            "Return exactly one complete JSON object and nothing else. Use protocol " + RESPONSE_PROTOCOL + " and schemaVersion " + RESPONSE_SCHEMA_VERSION + ". Every response must use the closed Vela response envelope selected for this request; never add unknown fields.",
+            "This request is bounded-logical-plan-eligible. Return only one logicalPlanProposal envelope with exactly two ordered steps: step 0 must be set-opacity-v1 with exactly params.opacity from the user's request, and step 1 must be set-layer-name-v1 with exactly params.name from the user's request.",
+            "The logicalPlanProposal is a declaration only. It is not a TaskPlan, executable plan, review, target binding, Host payload, or authority. Trusted local validation, per-step review, authority, execution, and verification happen later.",
+            "Never add, remove, reorder, nest, or dynamically append steps. Never include target identity, layer or comp ids, confirmation, nonce, authority, review state, Host payload, arbitrary code, tool_calls, or extra fields."
+        ].join(" "); }
         if (requestProfile === PROFILES.TEXT_ONLY) { return [
-            GLOBAL_STATIC_CONTRACT,
-            "This request is text-only. Return only a text envelope; a localProposal is invalid for this request.",
+            "This is ordinary conversation. Answer directly in natural language, following the user's language.",
             "Answer normal conversation, current-value queries, advice, explanations, ambiguity, and unavailable grounding as text. Trusted context is a fact only; never guess a missing current value.",
             "Do not claim an edit was performed, will be performed, or that a proposal was created. Do not describe a proposal."
         ].join(" "); }
         if (requestProfile === PROFILES.PROPOSAL_CAPABLE_UNION) { return [
             GLOBAL_STATIC_CONTRACT,
-            "This request is proposal-capable-union. Return either a conversational text envelope or one bounded localProposal envelope for set-opacity-v1.",
-            "Return text for questions, discussion, advice, ambiguity, or any message without a clear direct request to set the current actionable layer opacity.",
-            "For a clear direct opacity edit, use only capabilityId " + projection.capabilityId + " and only params.opacity from 0 through 100. Never include target identity, layer or comp ids, confirmation, nonce, Host payload, arbitrary code, or extra fields.",
+            "This request is proposal-capable-union. Return either a conversational text envelope or one bounded localProposal envelope for set-opacity-v1 or set-layer-name-v1.",
+            "Return text for questions, discussion, advice, ambiguity, multi-action requests, or any message without one clear direct supported edit.",
+            "For one clear direct edit, use exactly the matching capability and closed params: set-opacity-v1 uses params.opacity; set-layer-name-v1 uses params.name. Never include target identity, layer or comp ids, confirmation, nonce, Host payload, arbitrary code, or extra fields.",
             "A localProposal does not modify After Effects. Trusted local intent validation, target binding, review, confirmation, preflight, and execution happen later."
         ].join(" "); }
         return [
             GLOBAL_STATIC_CONTRACT,
             "This request is explicit-edit-eligible. Return only a localProposal envelope; text is invalid for this request.",
-            "Extract the single opacity target from the current user message. Use capabilityId " + projection.capabilityId + " and only params.opacity. The target must come from the current user message, never trusted context, history, or a fallback.",
+            "Extract exactly one supported edit from the current user message. Use set-opacity-v1 with only params.opacity, or set-layer-name-v1 with only params.name. The value must come from the current user message, never trusted context, history, or a fallback.",
             "Your role is to propose this supported edit. Trusted local review and approval happen later; do not add text, explanations, or extra fields."
         ].join(" ");
     }
@@ -137,10 +143,15 @@
         exampleParams = {};
         exampleParams[ownData(projection, "modelPolicy").modelMaySupply[0].slice("params.".length)] = 57.5;
         proposal57Example = rootEnvelope(requestId, model, { type: "localProposal", proposal: { capabilityId: projection.capabilityId, params: exampleParams } });
-        if (requestProfile === PROFILES.TEXT_ONLY) { return [
+        if (requestProfile === PROFILES.BOUNDED_LOGICAL_PLAN_ELIGIBLE) { return [
             "Turn response contract: profile " + requestProfile + ".",
             "Use requestId " + requestId + ", provider " + PROVIDER_ID + ", and model " + model + ".",
-            "Concrete valid response example: " + rootEnvelope(requestId, model, { type: "text", text: "A concise answer." })
+            "Concrete valid response example: " + rootEnvelope(requestId, model, { type: "logicalPlanProposal", steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 47 } }, { capabilityId: "set-layer-name-v1", params: { name: "Hero" } }] }),
+            "Replace only opacity and name with the exact values stated by the current user. The two steps, order, capability IDs, and all field names are fixed."
+        ].join(" "); }
+        if (requestProfile === PROFILES.TEXT_ONLY) { return [
+            "Answer the current user naturally. Use trusted grounding only as facts; do not invent unavailable values.",
+            "Do not create proposals or claim that After Effects changes have occurred or will occur."
         ].join(" "); }
         if (requestProfile === PROFILES.PROPOSAL_CAPABLE_UNION) { return [
             "Turn response contract: profile " + requestProfile + ".",

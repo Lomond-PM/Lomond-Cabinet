@@ -1,0 +1,52 @@
+"use strict";
+const assert = require("assert");
+const PresentationModel = require("../client/js/vela/velaPresentationModel").VelaPresentationModel;
+let assertions = 0;
+function check(value, message) { assert.ok(value, message); assertions += 1; }
+function event(invocation, generation, type, text, presentationMode) { const providerEvent = { type, requestId: "req_stream", generation: 1, providerId: "lmstudio", modelId: "model" }; if (text !== undefined) providerEvent.text = text; Object.freeze(providerEvent); return Object.freeze({ type: "provider-stream-event", runtimeGeneration: generation, reasoningInvocationId: invocation, presentationMode: presentationMode || "assistant-text", providerEvent }); }
+const model = PresentationModel.create();
+model.begin("objective");
+let view = model.applyPresentationEvent(event("reasoning_1", 1, "stream-started"));
+check(view.activeInvocationId === "reasoning_1" && view.invocations.length === 1 && view.invocations[0].state === "streaming", "stream-started creates one transient invocation segment");
+check(typeof view.presentationTurnId === "string" && view.invocations[0].presentationTurnId === view.presentationTurnId && model.getSnapshot().items[0].presentationTurnId === view.presentationTurnId, "Presentation creates one local turn anchor shared by user and Provider invocations");
+model.applyPresentationEvent(event("reasoning_1", 1, "stream-started"));
+check(model.getTransientSnapshot().invocations.length === 1, "duplicate stream-started does not duplicate a segment");
+model.applyPresentationEvent(event("reasoning_1", 1, "reasoning-delta", "think "));
+model.applyPresentationEvent(event("reasoning_1", 1, "text-delta", "Hello"));
+model.applyPresentationEvent(event("reasoning_1", 1, "reasoning-delta", "more"));
+model.applyPresentationEvent(event("reasoning_1", 1, "text-delta", " world"));
+view = model.getTransientSnapshot();
+check(view.invocations[0].reasoningText === "think more" && view.invocations[0].text === "Hello world", "reasoning and assistant text accumulate in separate ordered channels");
+check(Object.isFrozen(view) && Object.isFrozen(view.invocations) && Object.isFrozen(view.invocations[0]), "Transient outward projection is deeply frozen");
+model.applyPresentationEvent(event("reasoning_1", 1, "stream-completed"));
+check(model.getTransientSnapshot().invocations[0].state === "stream-completed", "stream-completed closes only presentation lifecycle");
+model.applyPresentationEvent(event("reasoning_1", 1, "text-delta", " late"));
+check(model.getTransientSnapshot().invocations[0].text === "Hello world", "Late delta after presentation terminal does not mutate the segment");
+model.apply({ state: "completed", text: "Hello world" });
+check(model.getSnapshot().items.filter((item) => item.kind === "assistant").length === 1 && model.getSnapshot().items[1].text === "Hello world", "Authoritative terminal text creates one committed assistant item without transcript duplication");
+check(model.getTransientSnapshot().invocations[0].reasoningText === "think more" && model.getTransientSnapshot().invocations[0].text === "" && model.getTransientSnapshot().invocations[0].assistantReconciliation === "closed", "Authoritative terminal closes transient assistant text while retaining reasoning for the current objective");
+model.apply({ state: "completed", text: null });
+check(model.getSnapshot().items.filter((item) => item.kind === "assistant").length === 1, "Authoritative text:null never promotes transient text");
+
+model.begin("structured proposal");
+model.applyPresentationEvent(event("structured_1", 1, "stream-started", undefined, "structured"));
+model.applyPresentationEvent(event("structured_1", 1, "reasoning-delta", "private reasoning", "structured"));
+model.applyPresentationEvent(event("structured_1", 1, "text-delta", "{\\\"type\\\":\\\"localProposal\\\"}", "structured"));
+check(model.getTransientSnapshot().invocations[0].reasoningText === "private reasoning" && model.getTransientSnapshot().invocations[0].text === "" && model.getTransientSnapshot().invocations[0].presentationMode === "structured", "Structured partial JSON stays private while structured reasoning remains visible");
+model.applyPresentationEvent(event("structured_1", 1, "stream-completed", undefined, "structured"));
+model.applyPresentationEvent(event("structured_2", 1, "stream-started", undefined, "structured"));
+check(model.getTransientSnapshot().invocations.length === 2 && model.getTransientSnapshot().invocations[0].presentationTurnId === model.getTransientSnapshot().invocations[1].presentationTurnId, "Sequential Provider steps share one presentation turn without adopting Agent identities");
+
+model.begin("next objective");
+model.applyPresentationEvent(event("reasoning_2", 2, "stream-started"));
+model.applyPresentationEvent(event("reasoning_2", 2, "text-delta", "second"));
+check(model.getTransientSnapshot().invocations.length === 1 && model.getTransientSnapshot().activeInvocationId === "reasoning_2" && model.getTransientSnapshot().invocations[0].text === "second", "begin starts a clean transient projection for the next invocation");
+model.applyPresentationEvent(event("reasoning_1", 1, "text-delta", "stale"));
+model.applyPresentationEvent(event("reasoning_2", 1, "text-delta", "wrong generation"));
+check(model.getTransientSnapshot().invocations[0].text === "second", "Stale runtime generation and old invocation events are rejected");
+model.applyPresentationEvent(event("reasoning_2", 2, "stream-failed"));
+check(model.getTransientSnapshot().invocations[0].state === "stream-failed", "stream-failed remains a transient presentation fact");
+model.reset();
+check(model.getTransientSnapshot().invocations.length === 0 && model.getTransientSnapshot().activeInvocationId === null, "reset clears all transient segments");
+check(!JSON.stringify(model.getTransientSnapshot()).match(/logicalPlan|proposal|hostPayload|capabilityIntent|terminalResponse/), "Transient projection contains no structured Agent or Host data");
+console.log("PASS Vela PresentationModel streaming: " + assertions + " assertions.");

@@ -1,6 +1,8 @@
 "use strict";
 
 const assert = require("assert");
+const fs = require("fs");
+const vm = require("vm");
 const PresentationModel = require("../client/js/vela/velaPresentationModel.js").VelaPresentationModel;
 const TranscriptView = require("../client/js/vela/velaTranscriptView.js").VelaTranscriptView;
 const ComposerView = require("../client/js/vela/velaComposerView.js").VelaComposerView;
@@ -11,9 +13,10 @@ let assertions = 0;
 function check(value, message) { assertions += 1; assert.ok(value, message); }
 function equal(actual, expected, message) { assertions += 1; assert.strictEqual(actual, expected, message); }
 function deferred() { let resolve; let reject; const promise = new Promise((ok, fail) => { resolve = ok; reject = fail; }); return { promise, resolve, reject }; }
-function Node(tag) { this.tagName = String(tag).toUpperCase(); this.children = []; this.parentNode = null; this.className = ""; this.attributes = {}; this.listeners = {}; this.textContent = ""; this.value = ""; this.hidden = false; this.disabled = false; this.readOnly = false; this.scrollTop = 0; this.scrollHeight = 100; this.clientHeight = 100; this.selectionStart = 0; this.selectionEnd = 0; this.focused = false; this.ownerDocument = { createElement: (childTag) => new Node(childTag) }; }
-Node.prototype.appendChild = function (child) { child.parentNode = this; this.children.push(child); this.scrollHeight += 20; return child; };
+function Node(tag) { this.tagName = String(tag).toUpperCase(); this.children = []; this.parentNode = null; this.className = ""; this.attributes = {}; this.listeners = {}; this.textContent = ""; this.value = ""; this.hidden = false; this.disabled = false; this.readOnly = false; this.scrollTop = 0; this.scrollHeight = 100; this.clientHeight = 100; this.selectionStart = 0; this.selectionEnd = 0; this.focused = false; this.style = {}; this.ownerDocument = { createElement: (childTag) => new Node(childTag) }; }
+Node.prototype.appendChild = function (child) { if (child.parentNode) { child.parentNode.removeChild(child); } child.parentNode = this; this.children.push(child); this.scrollHeight += 20; return child; };
 Node.prototype.removeChild = function (child) { const index = this.children.indexOf(child); if (index >= 0) { this.children.splice(index, 1); child.parentNode = null; } return child; };
+Node.prototype.insertBefore = function (child, before) { const index = before ? this.children.indexOf(before) : -1; if (child.parentNode) { child.parentNode.removeChild(child); } child.parentNode = this; if (index < 0) { this.children.push(child); } else { this.children.splice(index, 0, child); } return child; };
 Node.prototype.setAttribute = function (key, value) { this.attributes[key] = String(value); };
 Node.prototype.getAttribute = function (key) { return this.attributes[key] || null; };
 Node.prototype.addEventListener = function (type, listener) { (this.listeners[type] || (this.listeners[type] = [])).push(listener); };
@@ -31,6 +34,8 @@ function fixture(options) {
     let providerState = { state: "idle", text: null, errorCode: null };
     let confirmationState = { state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" };
     const calls = { check: [], send: [], cancel: 0, review: 0, approve: 0, reject: 0 };
+    const presentationListeners = [];
+    const runtime = options.runtime || null;
     let authorityState = { state: "inactive", active: false };
     const authority = options.authority ? {
         grant() { calls.grant = (calls.grant || 0) + 1; authorityState = { state: "active", active: true }; return Promise.resolve(authorityState); },
@@ -40,7 +45,7 @@ function fixture(options) {
     const provider = {
         check(config) { calls.check.push(config); if (options.readinessError) { return Promise.reject(options.readinessError); } return options.readinessPromise || Promise.resolve(options.readinessResult || { ready: true, code: "experimental-ready", modelId: config.model, loadedInstances: 1, quantization: "Q_TEST", contextLength: 8192 }); },
         send(message) { calls.send.push(message); if (options.synchronousRejection) { providerState = { state: "failed", text: null, errorCode: "VERIFICATION_UNAVAILABLE" }; return Promise.reject(new Error("VERIFICATION_UNAVAILABLE")); } providerState = { state: "pending", text: null, errorCode: null }; return request.promise; },
-        cancel() { calls.cancel += 1; providerState = { state: "cancelled", text: null, errorCode: "PROVIDER_REQUEST_ABORTED" }; },
+        cancel() { calls.cancel += 1; providerState = { state: "cancelled", text: null, errorCode: "PROVIDER_REQUEST_ABORTED" }; if (options.clearConfirmationOnCancel) { confirmationState = { state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }; } },
         getState() { return Object.freeze(Object.assign({}, providerState)); }
     };
     const confirmation = {
@@ -49,12 +54,17 @@ function fixture(options) {
         reject() { calls.reject += 1; confirmationState = { state: "rejected", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }; return Promise.resolve(); },
         getState() { return Object.freeze(Object.assign({}, confirmationState)); }
     };
-    const controller = SurfaceController.create({ surface: { getElementsForTest: () => elements }, provider, confirmation, authority, t: options.t || ((key) => "t:" + key), PresentationModel, TranscriptView, ComposerView, ConfirmationView, ActivationPolicy, agentProjection: options.agentProjection || null, onAgentProjectionError: options.onAgentProjectionError });
-    return { controller, elements, request, confirmationRequest, calls, setProvider(next) { providerState = next; }, setConfirmation(next) { confirmationState = next; } };
+    const runtimeBridge = runtime || { subscribePresentationEvents() { return null; } };
+    if (runtime) { runtimeBridge.subscribePresentationEvents = function (listener) { presentationListeners.push(listener); let active = true; return { unsubscribe() { if (!active) return false; active = false; const index = presentationListeners.indexOf(listener); if (index >= 0) presentationListeners.splice(index, 1); return true; }, dispose() { return this.unsubscribe(); } }; }; }
+    const controller = SurfaceController.create({ surface: { getElementsForTest: () => elements }, provider, confirmation, authority, runtime: runtime ? runtimeBridge : null, t: options.t || ((key) => "t:" + key), PresentationModel, TranscriptView, ComposerView, ConfirmationView, ActivationPolicy, agentProjection: options.agentProjection || null, onAgentProjectionError: options.onAgentProjectionError });
+    return { controller, elements, request, confirmationRequest, calls, emitPresentation(event) { presentationListeners.slice().forEach((listener) => listener(event)); }, presentationListeners, setProvider(next) { providerState = next; }, setConfirmation(next) { confirmationState = next; }, setAuthority(next) { authorityState = next; } };
 }
 async function flush() { await Promise.resolve(); await Promise.resolve(); }
 async function mountEnabled(test) { check(test.controller.mount(), "controller mounts before explicit experimental opt-in"); test.controller.configureExperimental({ endpoint: "http://127.0.0.1:1234", model: "configured-model", acknowledged: true }); await test.controller.enableExperimental(); equal(test.controller.getExperimentalState().enabled, true, "explicit readiness enables only the current experimental session"); return test; }
 async function run() {
+    const i18nSandbox = { window: {}, console }; vm.runInNewContext(fs.readFileSync(require.resolve("../client/js/i18n.js"), "utf8"), i18nSandbox);
+    equal(i18nSandbox.window.I18n.dictionaries.en["vela.surfaceStatusContextStale"], "Context changed. Start the action again", "CONTEXT_STALE status has concise English copy");
+    equal(i18nSandbox.window.I18n.dictionaries["zh-CN"]["vela.surfaceStatusContextStale"], "上下文已变化，请重新操作", "CONTEXT_STALE status has accurate Chinese copy");
     equal(PresentationModel.errorDisplayKey("VERIFICATION_UNAVAILABLE"), "vela.surfaceContextUnavailable", "AE context error is localized");
     equal(PresentationModel.errorDisplayKey("PROVIDER_CONNECTION_FAILED"), "vela.surfaceProviderConnection", "connection error is localized");
     equal(PresentationModel.errorDisplayKey("PROVIDER_TIMEOUT"), "vela.surfaceProviderTimeout", "timeout error is localized");
@@ -70,6 +80,11 @@ async function run() {
     equal(PresentationModel.projectSurfaceState({ state: "idle" }, { state: "executing" }, "", true).state, "executing", "local execution projects executing");
     equal(PresentationModel.projectSurfaceState({ state: "cancelled" }, { state: "idle" }, "", true).state, "cancelled", "trusted cancellation projects cancelled");
     equal(PresentationModel.projectSurfaceState({ state: "failed", text: "completed" }, { state: "idle" }, "", true).state, "error", "trusted failure projects error regardless of model text");
+    equal(PresentationModel.projectSurfaceState({ state: "objective-blocked", errorCode: "CONTEXT_STALE" }, { state: "review-approved" }, "", true).state, "blocked", "terminal CONTEXT_STALE blocks before historical approved review presentation");
+    equal(PresentationModel.projectSurfaceState({ state: "completed" }, { state: "review-approved" }, "", true).state, "completed", "completed terminal state wins over historical approved review presentation");
+    equal(PresentationModel.projectSurfaceState({ state: "cancelled" }, { state: "review-approved" }, "", true).state, "cancelled", "cancelled terminal state wins over historical approved review presentation");
+    equal(PresentationModel.projectSurfaceState({ state: "objective-blocked", errorCode: "VERIFICATION_UNAVAILABLE" }, { state: "review-approved" }, "", true).state, "blocked", "verification terminal state wins over historical approved review presentation");
+    equal(PresentationModel.projectSurfaceState({ state: "pending" }, { state: "review-approved" }, "", true).state, "awaiting-continuation", "nonterminal approved review retains awaiting-continuation presentation");
     equal(PresentationModel.statusTone("experimental-disabled"), "warning", "trusted disabled enum maps to warning without display-text matching");
     equal(PresentationModel.statusTone("idle"), "idle", "idle retains its existing semantic tone");
     equal(PresentationModel.statusTone("requesting"), "processing", "requesting retains processing semantics");
@@ -77,6 +92,18 @@ async function run() {
     equal(PresentationModel.statusTone("completed"), "success", "completed maps to shared success semantics");
     equal(PresentationModel.statusTone("error"), "error", "error retains its existing semantic tone");
     equal(PresentationModel.statusTone("experimental-disabled", "user-disabled"), "disabled", "explicit user disable is distinct from qualification warning");
+    const consumedStructured = PresentationModel.create(); consumedStructured.begin("two-step objective"); consumedStructured.apply({ state: "pending", text: null, errorCode: null });
+    const consumedStructuredSnapshot = consumedStructured.apply({ state: "completed", text: null, errorCode: null });
+    check(consumedStructuredSnapshot.pending === false && consumedStructuredSnapshot.items.length === 1 && consumedStructuredSnapshot.items[0].kind === "user", "validated structured completion without assistant text is consumed successfully without a fabricated Provider error");
+    const consumedRejected = PresentationModel.create(); consumedRejected.begin("reject objective"); consumedRejected.apply({ state: "pending", text: null, errorCode: null }); consumedRejected.apply({ state: "completed", text: null, errorCode: null });
+    const consumedRejectedSnapshot = consumedRejected.applyConfirmation({ state: "rejected" });
+    check(consumedRejectedSnapshot.items.length === 2 && consumedRejectedSnapshot.items[1].displayTextKey === "vela.surfaceConfirmationRejected" && !consumedRejectedSnapshot.items.some((item) => item.kind === "error"), "structured completion followed by Review rejection renders only the bounded rejection notice");
+    const malformedStructured = PresentationModel.create(); malformedStructured.begin("malformed objective"); malformedStructured.apply({ state: "pending", text: null, errorCode: null });
+    const malformedStructuredSnapshot = malformedStructured.apply({ state: "failed", text: null, errorCode: "PROVIDER_RESPONSE_INVALID" });
+    check(malformedStructuredSnapshot.items.length === 2 && malformedStructuredSnapshot.items[1].kind === "error" && malformedStructuredSnapshot.items[1].displayTextKey === "vela.surfaceProviderResponse", "genuine malformed Provider failure retains the existing unusable-response presentation");
+    const textCompletion = PresentationModel.create(); textCompletion.begin("single-step text"); textCompletion.apply({ state: "pending", text: null, errorCode: null });
+    const textCompletionSnapshot = textCompletion.apply({ state: "completed", text: "bounded answer", errorCode: null });
+    check(textCompletionSnapshot.items.length === 2 && textCompletionSnapshot.items[1].kind === "assistant" && textCompletionSnapshot.items[1].text === "bounded answer", "existing single-step text completion still appends its assistant response");
     const unavailable = fixture({ experimentalEnabled: false }); unavailable.controller.mount();
     equal(unavailable.elements.statusSlot.getAttribute("data-vela-provider-state"), "idle", "unavailable projection retains the trusted provider diagnostic state");
     equal(unavailable.elements.root.getAttribute("data-vela-surface-state"), "experimental-disabled", "production default projects the fixed experimental-disabled state");
@@ -129,6 +156,28 @@ async function run() {
     check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "provider text terminal exposes only Send");
     matrix.setProvider({ state: "failed", text: null, errorCode: "PROVIDER_CONNECTION_FAILED" }); matrix.controller.refreshLocale();
     check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "provider error terminal exposes only Send");
+    const blocked = fixture({ authority: true }); await mountEnabled(blocked); const blockedActions = blocked.elements.actionSlot.children; blocked.elements.composer.value = "opacity 47"; blockedActions[0].emit("click"); blocked.setProvider({ state: "objective-blocked", text: null, errorCode: "REVIEW_REQUIRED" }); blocked.request.resolve(); await flush();
+    check(!blockedActions[0].hidden && blockedActions[1].hidden && blockedActions[3].hidden && blockedActions[4].hidden && blockedActions[5].hidden && !blockedActions[6].hidden, "A1 REVIEW_REQUIRED restores Send and delegation while keeping Review, Approve, and Reject hidden");
+    equal(blocked.elements.transcriptScroll.children[1].children[1].textContent, "t:vela.surfaceReviewRequired", "A1 REVIEW_REQUIRED renders the bounded authorization notice");
+    const staleTerminal = fixture({ authority: true }); await mountEnabled(staleTerminal);
+    staleTerminal.setProvider({ state: "objective-blocked", text: null, errorCode: "CONTEXT_STALE" });
+    staleTerminal.setConfirmation({ state: "review-approved", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" });
+    staleTerminal.setAuthority({ state: "failed", active: false }); staleTerminal.controller.refreshLocale();
+    equal(staleTerminal.elements.root.getAttribute("data-vela-surface-state"), "blocked", "terminal CONTEXT_STALE suppresses historical approved review and authority metadata");
+    equal(staleTerminal.elements.statusText.textContent, "t:vela.surfaceStatusContextStale", "CONTEXT_STALE uses the stale-context status semantic");
+    check(staleTerminal.elements.statusText.textContent !== "t:vela.surfaceStatusBlocked" && staleTerminal.elements.statusText.textContent !== "t:vela.surfaceAuthorityStatus.failed", "CONTEXT_STALE never falls back to authorization status");
+    for (const terminalCase of [
+        { code: "VERIFICATION_UNAVAILABLE", key: "vela.surfaceContextUnavailable" },
+        { code: "UNKNOWN_TARGET", key: "vela.surfaceNoActionableTarget" },
+        { code: "AGENT_DRIVER_TASK_UNVERIFIED", key: "vela.surfaceStatusFailed" },
+        { code: "PLAN_FAILED", key: "vela.surfaceStatusFailed" },
+        { code: "LIFECYCLE_BLOCKED", key: "vela.surfaceStatusFailed" }
+    ]) {
+        staleTerminal.setProvider({ state: "objective-blocked", text: null, errorCode: terminalCase.code }); staleTerminal.controller.refreshLocale();
+        equal(staleTerminal.elements.statusText.textContent, "t:" + terminalCase.key, terminalCase.code + " terminal does not fall back to authorization status");
+    }
+    staleTerminal.setProvider({ state: "objective-blocked", text: null, errorCode: "PERMISSION_DENIED" }); staleTerminal.controller.refreshLocale();
+    equal(staleTerminal.elements.statusText.textContent, "t:vela.surfaceStatusBlocked", "PERMISSION_DENIED retains the canonical authorization status");
     matrix.setProvider({ state: "cancelled", text: null, errorCode: "PROVIDER_REQUEST_ABORTED" }); matrix.controller.refreshLocale();
     check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "provider cancellation terminal exposes only Send");
     matrix.setProvider({ state: "intent-rejected", text: null, errorCode: null }); matrix.controller.refreshLocale();
@@ -141,12 +190,36 @@ async function run() {
     check(m[0].hidden && m[1].hidden && !m[3].hidden && m[4].hidden && m[5].hidden, "proposal-ready exposes only Review");
     matrix.setProvider({ state: "idle", text: null, errorCode: null }); matrix.setConfirmation({ state: "confirmation-ready", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
     check(m[0].hidden && m[1].hidden && m[3].hidden && !m[4].hidden && !m[5].hidden, "confirmation-ready exposes only Approve and Reject");
+    equal(matrix.elements.statusText.textContent, "t:vela.surfaceStatusConfirmation", "opacity confirmation retains its capability-specific status");
+    matrix.setConfirmation({ state: "review-approved", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
+    matrix.setConfirmation({ state: "confirmation-ready", capabilityId: "set-layer-name-v1", valueKind: "string", beforeValue: "Layer A", proposedValue: "Vela Stream Test", errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
+    equal(matrix.elements.statusText.textContent, "t:vela.surfaceStatusLayerNameConfirmation", "step 1 rename confirmation cannot reuse the opacity status");
+    equal(m[2].textContent, "t:vela.surfaceConfirmationLayerName", "step 1 rename confirmation renders the typed layer-name summary");
+    equal(matrix.elements.transcriptScroll.children[1].children[matrix.elements.transcriptScroll.children[1].children.length - 1].textContent, "t:vela.surfaceConfirmationLayerNameReady", "step 1 rename confirmation cannot append a second opacity notice");
+    matrix.setProvider({ state: "pending", text: null, errorCode: null }); matrix.setConfirmation({ state: "review-approved", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
+    check(m[0].hidden && !m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "approved B2 review closes Confirmation and exposes only objective Cancel while awaiting continuation");
+    equal(matrix.elements.root.getAttribute("data-vela-surface-state"), "awaiting-continuation", "approved B2 review is not projected as execution or completion");
+    equal(matrix.elements.statusText.textContent, "t:vela.surfaceStatusAwaitingContinuation", "awaiting-continuation uses its own accurate status rather than local-model pending");
+    matrix.setConfirmation({ state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
+    equal(matrix.elements.statusText.textContent, "t:vela.surfaceStatusPending", "actual pending Provider work retains the local-model waiting status");
+    matrix.setProvider({ state: "idle", text: null, errorCode: null });
     matrix.setConfirmation({ state: "executing", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
     check(m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "executing hides every action");
     matrix.setConfirmation({ state: "execution-completed", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
     check(!m[0].hidden && m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "execution terminal exposes only Send");
     matrix.setConfirmation({ state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
     check(!m[0].hidden && m[1].hidden, "locale refresh retains idle Send visibility");
+    const cancelConvergence = fixture({ clearConfirmationOnCancel: true }); await mountEnabled(cancelConvergence); const cc = cancelConvergence.elements.actionSlot.children;
+    cancelConvergence.elements.composer.value = "opacity 47"; cc[0].emit("click");
+    cancelConvergence.setConfirmation({ state: "confirmation-ready", beforeValue: null, proposedValue: 47, errorCode: null, moduleRevision: "test" }); cancelConvergence.controller.refreshLocale();
+    cc[4].emit("click"); cancelConvergence.setConfirmation({ state: "review-approved", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }); cancelConvergence.confirmationRequest.resolve(); await flush();
+    check(cc[0].hidden && !cc[1].hidden && cc[4].hidden && cc[5].hidden, "approved review awaiting continuation exposes only Cancel");
+    cc[1].emit("click");
+    check(!cc[0].hidden && cc[1].hidden && cc[4].hidden && cc[5].hidden, "terminal cancel plus inactive Confirmation naturally restores Send");
+    equal(cancelConvergence.calls.cancel, 1, "full approve-to-cancel Surface sequence invokes objective cancellation once");
+    const cancelledItemCount = cancelConvergence.elements.transcriptScroll.children[1].children.length; cc[1].emit("click");
+    equal(cancelConvergence.calls.cancel, 1, "hidden Cancel cannot dispatch a duplicate cancellation");
+    equal(cancelConvergence.elements.transcriptScroll.children[1].children.length, cancelledItemCount, "duplicate Cancel produces no second transcript terminal");
     matrix.controller.suspend(); matrix.controller.resume();
     check(!m[0].hidden && matrixNodes.every((node, index) => node === m[index]), "suspend and resume retain idle Send visibility and every action node identity");
     e.composer.value = "set opacity"; e.composer.focus(); e.composer.setSelectionRange(2, 5); send.emit("click");
@@ -201,6 +274,32 @@ async function run() {
     check(!/errorCode|PROVIDER_|VERIFICATION_UNAVAILABLE/.test(TranscriptView.create.toString()), "Transcript does not map internal codes");
     check(!/requestId|candidateId|planId|rawGrant|grantSpec|PolicyDecision|reservation|nonce|digest/.test(SurfaceController.create.toString()), "Surface controller receives only fixed consent/revoke operations and no trusted identity or raw authority material");
     check(!/candidateId|planId|authority|target|context|nonce|digest/.test(ConfirmationView.create.toString()), "confirmation view receives no trusted execution data");
+    function runtimeEvent(invocation, type, text, presentationMode) { const providerEvent = { type, requestId: "req_surface", generation: 1, providerId: "lmstudio", modelId: "model" }; if (text !== undefined) providerEvent.text = text; return Object.freeze({ type: "provider-stream-event", runtimeGeneration: 1, reasoningInvocationId: invocation, presentationMode: presentationMode || "assistant-text", providerEvent: Object.freeze(providerEvent) }); }
+    const streamingSurface = fixture({ runtime: {} });
+    await mountEnabled(streamingSurface);
+    equal(streamingSurface.presentationListeners.length, 1, "Surface mounts exactly one Runtime presentation subscription");
+    streamingSurface.elements.composer.value = "streamed objective";
+    streamingSurface.elements.actionSlot.children[0].emit("click");
+    streamingSurface.emitPresentation(runtimeEvent("reasoning_1", "stream-started"));
+    streamingSurface.emitPresentation(runtimeEvent("reasoning_1", "reasoning-delta", "untrusted thinking"));
+    streamingSurface.emitPresentation(runtimeEvent("reasoning_1", "text-delta", "partial <b>json</b>"));
+    const streamingNodes = streamingSurface.elements.transcriptScroll.children[1];
+    check(streamingNodes.children.length === 2 && streamingNodes.children[1].children[0].children[1].textContent === "untrusted thinking" && streamingNodes.children[1].children[1].textContent === "partial <b>json</b>", "Runtime events reach PresentationModel and TranscriptView as separate safe transient channels");
+    streamingSurface.emitPresentation(runtimeEvent("reasoning_1", "stream-completed"));
+    streamingSurface.setProvider({ state: "failed", text: null, errorCode: "PROVIDER_RESPONSE_INVALID" });
+    streamingSurface.request.resolve();
+    await flush();
+    const retainedReasoningNode = streamingNodes.children.find((node) => node.attributes["data-reasoning-invocation-id"] === "reasoning_1");
+    check(streamingNodes.children.length === 3 && retainedReasoningNode && retainedReasoningNode.children[0].children[1].textContent === "untrusted thinking" && streamingSurface.elements.transcriptScroll.children[1].children.every((node) => node.className.indexOf("vela-transcript-assistant") === -1), "Authoritative parser failure retains reasoning while removing transient assistant success");
+    streamingSurface.controller.suspend();
+    equal(streamingSurface.presentationListeners.length, 0, "Surface suspend unsubscribes Runtime presentation events");
+    streamingSurface.emitPresentation(runtimeEvent("reasoning_1", "text-delta", "late"));
+    streamingSurface.controller.resume();
+    equal(streamingSurface.presentationListeners.length, 1, "Surface resume reattaches one Runtime presentation subscription");
+    streamingSurface.controller.dispose();
+    equal(streamingSurface.presentationListeners.length, 0, "Surface dispose unsubscribes Runtime presentation events");
+    streamingSurface.emitPresentation(runtimeEvent("reasoning_2", "stream-started"));
+    check(streamingNodes.children.length === 3 && retainedReasoningNode.children[0].children[1].textContent === "untrusted thinking", "Late Runtime events after dispose cannot mutate transcript DOM");
     const projectionCalls = { subscribe: 0, unsubscribe: 0, disposeAgent: 0 };
     const projectionListeners = [];
     let projectionRevision = 0;

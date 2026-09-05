@@ -21,6 +21,7 @@
         var experimentalEnabled = false;
         var onExperimentalStateChange = options && typeof options.onExperimentalStateChange === "function" ? options.onExperimentalStateChange : function () {};
         var agentProjection = options && options.agentProjection && typeof options.agentProjection.subscribe === "function" && typeof options.agentProjection.getSnapshot === "function" ? options.agentProjection : null;
+        var runtime = options && options.runtime && typeof options.runtime.subscribePresentationEvents === "function" ? options.runtime : null;
         var onAgentProjectionError = options && typeof options.onAgentProjectionError === "function" ? options.onAgentProjectionError : function () {};
         var experimentalState = experimentalEnabled ? "ready" : "disabled";
         var experimentalDisabledReason = "qualification-required";
@@ -37,6 +38,8 @@
         var disposed = false;
         var suppressConfirmationTerminal = false;
         var agentProjectionSubscription = null;
+        var presentationSubscription = null;
+        var presentationSubscriptionToken = null;
         var latestAgentProjectionSnapshot = null;
         var authorityButton = null;
         if (!surface || typeof surface.getElementsForTest !== "function" || !provider || typeof provider.send !== "function" || typeof provider.cancel !== "function" || typeof provider.getState !== "function" || !confirmation || typeof confirmation.review !== "function" || typeof confirmation.approve !== "function" || typeof confirmation.reject !== "function" || typeof confirmation.getState !== "function" || !PresentationModel || typeof PresentationModel.create !== "function" || !TranscriptView || typeof TranscriptView.create !== "function" || !ComposerView || typeof ComposerView.create !== "function" || !ConfirmationView || typeof ConfirmationView.create !== "function" || !ActivationPolicy || typeof ActivationPolicy.isTrustedPolicy !== "function" || !ActivationPolicy.isTrustedPolicy(activationPolicy) || activationPolicy.experimentalOptInAllowed !== true || activationPolicy.productionEnabled !== false) { throw new Error("VelaSurfaceController requires trusted presentation dependencies."); }
@@ -44,6 +47,7 @@
             var current = confirmationState && confirmationState.state;
             if (current === "executing") { return "none"; }
             if (current === "confirmation-ready") { return "confirm"; }
+            if (current === "review-approved") { return "cancel"; }
             if (current === "execution-completed" || current === "rejected" || current === "execution-failed") { return "send"; }
             if (providerState && providerState.state === "pending") { return "cancel"; }
             if (providerState && providerState.state === "proposal-ready") { return "review"; }
@@ -77,7 +81,33 @@
             catch (error) { reportAgentProjectionError(error, "unsubscribe"); }
             return true;
         }
-        function projectedStatusText(state) {
+        function subscribePresentationEvents() {
+            var token;
+            if (!runtime || presentationSubscription || disposed || suspended || !mounted || typeof presentation.applyPresentationEvent !== "function") { return false; }
+            token = { active: true };
+            try {
+                presentationSubscription = runtime.subscribePresentationEvents(function (event) {
+                    if (!token.active || disposed || suspended || !mounted) { return; }
+                    presentation.applyPresentationEvent(event);
+                    transcript.render(presentation.getSnapshot(), presentation.getTransientSnapshot());
+                });
+                presentationSubscriptionToken = token;
+                return !!presentationSubscription;
+            } catch (error) {
+                presentationSubscription = null;
+                presentationSubscriptionToken = null;
+                return false;
+            }
+        }
+        function unsubscribePresentationEvents() {
+            var subscription = presentationSubscription;
+            presentationSubscription = null;
+            if (presentationSubscriptionToken) { presentationSubscriptionToken.active = false; presentationSubscriptionToken = null; }
+            if (!subscription || typeof subscription.unsubscribe !== "function") { return false; }
+            try { subscription.unsubscribe(); } catch (error) { /* Presentation teardown remains authoritative. */ }
+            return true;
+        }
+        function projectedStatusText(state, errorCode, confirmationState) {
             var keys = {
                 "experimental-unavailable": "vela.surfaceStatusExperimentalUnavailable",
                 "experimental-disabled": "vela.surfaceStatusExperimentalDisabled",
@@ -94,11 +124,20 @@
                 "requesting": "vela.surfaceStatusPending",
                 "reviewing": "vela.surfaceStatusProposalReady",
                 "awaiting-confirmation": "vela.surfaceStatusConfirmation",
+                "awaiting-continuation": "vela.surfaceStatusAwaitingContinuation",
                 "executing": "vela.surfaceStatusExecuting",
                 "completed": "vela.surfaceStatusCompleted",
                 "cancelled": "vela.surfaceStatusCancelled",
+                "blocked": "vela.surfaceStatusBlocked",
                 "error": "vela.surfaceStatusFailed"
             };
+            if (state === "blocked") {
+                if (errorCode === "CONTEXT_STALE") { return t("vela.surfaceStatusContextStale"); }
+                if (errorCode === "VERIFICATION_UNAVAILABLE") { return t("vela.surfaceContextUnavailable"); }
+                if (errorCode === "UNKNOWN_TARGET") { return t("vela.surfaceNoActionableTarget"); }
+                if (errorCode !== "REVIEW_REQUIRED" && errorCode !== "PERMISSION_DENIED") { return t("vela.surfaceStatusFailed"); }
+            }
+            if (state === "awaiting-confirmation" && confirmationState && (confirmationState.capabilityId === "set-layer-name-v1" || confirmationState.valueKind === "string")) { return t("vela.surfaceStatusLayerNameConfirmation"); }
             return t(keys[state] || "vela.surfaceStatusFailed");
         }
         function synchronizeStatusAccessibility() {
@@ -130,7 +169,7 @@
             confirmationState = effectiveConfirmationState(confirmation.getState());
             snapshot = presentation.apply(providerState);
             snapshot = presentation.applyConfirmation(confirmationState, snapshot);
-            transcript.render(snapshot);
+            transcript.render(snapshot, presentation.getTransientSnapshot());
             action = actionState(providerState, confirmationState);
             projection = PresentationModel.projectSurfaceState(providerState, confirmationState, elements.composer.value, experimentalEnabled, experimentalState, activationPolicy, experimentalDisabledReason);
             if (!experimentalEnabled) { action = "send"; }
@@ -145,7 +184,7 @@
                 authorityButton.textContent = t(authorityActive ? "vela.surfaceRevokeOpacityConsent" : "vela.surfaceGrantOpacityConsent");
                 authorityButton.setAttribute("aria-label", authorityButton.textContent);
             }
-            elements.statusText.textContent = authorityState && ["active", "executing", "consumed", "revoked", "expired", "failed"].indexOf(authorityState.state) !== -1 ? t("vela.surfaceAuthorityStatus." + authorityState.state) : projectedStatusText(projection.state);
+            elements.statusText.textContent = authorityState && ["active", "executing", "consumed", "revoked", "expired", "failed"].indexOf(authorityState.state) !== -1 && projection.state !== "blocked" && projection.state !== "cancelled" && projection.state !== "completed" && projection.state !== "error" ? t("vela.surfaceAuthorityStatus." + authorityState.state) : projectedStatusText(projection.state, providerState && providerState.errorCode, confirmationState);
             elements.root.setAttribute("data-vela-surface-state", projection.state);
             elements.statusSlot.setAttribute("data-tone", projection.tone);
             elements.statusSlot.setAttribute("data-vela-provider-state", providerState && providerState.state || "idle");
@@ -253,12 +292,12 @@
                 authorityButton.addEventListener("click", authorityClick);
                 elements.actionSlot.appendChild(authorityButton);
             }
-            mounted = true; subscribeAgentProjection(); synchronize(); return true;
+            mounted = true; subscribeAgentProjection(); subscribePresentationEvents(); synchronize(); return true;
         }
-        function suspend() { if (disposed || !mounted || suspended) { return false; } suspended = true; generation += 1; unsubscribeAgentProjection(); return true; }
-        function resume() { if (disposed || !mounted || !suspended) { return false; } suspended = false; subscribeAgentProjection(); synchronize(); return true; }
+        function suspend() { if (disposed || !mounted || suspended) { return false; } suspended = true; generation += 1; unsubscribeAgentProjection(); unsubscribePresentationEvents(); return true; }
+        function resume() { if (disposed || !mounted || !suspended) { return false; } suspended = false; subscribeAgentProjection(); subscribePresentationEvents(); synchronize(); return true; }
         function refreshLocale() { if (disposed || !mounted) { return; } transcript.refreshLocale(); composer.refreshLocale(); confirmationView.refreshLocale(); synchronize(); }
-        function dispose() { if (disposed) { return false; } disposed = true; generation += 1; unsubscribeAgentProjection(); if (authorityButton) { authorityButton.removeEventListener("click", authorityClick); } if (transcript) { transcript.dispose(); } if (composer) { composer.dispose(); } if (confirmationView) { confirmationView.dispose(); } return true; }
+        function dispose() { if (disposed) { return false; } disposed = true; generation += 1; unsubscribeAgentProjection(); unsubscribePresentationEvents(); if (authorityButton) { authorityButton.removeEventListener("click", authorityClick); } if (transcript) { transcript.dispose(); } if (composer) { composer.dispose(); } if (confirmationView) { confirmationView.dispose(); } return true; }
         return Object.freeze({ mount: mount, suspend: suspend, resume: resume, refreshLocale: refreshLocale, configureExperimental: configureExperimental, enableExperimental: enableExperimental, disableExperimental: disableExperimental, getExperimentalState: experimentalSnapshot, getElementsForTest: function () { return elements; }, getAgentProjectionSnapshotForTest: function () { return latestAgentProjectionSnapshot; }, dispose: dispose });
     }
     return Object.freeze({ create: create });
