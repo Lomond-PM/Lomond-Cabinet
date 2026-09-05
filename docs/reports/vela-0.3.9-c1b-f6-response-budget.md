@@ -1,6 +1,7 @@
 # Vela 0.3.9-C1b-F6 — Response Hard-Limit Calibration & Reasoning/Completion Budget Policy
 
 日期：2026-09-05。状态：实现、离线回归、真实 LM Studio acceptance 完成；真实 AE 面板复测待进行。未 commit / push。
+以上为该阶段历史状态；C2 已记录用户后续手动 real AE acceptance PASS，见 [final closure](vela-0.3.9-c2-closure.md)。
 
 结论：旧 256 KiB ceiling 把逐 token SSE 当作短 terminal JSON 计费，已成为正常 reasoning workload 的阻断点。先测量并将 **stream transport ceiling 校准为 4 MiB**，再比较 reasoning policy。最终 qwen3.5-4b 普通聊天使用 `thinking_budget_tokens=6144, max_tokens=8192`；strict structured 使用 `2048/4096`。保留 LM Studio 的 reasoning on/off 选择，无自动重试。最终 12/12 真实请求成功，0 次 TOO_LARGE；全离线回归 170/170。
 
@@ -89,7 +90,7 @@ F5 production 未显式发送 `reasoning_effort`、`thinking_budget_tokens`、`m
 - 模型“on/off”与 OpenAI-compatible HTTP `reasoning_effort` 枚举不是同一层。实际 `on` / `off` 请求被 400 拒绝，错误列出 `none, minimal, low, medium, high, xhigh`。未把未测枚举当作已验证配置。
 - `none` 实测关闭 reasoning。`low/medium/high` 请求成功，但 server log 明确提示该模型不支持 strength，fallback 到模型 on；因此不能把三次随机输出差异当成高/中/低强度效果。
 - `/v1/chat/completions` 实际字段是 **`thinking_budget_tokens`**，bundled server 将其映射到 `reasoning.budgetTokens`。非负整数或 null；负数实测 400。未把 SDK/另一 REST 路径的 `reasoning_budget` 错发到该 endpoint。
-- 原始证据：`.tmp/vela-f6/model-info.json`；`C:/Users/Administrator/.lmstudio/server-logs/2026-09/2026-09-05.1.log`；`D:/Program Files/LM Studio/resources/app/.webpack/main/index.js` 的只读字段检索。未修改 LM Studio settings 或该实现。
+- 原始证据：当时本机 `.tmp/vela-f6/model-info.json`、2026-09-05 LM Studio server log，以及 LM Studio 安装内 bundled main/index.js 的只读字段检索。日志与安装文件属于原工作站的 local-only provenance，不要求其他 checkout 存在相同绝对路径。未修改 LM Studio settings 或该实现。
 
 同一 medium prompt，在 transport 已校准后比较：
 

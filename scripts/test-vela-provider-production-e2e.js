@@ -566,6 +566,24 @@ async function run() {
         check(driver.attachRuntimePort(harness.runtime.getAgentDriverRuntimePort()), "Rename Driver attaches the existing production Runtime semantic port.");
         return { driver, events };
     }
+    // F9: actual trusted Host state spans all four satisfaction combinations.
+    for (const testCase of require("./fixtures/vela-routing-harness").cases) {
+        const matrix = makeHarness();
+        Object.assign(matrix.state, { providerMode: "logical", value: testCase.opacity, name: testCase.name, proposalOpacity: 60, proposalName: "Vela Stream Test" });
+        await matrix.runtime.initialize();
+        const owner = renameDriver(matrix);
+        let step = await owner.driver.startObjective({ message: require("./fixtures/vela-routing-harness").message, endpoint: "http://127.0.0.1:1234", model: "m" });
+        check(step.state === "awaiting-review" && step.logicalPlan.stepCount === 2, "F9 " + testCase.id + " starts a two-step Agent objective even if all desired values are already satisfied.");
+        for (const capability of ["set-opacity-v1", "set-layer-name-v1"]) {
+            check(step.suspendedReview.capabilityId === capability, "F9 independent Review retains exact capability order.");
+            step = await owner.driver.resolveReview({ reviewId: step.suspendedReview.reviewId, revision: step.suspendedReview.revision, outcome: "approved" });
+        }
+        check(step.terminal.outcome === "completed" && step.logicalPlan.completedStepCount === 2, "F9 " + testCase.id + " completes both steps.");
+        check(matrix.calls.filter(call => call.kind === "execution").length === Number(testCase.opacity !== 60) + Number(testCase.name !== "Vela Stream Test"), "F9 Host mutation count reflects only unsatisfied steps.");
+        check(matrix.calls.filter(call => call.request && /^(observeCommittedPropertyValue|observeCommittedLayerAttributeValue)$/.test(call.request.operation)).length === 2, "F9 both steps receive fresh Verify, including no-op steps.");
+        check(matrix.runtime.getProviderDiagnostics().finalProfile === "bounded-logical-plan-eligible", "F9 runtime preserves logical profile.");
+        matrix.runtime.dispose();
+    }
     const logicalHappy = makeHarness(); logicalHappy.state.providerMode = "logical"; logicalHappy.state.value = 47; logicalHappy.state.proposalOpacity = 47; logicalHappy.state.proposalName = "Hero"; await logicalHappy.runtime.initialize();
     const logicalHappyDriver = renameDriver(logicalHappy);
     const logicalStep0 = await logicalHappyDriver.driver.startObjective({ message: "把当前图层透明度改成47%，然后把它命名为Hero", endpoint: "http://127.0.0.1:1234", model: "m" });

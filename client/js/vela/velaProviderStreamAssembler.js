@@ -43,7 +43,6 @@
             if (!delta || typeof delta !== "object") { invalid("Invalid streaming delta shape."); }
             if (own(delta, "content")) { if (typeof delta.content !== "string") { invalid("Invalid streaming content delta."); } text += delta.content; if (delta.content) { onDelta("text", delta.content); } }
             ["reasoning_content", "reasoning", "thinking"].forEach(function (key) { if (own(delta, key)) { if (typeof delta[key] !== "string") { invalid("Invalid streaming reasoning delta."); } reasoning += delta[key]; if (delta[key]) { onDelta("reasoning", delta[key]); } } });
-            if (own(delta, "content") && typeof delta.content === "string" && value.choices[0].finish_reason === null) { /* ordinary text */ }
             if (own(delta, "structured_content")) { if (typeof delta.structured_content !== "string") { invalid("Invalid structured delta."); } structured += delta.structured_content; }
             lastValidFrameType = "delta";
         }

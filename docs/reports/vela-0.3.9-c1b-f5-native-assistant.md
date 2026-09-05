@@ -1,6 +1,7 @@
 # Vela 0.3.9-C1b-F5 — Native Assistant Streaming & Output Capability Separation
 
 Date: 2026-09-05. Implementation and offline regression complete; real AE visual acceptance pending.
+Historical stage status above; C2 records subsequent user-performed real AE acceptance as PASS. See [final closure](vela-0.3.9-c2-closure.md).
 Architecture amendment: **NONE**. No commit or push.
 
 This correction changes Provider transport response responsibility. It does not change Agent canonical contracts, Authority, Review, Execution, Host, or AgentDriver. The existing dirty C1b workspace was preserved on `feat/vela-0.3.9-a1-stream-contract`; no branch switch, pull into dirty work, reset, commit, or push was performed.
