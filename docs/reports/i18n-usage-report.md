@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 464 |
+| A | Core / Global; keep | 471 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 3 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -635,7 +635,8 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.surfaceCancel | vela | Cancel | 取消 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceComposerLabel | vela | Vela message | Vela 消息 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceComposerPlaceholder | vela | Message Vela | 输入给 Vela 的消息 | client/js/vela/velaComposerView.js, client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| vela.surfaceConfirmationLayerName | vela | Layer name: {before} → {proposed} | 图层名称：{before} → {proposed} | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceConfirmationLayerName | vela | Layer name: {before} → {proposed} | 图层名称：{before} → {proposed} | client/js/vela/velaConfirmationView.js, client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceConfirmationLayerNameReady | vela | A local layer rename is ready for confirmation. | 一个本地图层重命名已准备待确认。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceConfirmationReady | vela | A local opacity change is ready for confirmation. | 一个本地不透明度更改已准备待确认。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceConfirmationRejected | vela | The local action suggestion was rejected. No change was made. | 已拒绝本地操作建议。未发生更改。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceConfirmationValue | vela | Opacity {before}% → {proposed}% | 不透明度 {before}% → {proposed}% | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -657,6 +658,11 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.surfaceProviderNoDisplayableText | vela | The local model did not return displayable text. | 本地模型未返回可显示的文本。 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceProviderResponse | vela | The local model returned a response that could not be used. Try again. | 本地模型返回了无法使用的响应。请重试。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceProviderTimeout | vela | The local model took too long to respond. Check LM Studio and try again. | 本地模型响应超时。请检查 LM Studio 后重试。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceReasoningActive | vela | Thinking… | 正在思考… | client/js/vela/velaTranscriptView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceReasoningCancelled | vela | Output stream cancelled | 输出流已取消 | client/js/vela/velaTranscriptView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceReasoningCompleted | vela | Output stream ended | 输出流已结束 | client/js/vela/velaTranscriptView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceReasoningFailed | vela | Output stream ended with an issue | 输出流结束（出现问题） | client/js/vela/velaTranscriptView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceReasoningResponse | vela | Thinking process | 思考过程 | client/js/vela/velaTranscriptView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceReject | vela | Reject | 拒绝 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceResize | vela | Resize Vela conversation area | 调整 Vela 对话区域大小 | client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceReview | vela | Review | 查看 | client/js/vela/velaConfirmationView.js, client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -682,6 +688,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.surfaceStatusExperimentalUnavailable | vela | Provider unavailable until manual opt-in | Provider 需手动选择加入后才可用 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusFailed | vela | Local request failed | 本地请求失败 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusIntentRejected | vela | An explicit opacity edit is needed | 需要明确的不透明度修改请求 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceStatusLayerNameConfirmation | vela | Confirm local layer rename | 请确认本地图层重命名 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusModelNotFound | vela | Configured model was not found | 未找到配置的模型 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusModelNotLoaded | vela | Configured model is not loaded | 配置的模型未加载 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusPending | vela | Waiting for local model | 正在等待本地模型 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |

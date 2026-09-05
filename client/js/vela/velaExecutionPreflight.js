@@ -78,7 +78,7 @@
             throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
         }
         if (!protocol.isPlainObject(options)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Execution preflight options must be an object."); }
-        protocol.assertNoUnknownKeys(options, ["protocol", "actionValidator", "planStore", "contextBridge", "reviewPort", "getCurrentExecutionBinding", "executeValidatedAction", "onCommittedVerificationAvailable"], "executionPreflight.options");
+        protocol.assertNoUnknownKeys(options, ["protocol", "actionValidator", "planStore", "contextBridge", "reviewPort", "getCurrentExecutionBinding", "executeValidatedAction", "onTerminalVerificationAvailable"], "executionPreflight.options");
 
         var actionValidator = protocol.getOwnDataProperty(options, "actionValidator");
         var planStore = protocol.getOwnDataProperty(options, "planStore");
@@ -105,7 +105,7 @@
         }
         var getCurrentExecutionBinding = requireOwnFunction(protocol, options, "getCurrentExecutionBinding");
         var executeValidatedAction = requireOwnFunction(protocol, options, "executeValidatedAction");
-        var onCommittedVerificationAvailable = options.onCommittedVerificationAvailable === undefined ? null : requireOwnFunction(protocol, options, "onCommittedVerificationAvailable");
+        var onTerminalVerificationAvailable = options.onTerminalVerificationAvailable === undefined ? null : requireOwnFunction(protocol, options, "onTerminalVerificationAvailable");
         var guard = guardModule.createExecutionGuard(planStore);
         if (!guard || typeof guard.check !== "function" || typeof guard.reserve !== "function" || typeof guard.complete !== "function" || typeof guard.fail !== "function" || typeof guard.abort !== "function") {
             protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Execution guard terminalization is unavailable.");
@@ -518,6 +518,24 @@
             return protocol.deepFreeze(normalized);
         }
 
+        function mutationExpectation(action) {
+            var payload = action && action.payload;
+            if (!payload || payload.toolId !== "vela" || !payload.params) { return null; }
+            if (payload.actionId === "set-opacity-v1") { return { valueKind: "number", value: payload.params.opacity }; }
+            if (payload.actionId === "set-layer-name-v1") { return { valueKind: "string", value: payload.params.name }; }
+            return null;
+        }
+
+        function capturedMutationValue(item, expectation, bindingCapture, valueCapture) {
+            var summary;
+            if (!item || !expectation || item.valueKind !== expectation.valueKind) { return undefined; }
+            if (expectation.valueKind === "string") { return item.value; }
+            if (!valueCapture || !valueCapture.snapshot || !Array.isArray(valueCapture.snapshot.targets) || valueCapture.snapshot.targets.length !== 1) { return undefined; }
+            try { summary = summarizeReview(bindingCapture, valueCapture); }
+            catch (ignored) { return undefined; }
+            return summary.beforeValue;
+        }
+
         function executeStep(input) {
             return withActive(function () {
                 if (!protocol.isPlainObject(input)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Execution step input is invalid."); }
@@ -621,16 +639,14 @@
                         if (!validatedBound || !actionValidator.authority.isValidatedAction(validatedBound.action)) { protocol.fail(protocol.ERROR_CODES.VALIDATION_AUTHORITY_REQUIRED, "JIT-bound action provenance is invalid."); }
                         stepRecord.transient = { action: validatedBound.action, bindingCapture: freshBindingCapture, valueCapture: freshValueCapture };
                         var trustedExecutionContext = Object.freeze({ bindingCapture: freshBindingCapture, valueCapture: freshValueCapture });
-                        var supportsCommittedVerification = validatedBound.action && validatedBound.action.payload && validatedBound.action.payload.toolId === "vela" && (validatedBound.action.payload.actionId === "set-opacity-v1" || validatedBound.action.payload.actionId === "set-layer-name-v1");
-                        if (validatedBound.action.payload.actionId === "set-layer-name-v1" && selectedCapture.item.value === validatedBound.action.payload.params.name) {
-                            markStale(record, candidate.candidateId, "no-op");
-                            protocol.fail(protocol.ERROR_CODES.PLAN_FAILED, "Layer rename is a no-op.");
-                        }
+                        var expectation = mutationExpectation(validatedBound.action);
+                        var supportsCommittedVerification = Boolean(expectation);
                         return {
                             bindingCapture: freshBindingCapture,
                             valueCapture: freshValueCapture,
                             baselineValidation: baselineValidation,
-                            verificationCandidate: supportsCommittedVerification ? committedTargetVerificationPort.prepare(validatedBound.action, trustedExecutionContext) : null
+                            verificationCandidate: supportsCommittedVerification ? committedTargetVerificationPort.prepare(validatedBound.action, trustedExecutionContext) : null,
+                            alreadySatisfied: Boolean(expectation && capturedMutationValue(selectedCapture.item, expectation, freshBindingCapture, selectedCapture.valueCapture) === expectation.value)
                         };
                     });
                 }).then(function (fresh) {
@@ -664,13 +680,13 @@
                     var trustedExecutionContext = Object.freeze({ bindingCapture: stepRecord.transient.bindingCapture, valueCapture: stepRecord.transient.valueCapture });
                     var verificationCandidate = fresh.verificationCandidate;
 
-                    function settleVerification(committed) {
+                    function settleVerification(available) {
                         var previous = committedVerificationsByPlanId.get(record.planId);
                         if (previous) { committedTargetVerificationPort.discard(previous); committedVerificationsByPlanId.delete(record.planId); }
-                        if (committed === true && verificationCandidate && onCommittedVerificationAvailable) {
+                        if (available === true && verificationCandidate && onTerminalVerificationAvailable) {
                             committedTargetVerificationPort.activate(verificationCandidate);
                             committedVerificationsByPlanId.set(record.planId, verificationCandidate);
-                            try { onCommittedVerificationAvailable(Object.freeze({ planId: record.planId })); }
+                            try { onTerminalVerificationAvailable(Object.freeze({ planId: record.planId })); }
                             catch (ownerError) {
                                 committedVerificationsByPlanId.delete(record.planId);
                                 committedTargetVerificationPort.discard(verificationCandidate);
@@ -720,7 +736,7 @@
                         if (terminalized) { throw protocolError(protocol, protocol.ERROR_CODES.PLAN_FAILED); }
                         try {
                             var candidate = guard.complete(reserved.reservation, result);
-                            settleVerification(result.committed === true ? true : result.committed === false ? false : null);
+                            settleVerification(result.ok === true);
                             terminalized = true;
                             stepRecord.transient = null;
                             var completedPlan = planStore.getPlanView(record.planId);
@@ -738,6 +754,8 @@
                         catch (error) { return failTerminal(error); }
                         return completeTerminal(result);
                     }
+
+                    if (fresh.alreadySatisfied) { return completeReturned({ ok: true, committed: false, summary: { disposition: "already-satisfied" } }); }
 
                     var returned;
                     try { returned = executeValidatedAction(action, metadata, trustedExecutionContext); }

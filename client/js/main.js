@@ -4284,6 +4284,7 @@
                 ComposerView: window.VelaComposerView,
                 ConfirmationView: window.VelaConfirmationView,
                 ActivationPolicy: window.VelaActivationPolicy,
+                runtime: velaRuntimeController,
                 onExperimentalStateChange: refreshVelaExperimentalSettings,
                 agentProjection: velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.getCurrentProjection === "function" ? velaAgentRuntimeOwner.getCurrentProjection() : null,
                 onAgentProjectionError: function (error, phase) { reportVelaAgentRuntimeError(error, phase || "surface"); },

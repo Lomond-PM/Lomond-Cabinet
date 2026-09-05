@@ -114,8 +114,7 @@
             "Never add, remove, reorder, nest, or dynamically append steps. Never include target identity, layer or comp ids, confirmation, nonce, authority, review state, Host payload, arbitrary code, tool_calls, or extra fields."
         ].join(" "); }
         if (requestProfile === PROFILES.TEXT_ONLY) { return [
-            GLOBAL_STATIC_CONTRACT,
-            "This request is text-only. Return only a text envelope; a localProposal is invalid for this request.",
+            "This is ordinary conversation. Answer directly in natural language, following the user's language.",
             "Answer normal conversation, current-value queries, advice, explanations, ambiguity, and unavailable grounding as text. Trusted context is a fact only; never guess a missing current value.",
             "Do not claim an edit was performed, will be performed, or that a proposal was created. Do not describe a proposal."
         ].join(" "); }
@@ -151,9 +150,8 @@
             "Replace only opacity and name with the exact values stated by the current user. The two steps, order, capability IDs, and all field names are fixed."
         ].join(" "); }
         if (requestProfile === PROFILES.TEXT_ONLY) { return [
-            "Turn response contract: profile " + requestProfile + ".",
-            "Use requestId " + requestId + ", provider " + PROVIDER_ID + ", and model " + model + ".",
-            "Concrete valid response example: " + rootEnvelope(requestId, model, { type: "text", text: "A concise answer." })
+            "Answer the current user naturally. Use trusted grounding only as facts; do not invent unavailable values.",
+            "Do not create proposals or claim that After Effects changes have occurred or will occur."
         ].join(" "); }
         if (requestProfile === PROFILES.PROPOSAL_CAPABLE_UNION) { return [
             "Turn response contract: profile " + requestProfile + ".",

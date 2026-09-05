@@ -46,6 +46,7 @@ function createController(options) {
     const environment = Object.assign({ setTimeout, clearTimeout }, nodeRuntime, options.environment || {});
     return runtimeModule.createRuntime({
         activationPolicy,
+        presentationStreaming: options.presentationStreaming === true,
         exactAgentSession: options.exactAgentSession || sessionRuntime.createSessionLog(),
         environment,
         invokeHost(source, callback) {
@@ -64,13 +65,14 @@ async function run() {
     check(/function continueApprovedReview\([\s\S]*capturedGeneration = reviewBarrierGeneration/.test(runtimeSource) && /reason: function \(input\)[\s\S]*agentReasoningGeneration \+= 1/.test(runtimeSource), "Agent reasoning and review continuation retain separate generation domains.");
     check(/code: "CONTEXT_STALE", committed: false, observation: Object\.freeze\(\{ targetAvailable: Boolean\(target\), targetClass: target \? \(record\.capabilityIntent\.capabilityId === "set-layer-name-v1" \? "layer-name" : "layer-opacity"\) : null, observedValueKind: record\.valueKind, observedValueDigest:/.test(runtimeSource), "Runtime maps approved precommit CONTEXT_STALE to bounded typed committed-false observation truth without execution identity leakage.");
     check(/function dispose\(\)[\s\S]*invalidateReviewBarriers\(\)[\s\S]*agentReasoningGeneration \+= 1/.test(runtimeSource), "Runtime dispose invalidates both review barriers and in-flight Agent reasoning generations.");
+    check(/var presentationStreamingEnabled = !\(options && ownData\(options, "presentationStreaming"\) === false\)/.test(runtimeSource), "Production Runtime enables presentation streaming by default while retaining an explicit false fallback.");
     ["velaAuthorizedPlanMaterializer", "velaTaskRun", "velaPlanReviewProjection", "velaPlanController", "velaConfirmedAuthorityComposer", "velaReviewRuntimePort"].forEach((file) => { check(runtimeSource.indexOf('require("./' + file + '")') !== -1, "Runtime CommonJS graph requires " + file + " before construction."); });
     check(/createAuthorizedPlanMaterializer\([\s\S]*preflight:\s*preflight[\s\S]*createPlanController\([\s\S]*planStore:\s*planStore[\s\S]*preflight:\s*preflight/.test(runtimeSource), "Dormant PlanController shares the exact production PlanStore and Preflight mutation spine.");
     check(/reviewRuntimePort\.invalidateAll\(\)[\s\S]*planController\.invalidate\("suspend"\)/.test(runtimeSource) && /planController\.invalidate\("session-reset"\)/.test(runtimeSource) && /planController\.dispose\(\)/.test(runtimeSource), "Suspend, resetSession, and dispose invalidate dormant review/orchestration lifetime.");
     check(/composeAuthorityPlane\(wallClock\);\s*createConfirmedAuthorityComposer\(\)/.test(runtimeSource) && /function dispose\(\)[\s\S]*disposeConfirmedAuthorityComposer\(\)[\s\S]*planController\.dispose\(\)/.test(runtimeSource), "Runtime privately creates Composer after canonical Authority dependencies and disposes it before PlanController teardown.");
-    check(/onCommittedVerificationAvailable:\s*ownCommittedVerification/.test(runtimeSource) && /function ownCommittedVerification\([\s\S]*phase !== "executing"[\s\S]*verificationPlanId !== null[\s\S]*record\.verificationPlanId = association\.planId/.test(runtimeSource), "Runtime synchronously owns one committed verification association only for the current executing continuation.");
+    check(/onTerminalVerificationAvailable:\s*ownTerminalVerification/.test(runtimeSource) && /function ownTerminalVerification\([\s\S]*phase !== "executing"[\s\S]*verificationPlanId !== null[\s\S]*record\.verificationPlanId = association\.planId/.test(runtimeSource), "Runtime synchronously owns one terminal verification association only for the current executing continuation.");
     check(/continuation\.phase = "executing";\s*return confirmedAuthorityComposer\.executeConfirmed\(\)/.test(runtimeSource), "Runtime establishes callback ownership before executeConfirmed can settle committed truth.");
-    check(/composition\.state !== "authority-ready"[\s\S]*confirmedAuthorityComposer\.executeConfirmed/.test(runtimeSource) && /committed === true[\s\S]*verificationPlanId[\s\S]*state: "verification-required"/.test(runtimeSource), "Production continuation executes only after authority-ready and translates committed truth into the semantic A1 checkpoint.");
+    check(/composition\.state !== "authority-ready"[\s\S]*confirmedAuthorityComposer\.executeConfirmed/.test(runtimeSource) && /continuation\.committed === true \|\| execution && execution\.state === "satisfied"[\s\S]*verificationPlanId[\s\S]*state: "verification-required"/.test(runtimeSource), "Production continuation executes only after authority-ready and routes committed or already-satisfied truth through fresh verification.");
     check(/preflight\.verifyCommittedValue\s*\(/.test(runtimeSource) && /verifyOpacity:\s*function|verifyOpacity: function/.test(runtimeSource) && !/verifyCommitted(?:Opacity|Value)/.test(require("fs").readFileSync(require.resolve("../client/js/vela/velaAgentDriver"), "utf8")), "A2 routes typed committed-target verification privately through Runtime while retaining the isolated legacy current-selection port.");
     check((runtimeSource.match(/invalidateProductionContinuation\(\);/g) || []).length >= 4 && /function invalidateProductionContinuation\([\s\S]*invalidateAllCommittedVerifications/.test(runtimeSource), "Cancel, suspend, reset and dispose converge through one committed-verification cleanup helper.");
     check(!/ConfirmedAuthorityComposerInstance|getComposer|composerPort/.test(runtimeSource) && !/confirmedAuthorityComposer[^\n]*return Object\.freeze\(\{/.test(runtimeSource), "Runtime exposes no Composer instance, authority port, or debug lifecycle seam.");
@@ -87,7 +89,7 @@ async function run() {
     assert.throws(() => runtimeModule.validateRegisteredActionMappings(capabilityContracts, { getTool() { return registeredTool; }, getAction() { return null; } }), (error) => error && error.code === "RUNTIME_CAPABILITY_UNAVAILABLE", "Runtime startup fails closed when the mapped action is missing."); assertions += 1;
     const controller = createController();
     check(Object.isFrozen(controller), "Controller is frozen.");
-    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,attachObjectiveReviewPort,cancelProviderRequest,checkProviderReadiness,dispose,getAgentDriverRuntimePort,getAuthorityDiagnostics,getAuthorityProjection,getConfirmationSurfaceState,getObservationReadPort,getProviderDiagnostics,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,grantNextOpacityMutation,initialize,rejectActiveCandidate,resetSession,resume,reviewProviderProposal,revokeOpacityDelegation,sendProviderMessage,suspend", "Runtime exposes only existing facades plus bounded Agent Driver and objective review composition ports.");
+    check(Object.keys(controller).sort().join(",") === "approveActiveCandidate,attachObjectiveReviewPort,cancelProviderRequest,checkProviderReadiness,dispose,getAgentDriverRuntimePort,getAuthorityDiagnostics,getAuthorityProjection,getConfirmationSurfaceState,getObservationReadPort,getProviderDiagnostics,getProviderSurfaceState,getProviderUiState,getStatus,getUiState,grantNextOpacityMutation,initialize,rejectActiveCandidate,resetSession,resume,reviewProviderProposal,revokeOpacityDelegation,sendProviderMessage,subscribePresentationEvents,suspend", "Runtime exposes only existing facades plus the narrow presentation subscription seam.");
     check(controller.getObservationReadPort() === null, "Observation read port is unavailable before Runtime initialization.");
     check(controller.getAgentDriverRuntimePort() === null, "Agent Driver runtime port is unavailable before Runtime initialization.");
     check(controller.cancelProviderRequest.length === 0, "Provider cancellation has no caller-supplied request identifier seam.");
@@ -97,6 +99,34 @@ async function run() {
     const second = controller.initialize();
     check(first === second, "Concurrent initialization shares one Promise.");
     const status = await first;
+    let streamFetchCount = 0;
+    const streamEvents = [];
+    const streaming = createController({ presentationStreaming: true, environment: Object.assign({}, nodeRuntime, { fetch(url, options) {
+        streamFetchCount += 1;
+        const body = JSON.parse(options.body);
+        const content = streamFetchCount === 1 ? "runtime stream" : "";
+        const chunks = [
+            "data: " + JSON.stringify({ choices: [{ delta: { reasoning_content: "runtime thinking" }, finish_reason: null }] }) + "\n\n",
+            "data: " + JSON.stringify({ choices: [{ delta: { content }, finish_reason: null }] }) + "\n\n",
+            "data: [DONE]\n\n"
+        ].map((value) => new TextEncoder().encode(value));
+        return Promise.resolve({ status: 200, redirected: false, url, headers: { get: () => "text/event-stream" }, body: { getReader() { return { read() { return Promise.resolve(chunks.length ? { done: false, value: chunks.shift() } : { done: true }); }, cancel() {} }; } } });
+    } }) });
+    await streaming.initialize();
+    const presentationSubscription = streaming.subscribePresentationEvents((event) => streamEvents.push(event));
+    const reasoningPort = streaming.getAgentDriverRuntimePort();
+    const firstReasoning = await reasoningPort.reason({ message: "hello", endpoint: "http://127.0.0.1:1234", model: "m" });
+    check(firstReasoning.type === "text" && streamEvents.map((event) => event.providerEvent.type).join(",") === "stream-started,reasoning-delta,text-delta,stream-completed", "Runtime projects ordered Provider presentation events through its own seam while reason returns the terminal result.");
+    check(streamEvents[0].reasoningInvocationId === "reasoning_1" && streamEvents.every((event) => event.runtimeGeneration === 1 && event.providerEvent.requestId), "Runtime adds only its own generation and reasoning invocation identity while preserving Provider identity.");
+    const firstInvocationId = streamEvents[0].reasoningInvocationId;
+    await assert.rejects(reasoningPort.reason({ message: "parser failure", endpoint: "http://127.0.0.1:1234", model: "m" }), (error) => error && error.code === "PROVIDER_RESPONSE_INVALID"); assertions += 1;
+    check(streamEvents.slice(4).map((event) => event.providerEvent.type).join(",") === "stream-started,reasoning-delta,stream-completed" && streamEvents[4].reasoningInvocationId !== firstInvocationId, "A later invocation has a distinct segment and presentation completion remains visible when terminal parsing rejects.");
+    check(presentationSubscription.unsubscribe() === true && presentationSubscription.dispose() === false, "Runtime presentation subscription is idempotent.");
+    const streamCountAfterUnsubscribe = streamEvents.length;
+    await assert.rejects(reasoningPort.reason({ message: "after unsubscribe", endpoint: "http://127.0.0.1:1234", model: "m" }), (error) => error && error.code === "PROVIDER_RESPONSE_INVALID"); assertions += 1;
+    check(streamEvents.length === streamCountAfterUnsubscribe, "Unsubscribed Runtime presentation listeners receive no later events.");
+    check(streaming.dispose() === true, "Disposed Runtime invalidates presentation delivery.");
+    await expectCode(Promise.resolve().then(() => streaming.subscribePresentationEvents(() => {})), "LIFECYCLE_BLOCKED", "Disposed Runtime rejects new presentation subscriptions.");
     let objectiveProjection = Object.freeze({ state: "active", reviewId: "runtime_review_1", revision: 1, capabilityId: "set-opacity-v1", beforeValue: 100, proposedValue: 47, outcome: null });
     let objectiveResolveCalls = 0;
     check(controller.attachObjectiveReviewPort(Object.freeze({ getProjection() { return objectiveProjection; }, resolve(input) { objectiveResolveCalls += 1; objectiveProjection = Object.freeze({ state: "resolved", reviewId: input.reviewId, revision: input.revision, capabilityId: null, beforeValue: null, proposedValue: null, outcome: input.outcome }); return Object.freeze({ state: input.outcome === "approved" ? "awaiting-outcome" : "terminal" }); } })) === true, "Runtime attaches one narrow owner-owned objective review port after initialization.");

@@ -88,7 +88,7 @@
         if (!protocolModule.isTrustedProtocol(protocol) || !bridgeModule.isTrustedContextBridgeForProtocol(bridge, protocol) || !transportModule.isTrustedLocalTransportForProtocol(transport, protocol) || !intentGateModule || typeof intentGateModule.evaluate !== "function" || !protocol.isPlainObject(options)) {
             throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
         }
-        protocol.assertNoUnknownKeys(options, ["protocol", "contextBridge", "transport", "runtime"], "providerController.options");
+        protocol.assertNoUnknownKeys(options, ["protocol", "contextBridge", "transport", "runtime", "streaming"], "providerController.options");
         try { protocol.attachLogicalPlanContracts(logicalPlanContracts); } catch (logicalAttachError) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
         if (!providerRuntime || typeof ownData(providerRuntime, "setTimeout") !== "function" || typeof ownData(providerRuntime, "clearTimeout") !== "function" || typeof ownData(providerRuntime, "createAbortController") !== "function" || typeof ownData(providerRuntime, "parseUrl") !== "function" || typeof ownData(providerRuntime, "nowMs") !== "function") {
             protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Provider runtime dependencies are unavailable.");
@@ -113,6 +113,8 @@
         var reviewingProposal = null;
         var diagnostics = Object.freeze({ moduleRevision: MODULE_REVISION, provisionalProfile: null, contextUnionEligible: false, finalProfile: null, responseSchemaName: null, parsedResponseType: null, intentAllowed: null, intentReason: null, lastTerminalRequestId: null, lastTerminalDisposition: null, lastTerminalFailureBoundary: null, lastTerminalErrorCode: null, lastContextOperation: null, lastContextDisposition: null, lastContextFailureStage: null, lastContextHostErrorCode: null, lastContextHostFailureStage: null, lastContextErrorCode: null, lastContextUnavailableReason: null });
         var generation = 1;
+        var streamingEnabled = ownData(options, "streaming") === true;
+        var streamListeners = [];
         var publicState = protocol.deepFreeze({ state: state, requestId: null, text: null, errorCode: null, intentReason: null, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: MODULE_REVISION });
         function publish(nextState, requestId, text, errorCode, model, proposal, intentReason) {
             state = nextState;
@@ -121,6 +123,17 @@
                 proposalCapabilityId: proposal ? proposal.capabilityId : null, suggestedOpacity: proposal ? proposal.opacity : null,
                 providerId: "lmstudio", modelId: model || null, moduleRevision: MODULE_REVISION });
             return publicState;
+        }
+        function dispatchStreamEvent(event) {
+            var snapshot = streamListeners.slice();
+            snapshot.forEach(function (listener) { if (streamListeners.indexOf(listener) !== -1) { try { listener(event); } catch (ignored) {} } });
+        }
+        function subscribeStreamEvents(listener) {
+            var activeSubscription = true;
+            if (typeof listener !== "function") { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED); }
+            streamListeners.push(listener);
+            function unsubscribe() { var index; if (!activeSubscription) { return false; } activeSubscription = false; index = streamListeners.indexOf(listener); if (index !== -1) { streamListeners.splice(index, 1); } return true; }
+            return Object.freeze({ unsubscribe: unsubscribe, dispose: unsubscribe });
         }
         function summaryFromProjection(projection) {
             return "Trusted request context: active composition type " + projection.activeCompositionType + "; selected layers " + projection.selectedLayerCount + "; first selected layer type " + projection.firstSelectedLayerType + "; selected layer opacity " + (projection.selectedLayerOpacity.available ? String(projection.selectedLayerOpacity.value) : "unavailable") + ".";
@@ -132,7 +145,7 @@
             return !!opacity && opacity.available === true && typeof opacity.value === "number" && isFinite(opacity.value) && opacity.value >= 0 && opacity.value <= 100;
         }
         function schemaNameForProfile(profile) {
-            if (profile === requestPolicyProfiles.TEXT_ONLY) { return "vela_text_response"; }
+            if (profile === requestPolicyProfiles.TEXT_ONLY) { return null; }
             if (profile === requestPolicyProfiles.EXPLICIT_EDIT_ELIGIBLE) { return "vela_local_proposal_response"; }
             if (profile === requestPolicyProfiles.BOUNDED_LOGICAL_PLAN_ELIGIBLE) { return "vela_bounded_logical_plan_response"; }
             return "vela_bounded_union_response";
@@ -326,9 +339,9 @@
                 if (!active || active.generation !== capturedGeneration || capturedGeneration !== generation || state !== "pending") { throw new protocol.VelaProtocolError(protocol.ERROR_CODES.LIFECYCLE_BLOCKED); }
                 syncContextDiagnostics();
                 contextUnionEligible = isUnionEligible(grounded.projection);
-                if (provisionalProfile === requestPolicyProfiles.TEXT_ONLY && contextUnionEligible) { requestProfile = requestPolicyProfiles.PROPOSAL_CAPABLE_UNION; }
+                if (provisionalProfile === requestPolicyProfiles.TEXT_ONLY) { requestProfile = requestPolicyProfiles.TEXT_ONLY; }
                 updateDiagnostics({ contextUnionEligible: contextUnionEligible, finalProfile: requestProfile, responseSchemaName: schemaNameForProfile(requestProfile) });
-                provider = adapterModule.createLocalOpenAICompatibleProvider({ protocol: protocol, transport: transport, runtime: providerRuntime, endpoint: values.endpoint, model: values.model, requestProfile: requestProfile, responseFormatMode: "json-schema" });
+                provider = adapterModule.createLocalOpenAICompatibleProvider({ protocol: protocol, transport: transport, runtime: providerRuntime, endpoint: values.endpoint, model: values.model, requestProfile: requestProfile, streaming: streamingEnabled, onStreamEvent: streamingEnabled ? dispatchStreamEvent : null });
                 started = provider.start({ messages: [{ role: "assistant", content: summaryFromProjection(grounded.projection) }, { role: "user", content: values.message }], context: grounded.requestContext });
                 active = { generation: capturedGeneration, requestId: started.requestId, provider: provider, captureHandle: null, requestProfile: requestProfile };
                 publish("pending", started.requestId, null, null, values.model);
@@ -441,7 +454,7 @@
                 return true;
             }
         });
-        var controller = Object.freeze({ send: send, cancel: cancel, invalidate: invalidate, checkReadiness: checkReadiness, getUiState: function () { return publicState; }, getDiagnostics: function () { return diagnostics; } });
+        var controller = Object.freeze({ send: send, cancel: cancel, invalidate: invalidate, checkReadiness: checkReadiness, subscribeStreamEvents: subscribeStreamEvents, getUiState: function () { return publicState; }, getDiagnostics: function () { return diagnostics; } });
         trustedControllers.add(controller);
         controllerProtocols.set(controller, protocol);
         controllerProposalPorts.set(controller, proposalPort);

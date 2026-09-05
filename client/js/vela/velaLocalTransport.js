@@ -45,7 +45,7 @@
         catch (error) { return undefined; }
         return descriptor && !descriptor.get && !descriptor.set && hasOwn.call(descriptor, "value") ? descriptor.value : undefined;
     }
-    function protocolError(protocol, code) { return new protocol.VelaProtocolError(code, undefined, { stage: "local-transport" }); }
+    function protocolError(protocol, code, details) { return new protocol.VelaProtocolError(code, undefined, { stage: "local-transport", details: details || {} }); }
     function endpointIsLocal(url) {
         var match = typeof url === "string" ? ENDPOINT_PATTERN.exec(url) : null;
         return !!match && Number(match[2]) >= 1 && Number(match[2]) <= 65535;
@@ -232,7 +232,86 @@
                 throw protocolError(protocol, responseStarted ? protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID : protocol.ERROR_CODES.PROVIDER_CONNECTION_FAILED);
             });
         }
-        var transport = Object.freeze({ sendJson: sendJson, readJson: readJson });
+        function readStream(input) {
+            var responseStarted = false;
+            var requestText;
+            var onChunk;
+            var onTransportDiagnostic;
+            if (!protocol.isPlainObject(input)) { return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID)); }
+            try {
+                protocol.assertNoUnknownKeys(input, ["url", "method", "headers", "body", "signal", "allowRedirects", "maxRequestBytes", "maxResponseBytes", "onChunk", "onTransportDiagnostic"], "localTransport.streamRequest");
+                onChunk = ownData(input, "onChunk");
+                onTransportDiagnostic = ownData(input, "onTransportDiagnostic");
+                if (!endpointIsLocal(input.url) || input.method !== "POST" || input.allowRedirects !== false || !validHeaders(input.headers) || typeof onChunk !== "function" ||
+                        (onTransportDiagnostic !== undefined && typeof onTransportDiagnostic !== "function") || !Number.isInteger(input.maxRequestBytes) || !Number.isInteger(input.maxResponseBytes) || input.maxRequestBytes < 1 || input.maxResponseBytes < 1) { throw protocolError(protocol, protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID); }
+                if (providerAdapterModule.isTrustedOutboundBodyForTransport(input.body, transport, protocol) === true) { requestText = trustedSerialize(input.body, protocol, [], 0); }
+                else { protocol.assertSafeJson(input.body); requestText = protocol.canonicalStringify(input.body, { maxBytes: input.maxRequestBytes }); }
+                if (protocol.utf8ByteLength(requestText) > input.maxRequestBytes) { throw protocolError(protocol, protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED); }
+            } catch (error) { return Promise.reject(error instanceof protocol.VelaProtocolError ? error : protocolError(protocol, protocol.ERROR_CODES.PROVIDER_CONFIG_INVALID)); }
+            return Promise.resolve(fetchFn(input.url, { method: "POST", headers: { "Content-Type": "application/json", "Accept": "text/event-stream" }, body: requestText, signal: input.signal, credentials: "omit", redirect: "error" })).then(function (response) {
+                var reader;
+                var decoder;
+                var total = 0;
+                var decodedChunkCount = 0;
+                var earlyStopped = false;
+                if (!response || typeof response.status !== "number" || !response.headers || typeof response.headers.get !== "function" || !response.body || typeof response.body.getReader !== "function") { throw protocolError(protocol, protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID); }
+                responseStarted = true;
+                reader = response.body.getReader();
+                decoder = new TextDecoderCtor("utf-8", { fatal: true });
+                function release() { try { if (reader && typeof reader.releaseLock === "function") { reader.releaseLock(); } } catch (ignored) {} }
+                function diagnostic(phase, error) {
+                    var detail;
+                    if (typeof onTransportDiagnostic !== "function") { return; }
+                    detail = Object.freeze({
+                        phase: phase,
+                        httpStatus: response.status,
+                        contentType: String(response.headers.get("content-type") || ""),
+                        bytesRead: total,
+                        decodedChunkCount: decodedChunkCount,
+                        readerErrorName: error && typeof error.name === "string" ? error.name.slice(0, 128) : null,
+                        readerErrorMessage: error && typeof error.message === "string" ? error.message.slice(0, 256) : null,
+                        abortSignaled: input.signal && input.signal.aborted === true,
+                        earlyStopped: earlyStopped
+                    });
+                    try { onTransportDiagnostic(detail); } catch (ignoredDiagnostic) {}
+                }
+                function completeWithoutEof() {
+                    var tail = decoder.decode();
+                    if (tail) { onChunk(tail); }
+                    earlyStopped = true;
+                    try { Promise.resolve(reader.cancel()).catch(function () {}); } catch (ignoredCancel) {}
+                    release();
+                    diagnostic("protocol-done", null);
+                    return protocol.deepFreeze({ status: response.status, contentType: String(response.headers.get("content-type") || ""), bodyText: "", redirected: response.redirected === true, finalUrl: String(response.url || "") });
+                }
+                function readNext() {
+                    return Promise.resolve(reader.read()).then(function (part) {
+                        var decoded;
+                        if (!part || typeof part.done !== "boolean") { throw protocolError(protocol, protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID); }
+                        if (part.done) {
+                            decoded = decoder.decode();
+                            if (decoded) { onChunk(decoded); }
+                            release();
+                            return protocol.deepFreeze({ status: response.status, contentType: String(response.headers.get("content-type") || ""), bodyText: "", redirected: response.redirected === true, finalUrl: String(response.url || "") });
+                        }
+                        if (!part.value || typeof part.value.byteLength !== "number") { throw protocolError(protocol, protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID); }
+                        total += part.value.byteLength;
+                        if (total > input.maxResponseBytes) { try { reader.cancel(); } catch (ignoredCancel) {} release(); throw protocolError(protocol, protocol.ERROR_CODES.PROVIDER_RESPONSE_TOO_LARGE); }
+                        decoded = decoder.decode(part.value, { stream: true });
+                        if (decoded) {
+                            decodedChunkCount += 1;
+                            if (onChunk(decoded) === true) { return completeWithoutEof(); }
+                        }
+                        return readNext();
+                    });
+                }
+                return readNext().catch(function (error) { diagnostic("reader-read", error); release(); throw error; });
+            }).catch(function (error) {
+                if (error instanceof protocol.VelaProtocolError) { throw error; }
+                throw protocolError(protocol, responseStarted ? protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID : protocol.ERROR_CODES.PROVIDER_CONNECTION_FAILED);
+            });
+        }
+        var transport = Object.freeze({ sendJson: sendJson, readStream: readStream, readJson: readJson });
         trustedTransports.add(transport);
         transportProtocols.set(transport, protocol);
         return transport;

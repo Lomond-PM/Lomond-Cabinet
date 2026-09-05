@@ -180,6 +180,7 @@ function makeHarness(options) {
             if (executorMode === "committed-result-unavailable") return Promise.reject(new protocol.VelaProtocolError(protocol.ERROR_CODES.PLAN_FAILED));
             if (executorMode === "failed-result") return { ok: false, summary: { reason: "fake" } };
             if (executorMode === "noncommit") return { ok: false, committed: false, summary: { reason: "not-committed" } };
+            if (executorMode === "successful-noncommit") return { ok: true, committed: false, summary: { reason: "unchanged" } };
             if (executorMode === "committed-unavailable") { const error = new protocol.VelaProtocolError(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE); error.committed = true; throw error; }
             if (executorMode === "invalid-result") return { ok: true, summary: { source: "unsafe" } };
             if (executorMode === "accessor-result") { const value = { ok: true }; Object.defineProperty(value, "summary", { enumerable: true, get() { throw new Error("accessor"); } }); return value; }
@@ -191,7 +192,7 @@ function makeHarness(options) {
         }
     };
     if (options.verificationOwner !== false) {
-        preflightOptions.onCommittedVerificationAvailable = function (association) { verificationAssociations.push(association); };
+        preflightOptions.onTerminalVerificationAvailable = function (association) { verificationAssociations.push(association); };
     }
     const preflight = preflightModule.createExecutionPreflight(preflightOptions);
     return {
@@ -644,11 +645,30 @@ async function run() {
     await expectCode(renameSelectionDrift.preflight.executeStep({ planId: renameSelectionPlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.CONTEXT_STALE, "Selection drift rejects dormant rename before execution.");
     check(renameSelectionDrift.executorCalls === 0, "Rename selection drift causes zero executor or Host calls.");
 
-    const renameNoOp = makeHarness();
+    const opacityNoOp = makeHarness(); opacityNoOp.state.value = 60; opacityNoOp.state.committedObservationValue = 60;
+    const opacityNoOpPlan = await opacityNoOp.preflight.createBoundPlan({ steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 60 }, targetScope: { type: "selected-layer", property: "opacity" } }], selectionOrderMeaningful: true });
+    await confirm(opacityNoOp, opacityNoOpPlan);
+    const opacityNoOpExecution = await opacityNoOp.preflight.executeStep({ planId: opacityNoOpPlan.planId, stepIndex: 0 });
+    check(opacityNoOpExecution.result.ok === true && opacityNoOpExecution.result.committed === false && opacityNoOpExecution.result.summary.disposition === "already-satisfied" && opacityNoOp.executorCalls === 0 && opacityNoOp.verificationAssociations.length === 1, "Exact-equal opacity completes as already satisfied without executor or Host mutation and retains fresh verification: " + JSON.stringify({ result: opacityNoOpExecution.result, executorCalls: opacityNoOp.executorCalls, associations: opacityNoOp.verificationAssociations }));
+    check((await opacityNoOp.preflight.verifyCommittedValue({ planId: opacityNoOpPlan.planId, capabilityId: "set-opacity-v1", expectedValue: 60 })).matches === true, "Exact-equal opacity is completed only after fresh observed value matches the expected state.");
+
+    const renameNoOp = makeHarness(); renameNoOp.state.committedObservationName = "Layer A";
     const renameNoOpPlan = await renameNoOp.preflight.createBoundPlan({ localProposal: { capabilityId: "set-layer-name-v1", params: { name: "Layer A" }, targetScope: { type: "selected-layer", attribute: "name" } }, selectionOrderMeaningful: true });
     await confirm(renameNoOp, renameNoOpPlan);
-    await expectCode(renameNoOp.preflight.executeStep({ planId: renameNoOpPlan.planId, stepIndex: 0 }), protocol.ERROR_CODES.PLAN_FAILED, "Exact-equal rename is terminalized as a no-op before Host mutation.");
-    check(renameNoOp.executorCalls === 0, "Rename no-op performs no executor or Host mutation.");
+    const renameNoOpExecution = await renameNoOp.preflight.executeStep({ planId: renameNoOpPlan.planId, stepIndex: 0 });
+    check(renameNoOpExecution.result.ok === true && renameNoOpExecution.result.committed === false && renameNoOpExecution.result.summary.disposition === "already-satisfied" && renameNoOp.executorCalls === 0 && renameNoOp.verificationAssociations.length === 1, "Exact-equal rename completes as already satisfied without executor or Host mutation.");
+    check((await renameNoOp.preflight.verifyCommittedValue({ planId: renameNoOpPlan.planId, capabilityId: "set-layer-name-v1", expectedValue: "Layer A" })).matches === true, "Exact-equal rename is completed only after fresh observed name matches the expected state.");
+
+    const postExecutionNoChange = makeHarness(); postExecutionNoChange.state.value = 50; postExecutionNoChange.state.committedObservationValue = 60; postExecutionNoChange.executorMode = "successful-noncommit";
+    const postExecutionNoChangePlan = await postExecutionNoChange.preflight.createBoundPlan({ steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 60 }, targetScope: { type: "selected-layer", property: "opacity" } }], selectionOrderMeaningful: true });
+    await confirm(postExecutionNoChange, postExecutionNoChangePlan);
+    const postExecutionNoChangeResult = await postExecutionNoChange.preflight.executeStep({ planId: postExecutionNoChangePlan.planId, stepIndex: 0 });
+    check(postExecutionNoChangeResult.result.ok === true && postExecutionNoChangeResult.result.committed === false && postExecutionNoChange.executorCalls === 1 && postExecutionNoChange.verificationAssociations.length === 1, "Successful noncommit executor outcome still admits final fresh verification.");
+    check((await postExecutionNoChange.preflight.verifyCommittedValue({ planId: postExecutionNoChangePlan.planId, capabilityId: "set-opacity-v1", expectedValue: 60 })).matches === true, "Successful noncommit outcome succeeds when final fresh observation equals expected.");
+    const postExecutionMismatch = makeHarness(); postExecutionMismatch.state.value = 50; postExecutionMismatch.state.committedObservationValue = 50; postExecutionMismatch.executorMode = "successful-noncommit";
+    const postExecutionMismatchPlan = await postExecutionMismatch.preflight.createBoundPlan({ steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 60 }, targetScope: { type: "selected-layer", property: "opacity" } }], selectionOrderMeaningful: true });
+    await confirm(postExecutionMismatch, postExecutionMismatchPlan); await postExecutionMismatch.preflight.executeStep({ planId: postExecutionMismatchPlan.planId, stepIndex: 0 });
+    check((await postExecutionMismatch.preflight.verifyCommittedValue({ planId: postExecutionMismatchPlan.planId, capabilityId: "set-opacity-v1", expectedValue: 60 })).matches === false, "Successful noncommit outcome remains unverified when final fresh observation differs from expected.");
 
     const strictInput = makeHarness();
     const strictPlan = await seedAndCreate(strictInput);

@@ -137,12 +137,13 @@
             return Promise.resolve(running).then(function (progress) {
                 var receipt = progress && progress.executionReceipt;
                 var committed = receipt && receipt.committed === true ? true : receipt && receipt.committed === false ? false : null;
+                var satisfied = receipt && receipt.satisfied === true;
                 var cancelled = record.cancelled === true || disposed || progress && progress.taskState === "cancelled";
                 record.terminalized = true;
                 finish(record);
                 if (cancelled) { return Object.freeze({ state: "cancelled", committed: committed, code: "AGENT_DRIVER_CANCELLED" }); }
-                if (!progress || progress.taskState !== "completed" || progress.executionArmed !== false || committed !== true) { return Object.freeze({ state: "failed", committed: committed, code: progress && progress.terminalErrorCode || "PLAN_FAILED" }); }
-                return Object.freeze({ state: "executed", committed: true, code: null });
+                if (!progress || progress.taskState !== "completed" || progress.executionArmed !== false || (committed !== true && !satisfied)) { return Object.freeze({ state: "failed", committed: committed, code: progress && progress.terminalErrorCode || "PLAN_FAILED" }); }
+                return Object.freeze({ state: satisfied ? "satisfied" : "executed", committed: committed, code: null });
             }, function (error) {
                 var receipt = error && error.executionReceipt;
                 var committed = receipt && receipt.committed === true ? true : receipt && receipt.committed === false ? false : null;

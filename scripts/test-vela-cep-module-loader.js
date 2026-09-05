@@ -125,7 +125,7 @@ async function run() {
     check(result.ok === true && result.state === "ready", "Loader reaches ready state.");
     check(Object.isFrozen(browser.context.VelaCepModuleLoader.getStatus()) && browser.context.VelaCepModuleLoader.getStatus().state === "ready" && browser.context.VelaCepModuleLoader.getStatus().lastErrorCode === null, "Loader exposes only a frozen ready diagnostic snapshot.");
     check(Object.isFrozen(result) && Object.isFrozen(result.modules), "Loader result is frozen.");
-    check(result.modules.length === 34 && result.modules[19] === "VelaCapabilityCompiler" && result.modules[24] === "VelaConfirmedAuthorityComposer" && result.modules.slice(-8).join(",") === "VelaDelegationGrantStore,VelaDelegationPolicyEngine,VelaAuthorityEvidenceResolver,VelaDelegationAuthorityCoordinator,VelaAuthorizedPlanAuthorityProducer,VelaAuthorityActivationGate,VelaAtomicActivationCoordinator,VelaRuntime", "Loader returns the canonical logical-plan, Composer, and Authority dependency order with Runtime last.");
+    check(result.modules.length === 36 && result.modules[21] === "VelaCapabilityCompiler" && result.modules[26] === "VelaConfirmedAuthorityComposer" && result.modules.slice(-8).join(",") === "VelaDelegationGrantStore,VelaDelegationPolicyEngine,VelaAuthorityEvidenceResolver,VelaDelegationAuthorityCoordinator,VelaAuthorizedPlanAuthorityProducer,VelaAuthorityActivationGate,VelaAtomicActivationCoordinator,VelaRuntime", "Loader returns the canonical streaming, logical-plan, Composer, and Authority dependency order with Runtime last.");
     check(browser.context.__velaProtocolCoreBootstrapV1.getModule("VelaProtocol") === browser.context.VelaProtocol, "Protocol uses the browser bootstrap identity.");
     check(browser.context.__velaProtocolCoreBootstrapV1.getModule("VelaRuntime") === browser.context.VelaRuntime, "Runtime uses the browser bootstrap identity.");
     check(browser.context.__velaProtocolCoreBootstrapV1.getModule("VelaLogicalPlanContracts") === browser.context.VelaLogicalPlanContracts && browser.context.VelaLogicalPlanContracts.MAX_LOGICAL_STEPS === 2, "Dormant logical-plan owner is available to the late-bound AgentDriver seam.");
@@ -152,7 +152,7 @@ async function run() {
     check(await browser.context.VelaCepModuleLoader.load() === result, "Ready loader calls return the same result.");
     check(Object.getOwnPropertyDescriptor(browser.context, "CSInterface") === undefined, "Loader does not create CSInterface state.");
     check(Object.getOwnPropertyDescriptor(browser.context, "__adobe_cep__") === undefined, "Loader does not create Adobe CEP state.");
-    check(browser.getAppendCount() === 34, "Loader injects each protected module exactly once.");
+    check(browser.getAppendCount() === 36, "Loader injects each protected module exactly once.");
     check(browser.requestedUrls[0] === "file:///C:/extension/client/js/vela/velaProtocol.js?v=test", "The captured loader base and cache query produce VelaProtocol as the first request after currentScript is cleared.");
     check(JSON.stringify(browser.requestedUrls) === JSON.stringify([
         "file:///C:/extension/client/js/vela/velaProtocol.js?v=test",
@@ -161,6 +161,8 @@ async function run() {
         "file:///C:/extension/client/js/vela/velaLogicalPlanContracts.js?v=test",
         "file:///C:/extension/client/js/vela/velaProviderRequestBranchPolicy.js?v=test",
         "file:///C:/extension/client/js/vela/velaCapabilityPromptBuilder.js?v=test",
+        "file:///C:/extension/client/js/vela/velaProviderStreamEvents.js?v=test",
+        "file:///C:/extension/client/js/vela/velaProviderStreamAssembler.js?v=test",
         "file:///C:/extension/client/js/vela/velaProviderAdapter.js?v=test",
         "file:///C:/extension/client/js/vela/velaProviderIntentGate.js?v=test",
         "file:///C:/extension/client/js/vela/velaLocalTransport.js?v=test",

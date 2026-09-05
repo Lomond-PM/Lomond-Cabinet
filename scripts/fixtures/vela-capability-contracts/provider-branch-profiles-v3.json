@@ -1,0 +1,31 @@
+{
+  "fixtureType": "vela-provider-branch-profiles",
+  "schemaRevision": "v3",
+  "promptBuilderRevision": "vela-capability-prompt-builder-v4",
+  "requestBranchPolicyRevision": "vela-provider-request-branch-policy-v1",
+  "capabilityId": "set-opacity-v1",
+  "capabilityRevision": "vela-capability-contract-v1",
+  "protocolVersion": "vela.model-response.v1",
+  "messageRoleOrder": [
+    "system",
+    "assistant",
+    "user"
+  ],
+  "fixedModelIdentifier": "vela-contract-model",
+  "fixedRequestId": "req_00000000000000000000000000000000",
+  "fixedAssistantContext": "Trusted request context: active composition type CompItem; selected layers 1; first selected layer type AVLayer; selected layer opacity 25.",
+  "fixedTextUserMessage": "Set opacity to 50%",
+  "fixedExtractionUserMessage": "Set opacity to 50%",
+  "textOnly": {
+    "promptSha256": "a97b9c367790eee8ae679e42005141d15cea7b8e4581fbc97dc0e5fb892f7045",
+    "responseFormatSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "stableRequestBodySha256": "4e45a9548c79c8a039f7def323a884a91db489a7a455fa5e4f4332ab69817de2"
+  },
+  "explicitEditEligible": {
+    "promptSha256": "0eeefc0440e0281f2c2da20245cebf7a9fbc6cf8adb5b08a271bf93c57f1d8c3",
+    "responseFormatSha256": "2d49c9fe90803334b15c92ece839c785852550e96876a38e331799ad167ce258",
+    "stableRequestBodySha256": "33b60eecf513814ee4e6d5b2075cfda0544d72f82066f8ecea12395ebc7d4315"
+  },
+  "changeReason": "0.3.9-C1b-F5 native assistant transport; Adapter owns text canonicalization",
+  "generatedBy": "production Adapter mock-transport capture"
+}

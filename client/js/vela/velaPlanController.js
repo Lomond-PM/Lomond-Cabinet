@@ -114,14 +114,14 @@
                 chain = chain.then(function () {
                     var currentTask = record.taskRun.snapshot();
                     if (disposed || generation !== capturedGeneration || record.generation !== capturedRecordGeneration || currentTask.state !== "active" || currentTask.executionArmed !== true) {
-                        if (!executionReceipt && currentTask.state === "cancelled") { executionReceipt = protocol.deepFreeze({ committed: false, code: "AGENT_DRIVER_CANCELLED" }); }
+                        if (!executionReceipt && currentTask.state === "cancelled") { executionReceipt = protocol.deepFreeze({ committed: false, satisfied: false, code: "AGENT_DRIVER_CANCELLED" }); }
                         return null;
                     }
                     var view = planStore.getPlanView(executionPlanId);
                     if (view.state === "consumed") { record.taskRun.complete(); return null; }
                     if (view.nextStep >= view.actionCount) { protocol.fail(protocol.ERROR_CODES.PLAN_FAILED, "Execution plan did not reach a terminal state."); }
                     return Promise.resolve(preflight.executeStep({ planId: executionPlanId, stepIndex: view.nextStep })).then(function (stepOutcome) {
-                        executionReceipt = protocol.deepFreeze({ committed: Boolean(stepOutcome && stepOutcome.result && stepOutcome.result.committed === true), code: null });
+                        executionReceipt = protocol.deepFreeze({ committed: Boolean(stepOutcome && stepOutcome.result && stepOutcome.result.committed === true), satisfied: Boolean(stepOutcome && stepOutcome.result && stepOutcome.result.ok === true && stepOutcome.result.committed === false), code: null });
                         var completedView = planStore.getPlanView(executionPlanId);
                         if (completedView.state === "consumed" && record.taskRun.snapshot().state === "active") { record.taskRun.complete(); }
                         return null;
@@ -139,7 +139,7 @@
                 record.running = false;
                 if (record.taskRun.snapshot().state === "active") { record.taskRun.block(stableCode(error)); }
                 errorCommitted = executionReceipt && executionReceipt.committed === true ? true : error && Object.prototype.hasOwnProperty.call(error, "committed") ? (error.committed === true ? true : error.committed === false ? false : null) : false;
-                error.executionReceipt = protocol.deepFreeze({ committed: errorCommitted, code: stableCode(error) });
+                error.executionReceipt = protocol.deepFreeze({ committed: errorCommitted, satisfied: false, code: stableCode(error) });
                 throw error;
             });
         }

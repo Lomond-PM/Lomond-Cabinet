@@ -104,6 +104,10 @@ async function run() {
     check((await executed.composer.executeConfirmed()).code === "LIFECYCLE_BLOCKED" && executed.state.runs === 1 && executed.state.executions === 1, "A terminal execution record cannot run twice.");
     const freshAfterRun = approval(executed, { reviewId: "review_after_run" }); check((await executed.composer.compose(freshAfterRun.input)).state === "authority-ready", "Terminal execution cleanup permits a fresh approval composition."); executed.composer.cancel();
 
+    const satisfied = makeHarness({ executionResult: { ok: true, committed: false, summary: { disposition: "already-satisfied" } } }); const sat = approval(satisfied); await satisfied.composer.compose(sat.input); const satisfiedResult = await satisfied.composer.executeConfirmed();
+    check(satisfiedResult.state === "satisfied" && satisfiedResult.committed === false && satisfiedResult.code === null && Object.keys(satisfiedResult).sort().join(",") === "code,committed,state", "Composer preserves bounded private satisfied truth without pretending that a Host mutation committed.");
+    check(satisfied.state.runs === 1 && satisfied.state.executions === 1 && (await satisfied.composer.executeConfirmed()).code === "LIFECYCLE_BLOCKED", "A successful noncommit execution outcome is terminal and cannot replay authority.");
+
     const concurrent = makeHarness({ deferExecution: true }); const cx = approval(concurrent); await concurrent.composer.compose(cx.input); const firstExecute = concurrent.composer.executeConfirmed(); await waitPending(concurrent, "execution");
     check((await concurrent.composer.executeConfirmed()).code === "LIFECYCLE_BLOCKED" && concurrent.state.runs === 1 && concurrent.state.executions === 1, "Concurrent execute is blocked by Composer runAttempted before PlanController replay guards."); concurrent.release("execution"); check((await firstExecute).committed === true, "The original concurrent execution settles once.");
 

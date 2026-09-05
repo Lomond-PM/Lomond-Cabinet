@@ -10,6 +10,8 @@
         { name: "VelaLogicalPlanContracts", file: "velaLogicalPlanContracts.js" },
         { name: "VelaProviderRequestBranchPolicy", file: "velaProviderRequestBranchPolicy.js" },
         { name: "VelaCapabilityPromptBuilder", file: "velaCapabilityPromptBuilder.js" },
+        { name: "VelaProviderStreamEvents", file: "velaProviderStreamEvents.js" },
+        { name: "VelaProviderStreamAssembler", file: "velaProviderStreamAssembler.js" },
         { name: "VelaProviderAdapter", file: "velaProviderAdapter.js" },
         { name: "VelaProviderIntentGate", file: "velaProviderIntentGate.js" },
         { name: "VelaLocalTransport", file: "velaLocalTransport.js" },
@@ -177,6 +179,8 @@
         if (name === "VelaLogicalPlanContracts") { return value.MODULE_REVISION === "vela-logical-plan-contracts-v1" && value.MAX_LOGICAL_STEPS === 2 && typeof value.validateLogicalPlanProposal === "function" && typeof value.isValidatedLogicalPlan === "function"; }
         if (name === "VelaProviderRequestBranchPolicy") { return isRequestBranchPolicyShape(value); }
         if (name === "VelaCapabilityPromptBuilder") { return typeof value.buildSystemPrompt === "function" && typeof value.buildTurnContract === "function"; }
+        if (name === "VelaProviderStreamEvents") { return value.MODULE_REVISION === "vela-provider-stream-events-v1" && typeof value.canonicalize === "function"; }
+        if (name === "VelaProviderStreamAssembler") { return value.MODULE_REVISION === "vela-provider-stream-assembler-v1" && typeof value.create === "function"; }
         if (name === "VelaProviderAdapter") { return typeof value.createLocalOpenAICompatibleProvider === "function"; }
         if (name === "VelaProviderIntentGate") { return typeof value.evaluate === "function" && typeof value.evaluateLogicalPlan === "function"; }
         if (name === "VelaLocalTransport") { return typeof value.createLocalTransport === "function" && typeof value.isTrustedLocalTransportForProtocol === "function"; }

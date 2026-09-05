@@ -34,8 +34,8 @@ function response(bodyText, options) {
 }
 function providerResponse(envelope, settings) {
     return async (url, options) => {
-        const request = JSON.parse(options.body); const schema = request.response_format.json_schema.schema; const canonical = { protocol: "vela.model-response.v1", schemaVersion: "1.1", requestId: schema.properties.requestId.enum[0], provider: "lmstudio", model: request.model, envelope };
-        return response(JSON.stringify({ choices: [{ finish_reason: "stop", message: { role: "assistant", content: JSON.stringify(canonical) } }] }), settings);
+        const request = JSON.parse(options.body); const schema = request.response_format && request.response_format.json_schema.schema; const canonical = { protocol: "vela.model-response.v1", schemaVersion: "1.1", requestId: schema ? schema.properties.requestId.enum[0] : "req_" + "0".repeat(32), provider: "lmstudio", model: request.model, envelope };
+        return response(JSON.stringify({ choices: [{ finish_reason: "stop", message: { role: "assistant", content: !schema && envelope.type === "text" ? envelope.text : JSON.stringify(canonical) } }] }), settings);
     };
 }
 function profileArgs(policy, name, runs) { return qualification.parseProfileArgs(["--model", "diagnostic", "--profile-label", "offline", "--quantization", "Q4_K_M", "--reasoning-mode", "nonthinking", "--runs", String(runs || 1), "--output", ".tmp/vela-provider-profile-qualification/" + name + ".json"], policy && policy.options); }
@@ -58,7 +58,7 @@ function loadDiagnosticsWithCaseOutcomeDrift() {
 async function run() {
     const outputPath = ".tmp/vela-model-qualification/example.json";
     const args = qualification.parseArgs(["--model", "qwen3.5-4b", "--profile-label", "declared-nonthinking", "--quantization", "Q4_K_M", "--reasoning-mode", "nonthinking", "--runs", "5", "--output", outputPath]);
-    const profileFixturePath = path.join(__dirname, "fixtures", "vela-capability-contracts", "provider-branch-profiles-v2.json");
+    const profileFixturePath = path.join(__dirname, "fixtures", "vela-capability-contracts", "provider-branch-profiles-v3.json");
     const profileFixtureBytes = fs.readFileSync(profileFixturePath);
     const profileFixture = JSON.parse(profileFixtureBytes.toString("utf8"));
     const profileKeys = ["id", "fixtureId", "message", "requestProfile", "expectedOutcome", "expectedOpacity"];
@@ -108,7 +108,7 @@ async function run() {
     await qualification.captureProfileContracts({ providerAdapterModule: observedAdapter });
     check(deeplyFrozen(firstCapture) && JSON.stringify(firstCapture) === JSON.stringify(secondCapture), "Two independent production Profile captures are deeply frozen and byte-equivalent.");
     check(providerProfiles.join(",") === "text-only,explicit-edit-eligible", "Production capture creates exactly one Provider for each frozen Profile.");
-    check(firstCapture.textOnly.promptSha256 === "c23f2768d2e4df9a1ebbfad23565da877d19bb227cfc15f6b5916f2a45c9e88c" && firstCapture.textOnly.responseFormatSha256 === "85813dd8950079ab9c9542612aa0ad14b82c98e3f3e71f3a370561669e64cdf8" && firstCapture.textOnly.stableRequestBodySha256 === "0b289b451e6787ff86b96493901f2f33ec5b130effd6c6922ab38d430635e9cc" && firstCapture.explicitEditEligible.promptSha256 === "0eeefc0440e0281f2c2da20245cebf7a9fbc6cf8adb5b08a271bf93c57f1d8c3" && firstCapture.explicitEditEligible.responseFormatSha256 === "2d49c9fe90803334b15c92ece839c785852550e96876a38e331799ad167ce258" && firstCapture.explicitEditEligible.stableRequestBodySha256 === "33b60eecf513814ee4e6d5b2075cfda0544d72f82066f8ecea12395ebc7d4315", "Production Adapter capture reproduces all six current production Profile SHA values.");
+    check(firstCapture.textOnly.promptSha256 === "a97b9c367790eee8ae679e42005141d15cea7b8e4581fbc97dc0e5fb892f7045" && firstCapture.textOnly.responseFormatSha256 === "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b" && firstCapture.textOnly.stableRequestBodySha256 === "4e45a9548c79c8a039f7def323a884a91db489a7a455fa5e4f4332ab69817de2" && firstCapture.explicitEditEligible.promptSha256 === "0eeefc0440e0281f2c2da20245cebf7a9fbc6cf8adb5b08a271bf93c57f1d8c3" && firstCapture.explicitEditEligible.responseFormatSha256 === "2d49c9fe90803334b15c92ece839c785852550e96876a38e331799ad167ce258" && firstCapture.explicitEditEligible.stableRequestBodySha256 === "33b60eecf513814ee4e6d5b2075cfda0544d72f82066f8ecea12395ebc7d4315", "Production Adapter capture reproduces all six current production Profile SHA values.");
     check(JSON.stringify(firstCapture.textOnly.messageRoleOrder) === JSON.stringify(["system", "assistant", "user"]) && JSON.stringify(firstCapture.explicitEditEligible.messageRoleOrder) === JSON.stringify(["system", "assistant", "user"]), "Both Profile captures retain system-assistant-user role order.");
     const profileMetadata = await qualification.profileQualificationMetadata(args, { requestBranchPolicyModule: observedPolicy });
     const metadataKeys = ["metadataRevision", "caseProfileFingerprint", "profileFixtureSha256", "builderRevision", "requestBranchPolicyRevision", "capabilityId", "capabilityRevision", "protocolVersion", "messageRoleOrder", "textOnlyContract", "explicitEditEligibleContract", "modelIdentifier", "quantization", "operatorDeclaredReasoningMode", "caseCount", "runsPerCase"];
@@ -195,12 +195,12 @@ async function run() {
     const proposalRecord = await cli.oneRun(qualification.createProtocol(), directArgs, c4q3, 1, { fetch: async (...values) => { fetchCalls += 1; return providerResponse({ type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 50 } } })(...values); }, evaluateIntentGate(caseDef, result) { gateCalls += 1; check(caseDef === c4q3 && result.opacity === 50, "Gate receives only the accepted frozen extraction case and proposal."); return { allowed: true }; } });
     check(proposalRecord.localOutcome === "accepted-local-proposal" && proposalRecord.classification === "correct" && proposalRecord.intentGate === "allowed" && gateCalls === 1, "An exact extraction proposal is correct only after the diagnostic Gate allows it.");
     const textMismatch = await cli.oneRun(qualification.createProtocol(), directArgs, c4q6, 1, { fetch: providerResponse({ type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 50 } } }), evaluateIntentGate() { gateCalls += 1; return { allowed: true }; } });
-    check(textMismatch.providerErrorCode === "PROVIDER_RESPONSE_INVALID" && textMismatch.localOutcome === "profile-mismatch" && textMismatch.profileMismatchReason === "TEXT_ONLY_RECEIVED_LOCAL_PROPOSAL" && textMismatch.classification === "invalid-response" && textMismatch.intentGate === null && gateCalls === 1, "Text-only/localProposal mismatch is observed boundedly, rejected by Adapter, and never reaches Gate.");
+    check(textMismatch.providerErrorCode === null && textMismatch.localOutcome === "accepted-text" && textMismatch.observedEnvelopeType === "text" && textMismatch.intentGate === null && gateCalls === 1, "JSON-looking native prose never becomes a proposal or reaches Gate.");
     const extractionMismatch = await cli.oneRun(qualification.createProtocol(), directArgs, c4q3, 1, { fetch: providerResponse({ type: "text", text: "No change." }), evaluateIntentGate() { gateCalls += 1; return { allowed: true }; } });
     check(extractionMismatch.providerErrorCode === "PROVIDER_RESPONSE_INVALID" && extractionMismatch.localOutcome === "profile-mismatch" && extractionMismatch.profileMismatchReason === "EXTRACTION_RECEIVED_TEXT" && extractionMismatch.classification === "invalid-response" && extractionMismatch.intentGate === null && gateCalls === 1, "Extraction/text mismatch is rejected by Adapter before Gate.");
     const malformed = await cli.oneRun(qualification.createProtocol(), directArgs, c4q1, 1, { fetch: async () => response("{bad") });
     check(malformed.localOutcome === "invalid-response" && malformed.profileMismatchReason === null && malformed.observedEnvelopeType === "unknown" && malformed.classification === "invalid-response", "Malformed JSON is invalid-response, never Profile mismatch.");
-    const modelError = await cli.oneRun(qualification.createProtocol(), directArgs, c4q1, 1, { fetch: providerResponse({ type: "error", error: { code: "PROVIDER_RESPONSE_INVALID", details: {}, message: "No", retryable: false, stage: "provider" } }) });
+    const modelError = await cli.oneRun(qualification.createProtocol(), directArgs, c4q3, 1, { fetch: providerResponse({ type: "error", error: { code: "PROVIDER_RESPONSE_INVALID", details: {}, message: "No", retryable: false, stage: "provider" } }) });
     check(modelError.providerErrorCode === "PROVIDER_RESPONSE_INVALID" && modelError.observedEnvelopeType === "error" && modelError.localOutcome === "invalid-response" && modelError.profileMismatchReason === null, "Model-authored error is locally invalid and never Profile mismatch.");
     const noClone = await cli.oneRun(qualification.createProtocol(), directArgs, c4q1, 1, { fetch: providerResponse({ type: "text", text: "The current opacity is 25%." }, { noClone: true }) });
     check(noClone.localOutcome === "accepted-text" && noClone.messageContent === null && noClone.observedEnvelopeType === null, "Unavailable response clone safely removes diagnostic observation without changing Provider acceptance.");
@@ -258,7 +258,7 @@ async function run() {
     await assertRealPreflightDrift("case-fingerprint", (realArgs) => isolatedDiagnostics.profileQualificationMetadata(realArgs));
 
     const fixtureDriftRoot = fs.mkdtempSync(path.join(os.tmpdir(), "vela-profile-fixture-byte-drift-"));
-    const fixtureDriftPath = path.join(fixtureDriftRoot, "provider-branch-profiles-v2.json");
+    const fixtureDriftPath = path.join(fixtureDriftRoot, "provider-branch-profiles-v3.json");
     const fixtureDriftBytes = Buffer.concat([profileFixtureBytes, Buffer.from(" ", "utf8")]);
     fs.writeFileSync(fixtureDriftPath, fixtureDriftBytes);
     await assertRealPreflightDrift("fixture-bytes", (realArgs) => qualification.profileQualificationMetadata(realArgs, { fixtureBytes: fs.readFileSync(fixtureDriftPath) }));
