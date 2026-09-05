@@ -152,6 +152,132 @@
     var RESOURCE_POLICY = Object.freeze({ maxStreamResponseBytes: 4 * 1024 * 1024 });
     var QWEN35_4B_ASSISTANT_POLICY = Object.freeze({ thinkingBudgetTokens: 6144, maxOutputTokens: 8192 });
     var QWEN35_4B_STRUCTURED_POLICY = Object.freeze({ thinkingBudgetTokens: 2048, maxOutputTokens: 4096 });
+
+    // A3b pure seams, colocated to preserve the existing loader contract. Provider-side
+    // normalization, construction accounting and local policy remain separate functions.
+    // Qualified/reviewed inputs are local caller attestations, NOT self-authenticating
+    // Provider fields. Production supplies none until a source contract is qualified.
+    function budgetData(value, key) {
+        if (!value || typeof value !== "object") { return undefined; }
+        var descriptor;
+        try { descriptor = Object.getOwnPropertyDescriptor(value, key); } catch (ignored) { return undefined; }
+        return descriptor && Object.prototype.hasOwnProperty.call(descriptor, "value") ? descriptor.value : undefined;
+    }
+    function budgetLabel(value) { return typeof value === "string" && value.length > 0 && value.length <= 512 ? value : null; }
+    function budgetInteger(value) { return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null; }
+    function freezeBudget(value) {
+        Object.keys(value).forEach(function (key) { if (value[key] && typeof value[key] === "object") { freezeBudget(value[key]); } });
+        return Object.freeze(value);
+    }
+    var BUDGET_IDENTITY_FIELDS = Object.freeze(["endpoint", "model", "profile", "requestId", "providerGeneration", "instanceId", "instanceConfigId", "providerContractId", "samplingBoundary", "runtimeRevision", "configRevision"]);
+    var BUDGET_REQUIRED_IDENTITY = Object.freeze(["endpoint", "model", "profile", "requestId", "providerGeneration", "instanceId", "instanceConfigId", "providerContractId", "samplingBoundary"]);
+    function budgetIdentity(value) {
+        var result = {};
+        var invalid = budgetData(value, "invalid") === true;
+        BUDGET_IDENTITY_FIELDS.forEach(function (key) {
+            var raw = budgetData(value, key);
+            result[key] = key === "providerGeneration" ? (budgetInteger(raw) > 0 ? raw : null) :
+                (key === "runtimeRevision" || key === "configRevision") && budgetInteger(raw) !== null ? raw : budgetLabel(raw);
+            if (raw !== undefined && raw !== null && result[key] === null) { invalid = true; }
+        });
+        result.invalid = invalid;
+        return result;
+    }
+    function budgetCorrelationReason(identity, expected) {
+        if (identity.invalid || expected.invalid) { return "invalid-binding-identity"; }
+        if (BUDGET_REQUIRED_IDENTITY.some(function (key) { return identity[key] === null || expected[key] === null; })) { return "missing-binding-identity"; }
+        if (BUDGET_IDENTITY_FIELDS.some(function (key) { return identity[key] !== expected[key]; })) { return "correlation-mismatch"; }
+        return null;
+    }
+    function normalizeCapacityEvidence(raw, expectedIdentity) {
+        var source = budgetData(raw, "sourceClass");
+        if (["provider-reported", "operator-configured", "model-profile-known", "heuristic", "unknown"].indexOf(source) < 0) { source = "unknown"; }
+        var identity = budgetIdentity(budgetData(raw, "correlation"));
+        var value = budgetInteger(budgetData(raw, "value"));
+        var unit = budgetData(raw, "unit") === "tokens" ? "tokens" : null;
+        var basis = budgetLabel(budgetData(raw, "tokenBasis"));
+        var qualificationId = budgetLabel(budgetData(raw, "qualificationId"));
+        var instanceCount = budgetInteger(budgetData(raw, "instanceCount"));
+        var ambiguous = budgetData(raw, "ambiguous") === true || instanceCount > 1;
+        var stale = budgetData(raw, "stale") === true;
+        var invalidFlags = ["ambiguous", "stale"].some(function (key) { var value = budgetData(raw, key); return value !== undefined && typeof value !== "boolean"; });
+        var reason = ambiguous ? "ambiguous-capacity" : stale ? "stale-capacity" :
+            invalidFlags ? "invalid-source-flags" : budgetData(raw, "instanceCount") !== undefined && (instanceCount === null || instanceCount === 0) ? "invalid-instance-count" :
+            value === null || value === 0 ? "missing-or-invalid-capacity" : !unit ? "incompatible-unit" : !basis ? "missing-token-basis" :
+            budgetCorrelationReason(identity, budgetIdentity(expectedIdentity));
+        if (!reason && (budgetData(raw, "qualified") !== true || !qualificationId || ["provider-reported", "model-profile-known"].indexOf(source) < 0)) { reason = "unqualified-source"; }
+        return freezeBudget({ schema: "vela.provider-capacity-evidence.v1", sourceClass: source, correlation: identity,
+            value: value > 0 ? value : null, unit: unit, tokenBasis: basis, qualificationId: qualificationId,
+            instanceCount: instanceCount, ambiguous: ambiguous, stale: stale || reason === "correlation-mismatch",
+            status: !reason ? "known" : ambiguous ? "ambiguous" : stale || reason === "correlation-mismatch" ? "stale" : reason === "unqualified-source" ? "conditional" : "unknown",
+            usable: !reason, reason: reason });
+    }
+    function normalizeInputCost(raw, expected) {
+        var kind = budgetData(raw, "kind");
+        var low = budgetInteger(budgetData(raw, kind === "exact" ? "value" : "low"));
+        var high = budgetInteger(budgetData(raw, kind === "exact" ? "value" : "high"));
+        var basis = budgetLabel(budgetData(raw, "tokenBasis"));
+        var method = budgetLabel(budgetData(raw, "methodId"));
+        var identity = budgetIdentity(budgetData(raw, "correlation"));
+        var reason = ["exact", "bounded"].indexOf(kind) < 0 ? "unknown-token-cost" :
+            low === null || high === null || low > high ? "invalid-input-bounds" :
+            budgetData(raw, "unit") !== "tokens" ? "incompatible-unit" : !basis ? "missing-token-basis" :
+            budgetData(raw, "certified") !== true || budgetData(raw, "fullInput") !== true || !method ? "uncertified-full-input" :
+            budgetCorrelationReason(identity, expected);
+        return { kind: !reason ? kind : "unknown", low: !reason ? low : null, high: !reason ? high : null,
+            unit: budgetData(raw, "unit") === "tokens" ? "tokens" : null, tokenBasis: basis, methodId: method,
+            fullInput: !reason, usable: !reason, reason: reason };
+    }
+    function normalizeBudgetReserve(raw, expected) {
+        var value = budgetInteger(budgetData(raw, "value"));
+        var basis = budgetLabel(budgetData(raw, "tokenBasis"));
+        var reviewId = budgetLabel(budgetData(raw, "reviewId"));
+        var reason = value === null ? "unknown-reserve" : budgetData(raw, "unit") !== "tokens" ? "incompatible-unit" :
+            !basis ? "missing-token-basis" : budgetData(raw, "reviewed") !== true || !reviewId ? "unreviewed-reserve" :
+            budgetCorrelationReason(budgetIdentity(budgetData(raw, "correlation")), expected);
+        return { value: !reason ? value : null, unit: budgetData(raw, "unit") === "tokens" ? "tokens" : null,
+            tokenBasis: basis, reviewId: reviewId, status: !reason ? "known" : "unknown", usable: !reason, reason: reason };
+    }
+    function decideContextBudget(input) {
+        var correlation = budgetIdentity(budgetData(input, "correlation"));
+        var capacity = normalizeCapacityEvidence(budgetData(input, "capacity"), correlation);
+        var cost = normalizeInputCost(budgetData(input, "inputCost"), correlation);
+        var generationReserve = normalizeBudgetReserve(budgetData(input, "generationReserve"), correlation);
+        var safetyReserve = normalizeBudgetReserve(budgetData(input, "safetyReserve"), correlation);
+        var disposition = "unassessed-capacity", inputFit = false, inputOverflow = false, fullFit = false, inputBudget = null;
+        if (capacity.status === "ambiguous") { disposition = "ambiguous-capacity"; }
+        else if (capacity.status === "stale") { disposition = "stale-capacity"; }
+        else if (capacity.usable) {
+            if (!cost.usable) { disposition = cost.reason === "incompatible-unit" ? "incompatible-token-basis" : "unassessed-input-cost"; }
+            else if (capacity.tokenBasis !== cost.tokenBasis) { disposition = "incompatible-token-basis"; }
+            else {
+                inputFit = cost.high <= capacity.value;
+                inputOverflow = cost.low > capacity.value;
+                if (inputOverflow) { disposition = "required-input-overflow"; }
+                else if (!generationReserve.usable) { disposition = generationReserve.reason === "incompatible-unit" ? "incompatible-token-basis" : "unassessed-generation-reserve"; }
+                else if (!safetyReserve.usable) { disposition = safetyReserve.reason === "incompatible-unit" ? "incompatible-token-basis" : "unassessed-safety-reserve"; }
+                else if (capacity.tokenBasis !== generationReserve.tokenBasis || capacity.tokenBasis !== safetyReserve.tokenBasis) { disposition = "incompatible-token-basis"; }
+                else {
+                    // Compare before subtracting: no unsafe sum, negative budget or guessed zero.
+                    if (generationReserve.value <= capacity.value && safetyReserve.value <= capacity.value - generationReserve.value) {
+                        inputBudget = capacity.value - generationReserve.value - safetyReserve.value;
+                        fullFit = cost.high <= inputBudget;
+                    }
+                    disposition = fullFit ? "full-fit" : "fit-not-established-under-bound";
+                }
+            }
+        }
+        var bytes = budgetData(input, "bytes");
+        var controls = budgetData(input, "generationControls");
+        return freezeBudget({ schema: "vela.provider-budget-decision-evidence.v1", authorityCapable: false,
+            correlation: correlation, capacity: capacity, inputCost: cost, generationReserve: generationReserve, safetyReserve: safetyReserve,
+            bytes: { canonicalUtf8Bytes: budgetInteger(budgetData(bytes, "canonicalUtf8Bytes")), wireUtf8Bytes: budgetInteger(budgetData(bytes, "wireUtf8Bytes")), messageContentUtf8Bytes: budgetInteger(budgetData(bytes, "messageContentUtf8Bytes")), unit: "utf8-bytes", tokenConversion: null },
+            generationControls: { maxTokens: budgetInteger(budgetData(controls, "maxTokens")), thinkingBudgetTokens: budgetInteger(budgetData(controls, "thinkingBudgetTokens")), reserveDerived: false },
+            disposition: disposition, inputBudgetTokens: inputBudget,
+            proof: { fullFit: fullFit, inputFit: inputFit, inputOverflow: inputOverflow },
+            dispatch: inputOverflow || disposition === "fit-not-established-under-bound" ? "reject-required-construction" : fullFit ? "allow-proven-fit" : "allow-current-shape",
+            optionalExpansion: false });
+    }
     function getGenerationPolicy(modelId, requestProfile) {
         // Calibrated LM Studio model identity only; unknown/non-reasoning providers inherit their own defaults.
         if (modelId !== "qwen3.5-4b") { return null; }
@@ -447,6 +573,7 @@
         var terminalDebugEvidence = null;
         var contextEvidenceEnabled = options.debugContextEvidence === true;
         var contextEvidence = null;
+        var budgetDecision = null;
 
         // Local, opt-in construction evidence. Never fed back to request/admission owners.
         function recordContextEvidence(requestId, request, body, error) {
@@ -913,11 +1040,26 @@
                 protocol.fail(protocol.ERROR_CODES.PROVIDER_REQUEST_IN_FLIGHT, "A local provider request is already in flight.", { stage: "provider" });
             }
             var requestId = issueUniqueRequestId();
+            budgetDecision = null;
             var request;
             var body;
             try { request = buildRequest(input, requestId); body = buildOpenAiBody(request); }
             catch (constructionError) { recordContextEvidence(requestId, null, null, constructionError); throw constructionError; }
             recordContextEvidence(requestId, request, body, null);
+            // Runs regardless of A2 debug exposure. No discovery/readiness/usage source
+            // is qualified here; real M/R controls never manufacture generation reserve.
+            var serializeBudgetWire = budgetData(transport, "getSerializedRequestEvidence");
+            var budgetWire = null;
+            // Older/custom transports need not expose observational serialization.
+            // Missing evidence remains unknown and cannot change dispatch behavior.
+            try { if (typeof serializeBudgetWire === "function") { budgetWire = serializeBudgetWire(body); } } catch (ignoredWireEvidence) { budgetWire = null; }
+            if (typeof budgetWire !== "string") { budgetWire = null; }
+            budgetDecision = decideContextBudget({
+                correlation: { endpoint: endpoint, model: model, profile: requestProfile, requestId: requestId, providerGeneration: generation + 1, samplingBoundary: requestId },
+                capacity: null, inputCost: null, generationReserve: null, safetyReserve: null,
+                bytes: { canonicalUtf8Bytes: protocol.utf8ByteLength(JSON.stringify(request)), wireUtf8Bytes: budgetWire === null ? null : protocol.utf8ByteLength(budgetWire), messageContentUtf8Bytes: request.messages.reduce(function (sum, message) { return sum + protocol.utf8ByteLength(message.content); }, 0) },
+                generationControls: { maxTokens: body.max_tokens, thinkingBudgetTokens: body.thinking_budget_tokens }
+            });
             var startedAt = readNowMs();
             var controller;
             try { controller = validateAbortController(createAbortController()); }
@@ -1093,6 +1235,7 @@
             cancel: cancel,
             getState: getState,
             getContextEvidence: function () { return contextEvidence; },
+            getBudgetDecisionEvidence: function () { return contextEvidenceEnabled ? budgetDecision : null; },
             getDiagnostics: getDiagnostics
         });
     }
@@ -1103,6 +1246,8 @@
     }
     return Object.freeze({
         RESOURCE_POLICY: RESOURCE_POLICY,
+        normalizeCapacityEvidence: normalizeCapacityEvidence,
+        decideContextBudget: decideContextBudget,
         getGenerationPolicy: getGenerationPolicy,
         getOutputDecision: getOutputDecision,
         createLocalOpenAICompatibleProvider: createLocalOpenAICompatibleProvider,
