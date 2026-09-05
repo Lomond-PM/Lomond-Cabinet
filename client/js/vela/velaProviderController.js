@@ -117,6 +117,7 @@
         var streamListeners = [];
         var contextEvidenceEnabled = ownData(options, "debugContextEvidence") === true;
         var contextEvidence = null;
+        var budgetDecisionEvidence = null;
         var constructingEvidence = null;
         function newSourceEvidence(operation, order) {
             return { domain: "trusted-capture-projection", producer: "VelaProviderController.send/" + operation, samplingBoundary: { operation: operation, order: order, attempted: false, captureId: null, hostInstanceId: null, hostReloadEpoch: null, projectGeneration: null, aeSampleTime: null, sampledAt: null, atomicWithOtherReads: false }, disposition: "not-collected", selectionReason: "current-independent-controller-read", trustClass: null, sourceFreshnessClass: null, selectedRepresentation: null, selectedUtf8Bytes: null, omittedCount: null, errorCode: null, unavailableReason: null };
@@ -326,6 +327,7 @@
             var requestProfile;
             var provisionalProfile;
             if (state === "pending" || reviewingProposal) { return Promise.reject(new protocol.VelaProtocolError(protocol.ERROR_CODES.PROVIDER_REQUEST_IN_FLIGHT)); }
+            budgetDecisionEvidence = null;
             try { values = validateInput(input); }
             catch (error) { publish("failed", null, null, safeCode(protocol, error), null); return Promise.reject(error); }
             try { provisionalProfile = requestPolicy.classify(values.message); }
@@ -392,6 +394,7 @@
                 try { started = provider.start({ messages: [{ role: "assistant", content: summaryFromProjection(grounded.projection) }, { role: "user", content: values.message }], context: grounded.requestContext }); }
                 catch (constructionError) { publishContextEvidence(evidence, constructionError.code === protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED ? "budget-rejected" : "construction-failed", contextEvidenceEnabled ? provider.getContextEvidence() : null); throw constructionError; }
                 publishContextEvidence(evidence, "closed", contextEvidenceEnabled ? provider.getContextEvidence() : null);
+                budgetDecisionEvidence = contextEvidenceEnabled ? provider.getBudgetDecisionEvidence() : null;
                 active = { generation: capturedGeneration, requestId: started.requestId, provider: provider, captureHandle: null, requestProfile: requestProfile };
                 publish("pending", started.requestId, null, null, values.model);
                 return started.promise;
@@ -506,7 +509,7 @@
                 return true;
             }
         });
-        var controller = Object.freeze({ send: send, cancel: cancel, invalidate: invalidate, checkReadiness: checkReadiness, subscribeStreamEvents: subscribeStreamEvents, getContextEvidence: function () { return contextEvidence; }, getUiState: function () { return publicState; }, getDiagnostics: function () { return diagnostics; } });
+        var controller = Object.freeze({ send: send, cancel: cancel, invalidate: invalidate, checkReadiness: checkReadiness, subscribeStreamEvents: subscribeStreamEvents, getContextEvidence: function () { return contextEvidence; }, getBudgetDecisionEvidence: function () { return budgetDecisionEvidence; }, getUiState: function () { return publicState; }, getDiagnostics: function () { return diagnostics; } });
         trustedControllers.add(controller);
         controllerProtocols.set(controller, protocol);
         controllerProposalPorts.set(controller, proposalPort);
