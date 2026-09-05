@@ -148,7 +148,7 @@ var AEToolbox = AEToolbox || {};
             }
             if (beforeDigest !== normalized.target.expectedValueDigest) { throw hostError("HOST_EXECUTION_VALUE_MISMATCH"); }
             try {
-                app.beginUndoGroup(normalized.capabilityId === LAYER_NAME_CAPABILITY_ID ? "Vela: Rename Layer" : "Vela: Set Opacity");
+                app.beginUndoGroup(undoGroupLabel(normalized.capabilityId));
                 undoOpen = true;
                 try {
                     if (normalized.capabilityId === LAYER_NAME_CAPABILITY_ID) { layer.name = normalized.value; }
@@ -175,6 +175,9 @@ var AEToolbox = AEToolbox || {};
                 return "{\"error\":{\"code\":\"" + code + "\",\"message\":\"The Vela Host execution request was rejected.\",\"mutationCommitted\":" + (mutationCommitted ? "true" : code === "HOST_EXECUTION_MUTATION_FAILED" ? "null" : "false") + "},\"hostExecutionRevision\":\"vela-execution-host-v1\",\"ok\":false,\"operation\":\"executeCapability\",\"protocol\":\"vela.host-execution-result.v1\",\"requestId\":\"unknown\",\"schemaVersion\":\"1.0\",\"sessionId\":\"unknown\"}";
             }
         }
+    }
+    function undoGroupLabel(capabilityId) {
+        return capabilityId === LAYER_NAME_CAPABILITY_ID ? "Vela: Rename Layer" : "Vela: Set Opacity";
     }
     if (!json || json.revision !== "vela-json-host-v1" || typeof propertyValueDigest !== "function" || typeof verifyExecutionAuthority !== "function") { throw hostError("HOST_EXECUTION_UNAVAILABLE"); }
     AEToolbox.VelaExecution = { hostExecutionRevision: HOST_EXECUTION_REVISION, handle: handle };

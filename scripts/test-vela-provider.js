@@ -86,6 +86,7 @@ function requestIdFromTransport(request) {
 }
 
 function canonicalContent(protocol, request, envelope, metadata) {
+    if (!request.body.response_format && (!envelope || envelope.type === "text")) return envelope ? envelope.text : "ok";
     metadata = metadata || {};
     return JSON.stringify({
         protocol: metadata.protocol || protocol.PROTOCOLS.RESPONSE,
@@ -171,7 +172,7 @@ function createHarness(options) {
         transport,
         endpoint: options.endpoint,
         model: options.model || "Qwen3.5-4B-Q6_K",
-        requestProfile: options.requestProfile === undefined ? requestBranchPolicy.PROFILES.TEXT_ONLY : options.requestProfile,
+        requestProfile: options.requestProfile === undefined ? requestBranchPolicy.PROFILES.PROPOSAL_CAPABLE_UNION : options.requestProfile,
         timeoutMs: options.timeoutMs === undefined ? 120000 : options.timeoutMs,
         responseFormatMode: options.responseFormatMode === undefined ? "json-schema" : options.responseFormatMode,
         runtime: runtimeBundle.runtime
@@ -254,14 +255,14 @@ async function run() {
     check(Object.isFrozen(sent) && Object.isFrozen(sent.headers) && Object.isFrozen(sent.body), "The complete transport request must be frozen.");
     equal(sent.body.response_format.type, "json_schema", "Production requests must use the LM Studio json_schema response format.");
     const responseSchema = sent.body.response_format.json_schema;
-    check(responseSchema && responseSchema.name === "vela_text_response" && responseSchema.strict === true, "The text profile must have the trusted LM Studio wrapper.");
+    check(responseSchema && responseSchema.name === "vela_bounded_union_response" && responseSchema.strict === true, "The text profile must have the trusted LM Studio wrapper.");
     check(responseSchema.schema.type === "object" && responseSchema.schema.additionalProperties === false, "The canonical response root must be closed.");
     equal(responseSchema.schema.properties.protocol.enum[0], normal.protocol.PROTOCOLS.RESPONSE, "Schema protocol metadata must match the trusted protocol.");
     equal(responseSchema.schema.properties.schemaVersion.enum[0], normal.protocol.SCHEMA_VERSION, "Schema version metadata must match the trusted protocol.");
     equal(responseSchema.schema.properties.requestId.enum[0], handle.requestId, "Schema request ids must bind the current local request.");
     equal(responseSchema.schema.properties.provider.enum[0], "lmstudio", "Schema provider metadata must be local.");
     equal(responseSchema.schema.properties.model.enum[0], "Qwen3.5-4B-Q6_K", "Schema model metadata must bind the configured model.");
-    const textVariant = responseSchema.schema.properties.envelope;
+    const textVariant = responseSchema.schema.properties.envelope.oneOf[0];
     check(!Object.prototype.hasOwnProperty.call(textVariant, "oneOf") && textVariant.properties.type.enum[0] === "text" && textVariant.properties.text.minLength === 1, "The text profile schema permits only a closed text envelope.");
     equal(textVariant.properties.text.maxLength, 1024, "LM Studio text generation must use the bounded generation cap.");
     const schemaMaxLengths = collectSchemaValues(responseSchema.schema, "maxLength", []);
@@ -275,7 +276,7 @@ async function run() {
     const prompt = sent.body.messages[0].content;
     const proposal57Example = JSON.stringify({ protocol: normal.protocol.PROTOCOLS.RESPONSE, schemaVersion: normal.protocol.SCHEMA_VERSION, requestId: handle.requestId, provider: "lmstudio", model: "Qwen3.5-4B-Q6_K", envelope: { type: "localProposal", proposal: { capabilityId: "set-opacity-v1", params: { opacity: 57.5 } } } });
     const decisionTable = "DECISION: text by default. Return localProposal only for a direct command to set the current or selected layer opacity to one explicit 0–100 target. Return text for greetings, questions, current-value queries, explanations, suggestions, uncertainty, hypotheticals, negations, relative adjustments, ambiguity, or no one target.";
-    check(prompt.includes("text-only") && prompt.includes("localProposal is invalid") && !prompt.includes("candidateId") && !prompt.includes("planId"), "Text prompt has only its local response authority and no execution architecture.");
+    check(prompt.includes("proposal-capable-union") && prompt.includes("localProposal") && !prompt.includes("candidateId") && !prompt.includes("planId"), "Text prompt has only its local response authority and no execution architecture.");
 
     const rebound = createHarness({ model: "another-local-model" });
     const reboundHandle = rebound.provider.start(input());

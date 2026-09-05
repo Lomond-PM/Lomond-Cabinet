@@ -1,0 +1,777 @@
+{
+  "note": "Production Controller/Adapter/LocalTransport, trusted simulated Host opacity; current name is not projected to Provider. Diagnostic fetch varies only reasoning_effort. Not AE acceptance or model qualification.",
+  "records": [
+    {
+      "evidenceId": "A-low",
+      "case": {
+        "id": "A",
+        "opacity": 100,
+        "name": "Layer 1"
+      },
+      "message": "把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test",
+      "reasoningEffort": "low",
+      "productionBodySha256": "d37561dec1eb2ea05ad99f3f96e9507d9aab7441f02833093da3fe6807d712da",
+      "provisionalProfile": "bounded-logical-plan-eligible",
+      "finalProfile": "bounded-logical-plan-eligible",
+      "allowedOutputs": [
+        "structured-logical-plan"
+      ],
+      "transportMode": "strict-structured",
+      "presentationMode": "structured",
+      "responseSchema": "vela_bounded_logical_plan_response",
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 8837,
+      "terminalState": "logical-plan-ready",
+      "error": null,
+      "steps": [
+        {
+          "capabilityId": "set-opacity-v1",
+          "params": {
+            "opacity": 60
+          }
+        },
+        {
+          "capabilityId": "set-layer-name-v1",
+          "params": {
+            "name": "Vela Stream Test"
+          }
+        }
+      ],
+      "durationMs": 24842
+    },
+    {
+      "evidenceId": "A-none",
+      "case": {
+        "id": "A",
+        "opacity": 100,
+        "name": "Layer 1"
+      },
+      "message": "把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test",
+      "reasoningEffort": "none",
+      "productionBodySha256": "089c8e15b75ed7d45d5fea52aa249404c4b4033c9a74141dc5ead659980eea50",
+      "provisionalProfile": "bounded-logical-plan-eligible",
+      "finalProfile": "bounded-logical-plan-eligible",
+      "allowedOutputs": [
+        "structured-logical-plan"
+      ],
+      "transportMode": "strict-structured",
+      "presentationMode": "structured",
+      "responseSchema": "vela_bounded_logical_plan_response",
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 0,
+      "terminalState": "logical-plan-ready",
+      "error": null,
+      "steps": [
+        {
+          "capabilityId": "set-opacity-v1",
+          "params": {
+            "opacity": 60
+          }
+        },
+        {
+          "capabilityId": "set-layer-name-v1",
+          "params": {
+            "name": "Vela Stream Test"
+          }
+        }
+      ],
+      "durationMs": 2559
+    },
+    {
+      "evidenceId": "B-low",
+      "case": {
+        "id": "B",
+        "opacity": 60,
+        "name": "Layer 1"
+      },
+      "message": "把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test",
+      "reasoningEffort": "low",
+      "productionBodySha256": "1c98180b2e41d95289f927f701769218dbc85cd28419272c8263fb7d93731190",
+      "provisionalProfile": "bounded-logical-plan-eligible",
+      "finalProfile": "bounded-logical-plan-eligible",
+      "allowedOutputs": [
+        "structured-logical-plan"
+      ],
+      "transportMode": "strict-structured",
+      "presentationMode": "structured",
+      "responseSchema": "vela_bounded_logical_plan_response",
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 9287,
+      "terminalState": "logical-plan-ready",
+      "error": null,
+      "steps": [
+        {
+          "capabilityId": "set-opacity-v1",
+          "params": {
+            "opacity": 60
+          }
+        },
+        {
+          "capabilityId": "set-layer-name-v1",
+          "params": {
+            "name": "Vela Stream Test"
+          }
+        }
+      ],
+      "durationMs": 25861
+    },
+    {
+      "evidenceId": "B-none",
+      "case": {
+        "id": "B",
+        "opacity": 60,
+        "name": "Layer 1"
+      },
+      "message": "把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test",
+      "reasoningEffort": "none",
+      "productionBodySha256": "e420aaf150b27f337e541675151ce6ebef5a6ec22d61cec476833b5b4c0a9722",
+      "provisionalProfile": "bounded-logical-plan-eligible",
+      "finalProfile": "bounded-logical-plan-eligible",
+      "allowedOutputs": [
+        "structured-logical-plan"
+      ],
+      "transportMode": "strict-structured",
+      "presentationMode": "structured",
+      "responseSchema": "vela_bounded_logical_plan_response",
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 0,
+      "terminalState": "logical-plan-ready",
+      "error": null,
+      "steps": [
+        {
+          "capabilityId": "set-opacity-v1",
+          "params": {
+            "opacity": 60
+          }
+        },
+        {
+          "capabilityId": "set-layer-name-v1",
+          "params": {
+            "name": "Vela Stream Test"
+          }
+        }
+      ],
+      "durationMs": 2127
+    },
+    {
+      "evidenceId": "C-low",
+      "case": {
+        "id": "C",
+        "opacity": 100,
+        "name": "Vela Stream Test"
+      },
+      "message": "把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test",
+      "reasoningEffort": "low",
+      "productionBodySha256": "969c262923042886d5db8030d35ea170517216feeac77d2f058b086932417327",
+      "provisionalProfile": "bounded-logical-plan-eligible",
+      "finalProfile": "bounded-logical-plan-eligible",
+      "allowedOutputs": [
+        "structured-logical-plan"
+      ],
+      "transportMode": "strict-structured",
+      "presentationMode": "structured",
+      "responseSchema": "vela_bounded_logical_plan_response",
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 9002,
+      "terminalState": "logical-plan-ready",
+      "error": null,
+      "steps": [
+        {
+          "capabilityId": "set-opacity-v1",
+          "params": {
+            "opacity": 60
+          }
+        },
+        {
+          "capabilityId": "set-layer-name-v1",
+          "params": {
+            "name": "Vela Stream Test"
+          }
+        }
+      ],
+      "durationMs": 26268
+    },
+    {
+      "evidenceId": "C-none",
+      "case": {
+        "id": "C",
+        "opacity": 100,
+        "name": "Vela Stream Test"
+      },
+      "message": "把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test",
+      "reasoningEffort": "none",
+      "productionBodySha256": "0d47ee98cc7e6295acbc3467913a00dbc22879b4bc5b00616efeb8f969d1d846",
+      "provisionalProfile": "bounded-logical-plan-eligible",
+      "finalProfile": "bounded-logical-plan-eligible",
+      "allowedOutputs": [
+        "structured-logical-plan"
+      ],
+      "transportMode": "strict-structured",
+      "presentationMode": "structured",
+      "responseSchema": "vela_bounded_logical_plan_response",
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 0,
+      "terminalState": "logical-plan-ready",
+      "error": null,
+      "steps": [
+        {
+          "capabilityId": "set-opacity-v1",
+          "params": {
+            "opacity": 60
+          }
+        },
+        {
+          "capabilityId": "set-layer-name-v1",
+          "params": {
+            "name": "Vela Stream Test"
+          }
+        }
+      ],
+      "durationMs": 2040
+    },
+    {
+      "evidenceId": "D-low",
+      "case": {
+        "id": "D",
+        "opacity": 60,
+        "name": "Vela Stream Test"
+      },
+      "message": "把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test",
+      "reasoningEffort": "low",
+      "productionBodySha256": "0d4f05375287fe959396a2069b912e9e948a0928f100cb5f5cd2493971ea64fc",
+      "provisionalProfile": "bounded-logical-plan-eligible",
+      "finalProfile": "bounded-logical-plan-eligible",
+      "allowedOutputs": [
+        "structured-logical-plan"
+      ],
+      "transportMode": "strict-structured",
+      "presentationMode": "structured",
+      "responseSchema": "vela_bounded_logical_plan_response",
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 8439,
+      "terminalState": "logical-plan-ready",
+      "error": null,
+      "steps": [
+        {
+          "capabilityId": "set-opacity-v1",
+          "params": {
+            "opacity": 60
+          }
+        },
+        {
+          "capabilityId": "set-layer-name-v1",
+          "params": {
+            "name": "Vela Stream Test"
+          }
+        }
+      ],
+      "durationMs": 25919
+    },
+    {
+      "evidenceId": "D-none",
+      "case": {
+        "id": "D",
+        "opacity": 60,
+        "name": "Vela Stream Test"
+      },
+      "message": "把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test",
+      "reasoningEffort": "none",
+      "productionBodySha256": "8956ddf6afba1419ce8b152075b7f6124162d28598438dac5b877dd6626ede28",
+      "provisionalProfile": "bounded-logical-plan-eligible",
+      "finalProfile": "bounded-logical-plan-eligible",
+      "allowedOutputs": [
+        "structured-logical-plan"
+      ],
+      "transportMode": "strict-structured",
+      "presentationMode": "structured",
+      "responseSchema": "vela_bounded_logical_plan_response",
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 0,
+      "terminalState": "logical-plan-ready",
+      "error": null,
+      "steps": [
+        {
+          "capabilityId": "set-opacity-v1",
+          "params": {
+            "opacity": 60
+          }
+        },
+        {
+          "capabilityId": "set-layer-name-v1",
+          "params": {
+            "name": "Vela Stream Test"
+          }
+        }
+      ],
+      "durationMs": 2120
+    },
+    {
+      "evidenceId": "conversation-B-low-turn-0",
+      "case": {
+        "id": "conversation-B",
+        "opacity": 60,
+        "name": "Layer 1"
+      },
+      "message": "请用一句话解释 AE 关键帧。",
+      "reasoningEffort": "low",
+      "productionBodySha256": "4eae1b82cf5dca955bc89496aaedd4260cdfbf02cb7c6dc9959019dc3bebd098",
+      "provisionalProfile": "text-only",
+      "finalProfile": "text-only",
+      "allowedOutputs": [
+        "assistant-text"
+      ],
+      "transportMode": "native-assistant",
+      "presentationMode": "assistant-text",
+      "responseSchema": null,
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 7750,
+      "terminalState": "completed",
+      "error": null,
+      "steps": null,
+      "durationMs": 24593
+    },
+    {
+      "evidenceId": "conversation-B-low-turn-1",
+      "case": {
+        "id": "conversation-B",
+        "opacity": 60,
+        "name": "Layer 1"
+      },
+      "message": "当前图层的不透明度是多少？",
+      "reasoningEffort": "low",
+      "productionBodySha256": "0cacf9a1c959d20ece887424c71403521c69fd328abb492088782d29ce4ae0ca",
+      "provisionalProfile": "text-only",
+      "finalProfile": "text-only",
+      "allowedOutputs": [
+        "assistant-text"
+      ],
+      "transportMode": "native-assistant",
+      "presentationMode": "assistant-text",
+      "responseSchema": null,
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 2960,
+      "terminalState": "completed",
+      "error": null,
+      "steps": null,
+      "durationMs": 9082
+    },
+    {
+      "evidenceId": "conversation-B-low-turn-2",
+      "case": {
+        "id": "conversation-B",
+        "opacity": 60,
+        "name": "Layer 1"
+      },
+      "message": "把当前图层的不透明度改成 60%",
+      "reasoningEffort": "low",
+      "productionBodySha256": "88d8ff74d313d0807d8394d535209751539f814cc7aadf5130c693557a4936a6",
+      "provisionalProfile": "explicit-edit-eligible",
+      "finalProfile": "explicit-edit-eligible",
+      "allowedOutputs": [
+        "structured-proposal"
+      ],
+      "transportMode": "strict-structured",
+      "presentationMode": "structured",
+      "responseSchema": "vela_local_proposal_response",
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 8586,
+      "terminalState": "proposal-ready",
+      "error": null,
+      "steps": null,
+      "durationMs": 24928
+    },
+    {
+      "evidenceId": "conversation-B-low-turn-3",
+      "case": {
+        "id": "conversation-B",
+        "opacity": 60,
+        "name": "Layer 1"
+      },
+      "message": "请简短解释图层重命名的用途。",
+      "reasoningEffort": "low",
+      "productionBodySha256": "68709201632900c94f953bd77729df614fafaf139b38f15852440ef6f149ec70",
+      "provisionalProfile": "text-only",
+      "finalProfile": "text-only",
+      "allowedOutputs": [
+        "assistant-text"
+      ],
+      "transportMode": "native-assistant",
+      "presentationMode": "assistant-text",
+      "responseSchema": null,
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 3131,
+      "terminalState": "completed",
+      "error": null,
+      "steps": null,
+      "durationMs": 9232
+    },
+    {
+      "evidenceId": "conversation-B-low-turn-4",
+      "case": {
+        "id": "conversation-B",
+        "opacity": 60,
+        "name": "Layer 1"
+      },
+      "message": "把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test",
+      "reasoningEffort": "low",
+      "productionBodySha256": "bcd97be280b1b7893d943472698fc9c52c3ade3bd706693286b4366d3d371c9d",
+      "provisionalProfile": "bounded-logical-plan-eligible",
+      "finalProfile": "bounded-logical-plan-eligible",
+      "allowedOutputs": [
+        "structured-logical-plan"
+      ],
+      "transportMode": "strict-structured",
+      "presentationMode": "structured",
+      "responseSchema": "vela_bounded_logical_plan_response",
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 9201,
+      "terminalState": "logical-plan-ready",
+      "error": null,
+      "steps": [
+        {
+          "capabilityId": "set-opacity-v1",
+          "params": {
+            "opacity": 60
+          }
+        },
+        {
+          "capabilityId": "set-layer-name-v1",
+          "params": {
+            "name": "Vela Stream Test"
+          }
+        }
+      ],
+      "durationMs": 26012
+    },
+    {
+      "evidenceId": "conversation-B-low-turn-5",
+      "case": {
+        "id": "conversation-B",
+        "opacity": 60,
+        "name": "Layer 1"
+      },
+      "message": "谢谢，请简短说明什么是缓动。",
+      "reasoningEffort": "low",
+      "productionBodySha256": "7b712ccc4edca11db0068e57f506d8c91d530709cdfffd8f0583d7002001106d",
+      "provisionalProfile": "text-only",
+      "finalProfile": "text-only",
+      "allowedOutputs": [
+        "assistant-text"
+      ],
+      "transportMode": "native-assistant",
+      "presentationMode": "assistant-text",
+      "responseSchema": null,
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 2853,
+      "terminalState": "completed",
+      "error": null,
+      "steps": null,
+      "durationMs": 9656
+    },
+    {
+      "evidenceId": "conversation-B-low-turn-6",
+      "case": {
+        "id": "conversation-B",
+        "opacity": 60,
+        "name": "Layer 1"
+      },
+      "message": "把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test",
+      "reasoningEffort": "low",
+      "productionBodySha256": "51c2abeaeadde666e8b16a30b5b9ed4cf09baf1ba83a4bcd901d8b9ab91f7126",
+      "provisionalProfile": "bounded-logical-plan-eligible",
+      "finalProfile": "bounded-logical-plan-eligible",
+      "allowedOutputs": [
+        "structured-logical-plan"
+      ],
+      "transportMode": "strict-structured",
+      "presentationMode": "structured",
+      "responseSchema": "vela_bounded_logical_plan_response",
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 9089,
+      "terminalState": "logical-plan-ready",
+      "error": null,
+      "steps": [
+        {
+          "capabilityId": "set-opacity-v1",
+          "params": {
+            "opacity": 60
+          }
+        },
+        {
+          "capabilityId": "set-layer-name-v1",
+          "params": {
+            "name": "Vela Stream Test"
+          }
+        }
+      ],
+      "durationMs": 26361
+    },
+    {
+      "evidenceId": "conversation-B-none-turn-0",
+      "case": {
+        "id": "conversation-B",
+        "opacity": 60,
+        "name": "Layer 1"
+      },
+      "message": "请用一句话解释 AE 关键帧。",
+      "reasoningEffort": "none",
+      "productionBodySha256": "4eae1b82cf5dca955bc89496aaedd4260cdfbf02cb7c6dc9959019dc3bebd098",
+      "provisionalProfile": "text-only",
+      "finalProfile": "text-only",
+      "allowedOutputs": [
+        "assistant-text"
+      ],
+      "transportMode": "native-assistant",
+      "presentationMode": "assistant-text",
+      "responseSchema": null,
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 0,
+      "terminalState": "completed",
+      "error": null,
+      "steps": null,
+      "durationMs": 952
+    },
+    {
+      "evidenceId": "conversation-B-none-turn-1",
+      "case": {
+        "id": "conversation-B",
+        "opacity": 60,
+        "name": "Layer 1"
+      },
+      "message": "当前图层的不透明度是多少？",
+      "reasoningEffort": "none",
+      "productionBodySha256": "0cacf9a1c959d20ece887424c71403521c69fd328abb492088782d29ce4ae0ca",
+      "provisionalProfile": "text-only",
+      "finalProfile": "text-only",
+      "allowedOutputs": [
+        "assistant-text"
+      ],
+      "transportMode": "native-assistant",
+      "presentationMode": "assistant-text",
+      "responseSchema": null,
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 0,
+      "terminalState": "completed",
+      "error": null,
+      "steps": null,
+      "durationMs": 212
+    },
+    {
+      "evidenceId": "conversation-B-none-turn-2",
+      "case": {
+        "id": "conversation-B",
+        "opacity": 60,
+        "name": "Layer 1"
+      },
+      "message": "把当前图层的不透明度改成 60%",
+      "reasoningEffort": "none",
+      "productionBodySha256": "9b54ff6cbbe191dba16157e6a519f8e3f26ac946c85117ce625cf7cf39094987",
+      "provisionalProfile": "explicit-edit-eligible",
+      "finalProfile": "explicit-edit-eligible",
+      "allowedOutputs": [
+        "structured-proposal"
+      ],
+      "transportMode": "strict-structured",
+      "presentationMode": "structured",
+      "responseSchema": "vela_local_proposal_response",
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 0,
+      "terminalState": "proposal-ready",
+      "error": null,
+      "steps": null,
+      "durationMs": 1823
+    },
+    {
+      "evidenceId": "conversation-B-none-turn-3",
+      "case": {
+        "id": "conversation-B",
+        "opacity": 60,
+        "name": "Layer 1"
+      },
+      "message": "请简短解释图层重命名的用途。",
+      "reasoningEffort": "none",
+      "productionBodySha256": "68709201632900c94f953bd77729df614fafaf139b38f15852440ef6f149ec70",
+      "provisionalProfile": "text-only",
+      "finalProfile": "text-only",
+      "allowedOutputs": [
+        "assistant-text"
+      ],
+      "transportMode": "native-assistant",
+      "presentationMode": "assistant-text",
+      "responseSchema": null,
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 0,
+      "terminalState": "completed",
+      "error": null,
+      "steps": null,
+      "durationMs": 1351
+    },
+    {
+      "evidenceId": "conversation-B-none-turn-4",
+      "case": {
+        "id": "conversation-B",
+        "opacity": 60,
+        "name": "Layer 1"
+      },
+      "message": "把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test",
+      "reasoningEffort": "none",
+      "productionBodySha256": "1bb7cd0bccfd738775ef359c69b663d4b3871a80e175c4d15d015b39e7281d41",
+      "provisionalProfile": "bounded-logical-plan-eligible",
+      "finalProfile": "bounded-logical-plan-eligible",
+      "allowedOutputs": [
+        "structured-logical-plan"
+      ],
+      "transportMode": "strict-structured",
+      "presentationMode": "structured",
+      "responseSchema": "vela_bounded_logical_plan_response",
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 0,
+      "terminalState": "logical-plan-ready",
+      "error": null,
+      "steps": [
+        {
+          "capabilityId": "set-opacity-v1",
+          "params": {
+            "opacity": 60
+          }
+        },
+        {
+          "capabilityId": "set-layer-name-v1",
+          "params": {
+            "name": "Vela Stream Test"
+          }
+        }
+      ],
+      "durationMs": 2078
+    },
+    {
+      "evidenceId": "conversation-B-none-turn-5",
+      "case": {
+        "id": "conversation-B",
+        "opacity": 60,
+        "name": "Layer 1"
+      },
+      "message": "谢谢，请简短说明什么是缓动。",
+      "reasoningEffort": "none",
+      "productionBodySha256": "7b712ccc4edca11db0068e57f506d8c91d530709cdfffd8f0583d7002001106d",
+      "provisionalProfile": "text-only",
+      "finalProfile": "text-only",
+      "allowedOutputs": [
+        "assistant-text"
+      ],
+      "transportMode": "native-assistant",
+      "presentationMode": "assistant-text",
+      "responseSchema": null,
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 0,
+      "terminalState": "completed",
+      "error": null,
+      "steps": null,
+      "durationMs": 707
+    },
+    {
+      "evidenceId": "conversation-B-none-turn-6",
+      "case": {
+        "id": "conversation-B",
+        "opacity": 60,
+        "name": "Layer 1"
+      },
+      "message": "把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test",
+      "reasoningEffort": "none",
+      "productionBodySha256": "9247188971c6947bb85a62aaccdad351f3bf44e8228945df8e5f38a2c4726cea",
+      "provisionalProfile": "bounded-logical-plan-eligible",
+      "finalProfile": "bounded-logical-plan-eligible",
+      "allowedOutputs": [
+        "structured-logical-plan"
+      ],
+      "transportMode": "strict-structured",
+      "presentationMode": "structured",
+      "responseSchema": "vela_bounded_logical_plan_response",
+      "status": 200,
+      "contentType": "text/event-stream",
+      "done": true,
+      "finishReason": "stop",
+      "reasoningChars": 0,
+      "terminalState": "logical-plan-ready",
+      "error": null,
+      "steps": [
+        {
+          "capabilityId": "set-opacity-v1",
+          "params": {
+            "opacity": 60
+          }
+        },
+        {
+          "capabilityId": "set-layer-name-v1",
+          "params": {
+            "name": "Vela Stream Test"
+          }
+        }
+      ],
+      "durationMs": 2019
+    }
+  ]
+}

@@ -158,6 +158,10 @@ async function run() {
     check(oneDone.taskState === "completed" && oneDone.executionArmed === false && one.state.value === 40 && one.executed.length === 1, "One-step run completes and disarms.");
     check(Object.isFrozen(oneDone.executionReceipt) && oneDone.executionReceipt.committed === true && oneDone.executionReceipt.code === null, "PlanController.run returns a bounded final committed execution receipt.");
 
+    const noOp = makeHarness(); const noOpRecord = await acceptAndConfirm(noOp, [100]);
+    const noOpDone = await noOp.controller.run(noOpRecord.waiting.executionPlanId);
+    check(noOpDone.taskState === "completed" && noOpDone.executionArmed === false && noOp.executed.length === 0 && noOpDone.executionReceipt.committed === false && noOpDone.executionReceipt.satisfied === true && noOpDone.executionReceipt.code === null, "PlanController records an already-satisfied step as bounded noncommit success without calling the Host executor.");
+
     const two = makeHarness(); const twoRecord = await acceptAndConfirm(two, [50, 25]);
     const twoDone = await two.controller.run(twoRecord.waiting.executionPlanId);
     check(twoDone.taskState === "completed" && two.state.value === 25, "Two-step run completes in order.");

@@ -53,10 +53,10 @@ const PROFILE_CASES = freezeJson([
     { id: "Q12", fixtureId: "A", message: "你好", requestProfile: "text-only", expectedOutcome: "text", expectedOpacity: null }
 ]);
 const BRANCH_FIXTURE_PATH = path.join(__dirname, "..", "fixtures", "vela-capability-contracts", "provider-branch-policy-v2.json");
-const PROFILE_FIXTURE_PATH = path.join(__dirname, "..", "fixtures", "vela-capability-contracts", "provider-branch-profiles-v2.json");
+const PROFILE_FIXTURE_PATH = path.join(__dirname, "..", "fixtures", "vela-capability-contracts", "provider-branch-profiles-v3.json");
 const BRANCH_POLICY_REVISION = "vela-branch-policy-v2";
 const PROFILE_METADATA_REVISION = "vela-provider-model-qualification-metadata-c4-v2";
-const PROFILE_FIXTURE_SHA256 = "8775d1ad2171489908b7e0b13856c228ddaf69f274cc7b48c941307f8c088a7f";
+const PROFILE_FIXTURE_SHA256 = "93f21dfc7231ffcba116a32c10aab89ea105e4d041c98c9064427d75e86d28ef";
 const PROFILE_CASE_FINGERPRINT = "df4e3ebf6a8126b7e70a8b0aef88b8aa5850c05df1c43f448f4f84626ce04ccf";
 const PROFILE_EVIDENCE_REVISION = "vela-provider-model-qualification-v4";
 const C2_PROMPT_SHA256 = "2109193792f682367499f7594a6644e758ea55b46522c0bc526c092a35de5c92";
@@ -133,8 +133,8 @@ async function captureProfileContracts(options) {
         const body = calls[0].body;
         captured[entry[0]] = {
             promptSha256: sha256(body.messages[0].content),
-            responseFormatSha256: sha256(stable(body.response_format)),
-            stableRequestBodySha256: sha256(stable({ model: body.model, messages: body.messages.map((message) => ({ role: message.role, content: message.content })), stream: body.stream, response_format: body.response_format })),
+            responseFormatSha256: sha256(stable(body.response_format || null)),
+            stableRequestBodySha256: sha256(stable({ model: body.model, messages: body.messages.map((message) => ({ role: message.role, content: message.content })), stream: body.stream, response_format: body.response_format || null })),
             messageRoleOrder: body.messages.map((message) => message.role)
         };
     }
@@ -142,7 +142,7 @@ async function captureProfileContracts(options) {
 }
 function validateProfileFixture(fixture) {
     if (!exactKeys(fixture, PROFILE_FIXTURE_KEYS) || !exactKeys(fixture.textOnly, PROFILE_CONTRACT_KEYS) || !exactKeys(fixture.explicitEditEligible, PROFILE_CONTRACT_KEYS)) throw contractDrift();
-    if (fixture.fixtureType !== "vela-provider-branch-profiles" || fixture.schemaRevision !== "v2" || fixture.promptBuilderRevision !== promptBuilder.MODULE_REVISION || fixture.promptBuilderRevision !== "vela-capability-prompt-builder-v4" || fixture.requestBranchPolicyRevision !== requestBranchPolicy.MODULE_REVISION || fixture.requestBranchPolicyRevision !== "vela-provider-request-branch-policy-v1" || fixture.capabilityId !== "set-opacity-v1" || fixture.capabilityRevision !== "vela-capability-contract-v1" || fixture.protocolVersion !== "vela.model-response.v1" || JSON.stringify(fixture.messageRoleOrder) !== JSON.stringify(["system", "assistant", "user"]) || fixture.fixedModelIdentifier !== "vela-contract-model" || fixture.fixedRequestId !== "req_00000000000000000000000000000000" || fixture.fixedAssistantContext !== "Trusted request context: active composition type CompItem; selected layers 1; first selected layer type AVLayer; selected layer opacity 25." || fixture.fixedTextUserMessage !== "Set opacity to 50%" || fixture.fixedExtractionUserMessage !== "Set opacity to 50%" || fixture.changeReason !== "0.3.4-B structured stable system and bounded dynamic turn contract" || fixture.generatedBy !== "production Adapter mock-transport capture") throw contractDrift();
+    if (fixture.fixtureType !== "vela-provider-branch-profiles" || fixture.schemaRevision !== "v3" || fixture.promptBuilderRevision !== promptBuilder.MODULE_REVISION || fixture.promptBuilderRevision !== "vela-capability-prompt-builder-v4" || fixture.requestBranchPolicyRevision !== requestBranchPolicy.MODULE_REVISION || fixture.requestBranchPolicyRevision !== "vela-provider-request-branch-policy-v1" || fixture.capabilityId !== "set-opacity-v1" || fixture.capabilityRevision !== "vela-capability-contract-v1" || fixture.protocolVersion !== "vela.model-response.v1" || JSON.stringify(fixture.messageRoleOrder) !== JSON.stringify(["system", "assistant", "user"]) || fixture.fixedModelIdentifier !== "vela-contract-model" || fixture.fixedRequestId !== "req_00000000000000000000000000000000" || fixture.fixedAssistantContext !== "Trusted request context: active composition type CompItem; selected layers 1; first selected layer type AVLayer; selected layer opacity 25." || fixture.fixedTextUserMessage !== "Set opacity to 50%" || fixture.fixedExtractionUserMessage !== "Set opacity to 50%" || fixture.changeReason !== "0.3.9-C1b-F5 native assistant transport; Adapter owns text canonicalization" || fixture.generatedBy !== "production Adapter mock-transport capture") throw contractDrift();
 }
 function validateProfileMetadataArgs(args) {
     if (!args || typeof args !== "object" || typeof args.model !== "string" || !args.model.trim() || typeof args.quantization !== "string" || !/^[A-Za-z0-9._-]{1,64}$/.test(args.quantization) || typeof args.reasoningMode !== "string" || !/^[A-Za-z0-9._-]{1,64}$/.test(args.reasoningMode) || !Number.isInteger(args.runs) || args.runs < 1 || args.runs > 100) throw contractDrift();

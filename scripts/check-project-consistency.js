@@ -328,7 +328,7 @@ function checkVelaRuntimeBootstrap() {
     const main = exists("client/js/main.js") ? readText("client/js/main.js") : "";
     const surface = exists("client/js/vela/velaSurface.js") ? readText("client/js/vela/velaSurface.js") : "";
     const host = exists("host/vela/velaContext.jsx") ? readText("host/vela/velaContext.jsx") : "";
-    const orderedNames = ["VelaProtocol", "VelaResponseParser", "VelaCapabilityContracts", "VelaProviderRequestBranchPolicy", "VelaCapabilityPromptBuilder", "VelaProviderAdapter", "VelaProviderIntentGate", "VelaLocalTransport", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaProviderController", "VelaProviderProposalRouter", "VelaRuntime"];
+    const orderedNames = ["VelaProtocol", "VelaResponseParser", "VelaCapabilityContracts", "VelaProviderRequestBranchPolicy", "VelaCapabilityPromptBuilder", "VelaProviderStreamEvents", "VelaProviderStreamAssembler", "VelaProviderAdapter", "VelaProviderIntentGate", "VelaLocalTransport", "VelaContext", "VelaValidator", "VelaPlan", "VelaExecutionGuard", "VelaContextBridge", "VelaExecutionPreflight", "VelaExecutionAdapter", "VelaController", "VelaProviderController", "VelaProviderProposalRouter", "VelaRuntime"];
     let previous = -1;
     orderedNames.forEach((name) => {
         const index = loader.indexOf('name: "' + name + '"');
@@ -351,7 +351,7 @@ function checkVelaRuntimeBootstrap() {
 }
 
 function checkVelaProviderBranchProfiles() {
-    const fixturePath = "scripts/fixtures/vela-capability-contracts/provider-branch-profiles-v2.json";
+    const fixturePath = "scripts/fixtures/vela-capability-contracts/provider-branch-profiles-v3.json";
     const promptBuilder = exists("client/js/vela/velaCapabilityPromptBuilder.js") ? readText("client/js/vela/velaCapabilityPromptBuilder.js") : "";
     const adapter = exists("client/js/vela/velaProviderAdapter.js") ? readText("client/js/vela/velaProviderAdapter.js") : "";
     const controller = exists("client/js/vela/velaProviderController.js") ? readText("client/js/vela/velaProviderController.js") : "";
@@ -364,9 +364,9 @@ function checkVelaProviderBranchProfiles() {
     let fixture;
     try { fixture = JSON.parse(readText(fixturePath)); } catch (error) { fail("C4 Provider Branch Profiles fixture parses", error.message); return; }
     const hashes = [
-        "c23f2768d2e4df9a1ebbfad23565da877d19bb227cfc15f6b5916f2a45c9e88c",
-        "85813dd8950079ab9c9542612aa0ad14b82c98e3f3e71f3a370561669e64cdf8",
-        "0b289b451e6787ff86b96493901f2f33ec5b130effd6c6922ab38d430635e9cc",
+        "a97b9c367790eee8ae679e42005141d15cea7b8e4581fbc97dc0e5fb892f7045",
+        "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+        "4e45a9548c79c8a039f7def323a884a91db489a7a455fa5e4f4332ab69817de2",
         "0eeefc0440e0281f2c2da20245cebf7a9fbc6cf8adb5b08a271bf93c57f1d8c3",
         "2d49c9fe90803334b15c92ece839c785852550e96876a38e331799ad167ce258",
         "33b60eecf513814ee4e6d5b2075cfda0544d72f82066f8ecea12395ebc7d4315"
@@ -375,12 +375,12 @@ function checkVelaProviderBranchProfiles() {
     check("Capability Prompt Builder splits stable and dynamic contracts", /buildSystemPrompt\s*\(\s*modelProjection\s*,\s*requestProfile\s*\)/.test(promptBuilder) && /buildTurnContract\s*\(\s*modelProjection\s*,\s*requestId\s*,\s*model\s*,\s*requestProfile\s*\)/.test(promptBuilder), "Prompt Builder must expose the stable system and bounded turn contracts.");
     check("Provider Adapter requires requestProfile", /ownDataOption\s*\(\s*options\s*,\s*"requestProfile"\s*\)/.test(adapter), "VelaProviderAdapter must require requestProfile.");
     check("Provider Controller depends on Contracts and Request Branch Policy", /require\("\.\/velaCapabilityContracts"\)/.test(controller) && /require\("\.\/velaProviderRequestBranchPolicy"\)/.test(controller), "VelaProviderController must load both C4 dependencies.");
-    const order = ["VelaCapabilityContracts", "VelaProviderRequestBranchPolicy", "VelaCapabilityPromptBuilder", "VelaProviderAdapter"].map((name) => loader.indexOf('name: "' + name + '"'));
+    const order = ["VelaCapabilityContracts", "VelaProviderRequestBranchPolicy", "VelaCapabilityPromptBuilder", "VelaProviderStreamEvents", "VelaProviderStreamAssembler", "VelaProviderAdapter"].map((name) => loader.indexOf('name: "' + name + '"'));
     check("C4 loader dependency order is fixed", order.every((value, index) => value !== -1 && (index === 0 || value > order[index - 1])), "Loader order must be Contracts → Request Branch Policy → Prompt Builder → Provider Adapter.");
     check("C4 fixture records all six frozen SHA values", hashes.every((hash) => JSON.stringify(fixture).indexOf(hash) !== -1), "Profile fixture must retain all six C4 SHA values.");
     check("C4-C1A has an independent frozen Profile case matrix", /const PROFILE_CASES\s*=\s*freezeJson\s*\(\s*\[/.test(diagnostics) && /requestProfile/.test(diagnostics) && /expectedOutcome/.test(diagnostics) && /expectedOpacity/.test(diagnostics), "Qualification diagnostics must define PROFILE_CASES independently from historical C3 CASES.");
     check("C4-C1A uses the production Request Branch Policy", /require\("\.\.\/\.\.\/client\/js\/vela\/velaProviderRequestBranchPolicy"\)/.test(diagnostics) && /createRequestBranchPolicy\s*\(\s*projection\s*\)/.test(diagnostics), "Profile case validation must use the production Request Branch Policy and projection.");
-    check("C4-C1A binds the committed Profile fixture", diagnostics.indexOf("provider-branch-profiles-v2.json") !== -1 && diagnostics.indexOf("profileFixtureSha256") !== -1 && diagnostics.indexOf("8775d1ad2171489908b7e0b13856c228ddaf69f274cc7b48c941307f8c088a7f") !== -1, "Profile metadata must bind the exact raw committed current fixture bytes.");
+    check("C4-C1A binds the committed Profile fixture", diagnostics.indexOf("provider-branch-profiles-v3.json") !== -1 && diagnostics.indexOf("profileFixtureSha256") !== -1 && diagnostics.indexOf("93f21dfc7231ffcba116a32c10aab89ea105e4d041c98c9064427d75e86d28ef") !== -1, "Profile metadata must bind the exact raw committed current fixture bytes.");
     check("C4-C1A captures both production Profile contracts", /function captureProfileContracts\s*\(/.test(diagnostics) && diagnostics.indexOf('"text-only"') !== -1 && diagnostics.indexOf('"explicit-edit-eligible"') !== -1, "Qualification diagnostics must capture text-only and explicit-edit-eligible contracts independently.");
     check("C4-C1A metadata revision is fixed", diagnostics.indexOf("vela-provider-model-qualification-metadata-c4-v2") !== -1 && /function profileQualificationMetadata\s*\(/.test(diagnostics), "The current offline C4 metadata foundation revision and API are required.");
     check("C4-C1A retains all six frozen Profile SHA values", hashes.every((hash) => diagnostics.indexOf(hash) !== -1 || JSON.stringify(fixture).indexOf(hash) !== -1), "The Profile fixture and diagnostics contract must retain all six C4 SHA values.");

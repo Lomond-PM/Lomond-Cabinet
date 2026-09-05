@@ -1,0 +1,32 @@
+"use strict";
+const assert = require("assert");
+const PresentationModel = require("../client/js/vela/velaPresentationModel").VelaPresentationModel;
+let assertions = 0;
+function check(value, message) { assert.ok(value, message); assertions += 1; }
+function event(invocation, generation, type, text, presentationMode) { const providerEvent = { type, requestId: "request", generation: 1, providerId: "provider", modelId: "model" }; if (text !== undefined) { providerEvent.text = text; } Object.freeze(providerEvent); return Object.freeze({ type: "provider-stream-event", runtimeGeneration: generation, reasoningInvocationId: invocation, presentationMode: presentationMode || "assistant-text", providerEvent }); }
+const model = PresentationModel.create();
+model.begin("multi-step objective");
+model.applyPresentationEvent(event("reasoning_1", 1, "stream-started"));
+model.applyPresentationEvent(event("reasoning_1", 1, "reasoning-delta", "first"));
+model.applyPresentationEvent(event("reasoning_1", 1, "text-delta", "intermediate"));
+model.applyPresentationEvent(event("reasoning_1", 1, "stream-completed"));
+model.applyPresentationEvent(event("reasoning_2", 1, "stream-started"));
+model.applyPresentationEvent(event("reasoning_2", 1, "reasoning-delta", "second"));
+let transient = model.getTransientSnapshot();
+check(transient.invocations.map((item) => item.reasoningInvocationId).join(",") === "reasoning_1,reasoning_2", "Multiple invocations retain deterministic presentation insertion order");
+check(transient.activeInvocationId === "reasoning_2" && transient.invocations[0].state === "stream-completed", "Only the newest invocation is active while the previous invocation remains terminal");
+check(transient.invocations[0].text === "intermediate" && transient.invocations[1].text === "", "Later invocation does not inherit earlier intermediate text");
+model.applyPresentationEvent(event("reasoning_2", 1, "stream-failed"));
+transient = model.getTransientSnapshot();
+check(transient.activeInvocationId === null && transient.invocations[0].state === "stream-completed" && transient.invocations[1].state === "stream-failed", "Failure between invocations ends the active presentation without implying objective success");
+model.apply({ state: "failed", text: null, errorCode: "PROVIDER_RESPONSE_INVALID" });
+check(model.getSnapshot().items.filter((item) => item.kind === "assistant").length === 0 && model.getTransientSnapshot().invocations.every((item) => item.assistantReconciliation === "closed" && item.text === ""), "Authoritative failure closes assistant presentation without promoting intermediate text while retaining reasoning");
+model.begin("next objective");
+check(model.getTransientSnapshot().invocations.length === 0 && model.getTransientSnapshot().activeInvocationId === null, "begin clears the entire previous objective composition");
+model.applyPresentationEvent(event("reasoning_3", 2, "stream-started"));
+model.applyPresentationEvent(event("reasoning_3", 2, "stream-cancelled"));
+check(model.getTransientSnapshot().invocations[0].state === "stream-cancelled" && model.getTransientSnapshot().activeInvocationId === null, "Cancellation stops the active invocation without reactivating earlier work");
+model.reset();
+check(model.getTransientSnapshot().invocations.length === 0, "reset removes transient composition state");
+check(!JSON.stringify(model.getTransientSnapshot()).match(/step|plan|task|review|authority|host/i), "Composition projection does not expose logical step or control identities");
+console.log("PASS Vela multi-step presentation composition: " + assertions + " assertions.");

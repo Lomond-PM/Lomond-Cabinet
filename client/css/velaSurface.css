@@ -256,6 +256,68 @@
     background: var(--action-danger-hover-surface);
 }
 
+.vela-transcript-transient-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.vela-transcript-transient-segment {
+    padding: 7px 10px;
+    border-left: 2px solid var(--separator);
+    color: var(--text-secondary);
+}
+
+.vela-transcript-transient-segment[data-transient-active="false"] {
+    opacity: 0.78;
+}
+
+.vela-transcript-transient-segment[data-transient-active="true"] {
+    opacity: 1;
+}
+
+.vela-transcript-transient-reasoning {
+    color: var(--text-tertiary);
+}
+
+.vela-transcript-transient-reasoning-toggle {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.vela-transcript-transient-reasoning-toggle::before {
+    content: "▶";
+    display: inline-block;
+    width: 1em;
+    margin-right: 3px;
+    font-size: 0.8em;
+}
+
+.vela-transcript-transient-reasoning-toggle[aria-expanded="true"]::before {
+    content: "▼";
+}
+
+.vela-transcript-transient-reasoning-toggle:focus-visible {
+    outline: 1px solid var(--gold-soft);
+    outline-offset: 2px;
+}
+
+.vela-transcript-transient-reasoning-body {
+    margin-top: 3px;
+    white-space: pre-wrap;
+}
+
+.vela-transcript-transient-text {
+    margin-top: 6px;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+}
+
 .vela-resize-handle {
     position: absolute;
     z-index: 1;
