@@ -236,6 +236,12 @@
     }
 
     installVelaActiveCompositionDiagnostics();
+    // Read-only acceptance surface; no event subscription or execution access.
+    if (!Object.prototype.hasOwnProperty.call(window, "VelaTrajectoryDiagnostics")) {
+        try { Object.defineProperty(window, "VelaTrajectoryDiagnostics", { configurable: false, enumerable: true, writable: false, value: Object.freeze({
+            getEvidence: function () { return window.AETOOLBOX_DEBUG_REGISTRY === true && velaAgentRuntimeOwner ? velaAgentRuntimeOwner.getTrajectoryEvidence() : null; }
+        }) }); } catch (ignoredTrajectoryDiagnostics) { /* Optional inspection cannot block panel startup. */ }
+    }
     var Motion = {
         fast: 160,
         normal: 260,

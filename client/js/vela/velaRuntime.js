@@ -234,6 +234,22 @@
         var reviewBarrierGeneration = 0;
         var reviewBarriers = new Map();
         var activeProductionContinuation = null;
+        var trajectoryReporter = null;
+        var trajectoryAssociation = null;
+        function reportTrajectory(fact) {
+            var association = trajectoryAssociation;
+            if (!association || !trajectoryReporter) { return; }
+            try {
+                if (fact.objectiveId && fact.objectiveId !== association.objectiveId || fact.taskPlanId && fact.taskPlanId !== association.taskPlanId) { return; }
+                if (fact.kind === "association") {
+                    if (association.planId !== null || !fact.planId) { return; }
+                    association.planId = fact.planId;
+                } else if (fact.planId && fact.planId !== association.planId) { return; }
+                if (fact.kind === "execution-entered") { association.executionEntered = true; }
+                if (fact.kind === "verify-result") { association.verificationSettled = true; }
+                trajectoryReporter(Object.freeze(Object.assign({}, fact, { objectiveId: association.objectiveId, taskPlanId: association.taskPlanId })));
+            } catch (ignoredTrajectory) {}
+        }
         var authorityState = "inactive";
         var authorityErrorCode = null;
         var activePilot = null;
@@ -320,6 +336,8 @@
             return true;
         }
         function invalidateProductionContinuation() {
+            if (trajectoryAssociation && !trajectoryAssociation.executionEntered) { reportTrajectory({ kind: "not-executed", producer: "VelaRuntime", code: "LIFECYCLE_BLOCKED" }); }
+            trajectoryAssociation = null;
             var record = activeProductionContinuation;
             if (record) { closeProductionContinuation(record); }
             if (preflight) { try { preflight.invalidateAllCommittedVerifications(); } catch (ignored) {} }
@@ -344,6 +362,9 @@
                 return Object.freeze({ state: verification && verification.matches === true ? "verified" : "unverified", code: verification && verification.matches === true ? null : "AGENT_DRIVER_TASK_UNVERIFIED" });
             }, function (error) {
                 if (activeProductionContinuation !== record || record.generation !== reviewBarrierGeneration || disposed || state !== "ready") { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
+                if (trajectoryAssociation && trajectoryAssociation.planId === planId && !trajectoryAssociation.verificationSettled) {
+                    reportTrajectory({ kind: "verify-result", producer: "VelaRuntime", planId: planId, scope: "committed-target", fresh: null, matches: null, actual: null, digest: null, sourceRequestId: null, code: "VERIFICATION_UNAVAILABLE" });
+                }
                 closeProductionContinuation(record);
                 return Object.freeze({ state: "blocked", code: stableErrorCode(error) === "AGENT_DRIVER_CANCELLED" ? "AGENT_DRIVER_CANCELLED" : "VERIFICATION_UNAVAILABLE" });
             });
@@ -369,7 +390,7 @@
         }
         function createConfirmedAuthorityComposer() {
             if (confirmedAuthorityComposer || !authorityPlane || !planController) { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
-            confirmedAuthorityComposer = confirmedAuthorityComposerModule.createConfirmedAuthorityComposer({ compiler: authorityPlane.compiler, policyEngine: authorityPlane.policyEngine, planController: planController, resolveRegisteredAction: capabilityContracts.resolveRegisteredAction, makePlanId: makeAuthorityId, getRuntimeGeneration: function () { return reviewBarrierGeneration; }, claimApprovedReview: claimApprovedReview });
+            confirmedAuthorityComposer = confirmedAuthorityComposerModule.createConfirmedAuthorityComposer({ compiler: authorityPlane.compiler, policyEngine: authorityPlane.policyEngine, planController: planController, resolveRegisteredAction: capabilityContracts.resolveRegisteredAction, makePlanId: makeAuthorityId, getRuntimeGeneration: function () { return reviewBarrierGeneration; }, claimApprovedReview: claimApprovedReview, onTrajectoryAssociation: reportTrajectory });
             return confirmedAuthorityComposer;
         }
         function reviewBarrierError(code) { var value = safeError(code); return value; }
@@ -417,7 +438,7 @@
                 var current = reviewBarriers.get(input.reviewCorrelation);
                 var target = captures.valueCapture && captures.valueCapture.snapshot && (record.capabilityIntent.capabilityId === "set-layer-name-v1" ? captures.valueCapture.snapshot.target : captures.valueCapture.snapshot.targets && captures.valueCapture.snapshot.targets[0]);
                 if (!current || current !== record || disposed || state !== "ready" || reviewBarrierGeneration !== capturedGeneration) { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
-                if (!captures.bindingCapture || captures.bindingCapture.fingerprint !== record.contextFingerprint || !target || target.valueDigest !== record.valueDigest) { record.state = "terminal"; reviewBarriers.delete(input.reviewCorrelation); return Object.freeze({ state: "blocked", code: "CONTEXT_STALE", committed: false, observation: Object.freeze({ targetAvailable: Boolean(target), targetClass: target ? (record.capabilityIntent.capabilityId === "set-layer-name-v1" ? "layer-name" : "layer-opacity") : null, observedValueKind: record.valueKind, observedValueDigest: target && target.valueDigest || record.valueDigest }) }); }
+                if (!captures.bindingCapture || captures.bindingCapture.fingerprint !== record.contextFingerprint || !target || target.valueDigest !== record.valueDigest) { reportTrajectory({ kind: "not-executed", producer: "VelaRuntime", code: "CONTEXT_STALE" }); record.state = "terminal"; reviewBarriers.delete(input.reviewCorrelation); return Object.freeze({ state: "blocked", code: "CONTEXT_STALE", committed: false, observation: Object.freeze({ targetAvailable: Boolean(target), targetClass: target ? (record.capabilityIntent.capabilityId === "set-layer-name-v1" ? "layer-name" : "layer-opacity") : null, observedValueKind: record.valueKind, observedValueDigest: target && target.valueDigest || record.valueDigest }) }); }
                 record.state = "claimable";
                 if (activeProductionContinuation) { record.state = "terminal"; reviewBarriers.delete(input.reviewCorrelation); return Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED" }); }
                 activeProductionContinuation = {
@@ -466,7 +487,7 @@
                         return Object.freeze({ state: "blocked", code: execution && execution.code || "PLAN_FAILED" });
                     });
                 }).then(function (result) {
-                    if (result.state !== "verification-required") { reviewBarriers.delete(record.reviewCorrelation); }
+                    if (result.state !== "verification-required") { reportTrajectory({ kind: "verification-skipped", producer: "VelaRuntime", objectiveId: record.objectiveId, taskPlanId: record.taskPlanId, planId: continuation.verificationPlanId }); reviewBarriers.delete(record.reviewCorrelation); }
                     return result;
                 }, function (error) {
                     closeProductionContinuation(continuation);
@@ -576,7 +597,7 @@
                 getState: function () { return bridge.getState(); }
             });
             reviewPort = bridgeModule.createReviewPort(bridge, protocol);
-            executionAdapter = executionAdapterModule.createExecutionAdapter({ protocol: protocol, contextApi: contextApi, contextBridge: bridge, executionPort: bridgeModule.createExecutionPort(bridge, protocol), invokeHost: invokeHost });
+            executionAdapter = executionAdapterModule.createExecutionAdapter({ protocol: protocol, contextApi: contextApi, contextBridge: bridge, executionPort: bridgeModule.createExecutionPort(bridge, protocol), invokeHost: invokeHost, onTrajectoryFact: reportTrajectory });
             preflight = preflightModule.createExecutionPreflight({
                 protocol: protocol,
                 actionValidator: validator,
@@ -585,7 +606,7 @@
                 reviewPort: reviewPort,
                 getCurrentExecutionBinding: function () { return { settingsFingerprint: contextApi.fingerprintSettings({}), permissionSnapshot: { mode: "confirm-every-action", grants: [], policyRevision: MODULE_REVISION }, lifecycle: "ready", hasVerifier: true }; },
                 executeValidatedAction: executionAdapter.executeValidatedAction,
-                onTerminalVerificationAvailable: ownTerminalVerification
+                onTrajectoryFact: reportTrajectory, onTerminalVerificationAvailable: ownTerminalVerification
             });
             authorizedPlanMaterializer = materializerModule.createAuthorizedPlanMaterializer({ protocol: protocol, planningContracts: planningContracts, capabilityContracts: capabilityContracts, preflight: preflight });
             planReviewProjection = planReviewProjectionModule.createPlanReviewProjection({ protocol: protocol, planningContracts: planningContracts, capabilityContracts: capabilityContracts });
@@ -751,7 +772,9 @@
                         throw error;
                     });
                 },
+                attachTrajectoryReporter: function (reporter) { if (trajectoryReporter || typeof reporter !== "function") { return false; } trajectoryReporter = reporter; return true; },
                 submitIntent: function (input) {
+                    trajectoryAssociation = { objectiveId: input.objectiveId, taskPlanId: input.taskPlanId, planId: null, executionEntered: false };
                     var candidate;
                     var decision;
                     var plan;
@@ -782,6 +805,7 @@
                     authorityState = "executing";
                     return authorityPlane.atomicCoordinator.activate(plan, { selectionOrderMeaningful: false }).then(function (handle) {
                         activeDelegatedTask = handle;
+                        reportTrajectory({ kind: "association", producer: "VelaRuntime", planId: handle.executionPlanId, authorizedPlanId: handle.planId, taskRunId: handle.taskRunId });
                         authorityPlane.authorityAppender.publishCommitted(exactAgentSession.getEventBySeq(handle.armedEvidenceSeq));
                         return authorityPlane.atomicCoordinator.run(handle).then(function (result) {
                             var settlementSucceeded = true;
@@ -801,8 +825,13 @@
                     });
                 },
                 verifyAction: function (input) {
+                    var reportingPlanId = trajectoryAssociation && trajectoryAssociation.planId;
+                    reportTrajectory({ kind: "verify-entered", producer: "VelaRuntime", planId: reportingPlanId, scope: "current-selection" });
                     if (input.capabilityId !== "set-opacity-v1") { return Promise.resolve(Object.freeze({ fresh: false, matches: false, observationRevision: null })); }
-                    return opacityVerificationPort.observe().then(function (observation) { return Object.freeze({ fresh: observation.fresh === true, value: observation.opacity, matches: observation.opacity === input.expectedValue.data, observationRevision: observation.observationId }); });
+                    return opacityVerificationPort.observe().then(function (observation) {
+                        reportTrajectory({ kind: "verify-result", producer: "VelaRuntime", planId: reportingPlanId, scope: "current-selection", fresh: observation.fresh === true, matches: observation.opacity === input.expectedValue.data, actual: { kind: "number", data: observation.opacity }, digest: observation.valueDigest || null, sourceRequestId: observation.observationId, code: null });
+                        return Object.freeze({ fresh: observation.fresh === true, value: observation.opacity, matches: observation.opacity === input.expectedValue.data, observationRevision: observation.observationId });
+                    }, function (error) { reportTrajectory({ kind: "verify-result", producer: "VelaRuntime", planId: reportingPlanId, scope: "current-selection", fresh: null, matches: null, actual: null, digest: null, sourceRequestId: null, code: "VERIFICATION_UNAVAILABLE" }); throw error; });
                 },
                 verifyCommittedAction: verifyCommittedAction,
                 continueApprovedReview: continueApprovedReview,
