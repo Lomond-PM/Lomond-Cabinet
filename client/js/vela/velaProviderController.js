@@ -51,16 +51,16 @@
             browserDependency(target, bootstrap, "VelaProviderIntentGate"),
             browserDependency(target, bootstrap, "VelaLogicalPlanContracts")
         );
-        exported = Object.freeze(create(dependencies[0], dependencies[1], dependencies[2], dependencies[3], dependencies[4], dependencies[5], dependencies[6], dependencies[7]));
+        exported = Object.freeze(create(dependencies[0], dependencies[1], dependencies[2], dependencies[3], dependencies[4], dependencies[5], dependencies[6], dependencies[7], (function () { var d = Object.getOwnPropertyDescriptor(target, "VelaAgentRuntimeOwner"); return d && d.writable === false && d.configurable === false && Object.isFrozen(d.value) ? d.value : null; }())));
         bootstrap.registerModule(name, exported);
         Object.defineProperty(target, name, { configurable: false, enumerable: true, value: exported, writable: false });
     }
     if (root && root.self === root && (root["win" + "dow"] === root || !(typeof module === "object" && module.exports))) {
         registerBrowserModule(root, MODULE_NAME, factory);
     } else if (typeof module === "object" && module.exports) {
-        module.exports = Object.freeze(factory.apply(null, assertDependencies(require("./velaProtocol"), require("./velaContextBridge"), require("./velaCapabilityContracts"), require("./velaProviderRequestBranchPolicy"), require("./velaProviderAdapter"), require("./velaLocalTransport"), require("./velaProviderIntentGate"), require("./velaLogicalPlanContracts"))));
+        module.exports = Object.freeze(factory.apply(null, assertDependencies(require("./velaProtocol"), require("./velaContextBridge"), require("./velaCapabilityContracts"), require("./velaProviderRequestBranchPolicy"), require("./velaProviderAdapter"), require("./velaLocalTransport"), require("./velaProviderIntentGate"), require("./velaLogicalPlanContracts")).concat([require("./velaAgentRuntimeOwner")])));
     }
-}(typeof self !== "undefined" ? self : this, function (protocolModule, bridgeModule, capabilityContracts, requestBranchPolicy, adapterModule, transportModule, intentGateModule, logicalPlanContracts) {
+}(typeof self !== "undefined" ? self : this, function (protocolModule, bridgeModule, capabilityContracts, requestBranchPolicy, adapterModule, transportModule, intentGateModule, logicalPlanContracts, selectionOwnerModule) {
     "use strict";
     var MODULE_REVISION = "vela-provider-controller-v2";
     var trustedControllers = new WeakSet();
@@ -88,7 +88,7 @@
         if (!protocolModule.isTrustedProtocol(protocol) || !bridgeModule.isTrustedContextBridgeForProtocol(bridge, protocol) || !transportModule.isTrustedLocalTransportForProtocol(transport, protocol) || !intentGateModule || typeof intentGateModule.evaluate !== "function" || !protocol.isPlainObject(options)) {
             throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
         }
-        protocol.assertNoUnknownKeys(options, ["protocol", "contextBridge", "transport", "runtime", "streaming", "debugContextEvidence"], "providerController.options");
+        protocol.assertNoUnknownKeys(options, ["protocol", "contextBridge", "transport", "runtime", "streaming", "debugContextEvidence", "selectionSession"], "providerController.options");
         try { protocol.attachLogicalPlanContracts(logicalPlanContracts); } catch (logicalAttachError) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
         if (!providerRuntime || typeof ownData(providerRuntime, "setTimeout") !== "function" || typeof ownData(providerRuntime, "clearTimeout") !== "function" || typeof ownData(providerRuntime, "createAbortController") !== "function" || typeof ownData(providerRuntime, "parseUrl") !== "function" || typeof ownData(providerRuntime, "nowMs") !== "function") {
             protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Provider runtime dependencies are unavailable.");
@@ -118,6 +118,8 @@
         var contextEvidenceEnabled = ownData(options, "debugContextEvidence") === true;
         var contextEvidence = null;
         var budgetDecisionEvidence = null;
+        var selectionEvidence = null;
+        var latestSelectionSource = null;
         var constructingEvidence = null;
         function newSourceEvidence(operation, order) {
             return { domain: "trusted-capture-projection", producer: "VelaProviderController.send/" + operation, samplingBoundary: { operation: operation, order: order, attempted: false, captureId: null, hostInstanceId: null, hostReloadEpoch: null, projectGeneration: null, aeSampleTime: null, sampledAt: null, atomicWithOtherReads: false }, disposition: "not-collected", selectionReason: "current-independent-controller-read", trustClass: null, sourceFreshnessClass: null, selectedRepresentation: null, selectedUtf8Bytes: null, omittedCount: null, errorCode: null, unavailableReason: null };
@@ -321,7 +323,9 @@
                 return protocol.deepFreeze({ ready: true, code: "experimental-ready", modelId: model, loadedInstances: loaded.length, quantization: typeof quantization === "string" ? quantization : null, contextLength: Number.isInteger(contextLength) && contextLength > 0 ? contextLength : null, baseUrl: urls.baseUrl, chatUrl: urls.chatUrl, moduleRevision: MODULE_REVISION });
             }).then(function (result) { providerRuntime.clearTimeout(timer); return result; }, function (error) { providerRuntime.clearTimeout(timer); if (!error.localReadinessCode) { error.localReadinessCode = error.code === protocol.ERROR_CODES.PROVIDER_CONNECTION_FAILED ? "readiness-network-failed" : "readiness-response-invalid"; } throw error; });
         }
-        function send(input) {
+        function send(input, selectionSource) {
+            selectionEvidence = null; latestSelectionSource = null;
+            try { if (selectionOwnerModule && selectionOwnerModule.isSelectionSourceLive(selectionSource)) { latestSelectionSource = selectionSource; } } catch (ignoredSelectionSource) {}
             var values;
             var capturedGeneration;
             var requestProfile;
@@ -336,6 +340,19 @@
             diagnostics = Object.freeze({ moduleRevision: MODULE_REVISION, provisionalProfile: provisionalProfile, contextUnionEligible: false, finalProfile: null, responseSchemaName: null, parsedResponseType: null, intentAllowed: null, intentReason: null, lastTerminalRequestId: diagnostics.lastTerminalRequestId, lastTerminalDisposition: diagnostics.lastTerminalDisposition, lastTerminalFailureBoundary: diagnostics.lastTerminalFailureBoundary, lastTerminalErrorCode: diagnostics.lastTerminalErrorCode, lastContextOperation: diagnostics.lastContextOperation, lastContextDisposition: diagnostics.lastContextDisposition, lastContextFailureStage: diagnostics.lastContextFailureStage, lastContextHostErrorCode: diagnostics.lastContextHostErrorCode, lastContextHostFailureStage: diagnostics.lastContextHostFailureStage, lastContextErrorCode: diagnostics.lastContextErrorCode, lastContextUnavailableReason: diagnostics.lastContextUnavailableReason });
             capturedGeneration = generation + 1;
             generation = capturedGeneration;
+            var selectionSample = null;
+            try { selectionSample = selectionOwnerModule ? selectionOwnerModule.sampleSelectionSource(selectionSource, ownData(options, "selectionSession")) : null; } catch (ignoredSelectionSample) {}
+            function publishSelection(budget) {
+                if (generation !== capturedGeneration) { return; }
+                var sample = null;
+                try { if (selectionSample && selectionOwnerModule.isSelectionSampleCurrent(selectionSample)) { sample = selectionSample; } } catch (ignoredSelectionLifetime) {}
+                var selectionInput = { sample: sample, correlation: { requestId: budget && budget.correlation.requestId || null, controllerGeneration: capturedGeneration }, budget: budget || null };
+                try { selectionEvidence = adapterModule.evaluateContextSelection(selectionInput, selectionOwnerModule && selectionOwnerModule.createTrajectoryProjection); }
+                catch (ignoredSelectionEvaluation) {
+                    try { selectionEvidence = adapterModule.evaluateContextSelection({ correlation: selectionInput.correlation }); } catch (ignoredSelectionFallback) { selectionEvidence = null; }
+                }
+            }
+            publishSelection(null);
             var evidence = contextEvidenceEnabled ? { generation: capturedGeneration, closed: false, sources: [newSourceEvidence("captureContext", 1), newSourceEvidence("capturePropertyValues", 2)] } : null;
             constructingEvidence = evidence;
             contextEvidence = null;
@@ -390,7 +407,7 @@
                     if (grounded.projection.selectedLayerOpacity.available) { evidence.sources[1].disposition = "selected"; evidence.sources[1].selectedRepresentation = { selectedLayerOpacity: grounded.projection.selectedLayerOpacity.value }; }
                     evidence.sources.forEach(function (source) { if (source.selectedRepresentation !== null) { source.selectedUtf8Bytes = protocol.utf8ByteLength(JSON.stringify(source.selectedRepresentation)); } });
                 }
-                provider = adapterModule.createLocalOpenAICompatibleProvider({ protocol: protocol, transport: transport, runtime: providerRuntime, endpoint: values.endpoint, model: values.model, requestProfile: requestProfile, streaming: streamingEnabled, onStreamEvent: streamingEnabled ? dispatchStreamEvent : null, debugContextEvidence: contextEvidenceEnabled });
+                provider = adapterModule.createLocalOpenAICompatibleProvider({ protocol: protocol, transport: transport, runtime: providerRuntime, endpoint: values.endpoint, model: values.model, requestProfile: requestProfile, streaming: streamingEnabled, onStreamEvent: streamingEnabled ? dispatchStreamEvent : null, debugContextEvidence: contextEvidenceEnabled, onSelectionBudget: publishSelection });
                 try { started = provider.start({ messages: [{ role: "assistant", content: summaryFromProjection(grounded.projection) }, { role: "user", content: values.message }], context: grounded.requestContext }); }
                 catch (constructionError) { publishContextEvidence(evidence, constructionError.code === protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED ? "budget-rejected" : "construction-failed", contextEvidenceEnabled ? provider.getContextEvidence() : null); throw constructionError; }
                 publishContextEvidence(evidence, "closed", contextEvidenceEnabled ? provider.getContextEvidence() : null);
@@ -469,6 +486,7 @@
             return true;
         }
         function invalidate(nextState) {
+            selectionEvidence = null; latestSelectionSource = null;
             publishContextEvidence(constructingEvidence, "cancelled-before-construction-closure", null);
             generation += 1;
             cancelActiveCapture();
@@ -509,7 +527,10 @@
                 return true;
             }
         });
-        var controller = Object.freeze({ send: send, cancel: cancel, invalidate: invalidate, checkReadiness: checkReadiness, subscribeStreamEvents: subscribeStreamEvents, getContextEvidence: function () { return contextEvidence; }, getBudgetDecisionEvidence: function () { return budgetDecisionEvidence; }, getUiState: function () { return publicState; }, getDiagnostics: function () { return diagnostics; } });
+        var controller = Object.freeze({ send: send, cancel: cancel, invalidate: invalidate, checkReadiness: checkReadiness, subscribeStreamEvents: subscribeStreamEvents, getSelectionEvidence: function () {
+            if (latestSelectionSource) { try { if (!selectionOwnerModule || !selectionOwnerModule.isSelectionSourceLive(latestSelectionSource)) { selectionEvidence = null; } } catch (ignoredSelectionGetter) { selectionEvidence = null; } }
+            return selectionEvidence;
+        }, getContextEvidence: function () { return contextEvidence; }, getBudgetDecisionEvidence: function () { return budgetDecisionEvidence; }, getUiState: function () { return publicState; }, getDiagnostics: function () { return diagnostics; } });
         trustedControllers.add(controller);
         controllerProtocols.set(controller, protocol);
         controllerProposalPorts.set(controller, proposalPort);

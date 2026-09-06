@@ -278,6 +278,129 @@
             dispatch: inputOverflow || disposition === "fit-not-established-under-bound" ? "reject-required-construction" : fullFit ? "allow-proven-fit" : "allow-current-shape",
             optionalExpansion: false });
     }
+    // A5b data-only evaluator. Calling this pure function never authenticates a
+    // historical source; Controller obtains samples only from the Owner port.
+    var SELECTION_REASONS = ["prohibited-source", "deferred-source", "source-unavailable", "not-within-retention", "incomplete-evidence", "conflict", "superseded", "target-relation-unproven", "verification-not-match", "not-eligible", "representation-overflow", "budget-unassessed", "optional-expansion-disabled", "budget-omitted"];
+    function evaluateContextSelection(input, validateTrajectory) {
+        input = input || {};
+        function data(o, k) { return budgetData(o, k); }
+        function byteLength(s) { var n = 0; for (var i = 0; i < s.length; i++) { var c = s.charCodeAt(i); if (c < 128) { n++; } else if (c < 2048) { n += 2; } else if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length && s.charCodeAt(i + 1) >= 0xdc00 && s.charCodeAt(i + 1) <= 0xdfff) { n += 4; i++; } else { n += 3; } } return n; }
+        function id(v) { return typeof v === "string" && v.length && byteLength(v) <= 256 ? v : null; }
+        function integer(v) { return Number.isSafeInteger(v) && v >= 0 ? v : null; }
+        function reasons(values) { return SELECTION_REASONS.filter(function (r) { return values.indexOf(r) >= 0; }); }
+        var c = data(input, "correlation"), sample = data(input, "sample"), b = data(input, "budget");
+        var correlation = { requestId: id(data(c, "requestId")), controllerGeneration: integer(data(c, "controllerGeneration")), sessionId: id(data(sample, "sessionId")), objectiveId: id(data(sample, "objectiveId")), unavailableReason: null };
+        if (!correlation.requestId || !correlation.controllerGeneration || !correlation.sessionId || !correlation.objectiveId) { correlation.unavailableReason = "source-unavailable"; }
+        var budgetAvailable = data(b, "schema") === "vela.provider-budget-decision-evidence.v1" && data(b, "authorityCapable") === false && data(data(b, "correlation"), "requestId") === correlation.requestId;
+        var budgetDisposition = budgetAvailable ? id(data(b, "disposition")) : null;
+        var assessed = budgetAvailable && data(data(b, "proof"), "fullFit") === true && data(b, "optionalExpansion") === false;
+        var budgetReason = !budgetAvailable ? "source-unavailable" : assessed ? "optional-expansion-disabled" : "budget-unassessed";
+        var out = {
+            schema: "vela.provider-context-selection.v1", policyRevision: "vela-terminal-history-policy-v1", authorityCapable: false,
+            correlation: correlation, mode: "evidence-only", sampleBoundary: "invocation-construction",
+            source: { slot: "most-recent-terminal", projectionId: null, objectiveId: null, sessionId: null, state: "unavailable", reasons: ["source-unavailable"], bounds: null },
+            requiredCurrent: ["system-profile-instructions", "response-contract", "current-user-objective", "current-controller-grounding"].map(function (domain) { return { domain: domain, disposition: "preserve-current-construction" }; }),
+            candidates: [], selectedItems: [], omittedItems: [],
+            domainExclusions: [["agent-observation-currentContext", "deferred-source"], ["active-trajectory", "deferred-source"], ["session-history", "prohibited-source"], ["presentation-transcript", "prohibited-source"], ["prior-assistant-prose", "prohibited-source"], ["notices-errors", "prohibited-source"], ["raw-reasoning", "prohibited-source"], ["prior-provider-declarations", "prohibited-source"], ["a3-resource-evidence", "prohibited-source"], ["authority-native-material", "prohibited-source"]].map(function (entry) { return { domain: entry[0], reason: entry[1], omittedCount: null }; }),
+            budget: { schema: budgetAvailable ? "vela.provider-budget-decision-evidence.v1" : null, requestId: budgetAvailable ? correlation.requestId : null, disposition: budgetDisposition, optionalExpansion: budgetAvailable && typeof data(b, "optionalExpansion") === "boolean" ? data(b, "optionalExpansion") : null, basis: !budgetAvailable ? "unavailable" : assessed ? "qualified-full-input" : "unassessed", tokenBasis: budgetAvailable ? id(data(data(b, "inputCost"), "tokenBasis")) : null, omissionReason: budgetReason },
+            cost: { eligibleRepresentationUtf8Bytes: 0, selectedHistoricalUtf8Bytes: 0, fullSelectedInputTokenCost: null, tokenConversion: null },
+            counts: { inventoriedCount: 0, eligibleCount: 0, selectedCount: 0, omittedCount: 0, uninspectedCount: null, omittedBySourceCount: null },
+            bounds: { complete: true, reportingOverflowCount: 0 }
+        };
+        function unavailable(reason, overflow) {
+            out.source.state = reason === "incomplete-evidence" || overflow ? "incomplete" : "unavailable";
+            out.source.reasons = [reason]; out.candidates = []; out.omittedItems = [];
+            out.counts = { inventoriedCount: 0, eligibleCount: 0, selectedCount: 0, omittedCount: 0, uninspectedCount: null, omittedBySourceCount: out.source.bounds ? out.source.bounds.omittedAttemptCount : null };
+            out.cost.eligibleRepresentationUtf8Bytes = 0;
+            out.bounds.complete = false; out.bounds.reportingOverflowCount = overflow ? null : 0;
+            return freezeBudget(out);
+        }
+        if (!sample || correlation.unavailableReason || typeof validateTrajectory !== "function" || !data(sample, "terminal")) { return unavailable("source-unavailable"); }
+        var rawProjection = data(sample, "terminal"), rawBounds = data(rawProjection, "bounds");
+        if (data(rawProjection, "schema") !== "vela.verified-trajectory-evidence.v1" || data(rawProjection, "authorityCapable") !== false || data(data(rawProjection, "lifecycle"), "state") !== "terminal" || data(data(rawProjection, "lifecycle"), "lateEvidence") !== false) { return unavailable("source-unavailable"); }
+        if (typeof data(rawBounds, "complete") !== "boolean" || integer(data(rawBounds, "omittedAttemptCount")) === null || integer(data(rawBounds, "omittedValueCount")) === null) { return unavailable("source-unavailable"); }
+        out.source.bounds = { complete: data(rawBounds, "complete"), omittedAttemptCount: data(rawBounds, "omittedAttemptCount"), omittedValueCount: data(rawBounds, "omittedValueCount") };
+        if (!out.source.bounds.complete || out.source.bounds.omittedAttemptCount || out.source.bounds.omittedValueCount) { return unavailable("incomplete-evidence"); }
+        var rawAttempts = data(rawProjection, "attempts");
+        if (Array.isArray(rawAttempts) && rawAttempts.length <= 16) {
+            var seenIds = [];
+            for (var rawIndex = 0; rawIndex < rawAttempts.length; rawIndex++) {
+                var rawId = data(data(rawAttempts, String(rawIndex)), "attemptId");
+                if (typeof rawId === "string" && seenIds.indexOf(rawId) >= 0) { return unavailable("conflict"); }
+                seenIds.push(rawId);
+            }
+        }
+        var p;
+        try { p = validateTrajectory(data(sample, "terminal")); }
+        catch (invalidSource) { return unavailable("source-unavailable"); }
+        out.source.projectionId = p.projectionId; out.source.objectiveId = p.objective.objectiveId; out.source.sessionId = p.objective.sessionId;
+        out.source.bounds = { complete: p.bounds.complete, omittedAttemptCount: p.bounds.omittedAttemptCount, omittedValueCount: p.bounds.omittedValueCount };
+        if (!p.bounds.complete || p.bounds.omittedAttemptCount !== 0 || p.bounds.omittedValueCount !== 0) { return unavailable("incomplete-evidence"); }
+        if (p.lifecycle.state !== "terminal" || p.lifecycle.lateEvidence !== false || p.objective.sessionId !== correlation.sessionId || p.objective.objectiveId === correlation.objectiveId) { return unavailable("source-unavailable"); }
+        function covers(source, field) { return source.factPaths.some(function (path) { return path === field || field.indexOf(path + ".") === 0; }); }
+        function hasSource(record, producer, kind, strength, fields, requestId) {
+            return record.provenance.some(function (source) {
+                return source.producer === producer && source.class === kind && source.strength === strength && source.contractRevision === "vela-trajectory-source-v1" && !!source.occurrenceId && (requestId === undefined || source.sourceRequestId === requestId) && fields.every(function (field) { return covers(source, field); });
+            });
+        }
+        var completion = p.completion;
+        if (["completed", "rejected", "cancelled", "blocked"].indexOf(completion.outcome) < 0) { return unavailable("incomplete-evidence"); }
+        // An empty text terminal is a valid latest terminal, not a reason to search back.
+        if (p.attempts.length === 0 && completion.declaredStepCount === 0 && completion.completedStepCount === 0 && completion.remainingStepCount === 0) {
+            out.source.state = "available"; out.source.reasons = []; out.counts.uninspectedCount = 0; out.counts.omittedBySourceCount = 0; return freezeBudget(out);
+        }
+        if (["full", "partial"].indexOf(completion.coverage) < 0) { return unavailable("incomplete-evidence"); }
+        if (completion.declaredStepCount === null || completion.completedStepCount === null || completion.remainingStepCount === null) { return unavailable("incomplete-evidence"); }
+        if (completion.declaredStepCount !== completion.completedStepCount + completion.remainingStepCount || completion.completedStepCount < 1 || (completion.coverage === "full") !== (completion.remainingStepCount === 0)) { return unavailable("conflict"); }
+        if (!hasSource(p, "VelaAgentDriver", "derived-objective-summary", "derived", ["completion.outcome", "completion.completedStepCount", "completion.remainingStepCount"])) { return unavailable("incomplete-evidence"); }
+        if (p.unknowns.some(function (u) { return u.path === "completion" || ["completion.outcome", "completion.coverage", "completion.declaredStepCount", "completion.completedStepCount", "completion.remainingStepCount"].indexOf(u.path) >= 0; })) { return unavailable("incomplete-evidence"); }
+        if (p.attempts.filter(function (a) { return a.completion.outcome === "completed" && !a.completion.superseded; }).length !== completion.completedStepCount) { return unavailable("conflict"); }
+        out.source.state = "available"; out.source.reasons = []; out.counts.uninspectedCount = 0; out.counts.omittedBySourceCount = 0;
+        var eligibleOrdinal = 0;
+        p.attempts.forEach(function (a, index) {
+            var rejected = [], v = a.verification, e = a.execution;
+            var later = p.attempts.slice(index + 1);
+            var candidate = { candidateId: "candidate_" + index, sourceAttemptIndex: index, ordinal: index, attemptId: a.attemptId, logicalStepIndex: a.correlation.logicalStepIndex, materializationAttempt: a.correlation.materializationAttempt, sourceProjectionId: p.projectionId, domain: "terminal-verified-attempt", objectiveRelation: "previous-terminal", trust: null, freshness: null, eligibility: "ineligible", reasons: [], order: index, modelRepresentation: null, representationUtf8Bytes: null };
+            if (p.attempts.some(function (other, otherIndex) { return otherIndex !== index && (other.attemptId === a.attemptId || other.correlation.taskPlanId === a.correlation.taskPlanId || v.attemptId && other.verification.attemptId === v.attemptId); })) { rejected.push("conflict"); }
+            if (a.completion.superseded || later.some(function (next) { return next.correlation.supersedesAttemptId === a.attemptId; })) { rejected.push("superseded"); }
+            if (v.scope !== "committed-target" || v.targetRelation !== "committed-target") { rejected.push("target-relation-unproven"); }
+            if (v.attempted !== true || v.disposition !== "verified-match" || v.freshAtRead !== true || v.matches !== true) { rejected.push("verification-not-match"); }
+            if (a.completion.outcome !== "completed") { rejected.push("not-eligible"); }
+            if (!v.attemptId || !v.sourceObservationId || !v.expected || !v.actual) { rejected.push("incomplete-evidence"); }
+            if (v.expected && v.actual) {
+                if (v.expected.kind !== v.actual.kind || v.expected.data !== v.actual.data) { rejected.push("conflict"); }
+                try {
+                    if (a.capabilityId !== "set-opacity-v1" && a.capabilityId !== "set-layer-name-v1") { throw new Error(); }
+                    if (v.actual.kind !== (a.capabilityId === "set-opacity-v1" ? "number" : "string")) { throw new Error(); }
+                    capabilityContracts.validateRepresentationCapabilityParams(a.capabilityId, a.capabilityId === "set-opacity-v1" ? { opacity: v.actual.data } : { name: v.actual.data });
+                } catch (unsupportedValue) { rejected.push("not-eligible"); }
+            }
+            if (!hasSource(a, "VelaAgentDriver", "local-control-occurrence", "direct", ["correlation", "capabilityId", "verification.expected"])) { rejected.push("incomplete-evidence"); }
+            if (!hasSource(a, "VelaExecutionPreflight", "fresh-verify-evidence", "direct", ["verification.actual", "verification.disposition", "verification.scope", "verification.targetRelation", "verification.sourceObservationId"], v.sourceObservationId) || !hasSource(a, "VelaAgentDriver", "derived-objective-summary", "derived", ["completion"])) { rejected.push("incomplete-evidence"); }
+            if (e.mutationDisposition === "mutated") {
+                if (e.executionAttempted !== true || e.hostInvocationAttempted !== true || e.reportedCommitted !== true || e.hostCommitted !== true) { rejected.push("not-eligible"); }
+                if (!hasSource(a, "VelaExecutionAdapter", "host-commit-evidence", "direct", ["execution.hostCommitted", "execution.mutationDisposition", "execution.reportedCommitted"]) || !hasSource(a, "VelaExecutionPreflight", "execution-result", "direct", ["execution.executionAttempted"]) || !hasSource(a, "VelaExecutionAdapter", "execution-result", "direct", ["execution.hostInvocationAttempted"])) { rejected.push("incomplete-evidence"); }
+            } else if (e.mutationDisposition === "already-satisfied") {
+                if (e.executionAttempted !== true || e.hostInvocationAttempted !== false || e.reportedCommitted !== false || e.hostCommitted !== null) { rejected.push("not-eligible"); }
+                if (!a.unknowns.some(function (u) { return u.path === "execution.hostCommitted" && u.reason === "host-not-invoked"; }) || !hasSource(a, "VelaExecutionPreflight", "execution-result", "direct", ["execution"])) { rejected.push("incomplete-evidence"); }
+            } else { rejected.push("not-eligible"); }
+            var requiredPaths = ["capabilityId", "correlation.taskPlanId", "correlation.taskPlanRevision", "correlation.materializedStepId", "correlation.intentId", "completion", "execution.executionAttempted", "execution.hostInvocationAttempted", "execution.mutationDisposition", "execution.reportedCommitted", "execution.hostCommitted", "verification.attemptId", "verification.sourceObservationId", "verification.attempted", "verification.disposition", "verification.scope", "verification.targetRelation", "verification.freshAtRead", "verification.matches", "verification.expected", "verification.actual"];
+            if (a.unknowns.some(function (u) { return !(e.mutationDisposition === "already-satisfied" && u.path === "execution.hostCommitted" && u.reason === "host-not-invoked") && requiredPaths.some(function (path) { return u.path === path || path.indexOf(u.path + ".") === 0 || u.path.indexOf(path + ".") === 0; }); })) { rejected.push("incomplete-evidence"); }
+            if (!rejected.length) {
+                candidate.eligibility = "eligible"; candidate.trust = "locally-verified-outcome"; candidate.freshness = "D";
+                var preview = { kind: "historical-verified-operation", temporalClass: "historical-not-current", freshnessClass: "D", targetRelationToCurrent: "unproven", ordinal: eligibleOrdinal++, actionType: a.capabilityId, result: { kind: v.actual.kind, data: v.actual.data }, operationDisposition: e.mutationDisposition, verificationBasis: "local-committed-target-verified-match", objectiveRelation: "previous-terminal", objectiveOutcome: completion.outcome, objectiveCoverage: completion.coverage };
+                var size = byteLength(JSON.stringify(preview));
+                if (size > 1024 || out.cost.eligibleRepresentationUtf8Bytes + size > 16384) { rejected.push("representation-overflow"); out.bounds.complete = false; out.bounds.reportingOverflowCount++; }
+                else { candidate.modelRepresentation = preview; candidate.representationUtf8Bytes = size; out.cost.eligibleRepresentationUtf8Bytes += size; }
+                out.counts.eligibleCount++;
+            }
+            candidate.reasons = reasons(rejected);
+            out.candidates.push(candidate); out.omittedItems.push({ candidateId: candidate.candidateId, reasons: candidate.reasons.length ? candidate.reasons.slice() : [budgetReason] });
+        });
+        out.counts.inventoriedCount = out.candidates.length; out.counts.omittedCount = out.candidates.length;
+        if (byteLength(JSON.stringify(out)) > 65536) { return unavailable("representation-overflow", true); }
+        return freezeBudget(out);
+    }
     function getGenerationPolicy(modelId, requestProfile) {
         // Calibrated LM Studio model identity only; unknown/non-reasoning providers inherit their own defaults.
         if (modelId !== "qwen3.5-4b") { return null; }
@@ -1060,6 +1183,9 @@
                 bytes: { canonicalUtf8Bytes: protocol.utf8ByteLength(JSON.stringify(request)), wireUtf8Bytes: budgetWire === null ? null : protocol.utf8ByteLength(budgetWire), messageContentUtf8Bytes: request.messages.reduce(function (sum, message) { return sum + protocol.utf8ByteLength(message.content); }, 0) },
                 generationControls: { maxTokens: body.max_tokens, thinkingBudgetTokens: body.thinking_budget_tokens }
             });
+            // A5 observes the existing decision before dispatch. Never request input
+            // or accept a replacement message/body from this reporting callback.
+            try { if (typeof options.onSelectionBudget === "function") { options.onSelectionBudget(budgetDecision); } } catch (ignoredSelectionEvidence) {}
             var startedAt = readNowMs();
             var controller;
             try { controller = validateAbortController(createAbortController()); }
@@ -1248,6 +1374,7 @@
         RESOURCE_POLICY: RESOURCE_POLICY,
         normalizeCapacityEvidence: normalizeCapacityEvidence,
         decideContextBudget: decideContextBudget,
+        evaluateContextSelection: evaluateContextSelection,
         getGenerationPolicy: getGenerationPolicy,
         getOutputDecision: getOutputDecision,
         createLocalOpenAICompatibleProvider: createLocalOpenAICompatibleProvider,
