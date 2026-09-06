@@ -235,6 +235,7 @@
         var reviewBarriers = new Map();
         var activeProductionContinuation = null;
         var trajectoryReporter = null;
+        var selectionSourcePort = null;
         var trajectoryAssociation = null;
         function reportTrajectory(fact) {
             var association = trajectoryAssociation;
@@ -616,7 +617,7 @@
             if (!controllerModule.isTrustedControllerForProtocol(controller, protocol)) { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
             if (typeof fetchFn !== "function" || typeof TextDecoderCtor !== "function" || typeof root.AbortController !== "function") { throw safeError("RUNTIME_CAPABILITY_UNAVAILABLE"); }
             var localTransport = localTransportModule.createLocalTransport({ protocol: protocol, fetch: fetchFn, TextDecoder: TextDecoderCtor });
-            providerController = providerControllerModule.createProviderController({ protocol: protocol, contextBridge: bridge, transport: localTransport, streaming: presentationStreamingEnabled, runtime: { setTimeout: setTimer, clearTimeout: clearTimer, createAbortController: function () { var nativeController = new root.AbortController(); return { signal: nativeController.signal, abort: function () { nativeController.abort(); } }; }, parseUrl: function (value) { var parsed = new root.URL(value); return { protocol: parsed.protocol, hostname: parsed.hostname, port: parsed.port, pathname: parsed.pathname, username: parsed.username, password: parsed.password, search: parsed.search, hash: parsed.hash, href: parsed.href }; }, nowMs: wallClock } });
+            providerController = providerControllerModule.createProviderController({ selectionSession: exactAgentSession, protocol: protocol, contextBridge: bridge, transport: localTransport, streaming: presentationStreamingEnabled, runtime: { setTimeout: setTimer, clearTimeout: clearTimer, createAbortController: function () { var nativeController = new root.AbortController(); return { signal: nativeController.signal, abort: function () { nativeController.abort(); } }; }, parseUrl: function (value) { var parsed = new root.URL(value); return { protocol: parsed.protocol, hostname: parsed.hostname, port: parsed.port, pathname: parsed.pathname, username: parsed.username, password: parsed.password, search: parsed.search, hash: parsed.hash, href: parsed.href }; }, nowMs: wallClock } });
             if (presentationStreamingEnabled) { providerPresentationSubscription = providerController.subscribeStreamEvents(dispatchPresentationEvent); }
             providerProposalRouter = proposalRouterModule.createProposalRouter({ protocol: protocol, providerController: providerController, controller: controller });
             composeAuthorityPlane(wallClock);
@@ -742,7 +743,7 @@
                     agentReasoningGeneration += 1;
                     capturedGeneration = agentReasoningGeneration;
                     activeAgentReasoning = { generation: capturedGeneration, invocationId: "reasoning_" + String(capturedGeneration), requestId: null };
-                    var reasoningPromise = providerController.send(input);
+                    var reasoningPromise = providerController.send(input, selectionSourcePort);
                     activeAgentReasoning.requestId = providerController.getUiState().requestId;
                     activeAgentReasoning = Object.freeze(activeAgentReasoning);
                     return Promise.resolve(reasoningPromise).then(function (result) {
@@ -772,6 +773,7 @@
                         throw error;
                     });
                 },
+                attachSelectionSource: function (port) { if (selectionSourcePort) { return false; } selectionSourcePort = port; return true; },
                 attachTrajectoryReporter: function (reporter) { if (trajectoryReporter || typeof reporter !== "function") { return false; } trajectoryReporter = reporter; return true; },
                 submitIntent: function (input) {
                     trajectoryAssociation = { objectiveId: input.objectiveId, taskPlanId: input.taskPlanId, planId: null, executionEntered: false };
@@ -938,7 +940,7 @@
             if (reviewRuntimePort) { try { reviewRuntimePort.invalidateAll(); } catch (ignoredReviews) {} }
             if (objectiveReviewRuntimePort) { try { objectiveReviewRuntimePort.invalidate(); } catch (ignoredObjectiveReview) {} }
             if (planController) { try { planController.dispose(); } catch (ignoredPlans) {} }
-            presentationListeners = []; if (providerPresentationSubscription) { try { providerPresentationSubscription.unsubscribe(); } catch (ignoredStreamSubscription) {} } providerPresentationSubscription = null; protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; reviewPort = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; authorizedPlanMaterializer = null; planReviewProjection = null; planController = null; confirmedAuthorityComposer = null; reviewRuntimePort = null; objectiveReviewRuntimePort = null; protocolClock = null; agentDriverRuntimePort = null; agentDriverProposal = null; agentDriverLogicalAdmission = null; agentDriverLogicalObjectiveId = null; agentReasoningGeneration += 1; activeAgentReasoning = null; activeProductionContinuation = null; opacityVerificationPort = null;
+            presentationListeners = []; if (providerPresentationSubscription) { try { providerPresentationSubscription.unsubscribe(); } catch (ignoredStreamSubscription) {} } providerPresentationSubscription = null; selectionSourcePort = null; protocol = null; contextApi = null; validator = null; planStore = null; bridge = null; reviewPort = null; preflight = null; executionAdapter = null; controller = null; providerController = null; providerProposalRouter = null; authorizedPlanMaterializer = null; planReviewProjection = null; planController = null; confirmedAuthorityComposer = null; reviewRuntimePort = null; objectiveReviewRuntimePort = null; protocolClock = null; agentDriverRuntimePort = null; agentDriverProposal = null; agentDriverLogicalAdmission = null; agentDriverLogicalObjectiveId = null; agentReasoningGeneration += 1; activeAgentReasoning = null; activeProductionContinuation = null; opacityVerificationPort = null;
             initialized = false; suspended = false; disposed = true; state = "disposed";
             return true;
         }
@@ -994,6 +996,7 @@
             } catch (error) { return false; }
         }
         function getProviderUiState() { return providerController ? providerController.getUiState() : Object.freeze({ state: disposed ? "disposed" : state, requestId: null, text: null, errorCode: lastErrorCode, intentReason: null, proposalCapabilityId: null, suggestedOpacity: null, providerId: "lmstudio", modelId: null, moduleRevision: "vela-provider-controller-v2" }); }
+        function getProviderSelectionEvidence() { return providerController && typeof providerController.getSelectionEvidence === "function" ? providerController.getSelectionEvidence() : null; }
         function getProviderDiagnostics() { return providerController && typeof providerController.getDiagnostics === "function" ? providerController.getDiagnostics() : null; }
         function getProviderSurfaceState() {
             var source = getProviderUiState();
@@ -1013,7 +1016,7 @@
             var proposedValue = hasConfirmation && source && typeof source.proposedValue === "number" && isFinite(source.proposedValue) && source.proposedValue >= 0 && source.proposedValue <= 100 ? source.proposedValue : null;
             return Object.freeze({ state: state, beforeValue: beforeValue, proposedValue: proposedValue, errorCode: source && typeof source.errorCode === "string" ? source.errorCode : null, moduleRevision: "vela-confirmation-surface-v1" });
         }
-        return Object.freeze({ initialize: initialize, attachObjectiveReviewPort: attachObjectiveReviewPort, getStatus: safeStatus, getAuthorityProjection: authorityProjection, getAuthorityDiagnostics: authorityDiagnostics, grantNextOpacityMutation: grantNextOpacityMutation, revokeOpacityDelegation: revokeOpacityDelegation, getObservationReadPort: function () { return initialized && !disposed ? observationReadPort : null; }, getAgentDriverRuntimePort: function () { return initialized && !disposed ? createAgentDriverRuntimePort() : null; }, subscribePresentationEvents: subscribePresentationEvents, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, approveActiveCandidate: approveActiveCandidate, rejectActiveCandidate: rejectActiveCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, checkProviderReadiness: checkProviderReadiness, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderDiagnostics: getProviderDiagnostics, getProviderSurfaceState: getProviderSurfaceState, getConfirmationSurfaceState: getConfirmationSurfaceState });
+        return Object.freeze({ initialize: initialize, attachObjectiveReviewPort: attachObjectiveReviewPort, getStatus: safeStatus, getAuthorityProjection: authorityProjection, getAuthorityDiagnostics: authorityDiagnostics, grantNextOpacityMutation: grantNextOpacityMutation, revokeOpacityDelegation: revokeOpacityDelegation, getObservationReadPort: function () { return initialized && !disposed ? observationReadPort : null; }, getAgentDriverRuntimePort: function () { return initialized && !disposed ? createAgentDriverRuntimePort() : null; }, subscribePresentationEvents: subscribePresentationEvents, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, approveActiveCandidate: approveActiveCandidate, rejectActiveCandidate: rejectActiveCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, checkProviderReadiness: checkProviderReadiness, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderDiagnostics: getProviderDiagnostics, getProviderSelectionEvidence: getProviderSelectionEvidence, getProviderSurfaceState: getProviderSurfaceState, getConfirmationSurfaceState: getConfirmationSurfaceState });
     }
     return Object.freeze({ createRuntime: createRuntime, deriveRegisteredActionParamsSchema: deriveRegisteredActionParamsSchema, validateRegisteredActionMappings: validateRegisteredActionMappings });
 }));

@@ -24,6 +24,21 @@
 }(typeof self !== "undefined" ? self : this, function (defaultAgentRuntime, defaultAgentDriver) {
     "use strict";
 
+    // Reporting-only provenance, separate from every Authority/native registry.
+    var selectionSources = new WeakMap();
+    var selectionSamples = new WeakMap();
+    function sampleSelectionSource(port, exactSession) {
+        var read = selectionSources.get(port);
+        if (!read) { return null; }
+        var sample = read(false, exactSession);
+        if (sample) { selectionSamples.set(sample, function () { return read(false, exactSession); }); }
+        return sample;
+    }
+    function isSelectionSampleCurrent(sample) {
+        var read = selectionSamples.get(sample), current = read && read();
+        return !!current && current.sessionId === sample.sessionId && current.objectiveId === sample.objectiveId;
+    }
+    function isSelectionSourceLive(port) { var read = selectionSources.get(port); return !!read && read(true) === true; }
     var MODULE_REVISION = "vela-agent-runtime-owner-0.3.3-v1";
     var ERROR_CODES = Object.freeze({
         AGENT_OWNER_RUNTIME_UNAVAILABLE: "AGENT_OWNER_RUNTIME_UNAVAILABLE"
@@ -244,6 +259,17 @@
         var disposed = false;
         // Reporting-only slots; no Session replay, execution handle or public writer.
         var trajectory = createTrajectorySlots();
+        var selectionSource = Object.freeze({ kind: "vela-terminal-selection-source-port" });
+        selectionSources.set(selectionSource, function (livenessOnly, exactSession) {
+            if (disposed || !agent || agent.getSession().isClosed()) { return null; }
+            if (livenessOnly) { return true; }
+            if (!exactSession || exactSession !== agent.getSession()) { return null; }
+            var current = driver && driver.getSnapshot();
+            if (!current || !current.objectiveId || !current.turn || current.terminal) { return null; }
+            var sessionId = agent.getSnapshot().sessionId;
+            if (sessionId !== current.turn.sessionId) { return null; }
+            return Object.freeze({ sessionId: sessionId, objectiveId: current.objectiveId, terminal: trajectory.get().terminal });
+        });
 
         if (!runtime || typeof runtime.createAgent !== "function") {
             fail(ERROR_CODES.AGENT_OWNER_RUNTIME_UNAVAILABLE);
@@ -334,6 +360,9 @@
                 if (attached && typeof port.attachTrajectoryReporter === "function") {
                     port.attachTrajectoryReporter(function (fact) { if (!disposed) { trajectory.accept(fact); } });
                 }
+                if (attached && typeof port.attachSelectionSource === "function") {
+                    try { port.attachSelectionSource(selectionSource); } catch (ignoredSelectionAttachment) {}
+                }
                 return attached;
             },
             startObjective: function (input) { return !disposed && driver ? driver.startObjective(input) : Promise.reject(Object.assign(new Error("AGENT_OWNER_RUNTIME_UNAVAILABLE"), { code: "AGENT_OWNER_RUNTIME_UNAVAILABLE" })); },
@@ -375,6 +404,9 @@
     }
 
     return Object.freeze({
+        sampleSelectionSource: sampleSelectionSource,
+        isSelectionSampleCurrent: isSelectionSampleCurrent,
+        isSelectionSourceLive: isSelectionSourceLive,
         MODULE_REVISION: MODULE_REVISION,
         ERROR_CODES: ERROR_CODES,
         createTrajectoryProjection: createTrajectoryProjection,

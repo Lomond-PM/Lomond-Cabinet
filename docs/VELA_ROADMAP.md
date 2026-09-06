@@ -13,7 +13,7 @@ Version numbers follow architecture completion boundaries, not a fixed minor-ver
 | 0.3.7 — Agent Loop Foundation | COMPLETE |
 | 0.3.8 — Multi-step Agent | COMPLETE |
 | 0.3.9 — Streaming Response & Reasoning Surface | COMPLETE / SEALED / merged into dev; 171/171 offline PASS, user-manual real AE PASS, architecture amendment NONE, no unresolved correctness blocker |
-| 0.3.10 — Context Architecture | IN PROGRESS; A0/A1/A2 and A3a/A3b complete; A4a execution/Verify evidence audit and projection contract complete; A4b merged (PR #190), targeted real AE acceptance confirmed by user; A5a selection policy contract complete; A5b/A6 not implemented |
+| 0.3.10 — Context Architecture | IN PROGRESS; A0/A1/A2 and A3a/A3b complete; A4a execution/Verify evidence audit and projection contract complete; A4b merged (PR #190), targeted real AE acceptance confirmed by user; A5a selection policy contract complete; A5b evidence-only implementation complete; A6 not implemented |
 | 0.3.11 — Multi-conversation Foundation | Planned |
 | 0.3.12 — Capability Model Generalization | Planned |
 | 0.3.13+ — AE Capability Completeness Program | Planned, continuing until formal AE Action Coverage Matrix closure; no artificial version ceiling |
@@ -32,7 +32,7 @@ Version numbers follow architecture completion boundaries, not a fixed minor-ver
 
 [A4a source/projection contract](design/vela-verified-trajectory-0.3.10-a4a.md) and [A4b implementation evidence](reports/vela-0.3.10-a4b-verified-trajectory.md) establish bounded canonical-source reporting. A4b is merged through PR #190; targeted real AE acceptance is user-confirmed in the A5a task request (the historical report has not yet incorporated per-case artifacts). A4 answers what evidence exists; it adds no Provider history input.
 
-[A5a Bounded Context Selection Policy Contract](design/vela-context-selection-0.3.10-a5a.md) resolves A1 U7: only eligible verified attempts from the most-recent terminal are optional historical candidates; active trajectory and conversation transcript selection are deferred. A3b currently always disables optional expansion, including synthetic full-fit decisions. A5b is therefore scoped to eligibility/selection evidence with zero model-visible optional history, and is not implemented. General conversation ownership remains 0.3.11; frozen architecture amendment NONE.
+[A5a Bounded Context Selection Policy Contract](design/vela-context-selection-0.3.10-a5a.md) resolves A1 U7: only eligible verified attempts from the most-recent terminal are optional historical candidates; active trajectory and conversation transcript selection are deferred. A3b currently always disables optional expansion, including synthetic full-fit decisions. [A5b implementation evidence](reports/vela-0.3.10-a5b-context-selection.md) records bounded immutable eligibility/omission evidence with zero model-visible optional history, 23 immutable pre-A5b production comparisons and full offline regression PASS. General conversation ownership remains 0.3.11; frozen architecture amendment NONE.
 
 Raw Provider reasoning must not directly enter LLM context by default. It is not Observation, a trusted fact, Authority input or execution justification. Any future treatment requires its own reviewed design; history display never grants authority.
 
