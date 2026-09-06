@@ -14,7 +14,7 @@ Version numbers follow architecture completion boundaries, not a fixed minor-ver
 | 0.3.8 — Multi-step Agent | COMPLETE |
 | 0.3.9 — Streaming Response & Reasoning Surface | COMPLETE / SEALED / merged into dev; 171/171 offline PASS, user-manual real AE PASS, architecture amendment NONE, no unresolved correctness blocker |
 | 0.3.10 — Context Architecture | COMPLETE / SEALED; 176/176 offline PASS, 0 skipped; A4 real AE PASS; A6R 15/15 PASS; A1 U11 CLOSED; architecture amendment NONE |
-| 0.3.11 — Multi-conversation Foundation | NEXT ACTIVE milestone; design/implementation not started |
+| 0.3.11 — Multi-conversation Foundation | IN PROGRESS; A1 Conversation Ownership Root COMPLETE / SEALED; 177/177 offline PASS and 5/5 targeted real-AE PASS; production still one conversation; next: 0.3.11-A2 Conversation-owned Presentation (not started); architecture amendment NONE |
 | 0.3.12 — Capability Model Generalization | Planned |
 | 0.3.13+ — AE Capability Completeness Program | Planned, continuing until formal AE Action Coverage Matrix closure; no artificial version ceiling |
 | User History Observation Foundation | Required after capability completeness; version assigned at the actual architecture boundary |

@@ -1,8 +1,9 @@
 # Development Handoff
 
-Current Vela milestone: **0.3.9 — Streaming Response & Reasoning Surface, COMPLETE / SEALED / merged into dev** (PR #182). Next: **0.3.10 — Context Architecture**; this handoff does not begin its implementation.
+Current Vela milestone: **0.3.11 — Multi-conversation Foundation**, A1 Conversation Ownership Root COMPLETE / SEALED, offline PASS and targeted real-AE acceptance 5/5 PASS; next dependency: 0.3.11-A2 Conversation-owned Presentation (not started). Production still has one conversation. The prior **0.3.10 Context Architecture** milestone remains COMPLETE / SEALED.
 
 - [Current project state](PROJECT_STATE.md): implementation defaults, limitations and acceptance status.
+- [0.3.11-A1 ownership report](reports/vela-0.3.11-a1-conversation-ownership.md): exact ownership/lifecycle contract, offline evidence and five-case real-AE PASS / formal seal; no switching, persistence or Presentation migration.
 - [Canonical Vela roadmap](VELA_ROADMAP.md): sole current milestone/future-scope authority.
 - [Frozen Agent architecture](design/vela-agent-architecture.md): normative boundaries, unchanged; amendment NONE.
 - [0.3.9 C2 closure](reports/vela-0.3.9-c2-closure.md): 171/171 offline PASS, user-manual real AE PASS, no correctness blocker. Historical refusal is non-reproduced, not pending acceptance.
