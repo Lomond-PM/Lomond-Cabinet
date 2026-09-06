@@ -34,6 +34,8 @@ check(!source.includes("Date.now") && !source.includes("setInterval") && !source
 function harness(options = {}) {
     let snapshot = {
         agentId: "agent_test",
+        sessionId: "session_test",
+        turnId: "turn_test",
         lifecycleStage: options.lifecycleStage || "active",
         scopeId: "scope_a",
         scopeBoundary: { opaque: { value: 1 } },

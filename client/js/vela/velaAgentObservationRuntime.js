@@ -170,7 +170,9 @@
             error = lifecycleError(current);
             if (error) { throw error; }
             if (current.agentId !== request.agentId || current.scopeId !== request.scopeToken.scopeId ||
-                    current.revision !== request.scopeToken.agentRevision) {
+                    current.revision !== request.scopeToken.agentRevision ||
+                    (typeof current.sessionId === "string" ? current.sessionId : null) !== request.sessionId ||
+                    (typeof current.turnId === "string" ? current.turnId : null) !== request.turnId) {
                 throw createError(ERROR_CODES.OBSERVATION_RESULT_STALE);
             }
             nextRevision = observationRevision + 1;
@@ -197,13 +199,10 @@
             return observation;
         }
 
-        function beginRefresh() {
-            var request;
+        function beginRefresh(request) {
             var invocationPromise;
             var capabilityOperation;
             if (capabilityRuntime && capabilityId) {
-                try { request = captureRequest(); }
-                catch (captureError) { return Promise.reject(captureError); }
                 if (!request.sessionId || !request.turnId) { return Promise.reject(createError(ERROR_CODES.AGENT_NOT_ACTIVE)); }
                 invocationPromise = capabilityRuntime.invoke({ capabilityId: capabilityId, input: {} });
                 capabilityOperation = invocationPromise.then(function (result) {
@@ -219,6 +218,7 @@
                             result.status === "error" && result.error ? result.error.code : null
                         );
                     }
+                    if (disposed) { throw createError(ERROR_CODES.OBSERVATION_RUNTIME_DISPOSED); }
                     current = validateAgentSnapshot(readAgentSnapshot());
                     if (current.lifecycleStage !== "active" || current.agentId !== request.agentId || current.scopeId !== request.scopeToken.scopeId || current.revision !== request.scopeToken.agentRevision || current.sessionId !== request.sessionId || current.turnId !== request.turnId || result.sessionId !== request.sessionId || result.turnId !== request.turnId || result.capabilityId !== capabilityId) { throw createError(ERROR_CODES.OBSERVATION_RESULT_STALE); }
                     data = result.data;
@@ -249,8 +249,6 @@
             if (!provider || typeof provider.observe !== "function") {
                 return Promise.reject(createError(ERROR_CODES.OBSERVATION_PROVIDER_UNAVAILABLE));
             }
-            try { request = captureRequest(); }
-            catch (error) { return Promise.reject(error); }
             return Promise.resolve().then(function () {
                 return provider.observe(request);
             }).then(function (rawResult) {
@@ -265,24 +263,34 @@
 
         function refresh() {
             var operation;
-            if (inFlight) { return inFlight; }
-            operation = beginRefresh();
-            inFlight = operation.then(function (value) {
-                inFlight = null;
+            var request;
+            var record;
+            try { request = captureRequest(); }
+            catch (captureError) { return Promise.reject(captureError).catch(function (error) { return rejectStable(error, "refresh"); }); }
+            // A pending read belongs to its captured turn, not the next caller.
+            if (inFlight && request.sessionId && request.turnId &&
+                    inFlight.request.agentId === request.agentId && inFlight.request.sessionId === request.sessionId &&
+                    inFlight.request.turnId === request.turnId && inFlight.request.scopeToken.scopeId === request.scopeToken.scopeId &&
+                    inFlight.request.scopeToken.agentRevision === request.scopeToken.agentRevision) { return inFlight.promise; }
+            record = { request: request, promise: null };
+            operation = beginRefresh(request);
+            record.promise = operation.then(function (value) {
+                if (inFlight === record) { inFlight = null; }
                 return value;
             }, function (error) {
-                inFlight = null;
+                if (inFlight === record) { inFlight = null; }
                 return rejectStable(error, "refresh");
             });
-            if (typeof operation.cancel === "function") { inFlight.cancel = operation.cancel; }
-            return inFlight;
+            if (typeof operation.cancel === "function") { record.promise.cancel = operation.cancel; }
+            inFlight = record;
+            return record.promise;
         }
 
         return Object.freeze({
             refresh: refresh,
             cancelRefresh: function () {
-                if (!inFlight || typeof inFlight.cancel !== "function") { return false; }
-                return inFlight.cancel();
+                if (!inFlight || typeof inFlight.promise.cancel !== "function") { return false; }
+                return inFlight.promise.cancel();
             },
             getObservationSnapshot: function () { return currentObservation; },
             getContextSnapshot: function () { return currentContext; },

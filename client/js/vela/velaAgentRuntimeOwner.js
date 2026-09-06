@@ -255,6 +255,8 @@
         var capabilityRuntime = null;
         var observationRuntime = null;
         var observationRefreshPromise = null;
+        var observationRefreshIdentity = null;
+        var observationRefreshOwned = false;
         var driver = null;
         var disposed = false;
         // Reporting-only slots; no Session replay, execution handle or public writer.
@@ -323,6 +325,17 @@
             attachObservationReadPort(settings.observationReadPort);
         }
 
+        function hasActiveObjective() {
+            var snapshot = driver && driver.getSnapshot();
+            return !!snapshot && ["observing", "reasoning", "awaiting-outcome", "awaiting-review", "verifying"].indexOf(snapshot.state) !== -1;
+        }
+
+        function sameObservationTurn(left, right) {
+            return !!left && !!right && !!left.sessionId && !!left.turnId && left.agentId === right.agentId &&
+                left.sessionId === right.sessionId && left.turnId === right.turnId &&
+                left.scopeId === right.scopeId && left.revision === right.revision;
+        }
+
         function objectiveReviewProjection() {
             var snapshot;
             var review;
@@ -379,15 +392,25 @@
                 return agent.beginTurn();
             },
             refreshActiveComposition: function () {
+                var operation;
+                var activeObjective;
                 if (disposed || !observationRuntime) { return Promise.reject(Object.assign(new Error("OBSERVATION_PROVIDER_UNAVAILABLE"), { code: "OBSERVATION_PROVIDER_UNAVAILABLE" })); }
-                if (observationRefreshPromise) { return observationRefreshPromise; }
-                agent.beginTurn();
-                observationRefreshPromise = observationRuntime.refresh();
-                observationRefreshPromise.then(function () { observationRefreshPromise = null; }, function () { observationRefreshPromise = null; });
-                return observationRefreshPromise;
+                if (observationRefreshPromise && sameObservationTurn(observationRefreshIdentity, agent.getSnapshot())) { return observationRefreshPromise; }
+                activeObjective = hasActiveObjective();
+                if (!activeObjective) { agent.beginTurn(); }
+                observationRefreshIdentity = agent.getSnapshot();
+                observationRefreshOwned = !activeObjective;
+                operation = observationRuntime.refresh();
+                observationRefreshPromise = operation;
+                function clear() {
+                    if (observationRefreshPromise === operation) { observationRefreshPromise = null; observationRefreshIdentity = null; observationRefreshOwned = false; }
+                }
+                operation.then(clear, clear);
+                return operation;
             },
             cancelActiveCompositionRefresh: function () {
-                return observationRuntime && typeof observationRuntime.cancelRefresh === "function" ? observationRuntime.cancelRefresh() : false;
+                // A diagnostic subscriber cannot cancel an objective's shared read.
+                return !disposed && observationRefreshOwned && observationRefreshPromise && typeof observationRefreshPromise.cancel === "function" ? observationRefreshPromise.cancel() : false;
             },
             dispose: function () {
                 if (disposed) { return false; }

@@ -118,7 +118,7 @@ async function create(options = {}) {
             if (!execution && request.operation === "captureContext" && state.noSelection) { response.snapshot.selection.count = 0; response.snapshot.selection.items = []; }
             callback(JSON.stringify(response));
         }
-        if (state.hold === "execution" && execution || state.hold === "verify" && request.operation.startsWith("observeCommitted")) waiting.push(answer); else answer();
+        if (state.hold === "execution" && execution || state.hold === "verify" && request.operation.startsWith("observeCommitted") || state.hold === "observation" && request.operation === "captureContext") waiting.push(answer); else answer();
     }
     const runtime = load("velaRuntime").createRuntime({ exactAgentSession: owner.getSessionRuntime(), environment: env, invokeHost });
     await runtime.initialize(); owner.attachObservationReadPort(runtime.getObservationReadPort()); owner.attachAgentDriverRuntimePort(runtime.getAgentDriverRuntimePort()); runtime.attachObjectiveReviewPort(owner.getObjectiveReviewPort()); owner.activate();
