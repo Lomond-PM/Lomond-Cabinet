@@ -1,6 +1,6 @@
 # Vela — Canonical Product Roadmap
 
-Status: current roadmap; reconciled after Vela 0.3.9 merged into dev (PR #182, `91005f2`).
+Status: current roadmap; reconciled at Vela 0.3.10 Context Architecture COMPLETE / SEALED.
 
 This is the single current milestone roadmap. [Project state](PROJECT_STATE.md) owns implemented behavior; [frozen Agent architecture](design/vela-agent-architecture.md) owns normative boundaries; [C2 closure](reports/vela-0.3.9-c2-closure.md) owns historical acceptance evidence. Roadmap milestones are not package releases: package metadata remains 0.3.6 and the recorded published tag remains v0.3.5.
 
@@ -13,8 +13,8 @@ Version numbers follow architecture completion boundaries, not a fixed minor-ver
 | 0.3.7 — Agent Loop Foundation | COMPLETE |
 | 0.3.8 — Multi-step Agent | COMPLETE |
 | 0.3.9 — Streaming Response & Reasoning Surface | COMPLETE / SEALED / merged into dev; 171/171 offline PASS, user-manual real AE PASS, architecture amendment NONE, no unresolved correctness blocker |
-| 0.3.10 — Context Architecture | IN PROGRESS; A0/A1/A2 and A3a/A3b complete; A4a execution/Verify evidence audit and projection contract complete; A4b merged (PR #190), targeted real AE acceptance confirmed by user; A5a selection policy contract complete; A5b evidence-only implementation complete; A6 not implemented |
-| 0.3.11 — Multi-conversation Foundation | Planned |
+| 0.3.10 — Context Architecture | COMPLETE / SEALED; 176/176 offline PASS, 0 skipped; A4 real AE PASS; A6R 15/15 PASS; A1 U11 CLOSED; architecture amendment NONE |
+| 0.3.11 — Multi-conversation Foundation | NEXT ACTIVE milestone; design/implementation not started |
 | 0.3.12 — Capability Model Generalization | Planned |
 | 0.3.13+ — AE Capability Completeness Program | Planned, continuing until formal AE Action Coverage Matrix closure; no artificial version ceiling |
 | User History Observation Foundation | Required after capability completeness; version assigned at the actual architecture boundary |
@@ -24,19 +24,21 @@ Version numbers follow architecture completion boundaries, not a fixed minor-ver
 
 ## Context and conversation boundaries
 
-0.3.10 scope includes context item typing/ownership, assembly, bounded selection, budgeting, trusted/untrusted boundaries, Provider/Agent/conversation context relationships and generation budgets with long context. This roadmap does not choose schemas, APIs or implementation algorithms.
+Completed 0.3.10 scope includes context typing/ownership, invocation assembly evidence, bounded selection eligibility evidence, conservative capacity/budget policy, trust/freshness/lifecycle boundaries and real AE Observation turn isolation. Model-visible history and live numeric long-context capacity integration remain excluded. This roadmap does not choose schemas, APIs or implementation algorithms.
 
-[0.3.10-A1 Context contract](design/vela-context-architecture-0.3.10-a1.md) records domain ownership, separate freshness/trust classes, lifecycle eligibility, invocation snapshot requirements, budget ownership and the A0 deferred-decision ledger. It defines focused A2–A6 slices; A2 is the Provider Context Assembly Evidence Seam. This is a design contract, not implemented context assembly or a change to current Provider/Observation/execution behavior.
+[0.3.10-A1 Context contract](design/vela-context-architecture-0.3.10-a1.md) records domain ownership, separate freshness/trust classes, lifecycle eligibility, invocation snapshot requirements, budget ownership and the A0 deferred-decision ledger. It defines focused A2–A6 slices; A2 is the Provider Context Assembly Evidence Seam. A1 remains the design contract; the completed slices below implement bounded evidence and turn isolation, not history injection.
 
 [A2 implementation evidence](reports/vela-0.3.10-a2-context-evidence.md) records the opt-in, immutable local input projection and exact pre-A2 request/capture equivalence tests. It adds no history, selection policy or capture substitution. [A3a capacity/budget decision](design/vela-provider-capacity-budget-0.3.10-a3a.md) defines source qualification, unknown-mode compatibility, accounting ownership and the conditional budget relation. [A3b implementation evidence](reports/vela-0.3.10-a3b-capacity-budget.md) records pure normalization/conditional dispositions, separate decision evidence and exact pre/post canonical/wire/capture equivalence. Production remains unknown/current-shape compatibility; no live numeric enforcement, new discovery or generation tuning. Future numeric integration requires qualified operands and targeted Provider evidence. A4–A6 retain the A1 boundaries.
 
-[A4a source/projection contract](design/vela-verified-trajectory-0.3.10-a4a.md) and [A4b implementation evidence](reports/vela-0.3.10-a4b-verified-trajectory.md) establish bounded canonical-source reporting. A4b is merged through PR #190; targeted real AE acceptance is user-confirmed in the A5a task request (the historical report has not yet incorporated per-case artifacts). A4 answers what evidence exists; it adds no Provider history input.
+[A4a source/projection contract](design/vela-verified-trajectory-0.3.10-a4a.md) and [A4b implementation evidence](reports/vela-0.3.10-a4b-verified-trajectory.md) establish bounded canonical-source reporting. A4b is merged through PR #190; targeted real AE acceptance is user-confirmed in the A5a and integrated closure task requests, with externally retained evidence and no invented repository artifacts. A4 answers what evidence exists; it adds no Provider history input.
 
 [A5a Bounded Context Selection Policy Contract](design/vela-context-selection-0.3.10-a5a.md) resolves A1 U7: only eligible verified attempts from the most-recent terminal are optional historical candidates; active trajectory and conversation transcript selection are deferred. A3b currently always disables optional expansion, including synthetic full-fit decisions. [A5b implementation evidence](reports/vela-0.3.10-a5b-context-selection.md) records bounded immutable eligibility/omission evidence with zero model-visible optional history, 23 immutable pre-A5b production comparisons and full offline regression PASS. General conversation ownership remains 0.3.11; frozen architecture amendment NONE.
 
 Raw Provider reasoning must not directly enter LLM context by default. It is not Observation, a trusted fact, Authority input or execution justification. Any future treatment requires its own reviewed design; history display never grants authority.
 
-0.3.11 owns Multi-conversation Foundation. In current 0.3.9, reasoning is retained only for the current turn/objective; a new objective clears old raw reasoning. Cross-turn reasoning presentation/history is deferred to conversation/history architecture. Whether UI history retains reasoning and whether model context consumes it are separate decisions; the former does not imply the latter.
+0.3.11 owns Multi-conversation Foundation. In current 0.3.10, reasoning is retained only for the current turn/objective; a new objective clears old raw reasoning. Cross-turn reasoning presentation/history is deferred to conversation/history architecture. Whether UI history retains reasoning and whether model context consumes it are separate decisions; the former does not imply the latter.
+
+[A6b final report](reports/vela-0.3.10-a6b-observation-turn-isolation.md) closes the original R1-1 defect: obsolete diagnostics failure previously blocked a newer objective. Exact turn coalescing, guarded cleanup and cancellation ownership now preserve the new objective; obsolete diagnostics may still safely report stale. Post-fix A6R 15/15 PASS closes A1 U11. See [0.3.10 integrated closure](reports/vela-0.3.10-context-closure.md) for retention/reset constraints and the explicit 0.3.11 ownership/scheduling decisions. Model-visible optional history remains zero; A3 optionalExpansion=false.
 
 ## Capability completeness
 
@@ -50,7 +52,7 @@ Future Agent UI Completion must cover Proposal Card, Execution Card, Agent Activ
 
 Per-invocation TTFT, reasoning/output/total tokens, TPS and total duration belong to presentation observability, never Agent state, Observation or Authority. Reasoning truncation/summarization/virtualization is future UI work with explicit omission semantics.
 
-Model/provider qualification refinement and qwen3.5-4b excessive/repetitive reasoning tuning are separately scoped provider work, not 0.3.9 correctness failures. Long-context generation budget management belongs with future Context budgeting. Complete capability coverage, metadata generalization, mixed response composition and the UI above remain future work, not reopened 0.3.9 TODOs.
+Model/provider qualification refinement and qwen3.5-4b excessive/repetitive reasoning tuning are separately scoped provider work, not 0.3.9 correctness failures. Live numeric capacity integration remains future budget work under the completed conservative A3 policy. Complete capability coverage, metadata generalization, mixed response composition and the UI above remain future work, not reopened 0.3.9 TODOs.
 
 ## Hard exit and architecture ownership
 
