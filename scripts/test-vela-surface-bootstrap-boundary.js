@@ -40,7 +40,7 @@ function harness(options) {
             },
             getStatus() { return Object.freeze({ state: disposed ? "disposed" : "ready", initialized: !disposed, disposed, activationPolicy: policy }); },
             getObservationReadPort() { return Object.freeze({ capture() {} }); },
-            dispose() { if (disposed) return false; disposed = true; calls.runtimeDispose += 1; return true; },
+            dispose() { if (disposed) return false; if (options.onDispose) options.onDispose("runtime"); disposed = true; calls.runtimeDispose += 1; return true; },
             sendProviderMessage() {}, checkProviderReadiness() {}, cancelProviderRequest() {}, getProviderSurfaceState() { return Object.freeze({ state: "idle" }); },
             reviewProviderProposal() {}, approveActiveCandidate() {}, rejectActiveCandidate() {}, getConfirmationSurfaceState() { return Object.freeze({ state: "idle" }); }
         });
@@ -59,12 +59,13 @@ function harness(options) {
                     return true;
                 },
                 configureExperimental() {}, getExperimentalState() { return { state: "disabled", enabled: false }; },
-                dispose() { calls.surfaceDispose += 1; }
+                dispose() { if (options.onDispose) options.onDispose("surface"); calls.surfaceDispose += 1; }
             };
         }
     };
     const context = {
         Promise,
+        crypto: require("crypto").webcrypto,
         Error,
         console: { warn() { warnings.push(Array.prototype.join.call(arguments, " ")); } },
         panelShuttingDown: false,
@@ -74,6 +75,7 @@ function harness(options) {
         velaRuntimeLastAttemptCoreGeneration: null,
         velaRuntimeController: null,
         velaAgentRuntimeOwner: null,
+        velaConversationBinding: null,
         velaSurfaceShell: { getElementsForTest() { return { actionSlot: slot }; } },
         velaSurfaceController: null,
         velaSurfaceBootstrapState: "idle",
@@ -92,6 +94,7 @@ function harness(options) {
         invokeVelaHost() {}
     };
     context.window = context;
+    context.window.VelaConversationOwnership = require("../client/js/vela/velaConversationOwnership");
     context.window.VelaCepModuleLoader = { load() { return options.loaderFailure ? Promise.reject({ code: "RUNTIME_CAPABILITY_UNAVAILABLE" }) : Promise.resolve(); } };
     context.window.VelaActivationPolicy = activationModule;
     context.getVelaActivationPolicy = function () { return activationModule.getPolicy(); };
@@ -102,12 +105,13 @@ function harness(options) {
             calls.agentOwnerCreate += 1;
             if (options.agentOwnerFailure) throw Object.assign(new Error("agent owner failed"), { code: "AGENT_OWNER_FAILED" });
             let disposed = false;
+            const session = Object.freeze({ exactSessionWitness: true, isClosed() { return disposed; } });
             const projection = { subscribe() { return { unsubscribe() {} }; }, getSnapshot() { return {}; } };
             return {
-                getSessionRuntime() { return Object.freeze({ exactSessionWitness: true }); },
+                getSessionRuntime() { return session; },
                 attachObservationReadPort() { return true; },
                 activate() { calls.agentOwnerActivate += 1; return true; },
-                dispose() { if (disposed) return false; disposed = true; calls.agentOwnerDispose += 1; return true; },
+                dispose() { if (disposed) return false; if (options.onDispose) options.onDispose("owner"); disposed = true; calls.agentOwnerDispose += 1; return true; },
                 isDisposed() { return disposed; },
                 getCurrentProjection() { return projection; },
                 getCurrentAgent() { return {}; },
@@ -122,6 +126,7 @@ function harness(options) {
     if (!options.missingConfirmationView) context.window.VelaConfirmationView = { create() {} };
     vm.createContext(context);
     vm.runInContext(source.slice(start, end) + "\nwindow.__testHooks = { initializeRuntime: initializeVelaRuntime, invalidateForCore: invalidateVelaRuntimeInitForCoreSnapshot, initializeSurface: initializeVelaSurfaceController, runtime: function () { return velaRuntimeController; }, runtimeError: function () { return velaRuntimeLastErrorCode; }, agentOwner: function () { return velaAgentRuntimeOwner; }, agentError: function () { return velaAgentRuntimeLastErrorCode; }, surfaceState: function () { return velaSurfaceBootstrapState; }, surfaceRevision: function () { return velaSurfaceBootstrapRevision; }, controller: function () { return velaSurfaceController; } };", context, { filename: "main-vela-bootstrap-boundary.js" });
+    vm.runInContext("window.__testHooks.conversation = currentVelaConversation; window.__testHooks.disposeBundle = disposeCommittedVelaBundle;", context);
     return { context, slot, calls, warnings, runtime };
 }
 
@@ -200,4 +205,5 @@ async function run() {
     console.log("test-vela-surface-bootstrap-boundary: " + assertions + " assertions passed.");
 }
 
-run().catch((error) => { console.error(error && error.stack ? error.stack : error); process.exitCode = 1; });
+module.exports = { harness, flush };
+if (require.main === module) run().catch((error) => { console.error(error && error.stack ? error.stack : error); process.exitCode = 1; });
