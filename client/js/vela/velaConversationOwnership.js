@@ -13,6 +13,7 @@
 }(typeof self !== "undefined" ? self : this, function () {
     "use strict";
     var records = new WeakMap();
+    var claimedPresentations = new WeakSet();
     var sequence = 0;
     function fail(code) { var error = new Error(code); error.code = code; throw error; }
     function invalidate(record) { record.disposed = true; record.binding = null; }
@@ -32,17 +33,19 @@
         var bytes = new Uint8Array(16);
         var id;
         var handle;
-        if (!options || Object.keys(options).sort().join(",") !== "agentOwner,runtime,session") { fail("CONVERSATION_BINDING_INVALID"); }
+        if (!options || Object.keys(options).sort().join(",") !== "agentOwner,presentation,runtime,session") { fail("CONVERSATION_BINDING_INVALID"); }
         // Only copy the association container, never any trusted object.
-        binding = Object.freeze({ agentOwner: options.agentOwner, session: options.session, runtime: options.runtime });
+        binding = Object.freeze({ agentOwner: options.agentOwner, session: options.session, runtime: options.runtime, presentation: options.presentation });
         if (!binding.agentOwner || typeof binding.agentOwner.isDisposed !== "function" || typeof binding.agentOwner.getSessionRuntime !== "function" || !binding.session || typeof binding.session.isClosed !== "function" || !binding.runtime || typeof binding.runtime.getStatus !== "function") { fail("CONVERSATION_BINDING_INVALID"); }
         var record = { binding: binding, disposed: false };
         if (!live(record) || binding.runtime.getStatus().state !== "ready") { fail("CONVERSATION_BINDING_INVALID"); }
+        if (!binding.presentation || typeof binding.presentation.getSnapshot !== "function" || typeof binding.presentation.begin !== "function" || claimedPresentations.has(binding.presentation)) { fail("CONVERSATION_PRESENTATION_INVALID"); }
         if (!Number.isSafeInteger(sequence + 1)) { fail("CONVERSATION_ID_UNAVAILABLE"); }
         try { fillRandomValues(bytes); } catch (error) { fail("CONVERSATION_ID_UNAVAILABLE"); }
         sequence += 1;
         id = "conversation_" + Array.prototype.map.call(bytes, function (value) { return ("0" + value.toString(16)).slice(-2); }).join("") + "_" + sequence;
         handle = Object.freeze({ conversationId: id });
+        claimedPresentations.add(binding.presentation);
         records.set(handle, record);
         return handle;
     }
@@ -58,5 +61,5 @@
         invalidate(record);
         return true;
     }
-    return Object.freeze({ MODULE_REVISION: "vela-conversation-ownership-0.3.11-a1-v1", createOwnership: createOwnership, readBinding: readBinding, isLive: function (handle) { return live(records.get(handle)); }, dispose: dispose });
+    return Object.freeze({ MODULE_REVISION: "vela-conversation-ownership-0.3.11-a2-v1", createOwnership: createOwnership, readBinding: readBinding, isLive: function (handle) { return live(records.get(handle)); }, dispose: dispose });
 }));

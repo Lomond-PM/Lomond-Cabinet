@@ -120,7 +120,7 @@ function harness(options) {
         }
     };
     context.window.VelaSurfaceController = controllerModule;
-    context.window.VelaPresentationModel = { create() {} };
+    context.window.VelaPresentationModel = require("../client/js/vela/velaPresentationModel").VelaPresentationModel;
     context.window.VelaTranscriptView = { create() {} };
     context.window.VelaComposerView = { create() {} };
     if (!options.missingConfirmationView) context.window.VelaConfirmationView = { create() {} };

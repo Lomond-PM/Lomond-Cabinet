@@ -48,6 +48,7 @@ async function create(options = {}) {
         const response = new Response(raw, { headers: { "content-type": body.stream ? "text/event-stream" : "application/json" } });
         return { status: 200, redirected: false, url, headers: response.headers, body: response.body };
     };
+    if (options.fetch) env.fetch = options.fetch;
     function invokeHost(source, callback) {
         const execution = source.startsWith("AEToolbox.VelaExecution.handle(");
         const prefix = execution ? "AEToolbox.VelaExecution.handle(" : "AEToolbox.VelaContext.handle(";

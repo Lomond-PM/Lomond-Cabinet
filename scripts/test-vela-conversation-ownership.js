@@ -4,7 +4,8 @@ const fs = require("fs");
 const vm = require("vm");
 const ownershipModule = require("../client/js/vela/velaConversationOwnership");
 const entropy = bytes => require("crypto").randomFillSync(bytes);
-const ownership = { ...ownershipModule, createOwnership: options => ownershipModule.createOwnership(options, entropy) };
+const PresentationModel = require("../client/js/vela/velaPresentationModel").VelaPresentationModel;
+const ownership = { ...ownershipModule, createOwnership: options => ownershipModule.createOwnership({ presentation: PresentationModel.create(), ...options }, entropy) };
 const { harness, flush } = require("./test-vela-surface-bootstrap-boundary");
 const real = require("./fixtures/vela-selection-harness");
 let assertions = 0;
@@ -16,7 +17,7 @@ function fixture() {
     const session = Object.freeze({ sessionId: "session_1", isClosed: () => disposed });
     const agentOwner = Object.freeze({ agentId: "agent_1", getSessionRuntime: () => session, isDisposed: () => disposed });
     const runtime = Object.freeze({ getStatus: () => ({ state: runtimeDisposed ? "disposed" : "ready", disposed: runtimeDisposed }) });
-    return { bundle: { agentOwner, session, runtime }, closeOwner() { disposed = true; }, closeRuntime() { runtimeDisposed = true; } };
+    return { bundle: { agentOwner, session, runtime, presentation: PresentationModel.create() }, closeOwner() { disposed = true; }, closeRuntime() { runtimeDisposed = true; } };
 }
 async function run() {
     const a = fixture(), b = fixture(), handle = ownership.createOwnership(a.bundle), other = ownership.createOwnership(b.bundle);
@@ -41,7 +42,7 @@ async function run() {
     rejects(() => ownership.readBinding(handle), "CONVERSATION_OWNER_STALE");
     same(binding.agentOwner.isDisposed(), false, "record disposal does not dispose trusted Agent");
     same(binding.runtime.getStatus().disposed, false, "record disposal does not operate on Runtime");
-    const newer = ownership.createOwnership({ ...binding });
+    const newer = ownership.createOwnership({ ...binding, presentation: PresentationModel.create() });
     check(newer.conversationId !== id, "new record cannot revive the old identity");
     rejects(() => ownership.readBinding(handle), "CONVERSATION_OWNER_STALE");
     b.closeRuntime(); same(ownership.isLive(other), false, "external Runtime disposal invalidates association");

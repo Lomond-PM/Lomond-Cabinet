@@ -840,8 +840,6 @@
                 cancel: function () {
                     var providerState;
                     var cancelledReasoning = activeAgentReasoning;
-                    agentReasoningGeneration += 1;
-                    activeAgentReasoning = null;
                     invalidateReviewBarriers();
                     invalidateProductionContinuation();
                     if (confirmedAuthorityComposer) { try { confirmedAuthorityComposer.cancel(); } catch (ignoredComposer) {} }
@@ -854,6 +852,10 @@
                             if (providerState && providerState.state === "pending") { providerController.cancel({ requestId: providerState.requestId }); }
                         } catch (ignoredProvider) {}
                     }
+                    // Provider.cancel synchronously publishes its correlated stream terminal.
+                    // Retire only reasoning ownership after that publication, before returning.
+                    agentReasoningGeneration += 1;
+                    activeAgentReasoning = null;
                     var cancelled = cancelActiveDelegatedTask();
                     if (cancelled && authorityState === "executing") { settleDelegatedExecutionFailure("AGENT_DRIVER_CANCELLED", false); }
                     return cancelled;

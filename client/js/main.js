@@ -4249,7 +4249,7 @@
                 throw { code: "LIFECYCLE_BLOCKED" };
             }
             if (transaction.owner !== velaAgentRuntimeOwner || !window.VelaConversationOwnership) { throw { code: "CONVERSATION_BINDING_INVALID" }; }
-            transaction.ownership = window.VelaConversationOwnership.createOwnership({ agentOwner: transaction.owner, session: transaction.session, runtime: transaction.candidate }, function (bytes) { window.crypto.getRandomValues(bytes); });
+            transaction.ownership = window.VelaConversationOwnership.createOwnership({ agentOwner: transaction.owner, session: transaction.session, runtime: transaction.candidate, presentation: window.VelaPresentationModel.create() }, function (bytes) { window.crypto.getRandomValues(bytes); });
             velaRuntimeController = transaction.candidate;
             velaRuntimeLastErrorCode = null;
             velaRuntimeStatusRevision += 1;
@@ -4330,6 +4330,7 @@
                 surface: velaSurfaceShell,
                 t: tr,
                 PresentationModel: window.VelaPresentationModel,
+                presentation: window.VelaConversationOwnership.readBinding(currentVelaConversation().handle).presentation,
                 TranscriptView: window.VelaTranscriptView,
                 ComposerView: window.VelaComposerView,
                 ConfirmationView: window.VelaConfirmationView,
