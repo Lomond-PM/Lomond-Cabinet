@@ -47,7 +47,7 @@
         var executionPort;
         var invokeHost;
         if (!protocolModule.isTrustedProtocol(protocol) || !protocol.isPlainObject(options)) { throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
-        protocol.assertNoUnknownKeys(options, ["protocol", "contextApi", "contextBridge", "executionPort", "invokeHost"], "executionAdapter.options");
+        protocol.assertNoUnknownKeys(options, ["protocol", "contextApi", "contextBridge", "executionPort", "invokeHost", "onTrajectoryFact"], "executionAdapter.options");
         contextApi = protocol.getOwnDataProperty(options, "contextApi");
         bridge = protocol.getOwnDataProperty(options, "contextBridge");
         executionPort = protocol.getOwnDataProperty(options, "executionPort");
@@ -55,6 +55,9 @@
         if (!bridgeModule.isTrustedExecutionPortForProtocol || !bridgeModule.isTrustedExecutionPortForProtocol(executionPort, protocol) || typeof ownFunction(executionPort, "buildRequest", protocol) !== "function") { throw error(protocol, protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE); }
         invokeHost = ownFunction(options, "invokeHost", protocol);
         function executeValidatedAction(action, metadata, trustedExecutionContext) {
+            function trajectory(kind, committed, hostCommitted, code, digest, validated) {
+                try { if (typeof options.onTrajectoryFact === "function") { options.onTrajectoryFact(protocol.deepFreeze({ kind: kind, producer: "VelaExecutionAdapter", planId: metadata.planId, committed: committed, hostCommitted: hostCommitted, code: code, digest: digest, hostValidated: validated, sourceRequestId: request ? request.requestId : null })); } } catch (ignoredTrajectory) {}
+            }
             var request;
             var expectedResultDigest;
             var expectedCapabilityId;
@@ -67,7 +70,7 @@
             } catch (cause) { return Promise.reject(cause instanceof protocol.VelaProtocolError ? cause : error(protocol, protocol.ERROR_CODES.PLAN_FAILED)); }
             return new Promise(function (resolve, reject) {
                 var settled = false;
-                function settleFailure(code, committed) { if (!settled) { settled = true; reject(error(protocol, code, committed)); } }
+                function settleFailure(code, committed, validated) { if (!settled) { trajectory("host-result", committed === true ? true : committed === false ? false : null, validated ? committed : null, code, null, validated === true); settled = true; reject(error(protocol, code, committed)); } }
                 function callback(raw) {
                     var result;
                     var hostError;
@@ -78,13 +81,15 @@
                         protocol.assertSafeJson(result, { allowDangerousPaths: ["error.code"] });
                         protocol.assertNoUnknownKeys(result, ["protocol", "schemaVersion", "requestId", "sessionId", "operation", "ok", "hostExecutionRevision", "result", "error"], "executionAdapter.hostResult");
                         if (result.protocol !== HOST_RESULT_PROTOCOL || result.schemaVersion !== "1.0" || result.requestId !== request.requestId || result.sessionId !== request.sessionId || result.operation !== "executeCapability" || result.hostExecutionRevision !== HOST_REVISION || typeof result.ok !== "boolean") { settleFailure(protocol.ERROR_CODES.PLAN_FAILED, null); return; }
-                        if (!result.ok) { protocol.assertNoUnknownKeys(result.error, ["code", "message", "mutationCommitted"], "executionAdapter.hostResult.error"); if (result.error.mutationCommitted !== true && result.error.mutationCommitted !== false && result.error.mutationCommitted !== null) { settleFailure(protocol.ERROR_CODES.PLAN_FAILED, null); return; } hostError = result.error && result.error.code; settleFailure(mapHostCode(protocol, hostError), result.error.mutationCommitted); return; }
+                        if (!result.ok) { protocol.assertNoUnknownKeys(result.error, ["code", "message", "mutationCommitted"], "executionAdapter.hostResult.error"); if (result.error.mutationCommitted !== true && result.error.mutationCommitted !== false && result.error.mutationCommitted !== null) { settleFailure(protocol.ERROR_CODES.PLAN_FAILED, null); return; } hostError = result.error && result.error.code; settleFailure(mapHostCode(protocol, hostError), result.error.mutationCommitted, true); return; }
                         protocol.assertNoUnknownKeys(result.result, ["capabilityId", "valueKind", "resultingValueDigest"], "executionAdapter.hostResult.result");
-                        if (result.result.capabilityId !== expectedCapabilityId || result.result.valueKind !== expectedValueKind || result.result.resultingValueDigest !== expectedResultDigest) { settleFailure(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, true); return; }
+                        if (result.result.capabilityId !== expectedCapabilityId || result.result.valueKind !== expectedValueKind || result.result.resultingValueDigest !== expectedResultDigest) { settleFailure(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, true, true); return; }
+                        trajectory("host-result", true, true, null, result.result.resultingValueDigest, true);
                         settled = true;
                         resolve(protocol.deepFreeze({ ok: true, committed: true, summary: { capabilityId: expectedCapabilityId, resultingValueDigest: result.result.resultingValueDigest } }));
                     } catch (ignored) { settleFailure(protocol.ERROR_CODES.PLAN_FAILED, null); }
                 }
+                trajectory("host-entered", null, null, null, null, false);
                 try { invokeHost(FIXED_FACADE_PREFIX + quote(JSON.stringify(request)) + ")", callback); }
                 catch (ignoredInvoke) { settleFailure(protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE, null); }
             });
