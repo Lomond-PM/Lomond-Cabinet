@@ -212,7 +212,7 @@ The first source/geometry parameter change after plugin startup may incur a one-
 
 Status:
 
-Deferred architecture issue; not a 0.3.1 release blocker.
+Accepted retained behavior through 0.3.10; request-send target continuity is not resolved by Context Architecture. Historically not a 0.3.1 release blocker.
 
 Current behavior:
 
@@ -220,5 +220,7 @@ Current behavior:
 - Review captures fresh Context and binds the actual current target.
 - After Review binds a candidate, later target changes fail through `CONTEXT_STALE` or `UNKNOWN_TARGET` during Confirmation/Preflight.
 - A selection change between the original Provider request and Review is therefore not request-time stale detection; Review intentionally binds the then-current target.
+
+0.3.10 does not guarantee that execution targets the layer selected at request-send time. Request-time proposals are identity-free; Review binds the then-current target, and post-Review freshness/JIT/Preflight enforce later drift. A4/A5 historical target evidence cannot infer present target identity. This is retained behavior, not a Context Architecture fix or new target-continuity guarantee.
 
 The 0.3.1 bounded union profile does not change this behavior. Future Context/Authority work must define request-time continuity explicitly rather than weakening fresh binding, fingerprints, generation protection, Preflight, Execution Guard, or Host authority.

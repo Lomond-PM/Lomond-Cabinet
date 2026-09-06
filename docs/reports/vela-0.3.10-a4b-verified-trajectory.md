@@ -1,6 +1,6 @@
 # Vela 0.3.10-A4b — Verified Trajectory Evidence Projection
 
-Status: IMPLEMENTED / OFFLINE INTEGRATION PASS / REAL AE ACCEPTANCE PENDING. **A4b is not closed.**
+Status: **A4b PASS / CLOSED**. **USER-MANUAL REAL AE ACCEPTANCE: PASS**.
 Baseline: `937386a92b0bda9ba0bab04752fcd63b868fa58e` (HEAD/dev/origin/dev at task start).
 Branch: `feat/vela-verified-trajectory-a4b-0.3.10`.
 Contract: [A4a source/projection contract](../design/vela-verified-trajectory-0.3.10-a4a.md).
@@ -97,7 +97,7 @@ The getter has no mutation methods or consumer subscription. Re-entrant reads re
 
 Negative tests pass copied, forged, modified and JSON-round-tripped projections to existing AuthorizedPlan, TaskRun, grant issuance, Review, Authority evidence and committed-target-port boundaries. They are rejected. No trajectory object is registered in an Authority/native-binding trusted WeakMap. The test does not claim serialized data alone is an execution identity.
 
-No Provider, A2, A3, Session or presentation module consumes the projection. Exact pre/post wire and Session event comparisons prove the current path unchanged. Existing A2, A3, reasoning and Provider production suites also pass. Raw reasoning is emitted by the Provider fixture but absent from the projection. Future historical selection remains A5 work.
+At the A4b implementation baseline, no Provider, A2, A3, Session or presentation module consumed the projection. Exact pre/post wire and Session event comparisons prove the current path unchanged. Existing A2, A3, reasoning and Provider production suites also pass. Raw reasoning is emitted by the Provider fixture but absent from the projection. Subsequent A5a/A5b now consume eligible trajectory facts only for bounded evidence; model-visible optional history remains zero.
 
 ## 13. Offline validation and evidence limits
 
@@ -146,13 +146,17 @@ New artifacts:
 
 Fourteen comparisons cover both capabilities' mutation/no-op, mutation/no-op mismatch, unavailable Verify, committed Host error, validated false, setter/invoke/malformed uncertainty, two-step mutation and two-step no-op. Each compares complete Driver snapshots, exact Host requests, actual Provider wire, Session events and simulated mutation/Undo/Verify counters. No execution/Verify result is replaced with a trajectory result.
 
-Final checks PASS: syntax for all nine changed/new JS files, project consistency, generated i18n freshness, local document links and git diff/whitespace. The generated report is unchanged. These offline checks do not close the real-AE gate below.
+Final checks PASS: syntax for all nine changed/new JS files, project consistency, generated i18n freshness, local document links and git diff/whitespace. The generated report is unchanged. These historical offline checks are separate from the user-confirmed real-AE gate below.
 
 ## 14–18. Production files, real acceptance and git handoff
 
 Exactly seven production files changed: main.js, velaAgentDriver.js, velaAgentRuntimeOwner.js, velaRuntime.js, velaConfirmedAuthorityComposer.js, velaExecutionPreflight.js and velaExecutionAdapter.js. Host, TaskRun, PlanController, Session, Provider/A2/A3, schema/Parser/Intent Gate, Authority modules and frozen architecture have zero diff. No loader module was added.
 
-### Targeted real AE acceptance — NOT RUN / PENDING
+### Targeted real AE acceptance — PASS (user-observed / externally retained)
+
+Final provenance: the A5a task request explicitly confirms A4 COMPLETE with targeted real AE acceptance, and the integrated 0.3.10 closure request reaffirms A4b targeted real AE PASS. Per-case raw artifacts are not present in this repository; real evidence was user-observed / externally retained. The table retains the accepted six-case scope and expected checks; PASS below is user-confirmed at matrix level, not a reconstruction of raw per-case telemetry. No fixture counters are presented as real AE observations. A6R R3/R3-N independently rechecked opacity mutation/no-op with real CEP snapshots and native user Undo confirmation; that is not a rerun of the A4 rename/two-step matrix. See [A6b report](vela-0.3.10-a6b-observation-turn-isolation.md).
+
+Retained acceptance procedure:
 
 Use a disposable composition with one selected, unlocked, ordinary layer and no opacity expression. Reload the CEP panel to load the changed browser JS. Enable the existing Developer Mode to permit the read-only diagnostic getter. Use existing Provider configuration/readiness/Review normally; do not change any activation policy.
 
@@ -166,12 +170,12 @@ This getter performs no Host/Provider operation. A null return means the Develop
 
 | Case | Initial AE state / objective | Expected projection and actual result | Actual result |
 | --- | --- | --- | --- |
-| 1 opacity mutation | opacity 50; `Set opacity to 60%`; approve | mutated, hostCommitted=true, verified-match; actual 60; one Vela opacity mutation/Undo; completed | PENDING |
-| 2 opacity already-satisfied | opacity 60; same objective; approve | already-satisfied, reportedCommitted=false, hostCommitted=null/host-not-invoked; separate fresh verified-match; actual 60; no new Host mutation/Undo; completed | PENDING |
-| 3 rename mutation | name Layer A; `把当前图层重命名为 Vela Stream Test`; approve | mutated, Host true, typed string verified-match; actual requested name; one rename mutation/Undo; completed | PENDING |
-| 4 rename already-satisfied | name already Vela Stream Test; same objective; approve | already-satisfied, false reported commit, no Host commit evidence; independent verified-match; no new mutation/Undo; completed | PENDING |
-| 5 two-step full completion | opacity 50/name Layer A; `把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test`; approve both | two distinct verified attempts; actual 60/new name; two Vela mutation/Undo operations; completed/full, counts 2/0 | PENDING |
-| 6 second-step rejection | same initial state/objective; approve opacity, reject rename | step 0 unchanged mutated/verified/completed; step 1 rejected/not-mutated/not-run; actual opacity 60/name Layer A; one Vela mutation/Undo; objective rejected/partial, counts 1/1 | PENDING |
+| 1 opacity mutation | opacity 50; `Set opacity to 60%`; approve | mutated, hostCommitted=true, verified-match; actual 60; one Vela opacity mutation/Undo; completed | PASS — user-confirmed matrix; raw per-case evidence external |
+| 2 opacity already-satisfied | opacity 60; same objective; approve | already-satisfied, reportedCommitted=false, hostCommitted=null/host-not-invoked; separate fresh verified-match; actual 60; no new Host mutation/Undo; completed | PASS — user-confirmed matrix; raw per-case evidence external |
+| 3 rename mutation | name Layer A; `把当前图层重命名为 Vela Stream Test`; approve | mutated, Host true, typed string verified-match; actual requested name; one rename mutation/Undo; completed | PASS — user-confirmed matrix; raw per-case evidence external |
+| 4 rename already-satisfied | name already Vela Stream Test; same objective; approve | already-satisfied, false reported commit, no Host commit evidence; independent verified-match; no new mutation/Undo; completed | PASS — user-confirmed matrix; raw per-case evidence external |
+| 5 two-step full completion | opacity 50/name Layer A; `把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test`; approve both | two distinct verified attempts; actual 60/new name; two Vela mutation/Undo operations; completed/full, counts 2/0 | PASS — user-confirmed matrix; raw per-case evidence external |
+| 6 second-step rejection | same initial state/objective; approve opacity, reject rename | step 0 unchanged mutated/verified/completed; step 1 rejected/not-mutated/not-run; actual opacity 60/name Layer A; one Vela mutation/Undo; objective rejected/partial, counts 1/1 | PASS — user-confirmed matrix; raw per-case evidence external |
 
 For case 6, also capture the active projection at the second Review, then compare its step-0 record to the terminal step-0 record. For no-op cases, compare the prior and subsequent AE Undo state and inspect hostInvocationAttempted=false plus the independent Verify source id. Do not force real setter exceptions, malformed responses or timing races; those remain offline injected cases.
 
@@ -179,4 +183,4 @@ Real LM Studio acceptance: **not separately required** because Provider wiring/r
 
 Architecture amendment: **NONE**. No A4a semantic amendment, frozen architecture edit, execution/Verify/Authority/Driver semantics change or A5 selection is intended or required. This report does not claim real AE PASS from the offline fixture.
 
-Git handoff: task branch above, baseline HEAD unchanged; production/test/docs changes are uncommitted. No staging, commit, push or PR. Completion/closure stays pending until all six actual AE results and projections are recorded and reviewed.
+Historical implementation handoff used the task branch and baseline above. A4b subsequently merged via PR #190; targeted real AE acceptance is confirmed and A4b CLOSED. This documentation reconciliation creates no production change or new acceptance run. See [integrated closure](vela-0.3.10-context-closure.md).

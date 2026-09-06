@@ -1,6 +1,6 @@
 # Vela 0.3.10-A1 — Context Taxonomy, Ownership & Lifecycle Contract
 
-Status: A1 design contract recorded; A2–A6 implementation not started.
+Status: A1 PASS; deferred ledger reconciled at 0.3.10 COMPLETE / SEALED. A2–A6 complete; [integrated closure](../reports/vela-0.3.10-context-closure.md). Baseline CURRENT descriptions below retain their historical meaning; the ledger records final dispositions.
 
 Baseline: `3619992cce9f51b7667c767b4abd757b32b099a9`; Vela 0.3.9 COMPLETE / SEALED. A0 was delivered as a read-only audit in the originating task, not as a repository file. This document preserves its relevant findings and eleven-question decision ledger with independently inspectable source anchors. A0 reported 11 focused offline suites / 913 assertions PASS; these are historical A0 results, not an A1 rerun or a new full acceptance claim.
 
@@ -226,7 +226,7 @@ D9 rules are scoped to the operation/task whose lifecycle ended. They do not inv
 
 Host/project changes are recognized through existing read/validation boundaries; this matrix does not claim a new immediate push invalidation listener. An old immutable sample may remain useful evidence of the past but cannot satisfy a current dependency check.
 
-CURRENT lifecycle caveats: Runtime.resetSession resets Bridge/Review/plan/grant execution-related state, not Agent Session or presentation. Observation getters keep last success after failures. Runtime logical admission and Driver cursor have separate owners/cleanup paths. Suspend/resume does not mean conversation switch or automatic autonomous task resumption. A6 must verify adapters against these distinctions before claiming conformance; A1 changes no runtime methods.
+CURRENT lifecycle caveats: Runtime.resetSession resets Bridge/Review/plan/grant execution-related state, not Agent Session or presentation. Observation getters keep last success after failures. Runtime logical admission and Driver cursor have separate owners/cleanup paths. Suspend/resume does not mean conversation switch or automatic autonomous task resumption. A6a/A6b conformance and A6R acceptance are complete under these distinctions; A1 itself changes no runtime methods.
 
 ## 9. Budget ownership matrix
 
@@ -256,17 +256,17 @@ Each row has one primary disposition. A resolved classification can still requir
 
 | A0 unknown | Primary disposition | A1 resolution / remaining decision |
 | --- | --- | --- |
-| U1 Provider independent AE read versus Observation projection | DEFER TO A2 | Preserve independent capture in A2; evidence seam must identify actual sources. Any later source substitution remains separately reviewed, not implicit in A2. |
+| U1 Provider independent AE read versus Observation projection | RESOLVED BY A2 | Independent capture preserved; immutable evidence identifies actual invocation sources. Future source substitution still requires separate review. |
 | U2 currentContext role | RESOLVED IN A1 | Compatibility/read-only projection; no independent canonical state, deletion or reserved universal role (§3.1). |
-| U3 last-successful snapshot invalidation | RESOLVED IN A1 | A/B/C/D freshness and consumer eligibility defined (§§5, 8). Getter behavior unchanged; A6 verifies lifecycle conformance, not an implied new freshness envelope. |
-| U4 request-to-Review continuity | DEFER TO A6 | Preserve known behavior; A6 gathers continuity evidence and produces an explicit design decision. No target lock/new rejection policy authorized by A1/A2. If changing semantics is needed, scope separately. |
-| U5 minimum verified-result evidence | DEFER TO A4 | State dimensions fixed in §7; exact projection schema and availability of source evidence require A4 design. Missing historical evidence remains unknown. |
+| U3 last-successful snapshot invalidation | RESOLVED IN A1 | A/B/C/D freshness and consumer eligibility defined (§§5, 8). Getter behavior unchanged; A6 lifecycle conformance PASS, without a new freshness envelope. |
+| U4 request-to-Review continuity | CLOSED BY A6a DISPOSITION; BEHAVIOR RETAINED | Request-time proposal is identity-free; Review binds then-current target; post-Review freshness/JIT/Preflight handle later drift. No send-time target lock. See [known issue](../KNOWN_ISSUES.md#vela-request-to-review-target-continuity). |
+| U5 minimum verified-result evidence | RESOLVED BY A4a/A4b | Bounded verified trajectory projection and explicit unknown/provenance semantics COMPLETE; targeted real AE acceptance PASS. No historical target identity reconstruction. |
 | U6 conversation canonical owner | DEFER TO 0.3.11 | Session, presentation and verified trajectory are separate; no reconstruction equivalence. |
-| U7 cross-objective Provider context selection | RESOLVED IN A5a (contract only) | [A5a selection contract](vela-context-selection-0.3.10-a5a.md): eligible most-recent-terminal verified attempts only; historical/not-current, no cross-target inference; A3 keeps optional inclusion at zero. Active trajectory and general conversation selection deferred; raw reasoning prohibited. A5b not implemented. |
-| U8 unknown model capacity | DEFER TO A3 | Unresolved input explicitly represented; no guessed capacity or implicit unlimited default. |
-| U9 long-term retention versus security | DEFER TO A6 | Budget ownership separated in §9; growth measurements/cleanup guarantees not established. A3/A4/A5 may define their own local policies but cannot prune replay truth. |
+| U7 cross-objective Provider context selection | RESOLVED BY A5a/A5b | [A5a contract](vela-context-selection-0.3.10-a5a.md) and [A5b evidence](../reports/vela-0.3.10-a5b-context-selection.md): evidence-only selection infrastructure COMPLETE; eligible most-recent-terminal verified attempts only. Model-visible optional historical context = 0; A3 optionalExpansion=false. Active/general conversation selection and history injection remain deferred; raw reasoning prohibited. |
+| U8 unknown model capacity | RESOLVED BY A3a/A3b | Unknown capacity stays explicit and permits unchanged current shape; conservative conditional numeric policy complete. Live qualified numeric capacity integration remains future work. |
+| U9 long-term retention versus security | CLOSED BY A6a DISPOSITION; FUTURE LIFECYCLE WORK RETAINED | No accidental unbounded A2–A5 evidence history found. Presentation items, Session events and Plan/replay/security bookkeeping retain their distinct owners; no pruning. 0.3.11 must decide conversation/session/presentation lifecycle. |
 | U10 conversation scheduling/identity isolation | DEFER TO 0.3.11 | Inheritance constraints fixed in §10; no parallel conversation runtime in 0.3.10. |
-| U11 real AE contention/long-running cost | DEFER TO A6 | Requires real AE evidence under a separately scheduled acceptance pass. A0/A1 did not operate AE or prove real-provider/Host concurrency performance. |
+| U11 real AE contention/long-running cost | CLOSED BY A6b + A6R | [A6b report](../reports/vela-0.3.10-a6b-observation-turn-isolation.md): repaired cross-turn stale propagation; 15/15 real AE near-concurrent cases PASS. Old diagnostics may safely stale without blocking the new objective. Not a benchmark or proof of exact simultaneous Host execution. |
 
 ## 12. Updated focused slices A2–A6
 
@@ -278,7 +278,7 @@ Each row has one primary disposition. A resolved classification can still requir
 | A5 — Bounded Context Selection | After explicit policy review, select allowed objective and factual projections with provenance, ordering, conflicts and omission evidence; compose through A2 and A3 | Exact selected input assertions, stale-source handling, cross-objective negative cases, reasoning exclusion, current user remains edit-parameter source | No raw log/transcript injection by default, temporal inference, multi-conversation, implied authority from history |
 | A6 — Lifecycle, Retention and Boundary Acceptance | Verify §§8–10 contracts across owners; inspect long-session growth and real AE read contention; document request-to-Review continuity disposition | New objective/cancel/reset/reload/Host/project and multi-step late-result tests; real AE evidence separately identified; security retention remains intact | No automatic semantic fixes, no claiming real AE PASS from mocks, no conversation implementation |
 
-These slices are proposed focused definitions, not implementation completion. A2 can proceed using this contract without resolving all future history/retention decisions. Any implementation change outside a slice's exclusions requires a new focused scope; irreconcilable frozen-architecture conflict must be reported and stopped under its amendment process, not silently implemented.
+These are the original focused slice definitions. A2–A6 are now complete under the integrated closure; future history/retention decisions remain explicitly deferred. Any implementation change outside a slice's exclusions requires a new focused scope; irreconcilable frozen-architecture conflict must be reported and stopped under its amendment process, not silently implemented.
 
 ## 13. Verification anchors and document acceptance
 
