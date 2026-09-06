@@ -74,6 +74,7 @@
         var pending = false;
         var terminalGeneration = 0;
         var confirmationState = "idle";
+        var suppressConfirmationTerminal = false;
         var proposalReviewPending = false;
         var transientInvocations = [];
         var activeTransientInvocationId = null;
@@ -138,6 +139,7 @@
             var code = providerState && typeof providerState.errorCode === "string" ? providerState.errorCode : null;
             var intentReason = providerState && typeof providerState.intentReason === "string" ? providerState.intentReason : null;
             if (state === "pending") { pending = true; return snapshot(); }
+            if (!pending && proposalReviewPending && state === "proposal-ready") { return snapshot(); }
             if (!pending && !proposalReviewPending) { return snapshot(); }
             if (proposalReviewPending && (state === "proposal-reviewing" || state === "idle" || state === "local-proposal-handled")) {
                 if (state === "idle" || state === "local-proposal-handled") {
@@ -169,9 +171,17 @@
             else if (next === "execution-failed") { append("error", "", errorDisplayKey(state && state.errorCode)); }
             return snapshot();
         }
-        function clearConfirmationTerminal() { if (confirmationState === "execution-completed" || confirmationState === "rejected" || confirmationState === "execution-failed") { confirmationState = "idle"; } return snapshot(); }
-        function reset() { items = []; transientInvocations = []; activeTransientInvocationId = null; activePresentationTurnId = null; transientRuntimeGeneration = 0; pending = false; proposalReviewPending = false; confirmationState = "idle"; terminalGeneration += 1; return snapshot(); }
-        return Object.freeze({ begin: begin, apply: apply, applyPresentationEvent: applyPresentationEvent, applyConfirmation: applyConfirmation, clearConfirmationTerminal: clearConfirmationTerminal, reset: reset, getSnapshot: snapshot, getTransientSnapshot: transientSnapshot });
+        function filterConfirmationState(state) {
+            var current = state && state.state;
+            if (current === "confirmation-ready" || current === "executing") { suppressConfirmationTerminal = false; }
+            if (suppressConfirmationTerminal && (current === "execution-completed" || current === "rejected" || current === "execution-failed")) {
+                return Object.freeze({ state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: state && state.moduleRevision || null });
+            }
+            return state;
+        }
+        function clearConfirmationTerminal() { suppressConfirmationTerminal = true; if (confirmationState === "execution-completed" || confirmationState === "rejected" || confirmationState === "execution-failed") { confirmationState = "idle"; } return snapshot(); }
+        function reset() { suppressConfirmationTerminal = false; items = []; transientInvocations = []; activeTransientInvocationId = null; activePresentationTurnId = null; transientRuntimeGeneration = 0; pending = false; proposalReviewPending = false; confirmationState = "idle"; terminalGeneration += 1; return snapshot(); }
+        return Object.freeze({ begin: begin, apply: apply, applyPresentationEvent: applyPresentationEvent, applyConfirmation: applyConfirmation, clearConfirmationTerminal: clearConfirmationTerminal, filterConfirmationState: filterConfirmationState, reset: reset, getSnapshot: snapshot, getTransientSnapshot: transientSnapshot });
     }
     return Object.freeze({ create: create, errorDisplayKey: errorDisplayKey, projectSurfaceState: projectSurfaceState, statusTone: statusTone });
 }));

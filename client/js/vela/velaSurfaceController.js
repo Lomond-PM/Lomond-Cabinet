@@ -28,7 +28,7 @@
         var experimentalConfig = { endpoint: "", model: "", acknowledged: false };
         var readiness = null;
         var elements;
-        var presentation;
+        var presentation = options && options.presentation;
         var transcript;
         var composer;
         var confirmationView;
@@ -36,13 +36,12 @@
         var mounted = false;
         var suspended = false;
         var disposed = false;
-        var suppressConfirmationTerminal = false;
         var agentProjectionSubscription = null;
         var presentationSubscription = null;
         var presentationSubscriptionToken = null;
         var latestAgentProjectionSnapshot = null;
         var authorityButton = null;
-        if (!surface || typeof surface.getElementsForTest !== "function" || !provider || typeof provider.send !== "function" || typeof provider.cancel !== "function" || typeof provider.getState !== "function" || !confirmation || typeof confirmation.review !== "function" || typeof confirmation.approve !== "function" || typeof confirmation.reject !== "function" || typeof confirmation.getState !== "function" || !PresentationModel || typeof PresentationModel.create !== "function" || !TranscriptView || typeof TranscriptView.create !== "function" || !ComposerView || typeof ComposerView.create !== "function" || !ConfirmationView || typeof ConfirmationView.create !== "function" || !ActivationPolicy || typeof ActivationPolicy.isTrustedPolicy !== "function" || !ActivationPolicy.isTrustedPolicy(activationPolicy) || activationPolicy.experimentalOptInAllowed !== true || activationPolicy.productionEnabled !== false) { throw new Error("VelaSurfaceController requires trusted presentation dependencies."); }
+        if (!surface || typeof surface.getElementsForTest !== "function" || !provider || typeof provider.send !== "function" || typeof provider.cancel !== "function" || typeof provider.getState !== "function" || !confirmation || typeof confirmation.review !== "function" || typeof confirmation.approve !== "function" || typeof confirmation.reject !== "function" || typeof confirmation.getState !== "function" || !presentation || typeof presentation.getSnapshot !== "function" || typeof presentation.apply !== "function" || typeof presentation.filterConfirmationState !== "function" || !PresentationModel || typeof PresentationModel.projectSurfaceState !== "function" || !TranscriptView || typeof TranscriptView.create !== "function" || !ComposerView || typeof ComposerView.create !== "function" || !ConfirmationView || typeof ConfirmationView.create !== "function" || !ActivationPolicy || typeof ActivationPolicy.isTrustedPolicy !== "function" || !ActivationPolicy.isTrustedPolicy(activationPolicy) || activationPolicy.experimentalOptInAllowed !== true || activationPolicy.productionEnabled !== false) { throw new Error("VelaSurfaceController requires trusted presentation dependencies."); }
         function actionState(providerState, confirmationState) {
             var current = confirmationState && confirmationState.state;
             if (current === "executing") { return "none"; }
@@ -149,14 +148,6 @@
             elements.experimentalText.setAttribute("title", experimental);
             elements.statusSlot.setAttribute("data-detail-empty", experimental ? "false" : "true");
         }
-        function effectiveConfirmationState(state) {
-            var current = state && state.state;
-            if (current === "confirmation-ready" || current === "executing") { suppressConfirmationTerminal = false; }
-            if (suppressConfirmationTerminal && (current === "execution-completed" || current === "rejected" || current === "execution-failed")) {
-                return Object.freeze({ state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: state && state.moduleRevision || null });
-            }
-            return state;
-        }
         function synchronize() {
             var providerState;
             var confirmationState;
@@ -166,7 +157,7 @@
             var authorityState = null;
             if (disposed || suspended || !elements) { return; }
             providerState = provider.getState();
-            confirmationState = effectiveConfirmationState(confirmation.getState());
+            confirmationState = presentation.filterConfirmationState(confirmation.getState());
             snapshot = presentation.apply(providerState);
             snapshot = presentation.applyConfirmation(confirmationState, snapshot);
             transcript.render(snapshot, presentation.getTransientSnapshot());
@@ -201,7 +192,6 @@
             if (!providerState || providerState.state !== "pending") { Promise.resolve(operation).then(function () {}, function () {}); return; }
             generation += 1;
             presentation.begin(message);
-            suppressConfirmationTerminal = true;
             presentation.clearConfirmationTerminal();
             composer.clearSubmittedMessage(message);
             synchronize();
@@ -281,7 +271,6 @@
         function mount() {
             if (disposed || mounted) { return false; }
             elements = surface.getElementsForTest();
-            presentation = PresentationModel.create();
             transcript = TranscriptView.create({ root: elements.transcriptScroll, intro: elements.transcriptMessage, t: t });
             composer = ComposerView.create({ composer: elements.composer, actionSlot: elements.actionSlot, t: t, onSend: send, onCancel: cancel, onDraftChange: synchronize });
             confirmationView = ConfirmationView.create({ actionSlot: elements.actionSlot, t: t, onReview: review, onApprove: approve, onReject: reject });

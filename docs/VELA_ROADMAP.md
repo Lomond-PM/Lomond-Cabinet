@@ -14,7 +14,7 @@ Version numbers follow architecture completion boundaries, not a fixed minor-ver
 | 0.3.8 — Multi-step Agent | COMPLETE |
 | 0.3.9 — Streaming Response & Reasoning Surface | COMPLETE / SEALED / merged into dev; 171/171 offline PASS, user-manual real AE PASS, architecture amendment NONE, no unresolved correctness blocker |
 | 0.3.10 — Context Architecture | COMPLETE / SEALED; 176/176 offline PASS, 0 skipped; A4 real AE PASS; A6R 15/15 PASS; A1 U11 CLOSED; architecture amendment NONE |
-| 0.3.11 — Multi-conversation Foundation | IN PROGRESS; A1 Conversation Ownership Root COMPLETE / SEALED; 177/177 offline PASS and 5/5 targeted real-AE PASS; production still one conversation; next: 0.3.11-A2 Conversation-owned Presentation (not started); architecture amendment NONE |
+| 0.3.11 — Multi-conversation Foundation | IN PROGRESS; A1 Conversation Ownership Root COMPLETE / SEALED; 177/177 offline PASS and 5/5 targeted real-AE PASS; production still one conversation; A2 Conversation-owned Presentation + F1 offline 179/179 PASS, real-AE PASS / COMPLETE / SEALED (Case 6 re-test; recorded limitation); architecture amendment NONE |
 | 0.3.12 — Capability Model Generalization | Planned |
 | 0.3.13+ — AE Capability Completeness Program | Planned, continuing until formal AE Action Coverage Matrix closure; no artificial version ceiling |
 | User History Observation Foundation | Required after capability completeness; version assigned at the actual architecture boundary |
@@ -36,7 +36,7 @@ Completed 0.3.10 scope includes context typing/ownership, invocation assembly ev
 
 Raw Provider reasoning must not directly enter LLM context by default. It is not Observation, a trusted fact, Authority input or execution justification. Any future treatment requires its own reviewed design; history display never grants authority.
 
-0.3.11 owns Multi-conversation Foundation. In current 0.3.10, reasoning is retained only for the current turn/objective; a new objective clears old raw reasoning. Cross-turn reasoning presentation/history is deferred to conversation/history architecture. Whether UI history retains reasoning and whether model context consumes it are separate decisions; the former does not imply the latter.
+0.3.11 owns Multi-conversation Foundation. [A2 presentation report](reports/vela-0.3.11-a2-conversation-presentation.md) records the conversation-owned PresentationModel and explicit Surface injection; A2 and F1 are COMPLETE / SEALED after targeted real-AE re-acceptance, with the first Case 6 response-field UNKNOWN retained in the seal. Exact next dependency: **0.3.11-A3 — Source-bound Async & Command Routing**; not started. In current 0.3.10, reasoning is retained only for the current turn/objective; a new objective clears old raw reasoning. Cross-turn reasoning presentation/history is deferred to conversation/history architecture. Whether UI history retains reasoning and whether model context consumes it are separate decisions; the former does not imply the latter.
 
 [A6b final report](reports/vela-0.3.10-a6b-observation-turn-isolation.md) closes the original R1-1 defect: obsolete diagnostics failure previously blocked a newer objective. Exact turn coalescing, guarded cleanup and cancellation ownership now preserve the new objective; obsolete diagnostics may still safely report stale. Post-fix A6R 15/15 PASS closes A1 U11. See [0.3.10 integrated closure](reports/vela-0.3.10-context-closure.md) for retention/reset constraints and the explicit 0.3.11 ownership/scheduling decisions. Model-visible optional history remains zero; A3 optionalExpansion=false.
 
@@ -65,3 +65,5 @@ The frozen architecture's section 12 is a dependency baseline, explicitly not a 
 ## 0.4.x — Refine and Deepen the Complete Agent
 
 0.4.x refines an already complete Agent product: planning quality, richer observation presentation (including Observation Window), UX, performance, recovery and related depth. It must not be used to defer baseline Agent product formation or incomplete AE Action Coverage Matrix accounting.
+
+A2 acceptance follow-up: [A2-F1 cancellation reasoning reconciliation](reports/vela-0.3.11-a2-f1-cancellation-reasoning.md) repairs a pre-existing terminal-publication ordering defect surfaced by real AE Case 4. F1 offline: 88 focused assertions and 179/179 full suites PASS, 0 skipped. Real-AE 4a–4c, Case 5 and Case 6 re-test PASS. First Case 6 outer-response failure and UNKNOWN rejected field remain documented. A2 and F1 are COMPLETE / SEALED; no further production change was made for the non-reproduced response failure.

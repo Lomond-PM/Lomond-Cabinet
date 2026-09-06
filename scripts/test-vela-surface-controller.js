@@ -56,7 +56,7 @@ function fixture(options) {
     };
     const runtimeBridge = runtime || { subscribePresentationEvents() { return null; } };
     if (runtime) { runtimeBridge.subscribePresentationEvents = function (listener) { presentationListeners.push(listener); let active = true; return { unsubscribe() { if (!active) return false; active = false; const index = presentationListeners.indexOf(listener); if (index >= 0) presentationListeners.splice(index, 1); return true; }, dispose() { return this.unsubscribe(); } }; }; }
-    const controller = SurfaceController.create({ surface: { getElementsForTest: () => elements }, provider, confirmation, authority, runtime: runtime ? runtimeBridge : null, t: options.t || ((key) => "t:" + key), PresentationModel, TranscriptView, ComposerView, ConfirmationView, ActivationPolicy, agentProjection: options.agentProjection || null, onAgentProjectionError: options.onAgentProjectionError });
+    const controller = SurfaceController.create({ surface: { getElementsForTest: () => elements }, provider, confirmation, authority, runtime: runtime ? runtimeBridge : null, presentation: options.presentation || PresentationModel.create(), t: options.t || ((key) => "t:" + key), PresentationModel, TranscriptView, ComposerView, ConfirmationView, ActivationPolicy, agentProjection: options.agentProjection || null, onAgentProjectionError: options.onAgentProjectionError });
     return { controller, elements, request, confirmationRequest, calls, emitPresentation(event) { presentationListeners.slice().forEach((listener) => listener(event)); }, presentationListeners, setProvider(next) { providerState = next; }, setConfirmation(next) { confirmationState = next; }, setAuthority(next) { authorityState = next; } };
 }
 async function flush() { await Promise.resolve(); await Promise.resolve(); }
@@ -358,4 +358,6 @@ async function run() {
     check(test.controller.dispose(), "dispose succeeds once");
     console.log("test-vela-surface-controller: " + assertions + " assertions passed.");
 }
-run().catch((error) => { console.error(error && error.stack ? error.stack : error); process.exitCode = 1; });
+if (require.main === module) run().catch((error) => { console.error(error && error.stack ? error.stack : error); process.exitCode = 1; });
+
+module.exports = { fixture, mountEnabled, flush };
