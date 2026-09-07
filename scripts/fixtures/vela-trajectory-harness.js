@@ -30,7 +30,7 @@ async function flush() { for (let i = 0; i < 150; i++) await Promise.resolve(); 
 function prepare(options = {}) {
     const load = options.load || loader(options.baseline, options.reportObserver), events = [], requests = [], wires = [], waiting = [];
     let id = 0;
-    const env = { ...require("../velaNodeRuntime"), randomId(kind) { return kind + "_" + String(++id).padStart(32, "0"); }, now: () => 100, setTimeout, clearTimeout, TextDecoder };
+    const env = { ...require("../velaNodeRuntime"), randomId(kind) { if (options.randomId) return options.randomId(kind); return kind + "_" + String(++id).padStart(32, "0"); }, now: () => 100, setTimeout, clearTimeout, TextDecoder };
     const p = load("velaProtocol").createProtocol(env), context = load("velaContext").createContextApi(p);
     const state = options.sharedState || { opacity: options.opacity === undefined ? 50 : options.opacity, name: options.name || "Layer A", mutations: 0, undo: 0, verifies: 0, hostMode: options.hostMode || "normal", hold: null, verifyMode: options.verifyMode || "normal" };
     const base = { hostInstanceId: "host_" + "a".repeat(48), hostReloadEpoch: 1, projectGeneration: 1 };

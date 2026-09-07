@@ -126,7 +126,7 @@
         function measureBounds() {
             var s = scale();
             var controlsHeight = Math.max(rectHeight(controls), rectHeight(settings));
-            var minimumFixedHeight = rectHeight(composer) + rectHeight(status) + controlsHeight;
+            var minimumFixedHeight = rectHeight(options.conversations) + rectHeight(composer) + rectHeight(status) + controlsHeight;
             var min = minimumFixedHeight + (TRANSCRIPT_MIN_READABLE_PX * s) + (HOME_VERTICAL_SAFETY_GAP_PX * s);
             var available = rectHeight(homeContainer) - rectHeight(headerElement) - toolPoolMinimumHeight() - (HOME_VERTICAL_SAFETY_GAP_PX * s);
             var measuredMin = Math.max(min, 1);

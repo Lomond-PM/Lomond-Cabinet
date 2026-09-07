@@ -10,6 +10,8 @@
     var velaAgentRuntimeOwner = null;
     var velaConversationBinding = null;
     var velaConversationComposition = null;
+    var velaConversationSwitcher = null;
+    var velaExperimentalSessionRequested = false;
     var velaCompositionGeneration = null;
     var velaRuntimeInitTransaction = null;
     var velaRuntimeLastAttemptCoreGeneration = null;
@@ -2390,8 +2392,8 @@
         disableButton = window.CoreUI.createButton({ document: document, id: "velaExperimentalDisable", variant: "neutral", classNames: "panel-button panel-local-action", text: tr("settings.vela.disableSession") });
         status = document.createElement("p"); status.id = "velaExperimentalStatus"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
         acknowledgement.addEventListener("change", function () { VelaExperimentalAcknowledged = acknowledgement.checked === true; configureSession(); refreshSession(); });
-        enableButton.addEventListener("click", function () { saveEndpoint(); saveModel(); if (velaSurfaceController && typeof velaSurfaceController.enableExperimental === "function") { velaSurfaceController.enableExperimental().then(refreshSession, refreshSession); } });
-        disableButton.addEventListener("click", function () { if (velaSurfaceController && typeof velaSurfaceController.disableExperimental === "function") { velaSurfaceController.disableExperimental(); } refreshSession(); });
+        enableButton.addEventListener("click", function () { velaExperimentalSessionRequested = true; saveEndpoint(); saveModel(); if (velaSurfaceController && typeof velaSurfaceController.enableExperimental === "function") { velaSurfaceController.enableExperimental().then(refreshSession, refreshSession); } });
+        disableButton.addEventListener("click", function () { velaExperimentalSessionRequested = false; if (velaSurfaceController && typeof velaSurfaceController.disableExperimental === "function") { velaSurfaceController.disableExperimental(); } refreshSession(); });
         mount.appendChild(acknowledgementLabel.root); mount.appendChild(enableButton); mount.appendChild(disableButton); mount.appendChild(status);
         configureSession(); refreshSession();
     }
@@ -4182,6 +4184,7 @@
     }
 
     function unbindVelaConversationSurface() {
+        if (velaConversationSwitcher && velaConversationBinding && velaSurfaceShell) { velaConversationSwitcher.setDraft(velaConversationBinding.record, velaSurfaceShell.getElementsForTest().composer.value); }
         if (velaSurfaceController) { try { velaSurfaceController.dispose(); } catch (ignoredSurface) {} velaSurfaceController = null; }
         clearVelaSurfaceActionSlot();
         velaSurfaceBootstrapState = "idle";
@@ -4189,6 +4192,8 @@
 
     function disposeCommittedVelaBundle() {
         var composition = velaConversationComposition;
+        if (velaConversationSwitcher) { velaConversationSwitcher.dispose(); velaConversationSwitcher = null; }
+        velaExperimentalSessionRequested = false;
         // Composition invalidates every source before disposing the selected view.
         if (composition) { composition.dispose(); }
         velaConversationComposition = null;
@@ -4239,6 +4244,7 @@
             velaCompositionGeneration = Object.freeze({ panelGeneration: transaction.panelGeneration, coreGeneration: transaction.coreGeneration });
             velaRuntimeLastErrorCode = null;
             velaRuntimeStatusRevision += 1;
+            initializeVelaConversationSwitcher();
             velaConversationComposition.select(record);
             transaction.composition = null;
             clearVelaRuntimeInitTransaction(transaction);
@@ -4253,6 +4259,16 @@
             return null;
         });
         return transaction.promise;
+    }
+
+    function initializeVelaConversationSwitcher() {
+        if (velaConversationSwitcher || !velaConversationComposition || !velaSurfaceShell) { return; }
+        var elements = velaSurfaceShell.getElementsForTest();
+        if (!elements.conversationSlot || !window.VelaConversationSwitcher) { return; }
+        velaConversationSwitcher = window.VelaConversationSwitcher.create({ composition: velaConversationComposition, mount: elements.conversationSlot, t: tr, onChange: function () {
+            if (velaSurfaceController && velaSurfaceController.refreshConversationState) { velaSurfaceController.refreshConversationState(); }
+            if (velaSurfaceShell.refreshLayout) { velaSurfaceShell.refreshLayout(); }
+        } });
     }
 
     function getVelaSurfaceUiScale() {
@@ -4283,6 +4299,7 @@
             eventTarget: window
         });
         velaSurfaceShell.mount();
+        initializeVelaConversationSwitcher();
         initializeVelaSurfaceController();
     }
 
@@ -4299,6 +4316,11 @@
         }
         try {
             sourcePort = velaConversationSourcePort(currentVelaConversation());
+            if (velaConversationSwitcher) {
+                var composerElement = velaSurfaceShell.getElementsForTest().composer;
+                composerElement.maxLength = window.VelaConversationSwitcher.MAX_DRAFT_LENGTH;
+                composerElement.value = velaConversationSwitcher.getDraft(velaConversationBinding.record);
+            }
             controller = window.VelaSurfaceController.create({
                 surface: velaSurfaceShell,
                 t: tr,
@@ -4309,6 +4331,7 @@
                 ConfirmationView: window.VelaConfirmationView,
                 ActivationPolicy: window.VelaActivationPolicy,
                 sourcePort: sourcePort,
+                getConversationAvailability: function () { var active = velaConversationComposition && velaConversationComposition.getActiveRecord(); return { busy: !!active, other: !!active && active !== (velaConversationBinding && velaConversationBinding.record) }; },
                 onExperimentalStateChange: function (snapshot) { if (velaSurfaceController === controller && sourcePort.isLive()) { refreshVelaExperimentalSettings(snapshot); } },
                 agentProjection: sourcePort.agentProjection,
                 onAgentProjectionError: function (error, phase) { if (velaSurfaceController === controller && sourcePort.isLive()) { reportVelaAgentRuntimeError(error, phase || "surface"); } },
@@ -4324,6 +4347,7 @@
             velaSurfaceBootstrapState = "ready";
             velaSurfaceBootstrapRevision += 1;
             configureVelaExperimentalSession();
+            if (velaExperimentalSessionRequested) { controller.enableExperimental().then(function () {}, function () {}); }
             refreshVelaExperimentalSettings();
         } catch (error) {
             if (controller && typeof controller.dispose === "function") {
@@ -8106,6 +8130,7 @@
         refreshSettingsThemePresentation();
         if (velaSurfaceController) {
             velaSurfaceController.refreshLocale();
+            if (velaConversationSwitcher) { velaConversationSwitcher.refreshLocale(); }
         }
         if (velaSurfaceShell) {
             velaSurfaceShell.refreshLocale();

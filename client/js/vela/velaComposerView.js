@@ -19,6 +19,7 @@
         var cancel;
         var state = "idle";
         var enabled = false;
+        var sendBlocked = false;
         var disposed = false;
         if (!composer || !actionSlot || !documentRef) { throw new Error("VelaComposerView requires composer elements."); }
         function refreshLocale() {
@@ -29,12 +30,13 @@
             send.setAttribute("aria-label", t("vela.surfaceSend"));
             cancel.setAttribute("aria-label", t("vela.surfaceCancel"));
         }
-        function render(nextState, nextEnabled) {
+        function render(nextState, nextEnabled, blocked) {
             state = nextState === "cancel" || nextState === "pending" ? "cancel" : nextState === "send" || nextState === "idle" || nextState === "completed" || nextState === "failed" || nextState === "cancelled" ? "send" : typeof nextState === "string" ? nextState : "send";
             enabled = nextEnabled === true;
+            sendBlocked = blocked === true;
             send.hidden = state !== "send";
             cancel.hidden = state !== "cancel";
-            send.disabled = state !== "send" || !enabled || !/\S/.test(composer.value);
+            send.disabled = state !== "send" || !enabled || sendBlocked || !/\S/.test(composer.value);
             cancel.disabled = state !== "cancel";
             composer.disabled = !enabled;
             composer.readOnly = !enabled || state === "review" || state === "confirm" || state === "none";
@@ -50,9 +52,9 @@
         cancel = documentRef.createElement("button");
         cancel.type = "button";
         cancel.className = "panel-button utility-action vela-surface-action vela-compact-action";
-        function sendHandler() { if (!disposed && state === "send" && enabled && /\S/.test(composer.value)) { onSend(composer.value); } }
+        function sendHandler() { if (!disposed && state === "send" && enabled && !sendBlocked && /\S/.test(composer.value)) { onSend(composer.value); } }
         function cancelHandler() { if (!disposed && state === "cancel" && !cancel.disabled) { onCancel(); } }
-        function inputHandler() { if (!disposed) { render(state, enabled); onDraftChange(composer.value); } }
+        function inputHandler() { if (!disposed) { render(state, enabled, sendBlocked); onDraftChange(composer.value); } }
         send.addEventListener("click", sendHandler);
         cancel.addEventListener("click", cancelHandler);
         composer.addEventListener("input", inputHandler);

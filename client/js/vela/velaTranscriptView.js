@@ -139,7 +139,7 @@
                 if (entry.text) { ref.hasStartedText = true; }
                 if (entry.state !== "streaming" && entry.state !== ref.lastState && ref.reasoning) { ref.expanded = false; ref.userToggled = false; }
                 if (!ref.reasoning && entry.reasoningText) {
-                    var lateShellRef = createReasoningShell(segment, entry);
+                    var lateShellRef = createReasoningShell(ref.node, entry);
                     ref.reasoning = lateShellRef.reasoning;
                     ref.header = lateShellRef.header;
                     ref.body = lateShellRef.body;
@@ -236,7 +236,7 @@
         transientList = documentRef.createElement("div");
         transientList.className = "vela-transcript-transient-list";
         rootElement.appendChild(transientList);
-        return Object.freeze({ render: renderWithTransient, refreshLocale: refreshLocale, dispose: function () { disposed = true; } });
+        return Object.freeze({ render: renderWithTransient, refreshLocale: refreshLocale, dispose: function () { disposed = true; if (list.parentNode) { list.parentNode.removeChild(list); } if (transientList.parentNode) { transientList.parentNode.removeChild(transientList); } } });
     }
     return Object.freeze({ create: create });
 }));

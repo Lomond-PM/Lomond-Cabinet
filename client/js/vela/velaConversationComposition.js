@@ -16,6 +16,8 @@
         var selected = null;
         var holder = null;
         var disposed = false;
+        var listeners = new Set();
+        function notify() { listeners.forEach(function (listener) { try { listener(); } catch (ignored) {} }); }
         var unbind = options.unbindSurface || function () {};
         var selectedChanged = options.onSelectionChanged || function () {};
         function requireLive() { if (disposed) { fail("CONVERSATION_COMPOSITION_DISPOSED"); } }
@@ -28,7 +30,7 @@
         function checkRelease(token) {
             if (disposed || holder !== token || token.pending !== 0) { return; }
             var state = token.entry.driver.getSnapshot();
-            if (state.state === "terminal" || state.state === "idle") { holder = null; }
+            if (state.state === "terminal" || state.state === "idle") { holder = null; notify(); }
         }
         function track(token, action) {
             token.pending += 1;
@@ -50,6 +52,7 @@
                     if (holder) { fail("CONVERSATION_OBJECTIVE_BUSY"); }
                     var token = { entry: entry, pending: 0 };
                     holder = token;
+                    notify();
                     return track(token, action);
                 },
                 continue: function (action) {
@@ -101,6 +104,7 @@
                 });
                 records.set(record, entry);
                 pending.delete(candidate);
+                notify();
                 return record;
             }).catch(function (error) { cleanup(candidate); pending.delete(candidate); throw error; });
         }
@@ -112,6 +116,7 @@
             selected = record;
             // Only the trusted composition root receives this association callback.
             selectedChanged(record, entry ? entry.association : null);
+            notify();
             return true;
         }
         function disposeRecord(record) {
@@ -120,11 +125,13 @@
             if (selected === record) { select(null); }
             records.delete(record);
             cleanup(entry.candidate);
+            notify();
             return true;
         }
         function dispose() {
             if (disposed) { return false; }
             disposed = true;
+            listeners.clear();
             selected = null;
             records.forEach(function (entry) { ownership.dispose(entry.association.handle); });
             pending.forEach(function (candidate) { if (candidate.handle) { ownership.dispose(candidate.handle); } });
@@ -138,6 +145,8 @@
             return true;
         }
         return Object.freeze({
+            getActiveRecord: function () { requireLive(); return holder ? holder.entry.record : null; },
+            subscribe: function (listener) { requireLive(); listeners.add(listener); return Object.freeze({ unsubscribe: function () { listeners.delete(listener); } }); },
             createRecord: createRecord, select: select, disposeRecord: disposeRecord, dispose: dispose,
             getRecords: function () { requireLive(); return Object.freeze(Array.from(records.keys())); },
             getSelected: function () { requireLive(); return selected; },

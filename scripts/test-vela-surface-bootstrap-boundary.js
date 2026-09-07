@@ -78,6 +78,8 @@ function harness(options) {
         velaAgentRuntimeOwner: null,
         velaConversationBinding: null,
         velaConversationComposition: null,
+        velaConversationSwitcher: null,
+        velaExperimentalSessionRequested: false,
         velaCompositionGeneration: null,
         velaSurfaceShell: { getElementsForTest() { return { actionSlot: slot }; } },
         velaSurfaceController: null,
