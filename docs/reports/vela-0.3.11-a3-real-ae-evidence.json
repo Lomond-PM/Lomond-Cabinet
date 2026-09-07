@@ -1,0 +1,133 @@
+{
+  "stage": "Vela 0.3.11-A3",
+  "date": "2026-09-07",
+  "evidenceKind": "manual transcription of observed real CEP DevTools console results",
+  "rawEvidenceLocation": "This Codex task's browser tool outputs, console labels listed below",
+  "notRawProviderWire": true,
+  "environment": {
+    "browser": "Codex built-in browser",
+    "cepDebugPort": 8088,
+    "moduleRevision": "vela-conversation-ownership-0.3.11-a3-v1",
+    "runtimeState": "ready",
+    "providerEndpoint": "http://127.0.0.1:1234",
+    "model": "qwen3.5-4b",
+    "productionConversationCount": 1
+  },
+  "cases": [
+    {
+      "case": 1,
+      "label": "A3_CASE1",
+      "result": "PASS",
+      "states": ["requesting", "completed"],
+      "streamingSamplesWithReasoning": 107,
+      "reasoningInvocationId": "reasoning_1",
+      "terminal": "stream-completed",
+      "reasoningCharacters": 5020,
+      "expanded": false,
+      "userItems": 1,
+      "assistantItems": 1
+    },
+    {
+      "case": 2,
+      "labels": ["A3_CASE2_BEFORE", "A3_CASE2_REVIEW", "A3_CASE2_AFTER", "A3_CASE2_HOST"],
+      "result": "PASS",
+      "reviewBefore": 100,
+      "reviewProposed": 63,
+      "hostActual": 63,
+      "hostCommitted": true,
+      "mutationDisposition": "mutated",
+      "verification": "verified-match",
+      "verificationScope": "committed-target",
+      "freshAtRead": true,
+      "expected": 63,
+      "actual": 63
+    },
+    {
+      "case": 3,
+      "labels": ["A3_CASE3_CANCEL", "A3_CASE3_SETTLED", "A3_CASE4_RESUMED"],
+      "result": "PASS",
+      "cancelledInvocation": "reasoning_3",
+      "before": {"state": "streaming", "reasoningCharacters": 80, "expanded": true},
+      "after": {"state": "stream-cancelled", "reasoningCharacters": 80, "expanded": false},
+      "providerTerminal": "cancelled",
+      "nextObjective": "completed with one user and one assistant item"
+    },
+    {
+      "case": 4,
+      "labels": ["A3_CASE4_DURING_HIDDEN", "A3_CASE4_STREAM_RESUME", "A3_CASE4_FINAL"],
+      "result": "PASS",
+      "method": "Home selectionInfo pointer navigation, then backBtn; actual Surface suspend/resume path",
+      "reasoningInvocationId": "reasoning_6",
+      "beforeHideCharacters": 84,
+      "hiddenHomeClass": "view view-home",
+      "resumeCharacters": 1713,
+      "resumedHomeClass": "view view-home is-active",
+      "terminalCharacters": 5497,
+      "terminal": "stream-completed",
+      "expanded": false,
+      "replyCountForObjective": 1
+    },
+    {
+      "case": 5,
+      "labels": ["A3_CASE5_PENDING", "A3_CASE5_REPLACED", "A3_CASE5_HOST_UNCHANGED"],
+      "result": "PASS",
+      "method": "DevTools dispatch of pagehide/pageshow into existing production lifecycle handlers; not a native window-close claim",
+      "oldState": "awaiting-confirmation",
+      "oldReviewBefore": 63,
+      "oldReviewProposed": 64,
+      "oldSession": "session_1",
+      "newSession": "session_2",
+      "runtime": "ready",
+      "newState": "experimental-configuring",
+      "newTranscriptItems": 0,
+      "newReasoningSegments": 0,
+      "newTrajectoryActive": null,
+      "newTrajectoryTerminal": null,
+      "newProviderTerminalRequestId": null,
+      "oldApproveConnected": false,
+      "newStateUnchangedAfterOldApproveAndRejectClicks": true,
+      "hostActual": 63
+    },
+    {
+      "case": 6,
+      "labels": ["A3_CASE6_DIAGNOSTICS", "A3_CASE6_DURING", "A3_CASE6_FRESH"],
+      "result": "PASS",
+      "activeComposition": {"available": true, "width": 800, "height": 800, "duration": 30, "frameRate": 30},
+      "adjacent": {"sessionId": "session_1", "turnId": "turn_3", "scopeId": "scope_1", "hostReloadEpoch": 1},
+      "duringObjective": {"sessionId": "session_1", "turnId": "turn_4", "scopeId": "scope_1", "hostReloadEpoch": 1},
+      "afterReplacement": {"sessionId": "session_2", "turnId": "turn_8", "scopeId": "scope_2", "hostReloadEpoch": 2},
+      "allRefreshes": "succeeded"
+    }
+  ],
+  "additionalRecoveryCheck": {
+    "firstRestore": {
+      "label": "A3_RESTORE_BLOCK",
+      "request": "Set selected layer opacity to 100 percent (Chinese prompt)",
+      "session": "session_2",
+      "intentReason": "target-mismatch",
+      "terminalOutcome": "blocked",
+      "code": "CANDIDATE_NOT_FOUND",
+      "trajectoryAttempts": 0,
+      "actualModelProposedValue": null,
+      "actualModelProposedValueEvidence": "UNKNOWN; raw wire not captured; mismatch diagnosed from exact-value Intent Gate"
+    },
+    "retry": {
+      "labels": ["A3_RESTORE_RETRY_REVIEW", "A3_RESTORE_VERIFIED", "A3_RESTORE_HOST"],
+      "request": "Set opacity to 100%",
+      "reviewBefore": 63,
+      "reviewProposed": 100,
+      "intentReason": "allowed",
+      "terminalOutcome": "completed",
+      "verification": "verified-match",
+      "freshAtRead": true,
+      "expected": 100,
+      "actual": 100,
+      "hostRestoredToOriginal": 100
+    }
+  },
+  "limits": [
+    "Cross-conversation isolation and stale callback races are proven by the offline production-focused multi-bundle harness, not a production selector.",
+    "This artifact records observed results, not a complete raw DevTools export or raw reasoning content.",
+    "No product defect repair or security-contract change was required by real-AE acceptance."
+  ]
+}

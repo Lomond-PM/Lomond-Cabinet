@@ -48,7 +48,7 @@ const agentReport = main.slice(agentReportStart, agentReportEnd);
 check(agentReport.indexOf("velaAgentRuntimeLastErrorCode") !== -1, "Agent failures use separate diagnostics state");
 check(agentReport.indexOf("reportVelaRuntimeError") === -1 && agentReport.indexOf("velaRuntimeLastErrorCode") === -1 && agentReport.indexOf("velaRuntimeStatusRevision") === -1, "Agent diagnostics cannot pollute existing Runtime status");
 check(!/resetSession\([^)]*\)[\s\S]{0,120}velaAgentRuntimeOwner\.dispose/.test(main), "existing resetSession is not mapped to Agent disposal");
-check(main.indexOf("agentProjection: velaAgentRuntimeOwner") !== -1, "Surface receives only optional current Projection from main-owned Owner");
+check(main.indexOf("agentProjection: sourcePort.agentProjection") !== -1, "Surface receives the conversation-bound optional Projection port");
 check(main.indexOf("velaRuntimeController.getObservationReadPort()") !== -1 && main.indexOf("ownerOptions.observationReadPort = observationReadPort") !== -1, "main composition root passes the existing Runtime read-only Context port into the Agent owner");
 check(main.indexOf("ownerOptions.AgentCapabilityRuntime") !== -1 && main.indexOf("ownerOptions.ActiveCompositionCapability") !== -1 && main.indexOf("ownerOptions.AgentObservationRuntime") !== -1, "main wires only the focused 0.3.4 capability dependencies");
 const ownerInitStart = normalizedMain.indexOf("    function initializeVelaAgentRuntimeOwner() {");
@@ -61,7 +61,7 @@ check(ownerInit.slice(factoryGuard, runtimePortGuard).indexOf("velaRuntimeContro
 check(ownerInit.indexOf("ownerOptions.observationReadPort = observationReadPort;", runtimePortGuard) > runtimePortGuard, "only the concrete Observation read port depends on Runtime availability");
 check(main.indexOf("velaAgentRuntimeOwner.attachAgentDriverRuntimePort(velaRuntimeController.getAgentDriverRuntimePort())") !== -1, "main wires the narrow Runtime port into the Owner-held Driver after Runtime initialization");
 check(main.indexOf("velaRuntimeController.attachObjectiveReviewPort(velaAgentRuntimeOwner.getObjectiveReviewPort())") !== -1, "main wires the Owner-owned objective review port into Runtime composition.");
-check(main.indexOf("velaAgentRuntimeOwner.startObjective({ message: message") !== -1, "the production composer enters the Owner-held AgentDriver objective path");
+check(main.indexOf("provider: sourcePort.provider") !== -1 && read("client/js/vela/velaConversationOwnership.js").includes("owner.startObjective(input)"), "the production composer enters the Owner-held AgentDriver objective path");
 check(!/suspendedReview|reviewResolution|resolveObjectiveReview|resolveReview/.test(main), "main holds no objective review identity, record, or resolution truth.");
 const driverSource = read("client/js/vela/velaAgentDriver.js");
 check(!/PlanController|ExecutionAdapter|confirmBoundPlan|executeStep|TaskRun|Host payload/.test(driverSource), "AgentDriver review contract imports no execution or Host authority owner");
@@ -77,7 +77,7 @@ check(main.indexOf("window.velaAgentRuntimeOwner") === -1 && main.indexOf("windo
 const ownerCommitStart = main.indexOf("            velaAgentRuntimeOwner = owner;");
 check(ownerCommitStart !== -1 && main.indexOf("            resetActiveCompositionDiagnostics();", ownerCommitStart) > ownerCommitStart, "cold/new Owner commit resets diagnostics before exposing new Observation truth");
 check(shutdown.indexOf("resetActiveCompositionDiagnostics()") !== -1 && shutdown.indexOf("resetActiveCompositionDiagnostics()") < shutdown.indexOf("velaAgentRuntimeOwner.dispose()"), "shutdown invalidates diagnostic Promise and truth before Owner disposal");
-check(main.indexOf("velaAgentRuntimeOwner.refreshActiveComposition()") !== -1 && main.indexOf("velaAgentRuntimeOwner.cancelActiveCompositionRefresh()") !== -1, "diagnostics delegates only to focused production Owner operations");
+check(main.indexOf("sourceOwner.refreshActiveComposition()") !== -1 && main.indexOf("source.owner.cancelActiveCompositionRefresh()") !== -1, "diagnostics delegates only to focused production Owner operations");
 check(main.indexOf("VelaActiveCompositionDiagnostics", main.indexOf("VelaActiveCompositionDiagnostics") + 1) !== -1 && main.indexOf("CapabilityRuntime.cancel", 0) === -1, "diagnostics exposes no arbitrary Capability Runtime cancellation path");
 
 console.log("test-vela-agent-production-lifecycle: " + assertions + " assertions passed");

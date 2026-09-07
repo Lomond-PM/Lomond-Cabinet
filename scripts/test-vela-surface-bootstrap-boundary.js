@@ -136,7 +136,7 @@ async function run() {
     check(test.context.__testHooks.runtime() === test.runtime && test.runtime.getStatus().state === "ready", "A successful Runtime bootstrap remains ready while Surface starts separately.");
     check(test.calls.surfaceCreate === 1 && test.calls.surfaceMount === 1 && test.slot.children.length === 5, "A complete Surface dependency graph creates the fixed five actions once.");
     check(test.calls.agentOwnerCreate === 1 && test.calls.agentOwnerActivate === 1 && test.context.__testHooks.agentOwner() !== null, "Successful Runtime commit creates and activates exactly one sibling Agent owner before Surface mount.");
-    check(test.calls.surfaceOptions.agentProjection === test.context.__testHooks.agentOwner().getCurrentProjection(), "Surface receives only the current optional Projection from the main-owned Agent owner.");
+    check(test.calls.surfaceOptions.agentProjection === test.calls.surfaceOptions.sourcePort.agentProjection && !test.calls.surfaceOptions.runtime, "Surface receives only the source-bound projection port, not the trusted Runtime.");
     check(test.context.__testHooks.surfaceState() === "ready" && test.context.__testHooks.runtimeError() === null, "Successful Surface bootstrap does not create a Runtime diagnostic.");
     check(!Object.prototype.hasOwnProperty.call(test.calls.runtimeOptions, "activationPolicy") && test.runtime.getStatus().activationPolicy === test.context.window.VelaActivationPolicy.getPolicy() && test.calls.surfaceOptions.ActivationPolicy === test.context.window.VelaActivationPolicy, "Runtime closes over and Surface receives the same source-owned activation policy identity without a caller injection option.");
     test.context.__testHooks.initializeSurface();

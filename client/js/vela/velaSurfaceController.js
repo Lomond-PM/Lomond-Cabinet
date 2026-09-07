@@ -7,6 +7,9 @@
 }(typeof self !== "undefined" ? self : this, function () {
     "use strict";
     function create(options) {
+        var sourcePort = options && options.sourcePort;
+        var sourceSubscription = null;
+        var renderedReviewCommands = null;
         var surface = options && options.surface;
         var provider = options && options.provider;
         var confirmation = options && options.confirmation;
@@ -80,9 +83,17 @@
             catch (error) { reportAgentProjectionError(error, "unsubscribe"); }
             return true;
         }
+        function subscribeSource() {
+            if (!sourcePort || sourceSubscription || disposed || suspended || !mounted || !sourcePort.isLive()) { return; }
+            sourceSubscription = sourcePort.subscribe(synchronize);
+        }
+        function unsubscribeSource() {
+            if (sourceSubscription) { sourceSubscription.unsubscribe(); sourceSubscription = null; }
+            renderedReviewCommands = null;
+        }
         function subscribePresentationEvents() {
             var token;
-            if (!runtime || presentationSubscription || disposed || suspended || !mounted || typeof presentation.applyPresentationEvent !== "function") { return false; }
+            if (sourcePort || !runtime || presentationSubscription || disposed || suspended || !mounted || typeof presentation.applyPresentationEvent !== "function") { return false; }
             token = { active: true };
             try {
                 presentationSubscription = runtime.subscribePresentationEvents(function (event) {
@@ -155,16 +166,17 @@
             var action;
             var projection;
             var authorityState = null;
-            if (disposed || suspended || !elements) { return; }
+            if (disposed || suspended || !elements || (sourcePort && !sourcePort.isLive())) { return; }
             providerState = provider.getState();
             confirmationState = presentation.filterConfirmationState(confirmation.getState());
-            snapshot = presentation.apply(providerState);
-            snapshot = presentation.applyConfirmation(confirmationState, snapshot);
+            snapshot = sourcePort ? presentation.getSnapshot() : presentation.apply(providerState);
+            if (!sourcePort) { snapshot = presentation.applyConfirmation(confirmationState, snapshot); }
             transcript.render(snapshot, presentation.getTransientSnapshot());
             action = actionState(providerState, confirmationState);
             projection = PresentationModel.projectSurfaceState(providerState, confirmationState, elements.composer.value, experimentalEnabled, experimentalState, activationPolicy, experimentalDisabledReason);
             if (!experimentalEnabled) { action = "send"; }
             composer.render(action, experimentalEnabled);
+            renderedReviewCommands = sourcePort && action === "confirm" ? confirmation.captureReviewCommands() : null;
             confirmationView.render(action, confirmationState);
             if (authorityButton) {
                 authorityState = authority.getState();
@@ -191,13 +203,12 @@
             providerState = provider.getState();
             if (!providerState || providerState.state !== "pending") { Promise.resolve(operation).then(function () {}, function () {}); return; }
             generation += 1;
-            presentation.begin(message);
-            presentation.clearConfirmationTerminal();
+            if (!sourcePort) { presentation.begin(message); presentation.clearConfirmationTerminal(); }
             composer.clearSubmittedMessage(message);
             synchronize();
             complete(operation, generation);
         }
-        function cancel() { if (disposed || suspended || !mounted) { return; } generation += 1; provider.cancel(); synchronize(); }
+        function cancel() { if (disposed || suspended || !mounted || (sourcePort && !sourcePort.isLive())) { return; } generation += 1; provider.cancel(); synchronize(); }
         function experimentalSnapshot() { return Object.freeze({ state: experimentalState, enabled: experimentalEnabled, acknowledged: experimentalConfig.acknowledged === true, endpoint: experimentalConfig.endpoint, model: experimentalConfig.model, readiness: readiness }); }
         function supersededSnapshot() { var snapshot = experimentalSnapshot(); return Object.freeze({ state: snapshot.state, enabled: snapshot.enabled, acknowledged: snapshot.acknowledged, endpoint: snapshot.endpoint, model: snapshot.model, readiness: snapshot.readiness, code: "readiness-superseded" }); }
         function notifyExperimental() { onExperimentalStateChange(experimentalSnapshot()); }
@@ -234,12 +245,12 @@
             synchronize();
             notifyExperimental();
             return Promise.resolve(provider.check({ endpoint: experimentalConfig.endpoint, model: experimentalConfig.model })).then(function (result) {
-                if (disposed || capturedGeneration !== generation || experimentalState !== "checking") { return supersededSnapshot(); }
+                if (disposed || (sourcePort && !sourcePort.isLive()) || capturedGeneration !== generation || experimentalState !== "checking") { return supersededSnapshot(); }
                 if (!result || result.ready !== true || result.modelId !== experimentalConfig.model) { experimentalState = result && result.code || "readiness-response-invalid"; readiness = result || null; }
                 else { experimentalState = "experimental-ready"; experimentalEnabled = true; readiness = result; }
                 synchronize(); notifyExperimental(); return experimentalSnapshot();
             }, function (error) {
-                if (!disposed && capturedGeneration === generation && experimentalState === "checking") { experimentalState = error && error.localReadinessCode || "readiness-network-failed"; experimentalEnabled = false; readiness = null; synchronize(); notifyExperimental(); }
+                if (!disposed && (!sourcePort || sourcePort.isLive()) && capturedGeneration === generation && experimentalState === "checking") { experimentalState = error && error.localReadinessCode || "readiness-network-failed"; experimentalEnabled = false; readiness = null; synchronize(); notifyExperimental(); }
                 return capturedGeneration !== generation ? supersededSnapshot() : experimentalSnapshot();
             });
         }
@@ -257,8 +268,8 @@
             synchronize(); notifyExperimental(); return true;
         }
         function review() { var operation; if (disposed || suspended || !mounted) { return; } generation += 1; try { operation = confirmation.review(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
-        function approve() { var operation; if (disposed || suspended || !mounted) { return; } generation += 1; try { operation = confirmation.approve(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
-        function reject() { var operation; if (disposed || suspended || !mounted) { return; } generation += 1; try { operation = confirmation.reject(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
+        function approve() { var operation; if (disposed || suspended || !mounted) { return; } generation += 1; try { operation = sourcePort ? (renderedReviewCommands && renderedReviewCommands.approve()) : confirmation.approve(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
+        function reject() { var operation; if (disposed || suspended || !mounted) { return; } generation += 1; try { operation = sourcePort ? (renderedReviewCommands && renderedReviewCommands.reject()) : confirmation.reject(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
         function authorityClick() {
             var state;
             var operation;
@@ -281,12 +292,12 @@
                 authorityButton.addEventListener("click", authorityClick);
                 elements.actionSlot.appendChild(authorityButton);
             }
-            mounted = true; subscribeAgentProjection(); subscribePresentationEvents(); synchronize(); return true;
+            mounted = true; subscribeAgentProjection(); subscribePresentationEvents(); subscribeSource(); if (sourcePort) { sourcePort.synchronize(); } synchronize(); return true;
         }
-        function suspend() { if (disposed || !mounted || suspended) { return false; } suspended = true; generation += 1; unsubscribeAgentProjection(); unsubscribePresentationEvents(); return true; }
-        function resume() { if (disposed || !mounted || !suspended) { return false; } suspended = false; subscribeAgentProjection(); subscribePresentationEvents(); synchronize(); return true; }
+        function suspend() { if (disposed || !mounted || suspended) { return false; } suspended = true; generation += 1; unsubscribeAgentProjection(); unsubscribePresentationEvents(); unsubscribeSource(); return true; }
+        function resume() { if (disposed || !mounted || !suspended) { return false; } suspended = false; subscribeAgentProjection(); subscribePresentationEvents(); subscribeSource(); if (sourcePort) { sourcePort.synchronize(); } synchronize(); return true; }
         function refreshLocale() { if (disposed || !mounted) { return; } transcript.refreshLocale(); composer.refreshLocale(); confirmationView.refreshLocale(); synchronize(); }
-        function dispose() { if (disposed) { return false; } disposed = true; generation += 1; unsubscribeAgentProjection(); unsubscribePresentationEvents(); if (authorityButton) { authorityButton.removeEventListener("click", authorityClick); } if (transcript) { transcript.dispose(); } if (composer) { composer.dispose(); } if (confirmationView) { confirmationView.dispose(); } return true; }
+        function dispose() { if (disposed) { return false; } disposed = true; generation += 1; unsubscribeAgentProjection(); unsubscribePresentationEvents(); unsubscribeSource(); if (authorityButton) { authorityButton.removeEventListener("click", authorityClick); } if (transcript) { transcript.dispose(); } if (composer) { composer.dispose(); } if (confirmationView) { confirmationView.dispose(); } return true; }
         return Object.freeze({ mount: mount, suspend: suspend, resume: resume, refreshLocale: refreshLocale, configureExperimental: configureExperimental, enableExperimental: enableExperimental, disableExperimental: disableExperimental, getExperimentalState: experimentalSnapshot, getElementsForTest: function () { return elements; }, getAgentProjectionSnapshotForTest: function () { return latestAgentProjectionSnapshot; }, dispose: dispose });
     }
     return Object.freeze({ create: create });
