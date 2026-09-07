@@ -9,6 +9,8 @@
     var velaRuntimeController = null;
     var velaAgentRuntimeOwner = null;
     var velaConversationBinding = null;
+    var velaConversationComposition = null;
+    var velaCompositionGeneration = null;
     var velaRuntimeInitTransaction = null;
     var velaRuntimeLastAttemptCoreGeneration = null;
     var velaSurfaceShell = null;
@@ -4082,41 +4084,27 @@
     function initializeVelaAgentRuntimeOwner() {
         var owner;
         var ownerOptions;
-        var observationReadPort;
         if (panelShuttingDown) { return null; }
-        if (velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.isDisposed === "function" && !velaAgentRuntimeOwner.isDisposed()) {
-            return velaAgentRuntimeOwner;
-        }
         if (!window.VelaAgentRuntime || !window.VelaAgentRuntimeOwner || typeof window.VelaAgentRuntimeOwner.createOwner !== "function") {
-            reportVelaAgentRuntimeError({ code: "AGENT_RUNTIME_UNAVAILABLE" }, "dependency");
+            if (!velaAgentRuntimeOwner) { reportVelaAgentRuntimeError({ code: "AGENT_RUNTIME_UNAVAILABLE" }, "dependency"); }
             return null;
         }
         try {
             ownerOptions = {
-                onListenerError: function (error) { reportVelaAgentRuntimeError(error, "listener"); }
+                onListenerError: function (error) { if (owner === velaAgentRuntimeOwner) { reportVelaAgentRuntimeError(error, "listener"); } }
             };
             if (window.VelaAgentCapabilityRuntime && window.VelaActiveCompositionCapability && window.VelaAgentObservationRuntime) {
                 ownerOptions.AgentCapabilityRuntime = window.VelaAgentCapabilityRuntime;
                 ownerOptions.ActiveCompositionCapability = window.VelaActiveCompositionCapability;
                 ownerOptions.AgentObservationRuntime = window.VelaAgentObservationRuntime;
-                if (velaRuntimeController && typeof velaRuntimeController.getObservationReadPort === "function") {
-                    observationReadPort = velaRuntimeController.getObservationReadPort();
-                    if (observationReadPort) {
-                        ownerOptions.observationReadPort = observationReadPort;
-                    }
-                }
             }
             owner = window.VelaAgentRuntimeOwner.createOwner(ownerOptions);
-            owner.activate();
-            velaAgentRuntimeOwner = owner;
-            resetActiveCompositionDiagnostics();
-            velaAgentRuntimeLastErrorCode = null;
             return owner;
         } catch (error) {
             if (owner && typeof owner.dispose === "function") {
                 try { owner.dispose(); } catch (ignored) {}
             }
-            reportVelaAgentRuntimeError(error, "initialize");
+            if (!velaAgentRuntimeOwner) { reportVelaAgentRuntimeError(error, "initialize"); }
             return null;
         }
     }
@@ -4147,10 +4135,9 @@
     }
 
     function disposeVelaRuntimeCandidate(transaction) {
-        if (transaction && transaction.ownership && window.VelaConversationOwnership) { window.VelaConversationOwnership.dispose(transaction.ownership); }
-        if (!transaction || !transaction.candidate || transaction.candidateDisposed) { return false; }
-        transaction.candidateDisposed = true;
-        try { transaction.candidate.dispose(); } catch (ignored) {}
+        if (!transaction || !transaction.composition) { return false; }
+        transaction.composition.dispose();
+        transaction.composition = null;
         return true;
     }
 
@@ -4163,7 +4150,7 @@
     function invalidateVelaRuntimeInitForCoreSnapshot(snapshot) {
         var transaction = velaRuntimeInitTransaction;
         var invalidated = false;
-        if (velaConversationBinding && (!snapshot || snapshot.hostReady !== true || snapshot.generation !== velaConversationBinding.coreGeneration || panelLifecycleGeneration !== velaConversationBinding.panelGeneration)) {
+        if (velaCompositionGeneration && (!snapshot || snapshot.hostReady !== true || snapshot.generation !== velaCompositionGeneration.coreGeneration || panelLifecycleGeneration !== velaCompositionGeneration.panelGeneration)) {
             disposeCommittedVelaBundle();
             invalidated = true;
         }
@@ -4174,14 +4161,12 @@
     }
 
     function invalidateVelaConversation() {
-        var binding = velaConversationBinding;
-        velaConversationBinding = null;
-        if (binding) { window.VelaConversationOwnership.dispose(binding.handle); }
+        disposeCommittedVelaBundle();
     }
 
     function velaConversationSourcePort(conversation) {
-        if (!conversation) { throw new Error("CONVERSATION_OWNER_STALE"); }
-        return window.VelaConversationOwnership.createSourcePort(conversation.handle, function () { return { endpoint: VelaProviderEndpoint, model: VelaProviderModel }; });
+        if (!conversation || !velaConversationComposition) { throw new Error("CONVERSATION_OWNER_STALE"); }
+        return velaConversationComposition.getSourcePort(conversation.record);
     }
 
     function currentVelaConversation() {
@@ -4196,104 +4181,75 @@
         return binding;
     }
 
-    function disposeCommittedVelaBundle() {
-        // Revoke correlation ownership before any lifecycle callback can run.
-        invalidateVelaConversation();
+    function unbindVelaConversationSurface() {
         if (velaSurfaceController) { try { velaSurfaceController.dispose(); } catch (ignoredSurface) {} velaSurfaceController = null; }
         clearVelaSurfaceActionSlot();
         velaSurfaceBootstrapState = "idle";
-        if (velaRuntimeController) { try { velaRuntimeController.dispose(); } catch (ignoredRuntime) {} velaRuntimeController = null; }
-        if (velaAgentRuntimeOwner) { resetActiveCompositionDiagnostics(); try { velaAgentRuntimeOwner.dispose(); } catch (ignoredOwner) {} velaAgentRuntimeOwner = null; }
+    }
+
+    function disposeCommittedVelaBundle() {
+        var composition = velaConversationComposition;
+        // Composition invalidates every source before disposing the selected view.
+        if (composition) { composition.dispose(); }
+        velaConversationComposition = null;
+        velaCompositionGeneration = null;
     }
 
     function initializeVelaRuntime(coreSnapshot) {
         var snapshot = coreSnapshot || coreBootstrapSnapshot;
         var coreGeneration = snapshot && typeof snapshot.generation === "number" ? snapshot.generation : 0;
-        var committedStatus = velaRuntimeController && typeof velaRuntimeController.getStatus === "function" ? velaRuntimeController.getStatus() : null;
         var transaction;
-        if (panelShuttingDown || !snapshot || snapshot.hostReady !== true || !window.VelaCepModuleLoader || typeof window.VelaCepModuleLoader.load !== "function") {
-            return null;
-        }
-        if (velaRuntimeController && committedStatus && committedStatus.state === "ready" && committedStatus.disposed !== true && currentVelaConversation()) {
-            initializeVelaAgentRuntimeOwner();
-            initializeVelaSurfaceController();
-            return null;
-        }
-        if (velaRuntimeController) {
-            disposeCommittedVelaBundle();
-        }
-        if (velaRuntimeInitTransaction) {
-            if (velaRuntimeInitTransaction.panelGeneration === panelLifecycleGeneration && velaRuntimeInitTransaction.coreGeneration === coreGeneration) {
-                return velaRuntimeInitTransaction.promise;
-            }
-            disposeVelaRuntimeCandidate(velaRuntimeInitTransaction);
-            clearVelaRuntimeInitTransaction(velaRuntimeInitTransaction);
-        }
-        if (velaRuntimeLastAttemptCoreGeneration === coreGeneration) {
-            return null;
-        }
+        if (panelShuttingDown || !snapshot || snapshot.hostReady !== true || !window.VelaCepModuleLoader || typeof window.VelaCepModuleLoader.load !== "function") { return null; }
+        invalidateVelaRuntimeInitForCoreSnapshot(snapshot);
+        if (velaConversationComposition) { initializeVelaSurfaceController(); return null; }
+        if (velaRuntimeInitTransaction) { return velaRuntimeInitTransaction.promise; }
+        if (velaRuntimeLastAttemptCoreGeneration === coreGeneration) { return null; }
         velaRuntimeLastAttemptCoreGeneration = coreGeneration;
-        transaction = {
-            panelGeneration: panelLifecycleGeneration,
-            coreGeneration: coreGeneration,
-            candidate: null,
-            candidateDisposed: false,
-            owner: null,
-            session: null,
-            ownership: null,
-            promise: null
-        };
+        transaction = { panelGeneration: panelLifecycleGeneration, coreGeneration: coreGeneration, composition: null, promise: null };
         velaRuntimeInitTransaction = transaction;
+        function current() {
+            return !panelShuttingDown && velaRuntimeInitTransaction === transaction && transaction.panelGeneration === panelLifecycleGeneration && coreBootstrapSnapshot && coreBootstrapSnapshot.generation === transaction.coreGeneration && coreBootstrapSnapshot.hostReady === true;
+        }
         transaction.promise = Promise.resolve(window.VelaCepModuleLoader.load()).then(function () {
-            var owner;
-            var exactAgentSession;
-            if (panelShuttingDown || velaRuntimeInitTransaction !== transaction || transaction.panelGeneration !== panelLifecycleGeneration || !coreBootstrapSnapshot || coreBootstrapSnapshot.generation !== transaction.coreGeneration || coreBootstrapSnapshot.hostReady !== true || !window.VelaRuntime || typeof window.VelaRuntime.createRuntime !== "function") {
-                throw { code: "LIFECYCLE_BLOCKED" };
-            }
+            if (!current() || !window.VelaRuntime || typeof window.VelaRuntime.createRuntime !== "function") { throw { code: "LIFECYCLE_BLOCKED" }; }
             if (!getVelaActivationPolicy()) { throw { code: "VELA_ACTIVATION_POLICY_UNAVAILABLE" }; }
-            owner = initializeVelaAgentRuntimeOwner();
-            exactAgentSession = owner && typeof owner.getSessionRuntime === "function" ? owner.getSessionRuntime() : null;
-            if (!exactAgentSession) { throw { code: "AGENT_RUNTIME_UNAVAILABLE" }; }
-            transaction.owner = owner;
-            transaction.session = exactAgentSession;
-            transaction.candidate = window.VelaRuntime.createRuntime({ invokeHost: invokeVelaHost, exactAgentSession: exactAgentSession });
-            return transaction.candidate.initialize();
-        }).then(function (result) {
-            if (panelShuttingDown || velaRuntimeInitTransaction !== transaction || transaction.panelGeneration !== panelLifecycleGeneration || !coreBootstrapSnapshot || coreBootstrapSnapshot.generation !== transaction.coreGeneration || coreBootstrapSnapshot.hostReady !== true || !transaction.candidate || transaction.candidate.getStatus().state !== "ready") {
-                throw { code: "LIFECYCLE_BLOCKED" };
-            }
-            if (transaction.owner !== velaAgentRuntimeOwner || !window.VelaConversationOwnership) { throw { code: "CONVERSATION_BINDING_INVALID" }; }
-            transaction.ownership = window.VelaConversationOwnership.createOwnership({ agentOwner: transaction.owner, session: transaction.session, runtime: transaction.candidate, presentation: window.VelaPresentationModel.create() }, function (bytes) { window.crypto.getRandomValues(bytes); });
-            velaRuntimeController = transaction.candidate;
+            var composition = window.VelaConversationComposition.createComposition({
+                Ownership: window.VelaConversationOwnership,
+                PresentationModel: window.VelaPresentationModel,
+                createOwner: initializeVelaAgentRuntimeOwner,
+                createRuntime: function (exactAgentSession) { return window.VelaRuntime.createRuntime({ invokeHost: invokeVelaHost, exactAgentSession: exactAgentSession }); },
+                fillRandomValues: function (bytes) { window.crypto.getRandomValues(bytes); },
+                getConfig: function () { return { endpoint: VelaProviderEndpoint, model: VelaProviderModel }; },
+                unbindSurface: function () { if (velaConversationComposition === composition) { unbindVelaConversationSurface(); } },
+                onSelectionChanged: function (record, association) {
+                    if (velaConversationComposition !== composition) { return; }
+                    velaConversationBinding = association ? Object.freeze({ handle: association.handle, record: record, panelGeneration: transaction.panelGeneration, coreGeneration: transaction.coreGeneration }) : null;
+                    velaAgentRuntimeOwner = association ? association.agentOwner : null;
+                    velaRuntimeController = association ? association.runtime : null;
+                    resetActiveCompositionDiagnostics();
+                    velaAgentRuntimeLastErrorCode = null;
+                    if (record) { initializeVelaSurfaceController(); }
+                }
+            });
+            transaction.composition = composition;
+            return composition.createRecord();
+        }).then(function (record) {
+            if (!current()) { throw { code: "LIFECYCLE_BLOCKED" }; }
+            velaConversationComposition = transaction.composition;
+            velaCompositionGeneration = Object.freeze({ panelGeneration: transaction.panelGeneration, coreGeneration: transaction.coreGeneration });
             velaRuntimeLastErrorCode = null;
             velaRuntimeStatusRevision += 1;
-            if (velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.attachObservationReadPort === "function") {
-                velaAgentRuntimeOwner.attachObservationReadPort(velaRuntimeController.getObservationReadPort());
-            }
-            if (velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.attachAgentDriverRuntimePort === "function" && typeof velaRuntimeController.getAgentDriverRuntimePort === "function") {
-                velaAgentRuntimeOwner.attachAgentDriverRuntimePort(velaRuntimeController.getAgentDriverRuntimePort());
-            }
-            if (velaAgentRuntimeOwner && typeof velaAgentRuntimeOwner.getObjectiveReviewPort === "function" && typeof velaRuntimeController.attachObjectiveReviewPort === "function") {
-                velaRuntimeController.attachObjectiveReviewPort(velaAgentRuntimeOwner.getObjectiveReviewPort());
-            }
-            if (panelShuttingDown || velaRuntimeInitTransaction !== transaction || transaction.panelGeneration !== panelLifecycleGeneration || !coreBootstrapSnapshot || coreBootstrapSnapshot.hostReady !== true || coreBootstrapSnapshot.generation !== transaction.coreGeneration || transaction.owner !== velaAgentRuntimeOwner || !window.VelaConversationOwnership.isLive(transaction.ownership)) { throw { code: "LIFECYCLE_BLOCKED" }; }
-            velaConversationBinding = Object.freeze({ handle: transaction.ownership, panelGeneration: transaction.panelGeneration, coreGeneration: transaction.coreGeneration });
-            velaConversationSourcePort(velaConversationBinding);
-            transaction.candidate = null;
+            velaConversationComposition.select(record);
+            transaction.composition = null;
             clearVelaRuntimeInitTransaction(transaction);
-            initializeVelaSurfaceController();
             configureVelaExperimentalSession();
             refreshVelaExperimentalSettings();
-            return result;
+            return record;
         }).then(null, function (error) {
             var isCurrent = velaRuntimeInitTransaction === transaction;
-            if (transaction.candidate && velaRuntimeController === transaction.candidate) { disposeCommittedVelaBundle(); }
+            if (transaction.composition && velaConversationComposition === transaction.composition) { disposeCommittedVelaBundle(); }
             disposeVelaRuntimeCandidate(transaction);
-            if (isCurrent) {
-                clearVelaRuntimeInitTransaction(transaction);
-                reportVelaRuntimeError(error);
-                refreshVelaExperimentalSettings();
-            }
+            if (isCurrent) { clearVelaRuntimeInitTransaction(transaction); reportVelaRuntimeError(error); refreshVelaExperimentalSettings(); }
             return null;
         });
         return transaction.promise;
@@ -4353,9 +4309,9 @@
                 ConfirmationView: window.VelaConfirmationView,
                 ActivationPolicy: window.VelaActivationPolicy,
                 sourcePort: sourcePort,
-                onExperimentalStateChange: function (snapshot) { if (sourcePort.isLive()) { refreshVelaExperimentalSettings(snapshot); } },
+                onExperimentalStateChange: function (snapshot) { if (velaSurfaceController === controller && sourcePort.isLive()) { refreshVelaExperimentalSettings(snapshot); } },
                 agentProjection: sourcePort.agentProjection,
-                onAgentProjectionError: function (error, phase) { if (sourcePort.isLive()) { reportVelaAgentRuntimeError(error, phase || "surface"); } },
+                onAgentProjectionError: function (error, phase) { if (velaSurfaceController === controller && sourcePort.isLive()) { reportVelaAgentRuntimeError(error, phase || "surface"); } },
                 provider: sourcePort.provider,
                 confirmation: sourcePort.confirmation,
                 authority: sourcePort.authority
@@ -9190,8 +9146,8 @@
         if (velaSurfaceShell) {
             velaSurfaceShell.suspend();
         }
-        if (velaRuntimeController) {
-            velaRuntimeController.suspend();
+        if (velaConversationComposition) {
+            velaConversationComposition.suspend();
             velaRuntimeStatusRevision += 1;
         }
         stopSelectionPolling();
@@ -9206,7 +9162,7 @@
         }
         panelSuspended = false;
         if (velaRuntimeController) {
-            velaRuntimeController.resume();
+            velaConversationComposition.resume();
             velaRuntimeStatusRevision += 1;
         }
         if (velaSurfaceController && byId("homeView") && byId("homeView").classList.contains("is-active")) {
@@ -9249,16 +9205,7 @@
             velaSurfaceShell.dispose();
             velaSurfaceShell = null;
         }
-        if (velaRuntimeController) {
-            velaRuntimeController.dispose();
-            velaRuntimeController = null;
-            velaRuntimeStatusRevision += 1;
-        }
-        if (velaAgentRuntimeOwner) {
-            resetActiveCompositionDiagnostics();
-            velaAgentRuntimeOwner.dispose();
-            velaAgentRuntimeOwner = null;
-        }
+        velaRuntimeStatusRevision += 1;
         clearProceduralAppearanceSourceDebounce();
         stopSelectionPolling();
         stopRegistryStatePolling();

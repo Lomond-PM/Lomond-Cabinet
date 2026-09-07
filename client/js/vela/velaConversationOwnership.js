@@ -66,7 +66,7 @@
         return true;
     }
     // Composition-root only: the view receives the returned operations, never binding.
-    function createSourcePort(handle, getConfig) {
+    function createSourcePort(handle, getConfig, objectiveAdmission) {
         var binding = readBinding(handle);
         var record = records.get(handle);
         if (record.port) { return record.port; }
@@ -100,7 +100,14 @@
         function settle(operation) {
             return Promise.resolve(operation).then(function (result) { requireSource(); synchronize(); return result; }, function (error) { requireSource(); synchronize(); throw error; });
         }
-        function command(method) { return function () { requireSource(); var result = runtime[method](); synchronize(); return settle(result); }; }
+        function continuation(action) { return objectiveAdmission ? objectiveAdmission.continue(action) : action(); }
+        function command(method) {
+            return function () {
+                requireSource();
+                function action() { var result = runtime[method](); synchronize(); return settle(result); }
+                return /^(reviewProviderProposal|approveActiveCandidate|rejectActiveCandidate)$/.test(method) ? continuation(action) : action();
+            };
+        }
         function reviewIdentity() {
             var reviewPort = typeof owner.getObjectiveReviewPort === "function" ? owner.getObjectiveReviewPort() : null;
             var review = reviewPort && reviewPort.getProjection();
@@ -142,18 +149,20 @@
                 check: function (config) { requireSource(); return settle(runtime.checkProviderReadiness(config)); },
                 send: function (message) {
                     requireSource();
-                    var config = getConfig();
-                    var input = { message: message, endpoint: config.endpoint, model: config.model };
-                    var operation;
-                    initiating = true;
-                    try {
-                        operation = typeof owner.startObjective === "function" ? owner.startObjective(input) : runtime.sendProviderMessage(input);
-                        if (providerState().state === "pending") { model.begin(message); model.clearConfirmationTerminal(); }
-                    } finally { initiating = false; }
-                    synchronize();
-                    return settle(operation);
+                    return (objectiveAdmission ? objectiveAdmission.start : function (action) { return action(); })(function () {
+                        var config = getConfig();
+                        var input = { message: message, endpoint: config.endpoint, model: config.model };
+                        var operation;
+                        initiating = true;
+                        try {
+                            operation = typeof owner.startObjective === "function" ? owner.startObjective(input) : runtime.sendProviderMessage(input);
+                            if (providerState().state === "pending") { model.begin(message); model.clearConfirmationTerminal(); }
+                        } finally { initiating = false; }
+                        synchronize();
+                        return settle(operation);
+                    });
                 },
-                cancel: function () { requireSource(); var result = typeof owner.cancelObjective === "function" ? owner.cancelObjective() : runtime.cancelProviderRequest(); synchronize(); return result; }
+                cancel: function () { requireSource(); return continuation(function () { var result = typeof owner.cancelObjective === "function" ? owner.cancelObjective() : runtime.cancelProviderRequest(); synchronize(); return result; }); }
             }),
             confirmation: Object.freeze({ getState: confirmationState, review: command("reviewProviderProposal"), captureReviewCommands: captureReviewCommands,
                 approve: function () { fail("CONVERSATION_REVIEW_BINDING_REQUIRED"); }, reject: function () { fail("CONVERSATION_REVIEW_BINDING_REQUIRED"); } }),
