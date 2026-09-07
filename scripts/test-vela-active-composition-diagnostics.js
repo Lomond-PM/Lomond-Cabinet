@@ -38,6 +38,7 @@ function observation(id, available) {
         console: { warn() {} },
         CSInterface: function CSInterface() {},
         __testOwner: owner,
+        VelaConversationOwnership: { isLive: () => true },
         VelaRuntime: { createRuntime() { runtimeCreates += 1; } },
         VelaAgentRuntimeOwner: { createOwner() { ownerCreates += 1; } },
         VelaCepModuleLoader: Object.freeze({ getStatus() { return Object.freeze({ state: "idle" }); } })
@@ -45,6 +46,7 @@ function observation(id, available) {
     context.window = context;
     vm.createContext(context);
     const prefix = source.slice(0, cutoff)
+        .replace("var velaConversationBinding = null;", "var velaConversationBinding = {handle:{}};")
         .replace("var velaAgentRuntimeOwner = null;", "var velaAgentRuntimeOwner = window.__testOwner || null;") +
         "var panelShuttingDown = false; window.__replaceDiagnosticsOwner = function (next) { velaAgentRuntimeOwner = next; resetActiveCompositionDiagnostics(); }; window.__invalidateDiagnostics = resetActiveCompositionDiagnostics; }());";
     vm.runInContext(prefix, context, { filename: "main-active-composition-diagnostics-prefix.js" });
