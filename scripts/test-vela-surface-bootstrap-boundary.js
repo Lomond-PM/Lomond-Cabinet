@@ -12,7 +12,7 @@ const end = source.indexOf("    function playAnimation(", start);
 let assertions = 0;
 
 function check(value, message) { assertions += 1; assert.ok(value, message); }
-async function flush() { for (let index = 0; index < 8; index += 1) await Promise.resolve(); }
+async function flush() { for (let index = 0; index < 16; index += 1) await Promise.resolve(); }
 
 function actionSlot() {
     return {
@@ -39,6 +39,7 @@ function harness(options) {
                 return options.runtimeFailure && ordinal === 1 ? Promise.reject({ code: "SCHEMA_VALIDATION_FAILED" }) : Promise.resolve({ ok: true });
             },
             getStatus() { return Object.freeze({ state: disposed ? "disposed" : "ready", initialized: !disposed, disposed, activationPolicy: policy }); },
+            getAgentDriverRuntimePort() { return {}; }, attachObjectiveReviewPort() { return true; },
             getObservationReadPort() { return Object.freeze({ capture() {} }); },
             dispose() { if (disposed) return false; if (options.onDispose) options.onDispose("runtime"); disposed = true; calls.runtimeDispose += 1; return true; },
             sendProviderMessage() {}, checkProviderReadiness() {}, cancelProviderRequest() {}, getProviderSurfaceState() { return Object.freeze({ state: "idle" }); },
@@ -76,6 +77,8 @@ function harness(options) {
         velaRuntimeController: null,
         velaAgentRuntimeOwner: null,
         velaConversationBinding: null,
+        velaConversationComposition: null,
+        velaCompositionGeneration: null,
         velaSurfaceShell: { getElementsForTest() { return { actionSlot: slot }; } },
         velaSurfaceController: null,
         velaSurfaceBootstrapState: "idle",
@@ -94,6 +97,7 @@ function harness(options) {
         invokeVelaHost() {}
     };
     context.window = context;
+    context.window.VelaConversationComposition = require("../client/js/vela/velaConversationComposition");
     context.window.VelaConversationOwnership = require("../client/js/vela/velaConversationOwnership");
     context.window.VelaCepModuleLoader = { load() { return options.loaderFailure ? Promise.reject({ code: "RUNTIME_CAPABILITY_UNAVAILABLE" }) : Promise.resolve(); } };
     context.window.VelaActivationPolicy = activationModule;
@@ -109,6 +113,8 @@ function harness(options) {
             const projection = { subscribe() { return { unsubscribe() {} }; }, getSnapshot() { return {}; } };
             return {
                 getSessionRuntime() { return session; },
+                attachAgentDriverRuntimePort() { return true; }, getObjectiveReviewPort() { return {}; },
+                getAgentDriver() { return { getSnapshot() { return { state: "idle" }; }, subscribe() { return { unsubscribe() {} }; } }; },
                 attachObservationReadPort() { return true; },
                 activate() { calls.agentOwnerActivate += 1; return true; },
                 dispose() { if (disposed) return false; if (options.onDispose) options.onDispose("owner"); disposed = true; calls.agentOwnerDispose += 1; return true; },

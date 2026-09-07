@@ -27,12 +27,12 @@ function loader(ref, observer) {
     return load;
 }
 async function flush() { for (let i = 0; i < 150; i++) await Promise.resolve(); }
-async function create(options = {}) {
-    const load = loader(options.baseline, options.reportObserver), events = [], requests = [], wires = [], waiting = [];
+function prepare(options = {}) {
+    const load = options.load || loader(options.baseline, options.reportObserver), events = [], requests = [], wires = [], waiting = [];
     let id = 0;
     const env = { ...require("../velaNodeRuntime"), randomId(kind) { return kind + "_" + String(++id).padStart(32, "0"); }, now: () => 100, setTimeout, clearTimeout, TextDecoder };
     const p = load("velaProtocol").createProtocol(env), context = load("velaContext").createContextApi(p);
-    const state = { opacity: options.opacity === undefined ? 50 : options.opacity, name: options.name || "Layer A", mutations: 0, undo: 0, verifies: 0, hostMode: options.hostMode || "normal", hold: null, verifyMode: options.verifyMode || "normal" };
+    const state = options.sharedState || { opacity: options.opacity === undefined ? 50 : options.opacity, name: options.name || "Layer A", mutations: 0, undo: 0, verifies: 0, hostMode: options.hostMode || "normal", hold: null, verifyMode: options.verifyMode || "normal" };
     const base = { hostInstanceId: "host_" + "a".repeat(48), hostReloadEpoch: 1, projectGeneration: 1 };
     const owner = load("velaAgentRuntimeOwner").createOwner({ AgentCapabilityRuntime: load("velaAgentCapabilityRuntime"), ActiveCompositionCapability: load("velaActiveCompositionCapability"), AgentObservationRuntime: load("velaAgentObservationRuntime") });
     env.fetch = async (url, input) => {
@@ -85,9 +85,10 @@ async function create(options = {}) {
         if (state.hold === "execution" && execution || state.hold === "verify" && request.operation.startsWith("observeCommitted")) waiting.push(answer); else answer();
     }
     const runtime = load("velaRuntime").createRuntime({ exactAgentSession: owner.getSessionRuntime(), environment: env, invokeHost });
-    await runtime.initialize(); owner.attachObservationReadPort(runtime.getObservationReadPort()); owner.attachAgentDriverRuntimePort(runtime.getAgentDriverRuntimePort()); runtime.attachObjectiveReviewPort(owner.getObjectiveReviewPort()); owner.activate();
+    async function initialize() { await runtime.initialize(); owner.attachObservationReadPort(runtime.getObservationReadPort()); owner.attachAgentDriverRuntimePort(runtime.getAgentDriverRuntimePort()); runtime.attachObjectiveReviewPort(owner.getObjectiveReviewPort()); owner.activate(); }
     function start(logical = false) { return owner.startObjective({ message: logical ? "把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test" : options.rename ? "把当前图层重命名为 Vela Stream Test" : "Set opacity to 60%", endpoint: "http://127.0.0.1:1234", model: "m" }); }
     function review(outcome = "approved") { const r = owner.getAgentDriver().getSnapshot().suspendedReview; return owner.resolveObjectiveReview({ reviewId: r.reviewId, revision: r.revision, outcome }); }
-    return { load, owner, runtime, state, events, requests, wires, waiting, start, review, release() { const f = waiting.shift(); if (f) f(); }, dispose() { owner.dispose(); runtime.dispose(); } };
+    return { initialize, load, owner, runtime, state, events, requests, wires, waiting, start, review, release() { const f = waiting.shift(); if (f) f(); }, dispose() { owner.dispose(); runtime.dispose(); } };
 }
-module.exports = { create, flush };
+async function create(options) { const fixture = prepare(options); await fixture.initialize(); return fixture; }
+module.exports = { create, prepare, loader, flush };
