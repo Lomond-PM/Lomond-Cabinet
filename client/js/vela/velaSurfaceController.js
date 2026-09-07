@@ -8,6 +8,7 @@
     "use strict";
     function create(options) {
         var sourcePort = options && options.sourcePort;
+        var conversationAvailability = options && options.getConversationAvailability || function () { return { busy: false, other: false }; };
         var sourceSubscription = null;
         var renderedReviewCommands = null;
         var surface = options && options.surface;
@@ -175,7 +176,8 @@
             action = actionState(providerState, confirmationState);
             projection = PresentationModel.projectSurfaceState(providerState, confirmationState, elements.composer.value, experimentalEnabled, experimentalState, activationPolicy, experimentalDisabledReason);
             if (!experimentalEnabled) { action = "send"; }
-            composer.render(action, experimentalEnabled);
+            var availability = conversationAvailability();
+            composer.render(action, experimentalEnabled, availability.busy);
             renderedReviewCommands = sourcePort && action === "confirm" ? confirmation.captureReviewCommands() : null;
             confirmationView.render(action, confirmationState);
             if (authorityButton) {
@@ -183,11 +185,13 @@
                 var authorityActive = authorityState && authorityState.active === true;
                 var authorityVisible = experimentalEnabled && action === "send" && authorityState && ["inactive", "active", "revoked", "expired", "consumed", "failed"].indexOf(authorityState.state) !== -1;
                 authorityButton.hidden = !authorityVisible;
-                authorityButton.disabled = !authorityVisible;
+                authorityButton.disabled = !authorityVisible || (availability.other && !authorityActive);
                 authorityButton.textContent = t(authorityActive ? "vela.surfaceRevokeOpacityConsent" : "vela.surfaceGrantOpacityConsent");
                 authorityButton.setAttribute("aria-label", authorityButton.textContent);
             }
             elements.statusText.textContent = authorityState && ["active", "executing", "consumed", "revoked", "expired", "failed"].indexOf(authorityState.state) !== -1 && projection.state !== "blocked" && projection.state !== "cancelled" && projection.state !== "completed" && projection.state !== "error" ? t("vela.surfaceAuthorityStatus." + authorityState.state) : projectedStatusText(projection.state, providerState && providerState.errorCode, confirmationState);
+            if (availability.other) { elements.statusText.textContent = t("vela.conversationOtherRunning"); }
+            elements.root.setAttribute("data-vela-other-conversation-active", availability.other ? "true" : "false");
             elements.root.setAttribute("data-vela-surface-state", projection.state);
             elements.statusSlot.setAttribute("data-tone", projection.tone);
             elements.statusSlot.setAttribute("data-vela-provider-state", providerState && providerState.state || "idle");
@@ -275,6 +279,7 @@
             var operation;
             if (disposed || suspended || !mounted || !experimentalEnabled || !authority) { return; }
             state = authority.getState();
+            if (conversationAvailability().other && !(state && state.active)) { return; }
             try { operation = state && state.active ? authority.revoke() : authority.grant(); }
             catch (ignored) { return; }
             generation += 1; synchronize(); complete(operation, generation);
@@ -298,7 +303,7 @@
         function resume() { if (disposed || !mounted || !suspended) { return false; } suspended = false; subscribeAgentProjection(); subscribePresentationEvents(); subscribeSource(); if (sourcePort) { sourcePort.synchronize(); } synchronize(); return true; }
         function refreshLocale() { if (disposed || !mounted) { return; } transcript.refreshLocale(); composer.refreshLocale(); confirmationView.refreshLocale(); synchronize(); }
         function dispose() { if (disposed) { return false; } disposed = true; generation += 1; unsubscribeAgentProjection(); unsubscribePresentationEvents(); unsubscribeSource(); if (authorityButton) { authorityButton.removeEventListener("click", authorityClick); } if (transcript) { transcript.dispose(); } if (composer) { composer.dispose(); } if (confirmationView) { confirmationView.dispose(); } return true; }
-        return Object.freeze({ mount: mount, suspend: suspend, resume: resume, refreshLocale: refreshLocale, configureExperimental: configureExperimental, enableExperimental: enableExperimental, disableExperimental: disableExperimental, getExperimentalState: experimentalSnapshot, getElementsForTest: function () { return elements; }, getAgentProjectionSnapshotForTest: function () { return latestAgentProjectionSnapshot; }, dispose: dispose });
+        return Object.freeze({ refreshConversationState: synchronize, mount: mount, suspend: suspend, resume: resume, refreshLocale: refreshLocale, configureExperimental: configureExperimental, enableExperimental: enableExperimental, disableExperimental: disableExperimental, getExperimentalState: experimentalSnapshot, getElementsForTest: function () { return elements; }, getAgentProjectionSnapshotForTest: function () { return latestAgentProjectionSnapshot; }, dispose: dispose });
     }
     return Object.freeze({ create: create });
 }));

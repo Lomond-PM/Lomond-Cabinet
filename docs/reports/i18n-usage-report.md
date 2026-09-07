@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 471 |
+| A | Core / Global; keep | 481 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 3 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -623,6 +623,16 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | tools.registryControlLab.fields.colorAlphaField | tools.registryControlLab | Color + Alpha | 颜色 + 透明度 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
 | tools.registryControlLab.fields.shadowField | tools.registryControlLab | Shadow | 阴影 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
 | tools.registryControlLab.sections.coreUiDirect | tools.registryControlLab | CoreUI Direct | CoreUI 直接路径 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
+| vela.conversationActiveClose | vela | Finish or cancel this conversation before closing | 完成或取消此对话后才能关闭 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationClose | vela | Close conversation | 关闭对话 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationLabel | vela | Conversation {n} | 对话 {n} | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationLastClose | vela | Keep at least one conversation | 至少保留一个对话 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationLimit | vela | Up to 8 conversations. Close one to create another. | 最多 8 个对话，请先关闭一个。 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationNew | vela | New conversation | 新建对话 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationOperationFailed | vela | Conversation operation failed. Please try again. | 对话操作未完成，请重试。 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationOtherRunning | vela | Another conversation is running | 另一对话正在运行 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationRunning | vela | Running | 运行中 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationSelect | vela | Select conversation | 选择对话 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.planReviewCapabilitySetLayerName | vela | Rename layer | 重命名图层 | client/js/vela/velaPlanReviewProjection.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.planReviewParameterLayerName | vela | Layer name | 图层名称 | client/js/vela/velaPlanReviewProjection.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceApprove | vela | Approve | 批准 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |

@@ -18,11 +18,12 @@
     position: relative;
     display: grid;
     grid-template-areas:
+        "conversations"
         "transcript"
         "composer"
         "controls";
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto auto;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
     height: var(--vela-surface-height);
     min-height: 0;
     overflow: hidden;
@@ -437,3 +438,9 @@
         animation: none;
     }
 }
+
+.vela-conversation-slot { grid-area: conversations; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--vela-inline-gap); align-items: center; min-width: 0; padding: var(--vela-surface-inset); padding-bottom: 0; }
+.vela-conversation-select { width: 100%; min-width: 0; max-width: 100%; height: var(--control-height); color: var(--text-primary); background: var(--surface-conversation); border: 1px solid var(--panel-border); border-radius: var(--radius-sm); font: inherit; text-overflow: ellipsis; }
+.vela-conversation-button { min-width: var(--control-height); padding-inline: var(--vela-inline-gap); }
+.vela-conversation-feedback { grid-column: 1 / -1; font-size: inherit; overflow-wrap: anywhere; }
+.vela-conversation-feedback[hidden] { display: none; }
