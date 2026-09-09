@@ -3,7 +3,7 @@
 **规划修订：R1-2026-09-09**
 **基准节点：0.3.11 — Multi-conversation Foundation，COMPLETE / SEALED**
 **核对仓库：`Lomond-PM/Lomond-Cabinet`，`dev@b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a`**
-**文档状态：本次新规划交付，未写入远程；不代表任何修复、重构或新版本已经完成。**
+**文档状态：保留 R1 规划来源；当前 A01 为 TARGETED_ACCEPTED / READY FOR COMMIT / PR（覆盖限制见 A01 当前条目）。其余条目不因本次裁定改变，整个 B1/0.3.12 未完成。**
 
 > **总目标：先修可信性与数据风险，再重建视觉和 UI 基础，随后泛化能力、形成可委托的完整 AE Agent。**
 > 项目处于早期阶段，允许替换旧实现、重组模块与页面结构；不以维护既有类名、旧 Renderer 或庞大主程序为目的。需要保留的是执行安全、用户资产、明确的所有权和经过验证的产品语义，而不是实现外形。
@@ -535,6 +535,8 @@ TTFT、reasoning/output/total tokens、TPS、总时长仅在有合格来源时�
 
 
 #### A01 — 公共 Host 元数据解析进入 eval
+
+**当前条目（2026-09-09 用户裁定）：TARGETED_ACCEPTED / READY FOR COMMIT / PR。** 公共入口修复已实施，复用实施轮1122 focused assertions、183/183 suites PASS（0 skipped）；六组有界真实 AE 验收已接受。无可用 JSON.parse 回退为生产模块 VM PASS / 真实 ExtendScript NOT COVERED；本次 dev 合并接受该覆盖风险，0.3.12-G 重新裁定。`__proto__` 特殊环境、FolderItem 与 null 差异、有限字段/Undo/时间观察及未捕获动作回调均保留限制，见 [A01 报告](../reports/vela-0.3.12-b1-a01-host-json-entry.md#验收裁定与剩余覆盖)。INTEGRATED_ACCEPTED / CLOSED 留待 0.3.12-G；若出现回退解析错误、安全属性处理失效或相关回归，立即重新打开对应修复，不等待整合阶段。修复 commit / PR 尚未产生，关联待后补。
 
 **分配：**主办 0.3.12；集成/回验 0.3.12；0.3.25。
 **原有证据：**原报告 E1：隔离 Node/VM 摘录；真实宿主条件未验证。[S-A]

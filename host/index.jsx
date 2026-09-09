@@ -260,10 +260,147 @@ AEToolbox.ping = function () {
     };
 
     AEToolbox.parseJson = function (json) {
-        if (typeof JSON !== "undefined" && JSON.parse) {
+        if (typeof JSON !== "undefined" && JSON !== null && typeof JSON.parse === "function") {
             return JSON.parse(json);
         }
-        return eval("(" + json + ")");
+
+        // Public tool data uses JSON grammar, without Vela protocol/schema limits.
+        // Never execute input, including after a native parser rejects it.
+        var text = String(json);
+        var position = 0;
+
+        function fail() {
+            throw new SyntaxError("Invalid JSON at position " + position);
+        }
+
+        function whitespace() {
+            var c = text.charAt(position);
+            while (c === " " || c === "\t" || c === "\r" || c === "\n") {
+                position++;
+                c = text.charAt(position);
+            }
+        }
+
+        function stringValue() {
+            var result = "";
+            var c;
+            var hex;
+            position++;
+            while (position < text.length) {
+                c = text.charAt(position++);
+                if (c === '"') {
+                    return result;
+                }
+                if (c === "\\") {
+                    c = text.charAt(position++);
+                    if (c === '"' || c === "\\" || c === "/") {
+                        result += c;
+                    } else if (c === "b") {
+                        result += "\b";
+                    } else if (c === "f") {
+                        result += "\f";
+                    } else if (c === "n") {
+                        result += "\n";
+                    } else if (c === "r") {
+                        result += "\r";
+                    } else if (c === "t") {
+                        result += "\t";
+                    } else if (c === "u") {
+                        hex = text.substr(position, 4);
+                        if (!/^[0-9a-fA-F]{4}$/.test(hex)) { fail(); }
+                        result += String.fromCharCode(parseInt(hex, 16));
+                        position += 4;
+                    } else {
+                        fail();
+                    }
+                } else {
+                    if (c.charCodeAt(0) < 32) { fail(); }
+                    result += c;
+                }
+            }
+            fail();
+        }
+
+        function digit(c) {
+            return c >= "0" && c <= "9" && c !== "";
+        }
+
+        function numberValue() {
+            var start = position;
+            if (text.charAt(position) === "-") { position++; }
+            if (text.charAt(position) === "0") {
+                position++;
+            } else {
+                if (!digit(text.charAt(position))) { fail(); }
+                while (digit(text.charAt(position))) { position++; }
+            }
+            if (text.charAt(position) === ".") {
+                position++;
+                if (!digit(text.charAt(position))) { fail(); }
+                while (digit(text.charAt(position))) { position++; }
+            }
+            if (text.charAt(position) === "e" || text.charAt(position) === "E") {
+                position++;
+                if (text.charAt(position) === "+" || text.charAt(position) === "-") { position++; }
+                if (!digit(text.charAt(position))) { fail(); }
+                while (digit(text.charAt(position))) { position++; }
+            }
+            return Number(text.substring(start, position));
+        }
+
+        function setMember(object, key, value) {
+            // Preserve JSON's own-data-property semantics even on engines with a
+            // legacy __proto__ setter. ES3 engines without it use normal assignment.
+            if (key === "__proto__" && key in object) {
+                if (typeof Object.defineProperty !== "function") { fail(); }
+                Object.defineProperty(object, key, { value: value, enumerable: true, writable: true, configurable: true });
+            } else {
+                object[key] = value;
+            }
+        }
+
+        function value() {
+            var c;
+            var result;
+            var key;
+            whitespace();
+            c = text.charAt(position);
+            if (c === '"') { return stringValue(); }
+            if (c === "-" || digit(c)) { return numberValue(); }
+            if (c === "{" || c === "[") {
+                var isObject = c === "{";
+                var close = isObject ? "}" : "]";
+                result = isObject ? {} : [];
+                position++;
+                whitespace();
+                if (text.charAt(position) === close) { position++; return result; }
+                while (true) {
+                    whitespace();
+                    if (isObject) {
+                        if (text.charAt(position) !== '"') { fail(); }
+                        key = stringValue();
+                        whitespace();
+                        if (text.charAt(position++) !== ":") { fail(); }
+                        setMember(result, key, value());
+                    } else {
+                        result[result.length] = value();
+                    }
+                    whitespace();
+                    c = text.charAt(position++);
+                    if (c === close) { return result; }
+                    if (c !== ",") { fail(); }
+                }
+            }
+            if (text.substr(position, 4) === "true") { position += 4; return true; }
+            if (text.substr(position, 5) === "false") { position += 5; return false; }
+            if (text.substr(position, 4) === "null") { position += 4; return null; }
+            fail();
+        }
+
+        var result = value();
+        whitespace();
+        if (position !== text.length) { fail(); }
+        return result;
     };
 
     AEToolbox.normalizeHexColor = function (hex) {

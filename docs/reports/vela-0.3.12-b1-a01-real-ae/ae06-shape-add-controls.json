@@ -1,0 +1,280 @@
+{
+  "label": "AE-06-shapeAdd-panel-before-action",
+  "timestamp": "2026-09-09T06:45:20.079Z",
+  "uiText": "<\n主页\nAE绘画领域大神\n\n向选中的形状目标添加矢量形状、描边、填充与路径组件。\n\n形状目标\n目标\n不可用\n来源\n不可用\n形状组件\n\n向当前形状目标添加 AE 原生矢量组件。\n\n描边 / 填充图层\n\n新建一个 Fill 与 Stroke 路径联动的形状图层。\n\n新建描边 / 填充图层\nStroke / Fill 设置\n\n仅用于上方 Stroke / Fill 形状图层按钮的默认值。\n\n描边宽度\n尖角限制\nStroke 颜色\nFill 颜色\n修剪路径\n修剪开始\n修剪结束\n修剪偏移\nStroke 锥度\n起始长度\n结束长度\n起始宽度\n结束宽度\n起始缓和\n结束缓和\n恢复 Stroke / Fill 默认值\n已选择 1 个图层",
+  "controls": [
+    {
+      "id": "dynamic_shapeAdd_strokeWidth_number",
+      "value": "11",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_strokeWidth_number\" class=\"num-input registry-range-number ui-number-input registry-number-input is-drag-ready\" type=\"number\" inputmode=\"decimal\" min=\"0\" max=\"200\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_strokeWidth",
+      "value": "11",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_strokeWidth\" class=\"ui-range pill-slider registry-range\" type=\"range\" min=\"0\" max=\"200\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_miterLimit_number",
+      "value": "14",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_miterLimit_number\" class=\"num-input registry-range-number ui-number-input registry-number-input is-drag-ready\" type=\"number\" inputmode=\"decimal\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_miterLimit",
+      "value": "14",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_miterLimit\" class=\"ui-range pill-slider registry-range\" type=\"range\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_strokeColor",
+      "value": "#ffffff",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_strokeColor\" type=\"hidden\" value=\"#ffffff\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_strokeColorHex",
+      "value": "#ffffff",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_strokeColorHex\" class=\"ui-color-hex registry-color-hex ui-text-input\" type=\"text\" spellcheck=\"false\" data-hex-select-bound=\"true\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_fillColor",
+      "value": "#d6b25e",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_fillColor\" type=\"hidden\" value=\"#d6b25e\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_fillColorHex",
+      "value": "#d6b25e",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_fillColorHex\" class=\"ui-color-hex registry-color-hex ui-text-input\" type=\"text\" spellcheck=\"false\" data-hex-select-bound=\"true\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_trimStart_number",
+      "value": "0",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_trimStart_number\" class=\"num-input registry-range-number ui-number-input registry-number-input is-drag-ready\" type=\"number\" inputmode=\"decimal\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_trimStart",
+      "value": "0",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_trimStart\" class=\"ui-range pill-slider registry-range\" type=\"range\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_trimEnd_number",
+      "value": "100",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_trimEnd_number\" class=\"num-input registry-range-number ui-number-input registry-number-input is-drag-ready\" type=\"number\" inputmode=\"decimal\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_trimEnd",
+      "value": "100",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_trimEnd\" class=\"ui-range pill-slider registry-range\" type=\"range\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_trimOffset_number",
+      "value": "0",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_trimOffset_number\" class=\"num-input registry-range-number ui-number-input registry-number-input is-drag-ready\" type=\"number\" inputmode=\"decimal\" min=\"-360\" max=\"360\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_trimOffset",
+      "value": "0",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_trimOffset\" class=\"ui-range pill-slider registry-range\" type=\"range\" min=\"-360\" max=\"360\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_taperStartLength_number",
+      "value": "15",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_taperStartLength_number\" class=\"num-input registry-range-number ui-number-input registry-number-input is-drag-ready\" type=\"number\" inputmode=\"decimal\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_taperStartLength",
+      "value": "15",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_taperStartLength\" class=\"ui-range pill-slider registry-range\" type=\"range\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_taperEndLength_number",
+      "value": "15",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_taperEndLength_number\" class=\"num-input registry-range-number ui-number-input registry-number-input is-drag-ready\" type=\"number\" inputmode=\"decimal\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_taperEndLength",
+      "value": "15",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_taperEndLength\" class=\"ui-range pill-slider registry-range\" type=\"range\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_taperStartWidth_number",
+      "value": "0",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_taperStartWidth_number\" class=\"num-input registry-range-number ui-number-input registry-number-input is-drag-ready\" type=\"number\" inputmode=\"decimal\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_taperStartWidth",
+      "value": "0",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_taperStartWidth\" class=\"ui-range pill-slider registry-range\" type=\"range\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_taperEndWidth_number",
+      "value": "0",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_taperEndWidth_number\" class=\"num-input registry-range-number ui-number-input registry-number-input is-drag-ready\" type=\"number\" inputmode=\"decimal\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_taperEndWidth",
+      "value": "0",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_taperEndWidth\" class=\"ui-range pill-slider registry-range\" type=\"range\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_taperStartEase_number",
+      "value": "30",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_taperStartEase_number\" class=\"num-input registry-range-number ui-number-input registry-number-input is-drag-ready\" type=\"number\" inputmode=\"decimal\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_taperStartEase",
+      "value": "30",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_taperStartEase\" class=\"ui-range pill-slider registry-range\" type=\"range\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_taperEndEase_number",
+      "value": "30",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_taperEndEase_number\" class=\"num-input registry-range-number ui-number-input registry-number-input is-drag-ready\" type=\"number\" inputmode=\"decimal\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    },
+    {
+      "id": "dynamic_shapeAdd_taperEndEase",
+      "value": "30",
+      "checked": false,
+      "html": "<input id=\"dynamic_shapeAdd_taperEndEase\" class=\"ui-range pill-slider registry-range\" type=\"range\" min=\"0\" max=\"100\" step=\"0.1\" data-registry-tool-id=\"shapeAdd\">"
+    }
+  ],
+  "buttons": [
+    {
+      "text": "组group",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">组</span><span class=\"button-text-secondary\">group</span></span></button>"
+    },
+    {
+      "text": "矩形rectangle",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">矩形</span><span class=\"button-text-secondary\">rectangle</span></span></button>"
+    },
+    {
+      "text": "椭圆ellipse",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">椭圆</span><span class=\"button-text-secondary\">ellipse</span></span></button>"
+    },
+    {
+      "text": "星形star",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">星形</span><span class=\"button-text-secondary\">star</span></span></button>"
+    },
+    {
+      "text": "路径path",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">路径</span><span class=\"button-text-secondary\">path</span></span></button>"
+    },
+    {
+      "text": "填充fill",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">填充</span><span class=\"button-text-secondary\">fill</span></span></button>"
+    },
+    {
+      "text": "描边stroke",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">描边</span><span class=\"button-text-secondary\">stroke</span></span></button>"
+    },
+    {
+      "text": "渐变填充gradientFill",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">渐变填充</span><span class=\"button-text-secondary\">gradientFill</span></span></button>"
+    },
+    {
+      "text": "渐变描边gradientStroke",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">渐变描边</span><span class=\"button-text-secondary\">gradientStroke</span></span></button>"
+    },
+    {
+      "text": "合并路径mergePaths",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">合并路径</span><span class=\"button-text-secondary\">mergePaths</span></span></button>"
+    },
+    {
+      "text": "偏移路径offsetPaths",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">偏移路径</span><span class=\"button-text-secondary\">offsetPaths</span></span></button>"
+    },
+    {
+      "text": "收缩与膨胀puckerBloat",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">收缩与膨胀</span><span class=\"button-text-secondary\">puckerBloat</span></span></button>"
+    },
+    {
+      "text": "中继器repeater",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">中继器</span><span class=\"button-text-secondary\">repeater</span></span></button>"
+    },
+    {
+      "text": "圆角roundCorners",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">圆角</span><span class=\"button-text-secondary\">roundCorners</span></span></button>"
+    },
+    {
+      "text": "修剪路径trimPaths",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">修剪路径</span><span class=\"button-text-secondary\">trimPaths</span></span></button>"
+    },
+    {
+      "text": "扭转twist",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">扭转</span><span class=\"button-text-secondary\">twist</span></span></button>"
+    },
+    {
+      "text": "摆动路径wigglePaths",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">摆动路径</span><span class=\"button-text-secondary\">wigglePaths</span></span></button>"
+    },
+    {
+      "text": "摆动变换wiggleTransform",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">摆动变换</span><span class=\"button-text-secondary\">wiggleTransform</span></span></button>"
+    },
+    {
+      "text": "波形zigZag",
+      "disabled": true,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width registry-large-button--bilingual is-state-disabled\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"canAdd\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\" disabled=\"\"><span class=\"button-text-pair\"><span class=\"button-text-primary\">波形</span><span class=\"button-text-secondary\">zigZag</span></span></button>"
+    },
+    {
+      "text": "新建描边 / 填充图层",
+      "disabled": false,
+      "html": "<button class=\"primary-action registry-large-button ui-button--large ui-button ui-button--primary is-full-width\" type=\"button\" data-registry-tool-id=\"shapeAdd\" data-enabled-state-key=\"hasComp\" data-enabled-state-equals=\"true\" data-registry-state-conditioned=\"true\">新建描边 / 填充图层</button>"
+    },
+    {
+      "text": "",
+      "disabled": false,
+      "html": "<button aria-label=\"Stroke 颜色\" class=\"ui-color-swatch registry-color-swatch ui-button\" type=\"button\" data-color-target=\"dynamic_shapeAdd_strokeColor\" data-registry-tool-id=\"shapeAdd\" style=\"background-color: rgb(255, 255, 255);\"></button>"
+    },
+    {
+      "text": "",
+      "disabled": false,
+      "html": "<button aria-label=\"Fill 颜色\" class=\"ui-color-swatch registry-color-swatch ui-button\" type=\"button\" data-color-target=\"dynamic_shapeAdd_fillColor\" data-registry-tool-id=\"shapeAdd\" style=\"background-color: rgb(214, 178, 94);\"></button>"
+    },
+    {
+      "text": "恢复 Stroke / Fill 默认值",
+      "disabled": false,
+      "html": "<button class=\"panel-button registry-secondary-action registry-large-button ui-button--large ui-button ui-button--neutral is-full-width\" type=\"button\" data-registry-tool-id=\"shapeAdd\">恢复 Stroke / Fill 默认值</button>"
+    }
+  ]
+}

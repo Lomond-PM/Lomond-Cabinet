@@ -1,0 +1,5 @@
+{
+  "timestamp": "2026-09-09T06:40:49.958Z",
+  "hostInput": "(function(){var c=app.project.activeItem;return AEToolbox.stringify({ready:c instanceof CompItem&&c.id===191&&c.name===\"A01_TOOL_SMOKE\"&&c.numLayers===1&&c.selectedLayers.length===1&&c.selectedLayers[0].id===203});})()",
+  "hostRaw": "{\"ready\":true}"
+}

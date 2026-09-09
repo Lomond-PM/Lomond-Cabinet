@@ -1,0 +1,67 @@
+{
+  "label": "AE-01-host",
+  "timestamp": "2026-09-09T04:33:19.159Z",
+  "url": "file:///C:/Users/Administrator/AppData/Roaming/Adobe/CEP/extensions/com.kevin.aetoolbox/client/index.html",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 AdobeCEP/12.0.1 Safari/537.36",
+  "environment": {
+    "appVersion": "26.3",
+    "appSkinInfo": {
+      "systemHighlightColor": {
+        "alpha": 255,
+        "green": 120,
+        "blue": 215,
+        "red": 0
+      },
+      "baseFontSize": 11,
+      "appBarBackgroundColorSRGB": {
+        "antialiasLevel": 0,
+        "type": 1,
+        "color": {
+          "alpha": 255,
+          "green": 30,
+          "blue": 30,
+          "red": 30
+        }
+      },
+      "appBarBackgroundColor": {
+        "antialiasLevel": 0,
+        "type": 1,
+        "color": {
+          "alpha": 255,
+          "green": 30,
+          "blue": 30,
+          "red": 30
+        }
+      },
+      "panelBackgroundColor": {
+        "antialiasLevel": 0,
+        "type": 1,
+        "color": {
+          "alpha": 255,
+          "green": 30,
+          "blue": 30,
+          "red": 30
+        }
+      },
+      "baseFontFamily": "SimSun",
+      "panelBackgroundColorSRGB": {
+        "antialiasLevel": 0,
+        "type": 1,
+        "color": {
+          "alpha": 255,
+          "green": 30,
+          "blue": 30,
+          "red": 30
+        }
+      }
+    },
+    "appLocale": "zh_CN",
+    "isAppOnline": true,
+    "appUILocale": "zh_CN",
+    "appName": "AEFT",
+    "appId": "AEFT"
+  },
+  "extension": "file:///C:/Users/Administrator/AppData/Roaming/Adobe/CEP/extensions/com.kevin.aetoolbox",
+  "hostInput": "(function(){return AEToolbox.stringify({aeVersion:String(app.version),jsonType:typeof JSON,parseType:(typeof JSON!==\"undefined\" && JSON!==null)?typeof JSON.parse:\"unavailable\",definePropertyType:typeof Object.defineProperty,loadInfo:AEToolbox.getHostLoadInfo(),projectFile:app.project.file?app.project.file.fsName:\"unsaved\",itemCount:app.project.numItems,activeComp:app.project.activeItem instanceof CompItem?app.project.activeItem.name:null});})()",
+  "hostRaw": "{\"aeVersion\":\"26.3x87\",\"jsonType\":\"object\",\"parseType\":\"function\",\"definePropertyType\":\"function\",\"loadInfo\":\"{\\\"ok\\\":true,\\\"message\\\":\\\"Host load info ready.\\\",\\\"hostFile\\\":\\\"host/index.jsx\\\",\\\"registeredToolCount\\\":7,\\\"registeredToolLoadErrors\\\":\\\"\\\",\\\"registeredToolLoadErrorCount\\\":0,\\\"hasValidRegisteredToolCatalog\\\":true,\\\"registeredToolLastAttemptSucceeded\\\":true,\\\"registeredToolRegistryRevision\\\":1,\\\"includesAdComponentKit\\\":true,\\\"hasAdComponentKitCreateIconGrid\\\":true}\",\"projectFile\":\"D:\\\\Projects\\\\Vela Test\\\\Vela Test.aep\",\"itemCount\":25,\"activeComp\":\"Test Comp\"}"
+}

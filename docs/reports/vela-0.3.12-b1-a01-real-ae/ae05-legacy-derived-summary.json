@@ -1,0 +1,33 @@
+{
+  "derivedFrom": "ae05-legacy-repeated-state.json actual Host callbacks; no re-execution",
+  "timestamps": [
+    "2026-09-09T06:13:48.971Z",
+    "2026-09-09T06:13:50.304Z",
+    "2026-09-09T06:13:51.644Z"
+  ],
+  "samples": 3,
+  "layerCount": 27,
+  "withinCallsUnchanged": true,
+  "betweenCallsUnchanged": true,
+  "stateStable": true,
+  "uiStable": true,
+  "state": {
+    "ok": true,
+    "messageKey": "tools.adComponentKit.state.noTextSelection",
+    "state": {
+      "hasComp": true,
+      "activeComp": "Test Comp",
+      "selectionCount": 1,
+      "textLayerCount": 0,
+      "twoDLayerCount": 0,
+      "selectedControllerType": "featureStack",
+      "canCreateFeatureStack": false,
+      "canCreateIconGrid": false,
+      "canRefresh": true,
+      "canSelectLayers": true,
+      "canDetach": true,
+      "canRemoveGeneratedComponent": false
+    }
+  },
+  "undoAfter": "PENDING USER OBSERVATION"
+}

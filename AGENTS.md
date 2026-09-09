@@ -19,7 +19,7 @@ The product uses two runtimes:
 
 ## Current Vela milestone
 
-Vela **0.3.11 — Multi-conversation Foundation** is COMPLETE / SEALED. 最新封存离线基线为 182/182 PASS，Vela 顺序测试为 94/94 ×3；这是历史结果，本轮未重跑。当前 **0.3.12-A0 — Baseline Reconciliation & Production Revalidation Plan：COMPLETE（仅文档与复核计划）**；R1 原始资料已导入，生产修复尚未开始。排期只由下列 roadmap 持有。
+Vela **0.3.11 — Multi-conversation Foundation** is COMPLETE / SEALED；封存离线 182/182、Vela 顺序 94/94 ×3 是历史结果。0.3.12-A0 COMPLETE（仅文档与复核计划），已合并 dev。当前 **0.3.12-B1 / A01：TARGETED_ACCEPTED / READY FOR COMMIT / PR**；公共 Host JSON 入口已修复，复用实施结果1122 focused assertions、183/183 suites PASS（0 skipped），六组有界真实 AE 验收已接受并保留覆盖限制；INTEGRATED_ACCEPTED / CLOSED 留待 0.3.12-G，B1/0.3.12 未完成。见 [A01 阶段报告](docs/reports/vela-0.3.12-b1-a01-host-json-entry.md)。排期只由下列 roadmap 持有。
 
 Current roadmap: [docs/VELA_ROADMAP.md](docs/VELA_ROADMAP.md). Current implementation/handoff: [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md). Normative architecture: [docs/design/vela-agent-architecture.md](docs/design/vela-agent-architecture.md), frozen and unchanged. Feature milestones are independent of package VERSION/release tags.
 

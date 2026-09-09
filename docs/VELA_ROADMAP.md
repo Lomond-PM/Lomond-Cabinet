@@ -1,8 +1,8 @@
 # Vela / Lomond Cabinet — Canonical Product Roadmap
 
 **Planning revision: R1-2026-09-09**
-**状态：R1 已导入当前规划分支；0.3.12-A0 COMPLETE（仅文档与复核计划）。0.3.12 生产修复尚未开始，其余新里程碑 PLANNED / NOT STARTED。**
-**核对基线：`dev@b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a`，0.3.11 COMPLETE / SEALED。**
+**状态：R1 与 0.3.12-A0 文档规划已合并 dev；A0 COMPLETE。当前 0.3.12-B1 / A01：TARGETED_ACCEPTED / READY FOR COMMIT / PR，尚未 CLOSED。其余新里程碑 PLANNED / NOT STARTED。**
+**R1 规划核对基线：`dev@b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a`，0.3.11 COMPLETE / SEALED。A01 实施基线：`dev@cd96e0cd65fd485a8f00ac506ee74c0f97fc5e75`。**
 
 本文件是唯一当前版本排程，已替代旧版当前排程；历史报告、既有封存状态和包发布记录不被改写。详细问题、证据限定、重构边界和工作包见[0.3.x 产品重构与完成指导书](design/vela-0.3-reconstruction-guidance.md)。实际实现事实仍由 PROJECT_STATE 持有，Agent normative 边界由冻结 architecture 持有。
 
@@ -115,11 +115,11 @@
 
 ## 九、当前规划状态与下一项
 
-**0.3.12-A0 — Baseline Reconciliation & Production Revalidation Plan。**
+**0.3.12-B1 / A01 — 公共 Host JSON 数据入口。**
 
-[A0 报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)记录资料/哈希、入口对账、完整源码清单、25项生产复核计划与0.3.13样页/ADR待办。建议下一项为0.3.12-B1中的A01公共Host JSON数据入口生产复核与修复，A11/G-02随后独立处理；需新的实施任务，本轮到A0停止。
+[A0 报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)保留已完成的资料/哈希、入口对账、完整源码清单与25项生产复核计划。[A01 阶段报告](reports/vela-0.3.12-b1-a01-host-json-entry.md)记录实际生产模块反例、严格解析修复、复用实施轮1122 focused assertions/183/183 suites PASS（0 skipped），以及六组有界真实 AE 验收与用户风险裁定。A01 已 TARGETED_ACCEPTED / READY FOR COMMIT / PR；下一项为用户另行授权的 commit / PR，修复提交关联待实际产生后记录。INTEGRATED_ACCEPTED / CLOSED 留待 0.3.12-G，不自动进入 A11、G-02 或 UI 重构。
 
-当前生产修复与所有后续重构均未开始，远程未因本交付被修改。实际开发遵循 focused branch → 实施/回归 → AE/CEP → 用户 commit/push → PR 到 dev；正式版本发布另行处理。
+本切片仅 A01 已实施并获有界验收接受，剩余覆盖限制保留至 0.3.12-G 重新裁定；整个 B1/0.3.12 未完成，其余生产修复与后续重构未由本切片实施。实际开发遵循 focused branch → 实施/回归 → AE/CEP → 用户 commit/push → PR 到 dev；正式版本发布另行处理。
 
 ## 十、来源
 

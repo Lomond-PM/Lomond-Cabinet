@@ -3,7 +3,8 @@
   "planning_revision": "R1-2026-09-09",
   "baseline_repository": "Lomond-PM/Lomond-Cabinet",
   "baseline_commit": "b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a",
-  "new_plan_not_implemented": true,
+  "new_plan_not_implemented": false,
+  "implementation_scope": "仅 A01 已实施并 TARGETED_ACCEPTED；其余条目状态不变，整个 B1/0.3.12 未完成",
   "remote_modified": false,
   "inherited_probes_rerun_in_this_task": false,
   "counts": {
@@ -205,7 +206,28 @@
       "description": "缺少原生 JSON.parse 时公共解析器把工程 comment 元数据作为 JavaScript 表达式执行；元数据字段校验在执行之后，状态读取也可触及入口。",
       "closure": "换为不执行代码的严格解析；原生/无原生 JSON、合法/坏元数据与状态轮询负向回归；确认无效输入无副作用。",
       "guard": "条件是无原生 JSON.parse 且元数据入口被调用；不能写成打开任意工程就执行代码。",
-      "status": "OPEN — inherited finding / new planning item; not fixed in this deliverable"
+      "status": "TARGETED_ACCEPTED",
+      "readiness": "READY FOR COMMIT / PR",
+      "acceptance": {
+        "decision_date": "2026-09-09",
+        "authority": "本次用户验收裁定",
+        "report": "docs/reports/vela-0.3.12-b1-a01-host-json-entry.md",
+        "targeted_scope": "接受 AE-01 至 AE-06 六组有界真实 AE 验收；整个 B1/0.3.12 未完成",
+        "offline_evidence": "复用实施轮1122 focused assertions、183/183 suites PASS，0 skipped；本次未重跑",
+        "coverage_limits": [
+          "无可用 JSON.parse 回退：生产模块 VM PASS / 真实 ExtendScript NOT COVERED；本次 dev 合并接受覆盖风险，0.3.12-G 重新裁定",
+          "__proto__ 特殊环境：保留离线安全定义/失败关闭证据，真实环境未覆盖",
+          "真实 FolderItem 不等于 activeItem === null",
+          "AE-05 仅覆盖实际检查字段、指定 Undo 观察和有限时间；无效夹具逐组 Undo 与完整轮询 trace 未覆盖",
+          "两个普通工具动作自身原始回调未捕获，保持未知；已有 JSON.parse 不等于已证实原生实现"
+        ],
+        "integration_gate": "0.3.12-G：INTEGRATED_ACCEPTED / CLOSED 待裁定",
+        "reopen_on": "若出现回退解析错误、安全属性处理失效或相关回归，立即重新打开对应修复，不等待整合阶段"
+      },
+      "implementation_baseline": "cd96e0cd65fd485a8f00ac506ee74c0f97fc5e75",
+      "fix_commit": null,
+      "pull_request": null,
+      "commit_link_note": "当前 HEAD 为实施基线，修复提交/PR 关联待实际创建后记录"
     },
     {
       "id": "A02",
