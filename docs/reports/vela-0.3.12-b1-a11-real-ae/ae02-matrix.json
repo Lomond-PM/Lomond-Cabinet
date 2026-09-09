@@ -1,0 +1,210 @@
+{
+  "caseId": "A11-AE-02",
+  "expectedSource": "Independent CEP construction, exact suite samples plus quote/backslash individually",
+  "records": [
+    {
+      "caseId": "A11-AE-02/C0-0/jsonEscape",
+      "input": "(function(){var c=[0],s=\"\",i;for(i=0;i<c.length;i++)s+=String.fromCharCode(c[i]);return String.fromCharCode(34)+AEToolbox.jsonEscape(s)+String.fromCharCode(34);})()",
+      "startedAt": "2026-09-09T08:29:47.011Z",
+      "raw": "\"\\u0000\"",
+      "endedAt": "2026-09-09T08:29:47.012Z",
+      "sample": {
+        "label": "C0-0",
+        "value": "\u0000"
+      },
+      "route": "jsonEscape",
+      "inputCodeUnits": [
+        0
+      ],
+      "expectedSignature": {
+        "type": "string",
+        "length": 1,
+        "units": [
+          0
+        ]
+      },
+      "parsed": "\u0000",
+      "parsedSignature": {
+        "type": "string",
+        "length": 1,
+        "units": [
+          0
+        ]
+      },
+      "contentEqual": true,
+      "pass": true
+    },
+    {
+      "caseId": "A11-AE-02/C0-0/toJsonValue",
+      "input": "(function(){var c=[0],s=\"\",i;for(i=0;i<c.length;i++)s+=String.fromCharCode(c[i]);return AEToolbox.toJson({value:s});})()",
+      "startedAt": "2026-09-09T08:29:47.012Z",
+      "raw": "{\"value\":\"\\u0000\"}",
+      "endedAt": "2026-09-09T08:29:47.012Z",
+      "sample": {
+        "label": "C0-0",
+        "value": "\u0000"
+      },
+      "route": "toJsonValue",
+      "inputCodeUnits": [
+        0
+      ],
+      "expectedSignature": {
+        "type": "object",
+        "entries": [
+          {
+            "key": {
+              "type": "string",
+              "length": 5,
+              "units": [
+                118,
+                97,
+                108,
+                117,
+                101
+              ]
+            },
+            "value": {
+              "type": "string",
+              "length": 1,
+              "units": [
+                0
+              ]
+            }
+          }
+        ]
+      },
+      "parsed": {
+        "value": "\u0000"
+      },
+      "parsedSignature": {
+        "type": "object",
+        "entries": [
+          {
+            "key": {
+              "type": "string",
+              "length": 5,
+              "units": [
+                118,
+                97,
+                108,
+                117,
+                101
+              ]
+            },
+            "value": {
+              "type": "string",
+              "length": 1,
+              "units": [
+                0
+              ]
+            }
+          }
+        ]
+      },
+      "contentEqual": true,
+      "pass": true
+    },
+    {
+      "caseId": "A11-AE-02/C0-0/stringifyValue",
+      "input": "(function(){var c=[0],s=\"\",i;for(i=0;i<c.length;i++)s+=String.fromCharCode(c[i]);return AEToolbox.stringify(s);})()",
+      "startedAt": "2026-09-09T08:29:47.012Z",
+      "raw": "\"\\u0000\"",
+      "endedAt": "2026-09-09T08:29:47.012Z",
+      "sample": {
+        "label": "C0-0",
+        "value": "\u0000"
+      },
+      "route": "stringifyValue",
+      "inputCodeUnits": [
+        0
+      ],
+      "expectedSignature": {
+        "type": "string",
+        "length": 1,
+        "units": [
+          0
+        ]
+      },
+      "parsed": "\u0000",
+      "parsedSignature": {
+        "type": "string",
+        "length": 1,
+        "units": [
+          0
+        ]
+      },
+      "contentEqual": true,
+      "pass": true
+    },
+    {
+      "caseId": "A11-AE-02/C0-0/toJsonStringKey",
+      "input": "(function(){var c=[0],s=\"\",i;for(i=0;i<c.length;i++)s+=String.fromCharCode(c[i]);var o={};o[s]=\"value\";return AEToolbox.toJson(o);})()",
+      "startedAt": "2026-09-09T08:29:47.012Z",
+      "raw": "{\"\":\"value\"}",
+      "endedAt": "2026-09-09T08:29:47.013Z",
+      "sample": {
+        "label": "C0-0",
+        "value": "\u0000"
+      },
+      "route": "toJsonStringKey",
+      "inputCodeUnits": [
+        0
+      ],
+      "expectedSignature": {
+        "type": "object",
+        "entries": [
+          {
+            "key": {
+              "type": "string",
+              "length": 1,
+              "units": [
+                0
+              ]
+            },
+            "value": {
+              "type": "string",
+              "length": 5,
+              "units": [
+                118,
+                97,
+                108,
+                117,
+                101
+              ]
+            }
+          }
+        ]
+      },
+      "parsed": {
+        "": "value"
+      },
+      "parsedSignature": {
+        "type": "object",
+        "entries": [
+          {
+            "key": {
+              "type": "string",
+              "length": 0,
+              "units": []
+            },
+            "value": {
+              "type": "string",
+              "length": 5,
+              "units": [
+                118,
+                97,
+                108,
+                117,
+                101
+              ]
+            }
+          }
+        ]
+      },
+      "contentEqual": false,
+      "failureClass": "content-assertion",
+      "pass": false
+    }
+  ],
+  "planned": 320
+}

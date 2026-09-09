@@ -4,7 +4,7 @@
   "baseline_repository": "Lomond-PM/Lomond-Cabinet",
   "baseline_commit": "b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a",
   "new_plan_not_implemented": false,
-  "implementation_scope": "仅 A01 已实施并 TARGETED_ACCEPTED；其余条目状态不变，整个 B1/0.3.12 未完成",
+  "implementation_scope": "A01 已实施并 TARGETED_ACCEPTED；A11 已实施且离线通过、真实 AE 待验收；其余条目状态不变，整个 B1/0.3.12 未完成",
   "remote_modified": false,
   "inherited_probes_rerun_in_this_task": false,
   "counts": {
@@ -207,7 +207,7 @@
       "closure": "换为不执行代码的严格解析；原生/无原生 JSON、合法/坏元数据与状态轮询负向回归；确认无效输入无副作用。",
       "guard": "条件是无原生 JSON.parse 且元数据入口被调用；不能写成打开任意工程就执行代码。",
       "status": "TARGETED_ACCEPTED",
-      "readiness": "READY FOR COMMIT / PR",
+      "readiness": "MERGED TO DEV",
       "acceptance": {
         "decision_date": "2026-09-09",
         "authority": "本次用户验收裁定",
@@ -225,9 +225,26 @@
         "reopen_on": "若出现回退解析错误、安全属性处理失效或相关回归，立即重新打开对应修复，不等待整合阶段"
       },
       "implementation_baseline": "cd96e0cd65fd485a8f00ac506ee74c0f97fc5e75",
-      "fix_commit": null,
-      "pull_request": null,
-      "commit_link_note": "当前 HEAD 为实施基线，修复提交/PR 关联待实际创建后记录"
+      "fix_commit": "b3a6d0b454900afd27ca49153fae1d9618abc6f3",
+      "pull_request": 202,
+      "commit_link_note": "本轮核对本地 Git 历史；A01 TARGETED_ACCEPTED 与剩余覆盖裁定不变",
+      "merge_commit": "9dee61ee2d2a3ce2f8dd90107fe5343299063eb8",
+      "related_f1": {
+        "task": "A11-F1 (关联A01；非新增原始审计ID)",
+        "status": "TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+        "contract": "解码后任意对象成员名含实际U+0000时，在属性建立前拒绝整份公共JSON输入；合法JSON的Host兼容性限制",
+        "report": "docs/reports/vela-0.3.12-b1-a11-host-json-serialization.md",
+        "validation": "224 F1 /1122 A01 /2307 serializer /27 registry;185/185 suites,0 skip;本轮实机20/310/3 PASS；原离线结果未重跑",
+        "historical_evidence": "原A01裁定与首次A11 3 PASS /1 FAIL /316 NOT COVERED保持",
+        "real_revalidation": {
+          "input": "20/20 PASS",
+          "encoding": "310/310 PASS",
+          "public": "3/3 PASS",
+          "host_key_limits": "10 accepted support limits; not encoding PASS",
+          "evidence": "docs/reports/vela-0.3.12-b1-a11-real-ae/f1-revalidation-summary.json",
+          "inherited": "Existing JSON.parse branch only; fallback / special __proto__ real conditions remain not covered"
+        }
+      }
     },
     {
       "id": "A02",
@@ -377,7 +394,32 @@
       "description": "公共字符串转义漏掉部分 U+0000–U+001F，可能输出无效 JSON；私有 Vela JSON 路径不自动补救公共返回。",
       "closure": "完整字符串转义与严格往返；覆盖所有 C0、多语言、引号/反斜线、异常信息及既有结果形状。",
       "guard": "与 G-02 的参数代理项校验是不同问题；具体工程发生频率未知。",
-      "status": "OPEN — inherited finding / new planning item; not fixed in this deliverable"
+      "status": "TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+      "implementation": {
+        "baseline": "9dee61ee2d2a3ce2f8dd90107fe5343299063eb8",
+        "report": "docs/reports/vela-0.3.12-b1-a11-host-json-serialization.md",
+        "offline": "2307 focused assertions; A01 1122; Host registry 27; 184/184 suites PASS, 0 skipped",
+        "real_ae": "A11 including F1 TARGETED_ACCEPTED: 20 input,310 encoding,3 public PASS;10 Host key support limits accepted",
+        "scope": "仅完整字符串转义与 toJson 键名路径；G-02 等未实施"
+      },
+      "real_ae_evidence": "docs/reports/vela-0.3.12-b1-a11-real-ae/f1-revalidation-summary.json",
+      "related_f1": {
+        "task": "A11-F1 (关联A01；非新增原始审计ID)",
+        "status": "TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+        "contract": "解码后任意对象成员名含实际U+0000时，在属性建立前拒绝整份公共JSON输入；合法JSON的Host兼容性限制",
+        "report": "docs/reports/vela-0.3.12-b1-a11-host-json-serialization.md",
+        "validation": "224 F1 /1122 A01 /2307 serializer /27 registry;185/185 suites,0 skip;本轮实机20/310/3 PASS；原离线结果未重跑",
+        "historical_evidence": "原A01裁定与首次A11 3 PASS /1 FAIL /316 NOT COVERED保持",
+        "real_revalidation": {
+          "input": "20/20 PASS",
+          "encoding": "310/310 PASS",
+          "public": "3/3 PASS",
+          "host_key_limits": "10 accepted support limits; not encoding PASS",
+          "evidence": "docs/reports/vela-0.3.12-b1-a11-real-ae/f1-revalidation-summary.json",
+          "inherited": "Existing JSON.parse branch only; fallback / special __proto__ real conditions remain not covered"
+        }
+      },
+      "acceptance_scope": "Bounded targeted only; INTEGRATED_ACCEPTED / CLOSED at 0.3.12-G"
     },
     {
       "id": "A12",

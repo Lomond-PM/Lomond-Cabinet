@@ -18,7 +18,12 @@ AEToolbox.ping = function () {
             .replace(/"/g, "\\\"")
             .replace(/\r/g, "\\r")
             .replace(/\n/g, "\\n")
-            .replace(/\t/g, "\\t");
+            .replace(/\t/g, "\\t")
+            .replace(/[\x00-\x1f]/g, function (ch) {
+                // CR/LF/TAB above retain their existing short escape spelling.
+                var hex = ch.charCodeAt(0).toString(16);
+                return "\\u" + ("0000" + hex).slice(-4);
+            });
     };
 
     AEToolbox.toJson = function (obj) {
@@ -29,11 +34,11 @@ AEToolbox.ping = function () {
                 continue;
             }
             if (typeof obj[k] === "number") {
-                parts[parts.length] = "\"" + k + "\":" + obj[k];
+                parts[parts.length] = "\"" + AEToolbox.jsonEscape(k) + "\":" + obj[k];
             } else if (typeof obj[k] === "boolean") {
-                parts[parts.length] = "\"" + k + "\":" + (obj[k] ? "true" : "false");
+                parts[parts.length] = "\"" + AEToolbox.jsonEscape(k) + "\":" + (obj[k] ? "true" : "false");
             } else {
-                parts[parts.length] = "\"" + k + "\":\"" + AEToolbox.jsonEscape(obj[k]) + "\"";
+                parts[parts.length] = "\"" + AEToolbox.jsonEscape(k) + "\":\"" + AEToolbox.jsonEscape(obj[k]) + "\"";
             }
         }
         return "{" + parts.join(",") + "}";
@@ -260,14 +265,16 @@ AEToolbox.ping = function () {
     };
 
     AEToolbox.parseJson = function (json) {
-        if (typeof JSON !== "undefined" && JSON !== null && typeof JSON.parse === "function") {
-            return JSON.parse(json);
-        }
-
         // Public tool data uses JSON grammar, without Vela protocol/schema limits.
         // Never execute input, including after a native parser rejects it.
         var text = String(json);
         var position = 0;
+
+        function admitMemberName(key) {
+            if (key.indexOf(String.fromCharCode(0)) !== -1) {
+                throw new SyntaxError("Unsupported Host JSON member name: U+0000");
+            }
+        }
 
         function fail() {
             throw new SyntaxError("Invalid JSON at position " + position);
@@ -379,6 +386,7 @@ AEToolbox.ping = function () {
                     if (isObject) {
                         if (text.charAt(position) !== '"') { fail(); }
                         key = stringValue();
+                        admitMemberName(key);
                         whitespace();
                         if (text.charAt(position++) !== ":") { fail(); }
                         setMember(result, key, value());
@@ -395,6 +403,22 @@ AEToolbox.ping = function () {
             if (text.substr(position, 5) === "false") { position += 5; return false; }
             if (text.substr(position, 4) === "null") { position += 4; return null; }
             fail();
+        }
+
+        if (typeof JSON !== "undefined" && JSON !== null && typeof JSON.parse === "function") {
+            // A string followed by ':' is a member name in valid JSON. Reuse
+            // the decoder without constructing objects; JSON.parse still owns
+            // the remaining grammar and its errors never enter the fallback.
+            while (position < text.length) {
+                if (text.charAt(position) === '"') {
+                    var token = stringValue();
+                    whitespace();
+                    if (text.charAt(position) === ":") { admitMemberName(token); }
+                } else {
+                    position++;
+                }
+            }
+            return JSON.parse(text);
         }
 
         var result = value();

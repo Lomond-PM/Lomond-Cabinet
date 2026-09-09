@@ -1,0 +1,164 @@
+{
+  "kind": "Derived evidence reconciliation; user preauthorized conditional adjudication",
+  "status": "TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+  "scope": "A11 including F1; INTEGRATED_ACCEPTED / CLOSED pending 0.3.12-G",
+  "input": {
+    "planned": 20,
+    "executed": 20,
+    "pass": 20,
+    "fail": 0,
+    "notCovered": 0,
+    "negative": 10,
+    "positive": 10
+  },
+  "encoding": {
+    "planned": 310,
+    "executed": 310,
+    "pass": 310,
+    "fail": 0,
+    "notCovered": 0,
+    "nulValueCases": 6
+  },
+  "limitations": [
+    {
+      "caseId": "A11-AE-02/C0-0/toJsonStringKey",
+      "originalExpected": {
+        "\u0000": "value"
+      },
+      "status": "ACCEPTED_HOST_OBJECT_KEY_SUPPORT_LIMITATION; NOT ENCODING PASS",
+      "d1": "d1-derived.json",
+      "inputRejection": "F1-RE-input/single",
+      "inputEvidence": "f1-revalidation-input-final.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-0/toJsonNumberKey",
+      "originalExpected": {
+        "\u0000": 7
+      },
+      "status": "ACCEPTED_HOST_OBJECT_KEY_SUPPORT_LIMITATION; NOT ENCODING PASS",
+      "d1": "d1-derived.json",
+      "inputRejection": "F1-RE-input/single",
+      "inputEvidence": "f1-revalidation-input-final.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-0/toJsonBooleanKey",
+      "originalExpected": {
+        "\u0000": true
+      },
+      "status": "ACCEPTED_HOST_OBJECT_KEY_SUPPORT_LIMITATION; NOT ENCODING PASS",
+      "d1": "d1-derived.json",
+      "inputRejection": "F1-RE-input/single",
+      "inputEvidence": "f1-revalidation-input-final.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-0/stringifyKey",
+      "originalExpected": {
+        "\u0000": "value"
+      },
+      "status": "ACCEPTED_HOST_OBJECT_KEY_SUPPORT_LIMITATION; NOT ENCODING PASS",
+      "d1": "d1-derived.json",
+      "inputRejection": "F1-RE-input/single",
+      "inputEvidence": "f1-revalidation-input-final.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-0/nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0000": [
+              "\u0000",
+              {
+                "value": "\u0000"
+              }
+            ]
+          }
+        ]
+      },
+      "status": "ACCEPTED_HOST_OBJECT_KEY_SUPPORT_LIMITATION; NOT ENCODING PASS",
+      "d1": "d1-derived.json",
+      "inputRejection": "F1-RE-input/single",
+      "inputEvidence": "f1-revalidation-input-final.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-combined/toJsonStringKey",
+      "originalExpected": {
+        "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f": "value"
+      },
+      "status": "ACCEPTED_HOST_OBJECT_KEY_SUPPORT_LIMITATION; NOT ENCODING PASS",
+      "d1": "d1-derived.json",
+      "inputRejection": "F1-RE-input/C0-combined",
+      "inputEvidence": "f1-revalidation-input-final.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-combined/toJsonNumberKey",
+      "originalExpected": {
+        "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f": 7
+      },
+      "status": "ACCEPTED_HOST_OBJECT_KEY_SUPPORT_LIMITATION; NOT ENCODING PASS",
+      "d1": "d1-derived.json",
+      "inputRejection": "F1-RE-input/C0-combined",
+      "inputEvidence": "f1-revalidation-input-final.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-combined/toJsonBooleanKey",
+      "originalExpected": {
+        "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f": true
+      },
+      "status": "ACCEPTED_HOST_OBJECT_KEY_SUPPORT_LIMITATION; NOT ENCODING PASS",
+      "d1": "d1-derived.json",
+      "inputRejection": "F1-RE-input/C0-combined",
+      "inputEvidence": "f1-revalidation-input-final.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-combined/stringifyKey",
+      "originalExpected": {
+        "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f": "value"
+      },
+      "status": "ACCEPTED_HOST_OBJECT_KEY_SUPPORT_LIMITATION; NOT ENCODING PASS",
+      "d1": "d1-derived.json",
+      "inputRejection": "F1-RE-input/C0-combined",
+      "inputEvidence": "f1-revalidation-input-final.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-combined/nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f": [
+              "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f",
+              {
+                "value": "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f"
+              }
+            ]
+          }
+        ]
+      },
+      "status": "ACCEPTED_HOST_OBJECT_KEY_SUPPORT_LIMITATION; NOT ENCODING PASS",
+      "d1": "d1-derived.json",
+      "inputRejection": "F1-RE-input/C0-combined",
+      "inputEvidence": "f1-revalidation-input-final.json"
+    }
+  ],
+  "public": {
+    "planned": 3,
+    "executed": 3,
+    "pass": 3,
+    "fail": 0,
+    "notCovered": 0
+  },
+  "originalMatrix": {
+    "pass": 3,
+    "fail": 1,
+    "notCovered": 316,
+    "preserved": true
+  },
+  "hostCallbacks": 341,
+  "collectorIssues": "Two pre-UI construction errors; two overstrict collector assertions retained (exception name, object order), no repeated Host inputs",
+  "inheritedLimits": [
+    "Existing JSON.parse branch only; source not inferred",
+    "No-parser fallback VM evidence only; real ExtendScript not covered",
+    "Special __proto__ environments not covered",
+    "Memory strings do not prove AE project field support"
+  ],
+  "productionAndTestsChangedDuringCapture": false
+}

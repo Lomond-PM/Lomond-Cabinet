@@ -1,0 +1,9 @@
+{
+  "source": "PowerShell Get-Item and repository .debug",
+  "configuredHost": "AEFT",
+  "targetId": "AF0DE4EFCC5889DC2774DB9A8FBA67AA",
+  "configuredPort": 8088,
+  "linkType": "Junction",
+  "extension": "C:\\Users\\Administrator\\AppData\\Roaming\\Adobe\\CEP\\extensions\\com.kevin.aetoolbox",
+  "target": "C:\\Users\\Administrator\\.openclaw\\workspace\\com.kevin.aetoolbox"
+}
