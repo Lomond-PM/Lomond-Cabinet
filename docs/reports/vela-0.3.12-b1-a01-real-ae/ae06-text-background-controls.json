@@ -1,0 +1,114 @@
+{
+  "label": "AE-06-text-background-panel-controls-before-click",
+  "timestamp": "2026-09-09T06:40:15.207Z",
+  "uiText": "<\n主页\n背景圆角矩形\n\n为选中图层创建背景圆角矩形；未选中图层时创建 100x100 默认矩形。\n\n几何\n\n创建时的边界和圆角半径。\n\nPadding X\nPadding Y\n圆角半径\n填充\n\n选择无填充、纯色填充或渐变填充。\n\n填充模式\n纯色填充\n渐变填充\n纯色填充\n填充颜色\n填充不透明度\n描边\n\n选择无描边、纯色描边或渐变描边。\n\n恢复默认\n创建圆角矩形\n已选择 1 个图层",
+  "button": "<button class=\"primary-action ui-button ui-button--primary\" type=\"button\" data-dynamic-action=\"create\" data-registry-tool-id=\"textBackgroundBox\">创建圆角矩形</button>",
+  "controls": [
+    {
+      "id": "dynamic_textBackgroundBox_paddingX",
+      "tag": "INPUT",
+      "value": "40",
+      "checked": false,
+      "html": "<input id=\"dynamic_textBackgroundBox_paddingX\" class=\"num-input ui-number-input registry-number-input is-drag-ready\" type=\"text\" inputmode=\"decimal\" min=\"0\" step=\"1\" data-registry-tool-id=\"textBackgroundBox\">"
+    },
+    {
+      "id": "dynamic_textBackgroundBox_paddingY",
+      "tag": "INPUT",
+      "value": "25",
+      "checked": false,
+      "html": "<input id=\"dynamic_textBackgroundBox_paddingY\" class=\"num-input ui-number-input registry-number-input is-drag-ready\" type=\"text\" inputmode=\"decimal\" min=\"0\" step=\"1\" data-registry-tool-id=\"textBackgroundBox\">"
+    },
+    {
+      "id": "dynamic_textBackgroundBox_cornerRadius",
+      "tag": "INPUT",
+      "value": "35",
+      "checked": false,
+      "html": "<input id=\"dynamic_textBackgroundBox_cornerRadius\" class=\"num-input ui-number-input registry-number-input is-drag-ready\" type=\"text\" inputmode=\"decimal\" min=\"0\" step=\"1\" data-registry-tool-id=\"textBackgroundBox\">"
+    },
+    {
+      "id": "dynamic_textBackgroundBox_enableFill",
+      "tag": "INPUT",
+      "value": "on",
+      "checked": true,
+      "html": "<input id=\"dynamic_textBackgroundBox_enableFill\" type=\"checkbox\" data-section-toggle=\"fill\">"
+    },
+    {
+      "id": "dynamic_textBackgroundBox_fillMode",
+      "tag": "SELECT",
+      "value": "Solid Fill",
+      "html": "<select id=\"dynamic_textBackgroundBox_fillMode\" class=\"select-input ui-select is-native-select-hidden\" data-custom-select-id=\"dynamic_textBackgroundBox_fillMode-20\" data-customized=\"true\" data-registry-tool-id=\"textBackgroundBox\"><option value=\"Solid Fill\">纯色填充</option><option value=\"Gradient Fill\">渐变填充</option></select>"
+    },
+    {
+      "id": "dynamic_textBackgroundBox_fillColor",
+      "tag": "INPUT",
+      "value": "#000000",
+      "checked": false,
+      "html": "<input id=\"dynamic_textBackgroundBox_fillColor\" type=\"hidden\" value=\"#000000\" data-registry-tool-id=\"textBackgroundBox\">"
+    },
+    {
+      "id": "dynamic_textBackgroundBox_fillColorHex",
+      "tag": "INPUT",
+      "value": "#000000",
+      "checked": false,
+      "html": "<input id=\"dynamic_textBackgroundBox_fillColorHex\" class=\"ui-color-hex registry-color-hex ui-text-input\" type=\"text\" spellcheck=\"false\" data-hex-select-bound=\"true\" data-registry-tool-id=\"textBackgroundBox\">"
+    },
+    {
+      "id": "dynamic_textBackgroundBox_fillOpacity",
+      "tag": "INPUT",
+      "value": "100",
+      "checked": false,
+      "html": "<input id=\"dynamic_textBackgroundBox_fillOpacity\" class=\"num-input ui-number-input registry-number-input is-drag-ready\" type=\"text\" inputmode=\"decimal\" min=\"0\" max=\"100\" step=\"1\" data-registry-tool-id=\"textBackgroundBox\">"
+    },
+    {
+      "id": "dynamic_textBackgroundBox_enableStroke",
+      "tag": "INPUT",
+      "value": "on",
+      "checked": false,
+      "html": "<input id=\"dynamic_textBackgroundBox_enableStroke\" type=\"checkbox\" data-section-toggle=\"stroke\">"
+    },
+    {
+      "id": "dynamic_textBackgroundBox_strokeMode",
+      "tag": "SELECT",
+      "value": "Solid Stroke",
+      "html": "<select id=\"dynamic_textBackgroundBox_strokeMode\" class=\"select-input ui-select is-native-select-hidden\" data-custom-select-id=\"dynamic_textBackgroundBox_strokeMode-21\" data-customized=\"true\" data-registry-tool-id=\"textBackgroundBox\" disabled=\"\"><option value=\"Solid Stroke\">纯色描边</option><option value=\"Gradient Stroke\">渐变描边</option></select>"
+    },
+    {
+      "id": "dynamic_textBackgroundBox_strokeColor",
+      "tag": "INPUT",
+      "value": "#000000",
+      "checked": false,
+      "html": "<input id=\"dynamic_textBackgroundBox_strokeColor\" type=\"hidden\" value=\"#000000\" data-registry-tool-id=\"textBackgroundBox\" disabled=\"\">"
+    },
+    {
+      "id": "dynamic_textBackgroundBox_strokeColorHex",
+      "tag": "INPUT",
+      "value": "#000000",
+      "checked": false,
+      "html": "<input id=\"dynamic_textBackgroundBox_strokeColorHex\" class=\"ui-color-hex registry-color-hex ui-text-input\" type=\"text\" spellcheck=\"false\" data-hex-select-bound=\"true\" data-registry-tool-id=\"textBackgroundBox\" disabled=\"\">"
+    },
+    {
+      "id": "dynamic_textBackgroundBox_strokeWidth",
+      "tag": "INPUT",
+      "value": "2",
+      "checked": false,
+      "html": "<input id=\"dynamic_textBackgroundBox_strokeWidth\" class=\"num-input ui-number-input registry-number-input is-drag-ready\" type=\"text\" inputmode=\"decimal\" min=\"0\" step=\"1\" data-registry-tool-id=\"textBackgroundBox\" disabled=\"\">"
+    },
+    {
+      "id": "dynamic_textBackgroundBox_strokeOpacity",
+      "tag": "INPUT",
+      "value": "100",
+      "checked": false,
+      "html": "<input id=\"dynamic_textBackgroundBox_strokeOpacity\" class=\"num-input ui-number-input registry-number-input is-drag-ready\" type=\"text\" inputmode=\"decimal\" min=\"0\" max=\"100\" step=\"1\" data-registry-tool-id=\"textBackgroundBox\" disabled=\"\">"
+    },
+    {
+      "id": "dynamic_textBackgroundBox_fillMode-20-menu",
+      "tag": "SPAN",
+      "html": "<span id=\"dynamic_textBackgroundBox_fillMode-20-menu\" class=\"select-menu\" role=\"listbox\" data-select-menu-for=\"dynamic_textBackgroundBox_fillMode-20\"><span class=\"select-menu-viewport\"><button class=\"select-option is-selected\" type=\"button\" role=\"option\" data-value=\"Solid Fill\" aria-selected=\"true\">纯色填充</button><button class=\"select-option\" type=\"button\" role=\"option\" data-value=\"Gradient Fill\" aria-selected=\"false\">渐变填充</button></span></span>"
+    },
+    {
+      "id": "dynamic_textBackgroundBox_strokeMode-21-menu",
+      "tag": "SPAN",
+      "html": "<span id=\"dynamic_textBackgroundBox_strokeMode-21-menu\" class=\"select-menu\" role=\"listbox\" data-select-menu-for=\"dynamic_textBackgroundBox_strokeMode-21\"><span class=\"select-menu-viewport\"><button class=\"select-option is-selected\" type=\"button\" role=\"option\" data-value=\"Solid Stroke\" aria-selected=\"true\">纯色描边</button><button class=\"select-option\" type=\"button\" role=\"option\" data-value=\"Gradient Stroke\" aria-selected=\"false\">渐变描边</button></span></span>"
+    }
+  ]
+}

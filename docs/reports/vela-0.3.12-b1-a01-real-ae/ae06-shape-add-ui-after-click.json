@@ -1,0 +1,5 @@
+{
+  "label": "AE-06-actual-shape-panel-click-result",
+  "timestamp": "2026-09-09T06:46:22.265Z",
+  "uiText": "<\n主页\nAE绘画领域大神\n\n向选中的形状目标添加矢量形状、描边、填充与路径组件。\n\n形状目标\n目标\nGroup: Fill\n来源\nselectedGroup\n形状组件\n\n向当前形状目标添加 AE 原生矢量组件。\n\n描边 / 填充图层\n\n新建一个 Fill 与 Stroke 路径联动的形状图层。\n\n新建描边 / 填充图层\nStroke / Fill 设置\n\n仅用于上方 Stroke / Fill 形状图层按钮的默认值。\n\n描边宽度\n尖角限制\nStroke 颜色\nFill 颜色\n修剪路径\n修剪开始\n修剪结束\n修剪偏移\nStroke 锥度\n起始长度\n结束长度\n起始宽度\n结束宽度\n起始缓和\n结束缓和\n恢复 Stroke / Fill 默认值\n已创建 Stroke / Fill 形状图层。"
+}

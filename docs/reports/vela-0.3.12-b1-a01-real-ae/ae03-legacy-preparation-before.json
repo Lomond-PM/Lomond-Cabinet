@@ -1,0 +1,6 @@
+{
+  "label": "AE-03-legacy-preparation-before",
+  "timestamp": "2026-09-09T06:08:17.672Z",
+  "hostInput": "(function(){var c=app.project.activeItem,l=c instanceof CompItem&&c.selectedLayers.length===1?c.selectedLayers[0]:null;return AEToolbox.stringify({projectFile:app.project.file?app.project.file.fsName:null,comp:c instanceof CompItem?c.name:null,selectionCount:c instanceof CompItem?c.selectedLayers.length:0,layer:l?{id:l.id,index:l.index,name:l.name,nullLayer:l.nullLayer,comment:l.comment,parent:l.parent?l.parent.index:null}:null});})()",
+  "hostRaw": "{\"projectFile\":\"D:\\\\Projects\\\\Vela Test\\\\Vela Test.aep\",\"comp\":\"Test Comp\",\"selectionCount\":1,\"layer\":{\"id\":190,\"index\":1,\"name\":\"A01_METADATA_FIXTURE\",\"nullLayer\":true,\"comment\":\"\",\"parent\":null}}"
+}

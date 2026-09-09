@@ -1,0 +1,45 @@
+{
+  "label": "Final acceptance derived summary; not raw Host trace",
+  "timestamp": "2026-09-09T06:51:19.489Z",
+  "branch": "fix/host-json-entry-a01-0.3.12",
+  "head": "cd96e0cd65fd485a8f00ac506ee74c0f97fc5e75",
+  "originDev": "cd96e0cd65fd485a8f00ac506ee74c0f97fc5e75",
+  "implementationHashes": {
+    "host/index.jsx": {
+      "expected": "0e707fd18ebb7b723137771af1b14c1ac27fb3721d58bb32756c2f4a061eec78",
+      "current": "0e707fd18ebb7b723137771af1b14c1ac27fb3721d58bb32756c2f4a061eec78",
+      "unchanged": true
+    },
+    "scripts/test-host-json-entry.js": {
+      "expected": "b4761f9414f2b7b81534bd39764d63e22b5675c82c532a42230029fe24ec2955",
+      "current": "b4761f9414f2b7b81534bd39764d63e22b5675c82c532a42230029fe24ec2955",
+      "unchanged": true
+    },
+    "scripts/fixtures/host-json-entry-harness.js": {
+      "expected": "1baca47af8fdf39e4824063fc20f373a00f4af1f66c673c10a0d958b5ba79deb",
+      "current": "1baca47af8fdf39e4824063fc20f373a00f4af1f66c673c10a0d958b5ba79deb",
+      "unchanged": true
+    }
+  },
+  "ordinaryToolUndoSnapshotsRestored": {
+    "text-background": true,
+    "shape-add": true
+  },
+  "status": {
+    "AE-01": "PASS",
+    "AE-02": "PASS: existing JSON.parse branch",
+    "AE-03": "PASS: existing iconGrid artifact and constructed legacy featureStack",
+    "AE-04": "PASS: tested comment matrix, no selection, actual FolderItem",
+    "AE-05": "PASS: bounded snapshots and stable UI; new/legacy Undo menus observed",
+    "AE-06": "PASS: both normal panel actions and user-confirmed actual Undo"
+  },
+  "notCovered": [
+    "No-native JSON fallback in real ExtendScript (prior VM PASS only)",
+    "__proto__ special setter without safe defineProperty environment",
+    "activeItem null / no project as distinct cases",
+    "Per-invalid-case native Undo menus; full Undo stack; same-value writes",
+    "Complete automatic polling trace",
+    "Raw action callbacks for AE-06 (UI result and separate Host snapshots retained)"
+  ],
+  "disposition": "IMPLEMENTED / OFFLINE PASS / REAL AE ACCEPTANCE PENDING; uncovered conditions await adjudication; A01 not CLOSED"
+}

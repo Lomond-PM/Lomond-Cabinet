@@ -2,11 +2,11 @@
 
 ## Vela development milestone
 
-**0.3.11 — Multi-conversation Foundation：COMPLETE / SEALED**。当前 **0.3.12-A0 — Baseline Reconciliation & Production Revalidation Plan：COMPLETE（仅文档与复核计划）**，R1 资料已导入，生产修复尚未开始。当前排期唯一来源为 [VELA_ROADMAP](VELA_ROADMAP.md)，本轮资料与覆盖边界见 [A0 阶段报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)。
+**0.3.11 — Multi-conversation Foundation：COMPLETE / SEALED**。0.3.12-A0 文档规划 COMPLETE，已合并 dev。当前 **0.3.12-B1 / A01：TARGETED_ACCEPTED / READY FOR COMMIT / PR**：公共 `AEToolbox.parseJson` 已移除执行输入的回退，缺少原生 JSON.parse 时使用严格 JSON 解析，实际注册状态链与其他直接消费者的离线验证通过，六组有界真实 AE 验收已接受；覆盖限制保留，INTEGRATED_ACCEPTED / CLOSED 留待 0.3.12-G，B1/0.3.12 未完成。当前排期唯一来源为 [VELA_ROADMAP](VELA_ROADMAP.md)，本切片证据及宿主边界见 [A01 阶段报告](reports/vela-0.3.12-b1-a01-host-json-entry.md)，资料与覆盖规划保留在 [A0 阶段报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)。
 
 当前已实现：多条独立 live conversation records，全局最多一个 active objective；默认启动创建并选择一条；selector/New/Close、最多八条记录及各记录临时草稿。Conversation 拥有 PresentationModel，Surface 通过显式注入使用它；命令、流与完成事件绑定来源 conversation。持久化、历史注入、Authority 恢复、并发目标和队列/调度器均未实现。
 
-最新封存证据见 [0.3.11 综合验收](reports/vela-0.3.11-integrated-acceptance.md)：182/182 离线套件 PASS（0 skipped），94/94 每个 forward/reverse/forward 顺序 PASS，A5 focused 66 与 11 个实际产品 CEP/AE 用例 PASS。综合验收保留实际运行与继承离线证据的边界及全部 UNKNOWN；无 raw wire archive 声明。本轮未重跑这些测试或 AE 验收，architecture amendment NONE。
+最新封存证据见 [0.3.11 综合验收](reports/vela-0.3.11-integrated-acceptance.md)：182/182 离线套件 PASS（0 skipped），94/94 每个 forward/reverse/forward 顺序 PASS，A5 focused 66 与 11 个实际产品 CEP/AE 用例 PASS。综合验收保留实际运行与继承离线证据的边界及全部 UNKNOWN；无 raw wire archive 声明。A01 实施轮1122 focused assertions、最终代码全量离线183/183 PASS（0 skipped）由本次文档收束复用，未重跑；后续六组有界真实 AE 验收已 TARGETED_ACCEPTED，architecture amendment NONE。
 
 历史切片证据：[A1](reports/vela-0.3.11-a1-conversation-ownership.md) 177/177、真实 AE 5/5；[A2](reports/vela-0.3.11-a2-conversation-presentation.md) / F1 179/179；[A3](reports/vela-0.3.11-a3-source-routing.md) 180/180；[A4](reports/vela-0.3.11-a4-runtime-composition.md) 181/181；[A5](reports/vela-0.3.11-a5-conversation-selection.md) 182/182。以上均 COMPLETE / SEALED，不是并列的当前基线。此前 [0.3.10](reports/vela-0.3.10-context-closure.md) 176/176、A4 real AE PASS、A6R 15/15、A1 U11 CLOSED 保留为历史封存事实。
 
@@ -47,7 +47,7 @@ VERSION, both manifest fields and Host projectVersion remain **0.3.6**, release-
 
 ## 0.3.12 生产复核边界
 
-R1原审计指出A02一次性授权最终Verify关联、A03 no-op的Session提交标记、A05/A06/A12启停生命周期等待复核路径。当前生产分支仍在本基线，尚未修复；下述控制路径与封存结果不应被扩写为所有新反例都已通过。详细条件/来源/生产模块验证计划见[A0报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)。R1总账的OPEN状态不是本轮新确诊；原封存UNKNOWN不升级。
+R1原审计指出A02一次性授权最终Verify关联、A03 no-op的Session提交标记、A05/A06/A12启停生命周期等待复核路径。这些路径本轮未修复；下述控制路径与封存结果不应被扩写为所有新反例都已通过。详细条件/来源/生产模块验证计划见[A0报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)。R1总账的OPEN状态不是本轮新确诊；原封存UNKNOWN不升级。
 
 ## Agent execution and authority
 
@@ -65,7 +65,7 @@ qwen3.5 verbosity/repetition is model/provider tuning, not Vela correctness fail
 
 ## Verification and ownership
 
-最新完整功能封存基线为 **182/182 suites PASS，0 skipped（0.3.11-A5 / 综合封存继承）**，顺序测试 94/94 ×3。176/176 与 171/171 分别属于历史 0.3.10、0.3.9。本轮仅文档检查，结果见 A0 报告；不复述旧 reconciliation 的执行记录为本轮结果。Generated i18n content 由脚本拥有。[HANDOFF](HANDOFF.md) 是导航入口；[KNOWN_ISSUES](KNOWN_ISSUES.md) 持有既有问题；CHANGELOG 持有包发布历史。
+最新完整功能封存基线为 **182/182 suites PASS，0 skipped（0.3.11-A5 / 综合封存继承）**，顺序测试 94/94 ×3。176/176 与 171/171 分别属于历史 0.3.10、0.3.9。A01 实施轮生产组合测试1122项断言、全量离线183/183 PASS（0 skipped），本次复用而非重新执行，详见 A01 报告；真实 AE 的六组有界验收另见报告；两者都不等于整个 B1/0.3.12 封存。Generated i18n content 由脚本拥有。[HANDOFF](HANDOFF.md) 是导航入口；[KNOWN_ISSUES](KNOWN_ISSUES.md) 持有既有问题；CHANGELOG 持有包发布历史。
 
 ## Context closure and 0.3.11 inheritance
 
