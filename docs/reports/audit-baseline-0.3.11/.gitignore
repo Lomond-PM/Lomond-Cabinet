@@ -1,0 +1,4 @@
+# Preserve the three inherited R1 evidence archives despite the root *.zip rule.
+!source-evidence.zip
+!appearance-evidence.zip
+!uiux-evidence.zip

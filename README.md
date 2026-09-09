@@ -11,7 +11,7 @@ Lomond Cabinet is an After Effects CEP extension that combines a registry-driven
 
 Version 0.3.6 is the release candidate for Vela Delegated Authority. The latest published baseline remains immutable `v0.3.5` until final AE smoke and publication. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default.
 
-Current Vela milestone: **0.3.9 — Streaming Response & Reasoning Surface, COMPLETE / SEALED / merged into dev**. Next: **0.3.10 — Context Architecture**. These are development milestones, separate from package release metadata above. See the [canonical roadmap](docs/VELA_ROADMAP.md), [current project state](docs/PROJECT_STATE.md) and [0.3.9 acceptance evidence](docs/reports/vela-0.3.9-c2-closure.md).
+当前 Vela：**0.3.11 — Multi-conversation Foundation，COMPLETE / SEALED**；**0.3.12-A0 COMPLETE（仅文档与复核计划），生产修复尚未开始**，R1 资料已导入。功能里程碑与包 metadata 独立。见 [唯一当前排期](docs/VELA_ROADMAP.md)、[已实现事实](docs/PROJECT_STATE.md) 和 [0.3.11 封存证据](docs/reports/vela-0.3.11-integrated-acceptance.md)。
 
 ## Runtime architecture
 
@@ -194,7 +194,7 @@ Keep these synchronized for future releases:
 
 `AEToolbox.hostApiVersion` is an independent Host contract version and remains `1.0.0`; it is not the product version.
 
-Vela development has advanced through sealed 0.3.9 on dev. The next milestone is 0.3.10 Context Architecture, as recorded in the [canonical roadmap](docs/VELA_ROADMAP.md). This does not publish a package release or change the historical 0.3.6 release scope.
+Vela 已封存至 0.3.11；0.3.12-A0 基线核对与复核规划已完成，生产修复尚未开始。排期见 [canonical roadmap](docs/VELA_ROADMAP.md)。这不发布包版本，也不改变历史 0.3.6 release scope。
 
 ## Known issues and release history
 
