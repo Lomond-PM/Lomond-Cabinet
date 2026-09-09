@@ -3,7 +3,7 @@
 **规划修订：R1-2026-09-09**
 **基准节点：0.3.11 — Multi-conversation Foundation，COMPLETE / SEALED**
 **核对仓库：`Lomond-PM/Lomond-Cabinet`，`dev@b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a`**
-**文档状态：保留 R1 规划来源；当前 A01 为 TARGETED_ACCEPTED / READY FOR COMMIT / PR（覆盖限制见 A01 当前条目）。其余条目不因本次裁定改变，整个 B1/0.3.12 未完成。**
+**文档状态：保留 R1 规划来源；A01 已 TARGETED_ACCEPTED 并经 PR #202 合并 dev（覆盖限制保留）；当前 A11 为 TARGETED_ACCEPTED / READY FOR COMMIT / PR。其余条目不因本次裁定改变，整个 B1/0.3.12 未完成。**
 
 > **总目标：先修可信性与数据风险，再重建视觉和 UI 基础，随后泛化能力、形成可委托的完整 AE Agent。**
 > 项目处于早期阶段，允许替换旧实现、重组模块与页面结构；不以维护既有类名、旧 Renderer 或庞大主程序为目的。需要保留的是执行安全、用户资产、明确的所有权和经过验证的产品语义，而不是实现外形。
@@ -536,7 +536,7 @@ TTFT、reasoning/output/total tokens、TPS、总时长仅在有合格来源时�
 
 #### A01 — 公共 Host 元数据解析进入 eval
 
-**当前条目（2026-09-09 用户裁定）：TARGETED_ACCEPTED / READY FOR COMMIT / PR。** 公共入口修复已实施，复用实施轮1122 focused assertions、183/183 suites PASS（0 skipped）；六组有界真实 AE 验收已接受。无可用 JSON.parse 回退为生产模块 VM PASS / 真实 ExtendScript NOT COVERED；本次 dev 合并接受该覆盖风险，0.3.12-G 重新裁定。`__proto__` 特殊环境、FolderItem 与 null 差异、有限字段/Undo/时间观察及未捕获动作回调均保留限制，见 [A01 报告](../reports/vela-0.3.12-b1-a01-host-json-entry.md#验收裁定与剩余覆盖)。INTEGRATED_ACCEPTED / CLOSED 留待 0.3.12-G；若出现回退解析错误、安全属性处理失效或相关回归，立即重新打开对应修复，不等待整合阶段。修复 commit / PR 尚未产生，关联待后补。
+**当前条目（保留2026-09-09用户裁定）：TARGETED_ACCEPTED，已通过 PR #202 合并 dev。** 公共入口修复已实施，复用实施轮1122 focused assertions、183/183 suites PASS（0 skipped）；六组有界真实 AE 验收已接受。无可用 JSON.parse 回退为生产模块 VM PASS / 真实 ExtendScript NOT COVERED；本次 dev 合并接受该覆盖风险，0.3.12-G 重新裁定。`__proto__` 特殊环境、FolderItem 与 null 差异、有限字段/Undo/时间观察及未捕获动作回调均保留限制，见 [A01 报告](../reports/vela-0.3.12-b1-a01-host-json-entry.md#验收裁定与剩余覆盖)。INTEGRATED_ACCEPTED / CLOSED 留待 0.3.12-G；若出现回退解析错误、安全属性处理失效或相关回归，立即重新打开对应修复，不等待整合阶段。A01 修复提交 b3a6d0b454900afd27ca49153fae1d9618abc6f3，PR #202；合并节点 9dee61ee2d2a3ce2f8dd90107fe5343299063eb8，依据本地 Git 历史核对。
 
 **分配：**主办 0.3.12；集成/回验 0.3.12；0.3.25。
 **原有证据：**原报告 E1：隔离 Node/VM 摘录；真实宿主条件未验证。[S-A]
@@ -667,6 +667,8 @@ source binding 已保存 previousCommentEncoded，但 Detach 对所有组件层�
 
 
 #### A11 — 公共 serializer 未转义全部 C0 字符
+
+**当前（2026-09-09）：TARGETED_ACCEPTED / READY FOR COMMIT / PR。** A11（含F1）真实复验：入口20/20、编码310/310、公共返回3/3 PASS；10项含NUL对象键按用户预授权接受为Host支持范围限制，不计编码PASS。INTEGRATED_ACCEPTED / CLOSED 留待0.3.12-G。 原A11仅修serializer，离线184 suites；F1新增parseJson成员名准入，重新执行224/1122/2307/27项及185 suites（0 skip）；以上离线结果本轮未重跑。 首次3 PASS /1 FAIL /316 NOT COVERED及D1/F1修复前记录保留，未改写原期望。详见 [A11报告](../reports/vela-0.3.12-b1-a11-host-json-serialization.md)。不进入G-02。
 
 **分配：**主办 0.3.12；集成/回验 0.3.12；0.3.25。
 **原有证据：**原报告 E1：U+0001 与换行对照。[S-A]

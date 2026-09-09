@@ -1,0 +1,41 @@
+{
+  "kind": "Derived from saved real CEP/Host evidence, not new Host trace",
+  "groups": {
+    "A11-AE-01": "PASS",
+    "A11-AE-02": "FAIL: content-assertion at C0-0/toJsonStringKey",
+    "A11-AE-03": "NOT COVERED as complete group; getHostLoadInfo obtained during AE-01, getSelectionSummary not executed"
+  },
+  "matrix": {
+    "planned": 320,
+    "suiteRequired": 304,
+    "extraIndividualQuoteBackslash": 16,
+    "executed": 4,
+    "pass": 3,
+    "fail": 1,
+    "notCovered": 316,
+    "requiredNotCovered": 300
+  },
+  "hostCallbacks": 9,
+  "failure": {
+    "caseId": "A11-AE-02/C0-0/toJsonStringKey",
+    "raw": "{\"\":\"value\"}",
+    "expectedKeyCodeUnits": [
+      0
+    ],
+    "actualKeyCodeUnits": [],
+    "jsonParse": "PASS",
+    "content": "FAIL",
+    "attribution": "Not isolated: Host object key construction/enumeration versus serializer/bridge. No further probes after failure."
+  },
+  "disposition": "IMPLEMENTED / OFFLINE PASS / REAL AE ACCEPTANCE PENDING; targeted acceptance failed, not accepted",
+  "evidence": [
+    "ae01-environment-sources.json",
+    "ae01-load-info-cep-parse.json",
+    "ae01-source-comparison.json",
+    "ae02-matrix.json",
+    "collection-commands.json",
+    "environment-mapping.json",
+    "worktree-after-capture.json",
+    "worktree-before.json"
+  ]
+}

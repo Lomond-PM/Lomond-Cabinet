@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-09-09T10:30:42.246Z",
+  "baselineSnapshot": "f1-revalidation-before.json",
+  "existingFilesCompared": 474,
+  "changedExistingFiles": [
+    "AGENTS.md",
+    "README.md",
+    "docs/HANDOFF.md",
+    "docs/PROJECT_STATE.md",
+    "docs/VELA_ROADMAP.md",
+    "docs/design/vela-0.3-reconstruction-guidance.md",
+    "docs/reports/vela-0.3.11-consolidated-register.json",
+    "docs/reports/vela-0.3.12-b1-a11-host-json-serialization.md"
+  ],
+  "productionAndImplementationTestsUnchanged": true,
+  "priorEvidenceUnchanged": true,
+  "other52RegisterItemsAndA01AcceptanceUnchanged": true,
+  "jsonFilesParsed": 33,
+  "rawRecordsChecked": 358,
+  "localMarkdownLinksChecked": 122,
+  "untrackedFilesFormatChecked": 39,
+  "i18nFreshness": "PASS",
+  "projectConsistency": "PASS",
+  "trackedDiffCheck": "PASS",
+  "offlineSuitesRerun": false,
+  "head": "9dee61ee2d2a3ce2f8dd90107fe5343299063eb8"
+}

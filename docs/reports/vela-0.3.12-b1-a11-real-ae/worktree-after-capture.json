@@ -1,0 +1,11 @@
+{
+  "time": "2026-09-09T08:31:26.431Z",
+  "changedExistingFiles": [],
+  "productionAndTests": {
+    "host/index.jsx": "01e21e6f71236606424bb3498701c101dd00a9485c93e67b57f08c98f29f46a3",
+    "scripts/test-host-json-serialization.js": "a9961593f07215eaf8261d27a67f5215ab41fc18c61cd89202e8f8dfd9887353",
+    "scripts/test-host-json-entry.js": "c146426b8cae4d59f9ffe092f90f3a33c3ce593203115e8b05e0f7896ac3380e",
+    "scripts/fixtures/host-json-entry-harness.js": "8a4afa4cc82cc7f3048ccd8076b17af56c259b449ef23a538c89fb54426ef5eb"
+  },
+  "head": "9dee61ee2d2a3ce2f8dd90107fe5343299063eb8"
+}

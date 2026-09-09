@@ -1,0 +1,5077 @@
+{
+  "kind": "Forward plan only; initial case IDs and expectations preserved; no new PASS",
+  "counts": {
+    "total": 320,
+    "encodingMustPass": 310,
+    "nulKeyLimitations": 10,
+    "nulValueCases": 6
+  },
+  "entries": [
+    {
+      "caseId": "A11-AE-02/C0-0/jsonEscape",
+      "sample": {
+        "label": "C0-0",
+        "value": "\u0000"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0000",
+      "initialResult": "PASS",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json",
+      "nulValueMustRemainIntact": true
+    },
+    {
+      "caseId": "A11-AE-02/C0-0/toJsonValue",
+      "sample": {
+        "label": "C0-0",
+        "value": "\u0000"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0000"
+      },
+      "initialResult": "PASS",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json",
+      "nulValueMustRemainIntact": true
+    },
+    {
+      "caseId": "A11-AE-02/C0-0/stringifyValue",
+      "sample": {
+        "label": "C0-0",
+        "value": "\u0000"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0000",
+      "initialResult": "PASS",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json",
+      "nulValueMustRemainIntact": true
+    },
+    {
+      "caseId": "A11-AE-02/C0-0/toJsonStringKey",
+      "sample": {
+        "label": "C0-0",
+        "value": "\u0000"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0000": "value"
+      },
+      "initialResult": "FAIL",
+      "nextDisposition": "HOST_KEY_REPRESENTATION_LIMITATION_PENDING_REVIEW",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json",
+      "d1Evidence": "d1-derived.json",
+      "inputAdmissionCase": {
+        "caseId": "F1-AE-reject/C0-0",
+        "jsonInput": "{\"\\u0000\":\"value\"}",
+        "expected": "Unsupported Host JSON member name: U+0000; reject whole input before property creation"
+      }
+    },
+    {
+      "caseId": "A11-AE-02/C0-0/toJsonNumberKey",
+      "sample": {
+        "label": "C0-0",
+        "value": "\u0000"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0000": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "HOST_KEY_REPRESENTATION_LIMITATION_PENDING_REVIEW",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json",
+      "d1Evidence": "d1-derived.json",
+      "inputAdmissionCase": {
+        "caseId": "F1-AE-reject/C0-0",
+        "jsonInput": "{\"\\u0000\":\"value\"}",
+        "expected": "Unsupported Host JSON member name: U+0000; reject whole input before property creation"
+      }
+    },
+    {
+      "caseId": "A11-AE-02/C0-0/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-0",
+        "value": "\u0000"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0000": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "HOST_KEY_REPRESENTATION_LIMITATION_PENDING_REVIEW",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json",
+      "d1Evidence": "d1-derived.json",
+      "inputAdmissionCase": {
+        "caseId": "F1-AE-reject/C0-0",
+        "jsonInput": "{\"\\u0000\":\"value\"}",
+        "expected": "Unsupported Host JSON member name: U+0000; reject whole input before property creation"
+      }
+    },
+    {
+      "caseId": "A11-AE-02/C0-0/stringifyKey",
+      "sample": {
+        "label": "C0-0",
+        "value": "\u0000"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0000": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "HOST_KEY_REPRESENTATION_LIMITATION_PENDING_REVIEW",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json",
+      "d1Evidence": "d1-derived.json",
+      "inputAdmissionCase": {
+        "caseId": "F1-AE-reject/C0-0",
+        "jsonInput": "{\"\\u0000\":\"value\"}",
+        "expected": "Unsupported Host JSON member name: U+0000; reject whole input before property creation"
+      }
+    },
+    {
+      "caseId": "A11-AE-02/C0-0/nested",
+      "sample": {
+        "label": "C0-0",
+        "value": "\u0000"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0000": [
+              "\u0000",
+              {
+                "value": "\u0000"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "HOST_KEY_REPRESENTATION_LIMITATION_PENDING_REVIEW",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json",
+      "d1Evidence": "d1-derived.json",
+      "inputAdmissionCase": {
+        "caseId": "F1-AE-reject/C0-0",
+        "jsonInput": "{\"\\u0000\":\"value\"}",
+        "expected": "Unsupported Host JSON member name: U+0000; reject whole input before property creation"
+      }
+    },
+    {
+      "caseId": "A11-AE-02/C0-1/jsonEscape",
+      "sample": {
+        "label": "C0-1",
+        "value": "\u0001"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0001",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-1/toJsonValue",
+      "sample": {
+        "label": "C0-1",
+        "value": "\u0001"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0001"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-1/stringifyValue",
+      "sample": {
+        "label": "C0-1",
+        "value": "\u0001"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0001",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-1/toJsonStringKey",
+      "sample": {
+        "label": "C0-1",
+        "value": "\u0001"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0001": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-1/toJsonNumberKey",
+      "sample": {
+        "label": "C0-1",
+        "value": "\u0001"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0001": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-1/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-1",
+        "value": "\u0001"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0001": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-1/stringifyKey",
+      "sample": {
+        "label": "C0-1",
+        "value": "\u0001"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0001": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-1/nested",
+      "sample": {
+        "label": "C0-1",
+        "value": "\u0001"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0001": [
+              "\u0001",
+              {
+                "value": "\u0001"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-2/jsonEscape",
+      "sample": {
+        "label": "C0-2",
+        "value": "\u0002"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0002",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-2/toJsonValue",
+      "sample": {
+        "label": "C0-2",
+        "value": "\u0002"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0002"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-2/stringifyValue",
+      "sample": {
+        "label": "C0-2",
+        "value": "\u0002"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0002",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-2/toJsonStringKey",
+      "sample": {
+        "label": "C0-2",
+        "value": "\u0002"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0002": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-2/toJsonNumberKey",
+      "sample": {
+        "label": "C0-2",
+        "value": "\u0002"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0002": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-2/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-2",
+        "value": "\u0002"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0002": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-2/stringifyKey",
+      "sample": {
+        "label": "C0-2",
+        "value": "\u0002"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0002": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-2/nested",
+      "sample": {
+        "label": "C0-2",
+        "value": "\u0002"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0002": [
+              "\u0002",
+              {
+                "value": "\u0002"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-3/jsonEscape",
+      "sample": {
+        "label": "C0-3",
+        "value": "\u0003"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0003",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-3/toJsonValue",
+      "sample": {
+        "label": "C0-3",
+        "value": "\u0003"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0003"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-3/stringifyValue",
+      "sample": {
+        "label": "C0-3",
+        "value": "\u0003"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0003",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-3/toJsonStringKey",
+      "sample": {
+        "label": "C0-3",
+        "value": "\u0003"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0003": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-3/toJsonNumberKey",
+      "sample": {
+        "label": "C0-3",
+        "value": "\u0003"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0003": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-3/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-3",
+        "value": "\u0003"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0003": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-3/stringifyKey",
+      "sample": {
+        "label": "C0-3",
+        "value": "\u0003"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0003": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-3/nested",
+      "sample": {
+        "label": "C0-3",
+        "value": "\u0003"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0003": [
+              "\u0003",
+              {
+                "value": "\u0003"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-4/jsonEscape",
+      "sample": {
+        "label": "C0-4",
+        "value": "\u0004"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0004",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-4/toJsonValue",
+      "sample": {
+        "label": "C0-4",
+        "value": "\u0004"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0004"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-4/stringifyValue",
+      "sample": {
+        "label": "C0-4",
+        "value": "\u0004"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0004",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-4/toJsonStringKey",
+      "sample": {
+        "label": "C0-4",
+        "value": "\u0004"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0004": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-4/toJsonNumberKey",
+      "sample": {
+        "label": "C0-4",
+        "value": "\u0004"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0004": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-4/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-4",
+        "value": "\u0004"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0004": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-4/stringifyKey",
+      "sample": {
+        "label": "C0-4",
+        "value": "\u0004"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0004": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-4/nested",
+      "sample": {
+        "label": "C0-4",
+        "value": "\u0004"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0004": [
+              "\u0004",
+              {
+                "value": "\u0004"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-5/jsonEscape",
+      "sample": {
+        "label": "C0-5",
+        "value": "\u0005"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0005",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-5/toJsonValue",
+      "sample": {
+        "label": "C0-5",
+        "value": "\u0005"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0005"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-5/stringifyValue",
+      "sample": {
+        "label": "C0-5",
+        "value": "\u0005"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0005",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-5/toJsonStringKey",
+      "sample": {
+        "label": "C0-5",
+        "value": "\u0005"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0005": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-5/toJsonNumberKey",
+      "sample": {
+        "label": "C0-5",
+        "value": "\u0005"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0005": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-5/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-5",
+        "value": "\u0005"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0005": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-5/stringifyKey",
+      "sample": {
+        "label": "C0-5",
+        "value": "\u0005"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0005": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-5/nested",
+      "sample": {
+        "label": "C0-5",
+        "value": "\u0005"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0005": [
+              "\u0005",
+              {
+                "value": "\u0005"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-6/jsonEscape",
+      "sample": {
+        "label": "C0-6",
+        "value": "\u0006"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0006",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-6/toJsonValue",
+      "sample": {
+        "label": "C0-6",
+        "value": "\u0006"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0006"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-6/stringifyValue",
+      "sample": {
+        "label": "C0-6",
+        "value": "\u0006"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0006",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-6/toJsonStringKey",
+      "sample": {
+        "label": "C0-6",
+        "value": "\u0006"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0006": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-6/toJsonNumberKey",
+      "sample": {
+        "label": "C0-6",
+        "value": "\u0006"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0006": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-6/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-6",
+        "value": "\u0006"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0006": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-6/stringifyKey",
+      "sample": {
+        "label": "C0-6",
+        "value": "\u0006"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0006": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-6/nested",
+      "sample": {
+        "label": "C0-6",
+        "value": "\u0006"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0006": [
+              "\u0006",
+              {
+                "value": "\u0006"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-7/jsonEscape",
+      "sample": {
+        "label": "C0-7",
+        "value": "\u0007"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0007",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-7/toJsonValue",
+      "sample": {
+        "label": "C0-7",
+        "value": "\u0007"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0007"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-7/stringifyValue",
+      "sample": {
+        "label": "C0-7",
+        "value": "\u0007"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0007",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-7/toJsonStringKey",
+      "sample": {
+        "label": "C0-7",
+        "value": "\u0007"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0007": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-7/toJsonNumberKey",
+      "sample": {
+        "label": "C0-7",
+        "value": "\u0007"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0007": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-7/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-7",
+        "value": "\u0007"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0007": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-7/stringifyKey",
+      "sample": {
+        "label": "C0-7",
+        "value": "\u0007"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0007": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-7/nested",
+      "sample": {
+        "label": "C0-7",
+        "value": "\u0007"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0007": [
+              "\u0007",
+              {
+                "value": "\u0007"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-8/jsonEscape",
+      "sample": {
+        "label": "C0-8",
+        "value": "\b"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\b",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-8/toJsonValue",
+      "sample": {
+        "label": "C0-8",
+        "value": "\b"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\b"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-8/stringifyValue",
+      "sample": {
+        "label": "C0-8",
+        "value": "\b"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\b",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-8/toJsonStringKey",
+      "sample": {
+        "label": "C0-8",
+        "value": "\b"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\b": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-8/toJsonNumberKey",
+      "sample": {
+        "label": "C0-8",
+        "value": "\b"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\b": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-8/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-8",
+        "value": "\b"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\b": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-8/stringifyKey",
+      "sample": {
+        "label": "C0-8",
+        "value": "\b"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\b": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-8/nested",
+      "sample": {
+        "label": "C0-8",
+        "value": "\b"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\b": [
+              "\b",
+              {
+                "value": "\b"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-9/jsonEscape",
+      "sample": {
+        "label": "C0-9",
+        "value": "\t"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\t",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-9/toJsonValue",
+      "sample": {
+        "label": "C0-9",
+        "value": "\t"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\t"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-9/stringifyValue",
+      "sample": {
+        "label": "C0-9",
+        "value": "\t"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\t",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-9/toJsonStringKey",
+      "sample": {
+        "label": "C0-9",
+        "value": "\t"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\t": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-9/toJsonNumberKey",
+      "sample": {
+        "label": "C0-9",
+        "value": "\t"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\t": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-9/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-9",
+        "value": "\t"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\t": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-9/stringifyKey",
+      "sample": {
+        "label": "C0-9",
+        "value": "\t"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\t": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-9/nested",
+      "sample": {
+        "label": "C0-9",
+        "value": "\t"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\t": [
+              "\t",
+              {
+                "value": "\t"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-10/jsonEscape",
+      "sample": {
+        "label": "C0-10",
+        "value": "\n"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\n",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-10/toJsonValue",
+      "sample": {
+        "label": "C0-10",
+        "value": "\n"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\n"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-10/stringifyValue",
+      "sample": {
+        "label": "C0-10",
+        "value": "\n"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\n",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-10/toJsonStringKey",
+      "sample": {
+        "label": "C0-10",
+        "value": "\n"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\n": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-10/toJsonNumberKey",
+      "sample": {
+        "label": "C0-10",
+        "value": "\n"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\n": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-10/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-10",
+        "value": "\n"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\n": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-10/stringifyKey",
+      "sample": {
+        "label": "C0-10",
+        "value": "\n"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\n": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-10/nested",
+      "sample": {
+        "label": "C0-10",
+        "value": "\n"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\n": [
+              "\n",
+              {
+                "value": "\n"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-11/jsonEscape",
+      "sample": {
+        "label": "C0-11",
+        "value": "\u000b"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u000b",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-11/toJsonValue",
+      "sample": {
+        "label": "C0-11",
+        "value": "\u000b"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u000b"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-11/stringifyValue",
+      "sample": {
+        "label": "C0-11",
+        "value": "\u000b"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u000b",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-11/toJsonStringKey",
+      "sample": {
+        "label": "C0-11",
+        "value": "\u000b"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u000b": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-11/toJsonNumberKey",
+      "sample": {
+        "label": "C0-11",
+        "value": "\u000b"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u000b": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-11/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-11",
+        "value": "\u000b"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u000b": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-11/stringifyKey",
+      "sample": {
+        "label": "C0-11",
+        "value": "\u000b"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u000b": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-11/nested",
+      "sample": {
+        "label": "C0-11",
+        "value": "\u000b"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u000b": [
+              "\u000b",
+              {
+                "value": "\u000b"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-12/jsonEscape",
+      "sample": {
+        "label": "C0-12",
+        "value": "\f"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\f",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-12/toJsonValue",
+      "sample": {
+        "label": "C0-12",
+        "value": "\f"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\f"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-12/stringifyValue",
+      "sample": {
+        "label": "C0-12",
+        "value": "\f"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\f",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-12/toJsonStringKey",
+      "sample": {
+        "label": "C0-12",
+        "value": "\f"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\f": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-12/toJsonNumberKey",
+      "sample": {
+        "label": "C0-12",
+        "value": "\f"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\f": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-12/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-12",
+        "value": "\f"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\f": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-12/stringifyKey",
+      "sample": {
+        "label": "C0-12",
+        "value": "\f"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\f": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-12/nested",
+      "sample": {
+        "label": "C0-12",
+        "value": "\f"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\f": [
+              "\f",
+              {
+                "value": "\f"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-13/jsonEscape",
+      "sample": {
+        "label": "C0-13",
+        "value": "\r"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\r",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-13/toJsonValue",
+      "sample": {
+        "label": "C0-13",
+        "value": "\r"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\r"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-13/stringifyValue",
+      "sample": {
+        "label": "C0-13",
+        "value": "\r"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\r",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-13/toJsonStringKey",
+      "sample": {
+        "label": "C0-13",
+        "value": "\r"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\r": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-13/toJsonNumberKey",
+      "sample": {
+        "label": "C0-13",
+        "value": "\r"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\r": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-13/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-13",
+        "value": "\r"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\r": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-13/stringifyKey",
+      "sample": {
+        "label": "C0-13",
+        "value": "\r"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\r": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-13/nested",
+      "sample": {
+        "label": "C0-13",
+        "value": "\r"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\r": [
+              "\r",
+              {
+                "value": "\r"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-14/jsonEscape",
+      "sample": {
+        "label": "C0-14",
+        "value": "\u000e"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u000e",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-14/toJsonValue",
+      "sample": {
+        "label": "C0-14",
+        "value": "\u000e"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u000e"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-14/stringifyValue",
+      "sample": {
+        "label": "C0-14",
+        "value": "\u000e"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u000e",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-14/toJsonStringKey",
+      "sample": {
+        "label": "C0-14",
+        "value": "\u000e"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u000e": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-14/toJsonNumberKey",
+      "sample": {
+        "label": "C0-14",
+        "value": "\u000e"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u000e": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-14/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-14",
+        "value": "\u000e"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u000e": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-14/stringifyKey",
+      "sample": {
+        "label": "C0-14",
+        "value": "\u000e"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u000e": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-14/nested",
+      "sample": {
+        "label": "C0-14",
+        "value": "\u000e"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u000e": [
+              "\u000e",
+              {
+                "value": "\u000e"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-15/jsonEscape",
+      "sample": {
+        "label": "C0-15",
+        "value": "\u000f"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u000f",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-15/toJsonValue",
+      "sample": {
+        "label": "C0-15",
+        "value": "\u000f"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u000f"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-15/stringifyValue",
+      "sample": {
+        "label": "C0-15",
+        "value": "\u000f"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u000f",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-15/toJsonStringKey",
+      "sample": {
+        "label": "C0-15",
+        "value": "\u000f"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u000f": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-15/toJsonNumberKey",
+      "sample": {
+        "label": "C0-15",
+        "value": "\u000f"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u000f": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-15/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-15",
+        "value": "\u000f"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u000f": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-15/stringifyKey",
+      "sample": {
+        "label": "C0-15",
+        "value": "\u000f"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u000f": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-15/nested",
+      "sample": {
+        "label": "C0-15",
+        "value": "\u000f"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u000f": [
+              "\u000f",
+              {
+                "value": "\u000f"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-16/jsonEscape",
+      "sample": {
+        "label": "C0-16",
+        "value": "\u0010"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0010",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-16/toJsonValue",
+      "sample": {
+        "label": "C0-16",
+        "value": "\u0010"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0010"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-16/stringifyValue",
+      "sample": {
+        "label": "C0-16",
+        "value": "\u0010"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0010",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-16/toJsonStringKey",
+      "sample": {
+        "label": "C0-16",
+        "value": "\u0010"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0010": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-16/toJsonNumberKey",
+      "sample": {
+        "label": "C0-16",
+        "value": "\u0010"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0010": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-16/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-16",
+        "value": "\u0010"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0010": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-16/stringifyKey",
+      "sample": {
+        "label": "C0-16",
+        "value": "\u0010"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0010": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-16/nested",
+      "sample": {
+        "label": "C0-16",
+        "value": "\u0010"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0010": [
+              "\u0010",
+              {
+                "value": "\u0010"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-17/jsonEscape",
+      "sample": {
+        "label": "C0-17",
+        "value": "\u0011"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0011",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-17/toJsonValue",
+      "sample": {
+        "label": "C0-17",
+        "value": "\u0011"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0011"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-17/stringifyValue",
+      "sample": {
+        "label": "C0-17",
+        "value": "\u0011"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0011",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-17/toJsonStringKey",
+      "sample": {
+        "label": "C0-17",
+        "value": "\u0011"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0011": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-17/toJsonNumberKey",
+      "sample": {
+        "label": "C0-17",
+        "value": "\u0011"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0011": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-17/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-17",
+        "value": "\u0011"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0011": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-17/stringifyKey",
+      "sample": {
+        "label": "C0-17",
+        "value": "\u0011"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0011": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-17/nested",
+      "sample": {
+        "label": "C0-17",
+        "value": "\u0011"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0011": [
+              "\u0011",
+              {
+                "value": "\u0011"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-18/jsonEscape",
+      "sample": {
+        "label": "C0-18",
+        "value": "\u0012"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0012",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-18/toJsonValue",
+      "sample": {
+        "label": "C0-18",
+        "value": "\u0012"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0012"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-18/stringifyValue",
+      "sample": {
+        "label": "C0-18",
+        "value": "\u0012"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0012",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-18/toJsonStringKey",
+      "sample": {
+        "label": "C0-18",
+        "value": "\u0012"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0012": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-18/toJsonNumberKey",
+      "sample": {
+        "label": "C0-18",
+        "value": "\u0012"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0012": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-18/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-18",
+        "value": "\u0012"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0012": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-18/stringifyKey",
+      "sample": {
+        "label": "C0-18",
+        "value": "\u0012"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0012": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-18/nested",
+      "sample": {
+        "label": "C0-18",
+        "value": "\u0012"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0012": [
+              "\u0012",
+              {
+                "value": "\u0012"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-19/jsonEscape",
+      "sample": {
+        "label": "C0-19",
+        "value": "\u0013"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0013",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-19/toJsonValue",
+      "sample": {
+        "label": "C0-19",
+        "value": "\u0013"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0013"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-19/stringifyValue",
+      "sample": {
+        "label": "C0-19",
+        "value": "\u0013"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0013",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-19/toJsonStringKey",
+      "sample": {
+        "label": "C0-19",
+        "value": "\u0013"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0013": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-19/toJsonNumberKey",
+      "sample": {
+        "label": "C0-19",
+        "value": "\u0013"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0013": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-19/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-19",
+        "value": "\u0013"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0013": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-19/stringifyKey",
+      "sample": {
+        "label": "C0-19",
+        "value": "\u0013"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0013": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-19/nested",
+      "sample": {
+        "label": "C0-19",
+        "value": "\u0013"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0013": [
+              "\u0013",
+              {
+                "value": "\u0013"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-20/jsonEscape",
+      "sample": {
+        "label": "C0-20",
+        "value": "\u0014"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0014",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-20/toJsonValue",
+      "sample": {
+        "label": "C0-20",
+        "value": "\u0014"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0014"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-20/stringifyValue",
+      "sample": {
+        "label": "C0-20",
+        "value": "\u0014"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0014",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-20/toJsonStringKey",
+      "sample": {
+        "label": "C0-20",
+        "value": "\u0014"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0014": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-20/toJsonNumberKey",
+      "sample": {
+        "label": "C0-20",
+        "value": "\u0014"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0014": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-20/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-20",
+        "value": "\u0014"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0014": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-20/stringifyKey",
+      "sample": {
+        "label": "C0-20",
+        "value": "\u0014"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0014": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-20/nested",
+      "sample": {
+        "label": "C0-20",
+        "value": "\u0014"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0014": [
+              "\u0014",
+              {
+                "value": "\u0014"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-21/jsonEscape",
+      "sample": {
+        "label": "C0-21",
+        "value": "\u0015"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0015",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-21/toJsonValue",
+      "sample": {
+        "label": "C0-21",
+        "value": "\u0015"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0015"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-21/stringifyValue",
+      "sample": {
+        "label": "C0-21",
+        "value": "\u0015"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0015",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-21/toJsonStringKey",
+      "sample": {
+        "label": "C0-21",
+        "value": "\u0015"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0015": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-21/toJsonNumberKey",
+      "sample": {
+        "label": "C0-21",
+        "value": "\u0015"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0015": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-21/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-21",
+        "value": "\u0015"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0015": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-21/stringifyKey",
+      "sample": {
+        "label": "C0-21",
+        "value": "\u0015"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0015": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-21/nested",
+      "sample": {
+        "label": "C0-21",
+        "value": "\u0015"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0015": [
+              "\u0015",
+              {
+                "value": "\u0015"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-22/jsonEscape",
+      "sample": {
+        "label": "C0-22",
+        "value": "\u0016"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0016",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-22/toJsonValue",
+      "sample": {
+        "label": "C0-22",
+        "value": "\u0016"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0016"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-22/stringifyValue",
+      "sample": {
+        "label": "C0-22",
+        "value": "\u0016"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0016",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-22/toJsonStringKey",
+      "sample": {
+        "label": "C0-22",
+        "value": "\u0016"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0016": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-22/toJsonNumberKey",
+      "sample": {
+        "label": "C0-22",
+        "value": "\u0016"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0016": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-22/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-22",
+        "value": "\u0016"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0016": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-22/stringifyKey",
+      "sample": {
+        "label": "C0-22",
+        "value": "\u0016"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0016": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-22/nested",
+      "sample": {
+        "label": "C0-22",
+        "value": "\u0016"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0016": [
+              "\u0016",
+              {
+                "value": "\u0016"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-23/jsonEscape",
+      "sample": {
+        "label": "C0-23",
+        "value": "\u0017"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0017",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-23/toJsonValue",
+      "sample": {
+        "label": "C0-23",
+        "value": "\u0017"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0017"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-23/stringifyValue",
+      "sample": {
+        "label": "C0-23",
+        "value": "\u0017"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0017",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-23/toJsonStringKey",
+      "sample": {
+        "label": "C0-23",
+        "value": "\u0017"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0017": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-23/toJsonNumberKey",
+      "sample": {
+        "label": "C0-23",
+        "value": "\u0017"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0017": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-23/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-23",
+        "value": "\u0017"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0017": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-23/stringifyKey",
+      "sample": {
+        "label": "C0-23",
+        "value": "\u0017"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0017": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-23/nested",
+      "sample": {
+        "label": "C0-23",
+        "value": "\u0017"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0017": [
+              "\u0017",
+              {
+                "value": "\u0017"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-24/jsonEscape",
+      "sample": {
+        "label": "C0-24",
+        "value": "\u0018"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0018",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-24/toJsonValue",
+      "sample": {
+        "label": "C0-24",
+        "value": "\u0018"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0018"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-24/stringifyValue",
+      "sample": {
+        "label": "C0-24",
+        "value": "\u0018"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0018",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-24/toJsonStringKey",
+      "sample": {
+        "label": "C0-24",
+        "value": "\u0018"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0018": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-24/toJsonNumberKey",
+      "sample": {
+        "label": "C0-24",
+        "value": "\u0018"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0018": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-24/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-24",
+        "value": "\u0018"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0018": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-24/stringifyKey",
+      "sample": {
+        "label": "C0-24",
+        "value": "\u0018"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0018": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-24/nested",
+      "sample": {
+        "label": "C0-24",
+        "value": "\u0018"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0018": [
+              "\u0018",
+              {
+                "value": "\u0018"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-25/jsonEscape",
+      "sample": {
+        "label": "C0-25",
+        "value": "\u0019"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0019",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-25/toJsonValue",
+      "sample": {
+        "label": "C0-25",
+        "value": "\u0019"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0019"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-25/stringifyValue",
+      "sample": {
+        "label": "C0-25",
+        "value": "\u0019"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0019",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-25/toJsonStringKey",
+      "sample": {
+        "label": "C0-25",
+        "value": "\u0019"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0019": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-25/toJsonNumberKey",
+      "sample": {
+        "label": "C0-25",
+        "value": "\u0019"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0019": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-25/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-25",
+        "value": "\u0019"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0019": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-25/stringifyKey",
+      "sample": {
+        "label": "C0-25",
+        "value": "\u0019"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0019": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-25/nested",
+      "sample": {
+        "label": "C0-25",
+        "value": "\u0019"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0019": [
+              "\u0019",
+              {
+                "value": "\u0019"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-26/jsonEscape",
+      "sample": {
+        "label": "C0-26",
+        "value": "\u001a"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u001a",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-26/toJsonValue",
+      "sample": {
+        "label": "C0-26",
+        "value": "\u001a"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u001a"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-26/stringifyValue",
+      "sample": {
+        "label": "C0-26",
+        "value": "\u001a"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u001a",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-26/toJsonStringKey",
+      "sample": {
+        "label": "C0-26",
+        "value": "\u001a"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u001a": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-26/toJsonNumberKey",
+      "sample": {
+        "label": "C0-26",
+        "value": "\u001a"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u001a": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-26/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-26",
+        "value": "\u001a"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u001a": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-26/stringifyKey",
+      "sample": {
+        "label": "C0-26",
+        "value": "\u001a"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u001a": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-26/nested",
+      "sample": {
+        "label": "C0-26",
+        "value": "\u001a"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u001a": [
+              "\u001a",
+              {
+                "value": "\u001a"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-27/jsonEscape",
+      "sample": {
+        "label": "C0-27",
+        "value": "\u001b"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u001b",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-27/toJsonValue",
+      "sample": {
+        "label": "C0-27",
+        "value": "\u001b"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u001b"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-27/stringifyValue",
+      "sample": {
+        "label": "C0-27",
+        "value": "\u001b"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u001b",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-27/toJsonStringKey",
+      "sample": {
+        "label": "C0-27",
+        "value": "\u001b"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u001b": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-27/toJsonNumberKey",
+      "sample": {
+        "label": "C0-27",
+        "value": "\u001b"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u001b": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-27/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-27",
+        "value": "\u001b"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u001b": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-27/stringifyKey",
+      "sample": {
+        "label": "C0-27",
+        "value": "\u001b"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u001b": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-27/nested",
+      "sample": {
+        "label": "C0-27",
+        "value": "\u001b"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u001b": [
+              "\u001b",
+              {
+                "value": "\u001b"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-28/jsonEscape",
+      "sample": {
+        "label": "C0-28",
+        "value": "\u001c"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u001c",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-28/toJsonValue",
+      "sample": {
+        "label": "C0-28",
+        "value": "\u001c"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u001c"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-28/stringifyValue",
+      "sample": {
+        "label": "C0-28",
+        "value": "\u001c"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u001c",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-28/toJsonStringKey",
+      "sample": {
+        "label": "C0-28",
+        "value": "\u001c"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u001c": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-28/toJsonNumberKey",
+      "sample": {
+        "label": "C0-28",
+        "value": "\u001c"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u001c": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-28/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-28",
+        "value": "\u001c"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u001c": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-28/stringifyKey",
+      "sample": {
+        "label": "C0-28",
+        "value": "\u001c"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u001c": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-28/nested",
+      "sample": {
+        "label": "C0-28",
+        "value": "\u001c"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u001c": [
+              "\u001c",
+              {
+                "value": "\u001c"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-29/jsonEscape",
+      "sample": {
+        "label": "C0-29",
+        "value": "\u001d"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u001d",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-29/toJsonValue",
+      "sample": {
+        "label": "C0-29",
+        "value": "\u001d"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u001d"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-29/stringifyValue",
+      "sample": {
+        "label": "C0-29",
+        "value": "\u001d"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u001d",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-29/toJsonStringKey",
+      "sample": {
+        "label": "C0-29",
+        "value": "\u001d"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u001d": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-29/toJsonNumberKey",
+      "sample": {
+        "label": "C0-29",
+        "value": "\u001d"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u001d": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-29/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-29",
+        "value": "\u001d"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u001d": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-29/stringifyKey",
+      "sample": {
+        "label": "C0-29",
+        "value": "\u001d"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u001d": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-29/nested",
+      "sample": {
+        "label": "C0-29",
+        "value": "\u001d"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u001d": [
+              "\u001d",
+              {
+                "value": "\u001d"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-30/jsonEscape",
+      "sample": {
+        "label": "C0-30",
+        "value": "\u001e"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u001e",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-30/toJsonValue",
+      "sample": {
+        "label": "C0-30",
+        "value": "\u001e"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u001e"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-30/stringifyValue",
+      "sample": {
+        "label": "C0-30",
+        "value": "\u001e"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u001e",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-30/toJsonStringKey",
+      "sample": {
+        "label": "C0-30",
+        "value": "\u001e"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u001e": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-30/toJsonNumberKey",
+      "sample": {
+        "label": "C0-30",
+        "value": "\u001e"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u001e": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-30/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-30",
+        "value": "\u001e"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u001e": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-30/stringifyKey",
+      "sample": {
+        "label": "C0-30",
+        "value": "\u001e"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u001e": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-30/nested",
+      "sample": {
+        "label": "C0-30",
+        "value": "\u001e"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u001e": [
+              "\u001e",
+              {
+                "value": "\u001e"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-31/jsonEscape",
+      "sample": {
+        "label": "C0-31",
+        "value": "\u001f"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u001f",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-31/toJsonValue",
+      "sample": {
+        "label": "C0-31",
+        "value": "\u001f"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u001f"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-31/stringifyValue",
+      "sample": {
+        "label": "C0-31",
+        "value": "\u001f"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u001f",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-31/toJsonStringKey",
+      "sample": {
+        "label": "C0-31",
+        "value": "\u001f"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u001f": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-31/toJsonNumberKey",
+      "sample": {
+        "label": "C0-31",
+        "value": "\u001f"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u001f": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-31/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-31",
+        "value": "\u001f"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u001f": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-31/stringifyKey",
+      "sample": {
+        "label": "C0-31",
+        "value": "\u001f"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u001f": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-31/nested",
+      "sample": {
+        "label": "C0-31",
+        "value": "\u001f"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u001f": [
+              "\u001f",
+              {
+                "value": "\u001f"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/C0-combined/jsonEscape",
+      "sample": {
+        "label": "C0-combined",
+        "value": "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json",
+      "nulValueMustRemainIntact": true
+    },
+    {
+      "caseId": "A11-AE-02/C0-combined/toJsonValue",
+      "sample": {
+        "label": "C0-combined",
+        "value": "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json",
+      "nulValueMustRemainIntact": true
+    },
+    {
+      "caseId": "A11-AE-02/C0-combined/stringifyValue",
+      "sample": {
+        "label": "C0-combined",
+        "value": "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json",
+      "nulValueMustRemainIntact": true
+    },
+    {
+      "caseId": "A11-AE-02/C0-combined/toJsonStringKey",
+      "sample": {
+        "label": "C0-combined",
+        "value": "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "HOST_KEY_REPRESENTATION_LIMITATION_PENDING_REVIEW",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json",
+      "d1Evidence": "d1-derived.json",
+      "inputAdmissionCase": {
+        "caseId": "F1-AE-reject/C0-combined",
+        "jsonInput": "{\"\\u0000\\u0001\\u0002\\u0003\\u0004\\u0005\\u0006\\u0007\\b\\t\\n\\u000b\\f\\r\\u000e\\u000f\\u0010\\u0011\\u0012\\u0013\\u0014\\u0015\\u0016\\u0017\\u0018\\u0019\\u001a\\u001b\\u001c\\u001d\\u001e\\u001f\":\"value\"}",
+        "expected": "Unsupported Host JSON member name: U+0000; reject whole input before property creation"
+      }
+    },
+    {
+      "caseId": "A11-AE-02/C0-combined/toJsonNumberKey",
+      "sample": {
+        "label": "C0-combined",
+        "value": "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "HOST_KEY_REPRESENTATION_LIMITATION_PENDING_REVIEW",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json",
+      "d1Evidence": "d1-derived.json",
+      "inputAdmissionCase": {
+        "caseId": "F1-AE-reject/C0-combined",
+        "jsonInput": "{\"\\u0000\\u0001\\u0002\\u0003\\u0004\\u0005\\u0006\\u0007\\b\\t\\n\\u000b\\f\\r\\u000e\\u000f\\u0010\\u0011\\u0012\\u0013\\u0014\\u0015\\u0016\\u0017\\u0018\\u0019\\u001a\\u001b\\u001c\\u001d\\u001e\\u001f\":\"value\"}",
+        "expected": "Unsupported Host JSON member name: U+0000; reject whole input before property creation"
+      }
+    },
+    {
+      "caseId": "A11-AE-02/C0-combined/toJsonBooleanKey",
+      "sample": {
+        "label": "C0-combined",
+        "value": "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "HOST_KEY_REPRESENTATION_LIMITATION_PENDING_REVIEW",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json",
+      "d1Evidence": "d1-derived.json",
+      "inputAdmissionCase": {
+        "caseId": "F1-AE-reject/C0-combined",
+        "jsonInput": "{\"\\u0000\\u0001\\u0002\\u0003\\u0004\\u0005\\u0006\\u0007\\b\\t\\n\\u000b\\f\\r\\u000e\\u000f\\u0010\\u0011\\u0012\\u0013\\u0014\\u0015\\u0016\\u0017\\u0018\\u0019\\u001a\\u001b\\u001c\\u001d\\u001e\\u001f\":\"value\"}",
+        "expected": "Unsupported Host JSON member name: U+0000; reject whole input before property creation"
+      }
+    },
+    {
+      "caseId": "A11-AE-02/C0-combined/stringifyKey",
+      "sample": {
+        "label": "C0-combined",
+        "value": "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "HOST_KEY_REPRESENTATION_LIMITATION_PENDING_REVIEW",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json",
+      "d1Evidence": "d1-derived.json",
+      "inputAdmissionCase": {
+        "caseId": "F1-AE-reject/C0-combined",
+        "jsonInput": "{\"\\u0000\\u0001\\u0002\\u0003\\u0004\\u0005\\u0006\\u0007\\b\\t\\n\\u000b\\f\\r\\u000e\\u000f\\u0010\\u0011\\u0012\\u0013\\u0014\\u0015\\u0016\\u0017\\u0018\\u0019\\u001a\\u001b\\u001c\\u001d\\u001e\\u001f\":\"value\"}",
+        "expected": "Unsupported Host JSON member name: U+0000; reject whole input before property creation"
+      }
+    },
+    {
+      "caseId": "A11-AE-02/C0-combined/nested",
+      "sample": {
+        "label": "C0-combined",
+        "value": "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f": [
+              "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f",
+              {
+                "value": "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "HOST_KEY_REPRESENTATION_LIMITATION_PENDING_REVIEW",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json",
+      "d1Evidence": "d1-derived.json",
+      "inputAdmissionCase": {
+        "caseId": "F1-AE-reject/C0-combined",
+        "jsonInput": "{\"\\u0000\\u0001\\u0002\\u0003\\u0004\\u0005\\u0006\\u0007\\b\\t\\n\\u000b\\f\\r\\u000e\\u000f\\u0010\\u0011\\u0012\\u0013\\u0014\\u0015\\u0016\\u0017\\u0018\\u0019\\u001a\\u001b\\u001c\\u001d\\u001e\\u001f\":\"value\"}",
+        "expected": "Unsupported Host JSON member name: U+0000; reject whole input before property creation"
+      }
+    },
+    {
+      "caseId": "A11-AE-02/quote-backslash/jsonEscape",
+      "sample": {
+        "label": "quote-backslash",
+        "value": "\"\\"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\"\\",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/quote-backslash/toJsonValue",
+      "sample": {
+        "label": "quote-backslash",
+        "value": "\"\\"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\"\\"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/quote-backslash/stringifyValue",
+      "sample": {
+        "label": "quote-backslash",
+        "value": "\"\\"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\"\\",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/quote-backslash/toJsonStringKey",
+      "sample": {
+        "label": "quote-backslash",
+        "value": "\"\\"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\"\\": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/quote-backslash/toJsonNumberKey",
+      "sample": {
+        "label": "quote-backslash",
+        "value": "\"\\"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\"\\": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/quote-backslash/toJsonBooleanKey",
+      "sample": {
+        "label": "quote-backslash",
+        "value": "\"\\"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\"\\": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/quote-backslash/stringifyKey",
+      "sample": {
+        "label": "quote-backslash",
+        "value": "\"\\"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\"\\": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/quote-backslash/nested",
+      "sample": {
+        "label": "quote-backslash",
+        "value": "\"\\"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\"\\": [
+              "\"\\",
+              {
+                "value": "\"\\"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/literal-escapes/jsonEscape",
+      "sample": {
+        "label": "literal-escapes",
+        "value": "\\u0001\\n\\t\\\"\\\\"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\\u0001\\n\\t\\\"\\\\",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/literal-escapes/toJsonValue",
+      "sample": {
+        "label": "literal-escapes",
+        "value": "\\u0001\\n\\t\\\"\\\\"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\\u0001\\n\\t\\\"\\\\"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/literal-escapes/stringifyValue",
+      "sample": {
+        "label": "literal-escapes",
+        "value": "\\u0001\\n\\t\\\"\\\\"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\\u0001\\n\\t\\\"\\\\",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/literal-escapes/toJsonStringKey",
+      "sample": {
+        "label": "literal-escapes",
+        "value": "\\u0001\\n\\t\\\"\\\\"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\\u0001\\n\\t\\\"\\\\": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/literal-escapes/toJsonNumberKey",
+      "sample": {
+        "label": "literal-escapes",
+        "value": "\\u0001\\n\\t\\\"\\\\"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\\u0001\\n\\t\\\"\\\\": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/literal-escapes/toJsonBooleanKey",
+      "sample": {
+        "label": "literal-escapes",
+        "value": "\\u0001\\n\\t\\\"\\\\"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\\u0001\\n\\t\\\"\\\\": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/literal-escapes/stringifyKey",
+      "sample": {
+        "label": "literal-escapes",
+        "value": "\\u0001\\n\\t\\\"\\\\"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\\u0001\\n\\t\\\"\\\\": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/literal-escapes/nested",
+      "sample": {
+        "label": "literal-escapes",
+        "value": "\\u0001\\n\\t\\\"\\\\"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\\u0001\\n\\t\\\"\\\\": [
+              "\\u0001\\n\\t\\\"\\\\",
+              {
+                "value": "\\u0001\\n\\t\\\"\\\\"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/multilingual/jsonEscape",
+      "sample": {
+        "label": "multilingual",
+        "value": "中文 English 日本語 العربية é 😀  "
+      },
+      "route": "jsonEscape",
+      "originalExpected": "中文 English 日本語 العربية é 😀  ",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/multilingual/toJsonValue",
+      "sample": {
+        "label": "multilingual",
+        "value": "中文 English 日本語 العربية é 😀  "
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "中文 English 日本語 العربية é 😀  "
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/multilingual/stringifyValue",
+      "sample": {
+        "label": "multilingual",
+        "value": "中文 English 日本語 العربية é 😀  "
+      },
+      "route": "stringifyValue",
+      "originalExpected": "中文 English 日本語 العربية é 😀  ",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/multilingual/toJsonStringKey",
+      "sample": {
+        "label": "multilingual",
+        "value": "中文 English 日本語 العربية é 😀  "
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "中文 English 日本語 العربية é 😀  ": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/multilingual/toJsonNumberKey",
+      "sample": {
+        "label": "multilingual",
+        "value": "中文 English 日本語 العربية é 😀  "
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "中文 English 日本語 العربية é 😀  ": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/multilingual/toJsonBooleanKey",
+      "sample": {
+        "label": "multilingual",
+        "value": "中文 English 日本語 العربية é 😀  "
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "中文 English 日本語 العربية é 😀  ": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/multilingual/stringifyKey",
+      "sample": {
+        "label": "multilingual",
+        "value": "中文 English 日本語 العربية é 😀  "
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "中文 English 日本語 العربية é 😀  ": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/multilingual/nested",
+      "sample": {
+        "label": "multilingual",
+        "value": "中文 English 日本語 العربية é 😀  "
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "中文 English 日本語 العربية é 😀  ": [
+              "中文 English 日本語 العربية é 😀  ",
+              {
+                "value": "中文 English 日本語 العربية é 😀  "
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/plain/jsonEscape",
+      "sample": {
+        "label": "plain",
+        "value": "Normal 中文"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "Normal 中文",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/plain/toJsonValue",
+      "sample": {
+        "label": "plain",
+        "value": "Normal 中文"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "Normal 中文"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/plain/stringifyValue",
+      "sample": {
+        "label": "plain",
+        "value": "Normal 中文"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "Normal 中文",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/plain/toJsonStringKey",
+      "sample": {
+        "label": "plain",
+        "value": "Normal 中文"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "Normal 中文": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/plain/toJsonNumberKey",
+      "sample": {
+        "label": "plain",
+        "value": "Normal 中文"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "Normal 中文": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/plain/toJsonBooleanKey",
+      "sample": {
+        "label": "plain",
+        "value": "Normal 中文"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "Normal 中文": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/plain/stringifyKey",
+      "sample": {
+        "label": "plain",
+        "value": "Normal 中文"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "Normal 中文": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/plain/nested",
+      "sample": {
+        "label": "plain",
+        "value": "Normal 中文"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "Normal 中文": [
+              "Normal 中文",
+              {
+                "value": "Normal 中文"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/empty/jsonEscape",
+      "sample": {
+        "label": "empty",
+        "value": ""
+      },
+      "route": "jsonEscape",
+      "originalExpected": "",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/empty/toJsonValue",
+      "sample": {
+        "label": "empty",
+        "value": ""
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": ""
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/empty/stringifyValue",
+      "sample": {
+        "label": "empty",
+        "value": ""
+      },
+      "route": "stringifyValue",
+      "originalExpected": "",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/empty/toJsonStringKey",
+      "sample": {
+        "label": "empty",
+        "value": ""
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/empty/toJsonNumberKey",
+      "sample": {
+        "label": "empty",
+        "value": ""
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/empty/toJsonBooleanKey",
+      "sample": {
+        "label": "empty",
+        "value": ""
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/empty/stringifyKey",
+      "sample": {
+        "label": "empty",
+        "value": ""
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/empty/nested",
+      "sample": {
+        "label": "empty",
+        "value": ""
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "": [
+              "",
+              {
+                "value": ""
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/quote-only/jsonEscape",
+      "sample": {
+        "label": "quote-only",
+        "value": "\""
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\"",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/quote-only/toJsonValue",
+      "sample": {
+        "label": "quote-only",
+        "value": "\""
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\""
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/quote-only/stringifyValue",
+      "sample": {
+        "label": "quote-only",
+        "value": "\""
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\"",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/quote-only/toJsonStringKey",
+      "sample": {
+        "label": "quote-only",
+        "value": "\""
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\"": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/quote-only/toJsonNumberKey",
+      "sample": {
+        "label": "quote-only",
+        "value": "\""
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\"": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/quote-only/toJsonBooleanKey",
+      "sample": {
+        "label": "quote-only",
+        "value": "\""
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\"": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/quote-only/stringifyKey",
+      "sample": {
+        "label": "quote-only",
+        "value": "\""
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\"": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/quote-only/nested",
+      "sample": {
+        "label": "quote-only",
+        "value": "\""
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\"": [
+              "\"",
+              {
+                "value": "\""
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/backslash-only/jsonEscape",
+      "sample": {
+        "label": "backslash-only",
+        "value": "\\"
+      },
+      "route": "jsonEscape",
+      "originalExpected": "\\",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/backslash-only/toJsonValue",
+      "sample": {
+        "label": "backslash-only",
+        "value": "\\"
+      },
+      "route": "toJsonValue",
+      "originalExpected": {
+        "value": "\\"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/backslash-only/stringifyValue",
+      "sample": {
+        "label": "backslash-only",
+        "value": "\\"
+      },
+      "route": "stringifyValue",
+      "originalExpected": "\\",
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/backslash-only/toJsonStringKey",
+      "sample": {
+        "label": "backslash-only",
+        "value": "\\"
+      },
+      "route": "toJsonStringKey",
+      "originalExpected": {
+        "\\": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/backslash-only/toJsonNumberKey",
+      "sample": {
+        "label": "backslash-only",
+        "value": "\\"
+      },
+      "route": "toJsonNumberKey",
+      "originalExpected": {
+        "\\": 7
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/backslash-only/toJsonBooleanKey",
+      "sample": {
+        "label": "backslash-only",
+        "value": "\\"
+      },
+      "route": "toJsonBooleanKey",
+      "originalExpected": {
+        "\\": true
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/backslash-only/stringifyKey",
+      "sample": {
+        "label": "backslash-only",
+        "value": "\\"
+      },
+      "route": "stringifyKey",
+      "originalExpected": {
+        "\\": "value"
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    },
+    {
+      "caseId": "A11-AE-02/backslash-only/nested",
+      "sample": {
+        "label": "backslash-only",
+        "value": "\\"
+      },
+      "route": "nested",
+      "originalExpected": {
+        "nested": [
+          {
+            "\\": [
+              "\\",
+              {
+                "value": "\\"
+              }
+            ]
+          }
+        ]
+      },
+      "initialResult": "NOT COVERED",
+      "nextDisposition": "MUST_PASS_ENCODING_AND_CONTENT",
+      "nextResult": "NOT RUN",
+      "originalEvidence": "ae02-matrix.json"
+    }
+  ]
+}

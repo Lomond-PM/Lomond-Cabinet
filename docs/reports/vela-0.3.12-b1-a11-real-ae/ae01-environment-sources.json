@@ -1,0 +1,103 @@
+{
+  "caseId": "A11-AE-01",
+  "panel": {
+    "title": "Lomond Cabinet",
+    "url": "file:///C:/Users/Administrator/AppData/Roaming/Adobe/CEP/extensions/com.kevin.aetoolbox/client/index.html",
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 AdobeCEP/12.0.1 Safari/537.36",
+    "environment": {
+      "appVersion": "26.3",
+      "appSkinInfo": {
+        "systemHighlightColor": {
+          "alpha": 255,
+          "green": 120,
+          "blue": 215,
+          "red": 0
+        },
+        "baseFontSize": 11,
+        "appBarBackgroundColorSRGB": {
+          "antialiasLevel": 0,
+          "type": 1,
+          "color": {
+            "alpha": 255,
+            "green": 30,
+            "blue": 30,
+            "red": 30
+          }
+        },
+        "appBarBackgroundColor": {
+          "antialiasLevel": 0,
+          "type": 1,
+          "color": {
+            "alpha": 255,
+            "green": 30,
+            "blue": 30,
+            "red": 30
+          }
+        },
+        "panelBackgroundColor": {
+          "antialiasLevel": 0,
+          "type": 1,
+          "color": {
+            "alpha": 255,
+            "green": 30,
+            "blue": 30,
+            "red": 30
+          }
+        },
+        "baseFontFamily": "SimSun",
+        "panelBackgroundColorSRGB": {
+          "antialiasLevel": 0,
+          "type": 1,
+          "color": {
+            "alpha": 255,
+            "green": 30,
+            "blue": 30,
+            "red": 30
+          }
+        }
+      },
+      "appLocale": "zh_CN",
+      "isAppOnline": true,
+      "appUILocale": "zh_CN",
+      "appName": "AEFT",
+      "appId": "AEFT"
+    }
+  },
+  "records": [
+    {
+      "caseId": "source-jsonEscape",
+      "input": "AEToolbox.jsonEscape.toString()",
+      "startedAt": "2026-09-09T08:28:30.218Z",
+      "raw": "\nfunction (s) {\n        return String(s)\n            .replace(/\\\\/g, \"\\\\\\\\\")\n            .replace(/\"/g, \"\\\\\\\"\")\n            .replace(/\\r/g, \"\\\\r\")\n            .replace(/\\n/g, \"\\\\n\")\n            .replace(/\\t/g, \"\\\\t\")\n            .replace(/[\\x00-\\x1f]/g, function (ch) {\n                // CR/LF/TAB above retain their existing short escape spelling.\n                var hex = ch.charCodeAt(0).toString(16);\n                return \"\\\\u\" + (\"0000\" + hex).slice(-4);\n            });\n    }\n",
+      "endedAt": "2026-09-09T08:28:30.219Z"
+    },
+    {
+      "caseId": "source-toJson",
+      "input": "AEToolbox.toJson.toString()",
+      "startedAt": "2026-09-09T08:28:30.219Z",
+      "raw": "\nfunction (obj) {\n        var parts = [];\n        var k;\n        for (k in obj) {\n            if (!obj.hasOwnProperty(k)) {\n                continue;\n            }\n            if (typeof obj[k] === \"number\") {\n                parts[parts.length] = \"\\\"\" + AEToolbox.jsonEscape(k) + \"\\\":\" + obj[k];\n            } else if (typeof obj[k] === \"boolean\") {\n                parts[parts.length] = \"\\\"\" + AEToolbox.jsonEscape(k) + \"\\\":\" + (obj[k] ? \"true\" : \"false\");\n            } else {\n                parts[parts.length] = \"\\\"\" + AEToolbox.jsonEscape(k) + \"\\\":\\\"\" + AEToolbox.jsonEscape(obj[k]) + \"\\\"\";\n            }\n        }\n        return \"{\" + parts.join(\",\") + \"}\";\n    }\n",
+      "endedAt": "2026-09-09T08:28:30.219Z"
+    },
+    {
+      "caseId": "source-stringify",
+      "input": "AEToolbox.stringify.toString()",
+      "startedAt": "2026-09-09T08:28:30.219Z",
+      "raw": "\nfunction (value) {\n        var parts = [];\n        var k;\n        var i;\n\n        if (value === null || typeof value === \"undefined\") {\n            return \"null\";\n        }\n        if (typeof value === \"number\") {\n            return isFinite(value) ? String(value) : \"0\";\n        }\n        if (typeof value === \"boolean\") {\n            return value ? \"true\" : \"false\";\n        }\n        if (typeof value === \"string\") {\n            return \"\\\"\" + AEToolbox.jsonEscape(value) + \"\\\"\";\n        }\n        if (value instanceof Array) {\n            for (i = 0; i < value.length; i++) {\n                parts[parts.length] = AEToolbox.stringify(value[i]);\n            }\n            return \"[\" + parts.join(\",\") + \"]\";\n        }\n        if (typeof value === \"object\") {\n            for (k in value) {\n                if (value.hasOwnProperty(k) && typeof value[k] !== \"function\" && k.charAt(0) !== \"_\") {\n                    parts[parts.length] = \"\\\"\" + AEToolbox.jsonEscape(k) + \"\\\":\" + AEToolbox.stringify(value[k]);\n                }\n            }\n            return \"{\" + parts.join(\",\") + \"}\";\n        }\n        return \"\\\"\\\"\";\n    }\n",
+      "endedAt": "2026-09-09T08:28:30.220Z"
+    },
+    {
+      "caseId": "environment",
+      "input": "(function(){return \"AE=\"+app.version+\";ExtendScript=\"+$.version+\";JSON=\"+typeof JSON+\";parse=\"+(typeof JSON!==\"undefined\"?typeof JSON.parse:\"unavailable\")+\";defineProperty=\"+typeof Object.defineProperty;})()",
+      "startedAt": "2026-09-09T08:28:30.220Z",
+      "raw": "AE=26.3x87;ExtendScript=4.5.6;JSON=object;parse=function;defineProperty=function",
+      "endedAt": "2026-09-09T08:28:30.220Z"
+    },
+    {
+      "caseId": "host-load-info",
+      "input": "AEToolbox.getHostLoadInfo()",
+      "startedAt": "2026-09-09T08:28:30.220Z",
+      "raw": "{\"ok\":true,\"message\":\"Host load info ready.\",\"hostFile\":\"host/index.jsx\",\"registeredToolCount\":7,\"registeredToolLoadErrors\":\"\",\"registeredToolLoadErrorCount\":0,\"hasValidRegisteredToolCatalog\":true,\"registeredToolLastAttemptSucceeded\":true,\"registeredToolRegistryRevision\":1,\"includesAdComponentKit\":true,\"hasAdComponentKitCreateIconGrid\":true}",
+      "endedAt": "2026-09-09T08:28:30.220Z"
+    }
+  ]
+}
