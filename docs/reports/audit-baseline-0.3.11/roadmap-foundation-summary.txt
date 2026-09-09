@@ -1,0 +1,26 @@
+已整理成可直接加入项目源的 Markdown 基础文档：
+
+[下载 `vela-agent-0.3-roadmap-foundation.md`](sandbox:/mnt/data/vela-agent-0.3-roadmap-foundation.md)
+
+我建议放到：
+
+```text id="k4dpyy"
+docs/design/vela-agent-0.3-roadmap-foundation.md
+```
+
+文档已经明确写入这次讨论确定的几个关键裁定：
+
+- **`0.3.x = complete the Agent product`**
+- **`0.4.x = deepen and refine the complete Agent`**
+- 允许 `0.3.10 / 0.3.20+`，不为了版本号压缩工程范围。
+- `0.3.7` 当前 Agent Loop → `0.3.8` Multi-step → `0.3.9` Reasoning + Streaming → `0.3.10` Context → `0.3.11` Multi-conversation → `0.3.12` Capability Model Generalization。
+- **AE Capability Completeness 是 0.3 的硬性退出条件**，不是“常用功能覆盖”。
+- 建立正式 **AE Action Coverage Matrix**，无法覆盖的动作必须有 `AE_PLATFORM_UNREACHABLE` 证据，不能随意缩减范围。
+- User History Observation 在 0.3 建立可信、typed、bounded、queryable 的基础设施；**Observation Window / 历史理解放到 0.4**。
+- Provider reasoning 正式进入独立 UI channel，并明确其仍是 **untrusted model output**。
+- 文本输出采用 typed streaming event；raw delta 为 ephemeral，结构化 Agent response 只能在 terminal validation 后进入执行链。
+- Vela UI 不等最后才开始做：multi-step、streaming、reasoning、多对话会逐步增加 structural UI，后期再做统一的 **Agent UI Completion**。
+- 最后设置了 8 个明确的 **0.3.x hard exit gates**，防止未来出现“架构没做完整但为了进入 0.4 而顺延”的情况。
+- 明确声明该文档是 **roadmap / product-completion contract**，**不修改当前 `FROZEN FOR 0.3.x` 的 normative Agent architecture**。
+
+这份适合作为之后 Codex/DSH 做版本规划和 focused audit 时的上层路线依据。

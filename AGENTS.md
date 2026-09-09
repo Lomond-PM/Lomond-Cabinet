@@ -19,7 +19,7 @@ The product uses two runtimes:
 
 ## Current Vela milestone
 
-Vela **0.3.9 — Streaming Response & Reasoning Surface** is COMPLETE / SEALED / merged into dev. Full offline regression: 171/171 PASS; user-manual real AE acceptance: PASS; architecture amendment: NONE. Next: **0.3.10 — Context Architecture**, not yet implemented.
+Vela **0.3.11 — Multi-conversation Foundation** is COMPLETE / SEALED. 最新封存离线基线为 182/182 PASS，Vela 顺序测试为 94/94 ×3；这是历史结果，本轮未重跑。当前 **0.3.12-A0 — Baseline Reconciliation & Production Revalidation Plan：COMPLETE（仅文档与复核计划）**；R1 原始资料已导入，生产修复尚未开始。排期只由下列 roadmap 持有。
 
 Current roadmap: [docs/VELA_ROADMAP.md](docs/VELA_ROADMAP.md). Current implementation/handoff: [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md). Normative architecture: [docs/design/vela-agent-architecture.md](docs/design/vela-agent-architecture.md), frozen and unchanged. Feature milestones are independent of package VERSION/release tags.
 
@@ -247,7 +247,7 @@ AE smoke should verify the active path, not merely file presence. When behavior 
 
 Consult `docs/KNOWN_ISSUES.md` before opportunistic fixes.
 
-Accepted historical release work and the 0.3.9 feature milestone are closed. Do not reopen those scopes without a new focused regression and explicit authorization. Historical staging remains evidence in closure records; current development sequencing is owned only by the [canonical roadmap](docs/VELA_ROADMAP.md).
+Accepted historical release work and the sealed 0.3.9–0.3.11 feature milestones are closed. Do not reopen those scopes without a new focused regression and explicit authorization. Historical staging remains evidence in closure records; current development sequencing is owned only by the [canonical roadmap](docs/VELA_ROADMAP.md).
 
 Other sensitive areas:
 
