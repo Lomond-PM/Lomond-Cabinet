@@ -1,0 +1,63 @@
+{
+  "status": "TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+  "groups": {
+    "G02-AE-01": "PASS: executed script full match after CRLF normalization and behavior controls",
+    "G02-AE-02": {
+      "checks": 84,
+      "pass": 84,
+      "accepted": 26,
+      "rejected": 58,
+      "fail": 0,
+      "notCovered": 0,
+      "priorMisacceptances": [
+        "d800-single/validateCapabilityParams",
+        "d800-single/validateRepresentationCapabilityParams",
+        "d800-end/validateCapabilityParams",
+        "d800-end/validateRepresentationCapabilityParams",
+        "dbff-single/validateCapabilityParams",
+        "dbff-single/validateRepresentationCapabilityParams",
+        "dbff-end/validateCapabilityParams",
+        "dbff-end/validateRepresentationCapabilityParams",
+        "pair-high/validateCapabilityParams",
+        "pair-high/validateRepresentationCapabilityParams"
+      ]
+    },
+    "G02-AE-03": {
+      "checks": 4,
+      "pass": 4,
+      "fail": 0,
+      "notCovered": 0
+    },
+    "G02-AE-04": "PASS: user approved; actual target name; Agent verified-match/completed; user native Undo and identical target/name readback"
+  },
+  "baseline": {
+    "compId": 191,
+    "layerId": 203,
+    "name": "A01 中文 Smoke"
+  },
+  "boundaries": [
+    "CEP parameter and direct IntentGate calls are not illegal Provider end-to-end traces",
+    "Implementation 587/342 and 185/185 not rerun",
+    "Trajectory is existing Runtime projection, not raw internal Host dispatch trace; its unknowns retained",
+    "A01/A11 support limitations unchanged; integrated acceptance and closure deferred to 0.3.12-G"
+  ],
+  "filesAtStartVerifiedUnchanged": 495,
+  "userConfirmations": [
+    {
+      "source": "user message",
+      "text": "会话已保留，无活动任务"
+    },
+    {
+      "source": "user message",
+      "text": "Provider 已就绪"
+    },
+    {
+      "source": "user message",
+      "text": "已批准"
+    },
+    {
+      "source": "user message",
+      "text": "已撤销，名称恢复"
+    }
+  ]
+}

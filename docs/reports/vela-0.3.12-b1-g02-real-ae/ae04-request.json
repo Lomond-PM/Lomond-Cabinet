@@ -1,0 +1,6 @@
+{
+  "command": "(function(){var e=document.querySelector(\"textarea[placeholder=\"输入给 Vela 的消息\"]\");e.value=\"将当前图层重命名为 标题日本語 \"+String.fromCharCode(0xD83D,0xDE00);e.dispatchEvent(new Event(\"input\",{bubbles:true}));var b=Array.from(document.querySelectorAll(\"button\")).filter(function(b){return b.innerText===\"发送\";});if(b.length!==1||b[0].disabled)throw Error(\"Send unavailable\");b[0].click();})()",
+  "message": "将当前图层重命名为 标题日本語 😀",
+  "source": "actual existing textarea input event and Send button via CEP Console; no direct Runtime or Host mutation",
+  "time": "2026-09-10T02:11:16.783Z"
+}

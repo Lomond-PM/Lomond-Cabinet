@@ -419,7 +419,13 @@
           "inherited": "Existing JSON.parse branch only; fallback / special __proto__ real conditions remain not covered"
         }
       },
-      "acceptance_scope": "Bounded targeted only; INTEGRATED_ACCEPTED / CLOSED at 0.3.12-G"
+      "acceptance_scope": "Bounded targeted only; INTEGRATED_ACCEPTED / CLOSED at 0.3.12-G",
+      "merge_provenance": {
+        "pr": 203,
+        "commit": "5231d04",
+        "merge": "787cef2c8315a7d5c8a208dae69473f488d4e559",
+        "basis": "verified local git history; acceptance unchanged"
+      }
     },
     {
       "id": "A12",
@@ -719,7 +725,19 @@
       "description": "字符串末尾 charCodeAt(index+1) 为 NaN，现有范围比较未拒绝孤立高代理项。",
       "closure": "生产原模块复验并补边界；合法代理对、孤立高/低代理项、ASCII/多语言与 UTF-8 byte limit 对照。",
       "guard": "不把未归档的旧最小复现升级成当前完整执行链证据；不是已证权限绕过。",
-      "status": "OPEN — inherited finding / new planning item; not fixed in this deliverable"
+      "status": "TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+      "implementation": {
+        "baseline": "787cef2c8315a7d5c8a208dae69473f488d4e559",
+        "report": "docs/reports/vela-0.3.12-b1-g02-layer-name-unicode.md",
+        "scope": "仅utf8ByteLengthExact补高代理项后续存在性；保留公开形状和256 UTF-8 bytes契约",
+        "real_ae": "TARGETED_ACCEPTED: 4 required groups PASS; CEP params 84/84, IntentGate 4/4; actual rename verified-match/completed; user native Undo restored same target",
+        "offline": "contracts 587; production E2E 342; 185/185 executed, 0 failed, 0 skipped; current G-02 run"
+      },
+      "acceptance": {
+        "status": "TARGETED_ACCEPTED",
+        "evidence": "docs/reports/vela-0.3.12-b1-g02-real-ae/summary.json",
+        "scope": "Bounded targeted acceptance; direct CEP invalid inputs not full Provider illegal-response trace; INTEGRATED_ACCEPTED / CLOSED at 0.3.12-G"
+      }
     },
     {
       "id": "G-03",

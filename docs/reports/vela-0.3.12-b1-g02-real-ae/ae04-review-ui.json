@@ -1,0 +1,4 @@
+{
+  "raw": "{\"caseId\":\"G02-AE-04/ui-review\",\"text\":\"Lomond Cabinet\\n编辑主页\\n对话 1\\n+\\n×\\n\\n从本地模型开始与 Vela 对话。\\n\\n设置\\n可以发送本地消息\\n实验性 · 未通过资格认证 · 需手动选择加入\\n发送\\n允许下一次不透明度修改（一次，60 秒）\\nS\\n设置\\nC\\n控件测试实验室\\nS\\nAE绘画领域大神\\nA\\n电商组件工具箱\\nR\\n背景圆角矩形\\ni\\n选择信息\\n~\\n程序化外观实验室\\nS\\n设置渲染实验室\\n更多工具\\n已选择 1 个图层\",\"time\":\"2026-09-10T02:11:40.869Z\"}",
+  "source": "CEP document.body.innerText after real Send"
+}

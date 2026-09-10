@@ -1,0 +1,27 @@
+{
+  "command": "copy(JSON.stringify((function(){var c=window.VelaCapabilityContracts;var out={caseId:\"G02-AE-01/behavior\",title:document.title,url:location.href,ua:navigator.userAgent,first:typeof c.validateCapabilityParams,second:typeof c.validateRepresentationCapabilityParams,gate:typeof window.VelaProviderIntentGate.evaluate,checks:[]};[\"Hero\"+String.fromCharCode(0xD800),\"Hero\"+String.fromCharCode(0xD83D,0xDE00)].forEach(function(s){try{out.checks.push({inputUnits:Array.from(s).length,length:s.length,result:c.validateRepresentationCapabilityParams(\"set-layer-name-v1\",{name:s})});}catch(e){out.checks.push({length:s.length,error:e.message});}});return out;})()))",
+  "raw": "{\"caseId\":\"G02-AE-01/behavior\",\"title\":\"Lomond Cabinet\",\"url\":\"file:///C:/Users/Administrator/AppData/Roaming/Adobe/CEP/extensions/com.kevin.aetoolbox/client/index.html\",\"ua\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 AdobeCEP/12.0.1 Safari/537.36\",\"first\":\"function\",\"second\":\"function\",\"gate\":\"function\",\"checks\":[{\"length\":5,\"error\":\"CAPABILITY_CONTRACT_INVALID: Layer name contains an invalid Unicode scalar.\"},{\"inputUnits\":5,\"length\":6,\"result\":{\"name\":\"Hero😀\"}}]}",
+  "parsed": {
+    "caseId": "G02-AE-01/behavior",
+    "title": "Lomond Cabinet",
+    "url": "file:///C:/Users/Administrator/AppData/Roaming/Adobe/CEP/extensions/com.kevin.aetoolbox/client/index.html",
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 AdobeCEP/12.0.1 Safari/537.36",
+    "first": "function",
+    "second": "function",
+    "gate": "function",
+    "checks": [
+      {
+        "length": 5,
+        "error": "CAPABILITY_CONTRACT_INVALID: Layer name contains an invalid Unicode scalar."
+      },
+      {
+        "inputUnits": 5,
+        "length": 6,
+        "result": {
+          "name": "Hero😀"
+        }
+      }
+    ]
+  },
+  "note": "behavior record inputUnits field is code-point count, not UTF-16 signature; full code units recorded per case in AE-02"
+}

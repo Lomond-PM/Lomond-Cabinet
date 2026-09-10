@@ -1,0 +1,29 @@
+{
+  "issues": [
+    {
+      "caseId": "G02-AE-04/baseline-initial",
+      "command": "new CSInterface().evalScript(\"(function(){var p=app.project,c=p?p.activeItem:null;var o={hasProject:!!p,hasComp:!!c&&c instanceof CompItem};if(o.hasComp){o.compId=c.id;o.compName=c.name;o.selectedCount=c.selectedLayers.length;if(o.selectedCount===1){var l=c.selectedLayers[0];o.layerId=l.id;o.layerIndex=l.index;o.name=l.name;o.codeUnits=[];for(var i=0;i<l.name.length;i++)o.codeUnits.push(l.name.charCodeAt(i));}}return AEToolbox.stringify(o);})()\",function(raw){copy(JSON.stringify({caseId:\"G02-AE-04/baseline\",raw:raw,time:new Date().toISOString()}));})",
+      "error": "ReferenceError: copy is not defined in asynchronous callback",
+      "raw": "NOT CAPTURED",
+      "classification": "collector error, read-only Host call; retry captures copy in lexical closure"
+    },
+    {
+      "caseId": "G02-AE-04/after-execution",
+      "command": "(function(save){new CSInterface().evalScript(\"(function(){var p=app.project,c=p?p.activeItem:null;var o={hasProject:!!p,hasComp:!!c&&c instanceof CompItem};if(o.hasComp){o.compId=c.id;o.compName=c.name;o.selectedCount=c.selectedLayers.length;if(o.selectedCount===1){var l=c.selectedLayers[0];o.layerId=l.id;o.layerIndex=l.index;o.name=l.name;o.codeUnits=[];for(var i=0;i<l.name.length;i++)o.codeUnits.push(l.name.charCodeAt(i));}}return AEToolbox.stringify(o);})()\",function(raw){save(JSON.stringify({caseId:\"G02-AE-04/after-execution\",raw:raw,time:new Date().toISOString()}));})})(copy)",
+      "raw": "NOT CAPTURED",
+      "classification": "read-only callback not available at clipboard checks; later read2 separately captured; not counted as product failure"
+    },
+    {
+      "caseId": "G02-AE-04/after-user-undo",
+      "command": "(function(save){new CSInterface().evalScript(\"(function(){var p=app.project,c=p?p.activeItem:null;var o={hasProject:!!p,hasComp:!!c&&c instanceof CompItem};if(o.hasComp){o.compId=c.id;o.compName=c.name;o.selectedCount=c.selectedLayers.length;if(o.selectedCount===1){var l=c.selectedLayers[0];o.layerId=l.id;o.layerIndex=l.index;o.name=l.name;o.codeUnits=[];for(var i=0;i<l.name.length;i++)o.codeUnits.push(l.name.charCodeAt(i));}}return AEToolbox.stringify(o);})()\",function(raw){save(JSON.stringify({caseId:\"G02-AE-04/after-user-undo\",raw:raw,time:new Date().toISOString()}));})})(copy)",
+      "raw": "NOT CAPTURED",
+      "classification": "initial read callback not captured; independent read2 saved, no inferred return"
+    },
+    {
+      "caseId": "G02-AE-04/request-initial",
+      "command": "(function(){var e=document.querySelector(\"textarea[placeholder=\"输入给 Vela 的消息\"]\");e.value=\"将当前图层重命名为 标题日本語 \"+String.fromCharCode(0xD83D,0xDE00);e.dispatchEvent(new Event(\"input\",{bubbles:true}));var b=Array.from(document.querySelectorAll(\"button\")).filter(function(b){return b.innerText===\"发送\";});if(b.length!==1||b[0].disabled)throw Error(\"Send unavailable\");b[0].click();})()",
+      "error": "SyntaxError: missing ) after argument list",
+      "classification": "Console selector quote error before send; corrected input and Send button triggered one actual request"
+    }
+  ]
+}

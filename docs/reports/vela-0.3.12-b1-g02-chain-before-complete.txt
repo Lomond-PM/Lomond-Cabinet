@@ -1,0 +1,5 @@
+G02-chain {"codeUnits":[55296],"state":"intent-rejected","errorCode":null,"observations":3,"mutations":0}
+G02-chain {"codeUnits":[72,101,114,111,56319],"state":"intent-rejected","errorCode":null,"observations":3,"mutations":0}
+G02-chain {"codeUnits":[72,101,114,111,56320],"state":"intent-rejected","errorCode":null,"observations":3,"mutations":0}
+G02-chain {"name":"标题日本語 😀","outcome":"completed","observations":14,"mutations":1,"verify":1}
+test-vela-provider-production-e2e: 339 assertions passed.

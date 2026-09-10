@@ -1,0 +1,22 @@
+{
+  "baseline": "787cef2c8315a7d5c8a208dae69473f488d4e559",
+  "checks": {
+    "nodeSyntax": "PASS",
+    "i18nFreshness": "PASS",
+    "projectConsistency": "PASS",
+    "trackedDiffFormat": "PASS",
+    "newFilesFormat": 8,
+    "json": "PASS",
+    "localFileLinks": 92,
+    "parameterRecords": 84,
+    "changedAcceptances": 10,
+    "otherLedgerItemsAndA11AcceptanceUnchanged": true,
+    "historicalReportsHostArchitectureUnchanged": true
+  },
+  "productionAndTestHashes": {
+    "client/js/vela/velaCapabilityContracts.js": "47378a2e99ecd7306c70a02ec36852a71a737521328ad844d57b4309d5eb3a7c",
+    "scripts/test-vela-capability-contracts.js": "0556970ca57a204c959d69f27f1d6d06336d6cac592d2529f2bbb07d12ac8dba",
+    "scripts/test-vela-provider-production-e2e.js": "a64f532ae301e6b0722d271391f9d82bc1c5b770830cf6563273201a12780696",
+    "scripts/diagnostics/velaLayerNameUnicodeCases.js": "a2001493145ce1131b969b6ea2fc372c413dda5372321c60197e84a751896040"
+  }
+}
