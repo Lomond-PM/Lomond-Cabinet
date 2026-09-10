@@ -1,0 +1,1 @@
+G02-chain {"codeUnits":[55296],"state":"intent-rejected","errorCode":null,"observations":3,"mutations":0}

@@ -3,7 +3,7 @@
 **规划修订：R1-2026-09-09**
 **基准节点：0.3.11 — Multi-conversation Foundation，COMPLETE / SEALED**
 **核对仓库：`Lomond-PM/Lomond-Cabinet`，`dev@b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a`**
-**文档状态：保留 R1 规划来源；A01 已 TARGETED_ACCEPTED 并经 PR #202 合并 dev（覆盖限制保留）；当前 A11 为 TARGETED_ACCEPTED / READY FOR COMMIT / PR。其余条目不因本次裁定改变，整个 B1/0.3.12 未完成。**
+**文档状态：保留 R1 规划来源；A01 已 TARGETED_ACCEPTED 并经 PR #202 合并 dev（覆盖限制保留）；A11含F1已通过PR #203合并dev，保持TARGETED_ACCEPTED及覆盖边界；当前G-02为TARGETED_ACCEPTED / READY FOR COMMIT / PR。其余条目不因本次裁定改变，整个 B1/0.3.12 未完成。**
 
 > **总目标：先修可信性与数据风险，再重建视觉和 UI 基础，随后泛化能力、形成可委托的完整 AE Agent。**
 > 项目处于早期阶段，允许替换旧实现、重组模块与页面结构；不以维护既有类名、旧 Renderer 或庞大主程序为目的。需要保留的是执行安全、用户资产、明确的所有权和经过验证的产品语义，而不是实现外形。
@@ -668,7 +668,7 @@ source binding 已保存 previousCommentEncoded，但 Detach 对所有组件层�
 
 #### A11 — 公共 serializer 未转义全部 C0 字符
 
-**当前（2026-09-09）：TARGETED_ACCEPTED / READY FOR COMMIT / PR。** A11（含F1）真实复验：入口20/20、编码310/310、公共返回3/3 PASS；10项含NUL对象键按用户预授权接受为Host支持范围限制，不计编码PASS。INTEGRATED_ACCEPTED / CLOSED 留待0.3.12-G。 原A11仅修serializer，离线184 suites；F1新增parseJson成员名准入，重新执行224/1122/2307/27项及185 suites（0 skip）；以上离线结果本轮未重跑。 首次3 PASS /1 FAIL /316 NOT COVERED及D1/F1修复前记录保留，未改写原期望。详见 [A11报告](../reports/vela-0.3.12-b1-a11-host-json-serialization.md)。不进入G-02。
+**当前：TARGETED_ACCEPTED，已通过PR #203合并dev（787cef2）；以下为2026-09-09验收事实。** A11（含F1）真实复验：入口20/20、编码310/310、公共返回3/3 PASS；10项含NUL对象键按用户预授权接受为Host支持范围限制，不计编码PASS。INTEGRATED_ACCEPTED / CLOSED 留待0.3.12-G。 原A11仅修serializer，离线184 suites；F1新增parseJson成员名准入，重新执行224/1122/2307/27项及185 suites（0 skip）；以上离线结果本轮未重跑。 首次3 PASS /1 FAIL /316 NOT COVERED及D1/F1修复前记录保留，未改写原期望。详见 [A11报告](../reports/vela-0.3.12-b1-a11-host-json-serialization.md)。当时未进入G-02。
 
 **分配：**主办 0.3.12；集成/回验 0.3.12；0.3.25。
 **原有证据：**原报告 E1：U+0001 与换行对照。[S-A]
@@ -979,6 +979,8 @@ Provider 未启用则输入 disabled/readOnly；另一会话活动时已经允�
 
 
 #### G-02 — 图层名末尾孤立高代理项被接受
+
+**当前（2026-09-10）：TARGETED_ACCEPTED / READY FOR COMMIT / PR。** 补齐高代理项后续code unit存在性；合法名称与256 UTF-8 bytes契约不变。两个实际公开入口及生产组合离线通过；本次真实CEP参数84/84、IntentGate4/4及合法rename/Agent Verify/用户Undo通过，INTEGRATED_ACCEPTED / CLOSED留待0.3.12-G。见[G-02报告](../reports/vela-0.3.12-b1-g02-layer-name-unicode.md)。
 
 **分配：**主办 0.3.12；集成/回验 0.3.12；0.3.15。
 **原有证据：**首轮对话报告 Node 最小复现；独立脚本未进入三份证据包。[S-C]

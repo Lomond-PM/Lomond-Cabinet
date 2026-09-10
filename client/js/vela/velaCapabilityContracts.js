@@ -242,7 +242,7 @@
             else if (code < 0x800) { bytes += 2; }
             else if (code >= 0xD800 && code <= 0xDBFF) {
                 next = value.charCodeAt(index + 1);
-                if (next < 0xDC00 || next > 0xDFFF) { fail("Layer name contains an invalid Unicode scalar."); }
+                if (index + 1 >= value.length || next < 0xDC00 || next > 0xDFFF) { fail("Layer name contains an invalid Unicode scalar."); }
                 bytes += 4; index += 1;
             } else if (code >= 0xDC00 && code <= 0xDFFF) { fail("Layer name contains an invalid Unicode scalar."); }
             else { bytes += 3; }

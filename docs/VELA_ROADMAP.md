@@ -1,7 +1,9 @@
 # Vela / Lomond Cabinet — Canonical Product Roadmap
 
 **Planning revision: R1-2026-09-09**
-**状态：R1 与 0.3.12-A0 文档规划已合并 dev；A0 COMPLETE。当前 0.3.12-B1 / A11：TARGETED_ACCEPTED / READY FOR COMMIT / PR，尚未 CLOSED。其余新里程碑 PLANNED / NOT STARTED。**
+**状态：R1 与 0.3.12-A0 文档规划已合并 dev；A0 COMPLETE。当前 0.3.12-B1 / G-02：TARGETED_ACCEPTED / READY FOR COMMIT / PR，尚未 CLOSED。其余新里程碑 PLANNED / NOT STARTED。**
+G-02实施基线：`787cef2c8315a7d5c8a208dae69473f488d4e559`（PR #203）；[G-02报告](reports/vela-0.3.12-b1-g02-layer-name-unicode.md)。B1/0.3.12未完成。
+
 **R1 规划核对基线：`dev@b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a`，0.3.11 COMPLETE / SEALED。A11 实施基线：`dev@9dee61ee2d2a3ce2f8dd90107fe5343299063eb8`（PR #202）。A01 历史实施基线：`dev@cd96e0cd65fd485a8f00ac506ee74c0f97fc5e75`。**
 
 本文件是唯一当前版本排程，已替代旧版当前排程；历史报告、既有封存状态和包发布记录不被改写。详细问题、证据限定、重构边界和工作包见[0.3.x 产品重构与完成指导书](design/vela-0.3-reconstruction-guidance.md)。实际实现事实仍由 PROJECT_STATE 持有，Agent normative 边界由冻结 architecture 持有。
@@ -117,11 +119,11 @@
 
 A11-F1 已补强公共 parseJson：解码后含 U+0000 的对象成员名在属性建立前拒绝（Host兼容性契约）；F1 224项、A01 1122项、serializer 2307项、registry 27项及185/185离线套件通过（0 skip），A11（含F1）真实复验：入口20/20、编码310/310、公共返回3/3 PASS；10项含NUL对象键按用户预授权接受为Host支持范围限制，不计编码PASS。INTEGRATED_ACCEPTED / CLOSED 留待0.3.12-G。首次3 PASS / 1 FAIL / 316 NOT COVERED保留为历史。
 
-首次 A11 真实验收：AE-01 装载 PASS；AE-02 在 U+0000 的 toJson 字符串键返回空键时内容断言 FAIL，矩阵停止（3 PASS / 1 FAIL / 316 NOT COVERED）；AE-03 完整组 NOT COVERED。当时未裁定TARGETED_ACCEPTED；当前以本次复验结论为准，详见A11报告。
+首次 A11 真实验收：AE-01 装载 PASS；AE-02 在 U+0000 的 toJson 字符串键返回空键时内容断言 FAIL，矩阵停止（3 PASS / 1 FAIL / 316 NOT COVERED）；AE-03 完整组 NOT COVERED。当时未裁定TARGETED_ACCEPTED；A11以其后F1复验结论为准，详见A11报告。
 
 **0.3.12-B1 / A11 — 公共 Host JSON serializer 完整字符串转义。**
 
-[A0 报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)保留已完成的资料/哈希、入口对账、完整源码清单与25项生产复核计划。[A01 阶段报告](reports/vela-0.3.12-b1-a01-host-json-entry.md)记录实际生产模块反例、严格解析修复、复用实施轮1122 focused assertions/183/183 suites PASS（0 skipped），以及六组有界真实 AE 验收与用户风险裁定。A01 已 TARGETED_ACCEPTED 并通过 PR #202 合并 dev，原覆盖裁定保留。当前 [A11 公共 serializer 修复](reports/vela-0.3.12-b1-a11-host-json-serialization.md) 原实施轮2307项断言及184/184离线套件通过（0 skipped），F1轮新增准入并重跑224/1122/2307/27项及185/185套件；上述离线结果本轮未重跑。本轮真实复验通过并满足预授权条件；下一项为用户另行授权的commit / PR。INTEGRATED_ACCEPTED / CLOSED 留待 0.3.12-G，不自动进入 G-02 或 UI 重构。
+[A0 报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)保留已完成的资料/哈希、入口对账、完整源码清单与25项生产复核计划。[A01 阶段报告](reports/vela-0.3.12-b1-a01-host-json-entry.md)记录实际生产模块反例、严格解析修复、复用实施轮1122 focused assertions/183/183 suites PASS（0 skipped），以及六组有界真实 AE 验收与用户风险裁定。A01 已 TARGETED_ACCEPTED 并通过 PR #202 合并 dev，原覆盖裁定保留。当前 [A11 公共 serializer 修复](reports/vela-0.3.12-b1-a11-host-json-serialization.md) 原实施轮2307项断言及184/184离线套件通过（0 skipped），F1轮新增准入并重跑224/1122/2307/27项及185/185套件；上述为A11/F1历史结果，G-02本轮回归另见报告。A11真实复验通过并经PR #203合并dev。当前G-02仅补齐Unicode代理项检查，四组真实验收完成，下一项为用户另行授权的commit / PR。INTEGRATED_ACCEPTED / CLOSED 留待 0.3.12-G，不自动进入B2或UI重构。
 
 A01 已实施并获有界验收接受，其剩余覆盖限制保留至 0.3.12-G 重新裁定；A11含F1已完成有界真实复验并TARGETED_ACCEPTED；整个 B1/0.3.12 未完成，其余生产修复与后续重构未由本切片实施。实际开发遵循 focused branch → 实施/回归 → AE/CEP → 用户 commit/push → PR 到 dev；正式版本发布另行处理。
 

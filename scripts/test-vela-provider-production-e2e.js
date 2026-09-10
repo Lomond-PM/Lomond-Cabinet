@@ -634,6 +634,29 @@ async function run() {
     const logicalReject1 = makeHarness(); logicalReject1.state.providerMode = "logical"; logicalReject1.state.proposalOpacity = 47; logicalReject1.state.proposalName = "Hero"; await logicalReject1.runtime.initialize(); const logicalReject1Driver = renameDriver(logicalReject1); const reject1Review0 = await logicalReject1Driver.driver.startObjective({ message: "把当前图层透明度改成47%，然后把它命名为Hero", endpoint: "http://127.0.0.1:1234", model: "m" }); const reject1Review = await logicalReject1Driver.driver.resolveReview({ reviewId: reject1Review0.suspendedReview.reviewId, revision: reject1Review0.suspendedReview.revision, outcome: "approved" }); const reject1Done = logicalReject1Driver.driver.resolveReview({ reviewId: reject1Review.suspendedReview.reviewId, revision: reject1Review.suspendedReview.revision, outcome: "rejected" });
     const reject1Presentation = presentationModule.create(); reject1Presentation.begin("reject step 1"); reject1Presentation.apply({ state: "pending", text: null, errorCode: null }); reject1Presentation.apply({ state: "completed", text: null, errorCode: null }); const reject1Transcript = reject1Presentation.applyConfirmation({ state: "rejected" });
     check(reject1Done.terminal.outcome === "rejected" && reject1Done.logicalPlan.completedStepCount === 1 && reject1Done.logicalPlan.partialCompletion === true && logicalReject1.state.value === 47 && logicalReject1.state.name === "Layer A" && logicalReject1.calls.filter((call) => call.kind === "execution").length === 1 && reject1Transcript.items.filter((item) => item.displayTextKey === "vela.surfaceConfirmationRejected").length === 1 && !reject1Transcript.items.some((item) => item.kind === "error"), "step 1 reject retains committed step 0, skips rename mutation, and presents only one rejection notice");
+    // G-02: actual Runtime/Provider/Driver chain; only existing transport and Host boundaries are substituted.
+    for (const name of [String.fromCharCode(0xD800), "Hero" + String.fromCharCode(0xDBFF), "Hero" + String.fromCharCode(0xDC00)]) {
+        for (const requestKind of ["valid-request", "matching-malformed-request"]) {
+        const h = makeHarness(); h.state.proposalCapability = "set-layer-name-v1"; h.state.proposalName = name;
+        await h.runtime.initialize();
+        const result = await h.runtime.sendProviderMessage({ message: "将当前图层重命名为 " + (requestKind === "valid-request" ? "Hero" : name), endpoint: "http://127.0.0.1:1234", model: "m" });
+        const mutations = h.calls.filter(call => call.kind === "execution").length;
+        const observations = h.calls.filter(call => call.kind !== "execution").length;
+        console.log("G02-chain " + JSON.stringify({ requestKind, codeUnits: Array.from({length:name.length},(_,i)=>name.charCodeAt(i)), state: result.state, errorCode: result.errorCode, observations, mutations }));
+        check((result.state === "failed" || result.state === "intent-rejected") && mutations === 0, "G-02 malformed Provider rename fails before Host mutation; observations counted separately.");
+        h.runtime.dispose();
+        }
+    }
+    const unicodeHappy = makeHarness(); unicodeHappy.state.proposalCapability = "set-layer-name-v1"; unicodeHappy.state.proposalName = "标题日本語 😀";
+    await unicodeHappy.runtime.initialize(); const unicodeDriver = renameDriver(unicodeHappy);
+    const unicodeReview = await unicodeDriver.driver.startObjective({ message: "将当前图层重命名为 标题日本語 😀", endpoint: "http://127.0.0.1:1234", model: "m" });
+    check(unicodeReview.state === "awaiting-review" && unicodeReview.suspendedReview.params.name === unicodeHappy.state.proposalName && unicodeHappy.calls.filter(c=>c.kind === "execution").length === 0, "G-02 multilingual rename preserves content and requires actual Review before mutation.");
+    const unicodeDone = await unicodeDriver.driver.resolveReview({reviewId:unicodeReview.suspendedReview.reviewId, revision:unicodeReview.suspendedReview.revision, outcome:"approved"});
+    const unicodeMutations = unicodeHappy.calls.filter(c=>c.kind === "execution").length;
+    const unicodeVerify = unicodeHappy.calls.filter(c=>c.request && c.request.operation === "observeCommittedLayerAttributeValue").length;
+    check(unicodeDone.terminal.outcome === "completed" && unicodeHappy.state.name === "标题日本語 😀" && unicodeMutations === 1 && unicodeVerify === 1, "G-02 multilingual rename passes real Authority/Review/Execution/Verify logic with substituted Host.");
+    console.log("G02-chain " + JSON.stringify({name:unicodeHappy.state.name, outcome:unicodeDone.terminal.outcome, observations:unicodeHappy.calls.filter(c=>c.kind !== "execution").length, mutations:unicodeMutations, verify:unicodeVerify}));
+    unicodeHappy.runtime.dispose();
     const renameHappy = makeHarness(); renameHappy.state.proposalCapability = "set-layer-name-v1"; renameHappy.state.proposalName = "Hero"; await renameHappy.runtime.initialize();
     const renameHappyDriver = renameDriver(renameHappy);
     const renameReview = await renameHappyDriver.driver.startObjective({ message: "将当前图层重命名为 Hero", endpoint: "http://127.0.0.1:1234", model: "m" });

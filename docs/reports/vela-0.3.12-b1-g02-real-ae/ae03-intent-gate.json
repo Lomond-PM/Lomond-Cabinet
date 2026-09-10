@@ -1,0 +1,97 @@
+{
+  "command": "copy(JSON.stringify((function(){var g=window.VelaProviderIntentGate;return {caseId:\"G02-AE-03\",records:[{id:\"single-high\",name:String.fromCharCode(0xD800),message:\"将当前图层重命名为 Hero\"},{id:\"terminal-high\",name:\"Hero\"+String.fromCharCode(0xDBFF),message:\"将当前图层重命名为 Hero\"},{id:\"terminal-low\",name:\"Hero\"+String.fromCharCode(0xDC00),message:\"将当前图层重命名为 Hero\"},{id:\"multilingual\",name:\"标题日本語 \"+String.fromCharCode(0xD83D,0xDE00),message:\"将当前图层重命名为 标题日本語 \"+String.fromCharCode(0xD83D,0xDE00)}].map(function(x){var input={message:x.message,capabilityId:\"set-layer-name-v1\",params:{name:x.name}};return {caseId:x.id,input:input,codeUnits:Array.from({length:x.name.length},function(_,i){return x.name.charCodeAt(i);}),result:g.evaluate(input)};})};})()))",
+  "raw": "{\"caseId\":\"G02-AE-03\",\"records\":[{\"caseId\":\"single-high\",\"input\":{\"message\":\"将当前图层重命名为 Hero\",\"capabilityId\":\"set-layer-name-v1\",\"params\":{\"name\":\"\\ud800\"}},\"codeUnits\":[55296],\"result\":{\"allowed\":false,\"reason\":\"invalid-proposal\",\"moduleRevision\":\"vela-provider-intent-gate-v1\"}},{\"caseId\":\"terminal-high\",\"input\":{\"message\":\"将当前图层重命名为 Hero\",\"capabilityId\":\"set-layer-name-v1\",\"params\":{\"name\":\"Hero\\udbff\"}},\"codeUnits\":[72,101,114,111,56319],\"result\":{\"allowed\":false,\"reason\":\"invalid-proposal\",\"moduleRevision\":\"vela-provider-intent-gate-v1\"}},{\"caseId\":\"terminal-low\",\"input\":{\"message\":\"将当前图层重命名为 Hero\",\"capabilityId\":\"set-layer-name-v1\",\"params\":{\"name\":\"Hero\\udc00\"}},\"codeUnits\":[72,101,114,111,56320],\"result\":{\"allowed\":false,\"reason\":\"invalid-proposal\",\"moduleRevision\":\"vela-provider-intent-gate-v1\"}},{\"caseId\":\"multilingual\",\"input\":{\"message\":\"将当前图层重命名为 标题日本語 😀\",\"capabilityId\":\"set-layer-name-v1\",\"params\":{\"name\":\"标题日本語 😀\"}},\"codeUnits\":[26631,39064,26085,26412,35486,32,55357,56832],\"result\":{\"allowed\":true,\"reason\":\"allowed\",\"moduleRevision\":\"vela-provider-intent-gate-v1\"}}]}",
+  "result": {
+    "caseId": "G02-AE-03",
+    "records": [
+      {
+        "caseId": "single-high",
+        "input": {
+          "message": "将当前图层重命名为 Hero",
+          "capabilityId": "set-layer-name-v1",
+          "params": {
+            "name": "\ud800"
+          }
+        },
+        "codeUnits": [
+          55296
+        ],
+        "result": {
+          "allowed": false,
+          "reason": "invalid-proposal",
+          "moduleRevision": "vela-provider-intent-gate-v1"
+        }
+      },
+      {
+        "caseId": "terminal-high",
+        "input": {
+          "message": "将当前图层重命名为 Hero",
+          "capabilityId": "set-layer-name-v1",
+          "params": {
+            "name": "Hero\udbff"
+          }
+        },
+        "codeUnits": [
+          72,
+          101,
+          114,
+          111,
+          56319
+        ],
+        "result": {
+          "allowed": false,
+          "reason": "invalid-proposal",
+          "moduleRevision": "vela-provider-intent-gate-v1"
+        }
+      },
+      {
+        "caseId": "terminal-low",
+        "input": {
+          "message": "将当前图层重命名为 Hero",
+          "capabilityId": "set-layer-name-v1",
+          "params": {
+            "name": "Hero\udc00"
+          }
+        },
+        "codeUnits": [
+          72,
+          101,
+          114,
+          111,
+          56320
+        ],
+        "result": {
+          "allowed": false,
+          "reason": "invalid-proposal",
+          "moduleRevision": "vela-provider-intent-gate-v1"
+        }
+      },
+      {
+        "caseId": "multilingual",
+        "input": {
+          "message": "将当前图层重命名为 标题日本語 😀",
+          "capabilityId": "set-layer-name-v1",
+          "params": {
+            "name": "标题日本語 😀"
+          }
+        },
+        "codeUnits": [
+          26631,
+          39064,
+          26085,
+          26412,
+          35486,
+          32,
+          55357,
+          56832
+        ],
+        "result": {
+          "allowed": true,
+          "reason": "allowed",
+          "moduleRevision": "vela-provider-intent-gate-v1"
+        }
+      }
+    ]
+  },
+  "time": "2026-09-10T02:06:47.655Z"
+}
