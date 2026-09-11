@@ -12,7 +12,7 @@ const REPORT_PATH = path.join(ROOT, "docs", "reports", "i18n-usage-report.md");
 
 const RUNTIME_EXTENSIONS = new Set([".html", ".js", ".jsx", ".css"]);
 const DOC_EXTENSIONS = new Set([".md"]);
-const IGNORE_DIRS = new Set([".git", "node_modules", "docs/reports", "scripts"]);
+const IGNORE_DIRS = new Set([".git", ".tmp", "node_modules", "docs/reports", "scripts"]);
 
 function readText(filePath) {
     return fs.readFileSync(filePath, "utf8");
