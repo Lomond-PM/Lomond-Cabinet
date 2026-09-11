@@ -1,0 +1,478 @@
+{
+  "stage": "A09-A0",
+  "baseline": "f5ea7a10b5633cdf972bf3bf2c7cacff6cffd14f",
+  "evidenceLevel": "Actual complete production modules in Node VM; AE object/API substitutes; no real AE",
+  "sourceHashes": [
+    {
+      "path": "host/aeUtils.jsx",
+      "bytes": 7349,
+      "sha256": "f2f178ff96ef4732d316742eb658abdd7f7147ad0a7ed350e1c3c13c98eee511"
+    },
+    {
+      "path": "host/index.jsx",
+      "bytes": 30615,
+      "sha256": "5730c9c8be5eb70093f1fb4a8d61a645ac52e34b54c4e7693cf991794a9b7ea0"
+    },
+    {
+      "path": "host/tools/adComponentKit.jsx",
+      "bytes": 128500,
+      "sha256": "22a5c4997a71759135df8f2eb04179327c959e1dc4cc3b3dfb7321ebe17cda72"
+    },
+    {
+      "path": "host/tools/adComponentKit.tool.jsx",
+      "bytes": 39971,
+      "sha256": "e9a1994307ac9c784f38f09710fa27beb953bfb3631859f4ffea534360a2368c"
+    },
+    {
+      "path": "host/tools/textBackgroundBox.jsx",
+      "bytes": 18114,
+      "sha256": "81d567dab983559969a75690d2d43a2c22089ca940d0ab7f93fa644b30da3a63"
+    },
+    {
+      "path": "host/tools/textBackgroundBox.tool.jsx",
+      "bytes": 11177,
+      "sha256": "c60082737ae1508a1726494a58c7788c6bb447c67905c9db3ea51ac054568ea5"
+    },
+    {
+      "path": "scripts/fixtures/ad-component-detach-harness.js",
+      "bytes": 15273,
+      "sha256": "b8123e50d358d79aef0dfbdbf344b61c68d96d153320368ee7c8df495cbe3d32"
+    },
+    {
+      "path": "scripts/fixtures/host-json-entry-harness.js",
+      "bytes": 4756,
+      "sha256": "8a4afa4cc82cc7f3048ccd8076b17af56c259b449ef23a538c89fb54426ef5eb"
+    }
+  ],
+  "archival": {
+    "localDirectory": ".tmp/vela-evidence/0.3.12/a09/a0/",
+    "command": "node .tmp/vela-evidence/0.3.12/a09/a0/reproduce.js",
+    "recordsSha256": "068bb901b1361975720ef4c113013f2bd416dc888f118737b441e5c963f0ee15",
+    "note": "Full records, commands and inventory are local ignored artifacts, not a portable Git evidence dependency."
+  },
+  "result": {
+    "scenarios": 16,
+    "diagnosticChecks": 43,
+    "allExpectedObservationsMatched": true,
+    "meaning": "Reproductions confirm existing defects. This is not product acceptance or an offline regression run."
+  },
+  "sharedInput": {
+    "sourceRect": {
+      "left": 0,
+      "top": 0,
+      "width": 100,
+      "height": 50
+    },
+    "position": [
+      500,
+      300
+    ],
+    "anchor": [
+      10,
+      20
+    ],
+    "scale": [
+      200,
+      150
+    ],
+    "time": 1.25,
+    "geometryModel": "2D scale and translation; sourcePointToComp available unless explicitly disabled; parent adds [100,50]",
+    "expectedCompBoundsUnparented": [
+      480,
+      270,
+      680,
+      345
+    ],
+    "expectedCompCenterUnparented": [
+      580,
+      307.5
+    ]
+  },
+  "legacy": [
+    {
+      "caseId": "legacy-normal",
+      "toComp": "normal",
+      "actualBounds": {
+        "left": 480,
+        "top": 270,
+        "right": 680,
+        "bottom": 345,
+        "width": 200,
+        "height": 75,
+        "centerX": 580,
+        "centerY": 307.5
+      }
+    },
+    {
+      "caseId": "legacy-missing",
+      "toComp": "missing",
+      "actualBounds": {
+        "left": 0,
+        "top": 0,
+        "right": 100,
+        "bottom": 50,
+        "width": 100,
+        "height": 50,
+        "centerX": 50,
+        "centerY": 25
+      }
+    },
+    {
+      "caseId": "legacy-throws",
+      "toComp": "throws",
+      "actualBounds": {
+        "left": 0,
+        "top": 0,
+        "right": 100,
+        "bottom": 50,
+        "width": 100,
+        "height": 50,
+        "centerX": 50,
+        "centerY": 25
+      }
+    }
+  ],
+  "featureCreation": [
+    {
+      "caseId": "feature-create-normal",
+      "entry": "runRegisteredToolAction(ecommerceLayout, createFeatureStack, paramsJson)",
+      "params": {
+        "paddingX": 0,
+        "paddingY": 0,
+        "pillWidthMode": "auto",
+        "sortMode": "timeline"
+      },
+      "returnExcerpt": {
+        "ok": true,
+        "message": "Feature Stack created with 1 item(s).",
+        "originalCenter": [
+          580,
+          307.5
+        ],
+        "items": [
+          {
+            "textName": "source0",
+            "localPosition": [
+              0,
+              0
+            ],
+            "pillSize": [
+              200,
+              75
+            ]
+          }
+        ]
+      },
+      "actualGeneratedRectSize": [
+        200,
+        75
+      ],
+      "generatedSizeHasExpression": true,
+      "layerCount": 3
+    },
+    {
+      "caseId": "feature-create-missing",
+      "entry": "runRegisteredToolAction(ecommerceLayout, createFeatureStack, paramsJson)",
+      "params": {
+        "paddingX": 0,
+        "paddingY": 0,
+        "pillWidthMode": "auto",
+        "sortMode": "timeline"
+      },
+      "returnExcerpt": {
+        "ok": true,
+        "message": "Feature Stack created with 1 item(s).",
+        "originalCenter": [
+          580,
+          307.5
+        ],
+        "items": [
+          {
+            "textName": "source0",
+            "localPosition": [
+              0,
+              0
+            ],
+            "pillSize": [
+              100,
+              50
+            ]
+          }
+        ]
+      },
+      "actualGeneratedRectSize": [
+        100,
+        50
+      ],
+      "generatedSizeHasExpression": true,
+      "layerCount": 3
+    },
+    {
+      "caseId": "feature-create-throws",
+      "entry": "runRegisteredToolAction(ecommerceLayout, createFeatureStack, paramsJson)",
+      "params": {
+        "paddingX": 0,
+        "paddingY": 0,
+        "pillWidthMode": "auto",
+        "sortMode": "timeline"
+      },
+      "returnExcerpt": {
+        "ok": true,
+        "message": "Feature Stack created with 1 item(s).",
+        "originalCenter": [
+          580,
+          307.5
+        ],
+        "items": [
+          {
+            "textName": "source0",
+            "localPosition": [
+              0,
+              0
+            ],
+            "pillSize": [
+              100,
+              50
+            ]
+          }
+        ]
+      },
+      "actualGeneratedRectSize": [
+        100,
+        50
+      ],
+      "generatedSizeHasExpression": true,
+      "layerCount": 3
+    }
+  ],
+  "stateVersusGrid": {
+    "stateEntry": "actual registered stateAction -> adComponentKit.getState",
+    "canCreateIconGrid": true,
+    "gridEntry": "runRegisteredToolAction(ecommerceLayout, createIconGrid, paramsJson)",
+    "gridReturn": {
+      "ok": false,
+      "message": "Icon Grid rejected the selection before making changes.",
+      "reason": "GRID_TO_COMP_FAILED",
+      "invalidLayerCount": 1,
+      "firstInvalidLayerIndex": 1,
+      "firstInvalidLayerName": "source0"
+    },
+    "observedPreflightMutationEvents": 0
+  },
+  "textBackgroundVisual": [
+    {
+      "caseId": "tbb-visual-normal",
+      "entry": "runRegisteredToolAction(textBackgroundBox, create, paramsJson)",
+      "return": {
+        "ok": true,
+        "messageKey": "tools.textBackgroundBox.status.created",
+        "message": "Created 1 background rounded rectangle(s).",
+        "count": 1,
+        "selectionLabel": "1 layer(s)"
+      },
+      "layerCount": 2
+    },
+    {
+      "caseId": "tbb-visual-missing",
+      "entry": "runRegisteredToolAction(textBackgroundBox, create, paramsJson)",
+      "return": {
+        "ok": false,
+        "message": "Created 0 rounded rectangle(s), with 1 error(s).",
+        "count": 0,
+        "selectionLabel": "1 layer(s)"
+      },
+      "layerCount": 1
+    },
+    {
+      "caseId": "tbb-visual-throws",
+      "entry": "runRegisteredToolAction(textBackgroundBox, create, paramsJson)",
+      "return": {
+        "ok": false,
+        "message": "Created 0 rounded rectangle(s), with 1 error(s).",
+        "count": 0,
+        "selectionLabel": "1 layer(s)"
+      },
+      "layerCount": 1
+    }
+  ],
+  "textBackgroundParent": [
+    {
+      "caseId": "tbb-text-inverse-normal",
+      "entry": "runRegisteredToolAction(textBackgroundBox, create, paramsJson)",
+      "return": {
+        "ok": true,
+        "messageKey": "tools.textBackgroundBox.status.created",
+        "message": "Created 1 background rounded rectangle(s).",
+        "count": 1,
+        "selectionLabel": "1 layer(s)"
+      },
+      "requiredTargetSpace": "parent-layer-space",
+      "expectedParentPoint": [
+        580,
+        307.5
+      ],
+      "expectedCompPoint": [
+        680,
+        357.5
+      ],
+      "lastPositionWrite": {
+        "key": "position",
+        "parentId": 1002,
+        "op": "setValue",
+        "value": [
+          580,
+          307.5
+        ]
+      }
+    },
+    {
+      "caseId": "tbb-text-inverse-fallback-normal",
+      "entry": "runRegisteredToolAction(textBackgroundBox, create, paramsJson)",
+      "return": {
+        "ok": true,
+        "messageKey": "tools.textBackgroundBox.status.created",
+        "message": "Created 1 background rounded rectangle(s).",
+        "count": 1,
+        "selectionLabel": "1 layer(s)"
+      },
+      "requiredTargetSpace": "parent-layer-space",
+      "expectedParentPoint": [
+        580,
+        307.5
+      ],
+      "expectedCompPoint": [
+        680,
+        357.5
+      ],
+      "lastPositionWrite": {
+        "key": "position",
+        "parentId": 1002,
+        "op": "setValue",
+        "value": [
+          580,
+          307.5
+        ]
+      }
+    },
+    {
+      "caseId": "tbb-text-inverse-missing",
+      "entry": "runRegisteredToolAction(textBackgroundBox, create, paramsJson)",
+      "return": {
+        "ok": true,
+        "messageKey": "tools.textBackgroundBox.status.created",
+        "message": "Created 1 background rounded rectangle(s).",
+        "count": 1,
+        "selectionLabel": "1 layer(s)"
+      },
+      "requiredTargetSpace": "parent-layer-space",
+      "expectedParentPoint": [
+        580,
+        307.5
+      ],
+      "expectedCompPoint": [
+        680,
+        357.5
+      ],
+      "lastPositionWrite": {
+        "key": "position",
+        "parentId": 1002,
+        "op": "setValue",
+        "value": [
+          680,
+          357.5
+        ]
+      }
+    },
+    {
+      "caseId": "tbb-text-inverse-throws",
+      "entry": "runRegisteredToolAction(textBackgroundBox, create, paramsJson)",
+      "return": {
+        "ok": true,
+        "messageKey": "tools.textBackgroundBox.status.created",
+        "message": "Created 1 background rounded rectangle(s).",
+        "count": 1,
+        "selectionLabel": "1 layer(s)"
+      },
+      "requiredTargetSpace": "parent-layer-space",
+      "expectedParentPoint": [
+        580,
+        307.5
+      ],
+      "expectedCompPoint": [
+        680,
+        357.5
+      ],
+      "lastPositionWrite": {
+        "key": "position",
+        "parentId": 1002,
+        "op": "setValue",
+        "value": [
+          680,
+          357.5
+        ]
+      }
+    },
+    {
+      "caseId": "tbb-text-no-parent",
+      "entry": "runRegisteredToolAction(textBackgroundBox, create, paramsJson)",
+      "return": {
+        "ok": true,
+        "messageKey": "tools.textBackgroundBox.status.created",
+        "message": "Created 1 background rounded rectangle(s).",
+        "count": 1,
+        "selectionLabel": "1 layer(s)"
+      },
+      "requiredTargetSpace": "comp-space-2D",
+      "expectedParentPoint": null,
+      "expectedCompPoint": [
+        580,
+        307.5
+      ],
+      "lastPositionWrite": {
+        "key": "position",
+        "parentId": null,
+        "op": "setValue",
+        "value": [
+          580,
+          307.5
+        ]
+      }
+    },
+    {
+      "caseId": "tbb-text-forward-missing",
+      "entry": "runRegisteredToolAction(textBackgroundBox, create, paramsJson)",
+      "return": {
+        "ok": true,
+        "messageKey": "tools.textBackgroundBox.status.created",
+        "message": "Created 1 background rounded rectangle(s).",
+        "count": 1,
+        "selectionLabel": "1 layer(s)"
+      },
+      "requiredTargetSpace": "parent-layer-space",
+      "expectedParentPoint": [
+        580,
+        307.5
+      ],
+      "expectedCompPoint": [
+        680,
+        357.5
+      ],
+      "lastPositionWrite": {
+        "key": "position",
+        "parentId": 1002,
+        "op": "setValue",
+        "value": [
+          500,
+          300
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "Transforms are explicit affine API substitutes, not AE rendering or arbitrary parent transforms.",
+    "Generated shapes/effects, Property setters, reparenting and Undo are substitutes. Parent setter does not model AE automatic compensation.",
+    "Parent defect is established at actual Position write before final background-to-source reparenting; no final AE pixel or Undo claim.",
+    "Feature generated static Rect Size and public debug decisions are observed; installed production expressions are not evaluated in this diagnostic.",
+    "No production helper or validator was copied/replaced. Legacy bounds is an existing public export; other paths are actual registered actions/stateAction."
+  ]
+}

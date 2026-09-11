@@ -132,6 +132,15 @@ function makeLayer(kind, options) {
             if (options.sourcePointNaN) { return [NaN, 1]; }
             if (options.sourcePointInfinity) { return [Infinity, 1]; }
             return [position.value[0] + (point[0] - anchor.value[0]) * scale.value[0] / 100, position.value[1] + (point[1] - anchor.value[1]) * scale.value[1] / 100];
+        },
+        // Explicit legacy API capability for ordinary successful Feature fixtures.
+        // AE boundary model only: 2D affine point transform; no rendering or expression engine.
+        toComp: function (point) {
+            const angle=rotation.value*Math.PI/180;
+            const x=(point[0]-anchor.value[0])*scale.value[0]/100;
+            const y=(point[1]-anchor.value[1])*scale.value[1]/100;
+            const result=[position.value[0]+Math.cos(angle)*x-Math.sin(angle)*y,position.value[1]+Math.sin(angle)*x+Math.cos(angle)*y];
+            return this.parent ? this.parent.toComp(result) : result;
         }
     };
     Object.defineProperty(layer, "width", { get: function () { layer.sourceSizeReads += 1; if (options.sourceSizeThrows) { throw new Error("source size must not be read"); } return options.width === undefined ? 100 : options.width; } });
