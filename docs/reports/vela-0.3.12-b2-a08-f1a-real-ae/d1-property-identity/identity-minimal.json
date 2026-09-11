@@ -1,0 +1,1058 @@
+{
+  "kind": "H0 retention extract; existing D1 observations, not a new Host run",
+  "sourceFile": "identity-probes.json",
+  "sourceSha256": "23b3bb69dd6d481af1e585b8990abdfb144fbb9e99501095646bb3f81b378443",
+  "rawFile": "raw-property-identity.json",
+  "rawSha256": "be3583866efd988a708e8c832eece60ef388c0ee5792ff0eef9844f0cae778b7",
+  "sourceArchiveRoot": ".tmp/vela-evidence/0.3.12/a08/h0-20260911",
+  "method": "Copy all 30 recorded pair comparisons; retain one complete locator per property only after checking all four recorded locators and expression texts are identical. Expression bytes are represented by UTF-8 SHA-256/UTF-16 length. No new identity probe.",
+  "probes": [
+    {
+      "label": "sourcePosition",
+      "sourcePointer": "/probes/0",
+      "methods": {
+        "A": "held planned property from production acquisition chain",
+        "B": "fresh layer lookup and same production chain",
+        "C": "enumerate actual A.parentProperty; select unique actual propertyIndex",
+        "D": "another fresh lookup through same production chain"
+      },
+      "locator": {
+        "layer": {
+          "id": {
+            "status": "OK",
+            "type": "number",
+            "value": 213
+          },
+          "index": {
+            "status": "OK",
+            "type": "number",
+            "value": 3
+          },
+          "name": {
+            "status": "OK",
+            "type": "string",
+            "value": "A08_FEATURE_SOURCE"
+          }
+        },
+        "propertyDepth": {
+          "status": "OK",
+          "type": "number",
+          "value": 2
+        },
+        "path": [
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 5
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Transform Group"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "变换"
+            }
+          },
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 2
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Position"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "位置"
+            }
+          }
+        ],
+        "actualRoot": {
+          "id": {
+            "status": "OK",
+            "type": "number",
+            "value": 213
+          },
+          "index": {
+            "status": "OK",
+            "type": "number",
+            "value": 3
+          },
+          "name": {
+            "status": "OK",
+            "type": "string",
+            "value": "A08_FEATURE_SOURCE"
+          }
+        },
+        "complete": true,
+        "errors": []
+      },
+      "propertyValueType": {
+        "status": "OK",
+        "type": "number",
+        "value": 6413
+      },
+      "expressionSignature": {
+        "length": 1988,
+        "sha256Utf8": "f46b3ac8c4e9f567919a9cb380a093ee279e7459a4fc24b4fc7ccf2c58edc57e"
+      },
+      "selfEqualA": true,
+      "retrievalError": null,
+      "comparisons": [
+        {
+          "left": "A",
+          "right": "B",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "A",
+          "right": "C",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "A",
+          "right": "D",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "B",
+          "right": "C",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "B",
+          "right": "D",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "C",
+          "right": "D",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        }
+      ]
+    },
+    {
+      "label": "generatedPosition",
+      "sourcePointer": "/probes/1",
+      "methods": {
+        "A": "held planned property from production acquisition chain",
+        "B": "fresh layer lookup and same production chain",
+        "C": "enumerate actual A.parentProperty; select unique actual propertyIndex",
+        "D": "another fresh lookup through same production chain"
+      },
+      "locator": {
+        "layer": {
+          "id": {
+            "status": "OK",
+            "type": "number",
+            "value": 218
+          },
+          "index": {
+            "status": "OK",
+            "type": "number",
+            "value": 4
+          },
+          "name": {
+            "status": "OK",
+            "type": "string",
+            "value": "A08_FEATURE_SOURCE_PILL_BG"
+          }
+        },
+        "propertyDepth": {
+          "status": "OK",
+          "type": "number",
+          "value": 2
+        },
+        "path": [
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 5
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Transform Group"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "变换"
+            }
+          },
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 2
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Position"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "位置"
+            }
+          }
+        ],
+        "actualRoot": {
+          "id": {
+            "status": "OK",
+            "type": "number",
+            "value": 218
+          },
+          "index": {
+            "status": "OK",
+            "type": "number",
+            "value": 4
+          },
+          "name": {
+            "status": "OK",
+            "type": "string",
+            "value": "A08_FEATURE_SOURCE_PILL_BG"
+          }
+        },
+        "complete": true,
+        "errors": []
+      },
+      "propertyValueType": {
+        "status": "OK",
+        "type": "number",
+        "value": 6413
+      },
+      "expressionSignature": {
+        "length": 379,
+        "sha256Utf8": "6d6f4e44fda450331e286de3de109543312b2f8fcf4063c4cea1df1bfe0e4f0d"
+      },
+      "selfEqualA": true,
+      "retrievalError": null,
+      "comparisons": [
+        {
+          "left": "A",
+          "right": "B",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "A",
+          "right": "C",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "A",
+          "right": "D",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "B",
+          "right": "C",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "B",
+          "right": "D",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "C",
+          "right": "D",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        }
+      ]
+    },
+    {
+      "label": "generatedRectSize",
+      "sourcePointer": "/probes/2",
+      "methods": {
+        "A": "held planned property from production acquisition chain",
+        "B": "fresh layer lookup and same production chain",
+        "C": "enumerate actual A.parentProperty; select unique actual propertyIndex",
+        "D": "another fresh lookup through same production chain"
+      },
+      "locator": {
+        "layer": {
+          "id": {
+            "status": "OK",
+            "type": "number",
+            "value": 218
+          },
+          "index": {
+            "status": "OK",
+            "type": "number",
+            "value": 4
+          },
+          "name": {
+            "status": "OK",
+            "type": "string",
+            "value": "A08_FEATURE_SOURCE_PILL_BG"
+          }
+        },
+        "propertyDepth": {
+          "status": "OK",
+          "type": "number",
+          "value": 5
+        },
+        "path": [
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 2
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Root Vectors Group"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "内容"
+            }
+          },
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 1
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Vector Group"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "Pill"
+            }
+          },
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 2
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Vectors Group"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "内容"
+            }
+          },
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 1
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Vector Shape - Rect"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "矩形路径 1"
+            }
+          },
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 2
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Vector Rect Size"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "大小"
+            }
+          }
+        ],
+        "actualRoot": {
+          "id": {
+            "status": "OK",
+            "type": "number",
+            "value": 218
+          },
+          "index": {
+            "status": "OK",
+            "type": "number",
+            "value": 4
+          },
+          "name": {
+            "status": "OK",
+            "type": "string",
+            "value": "A08_FEATURE_SOURCE_PILL_BG"
+          }
+        },
+        "complete": true,
+        "errors": []
+      },
+      "propertyValueType": {
+        "status": "OK",
+        "type": "number",
+        "value": 6416
+      },
+      "expressionSignature": {
+        "length": 1001,
+        "sha256Utf8": "64ddb32fc670390fc76d0797316f596e9f985d65cd021cb4c984b6752d30e1bf"
+      },
+      "selfEqualA": true,
+      "retrievalError": null,
+      "comparisons": [
+        {
+          "left": "A",
+          "right": "B",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "A",
+          "right": "C",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "A",
+          "right": "D",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "B",
+          "right": "C",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "B",
+          "right": "D",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "C",
+          "right": "D",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        }
+      ]
+    },
+    {
+      "label": "generatedRoundness",
+      "sourcePointer": "/probes/3",
+      "methods": {
+        "A": "held planned property from production acquisition chain",
+        "B": "fresh layer lookup and same production chain",
+        "C": "enumerate actual A.parentProperty; select unique actual propertyIndex",
+        "D": "another fresh lookup through same production chain"
+      },
+      "locator": {
+        "layer": {
+          "id": {
+            "status": "OK",
+            "type": "number",
+            "value": 218
+          },
+          "index": {
+            "status": "OK",
+            "type": "number",
+            "value": 4
+          },
+          "name": {
+            "status": "OK",
+            "type": "string",
+            "value": "A08_FEATURE_SOURCE_PILL_BG"
+          }
+        },
+        "propertyDepth": {
+          "status": "OK",
+          "type": "number",
+          "value": 5
+        },
+        "path": [
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 2
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Root Vectors Group"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "内容"
+            }
+          },
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 1
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Vector Group"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "Pill"
+            }
+          },
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 2
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Vectors Group"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "内容"
+            }
+          },
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 1
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Vector Shape - Rect"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "矩形路径 1"
+            }
+          },
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 4
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Vector Rect Roundness"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "圆度"
+            }
+          }
+        ],
+        "actualRoot": {
+          "id": {
+            "status": "OK",
+            "type": "number",
+            "value": 218
+          },
+          "index": {
+            "status": "OK",
+            "type": "number",
+            "value": 4
+          },
+          "name": {
+            "status": "OK",
+            "type": "string",
+            "value": "A08_FEATURE_SOURCE_PILL_BG"
+          }
+        },
+        "complete": true,
+        "errors": []
+      },
+      "propertyValueType": {
+        "status": "OK",
+        "type": "number",
+        "value": 6417
+      },
+      "expressionSignature": {
+        "length": 373,
+        "sha256Utf8": "a0cd21a79aa2631915904c7776360db88f7ced30c1ee3487b7a638427e9dcc3e"
+      },
+      "selfEqualA": true,
+      "retrievalError": null,
+      "comparisons": [
+        {
+          "left": "A",
+          "right": "B",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "A",
+          "right": "C",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "A",
+          "right": "D",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "B",
+          "right": "C",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "B",
+          "right": "D",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "C",
+          "right": "D",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        }
+      ]
+    },
+    {
+      "label": "generatedFillColor",
+      "sourcePointer": "/probes/4",
+      "methods": {
+        "A": "held planned property from production acquisition chain",
+        "B": "fresh layer lookup and same production chain",
+        "C": "enumerate actual A.parentProperty; select unique actual propertyIndex",
+        "D": "another fresh lookup through same production chain"
+      },
+      "locator": {
+        "layer": {
+          "id": {
+            "status": "OK",
+            "type": "number",
+            "value": 218
+          },
+          "index": {
+            "status": "OK",
+            "type": "number",
+            "value": 4
+          },
+          "name": {
+            "status": "OK",
+            "type": "string",
+            "value": "A08_FEATURE_SOURCE_PILL_BG"
+          }
+        },
+        "propertyDepth": {
+          "status": "OK",
+          "type": "number",
+          "value": 5
+        },
+        "path": [
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 2
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Root Vectors Group"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "内容"
+            }
+          },
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 1
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Vector Group"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "Pill"
+            }
+          },
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 2
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Vectors Group"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "内容"
+            }
+          },
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 2
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Vector Graphic - Fill"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "填充 1"
+            }
+          },
+          {
+            "propertyIndex": {
+              "status": "OK",
+              "type": "number",
+              "value": 4
+            },
+            "matchName": {
+              "status": "OK",
+              "type": "string",
+              "value": "ADBE Vector Fill Color"
+            },
+            "name": {
+              "status": "OK",
+              "type": "string",
+              "value": "颜色"
+            }
+          }
+        ],
+        "actualRoot": {
+          "id": {
+            "status": "OK",
+            "type": "number",
+            "value": 218
+          },
+          "index": {
+            "status": "OK",
+            "type": "number",
+            "value": 4
+          },
+          "name": {
+            "status": "OK",
+            "type": "string",
+            "value": "A08_FEATURE_SOURCE_PILL_BG"
+          }
+        },
+        "complete": true,
+        "errors": []
+      },
+      "propertyValueType": {
+        "status": "OK",
+        "type": "number",
+        "value": 6418
+      },
+      "expressionSignature": {
+        "length": 370,
+        "sha256Utf8": "b49c02dd8bbd905a03ce7463c045401c28d27db9de492deacc6738c25b7bc504"
+      },
+      "selfEqualA": true,
+      "retrievalError": null,
+      "comparisons": [
+        {
+          "left": "A",
+          "right": "B",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "A",
+          "right": "C",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "A",
+          "right": "D",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "B",
+          "right": "C",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "B",
+          "right": "D",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        },
+        {
+          "left": "C",
+          "right": "D",
+          "status": "OK",
+          "strictEqual": false,
+          "strictNotEqual": true,
+          "locatorEqual": true,
+          "propertyIndexEqual": true,
+          "matchNameEqual": true,
+          "propertyDepthEqual": true,
+          "contentEqual": true
+        }
+      ]
+    }
+  ],
+  "scanStatistics": {
+    "properties": 5,
+    "identityPairs": 30,
+    "strictEqualPairs": 0,
+    "sameLocatorAndContentPairs": 30,
+    "selfEqualityControls": 5,
+    "scanToPlannedComparisons": 25,
+    "scanReferenceMatches": 0,
+    "scanUniqueLocatorAndContentMatches": 5,
+    "visited": 610,
+    "uniqueStructuralPaths": 610,
+    "enumerationErrors": 0,
+    "fieldStatuses": {
+      "canSetExpression:OK": 507,
+      "expression:OK": 507,
+      "expressionEnabled:OK": 507,
+      "propertyValueType:OK": 507,
+      "canSetExpression:UNAVAILABLE": 103,
+      "expression:UNAVAILABLE": 103,
+      "expressionEnabled:UNAVAILABLE": 103,
+      "propertyValueType:UNAVAILABLE": 103
+    }
+  },
+  "classification": "A"
+}

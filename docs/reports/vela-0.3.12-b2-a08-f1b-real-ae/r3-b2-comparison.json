@@ -1,0 +1,232 @@
+{
+  "recordedAt": "2026-09-11T04:01:26.429Z",
+  "source": "Actual retained Grid Detach raw callback; independent current B1/B2, original comments from real historical Grid B0; no production verifier reused",
+  "action": {
+    "ok": true,
+    "message": "Component detached. Layers will no longer refresh as a kit component."
+  },
+  "checks": [
+    {
+      "label": "action ok",
+      "pass": true,
+      "action": {
+        "ok": true,
+        "message": "Component detached. Layers will no longer refresh as a kit component."
+      }
+    }
+  ],
+  "restoredOriginals": [
+    {
+      "id": 206,
+      "comment": "  中文 日本語 😀\n\"quote\" \\path % %25 literal\\u0000  ",
+      "units": [
+        32,
+        32,
+        20013,
+        25991,
+        32,
+        26085,
+        26412,
+        35486,
+        32,
+        55357,
+        56832,
+        10,
+        34,
+        113,
+        117,
+        111,
+        116,
+        101,
+        34,
+        32,
+        92,
+        112,
+        97,
+        116,
+        104,
+        32,
+        37,
+        32,
+        37,
+        50,
+        53,
+        32,
+        108,
+        105,
+        116,
+        101,
+        114,
+        97,
+        108,
+        92,
+        117,
+        48,
+        48,
+        48,
+        48,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 207,
+      "comment": "",
+      "units": []
+    }
+  ],
+  "release": {
+    "layerId": 207,
+    "before": {
+      "index": 2,
+      "name": "位置",
+      "matchName": "ADBE Position",
+      "evaluated": [
+        0,
+        0,
+        0
+      ],
+      "preExpression": [
+        0,
+        0,
+        0
+      ],
+      "value": [
+        0,
+        0,
+        0
+      ],
+      "expression": "",
+      "expressionEnabled": false,
+      "expressionError": "",
+      "numKeys": 0,
+      "keys": []
+    },
+    "after": {
+      "index": 2,
+      "name": "位置",
+      "matchName": "ADBE Position",
+      "evaluated": [
+        360,
+        250,
+        0
+      ],
+      "preExpression": [
+        360,
+        250,
+        0
+      ],
+      "value": [
+        360,
+        250,
+        0
+      ],
+      "expression": "",
+      "expressionEnabled": false,
+      "expressionError": "",
+      "numKeys": 0,
+      "keys": []
+    },
+    "expectedCompPosition": [
+      360,
+      250,
+      0
+    ],
+    "tolerance": 0.0001
+  },
+  "nativeSpace": [
+    {
+      "index": 0,
+      "sourcePoint": [
+        0,
+        0
+      ],
+      "before": [
+        360,
+        250
+      ],
+      "after": [
+        360,
+        250
+      ],
+      "status": "COMPARED"
+    },
+    {
+      "index": 1,
+      "sourcePoint": [
+        -40,
+        -30
+      ],
+      "before": [
+        320,
+        220
+      ],
+      "after": [
+        320,
+        220
+      ],
+      "status": "COMPARED"
+    },
+    {
+      "index": 2,
+      "sourcePoint": [
+        40,
+        -30
+      ],
+      "before": [
+        400,
+        220
+      ],
+      "after": [
+        400,
+        220
+      ],
+      "status": "COMPARED"
+    },
+    {
+      "index": 3,
+      "sourcePoint": [
+        40,
+        30
+      ],
+      "before": [
+        400,
+        280
+      ],
+      "after": [
+        400,
+        280
+      ],
+      "status": "COMPARED"
+    },
+    {
+      "index": 4,
+      "sourcePoint": [
+        -40,
+        30
+      ],
+      "before": [
+        320,
+        280
+      ],
+      "after": [
+        320,
+        280
+      ],
+      "status": "COMPARED"
+    }
+  ],
+  "differences": [],
+  "allCheckedHostConditionsPassed": true,
+  "tolerances": {
+    "geometry": 0.0001,
+    "protectedNumbers": 0.000001,
+    "undoNumbers": 0.000001,
+    "textAndIdentity": "strict"
+  },
+  "limits": "Only captured fields and sampled points are compared. Grid user visual and native Undo/B3 remain required. Historical Grid PASS does not replace this run.",
+  "userVisual": "PENDING",
+  "undo": "PENDING",
+  "R1": "PASS",
+  "R2": "PASS"
+}

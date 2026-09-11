@@ -1,0 +1,31 @@
+{
+  "phase": "A08-F1a",
+  "status": "F1a IMPLEMENTED / OFFLINE PASS / REAL AE REVALIDATION PENDING",
+  "summary": "summary.json",
+  "history": "../vela-0.3.12-b2-a08-f1-real-ae/index.json",
+  "retention": {
+    "task": "A08-H0",
+    "changed": "Index only; retained historical summaries, callbacks, comparisons and confirmations keep original bytes. Phase status/counts above are historical, not recertified by H0.",
+    "currentAcceptance": "TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+    "archiveWorkspaceRelative": ".tmp/vela-evidence/0.3.12/a08/h0-20260911",
+    "archiveManifest": "manifest.json",
+    "originalIndex": {
+      "path": "docs/reports/vela-0.3.12-b2-a08-f1a-offline/index.json",
+      "sha256": "192e0cdd090fe0bce31ad2324465b860c432bafa172e41c703c0dad543ea5efe"
+    },
+    "referencePolicy": "Historical filenames, command strings, JSON pointers and checksums retain their original meaning. Files absent from the retained set resolve as archiveWorkspaceRelative + original repository path; bare names resolve against this evidence directory. They are local-only, unavailable in a fresh clone. Original file counts/hashes describe the complete collection, not this retained subset.",
+    "archivedReferences": []
+  },
+  "files": [
+    {
+      "file": "harness-gap.json",
+      "bytes": 1397,
+      "sha256": "fde1aef2dea9990c5b7f48a273932e2aa969b8741250f4a121faf39e730eb037"
+    },
+    {
+      "file": "summary.json",
+      "bytes": 889,
+      "sha256": "7179d7b39be26def4d52a95806303c59e971f439f923597d0688726c98f6664a"
+    }
+  ]
+}

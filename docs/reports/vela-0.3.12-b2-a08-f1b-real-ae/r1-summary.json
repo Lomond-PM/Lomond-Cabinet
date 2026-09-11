@@ -1,0 +1,41 @@
+{
+  "recordedAt": "2026-09-11T03:23:23.539Z",
+  "group": "R1",
+  "status": "PASS",
+  "action": {
+    "ok": true,
+    "message": "Component detached. Layers will no longer refresh as a kit component."
+  },
+  "detachCalls": 1,
+  "detachCallEvidence": "r1-detach-action.json",
+  "environmentEvidence": [
+    "environment.json",
+    "load-comparison.json",
+    "workspace.json"
+  ],
+  "b1": "r1-b1.json",
+  "b2": "r1-b2.json",
+  "b3": "r1-b3.json",
+  "comparisons": [
+    "r1-b1-checks.json",
+    "r1-b1-space.json",
+    "r1-b2-comparison.json",
+    "r1-b3-comparison.json"
+  ],
+  "userConfirmations": [
+    "r1-before-user-confirmation.json",
+    "r1-after-user-confirmation.json",
+    "r1-undo-user-confirmation.json"
+  ],
+  "images": [
+    "r1-b1-user.png",
+    "r1-b2-user.png"
+  ],
+  "hostB2ChecksPass": true,
+  "userAfterVisual": "R1 Detach后无异常跳变",
+  "userUndo": "R1已撤销，画面实际上无变化",
+  "undoRestorationPass": true,
+  "R2": "NOT COVERED; awaiting permission for a new longer disposable composition",
+  "R3": "NOT COVERED; blocked until R2 completes",
+  "overallAcceptance": "PENDING R2 and R3; not TARGETED_ACCEPTED"
+}

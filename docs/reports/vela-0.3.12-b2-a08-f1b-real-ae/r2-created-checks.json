@@ -1,0 +1,31 @@
+{
+  "recordedAt": "2026-09-11T03:38:01.321Z",
+  "pass": true,
+  "source": "Actual real Create UI and independent Host created/B0 snapshots",
+  "expected": {
+    "compId": 219,
+    "controllerId": 235,
+    "sourceId": 231,
+    "generatedId": 236,
+    "artifactId": "ack_20260911_113335_475799",
+    "members": [
+      {
+        "id": 235,
+        "comment": "LOMOND_CABINET_ARTIFACT_V1:{\"owner\":\"Lomond Cabinet / AEToolbox\",\"tool\":\"adComponentKit\",\"kind\":\"featureStack\",\"artifactId\":\"ack_20260911_113335_475799\",\"componentId\":\"featureStack_001\",\"componentType\":\"featureStack\",\"role\":\"controller\",\"index\":0,\"createdAt\":\"2026-09-11T11:33:35\"}",
+        "parentId": null
+      },
+      {
+        "id": 231,
+        "comment": "LOMOND_CABINET_ARTIFACT_V1:{\"owner\":\"Lomond Cabinet / AEToolbox\",\"tool\":\"adComponentKit\",\"kind\":\"featureStack\",\"artifactId\":\"ack_20260911_113335_475799\",\"componentId\":\"featureStack_001\",\"componentType\":\"featureStack\",\"role\":\"sourceLayerBinding\",\"index\":1,\"createdAt\":\"2026-09-11T11:33:35\",\"previousCommentEncoded\":\"%20%20R2%20%E4%B8%AD%E6%96%87%20%E6%97%A5%E6%9C%AC%E8%AA%9E%0A%22quote%22%20%5Cpath%20%25%20literal%5Cu0000%20%20\"}",
+        "parentId": 235
+      },
+      {
+        "id": 236,
+        "comment": "LOMOND_CABINET_ARTIFACT_V1:{\"owner\":\"Lomond Cabinet / AEToolbox\",\"tool\":\"adComponentKit\",\"kind\":\"featureStack\",\"artifactId\":\"ack_20260911_113335_475799\",\"componentId\":\"featureStack_001\",\"componentType\":\"featureStack\",\"role\":\"generatedLayer\",\"index\":1,\"createdAt\":\"2026-09-11T11:33:35\"}",
+        "parentId": 231
+      }
+    ]
+  },
+  "sourceCommentMatchesB0": true,
+  "createHostCallback": "not intercepted"
+}

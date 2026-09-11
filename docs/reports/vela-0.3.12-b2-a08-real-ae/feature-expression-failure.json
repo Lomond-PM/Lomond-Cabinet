@@ -1,0 +1,79 @@
+{
+  "status": "FAIL; no acceptance or production fix authorized by this observation",
+  "observed": "Five expressionError values became nonempty after actual retained Detach; action returned ok true; expression text and observed enabled flags unchanged",
+  "candidateCause": "Retained expressions dereference parent / thisLayer.parent after Detach clears owned parent links. Real AE error messages report missing parent. No engine-internals diagnosis or A09 attribution.",
+  "expressions": [
+    {
+      "path": "layer/213/transform/1",
+      "before": {
+        "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260910_142239_903961\n// kind=featureStack\n// role=sourceLayerBinding\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar ctrl = parent;\nif (ctrl) {\n  var refs = [{i:3,n:\"A08_FEATURE_SOURCE\"}];\n  var itemIndex = 0;\n  function layerFromRef(ref) {\n    try {\n      var byIndex = thisComp.layer(ref.i);\n      if (byIndex && byIndex.name == ref.n) { return byIndex; }\n    } catch (e1) {}\n    try { return thisComp.layer(ref.n); } catch (e2) {}\n    return null;\n  }\n  var gap = ctrl.effect(\"Gap\")(1);\n  var px = ctrl.effect(\"Padding X\")(1);\n  var py = ctrl.effect(\"Padding Y\")(1);\n  var fixedW = ctrl.effect(\"Fixed Width\")(1);\n  var mode = Math.round(ctrl.effect(\"Pill Width Mode\")(1));\n  var align = Math.round(ctrl.effect(\"Text Align\")(1));\n  function rectForLayer(l) {\n    if (!l) { return {left:0, top:0, width:0, height:0}; }\n    return l.sourceRectAtTime(time, false);\n  }\n  function scaleForLayer(l, axis) {\n    try {\n      var s = Math.abs(l.transform.scale[axis]) / 100;\n      return s > 0.0001 ? s : 1;\n    } catch (e) {\n      return 1;\n    }\n  }\n  function pillHeightForLayer(l) {\n    var r = rectForLayer(l);\n    var sy = scaleForLayer(l, 1);\n    return Math.max(0, r.height * sy + py * 2);\n  }\n  var totalH = 0;\n  for (var i = 0; i < refs.length; i++) {\n    totalH += pillHeightForLayer(layerFromRef(refs[i]));\n    if (i > 0) { totalH += gap; }\n  }\n  var y = -totalH / 2;\n  for (var j = 0; j < itemIndex; j++) {\n    y += pillHeightForLayer(layerFromRef(refs[j])) + gap;\n  }\n  var ownRect = rectForLayer(thisLayer);\n  var ownScaleX = scaleForLayer(thisLayer, 0);\n  var ownScaleY = scaleForLayer(thisLayer, 1);\n  var ownTextW = ownRect.width * ownScaleX;\n  var ownH = Math.max(0, ownRect.height * ownScaleY + py * 2);\n  var ownW = (mode == 1) ? fixedW : ownTextW + px * 2;\n  y += ownH / 2;\n  var x = 0;\n  if (align == 0) {\n    x = -ownW / 2 + px + ownTextW / 2;\n  }\n  [x, y];\n} else {\n  value;\n}",
+        "enabled": true,
+        "error": ""
+      },
+      "after": {
+        "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260910_142239_903961\n// kind=featureStack\n// role=sourceLayerBinding\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar ctrl = parent;\nif (ctrl) {\n  var refs = [{i:3,n:\"A08_FEATURE_SOURCE\"}];\n  var itemIndex = 0;\n  function layerFromRef(ref) {\n    try {\n      var byIndex = thisComp.layer(ref.i);\n      if (byIndex && byIndex.name == ref.n) { return byIndex; }\n    } catch (e1) {}\n    try { return thisComp.layer(ref.n); } catch (e2) {}\n    return null;\n  }\n  var gap = ctrl.effect(\"Gap\")(1);\n  var px = ctrl.effect(\"Padding X\")(1);\n  var py = ctrl.effect(\"Padding Y\")(1);\n  var fixedW = ctrl.effect(\"Fixed Width\")(1);\n  var mode = Math.round(ctrl.effect(\"Pill Width Mode\")(1));\n  var align = Math.round(ctrl.effect(\"Text Align\")(1));\n  function rectForLayer(l) {\n    if (!l) { return {left:0, top:0, width:0, height:0}; }\n    return l.sourceRectAtTime(time, false);\n  }\n  function scaleForLayer(l, axis) {\n    try {\n      var s = Math.abs(l.transform.scale[axis]) / 100;\n      return s > 0.0001 ? s : 1;\n    } catch (e) {\n      return 1;\n    }\n  }\n  function pillHeightForLayer(l) {\n    var r = rectForLayer(l);\n    var sy = scaleForLayer(l, 1);\n    return Math.max(0, r.height * sy + py * 2);\n  }\n  var totalH = 0;\n  for (var i = 0; i < refs.length; i++) {\n    totalH += pillHeightForLayer(layerFromRef(refs[i]));\n    if (i > 0) { totalH += gap; }\n  }\n  var y = -totalH / 2;\n  for (var j = 0; j < itemIndex; j++) {\n    y += pillHeightForLayer(layerFromRef(refs[j])) + gap;\n  }\n  var ownRect = rectForLayer(thisLayer);\n  var ownScaleX = scaleForLayer(thisLayer, 0);\n  var ownScaleY = scaleForLayer(thisLayer, 1);\n  var ownTextW = ownRect.width * ownScaleX;\n  var ownH = Math.max(0, ownRect.height * ownScaleY + py * 2);\n  var ownW = (mode == 1) ? fixedW : ownTextW + px * 2;\n  y += ownH / 2;\n  var x = 0;\n  if (align == 0) {\n    x = -ownW / 2 + px + ownTextW / 2;\n  }\n  [x, y];\n} else {\n  value;\n}",
+        "enabled": true,
+        "error": "表达式被禁用\n合成“A01_TOOL_SMOKE”中图层 3（“A08_FEATURE_SOURCE”）的属性“位置”中，第 59 行出现错误。\r\nError: 图层没有父级，无法使用 .parent\n\n\t  y += ownH / 2;\n▶\t  var x = 0;\n\t  if (align == 0) {"
+      },
+      "textUnchanged": true
+    },
+    {
+      "path": "layer/218/transform/1",
+      "before": {
+        "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260910_142239_903961\n// kind=featureStack\n// role=generatedLayer\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar txt = thisLayer.parent;\nvar ctrl = txt ? txt.parent : null;\nif (txt && ctrl && txt.sourceRectAtTime) {\n  txt.fromComp(ctrl.toComp([0, txt.position[1]]));\n} else {\n  value;\n}",
+        "enabled": true,
+        "error": ""
+      },
+      "after": {
+        "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260910_142239_903961\n// kind=featureStack\n// role=generatedLayer\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar txt = thisLayer.parent;\nvar ctrl = txt ? txt.parent : null;\nif (txt && ctrl && txt.sourceRectAtTime) {\n  txt.fromComp(ctrl.toComp([0, txt.position[1]]));\n} else {\n  value;\n}",
+        "enabled": true,
+        "error": "表达式被禁用\n合成“A01_TOOL_SMOKE”中图层 4（“A08_FEATURE_SOURCE_PILL_BG”）的属性“位置”中，第 8 行出现错误。\r\nError: 图层没有父级，无法使用 .parent\n\n\t// previousExpressionEncoded=\n▶\tvar txt = thisLayer.parent;\n\tvar ctrl = txt ? txt.parent : null;"
+      },
+      "textUnchanged": true
+    },
+    {
+      "path": "layer/218/vectorProperties/0/children/1/children/0/children/1",
+      "before": {
+        "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260910_142239_903961\n// kind=featureStack\n// role=generatedLayer\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar txt = thisLayer.parent;\nvar ctrl = txt ? txt.parent : null;\nif (!ctrl && thisLayer.parent) { ctrl = thisLayer.parent; }\nif (txt && ctrl && txt.sourceRectAtTime) {\n  var r = txt.sourceRectAtTime(time, false);\n  var px = ctrl.effect(\"Padding X\")(1);\n  var py = ctrl.effect(\"Padding Y\")(1);\n  var fixedW = ctrl.effect(\"Fixed Width\")(1);\n  var mode = Math.round(ctrl.effect(\"Pill Width Mode\")(1));\n  function scaleForLayer(l, axis) {\n    try {\n      var s = Math.abs(l.transform.scale[axis]) / 100;\n      return s > 0.0001 ? s : 1;\n    } catch (e) {\n      return 1;\n    }\n  }\n  var sx = scaleForLayer(txt, 0);\n  var sy = scaleForLayer(txt, 1);\n  var w = (mode == 1) ? fixedW : r.width * sx + px * 2;\n  var h = r.height * sy + py * 2;\n  [Math.max(0, w / sx), Math.max(0, h / sy)];\n} else {\n  value;\n}",
+        "enabled": true,
+        "error": ""
+      },
+      "after": {
+        "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260910_142239_903961\n// kind=featureStack\n// role=generatedLayer\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar txt = thisLayer.parent;\nvar ctrl = txt ? txt.parent : null;\nif (!ctrl && thisLayer.parent) { ctrl = thisLayer.parent; }\nif (txt && ctrl && txt.sourceRectAtTime) {\n  var r = txt.sourceRectAtTime(time, false);\n  var px = ctrl.effect(\"Padding X\")(1);\n  var py = ctrl.effect(\"Padding Y\")(1);\n  var fixedW = ctrl.effect(\"Fixed Width\")(1);\n  var mode = Math.round(ctrl.effect(\"Pill Width Mode\")(1));\n  function scaleForLayer(l, axis) {\n    try {\n      var s = Math.abs(l.transform.scale[axis]) / 100;\n      return s > 0.0001 ? s : 1;\n    } catch (e) {\n      return 1;\n    }\n  }\n  var sx = scaleForLayer(txt, 0);\n  var sy = scaleForLayer(txt, 1);\n  var w = (mode == 1) ? fixedW : r.width * sx + px * 2;\n  var h = r.height * sy + py * 2;\n  [Math.max(0, w / sx), Math.max(0, h / sy)];\n} else {\n  value;\n}",
+        "enabled": true,
+        "error": "表达式被禁用\n合成“A01_TOOL_SMOKE”中图层 4（“A08_FEATURE_SOURCE_PILL_BG”）的属性“大小”中，第 8 行出现错误。\r\nError: 图层没有父级，无法使用 .parent\n\n\t// previousExpressionEncoded=\n▶\tvar txt = thisLayer.parent;\n\tvar ctrl = txt ? txt.parent : null;"
+      },
+      "textUnchanged": true
+    },
+    {
+      "path": "layer/218/vectorProperties/0/children/1/children/0/children/3",
+      "before": {
+        "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260910_142239_903961\n// kind=featureStack\n// role=generatedLayer\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar txt = thisLayer.parent;\nvar ctrl = txt ? txt.parent : null;\nif (!ctrl && thisLayer.parent) { ctrl = thisLayer.parent; }\nctrl ? ctrl.effect(\"Corner Radius\")(1) : value;",
+        "enabled": true,
+        "error": ""
+      },
+      "after": {
+        "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260910_142239_903961\n// kind=featureStack\n// role=generatedLayer\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar txt = thisLayer.parent;\nvar ctrl = txt ? txt.parent : null;\nif (!ctrl && thisLayer.parent) { ctrl = thisLayer.parent; }\nctrl ? ctrl.effect(\"Corner Radius\")(1) : value;",
+        "enabled": true,
+        "error": "表达式被禁用\n合成“A01_TOOL_SMOKE”中图层 4（“A08_FEATURE_SOURCE_PILL_BG”）的属性“圆度”中，第 8 行出现错误。\r\nError: 图层没有父级，无法使用 .parent\n\n\t// previousExpressionEncoded=\n▶\tvar txt = thisLayer.parent;\n\tvar ctrl = txt ? txt.parent : null;"
+      },
+      "textUnchanged": true
+    },
+    {
+      "path": "layer/218/vectorProperties/0/children/1/children/1/children/3",
+      "before": {
+        "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260910_142239_903961\n// kind=featureStack\n// role=generatedLayer\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar txt = thisLayer.parent;\nvar ctrl = txt ? txt.parent : null;\nif (!ctrl && thisLayer.parent) { ctrl = thisLayer.parent; }\nctrl ? ctrl.effect(\"Fill Color\")(1) : value;",
+        "enabled": true,
+        "error": ""
+      },
+      "after": {
+        "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260910_142239_903961\n// kind=featureStack\n// role=generatedLayer\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar txt = thisLayer.parent;\nvar ctrl = txt ? txt.parent : null;\nif (!ctrl && thisLayer.parent) { ctrl = thisLayer.parent; }\nctrl ? ctrl.effect(\"Fill Color\")(1) : value;",
+        "enabled": true,
+        "error": "表达式被禁用\n合成“A01_TOOL_SMOKE”中图层 4（“A08_FEATURE_SOURCE_PILL_BG”）的属性“颜色”中，第 8 行出现错误。\r\nError: 图层没有父级，无法使用 .parent\n\n\t// previousExpressionEncoded=\n▶\tvar txt = thisLayer.parent;\n\tvar ctrl = txt ? txt.parent : null;"
+      },
+      "textUnchanged": true
+    }
+  ],
+  "collectionBoundary": "19 empty ADBE Effect Mask Parade groups have no valueAtTime; caught readLimitations present in both snapshots, not 19 product failures. Cannot infer expressionEnabled=false solely from error text saying disabled.",
+  "undo": "Awaiting user; Undo recovery cannot turn Detach FAIL into PASS"
+}

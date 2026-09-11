@@ -1,0 +1,433 @@
+{
+  "recordedAt": "2026-09-11T03:40:45.622Z",
+  "pass": true,
+  "project": "D:\\Projects\\Vela Test\\Vela Test.aep",
+  "comp": {
+    "id": 219,
+    "name": "A08_F1B_R2_NONZERO",
+    "time": 1,
+    "duration": 5,
+    "frameDuration": 0.03333333333333,
+    "numLayers": 4,
+    "width": 800,
+    "height": 800
+  },
+  "controllerId": 235,
+  "sourceId": 231,
+  "generatedId": 236,
+  "unrelatedId": 233,
+  "artifactId": "ack_20260911_113335_475799",
+  "properties": [
+    {
+      "key": "sourcePosition",
+      "id": 231,
+      "group": "transform",
+      "match": "ADBE Position",
+      "property": {
+        "index": 2,
+        "name": "位置",
+        "matchName": "ADBE Position",
+        "evaluated": [
+          -38.1945093870163,
+          0,
+          0
+        ],
+        "preExpression": [
+          0,
+          0,
+          0
+        ],
+        "value": [
+          -38.1945093870163,
+          0,
+          0
+        ],
+        "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260911_113335_475799\n// kind=featureStack\n// role=sourceLayerBinding\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar ctrl = parent;\nif (ctrl) {\n  var refs = [{i:3,n:\"A08_F1B_R2_SOURCE\"}];\n  var itemIndex = 0;\n  function layerFromRef(ref) {\n    try {\n      var byIndex = thisComp.layer(ref.i);\n      if (byIndex && byIndex.name == ref.n) { return byIndex; }\n    } catch (e1) {}\n    try { return thisComp.layer(ref.n); } catch (e2) {}\n    return null;\n  }\n  var gap = ctrl.effect(\"Gap\")(1);\n  var px = ctrl.effect(\"Padding X\")(1);\n  var py = ctrl.effect(\"Padding Y\")(1);\n  var fixedW = ctrl.effect(\"Fixed Width\")(1);\n  var mode = Math.round(ctrl.effect(\"Pill Width Mode\")(1));\n  var align = Math.round(ctrl.effect(\"Text Align\")(1));\n  function rectForLayer(l) {\n    if (!l) { return {left:0, top:0, width:0, height:0}; }\n    return l.sourceRectAtTime(time, false);\n  }\n  function scaleForLayer(l, axis) {\n    try {\n      var s = Math.abs(l.transform.scale[axis]) / 100;\n      return s > 0.0001 ? s : 1;\n    } catch (e) {\n      return 1;\n    }\n  }\n  function pillHeightForLayer(l) {\n    var r = rectForLayer(l);\n    var sy = scaleForLayer(l, 1);\n    return Math.max(0, r.height * sy + py * 2);\n  }\n  var totalH = 0;\n  for (var i = 0; i < refs.length; i++) {\n    totalH += pillHeightForLayer(layerFromRef(refs[i]));\n    if (i > 0) { totalH += gap; }\n  }\n  var y = -totalH / 2;\n  for (var j = 0; j < itemIndex; j++) {\n    y += pillHeightForLayer(layerFromRef(refs[j])) + gap;\n  }\n  var ownRect = rectForLayer(thisLayer);\n  var ownScaleX = scaleForLayer(thisLayer, 0);\n  var ownScaleY = scaleForLayer(thisLayer, 1);\n  var ownTextW = ownRect.width * ownScaleX;\n  var ownH = Math.max(0, ownRect.height * ownScaleY + py * 2);\n  var ownW = (mode == 1) ? fixedW : ownTextW + px * 2;\n  y += ownH / 2;\n  var x = 0;\n  if (align == 0) {\n    x = -ownW / 2 + px + ownTextW / 2;\n  }\n  [x, y];\n} else {\n  value;\n}",
+        "expressionEnabled": true,
+        "expressionError": "",
+        "numKeys": 0,
+        "keys": []
+      }
+    },
+    {
+      "key": "backgroundPosition",
+      "id": 236,
+      "group": "transform",
+      "match": "ADBE Position",
+      "property": {
+        "index": 2,
+        "name": "位置",
+        "matchName": "ADBE Position",
+        "evaluated": [
+          40.7755094766617,
+          -11.2445001602173,
+          0
+        ],
+        "preExpression": [
+          0,
+          0,
+          0
+        ],
+        "value": [
+          40.7755094766617,
+          -11.2445001602173,
+          0
+        ],
+        "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260911_113335_475799\n// kind=featureStack\n// role=generatedLayer\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar txt = thisLayer.parent;\nvar ctrl = txt ? txt.parent : null;\nif (txt && ctrl && txt.sourceRectAtTime) {\n  txt.fromComp(ctrl.toComp([0, txt.position[1]]));\n} else {\n  value;\n}",
+        "expressionEnabled": true,
+        "expressionError": "",
+        "numKeys": 0,
+        "keys": []
+      }
+    },
+    {
+      "key": "size",
+      "id": 236,
+      "group": "vectorProperties",
+      "match": "ADBE Vector Rect Size",
+      "property": {
+        "index": 2,
+        "name": "大小",
+        "matchName": "ADBE Vector Rect Size",
+        "evaluated": [
+          442,
+          68.0410004258156
+        ],
+        "preExpression": [
+          442,
+          68.0410003662109
+        ],
+        "value": [
+          442,
+          68.0410004258156
+        ],
+        "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260911_113335_475799\n// kind=featureStack\n// role=generatedLayer\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar txt = thisLayer.parent;\nvar ctrl = txt ? txt.parent : null;\nif (!ctrl && thisLayer.parent) { ctrl = thisLayer.parent; }\nif (txt && ctrl && txt.sourceRectAtTime) {\n  var r = txt.sourceRectAtTime(time, false);\n  var px = ctrl.effect(\"Padding X\")(1);\n  var py = ctrl.effect(\"Padding Y\")(1);\n  var fixedW = ctrl.effect(\"Fixed Width\")(1);\n  var mode = Math.round(ctrl.effect(\"Pill Width Mode\")(1));\n  function scaleForLayer(l, axis) {\n    try {\n      var s = Math.abs(l.transform.scale[axis]) / 100;\n      return s > 0.0001 ? s : 1;\n    } catch (e) {\n      return 1;\n    }\n  }\n  var sx = scaleForLayer(txt, 0);\n  var sy = scaleForLayer(txt, 1);\n  var w = (mode == 1) ? fixedW : r.width * sx + px * 2;\n  var h = r.height * sy + py * 2;\n  [Math.max(0, w / sx), Math.max(0, h / sy)];\n} else {\n  value;\n}",
+        "expressionEnabled": true,
+        "expressionError": "",
+        "numKeys": 0,
+        "keys": []
+      }
+    },
+    {
+      "key": "round",
+      "id": 236,
+      "group": "vectorProperties",
+      "match": "ADBE Vector Rect Roundness",
+      "property": {
+        "index": 4,
+        "name": "圆度",
+        "matchName": "ADBE Vector Rect Roundness",
+        "evaluated": 14,
+        "preExpression": 28,
+        "value": 14,
+        "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260911_113335_475799\n// kind=featureStack\n// role=generatedLayer\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar txt = thisLayer.parent;\nvar ctrl = txt ? txt.parent : null;\nif (!ctrl && thisLayer.parent) { ctrl = thisLayer.parent; }\nctrl ? ctrl.effect(\"Corner Radius\")(1) : value;",
+        "expressionEnabled": true,
+        "expressionError": "",
+        "numKeys": 0,
+        "keys": []
+      }
+    },
+    {
+      "key": "color",
+      "id": 236,
+      "group": "vectorProperties",
+      "match": "ADBE Vector Fill Color",
+      "property": {
+        "index": 4,
+        "name": "颜色",
+        "matchName": "ADBE Vector Fill Color",
+        "evaluated": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "preExpression": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "value": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260911_113335_475799\n// kind=featureStack\n// role=generatedLayer\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar txt = thisLayer.parent;\nvar ctrl = txt ? txt.parent : null;\nif (!ctrl && thisLayer.parent) { ctrl = thisLayer.parent; }\nctrl ? ctrl.effect(\"Fill Color\")(1) : value;",
+        "expressionEnabled": true,
+        "expressionError": "",
+        "numKeys": 0,
+        "keys": []
+      }
+    }
+  ],
+  "effects": {
+    "Fixed Width": {
+      "index": 1,
+      "name": "滑块",
+      "matchName": "ADBE Slider Control-0001",
+      "evaluated": 442,
+      "preExpression": 442,
+      "value": 442,
+      "expression": "",
+      "expressionEnabled": false,
+      "expressionError": "",
+      "numKeys": 0,
+      "keys": []
+    },
+    "Text Align": {
+      "index": 1,
+      "name": "滑块",
+      "matchName": "ADBE Slider Control-0001",
+      "evaluated": 0,
+      "preExpression": 0,
+      "value": 0,
+      "expression": "",
+      "expressionEnabled": false,
+      "expressionError": "",
+      "numKeys": 0,
+      "keys": []
+    },
+    "Pill Width Mode": {
+      "index": 1,
+      "name": "滑块",
+      "matchName": "ADBE Slider Control-0001",
+      "evaluated": 1,
+      "preExpression": 1,
+      "value": 1,
+      "expression": "",
+      "expressionEnabled": false,
+      "expressionError": "",
+      "numKeys": 0,
+      "keys": []
+    },
+    "Corner Radius": {
+      "index": 1,
+      "name": "滑块",
+      "matchName": "ADBE Slider Control-0001",
+      "evaluated": 14,
+      "preExpression": 14,
+      "value": 14,
+      "expression": "",
+      "expressionEnabled": false,
+      "expressionError": "",
+      "numKeys": 2,
+      "keys": [
+        {
+          "time": 0,
+          "value": 8,
+          "inInterpolation": "6612",
+          "outInterpolation": "6612",
+          "inEase": [
+            {
+              "speed": 0,
+              "influence": 16.666666667
+            }
+          ],
+          "outEase": [
+            {
+              "speed": 6,
+              "influence": 16.666666667
+            }
+          ],
+          "temporalAutoBezier": false,
+          "temporalContinuous": false
+        },
+        {
+          "time": 2,
+          "value": 20,
+          "inInterpolation": "6612",
+          "outInterpolation": "6612",
+          "inEase": [
+            {
+              "speed": 6,
+              "influence": 16.666666667
+            }
+          ],
+          "outEase": [
+            {
+              "speed": 0,
+              "influence": 16.666666667
+            }
+          ],
+          "temporalAutoBezier": false,
+          "temporalContinuous": false
+        }
+      ]
+    }
+  },
+  "memberTypes": [
+    {
+      "id": 235,
+      "locked": false,
+      "threeD": false,
+      "matchName": "ADBE AV Layer",
+      "collapseTransformation": false,
+      "canSetCollapseTransformation": true,
+      "nullLayer": true,
+      "continuouslyRasterizeType": "undefined",
+      "sourceKind": "FootageItem",
+      "sourceName": "空 17",
+      "sourceId": 234
+    },
+    {
+      "id": 231,
+      "locked": false,
+      "threeD": false,
+      "matchName": "ADBE Text Layer",
+      "collapseTransformation": true,
+      "canSetCollapseTransformation": false,
+      "nullLayer": false,
+      "continuouslyRasterizeType": "undefined",
+      "sourceKind": "FootageItem"
+    },
+    {
+      "id": 236,
+      "locked": false,
+      "threeD": false,
+      "matchName": "ADBE Vector Layer",
+      "collapseTransformation": true,
+      "canSetCollapseTransformation": false,
+      "nullLayer": false,
+      "continuouslyRasterizeType": "undefined",
+      "sourceKind": "FootageItem"
+    }
+  ],
+  "sourceOriginal": {
+    "evidence": "r2-b0.json",
+    "id": 231,
+    "comment": "  R2 中文 日本語\n\"quote\" \\path % literal\\u0000  ",
+    "units": [
+      32,
+      32,
+      82,
+      50,
+      32,
+      20013,
+      25991,
+      32,
+      26085,
+      26412,
+      35486,
+      10,
+      34,
+      113,
+      117,
+      111,
+      116,
+      101,
+      34,
+      32,
+      92,
+      112,
+      97,
+      116,
+      104,
+      32,
+      37,
+      32,
+      108,
+      105,
+      116,
+      101,
+      114,
+      97,
+      108,
+      92,
+      117,
+      48,
+      48,
+      48,
+      48,
+      32,
+      32
+    ]
+  },
+  "temporalFixture": {
+    "source": "r2-temporal-before.json",
+    "times": [
+      0,
+      1,
+      2
+    ],
+    "roundness": [
+      8,
+      14,
+      20
+    ],
+    "currentTime": 1,
+    "currentEvaluated": 14,
+    "currentPreExpressionBase": 28,
+    "controllerKeyframes": [
+      [
+        0,
+        8
+      ],
+      [
+        2,
+        20
+      ]
+    ],
+    "measurableVariation": true
+  },
+  "protectedUnrelated": {
+    "id": 233,
+    "opacityKeys": [
+      {
+        "time": 0,
+        "value": 60,
+        "inInterpolation": "6612",
+        "outInterpolation": "6612",
+        "inEase": [
+          {
+            "speed": 0,
+            "influence": 16.666666667
+          }
+        ],
+        "outEase": [
+          {
+            "speed": 15,
+            "influence": 16.666666667
+          }
+        ],
+        "temporalAutoBezier": false,
+        "temporalContinuous": false
+      },
+      {
+        "time": 2,
+        "value": 90,
+        "inInterpolation": "6612",
+        "outInterpolation": "6612",
+        "inEase": [
+          {
+            "speed": 15,
+            "influence": 16.666666667
+          }
+        ],
+        "outEase": [
+          {
+            "speed": 0,
+            "influence": 16.666666667
+          }
+        ],
+        "temporalAutoBezier": false,
+        "temporalContinuous": false
+      }
+    ],
+    "rotationExpression": "value"
+  },
+  "tolerances": {
+    "geometry": 0.0001,
+    "color": 0.000001,
+    "undoNumbers": 0.000001,
+    "textAndIdentity": "strict"
+  },
+  "pending": [
+    "current B1 image/user visual confirmation",
+    "one retained Host Detach",
+    "B2 including read-only temporal observations",
+    "user no-jump confirmation",
+    "one native Undo and B3"
+  ]
+}

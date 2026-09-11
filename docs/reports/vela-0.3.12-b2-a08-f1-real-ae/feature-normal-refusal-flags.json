@@ -1,0 +1,62 @@
+{
+  "time": "2026-09-10T08:55:05.733Z",
+  "target": {
+    "description": "",
+    "devtoolsFrontendUrl": "/devtools/inspector.html?ws=127.0.0.1:8088/devtools/page/DCC2135961049894C94B59A8C3E388D7",
+    "id": "DCC2135961049894C94B59A8C3E388D7",
+    "title": "Lomond Cabinet",
+    "type": "page",
+    "url": "file:///C:/Users/Administrator/AppData/Roaming/Adobe/CEP/extensions/com.kevin.aetoolbox/client/index.html",
+    "webSocketDebuggerUrl": "ws://127.0.0.1:8088/devtools/page/DCC2135961049894C94B59A8C3E388D7"
+  },
+  "command": "new Promise(function(resolve){var cmd=\"(function(){var c=app.project.activeItem;if(!(c instanceof CompItem)||c.id!==191)throw Error('target mismatch');var ids=[217,213,218],out=[],i,j,l;for(i=0;i<ids.length;i++){l=null;for(j=1;j<=c.numLayers;j++)if(c.layer(j).id===ids[i])l=c.layer(j);if(!l)throw Error('member missing');out.push({id:l.id,name:l.name,matchName:l.matchName,locked:l.locked,threeDLayer:l.threeDLayer,collapseTransformation:l.collapseTransformation,canSetCollapseTransformation:l.canSetCollapseTransformation,hasTextProperties:!!l.property('ADBE Text Properties'),parentId:l.parent?l.parent.id:null});}return AEToolbox.stringify(out);})()\\r\\n\";new CSInterface().evalScript(cmd,function(raw){var out={hostCommand:cmd,raw:raw,rawType:typeof raw,time:new Date().toISOString()};try{out.parsed=JSON.parse(raw);}catch(e){out.parseError=e.message;}resolve(out);});})",
+  "response": {
+    "id": 1,
+    "result": {
+      "result": {
+        "type": "object",
+        "value": {
+          "hostCommand": "(function(){var c=app.project.activeItem;if(!(c instanceof CompItem)||c.id!==191)throw Error('target mismatch');var ids=[217,213,218],out=[],i,j,l;for(i=0;i<ids.length;i++){l=null;for(j=1;j<=c.numLayers;j++)if(c.layer(j).id===ids[i])l=c.layer(j);if(!l)throw Error('member missing');out.push({id:l.id,name:l.name,matchName:l.matchName,locked:l.locked,threeDLayer:l.threeDLayer,collapseTransformation:l.collapseTransformation,canSetCollapseTransformation:l.canSetCollapseTransformation,hasTextProperties:!!l.property('ADBE Text Properties'),parentId:l.parent?l.parent.id:null});}return AEToolbox.stringify(out);})()\r\n",
+          "raw": "[{\"id\":217,\"name\":\"FEATURE_STACK_CTRL\",\"matchName\":\"ADBE AV Layer\",\"locked\":false,\"threeDLayer\":false,\"collapseTransformation\":false,\"canSetCollapseTransformation\":true,\"hasTextProperties\":false,\"parentId\":null},{\"id\":213,\"name\":\"A08_FEATURE_SOURCE\",\"matchName\":\"ADBE Text Layer\",\"locked\":false,\"threeDLayer\":false,\"collapseTransformation\":true,\"canSetCollapseTransformation\":false,\"hasTextProperties\":true,\"parentId\":217},{\"id\":218,\"name\":\"A08_FEATURE_SOURCE_PILL_BG\",\"matchName\":\"ADBE Vector Layer\",\"locked\":false,\"threeDLayer\":false,\"collapseTransformation\":true,\"canSetCollapseTransformation\":false,\"hasTextProperties\":false,\"parentId\":213}]",
+          "rawType": "string",
+          "time": "2026-09-10T08:55:05.731Z",
+          "parsed": [
+            {
+              "id": 217,
+              "name": "FEATURE_STACK_CTRL",
+              "matchName": "ADBE AV Layer",
+              "locked": false,
+              "threeDLayer": false,
+              "collapseTransformation": false,
+              "canSetCollapseTransformation": true,
+              "hasTextProperties": false,
+              "parentId": null
+            },
+            {
+              "id": 213,
+              "name": "A08_FEATURE_SOURCE",
+              "matchName": "ADBE Text Layer",
+              "locked": false,
+              "threeDLayer": false,
+              "collapseTransformation": true,
+              "canSetCollapseTransformation": false,
+              "hasTextProperties": true,
+              "parentId": 217
+            },
+            {
+              "id": 218,
+              "name": "A08_FEATURE_SOURCE_PILL_BG",
+              "matchName": "ADBE Vector Layer",
+              "locked": false,
+              "threeDLayer": false,
+              "collapseTransformation": true,
+              "canSetCollapseTransformation": false,
+              "hasTextProperties": false,
+              "parentId": 213
+            }
+          ]
+        }
+      }
+    }
+  }
+}

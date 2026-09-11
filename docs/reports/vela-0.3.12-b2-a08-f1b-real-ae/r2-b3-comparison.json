@@ -1,0 +1,25 @@
+{
+  "recordedAt": "2026-09-11T03:52:54.264Z",
+  "source": "Independent actual Host B3 after user native Undo, compared to this run R2-B1; all captured snapshot fields included without exclusions; separate temporal-before/restored records also compared.",
+  "baseline": "r2-b1.json",
+  "restored": "r2-b3.json",
+  "temporal": [
+    "r2-temporal-before.json",
+    "r2-temporal-restored.json"
+  ],
+  "tolerance": {
+    "numbers": 0.000001,
+    "textAndIdentity": "strict",
+    "fieldsExcluded": []
+  },
+  "comparedNumbers": 2306,
+  "comparedOtherLeaves": 668,
+  "maxNumericDifference": 0,
+  "layerCount": {
+    "b1": 4,
+    "b3": 4
+  },
+  "differences": [],
+  "allCapturedFieldsRestored": true,
+  "limitation": "Only captured identities, comments/code units, parents, transforms, text, shape/effect properties, expressions, keys and native sampled points are compared. No claim of all project fields or pixel-equivalent rendering."
+}

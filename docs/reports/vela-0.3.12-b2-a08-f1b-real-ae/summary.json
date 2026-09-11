@@ -1,0 +1,167 @@
+{
+  "phase": "0.3.12-B2 / A08-F1b targeted real AE revalidation",
+  "status": "A08 TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+  "recordedAt": "2026-09-11T04:26:17.175Z",
+  "baseline": "d7dd7356cccbb637ae01a7e9d0629b9bc184a388",
+  "branch": "fix/ad-component-detach-a08-0.3.12",
+  "repairCommit": null,
+  "pullRequest": null,
+  "environment": {
+    "ae": "26.3x87",
+    "cep": "12.0.1",
+    "target": "2EB1BDB5BE3E74534D3F0E80CB892B9B",
+    "load": "PASS",
+    "publicFunctionTextMatched": true,
+    "privateHelpers": "No independent export/full text match; normal restart, mapped source and actual R1/R2 behavior"
+  },
+  "requiredJourneys": {
+    "executed": 3,
+    "passed": 3,
+    "failed": 0,
+    "notCovered": 0
+  },
+  "groups": [
+    {
+      "id": "R1",
+      "status": "PASS",
+      "summary": "r1-summary.json",
+      "action": "r1-detach-action.json",
+      "snapshots": [
+        "r1-b1.json",
+        "r1-b2.json",
+        "r1-b3.json"
+      ]
+    },
+    {
+      "id": "R2",
+      "status": "PASS",
+      "summary": "r2-summary.json",
+      "action": "r2-detach-action.json",
+      "snapshots": [
+        "r2-b1.json",
+        "r2-b2.json",
+        "r2-b3.json"
+      ]
+    },
+    {
+      "id": "R3",
+      "status": "PASS",
+      "summary": "r3-summary.json",
+      "action": "r3-detach-action.json",
+      "snapshots": [
+        "r3-b1.json",
+        "r3-b2.json",
+        "r3-b3.json"
+      ]
+    }
+  ],
+  "detachCalls": 3,
+  "userNativeUndos": 3,
+  "repeatDetachCalls": 0,
+  "temporal": {
+    "compId": 219,
+    "time": 1,
+    "controllerKeys": [
+      [
+        0,
+        8
+      ],
+      [
+        2,
+        20
+      ]
+    ],
+    "roundAtTime": 14,
+    "baseBefore": 28,
+    "finalizedAtReferenceTimes": [
+      14,
+      14,
+      14
+    ],
+    "controllerAnimationPreserved": true,
+    "restoredByUndo": true,
+    "evidence": "r2-temporal-comparison.json"
+  },
+  "nativePointComparisons": [
+    {
+      "group": "R1",
+      "compared": 10,
+      "maxAbsoluteError": 0.000061035156022626325
+    },
+    {
+      "group": "R2",
+      "compared": 10,
+      "maxAbsoluteError": 0
+    },
+    {
+      "group": "R3",
+      "compared": 5,
+      "maxAbsoluteError": 0
+    }
+  ],
+  "undoComparisons": [
+    {
+      "group": "R1",
+      "numericLeaves": 5330,
+      "otherLeaves": 1710,
+      "maxNumericDifference": 0,
+      "differences": 0
+    },
+    {
+      "group": "R2",
+      "numericLeaves": 2306,
+      "otherLeaves": 668,
+      "maxNumericDifference": 0,
+      "differences": 0
+    },
+    {
+      "group": "R3",
+      "numericLeaves": 5330,
+      "otherLeaves": 1710,
+      "maxNumericDifference": 0,
+      "differences": 0
+    }
+  ],
+  "offline": {
+    "rerunInAcceptance": false,
+    "focusedReused": 932,
+    "finalizeReused": 1134,
+    "a08Reused": 251,
+    "fullRunCountInImplementation": 1,
+    "discovered": 188,
+    "executed": 188,
+    "passed": 187,
+    "failed": 1,
+    "skip": 0,
+    "soleFailure": "test-generated-report-guard.js",
+    "resolution": "Original generator then standalone 46-assertion PASS in implementation; not 188/188 full PASS"
+  },
+  "evidence": {
+    "index": "index.json",
+    "audit": "evidence-audit.json",
+    "integrity": "integrity-after.json",
+    "checks": "checks.txt",
+    "hostCallbackCount": 22,
+    "cepUiRecordCount": 4,
+    "userImages": 4,
+    "fileCountIncludingIndex": 126
+  },
+  "limits": [
+    "Only ordinary 2D, identified Text/Shape/supported AV, complete known Feature templates and supported translation-only parent chains; current-frame finalization",
+    "No arbitrary Property, 3D/parent/animation or general coordinate claim",
+    "Unsupported/fault/conflicting-keyframe and historical-expression cases remain offline-only",
+    "Captured fields and finite space points only; no full project/pixel equivalence",
+    "R2 Create raw callback unknown; R3 no screenshot; user visual/Undo evidence separate",
+    "Remove malformed recovery risk unresolved; registry/UI Detach unimplemented and needs later acceptance",
+    "Three earlier Feature failures, D1, historical Grid/Undo and offline artifacts byte unchanged"
+  ],
+  "deferredIntegration": "INTEGRATED_ACCEPTED / CLOSED in 0.3.12-G",
+  "b2MilestoneComplete": false,
+  "productionChangedDuringAcceptance": false,
+  "implementationTestsChangedDuringAcceptance": false,
+  "providerCalls": 0,
+  "removeCalls": 0,
+  "automaticSaveCloseCleanup": false,
+  "gitWrites": false,
+  "next": "Stop; user may commit/create dev PR. No automatic A09."
+}

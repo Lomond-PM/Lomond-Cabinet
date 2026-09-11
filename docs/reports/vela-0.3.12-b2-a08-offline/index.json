@@ -1,0 +1,98 @@
+{
+  "stage": "0.3.12-B2/A08",
+  "status": "IMPLEMENTED / OFFLINE PASS / REAL AE ACCEPTANCE PENDING",
+  "baseline": "d7dd7356cccbb637ae01a7e9d0629b9bc184a388",
+  "branch": "fix/ad-component-detach-a08-0.3.12",
+  "realAE": "NOT RUN",
+  "scope": "Retained Host Detach only; no registered action/UI added, per user decision",
+  "results": {
+    "focusedAssertions": 251,
+    "discovered": 186,
+    "executed": 186,
+    "passed": 186,
+    "failed": 0,
+    "skipped": 0
+  },
+  "inputs": [
+    {
+      "path": "host/tools/adComponentKit.jsx",
+      "sha256": "951d3f054f6cc0f90733a113c39a8014df984c4547188a3ce18fe0342a3ee384"
+    },
+    {
+      "path": "host/tools/adComponentKit.tool.jsx",
+      "sha256": "e9a1994307ac9c784f38f09710fa27beb953bfb3631859f4ffea534360a2368c"
+    },
+    {
+      "path": "scripts/fixtures/host-json-entry-harness.js",
+      "sha256": "8a4afa4cc82cc7f3048ccd8076b17af56c259b449ef23a538c89fb54426ef5eb"
+    },
+    {
+      "path": "scripts/fixtures/ad-component-detach-harness.js",
+      "sha256": "0f4ce870e7bc2d21e658030deaf08dc49a8bb8ee16280df52ef24905e90aca52"
+    },
+    {
+      "path": "scripts/test-ad-component-detach.js",
+      "sha256": "d27846f2acd80a832fcfede222062a74595a6f8aa20ddbd6f1642a1fdbd2111e"
+    },
+    {
+      "path": "scripts/capture-a08-detach.js",
+      "sha256": "16d1899a0ec2b30a1a051070c873e78bd4a5f0b3433cb784c4cdb7d18552a46e"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "docs/reports/vela-0.3.12-b2-a08-offline/before.json",
+      "sha256": "88e1d09d512dc7d8052c072cfc6461034a337711c5490a436f58875ff0864a83"
+    },
+    {
+      "path": "docs/reports/vela-0.3.12-b2-a08-offline/after.json",
+      "sha256": "f54eb47118a920314ec6fbe28c990ef892191eb9b83715476ac544086f9a3a0a"
+    },
+    {
+      "path": "docs/reports/vela-0.3.12-b2-a08-offline/focused-records.json",
+      "sha256": "b0a3ec10131fd3c0de521f91d3bbdda1ba9c5e24689c43026ae9f4b56bf2c30f"
+    },
+    {
+      "path": "docs/reports/vela-0.3.12-b2-a08-offline/focused.txt",
+      "sha256": "a374a5c02d8a7cf427931a81d18cca1cb5981218518718f83ca05ece6b07182f"
+    },
+    {
+      "path": "docs/reports/vela-0.3.12-b2-a08-offline/related.txt",
+      "sha256": "1f111aafa477252221e2434f8e84dcda5272e605cdd8e67c313793866751c549"
+    },
+    {
+      "path": "docs/reports/vela-0.3.12-b2-a08-offline/offline.txt",
+      "sha256": "86aa6418263b2169165052a345c83b52c59fe1e3fa7aa4692643bfdd97444bcf"
+    }
+  ],
+  "notes": [
+    "before.json expression field is a fixture diagnostic sentinel, not native Property.expression. Later focused snapshots include actual substitute transform Property expression fields.",
+    "before.json and after.json use independently created artifact IDs; match against each run creation result.",
+    "Host object substitution and Undo group call counts are not AE Undo acceptance."
+  ],
+  "retention": {
+    "task": "A08-H0",
+    "changed": "Index only; retained historical summaries, callbacks, comparisons and confirmations keep original bytes. Phase status/counts above are historical, not recertified by H0.",
+    "currentAcceptance": "TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+    "archiveWorkspaceRelative": ".tmp/vela-evidence/0.3.12/a08/h0-20260911",
+    "archiveManifest": "manifest.json",
+    "originalIndex": {
+      "path": "docs/reports/vela-0.3.12-b2-a08-offline/index.json",
+      "sha256": "477cab97467f75cca98bb42eaf3e2647842295ccc6f2940339438420d3715436"
+    },
+    "referencePolicy": "Historical filenames, command strings, JSON pointers and checksums retain their original meaning. Files absent from the retained set resolve as archiveWorkspaceRelative + original repository path; bare names resolve against this evidence directory. They are local-only, unavailable in a fresh clone. Original file counts/hashes describe the complete collection, not this retained subset.",
+    "archivedReferences": []
+  },
+  "files": [
+    {
+      "file": "after.json",
+      "bytes": 36030,
+      "sha256": "f54eb47118a920314ec6fbe28c990ef892191eb9b83715476ac544086f9a3a0a"
+    },
+    {
+      "file": "before.json",
+      "bytes": 27083,
+      "sha256": "88e1d09d512dc7d8052c072cfc6461034a337711c5490a436f58875ff0864a83"
+    }
+  ]
+}

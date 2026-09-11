@@ -1,0 +1,77 @@
+{
+  "recordedAt": "2026-09-11T03:59:34.832Z",
+  "pass": true,
+  "project": "D:\\Projects\\Vela Test\\Vela Test.aep",
+  "comp": {
+    "id": 191,
+    "name": "A01_TOOL_SMOKE",
+    "time": 0,
+    "duration": 0.03333333333333,
+    "frameDuration": 0.03333333333333,
+    "numLayers": 10,
+    "width": 800,
+    "height": 800
+  },
+  "expected": {
+    "project": "D:\\Projects\\Vela Test\\Vela Test.aep",
+    "compId": 191,
+    "time": 0,
+    "numLayers": 10,
+    "controllerId": 212,
+    "controllerComment": "LOMOND_CABINET_ARTIFACT_V1:{\"owner\":\"Lomond Cabinet / AEToolbox\",\"tool\":\"adComponentKit\",\"kind\":\"iconGrid\",\"artifactId\":\"ack_20260910_122851_618743\",\"componentId\":\"iconGrid_001\",\"componentType\":\"iconGrid\",\"role\":\"controller\",\"index\":0,\"createdAt\":\"2026-09-10T12:28:51\"}",
+    "artifactId": "ack_20260910_122851_618743",
+    "component": [
+      {
+        "id": 212,
+        "comment": "LOMOND_CABINET_ARTIFACT_V1:{\"owner\":\"Lomond Cabinet / AEToolbox\",\"tool\":\"adComponentKit\",\"kind\":\"iconGrid\",\"artifactId\":\"ack_20260910_122851_618743\",\"componentId\":\"iconGrid_001\",\"componentType\":\"iconGrid\",\"role\":\"controller\",\"index\":0,\"createdAt\":\"2026-09-10T12:28:51\"}",
+        "parentId": null
+      },
+      {
+        "id": 206,
+        "comment": "LOMOND_CABINET_ARTIFACT_V1:{\"owner\":\"Lomond Cabinet / AEToolbox\",\"tool\":\"adComponentKit\",\"kind\":\"iconGrid\",\"artifactId\":\"ack_20260910_122851_618743\",\"componentId\":\"iconGrid_001\",\"componentType\":\"iconGrid\",\"role\":\"sourceLayerBinding\",\"index\":1,\"createdAt\":\"2026-09-10T12:28:51\",\"previousCommentEncoded\":\"%20%20%E4%B8%AD%E6%96%87%20%E6%97%A5%E6%9C%AC%E8%AA%9E%20%F0%9F%98%80%0A%22quote%22%20%5Cpath%20%25%20%2525%20literal%5Cu0000%20%20\"}",
+        "parentId": 210
+      },
+      {
+        "id": 207,
+        "comment": "LOMOND_CABINET_ARTIFACT_V1:{\"owner\":\"Lomond Cabinet / AEToolbox\",\"tool\":\"adComponentKit\",\"kind\":\"iconGrid\",\"artifactId\":\"ack_20260910_122851_618743\",\"componentId\":\"iconGrid_001\",\"componentType\":\"iconGrid\",\"role\":\"sourceLayerBinding\",\"index\":2,\"createdAt\":\"2026-09-10T12:28:51\",\"previousCommentEncoded\":\"\"}",
+        "parentId": 212
+      }
+    ],
+    "protected": [
+      {
+        "id": 208,
+        "comment": "User edited after binding 中文",
+        "parentId": 212
+      },
+      {
+        "id": 210,
+        "comment": "unrelated 中文",
+        "parentId": null
+      }
+    ]
+  },
+  "onlySelectionChangedInPreparation": true,
+  "originalCommentEvidence": "r3-reuse-checks.json",
+  "positionExpected": {
+    "layerId": 207,
+    "compXY": [
+      360,
+      250
+    ],
+    "method": "Independent B1 unit-scale/zero-rotation parent Position minus Anchor chain; sourcePointToComp is separately captured",
+    "geometryTolerance": 0.0001
+  },
+  "protectedLayers": [
+    206,
+    208,
+    210
+  ],
+  "textAndIdentity": "strict",
+  "undoNumericTolerance": 0.000001,
+  "pending": [
+    "one actual retained Detach",
+    "B2 independent comparison",
+    "user visual and native Undo",
+    "B3 comparison"
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "recordedAt": "2026-09-11T04:18:20.542Z",
+  "groups": [
+    {
+      "group": "R1",
+      "status": "PASS",
+      "action": {
+        "ok": true,
+        "message": "Component detached. Layers will no longer refresh as a kit component."
+      },
+      "undoRestored": true
+    },
+    {
+      "group": "R2",
+      "status": "PASS",
+      "action": {
+        "ok": true,
+        "message": "Component detached. Layers will no longer refresh as a kit component."
+      },
+      "undoRestored": true
+    },
+    {
+      "group": "R3",
+      "status": "PASS",
+      "action": {
+        "ok": true,
+        "message": "Component detached. Layers will no longer refresh as a kit component."
+      },
+      "undoRestored": true
+    }
+  ],
+  "nativePointErrors": [
+    {
+      "group": "R1",
+      "compared": 10,
+      "maxAbsoluteError": 0.000061035156022626325
+    },
+    {
+      "group": "R2",
+      "compared": 10,
+      "maxAbsoluteError": 0
+    },
+    {
+      "group": "R3",
+      "compared": 5,
+      "maxAbsoluteError": 0
+    }
+  ],
+  "sourceComments": [
+    {
+      "group": "R1",
+      "id": 213,
+      "units": 48
+    },
+    {
+      "group": "R2",
+      "id": 231,
+      "units": 43
+    }
+  ],
+  "undo": [
+    {
+      "group": "R1",
+      "numericLeaves": 5330,
+      "otherLeaves": 1710,
+      "maxNumericDifference": 0,
+      "differences": 0
+    },
+    {
+      "group": "R2",
+      "numericLeaves": 2306,
+      "otherLeaves": 668,
+      "maxNumericDifference": 0,
+      "differences": 0
+    },
+    {
+      "group": "R3",
+      "numericLeaves": 5330,
+      "otherLeaves": 1710,
+      "maxNumericDifference": 0,
+      "differences": 0
+    }
+  ],
+  "protection": {
+    "integrity-before.json": 698,
+    "integrity-history-before.json": 192,
+    "uniquePaths": 710,
+    "allUnchangedBeforeDocumentClose": true
+  },
+  "git": {
+    "branch": "fix/ad-component-detach-a08-0.3.12",
+    "refs": [
+      "d7dd7356cccbb637ae01a7e9d0629b9bc184a388",
+      "d7dd7356cccbb637ae01a7e9d0629b9bc184a388"
+    ],
+    "status": "## fix/ad-component-detach-a08-0.3.12\n M AGENTS.md\n M docs/HANDOFF.md\n M docs/PROJECT_STATE.md\n M docs/VELA_ROADMAP.md\n M docs/design/vela-0.3-reconstruction-guidance.md\n M docs/reports/i18n-usage-report.md\n M docs/reports/vela-0.3.11-consolidated-register.json\n M host/tools/adComponentKit.jsx\n?? docs/reports/vela-0.3.12-b2-a08-detach-comment-ownership.md\n?? docs/reports/vela-0.3.12-b2-a08-f1-offline/\n?? docs/reports/vela-0.3.12-b2-a08-f1-real-ae/\n?? docs/reports/vela-0.3.12-b2-a08-f1a-offline/\n?? docs/reports/vela-0.3.12-b2-a08-f1a-real-ae/\n?? docs/reports/vela-0.3.12-b2-a08-f1b-offline/\n?? docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/\n?? docs/reports/vela-0.3.12-b2-a08-offline/\n?? docs/reports/vela-0.3.12-b2-a08-real-ae/\n?? scripts/capture-a08-detach.js\n?? scripts/fixtures/ad-component-detach-harness.js\n?? scripts/test-ad-component-detach-finalize.js\n?? scripts/test-ad-component-detach-locator.js\n?? scripts/test-ad-component-detach.js\n",
+    "staged": ""
+  }
+}

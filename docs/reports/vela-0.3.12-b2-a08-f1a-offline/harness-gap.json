@@ -1,0 +1,43 @@
+{
+  "productionSha256": "a5703ad191816b0cb1772c00a6ddec07be28e153691a6f25d86fa13d92ee6ba5",
+  "fixtureSha256": "04c6ee9e76adc74de9e44d8c13718a04f3fd84f0cb1de5024f0621cb89d7eed1",
+  "before": [
+    {
+      "name": "source0",
+      "matchName": "ADBE Text Layer",
+      "collapse": false,
+      "canSet": "ABSENT",
+      "continuous": false,
+      "nullLayer": false,
+      "source": "ABSENT"
+    },
+    {
+      "name": "FEATURE_STACK_CTRL",
+      "matchName": "ADBE AV Layer",
+      "collapse": false,
+      "canSet": "ABSENT",
+      "continuous": false,
+      "nullLayer": false,
+      "source": "ABSENT"
+    },
+    {
+      "name": "source0_PILL_BG",
+      "matchName": "ADBE Vector Layer",
+      "collapse": false,
+      "canSet": "ABSENT",
+      "continuous": true,
+      "nullLayer": false,
+      "source": "ABSENT"
+    },
+    {
+      "name": "av",
+      "matchName": "ADBE AV Layer",
+      "collapse": false,
+      "canSet": "ABSENT",
+      "continuous": false,
+      "nullLayer": false,
+      "source": "ABSENT"
+    }
+  ],
+  "gap": "Old layer factory assigns all collapse flags false unless explicit option; canSet and layer.source absent; Text/Shape matchName distinguished, Shape continuous=true but Text continuous=false; addNull did not use null kind. CompItem existed only for active comp, no FootageItem/layer source model. Real Text/Vector true/false flags are archived separately."
+}

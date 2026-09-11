@@ -1,0 +1,14 @@
+{
+  "recordedAt": "2026-09-11T03:47:04.724Z",
+  "source": "Local exec tool error transcribed into a diagnostic record; not a raw Host trace",
+  "classification": "LOCAL_COMMAND_FILE_READ_ERROR",
+  "attemptedCommand": "node .tmp/a08-f1b-real/cdp.cjs docs/reports/vela-0.12-b2-a08-f1b-real-ae/commands/r2-snapshot.js docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-b2.json",
+  "errorCode": "ENOENT",
+  "cause": "Mistyped evidence directory vela-0.12 instead of vela-0.3.12",
+  "failedAt": "cdp.cjs:11 readFileSync(input), before opening WebSocket or sending Runtime.evaluate",
+  "hostCallSent": false,
+  "affectedOperation": "independent read-only post-Detach snapshot",
+  "recovery": "Corrected path and ran the read-only snapshot once; r2-b2.json and r2-temporal-after.json saved",
+  "detachRetried": false,
+  "productFailure": false
+}

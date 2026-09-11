@@ -1,0 +1,105 @@
+{
+  "recordedAt": "2026-09-11T03:58:06.632Z",
+  "pass": true,
+  "originalCapturedSnapshotMatchesR1B3": true,
+  "source": "fresh read of original comp without changing active comp; original comments checked against historical actual Grid B0",
+  "expected": {
+    "project": "D:\\Projects\\Vela Test\\Vela Test.aep",
+    "compId": 191,
+    "time": 0,
+    "numLayers": 10,
+    "controllerId": 212,
+    "controllerComment": "LOMOND_CABINET_ARTIFACT_V1:{\"owner\":\"Lomond Cabinet / AEToolbox\",\"tool\":\"adComponentKit\",\"kind\":\"iconGrid\",\"artifactId\":\"ack_20260910_122851_618743\",\"componentId\":\"iconGrid_001\",\"componentType\":\"iconGrid\",\"role\":\"controller\",\"index\":0,\"createdAt\":\"2026-09-10T12:28:51\"}",
+    "artifactId": "ack_20260910_122851_618743",
+    "component": [
+      {
+        "id": 212,
+        "comment": "LOMOND_CABINET_ARTIFACT_V1:{\"owner\":\"Lomond Cabinet / AEToolbox\",\"tool\":\"adComponentKit\",\"kind\":\"iconGrid\",\"artifactId\":\"ack_20260910_122851_618743\",\"componentId\":\"iconGrid_001\",\"componentType\":\"iconGrid\",\"role\":\"controller\",\"index\":0,\"createdAt\":\"2026-09-10T12:28:51\"}",
+        "parentId": null
+      },
+      {
+        "id": 206,
+        "comment": "LOMOND_CABINET_ARTIFACT_V1:{\"owner\":\"Lomond Cabinet / AEToolbox\",\"tool\":\"adComponentKit\",\"kind\":\"iconGrid\",\"artifactId\":\"ack_20260910_122851_618743\",\"componentId\":\"iconGrid_001\",\"componentType\":\"iconGrid\",\"role\":\"sourceLayerBinding\",\"index\":1,\"createdAt\":\"2026-09-10T12:28:51\",\"previousCommentEncoded\":\"%20%20%E4%B8%AD%E6%96%87%20%E6%97%A5%E6%9C%AC%E8%AA%9E%20%F0%9F%98%80%0A%22quote%22%20%5Cpath%20%25%20%2525%20literal%5Cu0000%20%20\"}",
+        "parentId": 210
+      },
+      {
+        "id": 207,
+        "comment": "LOMOND_CABINET_ARTIFACT_V1:{\"owner\":\"Lomond Cabinet / AEToolbox\",\"tool\":\"adComponentKit\",\"kind\":\"iconGrid\",\"artifactId\":\"ack_20260910_122851_618743\",\"componentId\":\"iconGrid_001\",\"componentType\":\"iconGrid\",\"role\":\"sourceLayerBinding\",\"index\":2,\"createdAt\":\"2026-09-10T12:28:51\",\"previousCommentEncoded\":\"\"}",
+        "parentId": 212
+      }
+    ],
+    "protected": [
+      {
+        "id": 208,
+        "comment": "User edited after binding 中文",
+        "parentId": 212
+      },
+      {
+        "id": 210,
+        "comment": "unrelated 中文",
+        "parentId": null
+      }
+    ]
+  },
+  "originals": [
+    {
+      "id": 206,
+      "comment": "  中文 日本語 😀\n\"quote\" \\path % %25 literal\\u0000  ",
+      "units": [
+        32,
+        32,
+        20013,
+        25991,
+        32,
+        26085,
+        26412,
+        35486,
+        32,
+        55357,
+        56832,
+        10,
+        34,
+        113,
+        117,
+        111,
+        116,
+        101,
+        34,
+        32,
+        92,
+        112,
+        97,
+        116,
+        104,
+        32,
+        37,
+        32,
+        37,
+        50,
+        53,
+        32,
+        108,
+        105,
+        116,
+        101,
+        114,
+        97,
+        108,
+        92,
+        117,
+        48,
+        48,
+        48,
+        48,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 207,
+      "comment": "",
+      "units": []
+    }
+  ],
+  "historyEvidence": "../vela-0.3.12-b2-a08-real-ae/grid-b0.json"
+}

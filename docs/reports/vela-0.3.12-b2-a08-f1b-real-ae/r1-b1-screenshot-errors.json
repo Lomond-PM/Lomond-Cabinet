@@ -1,0 +1,12 @@
+{
+  "recordedAt": "2026-09-11T02:56:18.722Z",
+  "source": "Computer-use tool results manually recorded; no image payload was returned",
+  "attempts": 2,
+  "error": "SetIsBorderRequired failed: 不支持此接口 (0x80004002)",
+  "window": {
+    "id": 134002,
+    "app": "process:C:\\Program Files\\Adobe\\Adobe After Effects 2026\\Support Files\\AfterFX.exe",
+    "title": "Adobe After Effects 2026 - D:\\Projects\\Vela Test\\Vela Test.aep"
+  },
+  "outcome": "Current screenshot requested from user; no previous image reused; no UI input issued"
+}

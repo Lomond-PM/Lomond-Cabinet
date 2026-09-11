@@ -1,0 +1,90 @@
+{
+  "recordedAt": "2026-09-11T02:51:27.844Z",
+  "target": "2EB1BDB5BE3E74534D3F0E80CB892B9B",
+  "discoveredFromCurrentDebug": true,
+  "previousTarget": "1FBEA019488472ACDE40DB10C37F513F",
+  "newTarget": true,
+  "publicDetachFullTextMatched": true,
+  "normalization": "CRLF to LF and outer whitespace trim only; workspace extraction removes assignment/semicolon",
+  "actualFunction": "\nfunction () {\n        var comp = getComp();\n        var selected;\n        var ctrl;\n        var data;\n        var layers;\n        var i;\n        var j;\n        var item;\n        var raw;\n        var modern;\n        var plan = [];\n        var completed = 0;\n        var writes = 0;\n        var finalization = null;\n        var edit;\n        if (!comp) {\n            return jsonResult(false, \"Open a composition before detaching a component.\");\n        }\n        selected = comp.selectedLayers || [];\n        if (!selected.length) {\n            return jsonResult(false, \"Select a component controller first.\");\n        }\n        ctrl = selected[0];\n        try {\n            data = parseMetadata(ctrl);\n            if (!data || data.role !== \"controller\" || typeof data.componentId !== \"string\" || !data.componentId) {\n                return jsonResult(false, \"Selected layer is not an AE Toolbox component controller.\");\n            }\n            modern = !!parseArtifactMetadata(ctrl.comment);\n            if (!modern && (data.aetoolbox !== true || data.artifactId || (data.tool && data.tool !== \"adComponentKit\"))) {\n                throw new Error(\"Controller ownership is ambiguous.\");\n            }\n            layers = componentLayers(comp, data.componentId);\n            for (i = 0; i < layers.length; i++) {\n                item = layers[i];\n                raw = item.layer.comment;\n                if (modern) {\n                    if (!parseArtifactMetadata(raw) || item.data.artifactId !== data.artifactId) { continue; }\n                } else if (parseArtifactMetadata(raw) || item.data.artifactId || item.data.aetoolbox !== true || (item.data.tool && item.data.tool !== \"adComponentKit\")) {\n                    continue;\n                }\n                if (item.data.componentType !== data.componentType) {\n                    throw new Error(\"Component type ownership is ambiguous.\");\n                }\n                if (item.data.role !== \"sourceLayerBinding\" && item.data.role !== \"itemText\" && !shouldDeleteArtifactLayer(item.data.role)) {\n                    throw new Error(\"Component contains an unsupported role.\");\n                }\n                plan[plan.length] = { layer: item.layer, data: item.data, raw: raw,\n                    comment: item.data.role === \"sourceLayerBinding\" || item.data.role === \"itemText\" ? restoredDetachComment(item.data) : \"\",\n                    parent: item.layer.parent, clearParent: false };\n            }\n            // Only release relationships whose parent also belongs to this component.\n            for (i = 0; i < plan.length; i++) {\n                for (j = 0; j < plan.length; j++) {\n                    if (plan[i].parent === plan[j].layer) { plan[i].clearParent = true; }\n                }\n            }\n            if (data.componentType === \"featureStack\") {\n                finalization = detachFeaturePlan(plan, ctrl, data.artifactId, comp.time);\n            }\n        } catch (err) {\n            return jsonResult(false, \"Detach preflight failed; no changes made: \" + err.toString());\n        }\n        // Keep the selected controller metadata until the other layers have completed.\n        for (i = 0; i < plan.length; i++) {\n            if (plan[i].layer === ctrl) { item = plan.splice(i, 1)[0]; plan[plan.length] = item; break; }\n        }\n        app.beginUndoGroup(\"AE Toolbox Detach Component\");\n        try {\n            if (finalization) {\n                for (i = 0; i < plan.length; i++) {\n                    if (plan[i].layer.comment !== plan[i].raw || plan[i].layer.parent !== plan[i].parent) { throw new Error(\"Component data changed after preflight.\"); }\n                }\n                for (i = 0; i < finalization.edits.length; i++) {\n                    edit = finalization.edits[i];\n                    if (edit.prop.expression !== edit.expression || edit.prop.numKeys !== 0) { throw new Error(edit.label + \" changed after preflight\"); }\n                    edit.prop.expression = \"\"; writes++;\n                    edit.prop.setValue(edit.value); writes++;\n                }\n                for (i = 0; i < finalization.releases.length; i++) {\n                    edit = finalization.releases[i];\n                    edit.layer.setParentWithJump(null); writes++;\n                    edit.prop.setValue(edit.value); writes++;\n                }\n                for (i = 0; i < finalization.edits.length; i++) {\n                    edit = finalization.edits[i];\n                    // Preflight linked Position to its sampled comp-space target.\n                    verifyDetachValue(edit.release || edit, finalization.time);\n                }\n            }\n            for (i = 0; i < plan.length; i++) {\n                item = plan[i];\n                if (item.layer.comment !== item.raw || item.layer.parent !== (finalization && item.clearParent ? null : item.parent)) {\n                    throw new Error(\"Component data changed after preflight.\");\n                }\n                if (item.clearParent && !finalization) { item.layer.parent = null; writes++; }\n                item.layer.comment = item.comment;\n                writes++;\n                completed++;\n            }\n        } catch (writeError) {\n            return jsonResult(false, \"Detach incomplete; completed layers: \" + completed + \", confirmed writes: \" + writes + \". A failing write may have changed data; no rollback performed: \" + writeError.toString());\n        } finally {\n            app.endUndoGroup();\n        }\n        return jsonResult(true, \"Component detached. Layers will no longer refresh as a kit component.\");\n    }\n",
+  "workspaceFunction": "function () {\n        var comp = getComp();\r\n        var selected;\r\n        var ctrl;\r\n        var data;\r\n        var layers;\n        var i;\n        var j;\n        var item;\n        var raw;\n        var modern;\n        var plan = [];\n        var completed = 0;\n        var writes = 0;\n        var finalization = null;\n        var edit;\n        if (!comp) {\r\n            return jsonResult(false, \"Open a composition before detaching a component.\");\r\n        }\r\n        selected = comp.selectedLayers || [];\r\n        if (!selected.length) {\r\n            return jsonResult(false, \"Select a component controller first.\");\r\n        }\r\n        ctrl = selected[0];\r\n        try {\n            data = parseMetadata(ctrl);\n            if (!data || data.role !== \"controller\" || typeof data.componentId !== \"string\" || !data.componentId) {\n                return jsonResult(false, \"Selected layer is not an AE Toolbox component controller.\");\n            }\n            modern = !!parseArtifactMetadata(ctrl.comment);\n            if (!modern && (data.aetoolbox !== true || data.artifactId || (data.tool && data.tool !== \"adComponentKit\"))) {\n                throw new Error(\"Controller ownership is ambiguous.\");\n            }\n            layers = componentLayers(comp, data.componentId);\n            for (i = 0; i < layers.length; i++) {\n                item = layers[i];\n                raw = item.layer.comment;\n                if (modern) {\n                    if (!parseArtifactMetadata(raw) || item.data.artifactId !== data.artifactId) { continue; }\n                } else if (parseArtifactMetadata(raw) || item.data.artifactId || item.data.aetoolbox !== true || (item.data.tool && item.data.tool !== \"adComponentKit\")) {\n                    continue;\n                }\n                if (item.data.componentType !== data.componentType) {\n                    throw new Error(\"Component type ownership is ambiguous.\");\n                }\n                if (item.data.role !== \"sourceLayerBinding\" && item.data.role !== \"itemText\" && !shouldDeleteArtifactLayer(item.data.role)) {\n                    throw new Error(\"Component contains an unsupported role.\");\n                }\n                plan[plan.length] = { layer: item.layer, data: item.data, raw: raw,\n                    comment: item.data.role === \"sourceLayerBinding\" || item.data.role === \"itemText\" ? restoredDetachComment(item.data) : \"\",\n                    parent: item.layer.parent, clearParent: false };\n            }\n            // Only release relationships whose parent also belongs to this component.\n            for (i = 0; i < plan.length; i++) {\n                for (j = 0; j < plan.length; j++) {\n                    if (plan[i].parent === plan[j].layer) { plan[i].clearParent = true; }\n                }\n            }\n            if (data.componentType === \"featureStack\") {\n                finalization = detachFeaturePlan(plan, ctrl, data.artifactId, comp.time);\n            }\n        } catch (err) {\n            return jsonResult(false, \"Detach preflight failed; no changes made: \" + err.toString());\n        }\n        // Keep the selected controller metadata until the other layers have completed.\n        for (i = 0; i < plan.length; i++) {\n            if (plan[i].layer === ctrl) { item = plan.splice(i, 1)[0]; plan[plan.length] = item; break; }\n        }\n        app.beginUndoGroup(\"AE Toolbox Detach Component\");\n        try {\n            if (finalization) {\n                for (i = 0; i < plan.length; i++) {\n                    if (plan[i].layer.comment !== plan[i].raw || plan[i].layer.parent !== plan[i].parent) { throw new Error(\"Component data changed after preflight.\"); }\n                }\n                for (i = 0; i < finalization.edits.length; i++) {\n                    edit = finalization.edits[i];\n                    if (edit.prop.expression !== edit.expression || edit.prop.numKeys !== 0) { throw new Error(edit.label + \" changed after preflight\"); }\n                    edit.prop.expression = \"\"; writes++;\n                    edit.prop.setValue(edit.value); writes++;\n                }\n                for (i = 0; i < finalization.releases.length; i++) {\n                    edit = finalization.releases[i];\n                    edit.layer.setParentWithJump(null); writes++;\n                    edit.prop.setValue(edit.value); writes++;\n                }\n                for (i = 0; i < finalization.edits.length; i++) {\n                    edit = finalization.edits[i];\n                    // Preflight linked Position to its sampled comp-space target.\n                    verifyDetachValue(edit.release || edit, finalization.time);\n                }\n            }\n            for (i = 0; i < plan.length; i++) {\n                item = plan[i];\n                if (item.layer.comment !== item.raw || item.layer.parent !== (finalization && item.clearParent ? null : item.parent)) {\n                    throw new Error(\"Component data changed after preflight.\");\n                }\n                if (item.clearParent && !finalization) { item.layer.parent = null; writes++; }\n                item.layer.comment = item.comment;\n                writes++;\n                completed++;\n            }\n        } catch (writeError) {\n            return jsonResult(false, \"Detach incomplete; completed layers: \" + completed + \", confirmed writes: \" + writes + \". A failing write may have changed data; no rollback performed: \" + writeError.toString());\n        } finally {\n            app.endUndoGroup();\n        }\n        return jsonResult(true, \"Component detached. Layers will no longer refresh as a kit component.\");\r\n    }",
+  "toolSha256": "e36c1c16a70e3f36f9d8daa9e149c6315e12dbbe9439bf44150daa5bdce175c1",
+  "mappedToolSha256": "e36c1c16a70e3f36f9d8daa9e149c6315e12dbbe9439bf44150daa5bdce175c1",
+  "load": {
+    "ok": true,
+    "message": "Host load info ready.",
+    "hostFile": "host/index.jsx",
+    "registeredToolCount": 7,
+    "registeredToolLoadErrors": "",
+    "registeredToolLoadErrorCount": 0,
+    "hasValidRegisteredToolCatalog": true,
+    "registeredToolLastAttemptSucceeded": true,
+    "registeredToolRegistryRevision": 1,
+    "includesAdComponentKit": true,
+    "hasAdComponentKitCreateIconGrid": true
+  },
+  "privateF1b": "No private helper export or independent textual match. Normal restart + workspace mapping + public function comparison; R1 behavior still required.",
+  "environment": {
+    "title": "Lomond Cabinet",
+    "url": "file:///C:/Users/Administrator/AppData/Roaming/Adobe/CEP/extensions/com.kevin.aetoolbox/client/index.html",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 AdobeCEP/12.0.1 Safari/537.36",
+    "environment": {
+      "appVersion": "26.3",
+      "appSkinInfo": {
+        "systemHighlightColor": {
+          "alpha": 255,
+          "green": 120,
+          "blue": 215,
+          "red": 0
+        },
+        "baseFontSize": 11,
+        "appBarBackgroundColorSRGB": {
+          "antialiasLevel": 0,
+          "type": 1,
+          "color": {
+            "alpha": 255,
+            "green": 30,
+            "blue": 30,
+            "red": 30
+          }
+        },
+        "appBarBackgroundColor": {
+          "antialiasLevel": 0,
+          "type": 1,
+          "color": {
+            "alpha": 255,
+            "green": 30,
+            "blue": 30,
+            "red": 30
+          }
+        },
+        "panelBackgroundColor": {
+          "antialiasLevel": 0,
+          "type": 1,
+          "color": {
+            "alpha": 255,
+            "green": 30,
+            "blue": 30,
+            "red": 30
+          }
+        },
+        "baseFontFamily": "SimSun",
+        "panelBackgroundColorSRGB": {
+          "antialiasLevel": 0,
+          "type": 1,
+          "color": {
+            "alpha": 255,
+            "green": 30,
+            "blue": 30,
+            "red": 30
+          }
+        }
+      },
+      "appLocale": "zh_CN",
+      "isAppOnline": true,
+      "appUILocale": "zh_CN",
+      "appName": "AEFT",
+      "appId": "AEFT"
+    }
+  }
+}
