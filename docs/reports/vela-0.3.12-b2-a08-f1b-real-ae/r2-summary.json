@@ -1,0 +1,46 @@
+{
+  "recordedAt": "2026-09-11T03:52:54.264Z",
+  "group": "R2",
+  "status": "PASS",
+  "action": {
+    "ok": true,
+    "message": "Component detached. Layers will no longer refresh as a kit component."
+  },
+  "detachCalls": 1,
+  "detachCallEvidence": "r2-detach-action.json",
+  "environmentEvidence": [
+    "environment.json",
+    "load-comparison.json",
+    "workspace.json"
+  ],
+  "b1": "r2-b1.json",
+  "b2": "r2-b2.json",
+  "b3": "r2-b3.json",
+  "comparisons": [
+    "r2-b1-checks.json",
+    "r2-b1-space.json",
+    "r2-b2-comparison.json",
+    "r2-b3-comparison.json"
+  ],
+  "userConfirmations": [
+    "r2-before-user-confirmation.json",
+    "r2-after-user-confirmation.json",
+    "r2-undo-user-confirmation.json"
+  ],
+  "images": [
+    "r2-b1-user.png",
+    "r2-b2-user.png"
+  ],
+  "hostB2ChecksPass": true,
+  "userAfterVisual": "R2 Detach后无异常跳变",
+  "userUndo": "Undo后画面无实际变化，无异常项",
+  "undoRestorationPass": true,
+  "R1": "PASS; see r1-summary.json",
+  "R3": "NOT COVERED; next only if R2 PASS",
+  "temporalHostChecksPass": true,
+  "restoredTemporalEvidence": [
+    "r2-temporal-before.json",
+    "r2-temporal-restored.json"
+  ],
+  "overallAcceptance": "PENDING R3; not TARGETED_ACCEPTED"
+}

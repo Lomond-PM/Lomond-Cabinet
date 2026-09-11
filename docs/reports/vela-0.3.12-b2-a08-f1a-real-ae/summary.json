@@ -1,0 +1,59 @@
+{
+  "phase": "A08-F1a targeted real AE revalidation",
+  "status": "F1a IMPLEMENTED / OFFLINE PASS / REAL AE REVALIDATION FAIL",
+  "recordedAt": "2026-09-11T01:22:04.353Z",
+  "targetId": "1FBEA019488472ACDE40DB10C37F513F",
+  "groups": {
+    "R1": {
+      "status": "FAIL",
+      "reason": "Detach preflight failed; no changes made: Error: Feature Detach: unknown dependency or tool binding on an unsupported property",
+      "observedPostRefusalFieldsUnchanged": true,
+      "finalization": "NOT COVERED",
+      "undo": "NOT COVERED; not requested after preflight refusal"
+    },
+    "R2": {
+      "status": "NOT COVERED",
+      "reason": "R1 failed; stopped before preparation"
+    },
+    "R3": {
+      "status": "NOT COVERED",
+      "reason": "R1 failed; historical Grid PASS retained separately"
+    }
+  },
+  "groupCounts": {
+    "pass": 0,
+    "fail": 1,
+    "notCovered": 2
+  },
+  "actions": {
+    "retainedDetachInvocations": 1,
+    "successfulFinalizations": 0,
+    "nativeUndo": 0,
+    "newComponentCreates": 0,
+    "providerRequests": 0
+  },
+  "load": {
+    "actualPublicDetachFullTextMatched": true,
+    "workspaceExtensionMappingMatched": true,
+    "registeredLoadErrors": 0,
+    "privateF1a": "Normal restart/source evidence plus progression beyond previous member admission; private source not independently exposed; full successful behavior not attained"
+  },
+  "offline": "1134/251 assertions and 187/187, 0 skip are implementation results; NOT RERUN in this acceptance",
+  "limits": [
+    "No successful current-frame/static geometry or visual preservation result",
+    "No nonzero-time/controller animation or new Grid/Undo result",
+    "Property reference-identity candidate unverified; no new production instrumentation",
+    "No B3 invented, no blanket zero-write/atomic guarantee from snapshots"
+  ],
+  "evidence": {
+    "environment": "environment.json",
+    "load": "load-comparison.json",
+    "b1": "r1-b1.json",
+    "b2": "r1-b2.json",
+    "action": "r1-detach-action.json",
+    "analysis": "r1-refusal-analysis.json",
+    "userBefore": "r1-before-user-confirmation.json",
+    "image": "r1-b1-user.png"
+  },
+  "next": "Stop at required normal Feature preflight blocker; no TARGETED_ACCEPTED/READY FOR COMMIT/PR, no A09"
+}

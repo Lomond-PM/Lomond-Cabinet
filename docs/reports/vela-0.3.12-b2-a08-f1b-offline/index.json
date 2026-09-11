@@ -1,0 +1,54 @@
+{
+  "phase": "A08-F1b",
+  "status": "F1b IMPLEMENTED / OFFLINE PASS / REAL AE REVALIDATION PENDING",
+  "summary": "summary.json",
+  "retention": {
+    "task": "A08-H0",
+    "changed": "Index only; retained historical summaries, callbacks, comparisons and confirmations keep original bytes. Phase status/counts above are historical, not recertified by H0.",
+    "currentAcceptance": "TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+    "archiveWorkspaceRelative": ".tmp/vela-evidence/0.3.12/a08/h0-20260911",
+    "archiveManifest": "manifest.json",
+    "originalIndex": {
+      "path": "docs/reports/vela-0.3.12-b2-a08-f1b-offline/index.json",
+      "sha256": "02f08fcd9b96f2396265ecc0019d85b53b38e17bbc7b4d8951254b901e062fc5"
+    },
+    "referencePolicy": "Historical filenames, command strings, JSON pointers and checksums retain their original meaning. Files absent from the retained set resolve as archiveWorkspaceRelative + original repository path; bare names resolve against this evidence directory. They are local-only, unavailable in a fresh clone. Original file counts/hashes describe the complete collection, not this retained subset.",
+    "archivedReferences": [
+      "docs/reports/vela-0.3.12-b2-a08-f1b-offline/a08.log",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-offline/finalize.log",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-offline/focused.log",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-offline/full-offline.log",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-offline/generated-guard-recheck.log",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-offline/grid-host.log",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-offline/grid-refresh.log",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-offline/host-registry.log"
+    ]
+  },
+  "files": [
+    {
+      "file": "full-validation-failed.json",
+      "bytes": 217,
+      "sha256": "521bfab613293ffcd107ba2ce9870545d354860269d8331dbdb10233d7610213"
+    },
+    {
+      "file": "outcome-extract.json",
+      "bytes": 4123,
+      "sha256": "e7321b046a83825c352e36894dfd1823f1a88eeab75cfdfe8e878ebf1b28f9a4"
+    },
+    {
+      "file": "scope-decision.json",
+      "bytes": 383,
+      "sha256": "2c6ef783fd3b739b9743028883662db2820d6c23b2a688f8db6c45f57167f5c4"
+    },
+    {
+      "file": "summary.json",
+      "bytes": 1544,
+      "sha256": "2b4f966f5737c5ae2533865fbd22eb557f4e3c75aaa246d679f1045e82b8aba6"
+    },
+    {
+      "file": "validation.json",
+      "bytes": 2437,
+      "sha256": "742ee4db1844da22f0de290e7549b254255f4f1e967ecf9a5cc4ff936fe37441"
+    }
+  ]
+}

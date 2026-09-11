@@ -1,0 +1,41 @@
+{
+  "phase": "A08-F1a-D1",
+  "classification": "A. SAME_PROPERTY_LOCATOR / REFERENCE_MISMATCH",
+  "status": "F1a REAL AE REVALIDATION FAIL / D1 DIAGNOSED / FIX DECISION PENDING",
+  "summary": "summary.json",
+  "retention": {
+    "task": "A08-H0",
+    "changed": "Index only; retained historical summaries, callbacks, comparisons and confirmations keep original bytes. Phase status/counts above are historical, not recertified by H0.",
+    "currentAcceptance": "TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+    "archiveWorkspaceRelative": ".tmp/vela-evidence/0.3.12/a08/h0-20260911",
+    "archiveManifest": "manifest.json",
+    "originalIndex": {
+      "path": "docs/reports/vela-0.3.12-b2-a08-f1a-real-ae/d1-property-identity/index.json",
+      "sha256": "6aaef12de250dfcc0b42db6c5b55769e661ae83ce7a6a928fefdbe7ff8589ac8"
+    },
+    "referencePolicy": "Historical filenames, command strings, JSON pointers and checksums retain their original meaning. Files absent from the retained set resolve as archiveWorkspaceRelative + original repository path; bare names resolve against this evidence directory. They are local-only, unavailable in a fresh clone. Original file counts/hashes describe the complete collection, not this retained subset.",
+    "archivedReferences": [
+      "docs/reports/vela-0.3.12-b2-a08-f1a-real-ae/d1-property-identity/after.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1a-real-ae/d1-property-identity/before.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1a-real-ae/d1-property-identity/identity-probes.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1a-real-ae/d1-property-identity/raw-property-identity.json"
+    ]
+  },
+  "files": [
+    {
+      "file": "comparison.json",
+      "bytes": 5053,
+      "sha256": "6afebf5ace8c4bff33cbd66a9915ddaf5622d130c6374916506999f28dbf0e7c"
+    },
+    {
+      "file": "identity-minimal.json",
+      "bytes": 28540,
+      "sha256": "de3929276202e2d37130853f6e94e98caf42a8ccd5fcd703aa8452e89a10f975"
+    },
+    {
+      "file": "summary.json",
+      "bytes": 2520,
+      "sha256": "5c93e29b73b6e70c6781cf1443f388dc6bbb4df1476cd2b09c8a861d8027bffc"
+    }
+  ]
+}

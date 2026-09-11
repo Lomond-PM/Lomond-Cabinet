@@ -1,0 +1,14 @@
+{
+  "runLabel": "Grid R2 clean Undo evidence recovery",
+  "reason": "First user Undo/inspection sequence reported contaminated; observed current state matched full recorded B1 before explicit guarded repeat",
+  "B1": "grid-b3-contaminated-read.json",
+  "originalB1": "grid-b1.json",
+  "detachResult": {
+    "ok": true,
+    "message": "Component detached. Layers will no longer refresh as a kit component."
+  },
+  "B2": "grid-r2-b2.json",
+  "sameAsFirstVerifiedB2": true,
+  "comparison": "Exact serialized parsed snapshot equality, stronger than predefined numeric tolerance; actual action raw preserved separately",
+  "undo": "AWAITING USER; no intervening project writes after R2 Detach"
+}

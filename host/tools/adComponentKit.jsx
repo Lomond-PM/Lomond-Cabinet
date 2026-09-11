@@ -764,16 +764,37 @@
 
     function setLayerArtifactMetadata(layer, data) {
         var raw = "";
+        var existing;
         if (!layer) {
+            return;
+        }
+        if (data.role === "sourceLayerBinding") {
+            // A missing comment read is not evidence of an empty original comment.
+            raw = layer.comment;
+            if (typeof raw !== "string") {
+                throw new Error("Source comment is unavailable.");
+            }
+            existing = parseMetadata(layer);
+            if (existing) {
+                if (existing.role !== "sourceLayerBinding" && existing.role !== "itemText") {
+                    throw new Error("Source comment belongs to another component role.");
+                }
+                restoredDetachComment(existing);
+                data.previousCommentEncoded = existing.previousCommentEncoded;
+            } else {
+                if (raw.indexOf(ARTIFACT_METADATA_PREFIX) === 0) {
+                    throw new Error("Source metadata cannot be safely replaced.");
+                }
+                // Encode once, including explicit empty originals; encoding failures propagate.
+                data.previousCommentEncoded = encodeURIComponent(raw);
+            }
+            layer.comment = buildArtifactMetadata(data);
             return;
         }
         try {
             raw = layer.comment || "";
         } catch (err1) {
             raw = "";
-        }
-        if (data.role === "sourceLayerBinding" && raw && raw.indexOf(ARTIFACT_METADATA_PREFIX) !== 0) {
-            data.previousCommentEncoded = encodeText(raw);
         }
         try {
             layer.comment = buildArtifactMetadata(data);
@@ -1082,14 +1103,9 @@
         return "[" + refs.join(",") + "]";
     }
 
-    function bindFeatureTextPositionToController(layer, allTextLayers, itemIndex, artifactId) {
-        var pos = positionProp(layer);
-        var refs = layerRefsExpression(allTextLayers);
-        var expressionText;
-        if (!pos) {
-            return;
-        }
-        expressionText = [
+    // Shared exact templates: creation and Detach recognize the same property bodies.
+    function featureTextPositionExpression(refs, itemIndex) {
+        return [
             "var ctrl = parent;",
             "if (ctrl) {",
             "  var refs = " + refs + ";",
@@ -1150,6 +1166,16 @@
             "  value;",
             "}"
         ].join("\n");
+    }
+
+    function bindFeatureTextPositionToController(layer, allTextLayers, itemIndex, artifactId) {
+        var pos = positionProp(layer);
+        var refs = layerRefsExpression(allTextLayers);
+        var expressionText;
+        if (!pos) {
+            return;
+        }
+        expressionText = featureTextPositionExpression(refs, itemIndex);
         if (artifactId) {
             setSignedExpressionSafe(pos, expressionText, {
                 artifactId: artifactId,
@@ -1176,21 +1202,8 @@
         }
     }
 
-    function bindFeaturePillToController(layer, artifactId) {
-        var root = layer.property("ADBE Root Vectors Group");
-        var group = root ? root.property(1) : null;
-        var vectors = group ? group.property("ADBE Vectors Group") : null;
-        var rect = vectors ? vectors.property("ADBE Vector Shape - Rect") : null;
-        var fill = vectors ? vectors.property("ADBE Vector Graphic - Fill") : null;
-        var position = positionProp(layer);
-        var sizeProp = rect ? rect.property("ADBE Vector Rect Size") : null;
-        var roundProp = rect ? rect.property("ADBE Vector Rect Roundness") : null;
-        var colorProp = fill ? fill.property("ADBE Vector Fill Color") : null;
-        var positionExpression;
-        var sizeExpression;
-        var roundExpression;
-        var colorExpression;
-
+    function featurePillExpressions() {
+        var positionExpression, sizeExpression, roundExpression, colorExpression;
         positionExpression = [
             "var txt = thisLayer.parent;",
             "var ctrl = txt ? txt.parent : null;",
@@ -1242,6 +1255,30 @@
             "if (!ctrl && thisLayer.parent) { ctrl = thisLayer.parent; }",
             "ctrl ? ctrl.effect(\"Fill Color\")(1) : value;"
         ].join("\n");
+
+        return [positionExpression, sizeExpression, roundExpression, colorExpression];
+    }
+
+    function bindFeaturePillToController(layer, artifactId) {
+        var root = layer.property("ADBE Root Vectors Group");
+        var group = root ? root.property(1) : null;
+        var vectors = group ? group.property("ADBE Vectors Group") : null;
+        var rect = vectors ? vectors.property("ADBE Vector Shape - Rect") : null;
+        var fill = vectors ? vectors.property("ADBE Vector Graphic - Fill") : null;
+        var position = positionProp(layer);
+        var sizeProp = rect ? rect.property("ADBE Vector Rect Size") : null;
+        var roundProp = rect ? rect.property("ADBE Vector Rect Roundness") : null;
+        var colorProp = fill ? fill.property("ADBE Vector Fill Color") : null;
+        var positionExpression;
+        var sizeExpression;
+        var roundExpression;
+        var colorExpression;
+
+        var templates = featurePillExpressions();
+        positionExpression = templates[0];
+        sizeExpression = templates[1];
+        roundExpression = templates[2];
+        colorExpression = templates[3];
 
         if (artifactId) {
             setSignedExpressionSafe(position, positionExpression, { artifactId: artifactId, kind: "featureStack", role: "generatedLayer" });
@@ -2413,6 +2450,271 @@
         return jsonResult(true, "Selected " + layers.length + " component layer(s).");
     };
 
+    function restoredDetachComment(data) {
+        if (typeof data.previousCommentEncoded !== "string") {
+            throw new Error("Original source comment is missing or has an unsupported type.");
+        }
+        try {
+            return decodeURIComponent(data.previousCommentEncoded);
+        } catch (err) {
+            throw new Error("Original source comment encoding is invalid.");
+        }
+    }
+
+    // Detach F1 is deliberately bounded to translation-only 2D parent chains.
+    // Samples are post-expression at one comp time; metadata is retained until verification.
+    function detachFeaturePlan(plan, ctrl, artifactId, time) {
+        var samples = [], edits = [], releases = [], templates = featurePillExpressions();
+        var i, j, entry, layer, root, group, vectors, rect, fill, source, refs, text, match, names, cursor, token, resolved;
+        var release, releaseLocator, plannedEdit;
+        if (typeof time !== "number" || !isFinite(time) || !artifactId) { throw new Error("Unsupported Feature Detach time or legacy expression ownership."); }
+        function fail(label) { throw new Error("Feature Detach: " + label); }
+        function positiveInteger(value) {
+            return typeof value === "number" && isFinite(value) && value > 0 && Math.floor(value) === value;
+        }
+        // Preflight identity only. Keep edit.prop for all sampling and execution;
+        // native AE can return different wrappers for the same structural Property.
+        function propertyLocator(prop, expectedLayer) {
+            var compId, layerId, depth, remaining, node = prop, path = [], index, matchName;
+            try {
+                compId = ctrl.containingComp.id; layerId = expectedLayer.id;
+                if (!positiveInteger(compId) || !positiveInteger(layerId) || expectedLayer.containingComp.id !== compId) {
+                    fail("property locator invalid comp/layer identity");
+                }
+                depth = prop.propertyDepth;
+                if (!positiveInteger(depth) || depth > 21) { fail("property locator invalid depth"); }
+                remaining = depth;
+                while (remaining > 0) {
+                    if (!node || node.propertyDepth !== remaining) { fail("property locator inconsistent parent depth"); }
+                    index = node.propertyIndex; matchName = node.matchName;
+                    if (!positiveInteger(index) || typeof matchName !== "string" || !matchName.length) {
+                        fail("property locator invalid index/matchName");
+                    }
+                    path.unshift({ propertyIndex: index, matchName: matchName });
+                    node = node.parentProperty;
+                    remaining--;
+                }
+                if (!node || node.propertyDepth !== 0 || node.id !== layerId || !node.containingComp || node.containingComp.id !== compId) {
+                    fail("property locator does not reach expected layer/comp");
+                }
+            } catch (locatorError) {
+                // No name, layer index, String(prop), or reference-identity fallback.
+                throw new Error("Feature Detach: property locator unavailable or invalid: " + String(locatorError));
+            }
+            return { compId: compId, layerId: layerId, path: path };
+        }
+        function samePropertyLocator(a, b) {
+            var n;
+            if (a.compId !== b.compId || a.layerId !== b.layerId || a.path.length !== b.path.length) { return false; }
+            for (n = 0; n < a.path.length; n++) {
+                if (a.path[n].propertyIndex !== b.path[n].propertyIndex || a.path[n].matchName !== b.path[n].matchName) { return false; }
+            }
+            return true;
+        }
+        function member(l) {
+            var n;
+            for (n = 0; n < plan.length; n++) { if (plan[n].layer === l) { return plan[n]; } }
+            return null;
+        }
+        function admitLayerSpace(l, label, checkLocked) {
+            var kind = classifyGridLayer(l), threeD, collapse, canSetCollapse, locked, source, isNull, continuous;
+            if (kind === "unsupported") { fail(label + " unknown/unreadable layer type"); }
+            try {
+                threeD = l.threeDLayer; collapse = l.collapseTransformation;
+                canSetCollapse = l.canSetCollapseTransformation;
+                if (checkLocked) { locked = l.locked; }
+            } catch (flagError) { fail(label + " unreadable layer flags"); }
+            if (typeof threeD !== "boolean" || typeof collapse !== "boolean" || typeof canSetCollapse !== "boolean" || (checkLocked && typeof locked !== "boolean")) {
+                fail(label + " unavailable layer flags");
+            }
+            if (checkLocked && locked) { fail(label + " locked layer"); }
+            if (threeD) { fail(label + " unsupported 3D layer"); }
+            // Host matchName identifies Text/Shape. Their inherent collapse=true,
+            // canSet=false flags do not mean a collapsed precomp or unsafe parent space.
+            if (kind === "text" || kind === "shape") { return; }
+            try {
+                source = l.source; isNull = l.nullLayer; continuous = l.continuouslyRasterize;
+            } catch (sourceError) { fail(label + " unreadable AV source/space flags"); }
+            if (typeof isNull !== "boolean" || (typeof continuous !== "undefined" && typeof continuous !== "boolean")) { fail(label + " unavailable AV space flags"); }
+            if (source instanceof CompItem) {
+                if (collapse) { fail(label + " unsupported collapsed precomp"); }
+            } else if (!isNull && !(typeof FootageItem !== "undefined" && source instanceof FootageItem)) {
+                fail(label + " unknown AV source type");
+            }
+            if (collapse || continuous === true) { fail(label + " unsupported rasterized AV space"); }
+        }
+        function numeric(value, size, label) {
+            var n, result = [];
+            if (!size) {
+                if (typeof value !== "number" || !isFinite(value)) { fail(label + " invalid number"); }
+                return value;
+            }
+            if (!value || (size === -2 ? value.length !== 2 && value.length !== 3 : value.length !== size)) { fail(label + " invalid dimension"); }
+            for (n = 0; n < value.length; n++) {
+                if (typeof value[n] !== "number" || !isFinite(value[n])) { fail(label + " invalid number"); }
+                result[n] = value[n];
+            }
+            return result;
+        }
+        function sample(prop, size, label) {
+            var n, value;
+            if (!prop || typeof prop.valueAtTime !== "function") { fail(label + " unreadable"); }
+            for (n = 0; n < samples.length; n++) { if (samples[n].prop === prop) { return samples[n].value; } }
+            if (prop.expressionError) { fail(label + " expression error"); }
+            value = numeric(prop.valueAtTime(time, false), size, label);
+            if (prop.expressionError) { fail(label + " expression error after evaluation"); }
+            samples[samples.length] = { prop: prop, value: value };
+            return value;
+        }
+        function writable(prop, label) {
+            if (!prop || typeof prop.setValue !== "function" || prop.numKeys !== 0 || prop.dimensionsSeparated) {
+                fail(label + " not writable without changing keyframes/separated dimensions");
+            }
+        }
+        function expressionEdit(l, prop, body, role, size, label) {
+            var expected = signedExpressionBody(body, { artifactId: artifactId, kind: "featureStack", role: role,
+                previousExpression: "", previousExpressionEnabled: false });
+            var value;
+            writable(prop, label);
+            // Full signature and full body, including empty protected history. No prefix-only admission.
+            if (l.locked || prop.canSetExpression !== true || prop.expression !== expected || prop.expressionEnabled !== true) {
+                fail(label + " unknown/edited expression, protected history or locked layer");
+            }
+            value = sample(prop, size, label);
+            if (size === -2 && value.length === 3 && value[2] !== 0) { fail(label + " unsupported 2D Z component"); }
+            if ((label.indexOf("/Rect Size") >= 0 && (value[0] < 0 || value[1] < 0)) || (label.indexOf("/Roundness") >= 0 && value < 0)) { fail(label + " invalid geometry value"); }
+            edits[edits.length] = { prop: prop, locator: propertyLocator(prop, l), expression: expected, value: value, size: size === -2 ? value.length : size, label: label };
+        }
+        function translation(l, seen) {
+            var n, transform, p, a, scale, rotation, parentOffset;
+            for (n = 0; n < seen.length; n++) { if (seen[n] === l) { fail("parent cycle"); } }
+            admitLayerSpace(l, "parent space", false);
+            seen[seen.length] = l;
+            transform = l.property("ADBE Transform Group");
+            p = sample(positionProp(l), -2, l.name + "/Position");
+            a = sample(transform.property("ADBE Anchor Point"), -2, l.name + "/Anchor");
+            scale = sample(transform.property("ADBE Scale"), -2, l.name + "/Scale");
+            rotation = sample(transform.property("ADBE Rotate Z"), 0, l.name + "/Rotation");
+            // No affine decomposition or arbitrary A09 coordinate conversion in this slice.
+            if (scale[0] !== 100 || scale[1] !== 100 || rotation !== 0 || (scale.length === 3 && scale[2] !== 100) || (p.length === 3 && p[2] !== 0) || (a.length === 3 && a[2] !== 0)) { fail(l.name + " parent requires unit scale, zero rotation and neutral 2D Z"); }
+            parentOffset = l.parent ? translation(l.parent, seen) : [0, 0];
+            return [parentOffset[0] + p[0] - a[0], parentOffset[1] + p[1] - a[1]];
+        }
+        function checkAdditionalBindings(container, depth, releasing, owningLayer) {
+            var n, k, prop, known, scanLocator;
+            if (depth > 20) { fail("property hierarchy too deep"); }
+            for (n = 1; n <= container.numProperties; n++) {
+                prop = container.property(n);
+                if (!prop) { fail("property unavailable"); }
+                scanLocator = propertyLocator(prop, owningLayer);
+                if (prop.canSetExpression && (isToolOwnedExpression(prop.expression, artifactId) || (releasing && prop.expressionEnabled))) {
+                    known = false;
+                    for (k = 0; k < edits.length; k++) { if (samePropertyLocator(edits[k].locator, scanLocator)) { known = true; } }
+                    if (!known) { fail("unknown dependency or tool binding on an unsupported property"); }
+                }
+                if (prop.numProperties) { checkAdditionalBindings(prop, depth + 1, releasing, owningLayer); }
+            }
+        }
+        root = ctrl.property("ADBE Effect Parade");
+        names = ["Gap", "Padding X", "Padding Y", "Fixed Width", "Text Align", "Pill Width Mode", "Corner Radius", "Fill Color"];
+        for (i = 0; i < names.length; i++) {
+            source = root ? root.property(names[i]) : null;
+            sample(source ? source.property(1) : null, names[i] === "Fill Color" ? 4 : 0, "controller/" + names[i]);
+        }
+        for (i = 0; i < plan.length; i++) {
+            entry = plan[i]; layer = entry.layer;
+            admitLayerSpace(layer, layer.name, true);
+            if (entry.data.role === "sourceLayerBinding") {
+                if (entry.parent !== ctrl || !entry.clearParent) { fail(layer.name + " source parent is outside the recognized template"); }
+                text = positionProp(layer).expression;
+                // Parse only the template's literal reference list, never execute it.
+                match = typeof text === "string" ? /\n  var refs = (\[[^\r\n]*\]);\n  var itemIndex = ([0-9]+);\n/.exec(text) : null;
+                if (!match) { fail(layer.name + " source reference template unavailable"); }
+                refs = []; names = []; cursor = match[1].substring(1, match[1].length - 1);
+                while (cursor.length) {
+                    token = /^\{i:([0-9]+),n:("(?:[^"\\]|\\.)*")}([,]?)/.exec(cursor);
+                    if (!token || Number(token[1]) < 1) { fail(layer.name + " invalid source references"); }
+                    source = { index: Number(token[1]), name: AEToolbox.parseJson(token[2]) };
+                    resolved = null;
+                    for (j = 1; j <= layer.containingComp.numLayers; j++) {
+                        if (layer.containingComp.layer(j).name === source.name) {
+                            if (resolved) { fail("ambiguous source name"); }
+                            resolved = layer.containingComp.layer(j);
+                        }
+                    }
+                    if (!resolved || !member(resolved) || member(resolved).data.role !== "sourceLayerBinding" || resolved.parent !== ctrl) { fail("source reference outside artifact"); }
+                    for (j = 0; j < names.length; j++) { if (names[j] === resolved) { fail("duplicate source reference"); } }
+                    names[names.length] = resolved; refs[refs.length] = source;
+                    cursor = cursor.substring(token[0].length);
+                    if (cursor.length && token[3] !== ",") { fail("invalid source separator"); }
+                }
+                if (names[Number(match[2])] !== layer) { fail("source item identity mismatch"); }
+                expressionEdit(layer, positionProp(layer), featureTextPositionExpression(layerRefsExpression(refs), Number(match[2])), "sourceLayerBinding", -2, layer.name + "/Position");
+            } else if (entry.data.role === "generatedLayer") {
+                source = member(entry.parent);
+                if (!source || source.data.role !== "sourceLayerBinding" || source.parent !== ctrl) { fail(layer.name + " background dependency outside artifact"); }
+                root = layer.property("ADBE Root Vectors Group"); group = root ? root.property(1) : null;
+                vectors = group ? group.property("ADBE Vectors Group") : null;
+                rect = vectors ? vectors.property("ADBE Vector Shape - Rect") : null;
+                fill = vectors ? vectors.property("ADBE Vector Graphic - Fill") : null;
+                expressionEdit(layer, positionProp(layer), templates[0], "generatedLayer", -2, layer.name + "/Position");
+                expressionEdit(layer, rect ? rect.property("ADBE Vector Rect Size") : null, templates[1], "generatedLayer", 2, layer.name + "/Rect Size");
+                expressionEdit(layer, rect ? rect.property("ADBE Vector Rect Roundness") : null, templates[2], "generatedLayer", 0, layer.name + "/Roundness");
+                expressionEdit(layer, fill ? fill.property("ADBE Vector Fill Color") : null, templates[3], "generatedLayer", 4, layer.name + "/Fill Color");
+            } else if (layer !== ctrl || entry.data.role !== "controller") {
+                fail(layer.name + " unsupported Feature member role");
+            }
+        }
+        // Identity does not grant authority: every edit above passed exact template,
+        // artifact/role, protected-history and keyframe admission. Reject ambiguity.
+        for (i = 0; i < edits.length; i++) {
+            for (j = i + 1; j < edits.length; j++) {
+                if (samePropertyLocator(edits[i].locator, edits[j].locator)) { fail("duplicate planned property locator"); }
+            }
+        }
+        for (i = 0; i < plan.length; i++) {
+            entry = plan[i]; layer = entry.layer;
+            checkAdditionalBindings(layer, 0, entry.clearParent, layer);
+            if (!entry.clearParent) { continue; }
+            root = layer.property("ADBE Transform Group");
+            names = ["ADBE Anchor Point", "ADBE Scale", "ADBE Rotate Z"];
+            for (j = 0; j < names.length; j++) {
+                source = root.property(names[j]);
+                if (!source || source.expression) { fail(layer.name + "/" + names[j] + " protected transform expression"); }
+            }
+            if (typeof layer.setParentWithJump !== "function") { fail(layer.name + " cannot release parent without implicit transform writes"); }
+            writable(positionProp(layer), layer.name + "/Position");
+            source = translation(entry.parent, [layer]);
+            text = sample(positionProp(layer), -2, layer.name + "/Position");
+            refs = [text[0] + source[0], text[1] + source[1]];
+            if (text.length === 3) { refs[2] = text[2]; }
+            release = { layer: layer, prop: positionProp(layer), value: refs, size: text.length, label: layer.name + "/comp Position" };
+            releaseLocator = propertyLocator(release.prop, layer);
+            plannedEdit = null;
+            for (j = 0; j < edits.length; j++) {
+                if (samePropertyLocator(edits[j].locator, releaseLocator)) { plannedEdit = edits[j]; }
+            }
+            if (!plannedEdit || plannedEdit.release) { fail("parent release has no unique planned property"); }
+            // Preflight association only: verification uses the already sampled target,
+            // never native wrapper equality or execution-time locator re-resolution.
+            plannedEdit.release = release;
+            releases[releases.length] = release;
+        }
+        return { edits: edits, releases: releases, time: time };
+    }
+
+    function verifyDetachValue(edit, time) {
+        // Fixed before real revalidation: geometry 1e-4 AE units, color channels 1e-6.
+        var actual = edit.prop.valueAtTime(time, false), i, tolerance = edit.size === 4 ? 0.000001 : 0.0001;
+        if (edit.prop.expression || edit.prop.expressionEnabled || edit.prop.expressionError) { throw new Error(edit.label + " expression remains"); }
+        if (edit.size) {
+            if (!actual || actual.length !== edit.size) { throw new Error(edit.label + " verification dimension mismatch"); }
+            for (i = 0; i < edit.size; i++) {
+                if (typeof actual[i] !== "number" || !isFinite(actual[i]) || Math.abs(actual[i] - edit.value[i]) > tolerance) { throw new Error(edit.label + " verification mismatch"); }
+            }
+        } else if (typeof actual !== "number" || !isFinite(actual) || Math.abs(actual - edit.value) > tolerance) { throw new Error(edit.label + " verification mismatch"); }
+    }
+
     AEToolbox.tools.adComponentKit.detachSelectedComponent = function () {
         var comp = getComp();
         var selected;
@@ -2420,6 +2722,15 @@
         var data;
         var layers;
         var i;
+        var j;
+        var item;
+        var raw;
+        var modern;
+        var plan = [];
+        var completed = 0;
+        var writes = 0;
+        var finalization = null;
+        var edit;
         if (!comp) {
             return jsonResult(false, "Open a composition before detaching a component.");
         }
@@ -2428,22 +2739,88 @@
             return jsonResult(false, "Select a component controller first.");
         }
         ctrl = selected[0];
-        data = parseMetadata(ctrl);
-        if (!data || data.role !== "controller") {
-            return jsonResult(false, "Selected layer is not an AE Toolbox component controller.");
+        try {
+            data = parseMetadata(ctrl);
+            if (!data || data.role !== "controller" || typeof data.componentId !== "string" || !data.componentId) {
+                return jsonResult(false, "Selected layer is not an AE Toolbox component controller.");
+            }
+            modern = !!parseArtifactMetadata(ctrl.comment);
+            if (!modern && (data.aetoolbox !== true || data.artifactId || (data.tool && data.tool !== "adComponentKit"))) {
+                throw new Error("Controller ownership is ambiguous.");
+            }
+            layers = componentLayers(comp, data.componentId);
+            for (i = 0; i < layers.length; i++) {
+                item = layers[i];
+                raw = item.layer.comment;
+                if (modern) {
+                    if (!parseArtifactMetadata(raw) || item.data.artifactId !== data.artifactId) { continue; }
+                } else if (parseArtifactMetadata(raw) || item.data.artifactId || item.data.aetoolbox !== true || (item.data.tool && item.data.tool !== "adComponentKit")) {
+                    continue;
+                }
+                if (item.data.componentType !== data.componentType) {
+                    throw new Error("Component type ownership is ambiguous.");
+                }
+                if (item.data.role !== "sourceLayerBinding" && item.data.role !== "itemText" && !shouldDeleteArtifactLayer(item.data.role)) {
+                    throw new Error("Component contains an unsupported role.");
+                }
+                plan[plan.length] = { layer: item.layer, data: item.data, raw: raw,
+                    comment: item.data.role === "sourceLayerBinding" || item.data.role === "itemText" ? restoredDetachComment(item.data) : "",
+                    parent: item.layer.parent, clearParent: false };
+            }
+            // Only release relationships whose parent also belongs to this component.
+            for (i = 0; i < plan.length; i++) {
+                for (j = 0; j < plan.length; j++) {
+                    if (plan[i].parent === plan[j].layer) { plan[i].clearParent = true; }
+                }
+            }
+            if (data.componentType === "featureStack") {
+                finalization = detachFeaturePlan(plan, ctrl, data.artifactId, comp.time);
+            }
+        } catch (err) {
+            return jsonResult(false, "Detach preflight failed; no changes made: " + err.toString());
+        }
+        // Keep the selected controller metadata until the other layers have completed.
+        for (i = 0; i < plan.length; i++) {
+            if (plan[i].layer === ctrl) { item = plan.splice(i, 1)[0]; plan[plan.length] = item; break; }
         }
         app.beginUndoGroup("AE Toolbox Detach Component");
         try {
-            layers = componentLayers(comp, data.componentId);
-            for (i = 0; i < layers.length; i++) {
-                layers[i].layer.parent = null;
-                layers[i].layer.comment = "";
+            if (finalization) {
+                for (i = 0; i < plan.length; i++) {
+                    if (plan[i].layer.comment !== plan[i].raw || plan[i].layer.parent !== plan[i].parent) { throw new Error("Component data changed after preflight."); }
+                }
+                for (i = 0; i < finalization.edits.length; i++) {
+                    edit = finalization.edits[i];
+                    if (edit.prop.expression !== edit.expression || edit.prop.numKeys !== 0) { throw new Error(edit.label + " changed after preflight"); }
+                    edit.prop.expression = ""; writes++;
+                    edit.prop.setValue(edit.value); writes++;
+                }
+                for (i = 0; i < finalization.releases.length; i++) {
+                    edit = finalization.releases[i];
+                    edit.layer.setParentWithJump(null); writes++;
+                    edit.prop.setValue(edit.value); writes++;
+                }
+                for (i = 0; i < finalization.edits.length; i++) {
+                    edit = finalization.edits[i];
+                    // Preflight linked Position to its sampled comp-space target.
+                    verifyDetachValue(edit.release || edit, finalization.time);
+                }
             }
-        } catch (err) {
+            for (i = 0; i < plan.length; i++) {
+                item = plan[i];
+                if (item.layer.comment !== item.raw || item.layer.parent !== (finalization && item.clearParent ? null : item.parent)) {
+                    throw new Error("Component data changed after preflight.");
+                }
+                if (item.clearParent && !finalization) { item.layer.parent = null; writes++; }
+                item.layer.comment = item.comment;
+                writes++;
+                completed++;
+            }
+        } catch (writeError) {
+            return jsonResult(false, "Detach incomplete; completed layers: " + completed + ", confirmed writes: " + writes + ". A failing write may have changed data; no rollback performed: " + writeError.toString());
+        } finally {
             app.endUndoGroup();
-            return jsonResult(false, "Detach component failed: " + err.toString());
         }
-        app.endUndoGroup();
         return jsonResult(true, "Component detached. Layers will no longer refresh as a kit component.");
     };
 

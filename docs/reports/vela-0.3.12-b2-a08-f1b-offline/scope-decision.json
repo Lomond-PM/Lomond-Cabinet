@@ -1,0 +1,6 @@
+{
+  "source": "Manual record of explicit user reply in this conversation; not an AE trace",
+  "question": "Allow preflight association between planned Position edit and release using validated locator; verification uses saved original comp-space target, no execution re-resolution or algorithm/tolerance changes",
+  "answer": "允许补齐 preflight 关联",
+  "implemented": true
+}

@@ -1,0 +1,133 @@
+{
+  "source": "Fields extracted from one actual Host callback; not independent repeat collections",
+  "rawFile": "raw-property-identity.json",
+  "sha256": "be3583866efd988a708e8c832eece60ef388c0ee5792ff0eef9844f0cae778b7",
+  "targetId": "1FBEA019488472ACDE40DB10C37F513F",
+  "classification": "A",
+  "rows": [
+    {
+      "visit": 238,
+      "scanProperty": "layer 213 / 5:ADBE Transform Group / 2:ADBE Position",
+      "plannedMatchByReference": [],
+      "plannedMatchByLocator": [
+        "sourcePosition"
+      ],
+      "matchedContentIdentical": true,
+      "expressionOwnership": {
+        "prefixAtStart": true,
+        "tool": "adComponentKit",
+        "artifactId": "ack_20260910_142239_903961",
+        "kind": "featureStack",
+        "role": "sourceLayerBinding"
+      },
+      "result": "A: SAME_PROPERTY_LOCATOR / REFERENCE_MISMATCH"
+    },
+    {
+      "visit": 393,
+      "scanProperty": "layer 218 / 2:ADBE Root Vectors Group / 1:ADBE Vector Group / 2:ADBE Vectors Group / 1:ADBE Vector Shape - Rect / 2:ADBE Vector Rect Size",
+      "plannedMatchByReference": [],
+      "plannedMatchByLocator": [
+        "generatedRectSize"
+      ],
+      "matchedContentIdentical": true,
+      "expressionOwnership": {
+        "prefixAtStart": true,
+        "tool": "adComponentKit",
+        "artifactId": "ack_20260910_142239_903961",
+        "kind": "featureStack",
+        "role": "generatedLayer"
+      },
+      "result": "A: SAME_PROPERTY_LOCATOR / REFERENCE_MISMATCH"
+    },
+    {
+      "visit": 395,
+      "scanProperty": "layer 218 / 2:ADBE Root Vectors Group / 1:ADBE Vector Group / 2:ADBE Vectors Group / 1:ADBE Vector Shape - Rect / 4:ADBE Vector Rect Roundness",
+      "plannedMatchByReference": [],
+      "plannedMatchByLocator": [
+        "generatedRoundness"
+      ],
+      "matchedContentIdentical": true,
+      "expressionOwnership": {
+        "prefixAtStart": true,
+        "tool": "adComponentKit",
+        "artifactId": "ack_20260910_142239_903961",
+        "kind": "featureStack",
+        "role": "generatedLayer"
+      },
+      "result": "A: SAME_PROPERTY_LOCATOR / REFERENCE_MISMATCH"
+    },
+    {
+      "visit": 400,
+      "scanProperty": "layer 218 / 2:ADBE Root Vectors Group / 1:ADBE Vector Group / 2:ADBE Vectors Group / 2:ADBE Vector Graphic - Fill / 4:ADBE Vector Fill Color",
+      "plannedMatchByReference": [],
+      "plannedMatchByLocator": [
+        "generatedFillColor"
+      ],
+      "matchedContentIdentical": true,
+      "expressionOwnership": {
+        "prefixAtStart": true,
+        "tool": "adComponentKit",
+        "artifactId": "ack_20260910_142239_903961",
+        "kind": "featureStack",
+        "role": "generatedLayer"
+      },
+      "result": "A: SAME_PROPERTY_LOCATOR / REFERENCE_MISMATCH"
+    },
+    {
+      "visit": 463,
+      "scanProperty": "layer 218 / 5:ADBE Transform Group / 2:ADBE Position",
+      "plannedMatchByReference": [],
+      "plannedMatchByLocator": [
+        "generatedPosition"
+      ],
+      "matchedContentIdentical": true,
+      "expressionOwnership": {
+        "prefixAtStart": true,
+        "tool": "adComponentKit",
+        "artifactId": "ack_20260910_142239_903961",
+        "kind": "featureStack",
+        "role": "generatedLayer"
+      },
+      "result": "A: SAME_PROPERTY_LOCATOR / REFERENCE_MISMATCH"
+    }
+  ],
+  "statistics": {
+    "properties": 5,
+    "identityPairs": 30,
+    "strictEqualPairs": 0,
+    "sameLocatorAndContentPairs": 30,
+    "selfEqualityControls": 5,
+    "scanToPlannedComparisons": 25,
+    "scanReferenceMatches": 0,
+    "scanUniqueLocatorAndContentMatches": 5,
+    "visited": 610,
+    "uniqueStructuralPaths": 610,
+    "enumerationErrors": 0,
+    "fieldStatuses": {
+      "canSetExpression:OK": 507,
+      "expression:OK": 507,
+      "expressionEnabled:OK": 507,
+      "propertyValueType:OK": 507,
+      "canSetExpression:UNAVAILABLE": 103,
+      "expression:UNAVAILABLE": 103,
+      "expressionEnabled:UNAVAILABLE": 103,
+      "propertyValueType:UNAVAILABLE": 103
+    }
+  },
+  "snapshotComparison": {
+    "before": "before.json",
+    "after": "after.json",
+    "method": "deep strict comparison of decoded raw snapshot fields",
+    "equal": true
+  },
+  "productionConditionReview": {
+    "source": "host/tools/adComponentKit.jsx::checkAdditionalBindings/isToolOwnedExpression",
+    "facts": [
+      "Production checks canSetExpression and signed expression prefix/tool/artifact, or enabled expression when releasing the parent.",
+      "Signature parsing here records existing comment header first-values/occurrences only; no expression is executed or rewritten.",
+      "An empty expression cannot carry the required prefix/tool/artifact signature; there is no separate property-metadata binding branch in this production scan.",
+      "All 610 visited nodes retained, including empty/disabled and unavailable expression fields; none are silently treated as a tool binding."
+    ],
+    "decisionBoundary": "This diagnoses structure and reference comparisons. It does not execute or replace production admission and does not rerun Detach."
+  }
+}

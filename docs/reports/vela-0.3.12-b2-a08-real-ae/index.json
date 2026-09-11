@@ -1,0 +1,88 @@
+{
+  "stage": "A08 limited real AE acceptance",
+  "status": "FAIL: Feature Stack expression correctness blocker; not TARGETED_ACCEPTED",
+  "summary": "summary.json",
+  "checks": "checks.txt",
+  "notes": [
+    "All original callback records preserved; first contaminated Grid Undo not overwritten or relabeled as clean.",
+    "No captured screenshots; UI/Undo user confirmations are separately attributed.",
+    "Local .tmp transport only transmits CDP requests. Actual CEP/Host commands are stored verbatim in corresponding response records."
+  ],
+  "retention": {
+    "task": "A08-H0",
+    "changed": "Index only; retained historical summaries, callbacks, comparisons and confirmations keep original bytes. Phase status/counts above are historical, not recertified by H0.",
+    "currentAcceptance": "TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+    "archiveWorkspaceRelative": ".tmp/vela-evidence/0.3.12/a08/h0-20260911",
+    "archiveManifest": "manifest.json",
+    "originalIndex": {
+      "path": "docs/reports/vela-0.3.12-b2-a08-real-ae/index.json",
+      "sha256": "d9859e487b91287b1bb33395c236e46dfd0c34f09e700c625a42dedd54360e39"
+    },
+    "referencePolicy": "Historical filenames, command strings, JSON pointers and checksums retain their original meaning. Files absent from the retained set resolve as archiveWorkspaceRelative + original repository path; bare names resolve against this evidence directory. They are local-only, unavailable in a fresh clone. Original file counts/hashes describe the complete collection, not this retained subset.",
+    "archivedReferences": [
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/ae01-comparison.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/ae01-environment.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/feature-b0.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/feature-b1-user-confirmation.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/feature-b1.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/feature-b2-comparison.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/feature-b2.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/feature-b3.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/grid-b0.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/grid-b1.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/grid-b2-comparison.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/grid-b3-contaminated-read.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/grid-detach-action.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/grid-r2-b2.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/grid-r2-b3.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/grid-r2-detach-action.json"
+    ]
+  },
+  "files": [
+    {
+      "file": "feature-detach-action.json",
+      "bytes": 10088,
+      "sha256": "e0748868cfe6caec6b34ac6e79116b3ce75b848009064d84d6ecf5d04eccb18f"
+    },
+    {
+      "file": "feature-expression-failure.json",
+      "bytes": 12319,
+      "sha256": "4eabbb0226587e42aba1e7ea2dff62b775c085caebf05010ce85ae2505b1d7f6"
+    },
+    {
+      "file": "feature-preparation-comparison.json",
+      "bytes": 1062,
+      "sha256": "3dd8cd8b2972774eae7795d0c012b470aed2015a827eb960e039b21598e7d7ad"
+    },
+    {
+      "file": "feature-undo-confirmed.json",
+      "bytes": 426,
+      "sha256": "42b9cc5d107615bfbfd9fdf3fe61f4cba8e83c4c33b23280aa86fed9af08b50a"
+    },
+    {
+      "file": "grid-preparation-comparison.json",
+      "bytes": 2425,
+      "sha256": "151920a2ceec4cb5e3870e5888b9da2bbcee8f24c84cac2f936c85a00c8cec4a"
+    },
+    {
+      "file": "grid-r2-status.json",
+      "bytes": 691,
+      "sha256": "ce67cf9072f7417b90240d328786bb6e7f13fc7a59456291c766265899159f56"
+    },
+    {
+      "file": "grid-r2-undo-confirmed.json",
+      "bytes": 241,
+      "sha256": "c0a103821c8f444469fa8d7579d7585e9dac0c48680d005fc0cc7506029d8c90"
+    },
+    {
+      "file": "grid-undo-user-contamination.json",
+      "bytes": 2540,
+      "sha256": "a268fc26c879d0d6861dfdb7c04d3a03381dd4f4b356fa1a50004312a1fa4018"
+    },
+    {
+      "file": "summary.json",
+      "bytes": 3489,
+      "sha256": "34e0dcc270da37a5331fa372429e65b56f7f0bc6fd074c0ea6740f10d4ff2a0a"
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "stage": "0.3.12-B2 / A08 targeted real AE acceptance",
+  "status": "IMPLEMENTED / OFFLINE PASS / REAL AE ACCEPTANCE FAIL",
+  "targetedAccepted": false,
+  "groups": [
+    {
+      "caseId": "A08-AE-01",
+      "status": "PASS",
+      "scope": "Real CEP target, Extensions junction, full retained Detach function matched; registered Create targets; private helpers not directly compared",
+      "evidence": [
+        "ae01-environment.json",
+        "ae01-comparison.json"
+      ]
+    },
+    {
+      "caseId": "A08-AE-02",
+      "status": "PASS",
+      "scope": "Grid exact nonempty/empty comment restoration, bounded ownership, no layer deletion, user visual and clean R2 Undo to B1",
+      "evidence": [
+        "grid-b0.json",
+        "grid-b1.json",
+        "grid-detach-action.json",
+        "grid-b2-comparison.json",
+        "grid-r2-detach-action.json",
+        "grid-r2-b2.json",
+        "grid-r2-b3.json",
+        "grid-r2-undo-confirmed.json"
+      ]
+    },
+    {
+      "caseId": "A08-AE-03",
+      "status": "FAIL",
+      "scope": "Feature Stack action returned ok true and comment/ownership checks passed; five new expressionError values after parent release; user Undo restored observed B1",
+      "evidence": [
+        "feature-b0.json",
+        "feature-b1.json",
+        "feature-b1-user-confirmation.json",
+        "feature-detach-action.json",
+        "feature-b2.json",
+        "feature-b2-comparison.json",
+        "feature-expression-failure.json",
+        "feature-b3.json",
+        "feature-undo-confirmed.json"
+      ]
+    }
+  ],
+  "counts": {
+    "requiredGroups": 3,
+    "pass": 2,
+    "fail": 1,
+    "notCoveredGroups": 0,
+    "componentJourneys": 2,
+    "retainedDetachCalls": 3,
+    "gridFirstB2Checks": {
+      "passed": 82,
+      "failed": 0
+    },
+    "featureB2Checks": {
+      "passed": 152,
+      "failed": 1,
+      "total": 153
+    },
+    "featureExpressionErrors": 5
+  },
+  "boundaries": [
+    "Grid first Undo provenance contaminated by user inspection: preserved, not accepted as clean Undo. Full B1 was independently recovered before one guarded R2 repeat; R2 clean Undo passed.",
+    "Create UI callbacks not intercepted; actual UI actions and production-created metadata snapshots retained. All three Detach original callbacks retained.",
+    "19 empty effect-mask groups do not expose valueAtTime; read limitation recorded, not product failure.",
+    "Expression strings and observed enabled flags unchanged; expressionError says disabled while observed enabled remains true; no stronger enabled-state claim.",
+    "Missing/damaged recovery, partial setter failures, and legacy constructed metadata remain implementation VM-only.",
+    "Remove loose decoding risk remains open. No Remove/Provider/Agent, global patching or new registration/UI.",
+    "Fixed time 0; numeric Undo comparison absolute tolerance 1e-6, text/IDs/parents/expressions exact. Not full dynamic baking or full AE field coverage."
+  ],
+  "integrity": {
+    "filesChecked": 345,
+    "changes": [],
+    "pass": true,
+    "note": "Production/client/implementation tests/frozen architecture/A08 offline files checked against acceptance-start hashes; no offline rerun."
+  },
+  "offline": "Implementation 251 assertions and 186/186 suites preserved and NOT rerun in this acceptance.",
+  "next": "Stop at Feature Stack Detach expression correctness blocker. Separate contract decision and explicit implementation authorization required; no A09 or automatic expression cleanup."
+}

@@ -1,0 +1,53 @@
+{
+  "phase": "A08-F1 limited real AE acceptance",
+  "status": "REAL AE REVALIDATION FAIL",
+  "groups": {
+    "pass": 1,
+    "fail": 1,
+    "notCovered": 2
+  },
+  "counts": {
+    "detachInvocations": 1,
+    "successfulFinalizations": 0,
+    "nativeUndo": 0
+  },
+  "retention": {
+    "task": "A08-H0",
+    "changed": "Index only; retained historical summaries, callbacks, comparisons and confirmations keep original bytes. Phase status/counts above are historical, not recertified by H0.",
+    "currentAcceptance": "TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+    "archiveWorkspaceRelative": ".tmp/vela-evidence/0.3.12/a08/h0-20260911",
+    "archiveManifest": "manifest.json",
+    "originalIndex": {
+      "path": "docs/reports/vela-0.3.12-b2-a08-f1-real-ae/index.json",
+      "sha256": "72ec4ab5d223802e8ae1a87a7a2563c675ccd0b9bc1d50ca7b0a7e9a012f8683"
+    },
+    "referencePolicy": "Historical filenames, command strings, JSON pointers and checksums retain their original meaning. Files absent from the retained set resolve as archiveWorkspaceRelative + original repository path; bare names resolve against this evidence directory. They are local-only, unavailable in a fresh clone. Original file counts/hashes describe the complete collection, not this retained subset.",
+    "archivedReferences": [
+      "docs/reports/vela-0.3.12-b2-a08-f1-real-ae/ae01-comparison.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1-real-ae/ae01-environment.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1-real-ae/ae01-inventory.json"
+    ]
+  },
+  "files": [
+    {
+      "file": "feature-normal-detach-action.json",
+      "bytes": 7663,
+      "sha256": "7e08dd4ebdcde8018582e5ea443160e428f232935c5d5f0c53f15fa200065d57"
+    },
+    {
+      "file": "feature-normal-refusal-comparison.json",
+      "bytes": 1547,
+      "sha256": "1027232471b3ca39bda25aa802dc74a372c8eb87ebbdf73f79f5099ed5207200"
+    },
+    {
+      "file": "feature-normal-refusal-flags.json",
+      "bytes": 4190,
+      "sha256": "1bfb4a106874f866f5d25d29375b87adecfc12611f4e4f87b12821d1385061e2"
+    },
+    {
+      "file": "summary.json",
+      "bytes": 3072,
+      "sha256": "910c1ae8c6794750165c16bd0409b7f1c56047fc019703af6ccdcebddc77d26a"
+    }
+  ]
+}

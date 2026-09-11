@@ -1,8 +1,9 @@
 # Vela / Lomond Cabinet — Canonical Product Roadmap
 
 **Planning revision: R1-2026-09-09**
-**状态：R1 与 0.3.12-A0 文档规划已合并 dev；A0 COMPLETE。当前 0.3.12-B1 / G-02：TARGETED_ACCEPTED / READY FOR COMMIT / PR，尚未 CLOSED。其余新里程碑 PLANNED / NOT STARTED。**
-G-02实施基线：`787cef2c8315a7d5c8a208dae69473f488d4e559`（PR #203）；[G-02报告](reports/vela-0.3.12-b1-g02-layer-name-unicode.md)。B1/0.3.12未完成。
+**状态：R1 与 0.3.12-A0 文档规划已合并 dev；A0 COMPLETE。当前 0.3.12-B2 / A08：TARGETED_ACCEPTED / READY FOR COMMIT / PR；INTEGRATED_ACCEPTED / CLOSED 留待0.3.12-G。其余新里程碑 PLANNED / NOT STARTED。**
+A08基线：`d7dd7356cccbb637ae01a7e9d0629b9bc184a388`（G-02 PR #204 合并）；[A08报告](reports/vela-0.3.12-b2-a08-detach-comment-ownership.md)。仅修保留Host函数，注册/UI留待后续，B2未完成。
+G-02历史实施基线：`787cef2c8315a7d5c8a208dae69473f488d4e559`（PR #203）；[G-02报告](reports/vela-0.3.12-b1-g02-layer-name-unicode.md)。B1/0.3.12未完成。
 
 **R1 规划核对基线：`dev@b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a`，0.3.11 COMPLETE / SEALED。A11 实施基线：`dev@9dee61ee2d2a3ce2f8dd90107fe5343299063eb8`（PR #202）。A01 历史实施基线：`dev@cd96e0cd65fd485a8f00ac506ee74c0f97fc5e75`。**
 
@@ -123,7 +124,7 @@ A11-F1 已补强公共 parseJson：解码后含 U+0000 的对象成员名在属�
 
 **0.3.12-B1 / A11 — 公共 Host JSON serializer 完整字符串转义。**
 
-[A0 报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)保留已完成的资料/哈希、入口对账、完整源码清单与25项生产复核计划。[A01 阶段报告](reports/vela-0.3.12-b1-a01-host-json-entry.md)记录实际生产模块反例、严格解析修复、复用实施轮1122 focused assertions/183/183 suites PASS（0 skipped），以及六组有界真实 AE 验收与用户风险裁定。A01 已 TARGETED_ACCEPTED 并通过 PR #202 合并 dev，原覆盖裁定保留。当前 [A11 公共 serializer 修复](reports/vela-0.3.12-b1-a11-host-json-serialization.md) 原实施轮2307项断言及184/184离线套件通过（0 skipped），F1轮新增准入并重跑224/1122/2307/27项及185/185套件；上述为A11/F1历史结果，G-02本轮回归另见报告。A11真实复验通过并经PR #203合并dev。当前G-02仅补齐Unicode代理项检查，四组真实验收完成，下一项为用户另行授权的commit / PR。INTEGRATED_ACCEPTED / CLOSED 留待 0.3.12-G，不自动进入B2或UI重构。
+[A0 报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)保留已完成的资料/哈希、入口对账、完整源码清单与25项生产复核计划。[A01 阶段报告](reports/vela-0.3.12-b1-a01-host-json-entry.md)记录实际生产模块反例、严格解析修复、复用实施轮1122 focused assertions/183/183 suites PASS（0 skipped），以及六组有界真实 AE 验收与用户风险裁定。A01 已 TARGETED_ACCEPTED 并通过 PR #202 合并 dev，原覆盖裁定保留。当前 [A11 公共 serializer 修复](reports/vela-0.3.12-b1-a11-host-json-serialization.md) 原实施轮2307项断言及184/184离线套件通过（0 skipped），F1轮新增准入并重跑224/1122/2307/27项及185/185套件；上述为A11/F1历史结果，G-02历史回归另见报告。A11真实复验通过并经PR #203合并dev。G-02已通过PR #204合并dev并保留TARGETED_ACCEPTED。历史A08-F1按实际comp.time定稿，精确模板准入后统一采样、有界2D补偿，421项定向及187/187离线套件通过；原251项/186 suites、Grid PASS/Feature FAIL及Undo保持历史；随后F1装载PASS但普通Feature被collapse准入拒绝，后续两组未执行，保留该历史失败。F1a按Text/Shape与AV来源区分成员及父链准入，历史实施轮1134项定向、251项A08及187/187离线通过；随后R1在额外依赖/属性扫描预检失败，所查B1/B2未变，R2/R3及Undo未执行。D1已确认当前AE五个Property的结构locator一致而wrapper引用不等；F1b现以compId/layerId及完整propertyIndex+matchName路径作私有preflight匹配，并经用户追加授权预先关联Position release校验目标，不在执行阶段重新resolve。F1b 932项定向、重新执行F1/F1a 1134项及A08 251项通过；全量仅运行一次，188 discovered/executed、187 PASS、1 FAIL、0 skip，唯一失败为i18n生成报告过期，原脚本更新后该suite单独46项PASS，生产/测试未再变更；不表述为全量188/188 PASS。以上为F1b实施轮离线事实，本次实机未重跑。2026-09-11正常装载后，R1正常Feature、R2非零t=1秒定稿、R3原Grid小回验及三次用户原生Undo均PASS；独立B3所查字段均恢复B1。A08（含F1/F1a/F1b）现为TARGETED_ACCEPTED / READY FOR COMMIT / PR，仅覆盖普通2D、已识别类型/完整Feature模板和受支持平移父链的当前帧定稿；Detach注册/UI未交付，未来接入仍需回验。INTEGRATED_ACCEPTED / CLOSED留待0.3.12-G，B2/0.3.12未完成，不进入A09。注册/UI留待后续。INTEGRATED_ACCEPTED / CLOSED 留待 0.3.12-G，不自动进入A09或UI重构。
 
 A01 已实施并获有界验收接受，其剩余覆盖限制保留至 0.3.12-G 重新裁定；A11含F1已完成有界真实复验并TARGETED_ACCEPTED；整个 B1/0.3.12 未完成，其余生产修复与后续重构未由本切片实施。实际开发遵循 focused branch → 实施/回归 → AE/CEP → 用户 commit/push → PR 到 dev；正式版本发布另行处理。
 

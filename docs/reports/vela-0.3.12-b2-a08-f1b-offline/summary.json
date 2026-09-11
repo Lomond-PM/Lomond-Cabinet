@@ -1,0 +1,41 @@
+{
+  "phase": "A08-F1b",
+  "status": "F1b IMPLEMENTED / OFFLINE PASS / REAL AE REVALIDATION PENDING",
+  "baseline": "d7dd7356cccbb637ae01a7e9d0629b9bc184a388",
+  "branch": "fix/ad-component-detach-a08-0.3.12",
+  "focusedAssertions": 932,
+  "recordedCases": 105,
+  "finalizeAssertions": 1134,
+  "a08Assertions": 251,
+  "hostRegistryAssertions": 27,
+  "gridHostAssertions": 120,
+  "gridRefreshAssertions": 106,
+  "full": {
+    "runCount": 1,
+    "discovered": 188,
+    "executed": 188,
+    "passed": 187,
+    "failed": 1,
+    "skipped": 0,
+    "failedSuite": "test-generated-report-guard.js",
+    "remediation": "Original generator refreshed i18n usage report; standalone failed-suite rerun passed 46 assertions. No code/test changes after full run; no second full run. Not a raw 188/188 full PASS."
+  },
+  "finalGate": "OFFLINE PASS after sole generated-report failure remedied",
+  "history": {
+    "files": 160,
+    "byteUnchanged": true,
+    "threeFeatureRealFailuresRetained": true,
+    "D1NotRepeated": true
+  },
+  "scopeDecision": "scope-decision.json",
+  "limits": [
+    "Synthetic Property wrappers/field hierarchy and expression/parent values, not AE rendering/Undo",
+    "Original five property classes, current-frame and supported 2D translation chains only",
+    "No public locator export or execution-time resolution; no A09",
+    "Remove malformed restoration risk still unresolved; no registry/UI Detach"
+  ],
+  "realAE": "NOT RUN; R1/R2/R3 pending",
+  "targetedAccepted": false,
+  "readyForCommitPR": false,
+  "gitWrites": false
+}

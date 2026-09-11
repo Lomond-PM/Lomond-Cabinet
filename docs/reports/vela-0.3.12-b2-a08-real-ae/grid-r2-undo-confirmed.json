@@ -1,0 +1,9 @@
+{
+  "source": "user confirmation and independent Host read",
+  "quote": "已撤销，变化如预期",
+  "baseline": "grid-b1.json",
+  "after": "grid-r2-b3.json",
+  "numericAbsoluteTolerance": 0.000001,
+  "differences": [],
+  "pass": true
+}

@@ -1,0 +1,11 @@
+{
+  "source": "user conversation plus independent Host read",
+  "quote": "撤销后表达式恢复正常",
+  "baseline": "feature-b1.json",
+  "after": "feature-b3.json",
+  "numericAbsoluteTolerance": 0.000001,
+  "differences": [],
+  "observedB1Restored": true,
+  "visualScope": "user explicitly confirmed expression recovery; no additional screenshot or separate post-Undo visual claim",
+  "doesNotEraseDetachFailure": true
+}

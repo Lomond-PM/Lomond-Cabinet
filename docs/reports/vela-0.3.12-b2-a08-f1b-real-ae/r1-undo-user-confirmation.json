@@ -1,0 +1,10 @@
+{
+  "recordedAt": "2026-09-11T03:23:23.539Z",
+  "source": "user message, manual native Undo confirmation",
+  "answer": "R1已撤销，画面实际上无变化",
+  "interpretation": "User reports Undo was performed and the image remained visually unchanged; this is separate from Host evidence of binding/expression/property restoration.",
+  "hostEvidence": [
+    "r1-b3.json",
+    "r1-b3-comparison.json"
+  ]
+}

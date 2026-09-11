@@ -1,0 +1,43 @@
+{
+  "phase": "A08-F1a targeted real AE revalidation",
+  "status": "REAL AE REVALIDATION FAIL",
+  "summary": "summary.json",
+  "retention": {
+    "task": "A08-H0",
+    "changed": "Index only; retained historical summaries, callbacks, comparisons and confirmations keep original bytes. Phase status/counts above are historical, not recertified by H0.",
+    "currentAcceptance": "TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+    "archiveWorkspaceRelative": ".tmp/vela-evidence/0.3.12/a08/h0-20260911",
+    "archiveManifest": "manifest.json",
+    "originalIndex": {
+      "path": "docs/reports/vela-0.3.12-b2-a08-f1a-real-ae/index.json",
+      "sha256": "367ccaeb18e86f6be42654d43ac93805808c2e5b427b8d374101ae6e76a338b3"
+    },
+    "referencePolicy": "Historical filenames, command strings, JSON pointers and checksums retain their original meaning. Files absent from the retained set resolve as archiveWorkspaceRelative + original repository path; bare names resolve against this evidence directory. They are local-only, unavailable in a fresh clone. Original file counts/hashes describe the complete collection, not this retained subset.",
+    "archivedReferences": [
+      "docs/reports/vela-0.3.12-b2-a08-f1a-real-ae/environment.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1a-real-ae/load-comparison.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1a-real-ae/r1-b1-user.png",
+      "docs/reports/vela-0.3.12-b2-a08-f1a-real-ae/r1-b1.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1a-real-ae/r1-b2.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1a-real-ae/r1-before-user-confirmation.json"
+    ],
+    "childIndex": "d1-property-identity/index.json"
+  },
+  "files": [
+    {
+      "file": "r1-detach-action.json",
+      "bytes": 7716,
+      "sha256": "32b072e124237bb25ff0560107b9579d133ce31b0ef9a967dc63518ae30d0347"
+    },
+    {
+      "file": "r1-refusal-analysis.json",
+      "bytes": 7025,
+      "sha256": "72560cee9e053a10d6af69145abd26da305d6908212b83dd5cd2858858153e9a"
+    },
+    {
+      "file": "summary.json",
+      "bytes": 2246,
+      "sha256": "9fda0fea358ea1ae11806ca0a189e9eb45152080028ef19752730e99c005b844"
+    }
+  ]
+}
