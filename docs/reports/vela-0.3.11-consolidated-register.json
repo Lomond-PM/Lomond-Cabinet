@@ -4,7 +4,7 @@
   "baseline_repository": "Lomond-PM/Lomond-Cabinet",
   "baseline_commit": "b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a",
   "new_plan_not_implemented": false,
-  "implementation_scope": "A01、A11/F1、G-02 已 TARGETED_ACCEPTED 并合并 dev，原覆盖边界保留；A08（含F1/F1a/F1b）保留Host Detach经R1/R2/R3及用户Undo定向实机接受，TARGETED_ACCEPTED / READY FOR COMMIT / PR；仅覆盖声明的普通2D/类型/模板/平移父链与当前帧契约，整合关闭留待0.3.12-G；三次历史Feature失败和Grid/Undo证据保留，注册/UI留待后续；B2/0.3.12未完成",
+  "implementation_scope": "当前A09（M1、M2/F1）TARGETED_ACCEPTED — AE26.0x67 / READY FOR COMMIT / PR；见docs/reports/vela-0.3.12-b2-a09-coordinate-space.md；26.3x87跨版本DEFERRED，INTEGRATED_ACCEPTED/CLOSED留待0.3.12-G，不自动开始下一项。A01、A11/F1、G-02 已 TARGETED_ACCEPTED 并合并 dev，原覆盖边界保留；A09开始前记录：A08（含F1/F1a/F1b）保留Host Detach经R1/R2/R3及用户Undo定向实机接受，TARGETED_ACCEPTED / READY FOR COMMIT / PR；仅覆盖声明的普通2D/类型/模板/平移父链与当前帧契约，整合关闭留待0.3.12-G；三次历史Feature失败和Grid/Undo证据保留，注册/UI留待后续；B2/0.3.12未完成",
   "remote_modified": false,
   "inherited_probes_rerun_in_this_task": false,
   "counts": {
@@ -499,7 +499,24 @@
       "description": "旧路径 toComp 失败后直接使用局部点，另一条背景路径则返回 null；严格 Grid 路径已有 sourcePointToComp 对照。",
       "closure": "定义受支持的坐标空间与 Host 转换；不可转换明确失败；父级、旋转、缩放、时间、2D/3D 和表达式条件做矩阵。",
       "guard": "不声称所有 AE 都没有 toComp；禁止只替换 API 名字而不验证空间语义。",
-      "status": "OPEN — inherited finding / new planning item; not fixed in this deliverable"
+      "status": "TARGETED_ACCEPTED",
+      "readiness": "READY FOR COMMIT / PR",
+      "acceptance": {
+        "decision_date": "2026-09-12",
+        "authority": "用户A09-M1/M2/F1定向验收及提交前文档收束裁定",
+        "report": "docs/reports/vela-0.3.12-b2-a09-coordinate-space.md",
+        "host_version": "AE26.0x67",
+        "targeted_scope": "M1与M2/F1均已定向接受；M1c R1-R8 PASS；M2七组PASS、六次原生Undo、3451所查字段零差异",
+        "offline_evidence": "最新全量为M2-F1实施轮192 discovered/executed/PASS，0 FAIL/skip；实机轮和本轮文档收束未重跑",
+        "support_envelope": "ACK Feature auto/center与既有有界2D/平移父链；TBB Text source-local padding、Shape/AV visual comp-space padding及既有静态2D/类型/父链规则",
+        "coverage_limits": [
+          "AE26.3x87 CROSS-VERSION REVALIDATION DEFERRED",
+          "AV fallback REAL AE NOT COVERED；已有正式离线覆盖保持",
+          "不泛化任意Transform、parent rotation/scale chain、复杂Shape或其他AE版本"
+        ],
+        "integration_gate": "0.3.12-G：INTEGRATED_ACCEPTED / CLOSED待裁定；B2/0.3.12未完成",
+        "historical_evidence": "原26.3旧M1/toComp FAIL、26.0 M1b V1几何FAIL、M2 R1 identity误拒及2555字段零差异均保留于主报告，不改写历史"
+      }
     },
     {
       "id": "A10",

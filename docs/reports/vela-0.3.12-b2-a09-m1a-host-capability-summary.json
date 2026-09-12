@@ -1,0 +1,381 @@
+{
+  "apiCapabilityMatrix": {
+    "host": "AE 26.0x67 (this workstation); AE 26.3x87 NOT COVERED in M1a",
+    "rows": [
+      {
+        "type": "Text 0deg",
+        "matchName": "ADBE Text Layer",
+        "sourcePointToComp": "function",
+        "toComp": "undefined",
+        "compPointToSource": "function",
+        "fromComp": "undefined",
+        "sourcePointToCompCalls": 15,
+        "threw": 0,
+        "returnDimensions": 2,
+        "finiteXY": true,
+        "repeatStable": true
+      },
+      {
+        "type": "Text 8deg",
+        "matchName": "ADBE Text Layer",
+        "sourcePointToComp": "function",
+        "toComp": "undefined",
+        "compPointToSource": "function",
+        "fromComp": "undefined",
+        "sourcePointToCompCalls": 15,
+        "threw": 0,
+        "returnDimensions": 2,
+        "finiteXY": true,
+        "repeatStable": true
+      },
+      {
+        "type": "Shape",
+        "matchName": "ADBE Vector Layer",
+        "sourcePointToComp": "function",
+        "toComp": "undefined",
+        "compPointToSource": "function",
+        "fromComp": "undefined",
+        "sourcePointToCompCalls": 15,
+        "threw": 0,
+        "returnDimensions": 2,
+        "finiteXY": true,
+        "repeatStable": true
+      },
+      {
+        "type": "PNG FootageItem",
+        "matchName": "ADBE AV Layer",
+        "sourcePointToComp": "function",
+        "toComp": "undefined",
+        "compPointToSource": "function",
+        "fromComp": "undefined",
+        "sourcePointToCompCalls": 15,
+        "threw": 0,
+        "returnDimensions": 2,
+        "finiteXY": true,
+        "repeatStable": true
+      },
+      {
+        "type": "precomp CompItem",
+        "matchName": "ADBE AV Layer",
+        "sourcePointToComp": "function",
+        "toComp": "undefined",
+        "compPointToSource": "function",
+        "fromComp": "undefined",
+        "sourcePointToCompCalls": 15,
+        "threw": 0,
+        "returnDimensions": 2,
+        "finiteXY": true,
+        "repeatStable": true
+      }
+    ],
+    "inverseApis": "typeof only; neither inverse API called"
+  },
+  "independentNumericalComparisons": {
+    "toleranceAEUnit": 0.0001,
+    "formula": "R(rotation) * diag(scale/100) * (localPoint - Anchor) + Position; translation-only parent adds actual parent Position",
+    "cases": [
+      {
+        "case": "A09_M1A_TEXT_0",
+        "time": 0,
+        "points": 5,
+        "calls": 15,
+        "maxAbsError": 0.000032520294098503655,
+        "representative": {
+          "localPoint": [
+            -0.4000078253448,
+            -13.9600009098649
+          ],
+          "expected": [
+            282.6399890445173,
+            141.2359991811216
+          ],
+          "actual": [
+            282.639984130859,
+            141.235992431641
+          ]
+        },
+        "pass": true
+      },
+      {
+        "case": "A09_M1A_TEXT_8",
+        "time": 0,
+        "points": 5,
+        "calls": 15,
+        "maxAbsError": 0.000027081068537881947,
+        "representative": {
+          "localPoint": [
+            -1.38698479533195,
+            -22.3570013642311
+          ],
+          "expected": [
+            600.2143987809657,
+            320.55415052048374
+          ],
+          "actual": [
+            600.214416503906,
+            320.554138183594
+          ]
+        },
+        "pass": true
+      },
+      {
+        "case": "A09_M1A_SHAPE",
+        "time": 0,
+        "points": 5,
+        "calls": 15,
+        "maxAbsError": 0.000012207031033995008,
+        "representative": {
+          "localPoint": [
+            0,
+            0
+          ],
+          "expected": [
+            267.9,
+            254.05
+          ],
+          "actual": [
+            267.899993896484,
+            254.050003051758
+          ]
+        },
+        "pass": true
+      },
+      {
+        "case": "A09_M1A_AV_PNG",
+        "time": 0,
+        "points": 5,
+        "calls": 15,
+        "maxAbsError": 0.000012207031033995008,
+        "representative": {
+          "localPoint": [
+            32,
+            16
+          ],
+          "expected": [
+            437.6,
+            219.5
+          ],
+          "actual": [
+            437.600006103516,
+            219.5
+          ]
+        },
+        "pass": true
+      },
+      {
+        "case": "A09_M1A_PRECOMP",
+        "time": 0,
+        "points": 5,
+        "calls": 15,
+        "maxAbsError": 0.000012207031033995008,
+        "representative": {
+          "localPoint": [
+            80,
+            45
+          ],
+          "expected": [
+            625.8,
+            365.2
+          ],
+          "actual": [
+            625.799987792969,
+            365.200012207031
+          ]
+        },
+        "pass": true
+      },
+      {
+        "case": "A09_M1A_PARENT_CHILD",
+        "time": 0,
+        "points": 5,
+        "calls": 15,
+        "maxAbsError": 0.000012598931562024518,
+        "representative": {
+          "localPoint": [
+            -0.64000031352043,
+            -22.3360014557838
+          ],
+          "expected": [
+            327.94999960809946,
+            203.33119883537296
+          ],
+          "actual": [
+            327.950012207031,
+            203.331192016602
+          ]
+        },
+        "pass": true
+      },
+      {
+        "case": "A09_M1A_PARENT_CHILD",
+        "time": 0,
+        "points": 5,
+        "calls": 15,
+        "maxAbsError": 0.000012598931562024518,
+        "representative": {
+          "localPoint": [
+            -0.64000031352043,
+            -22.3360014557838
+          ],
+          "expected": [
+            327.94999960809946,
+            203.33119883537296
+          ],
+          "actual": [
+            327.950012207031,
+            203.331192016602
+          ]
+        },
+        "pass": true
+      },
+      {
+        "case": "A09_M1A_TIME_CHILD",
+        "time": 0,
+        "points": 1,
+        "calls": 3,
+        "maxAbsError": 0.0000018253925020417228,
+        "representative": {
+          "localPoint": [
+            -0.64000031352043,
+            -22.3360014557838
+          ],
+          "expected": [
+            187.4139996394515,
+            115.06439876258376
+          ],
+          "actual": [
+            187.414001464844,
+            115.064399719238
+          ]
+        },
+        "pass": true
+      },
+      {
+        "case": "A09_M1A_TIME_CHILD",
+        "time": 1,
+        "points": 1,
+        "calls": 3,
+        "maxAbsError": 0.00000667273980070604,
+        "representative": {
+          "localPoint": [
+            -0.64000031352043,
+            -22.3360014557838
+          ],
+          "expected": [
+            447.4139996394515,
+            285.0643987625838
+          ],
+          "actual": [
+            447.414001464844,
+            285.064392089844
+          ]
+        },
+        "pass": true
+      }
+    ],
+    "totalPoints": 37,
+    "totalCalls": 111,
+    "maxAbsError": 0.000032520294098503655,
+    "scope": "Ordinary 2D, no expressions, unseparated Position; exact samples only. Preliminary Text gates are outside these totals."
+  },
+  "parentConclusion": {
+    "result": "PASS",
+    "parent": {
+      "anchor": [
+        0,
+        0,
+        0
+      ],
+      "position": [
+        90,
+        60,
+        0
+      ],
+      "scale": [
+        100,
+        100,
+        100
+      ],
+      "rotation": 0,
+      "threeD": false
+    },
+    "child": {
+      "anchor": [
+        17,
+        11,
+        0
+      ],
+      "positionBefore": [
+        350,
+        230,
+        0
+      ],
+      "positionAfter": [
+        260,
+        170,
+        0
+      ],
+      "scale": [
+        125,
+        80,
+        100
+      ],
+      "rotation": 0
+    },
+    "maxAbsError": 0.000012598931562024518,
+    "scope": "One translation-only external parent. Actual AE automatic reparent compensation read back; no corrective fixture rewrite. No rotated/scaled-parent coverage."
+  },
+  "timeConclusion": {
+    "result": "PASS",
+    "localPoint": [
+      -0.64000031352043,
+      -22.3360014557838
+    ],
+    "samples": [
+      {
+        "compTime": 0,
+        "positionValueAtTime": [
+          210,
+          140,
+          0
+        ],
+        "actual": [
+          187.414001464844,
+          115.064399719238
+        ],
+        "expected": [
+          187.4139996394515,
+          115.06439876258376
+        ],
+        "maxAbsError": 0.0000018253925020417228
+      },
+      {
+        "compTime": 1,
+        "positionValueAtTime": [
+          470,
+          310,
+          0
+        ],
+        "actual": [
+          447.414001464844,
+          285.064392089844
+        ],
+        "expected": [
+          447.4139996394515,
+          285.0643987625838
+        ],
+        "maxAbsError": 0.00000667273980070604
+      }
+    ],
+    "originalCompTime": 0,
+    "restoredCompTime": 0,
+    "scope": "Separate unparented animated Text, Position keys at 0 and 1 seconds. Does not establish other types, intermediate times, expressions, or parent+time combination."
+  },
+  "classification": {
+    "result": "SOURCE_POINT_TO_COMP_VERIFIED",
+    "host": "26.0x67",
+    "stop": "A09-M1a HOST CAPABILITY PROBED / ADAPTER DECISION READY",
+    "priorHost263x87": "NOT COVERED; previous M1 REAL AE REVALIDATION FAIL remains",
+    "scope": "Capability/2D semantics only; no adapter implemented, no product Action acceptance, no all-version or all-type admission."
+  }
+}

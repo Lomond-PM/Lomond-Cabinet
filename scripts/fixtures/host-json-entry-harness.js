@@ -5,13 +5,14 @@ const vm = require("vm");
 const HOST = path.resolve(__dirname, "../../host");
 
 // Expand complete production includes in place; no function extraction or copies.
-function expand(file) {
-    return fs.readFileSync(file, "utf8")
+function expand(file, transformSource) {
+    const source = fs.readFileSync(file, "utf8");
+    return (transformSource ? transformSource(source, file) : source)
         .replace(/^#target.*$/gm, "")
-        .replace(/^#include "([^"]+)".*$/gm, (_, relative) => expand(path.resolve(path.dirname(file), relative)));
+        .replace(/^#include "([^"]+)".*$/gm, (_, relative) => expand(path.resolve(path.dirname(file), relative), transformSource));
 }
 
-function makeHost(mode) {
+function makeHost(mode, options = {}) {
     const loaded = [];
     const writes = [];
     function File(file) {
@@ -41,9 +42,9 @@ function makeHost(mode) {
     if (mode === "missing-json") vm.runInContext("JSON = undefined;", sandbox);
     sandbox.$.evalFile = file => {
         loaded.push(path.relative(HOST, file.fsName));
-        vm.runInContext(expand(file.fsName), sandbox, { filename: file.fsName, timeout: 1000 });
+        vm.runInContext(expand(file.fsName, options.transformSource), sandbox, { filename: file.fsName, timeout: 1000 });
     };
-    vm.runInContext(expand(path.join(HOST, "index.jsx")), sandbox, { filename: "host/index.jsx (expanded includes)", timeout: 3000 });
+    vm.runInContext(expand(path.join(HOST, "index.jsx"), options.transformSource), sandbox, { filename: "host/index.jsx (expanded includes)", timeout: 3000 });
     function guard(object, label) {
         return new Proxy(object, {
             set(target, key) { writes.push(label + "." + String(key)); throw new Error("Project write forbidden"); },

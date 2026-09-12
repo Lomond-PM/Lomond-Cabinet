@@ -153,7 +153,7 @@ if(!baseline) {
     },unknown);
     rejected('different-full-path-length',h=>{
         const extra=vectors(h).addProperty('ADBE Vector Group').property('ADBE Vectors Group')
-            .property('ADBE Vector Shape - Rect').property('ADBE Vector Rect Size');
+            .addProperty('ADBE Vector Shape - Rect').property('ADBE Vector Rect Size');
         extra.expression=valueField(h,'size').expression;
         ok(extra.propertyDepth!==valueField(h,'size').propertyDepth,'extra ancestor changes full path length');
     },unknown);
@@ -162,7 +162,7 @@ if(!baseline) {
             const root=h.bg.property('ADBE Root Vectors Group'), first=root.property(1);
             const duplicate=root.addProperty('ADBE Vector Group');duplicate.name=first.name;
             const secondVectors=duplicate.property('ADBE Vectors Group');
-            const secondSize=secondVectors.property('ADBE Vector Shape - Rect').property('ADBE Vector Rect Size');
+            const secondSize=secondVectors.addProperty('ADBE Vector Shape - Rect').property('ADBE Vector Rect Size');
             secondSize.expression=valueField(h,'size').expression;
             ok(duplicate.propertyIndex!==first.propertyIndex,'distinct ancestor index, same display/matchName');
         } else {

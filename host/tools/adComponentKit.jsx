@@ -82,59 +82,120 @@
         };
     }
 
-    function getLayerVisualBoundsInComp(layer, time) {
-        var rect = null;
-        var pts;
-        var i;
-        var p;
-        var left = 9999999;
-        var top = 9999999;
-        var right = -9999999;
-        var bottom = -9999999;
+    function measurementError(reason) {
+        // Keep the public action envelope; never depend on a thrown API value for the reason.
+        return new Error("ACK_MEASUREMENT_" + reason);
+    }
 
+    function measurementNumber(value) {
+        return typeof value === "number" && isFinite(value);
+    }
+
+    function requireMeasurementCurrentTime(layer, time) {
+        var comp;
+        var currentTime;
+        // sourcePointToComp uses current comp.time. This absolute seconds epsilon
+        // permits float representation noise only; it is not a frame/geometry tolerance.
+        var timeEpsilon = 1e-9;
+        if (!measurementNumber(time)) { throw measurementError("INVALID_TIME"); }
         try {
-            if (layer.sourceRectAtTime) {
+            comp = layer.containingComp;
+            currentTime = comp.time;
+        } catch (timeError) { throw measurementError("TIME_UNAVAILABLE"); }
+        if (!measurementNumber(currentTime)) { throw measurementError("TIME_UNAVAILABLE"); }
+        if (Math.abs(currentTime - time) > timeEpsilon) { throw measurementError("TIME_MISMATCH"); }
+    }
+
+    function convertMeasurementSourcePointToComp(layer, point, time) {
+        var result;
+        requireMeasurementCurrentTime(layer, time);
+        try {
+            if (typeof layer.sourcePointToComp !== "function") { throw measurementError("TO_COMP_UNAVAILABLE"); }
+            result = layer.sourcePointToComp([point[0], point[1]]);
+        } catch (conversionError) { throw measurementError("TO_COMP_FAILED"); }
+        try {
+            if (!result || !measurementNumber(result.length) || result.length < 2 ||
+                    !measurementNumber(result[0]) || !measurementNumber(result[1])) {
+                throw measurementError("INVALID_COMP_POINT");
+            }
+            return [result[0], result[1]];
+        } catch (pointError) { throw measurementError("INVALID_COMP_POINT"); }
+    }
+
+    function checkedMeasurementBounds(left, top, right, bottom) {
+        var bounds = area(left, top, right, bottom);
+        var keys = ["left", "top", "right", "bottom", "width", "height", "centerX", "centerY"];
+        var i;
+        for (i = 0; i < keys.length; i++) {
+            if (!measurementNumber(bounds[keys[i]])) { throw measurementError("NON_FINITE_BOUNDS"); }
+        }
+        if (bounds.width <= 0 || bounds.height <= 0) { throw measurementError("ZERO_SIZE_BOUNDS"); }
+        return bounds;
+    }
+
+    function readMeasurementRect(layer, time) {
+        var rect = null;
+        var width;
+        var height;
+        try {
+            if (!layer) { throw measurementError("SOURCE_UNAVAILABLE"); }
+            if (typeof layer.sourceRectAtTime === "function") {
                 rect = layer.sourceRectAtTime(time, false);
             }
-        } catch (err1) {
-            rect = null;
-        }
-
-        if (rect && rect.width > 0 && rect.height > 0) {
-            pts = [
-                [rect.left, rect.top],
-                [rect.left + rect.width, rect.top],
-                [rect.left + rect.width, rect.top + rect.height],
-                [rect.left, rect.top + rect.height]
-            ];
-        } else {
-            pts = [
-                [0, 0],
-                [layer.width || 0, 0],
-                [layer.width || 0, layer.height || 0],
-                [0, layer.height || 0]
-            ];
-        }
-
-        for (i = 0; i < pts.length; i++) {
+        } catch (sourceError) { throw measurementError("SOURCE_RECT_UNREADABLE"); }
+        if (rect === null || typeof rect === "undefined") {
+            // Only an AV source's explicit dimensions have the retained rectangular fallback.
+            // A thrown read or an existing invalid rect is never replaced with another geometry.
             try {
-                p = layer.toComp(pts[i]);
-            } catch (err2) {
-                p = pts[i];
-            }
+                if (layer.matchName !== "ADBE AV Layer" || !layer.source || layer.nullLayer) {
+                    throw measurementError("SOURCE_RECT_UNAVAILABLE");
+                }
+                width = layer.width;
+                height = layer.height;
+            } catch (sizeError) { throw measurementError("SOURCE_RECT_UNAVAILABLE"); }
+            rect = { left: 0, top: 0, width: width, height: height };
+        }
+        try {
+            rect = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+        } catch (rectError) { throw measurementError("SOURCE_RECT_UNREADABLE"); }
+        if (!measurementNumber(rect.left) || !measurementNumber(rect.top) ||
+                !measurementNumber(rect.width) || !measurementNumber(rect.height) ||
+                !measurementNumber(rect.left + rect.width) || !measurementNumber(rect.top + rect.height)) {
+            throw measurementError("INVALID_SOURCE_RECT");
+        }
+        if (rect.width <= 0 || rect.height <= 0) { throw measurementError("ZERO_SIZE_SOURCE_RECT"); }
+        return rect;
+    }
+
+    function measureLayerVisualBoundsInComp(layer, time) {
+        var rect;
+        var pts;
+        var converted = [];
+        var i;
+        var p;
+        var left;
+        var top;
+        var right;
+        var bottom;
+        requireMeasurementCurrentTime(layer, time);
+        rect = readMeasurementRect(layer, time);
+        pts = [[rect.left, rect.top], [rect.left + rect.width, rect.top],
+            [rect.left + rect.width, rect.top + rect.height], [rect.left, rect.top + rect.height]];
+        for (i = 0; i < pts.length; i++) {
+            p = convertMeasurementSourcePointToComp(layer, pts[i], time);
+            converted[i] = p;
+            if (i === 0) { left = right = p[0]; top = bottom = p[1]; }
             left = Math.min(left, p[0]);
             top = Math.min(top, p[1]);
             right = Math.max(right, p[0]);
             bottom = Math.max(bottom, p[1]);
         }
+        return { rect: rect, points: converted, bounds: checkedMeasurementBounds(left, top, right, bottom) };
+    }
 
-        if (left === 9999999) {
-            left = 0;
-            top = 0;
-            right = 0;
-            bottom = 0;
-        }
-        return area(left, top, right, bottom);
+    function getLayerVisualBoundsInComp(layer, time) {
+        // Success shape is unchanged. Failure now throws instead of manufacturing comp bounds.
+        return measureLayerVisualBoundsInComp(layer, time).bounds;
     }
 
     function gridFiniteNumber(value) {
@@ -399,12 +460,17 @@
         }
     }
 
-    function getTextVisualBounds2D(layer, time) {
-        var rect = layer.sourceRectAtTime(time, false);
+    function getTextVisualBounds2D(layer, time, measuredRect) {
+        var rect = measuredRect || readMeasurementRect(layer, time);
         var tr = layer.property("ADBE Transform Group");
         var pos = tr.property("ADBE Position").value;
         var anchor = tr.property("ADBE Anchor Point").value;
         var scale = tr.property("ADBE Scale").value;
+        if (!pos || !anchor || !scale || !measurementNumber(pos[0]) || !measurementNumber(pos[1]) ||
+                !measurementNumber(anchor[0]) || !measurementNumber(anchor[1]) ||
+                !measurementNumber(scale[0]) || !measurementNumber(scale[1])) {
+            throw measurementError("INVALID_SIMPLE_2D_TRANSFORM");
+        }
         var left = pos[0] + (rect.left - anchor[0]) * scale[0] / 100;
         var top = pos[1] + (rect.top - anchor[1]) * scale[1] / 100;
         var right = left + rect.width * scale[0] / 100;
@@ -419,7 +485,7 @@
             bottom = top - bottom;
             top = top - bottom;
         }
-        return area(left, top, right, bottom);
+        return checkedMeasurementBounds(left, top, right, bottom);
     }
 
     function canUseTextBounds2D(layer) {
@@ -435,12 +501,12 @@
         try {
             rot = tr.property("ADBE Rotate Z").value;
         } catch (err) {
-            rot = 0;
+            return false;
         }
         return Math.abs(rot) < 0.001;
     }
 
-    function unionTextBounds2D(layers, comp) {
+    function unionTextBounds2D(layers, comp, measurements) {
         var i;
         var b;
         var left = 999999;
@@ -448,19 +514,18 @@
         var right = -999999;
         var bottom = -999999;
         for (i = 0; i < layers.length; i++) {
-            b = getTextVisualBounds2D(layers[i], comp.time);
+            b = getTextVisualBounds2D(layers[i], comp.time, measurements && measurements[i].measurement.rect);
+            if (i === 0) { left = b.left; top = b.top; right = b.right; bottom = b.bottom; }
             left = Math.min(left, b.left);
             top = Math.min(top, b.top);
             right = Math.max(right, b.right);
             bottom = Math.max(bottom, b.bottom);
         }
-        if (left === 999999) {
-            return area(0, 0, 0, 0);
-        }
-        return area(left, top, right, bottom);
+        if (!layers.length) { throw measurementError("NO_SOURCE_LAYERS"); }
+        return checkedMeasurementBounds(left, top, right, bottom);
     }
 
-    function unionOriginalFeatureTextBounds(layers, comp) {
+    function unionOriginalFeatureTextBounds(layers, comp, measurements) {
         var i;
         var allSimple2D = true;
         var warning = "";
@@ -472,9 +537,9 @@
             }
         }
         if (allSimple2D) {
-            bounds = unionTextBounds2D(layers, comp);
+            bounds = unionTextBounds2D(layers, comp, measurements);
         } else {
-            bounds = unionBoundsForLayers(layers, comp);
+            bounds = unionBoundsForLayers(layers, comp, measurements);
             warning = "Used comp-space bounds fallback for parented, rotated, or non-simple text layers.";
         }
         return {
@@ -582,7 +647,7 @@
         moveLayerBoundsCenterTo(layer, oldCenter.centerX, oldCenter.centerY);
     }
 
-    function centerTextAnchor(layer, time) {
+    function centerTextAnchor(layer, time, measuredRect) {
         var tr = layer.property("ADBE Transform Group");
         var anchor = tr ? tr.property("ADBE Anchor Point") : null;
         var rect;
@@ -590,7 +655,7 @@
         if (!anchor || !layer.sourceRectAtTime) {
             return;
         }
-        rect = layer.sourceRectAtTime(time, false);
+        rect = measuredRect || layer.sourceRectAtTime(time, false);
         newAnchor = [rect.left + rect.width / 2, rect.top + rect.height / 2];
         if (anchor.value.length > 2) {
             anchor.setValue([newAnchor[0], newAnchor[1], anchor.value[2]]);
@@ -967,6 +1032,7 @@
         var fill;
         var tr;
         layer.name = name;
+        layer.threeDLayer = false;
         root = layer.property("ADBE Root Vectors Group");
         group = root.addProperty("ADBE Vector Group");
         group.name = "Pill";
@@ -981,6 +1047,8 @@
         tr = layer.property("ADBE Transform Group");
         tr.property("ADBE Anchor Point").setValue([0, 0]);
         tr.property("ADBE Position").setValue([0, 0]);
+        tr.property("ADBE Scale").setValue([100, 100]);
+        tr.property("ADBE Rotate Z").setValue(0);
         return layer;
     }
 
@@ -1103,8 +1171,8 @@
         return "[" + refs.join(",") + "]";
     }
 
-    // Shared exact templates: creation and Detach recognize the same property bodies.
-    function featureTextPositionExpression(refs, itemIndex) {
+    // LEGACY/V1: retained byte-for-byte bodies for exact Refresh/Detach recognition.
+    function legacyFeatureTextPositionExpression(refs, itemIndex) {
         return [
             "var ctrl = parent;",
             "if (ctrl) {",
@@ -1202,7 +1270,7 @@
         }
     }
 
-    function featurePillExpressions() {
+    function legacyFeaturePillExpressions() {
         var positionExpression, sizeExpression, roundExpression, colorExpression;
         positionExpression = [
             "var txt = thisLayer.parent;",
@@ -1257,6 +1325,67 @@
         ].join("\n");
 
         return [positionExpression, sizeExpression, roundExpression, colorExpression];
+    }
+
+    // CURRENT/V2: D0 A1 geometry verbatim; only literal refs, version and parameter guard differ.
+    function featureTextPositionExpression(refs, itemIndex) {
+        return [
+            "// ACK_FEATURE_GEOMETRY_V2",
+            "var ctrl=parent;",
+            "if (!ctrl || Number(ctrl.effect(\"Pill Width Mode\")(1))!==0 || Number(ctrl.effect(\"Text Align\")(1))!==1) { throw new Error(\"ACK_FEATURE_UNSUPPORTED_PARAMETERS: auto/center required\"); }",
+            "  var refs = " + refs + ";",
+            "  var itemIndex = " + itemIndex + ";",
+            "  function layerFromRef(ref) {",
+            "    try {",
+            "      var byIndex = thisComp.layer(ref.i);",
+            "      if (byIndex && byIndex.name == ref.n) { return byIndex; }",
+            "    } catch (e1) {}",
+            "    return thisComp.layer(ref.n);",
+            "  }",
+            "  for (var refIndex=0;refIndex<refs.length;refIndex++) { refs[refIndex]=layerFromRef(refs[refIndex]); }",
+            "var gap=ctrl.effect(\"Gap\")(1),py=ctrl.effect(\"Padding Y\")(1);",
+            "function geometry(l){",
+            " var r=l.sourceRectAtTime(time,false),s=l.transform.scale,a=l.transform.anchorPoint,z=l.transform.rotation*Math.PI/180;",
+            " var c=Math.cos(z),n=Math.sin(z),w=r.width*s[0]/100,h=r.height*s[1]/100;",
+            " var x=(r.left+r.width/2-a[0])*s[0]/100,y=(r.top+r.height/2-a[1])*s[1]/100;",
+            " return {height:Math.abs(w*n)+Math.abs(h*c),offset:[c*x-n*y,n*x+c*y]};",
+            "}",
+            "var total=gap*(refs.length-1),preceding=0,own;",
+            "for(var i=0;i<refs.length;i++){var g=geometry(refs[i]),h=g.height+2*py;total+=h;if(i<itemIndex)preceding+=h+gap;if(i===itemIndex)own=g;}",
+            "[-own.offset[0],-total/2+preceding+(own.height+2*py)/2-own.offset[1]];"
+        ].join("\n");
+    }
+
+    function featurePillExpressions() {
+        var legacy = legacyFeaturePillExpressions();
+        return [[
+            "// ACK_FEATURE_GEOMETRY_V2",
+            "var txt=parent;",
+            "var ctrl=txt.parent;",
+            "if (!ctrl || Number(ctrl.effect(\"Pill Width Mode\")(1))!==0 || Number(ctrl.effect(\"Text Align\")(1))!==1) { throw new Error(\"ACK_FEATURE_UNSUPPORTED_PARAMETERS: auto/center required\"); }",
+            "var r=txt.sourceRectAtTime(time,false);",
+            "var q=[txt.toComp([r.left,r.top]),txt.toComp([r.left+r.width,r.top]),txt.toComp([r.left+r.width,r.top+r.height]),txt.toComp([r.left,r.top+r.height])];",
+            "var left=q[0][0],right=left,top=q[0][1],bottom=top;",
+            "for(var i=1;i<4;i++){left=Math.min(left,q[i][0]);right=Math.max(right,q[i][0]);top=Math.min(top,q[i][1]);bottom=Math.max(bottom,q[i][1]);}",
+            "var center=[(left+right)/2,(top+bottom)/2];",
+            "var p=txt.fromComp(center);",
+            "[p[0],p[1]];"
+        ].join("\n"), [
+            "// ACK_FEATURE_GEOMETRY_V2",
+            "var txt=parent;",
+            "var ctrl=txt.parent;",
+            "if (!ctrl || Number(ctrl.effect(\"Pill Width Mode\")(1))!==0 || Number(ctrl.effect(\"Text Align\")(1))!==1) { throw new Error(\"ACK_FEATURE_UNSUPPORTED_PARAMETERS: auto/center required\"); }",
+            "var r=txt.sourceRectAtTime(time,false);",
+            "var q=[txt.toComp([r.left,r.top]),txt.toComp([r.left+r.width,r.top]),txt.toComp([r.left+r.width,r.top+r.height]),txt.toComp([r.left,r.top+r.height])];",
+            "var left=q[0][0],right=left,top=q[0][1],bottom=top;",
+            "for(var i=1;i<4;i++){left=Math.min(left,q[i][0]);right=Math.max(right,q[i][0]);top=Math.min(top,q[i][1]);bottom=Math.max(bottom,q[i][1]);}",
+            "var px=ctrl.effect(\"Padding X\")(1),py=ctrl.effect(\"Padding Y\")(1);",
+            "left-=px;right+=px;top-=py;bottom+=py;",
+            "var p=[thisLayer.fromComp([left,top]),thisLayer.fromComp([right,top]),thisLayer.fromComp([right,bottom]),thisLayer.fromComp([left,bottom])];",
+            "var x0=p[0][0],x1=x0,y0=p[0][1],y1=y0;",
+            "for(var j=1;j<4;j++){x0=Math.min(x0,p[j][0]);x1=Math.max(x1,p[j][0]);y0=Math.min(y0,p[j][1]);y1=Math.max(y1,p[j][1]);}",
+            "[x1-x0,y1-y0];"
+        ].join("\n"), legacy[2], legacy[3]];
     }
 
     function bindFeaturePillToController(layer, artifactId) {
@@ -1525,7 +1654,7 @@
         return jsonResult(true, "Removed generated component. Layers: " + result.removedLayers + ", restored expressions: " + result.restoredExpressions + ", cleared expressions: " + result.clearedExpressions + ".", "\"artifactId\":\"" + AEToolbox.jsonEscape(result.artifactId) + "\",\"kind\":\"" + AEToolbox.jsonEscape(result.kind || selectedInfo.kind || "") + "\",\"removedLayers\":" + result.removedLayers + ",\"restoredExpressions\":" + result.restoredExpressions + ",\"clearedExpressions\":" + result.clearedExpressions + ",\"skippedItems\":" + result.skippedItems);
     }
 
-    function unionBoundsForLayers(layers, comp) {
+    function unionBoundsForLayers(layers, comp, measurements) {
         var i;
         var b;
         var left = 999999;
@@ -1534,75 +1663,32 @@
         var bottom = -999999;
         for (i = 0; i < layers.length; i++) {
             if (!layers[i]) {
-                continue;
+                throw measurementError("SOURCE_UNAVAILABLE");
             }
-            b = getLayerVisualBoundsInComp(layers[i], comp.time);
+            b = measurements ? measurements[i].measurement.bounds : getLayerVisualBoundsInComp(layers[i], comp.time);
+            if (i === 0) { left = b.left; top = b.top; right = b.right; bottom = b.bottom; }
             left = Math.min(left, b.left);
             top = Math.min(top, b.top);
             right = Math.max(right, b.right);
             bottom = Math.max(bottom, b.bottom);
         }
-        if (left === 999999) {
-            return area(0, 0, 0, 0);
-        }
-        return area(left, top, right, bottom);
+        if (!layers.length) { throw measurementError("NO_SOURCE_LAYERS"); }
+        return checkedMeasurementBounds(left, top, right, bottom);
     }
 
-    function sortTexts(texts, sortMode, comp) {
-        texts.sort(function (a, b) {
-            var ba;
-            var bb;
-            if (sortMode === "timeline") {
-                return b.index - a.index;
-            }
-            ba = getLayerVisualBoundsInComp(a, comp.time);
-            bb = getLayerVisualBoundsInComp(b, comp.time);
-            return ba.centerY - bb.centerY;
-        });
-    }
-
-    function layoutFeatureItems(comp, items, backgrounds, p, centerX, centerY) {
-        var color = AEToolbox.hexToColorArray(p.fillColor);
-        var widths = [];
-        var heights = [];
-        var totalHeight = 0;
+    function measuredFeatureTexts(texts, sortMode, time) {
+        var entries = [];
         var i;
-        var b;
-        var w;
-        var h;
-        var y;
-        var pill;
-        var bg;
-        for (i = 0; i < items.length; i++) {
-            if (!items[i]) {
-                widths[i] = 0;
-                heights[i] = 0;
-                continue;
-            }
-            setAnchorToVisualCenter(items[i]);
-            b = getLayerVisualBoundsInComp(items[i], comp.time);
-            w = p.pillWidthMode === "fixed" ? p.fixedWidth : b.width + p.paddingX * 2;
-            h = b.height + p.paddingY * 2;
-            widths[i] = w;
-            heights[i] = h;
-            totalHeight += h;
-            if (i > 0) {
-                totalHeight += p.gap;
-            }
+        for (i = 0; i < texts.length; i++) {
+            entries[i] = { layer: texts[i], measurement: measureLayerVisualBoundsInComp(texts[i], time) };
         }
-        y = centerY - totalHeight / 2;
-        for (i = 0; i < items.length; i++) {
-            if (!items[i]) {
-                continue;
+        entries.sort(function (a, b) {
+            if (sortMode === "timeline") {
+                return b.layer.index - a.layer.index;
             }
-            pill = area(centerX - widths[i] / 2, y, centerX + widths[i] / 2, y + heights[i]);
-            bg = backgrounds[i];
-            if (bg) {
-                updateRectLayer(bg, pill, color, p.cornerRadius);
-            }
-            moveLayerBoundsCenterTo(items[i], pill.centerX, pill.centerY);
-            y += heights[i] + p.gap;
-        }
+            return a.measurement.bounds.centerY - b.measurement.bounds.centerY;
+        });
+        return entries;
     }
 
     function selectedTextLayers(comp) {
@@ -1627,6 +1713,171 @@
         return out;
     }
 
+    // Feature V2 only; not a Grid gate or a general transform adapter.
+    // Fixed before probing: degrees/identity 1e-8, scale ratio 1e-8, comp basis 1e-4 AE unit.
+    var FEATURE_TRANSFORM_EPSILON = 1e-8;
+    var FEATURE_BASIS_EPSILON = 1e-4;
+
+    function featureReject(reason) { throw measurementError("FEATURE_UNSUPPORTED_" + reason); }
+
+    function featureVector(value, neutralZ) {
+        if (!value || (value.length !== 2 && value.length !== 3) ||
+                !measurementNumber(value[0]) || !measurementNumber(value[1]) ||
+                (value.length === 3 && value[2] !== neutralZ)) { featureReject("2D_VALUE"); }
+        return [value[0], value[1]];
+    }
+
+    function featureStatic(prop, positionBinding) {
+        if (!prop || prop.numKeys !== 0 || prop.dimensionsSeparated || prop.expressionError ||
+                (!positionBinding && (prop.expression || prop.expressionEnabled))) { featureReject("STATIC_TRANSFORM"); }
+        return prop.value;
+    }
+
+    function featureTransform(layer, positionBinding) {
+        var tr, kind;
+        if (!layer || layer.threeDLayer !== false || layer.locked) { featureReject("LAYER_SPACE"); }
+        kind = layer.matchName;
+        if (kind !== "ADBE Text Layer" && kind !== "ADBE Vector Layer" && kind !== "ADBE AV Layer") { featureReject("LAYER_TYPE"); }
+        if (kind === "ADBE AV Layer" && (layer.collapseTransformation || layer.continuouslyRasterize)) { featureReject("PARENT_SPACE"); }
+        tr = layer.property("ADBE Transform Group");
+        if (!tr) { featureReject("TRANSFORM_UNAVAILABLE"); }
+        return {
+            anchor: featureVector(featureStatic(tr.property("ADBE Anchor Point"), false), 0),
+            position: featureVector(featureStatic(tr.property("ADBE Position"), positionBinding), 0),
+            scale: featureVector(featureStatic(tr.property("ADBE Scale"), false), 100),
+            rotation: featureStatic(tr.property("ADBE Rotate Z"), false)
+        };
+    }
+
+    function featureTranslation(layer) {
+        var t = featureTransform(layer, false);
+        if (!measurementNumber(t.rotation) || Math.abs(t.rotation) > FEATURE_TRANSFORM_EPSILON ||
+                Math.abs(t.scale[0] - 100) > FEATURE_TRANSFORM_EPSILON ||
+                Math.abs(t.scale[1] - 100) > FEATURE_TRANSFORM_EPSILON) { featureReject("TRANSLATION_PARENT"); }
+        return t;
+    }
+
+    function featureControllerOffset(ctrl) {
+        var t = featureTranslation(ctrl), p, result;
+        result = [t.position[0] - t.anchor[0], t.position[1] - t.anchor[1]];
+        if (ctrl.parent) {
+            if (ctrl.parent === ctrl || ctrl.parent.parent) { featureReject("PARENT_CHAIN"); }
+            p = featureTranslation(ctrl.parent);
+            result = [result[0] + p.position[0] - p.anchor[0], result[1] + p.position[1] - p.anchor[1]];
+        }
+        return result;
+    }
+
+    function featureSourceEnvelope(layer, ctrl) {
+        var t = featureTransform(layer, !!ctrl), parent;
+        if (!isTextLayer(layer) || !measurementNumber(t.rotation) || t.scale[0] <= 0 || t.scale[1] <= 0) { featureReject("TEXT_TRANSFORM"); }
+        if (Math.abs(t.rotation) > FEATURE_TRANSFORM_EPSILON &&
+                Math.abs(t.scale[0] / t.scale[1] - 1) > FEATURE_TRANSFORM_EPSILON) { featureReject("NONUNIFORM_ROTATION"); }
+        if (ctrl) {
+            if (layer.parent !== ctrl) { featureReject("SOURCE_PARENT"); }
+        } else if (layer.parent) {
+            parent = layer.parent;
+            if (parent === layer || parent.parent) { featureReject("PARENT_CHAIN"); }
+            featureTranslation(parent);
+        }
+    }
+
+    function featureParameterEnvelope(p, ctrl) {
+        var names, i, effect, value;
+        if (ctrl) {
+            names = ["Pill Width Mode", "Text Align", "Gap", "Padding X", "Padding Y", "Fixed Width", "Corner Radius"];
+            for (i = 0; i < names.length; i++) {
+                effect = ctrl.property("ADBE Effect Parade").property(names[i]);
+                value = featureStatic(effect && effect.property(1), false);
+                if (!measurementNumber(value) || value < 0 || (i === 0 && value !== 0) || (i === 1 && value !== 1)) { featureReject("PARAMETERS"); }
+            }
+        }
+        if (p.pillWidthMode !== "auto" || p.textAlign !== "center" ||
+                !measurementNumber(p.gap) || p.gap < 0 || !measurementNumber(p.paddingX) || p.paddingX < 0 ||
+                !measurementNumber(p.paddingY) || p.paddingY < 0 || !measurementNumber(p.cornerRadius) || p.cornerRadius < 0) {
+            featureReject("PARAMETERS_AUTO_CENTER_REQUIRED");
+        }
+    }
+
+    function featureBackgroundEnvelope(bg, source, comp) {
+        var t = featureTransform(bg, true), root, group, vectors, gt, rect, fill, i, v;
+        var measurementTime = comp.time;
+        var names = ["ADBE Vector Anchor", "ADBE Vector Position", "ADBE Vector Scale", "ADBE Vector Skew", "ADBE Vector Skew Axis", "ADBE Vector Rotation", "ADBE Vector Group Opacity"];
+        var expected = [[0, 0], [0, 0], [100, 100], 0, 0, 0, 100];
+        var origin, x, y;
+        if (bg.matchName !== "ADBE Vector Layer" || bg.parent !== source || t.anchor[0] !== 0 || t.anchor[1] !== 0 || !measurementNumber(t.rotation)) { featureReject("BACKGROUND_TRANSFORM"); }
+        root = bg.property("ADBE Root Vectors Group"); group = root && root.property(1);
+        vectors = group && group.property("ADBE Vectors Group"); gt = group && group.property("ADBE Vector Transform Group");
+        rect = vectors && vectors.property("ADBE Vector Shape - Rect"); fill = vectors && vectors.property("ADBE Vector Graphic - Fill");
+        if (!root || root.numProperties !== 1 || !group || group.matchName !== "ADBE Vector Group" || group.name !== "Pill" ||
+                !vectors || vectors.numProperties !== 2 || !gt || !rect || rect.matchName !== "ADBE Vector Shape - Rect" ||
+                !fill || fill.matchName !== "ADBE Vector Graphic - Fill") { featureReject("CANONICAL_PILL"); }
+        for (i = 0; i < names.length; i++) {
+            v = featureStatic(gt.property(names[i]), false);
+            if (i < 3) {
+                v = featureVector(v, i === 2 ? 100 : 0);
+                if (v[0] !== expected[i][0] || v[1] !== expected[i][1]) { featureReject("GROUP_IDENTITY"); }
+            } else if (v !== expected[i]) { featureReject("GROUP_IDENTITY"); }
+        }
+        v = featureVector(featureStatic(rect.property("ADBE Vector Rect Position"), false), 0);
+        if (v[0] !== 0 || v[1] !== 0 || featureStatic(fill.property("ADBE Vector Fill Opacity"), false) !== 100) { featureReject("CANONICAL_PILL"); }
+        // Host evidence, at the same requested/current time as measurement. No inverse Host API.
+        origin = convertMeasurementSourcePointToComp(bg, [0, 0], measurementTime);
+        x = convertMeasurementSourcePointToComp(bg, [1, 0], measurementTime);
+        y = convertMeasurementSourcePointToComp(bg, [0, 1], measurementTime);
+        if (Math.abs(x[0] - origin[0] - 1) > FEATURE_BASIS_EPSILON || Math.abs(x[1] - origin[1]) > FEATURE_BASIS_EPSILON ||
+                Math.abs(y[0] - origin[0]) > FEATURE_BASIS_EPSILON || Math.abs(y[1] - origin[1] - 1) > FEATURE_BASIS_EPSILON) {
+            featureReject("BACKGROUND_COMP_BASIS");
+        }
+    }
+
+    function featureRefreshSourceTemplates(layer, texts, itemIndex) {
+        var expression = positionProp(layer).expression;
+        var match = typeof expression === "string" ? /\n  var refs = (\[[^\r\n]*\]);\n  var itemIndex = ([0-9]+);\n/.exec(expression) : null;
+        var cursor, token, n = 0, j, count, name, refs = [];
+        if (!match || Number(match[2]) !== itemIndex) { featureReject("SOURCE_REFERENCE_TEMPLATE"); }
+        cursor = match[1].substring(1, match[1].length - 1);
+        while (cursor.length) {
+            token = /^\{i:([0-9]+),n:("(?:[^"\\]|\\.)*")}([,]?)/.exec(cursor);
+            if (!token || Number(token[1]) < 1 || n >= texts.length) { featureReject("SOURCE_REFERENCES"); }
+            name = AEToolbox.parseJson(token[2]);
+            refs[refs.length] = { index: Number(token[1]), name: name };
+            if (texts[n].name !== name) { featureReject("SOURCE_REFERENCES"); }
+            count = 0;
+            for (j = 1; j <= layer.containingComp.numLayers; j++) { if (layer.containingComp.layer(j).name === name) { count++; } }
+            if (count !== 1) { featureReject("AMBIGUOUS_SOURCE_NAME"); }
+            n++;
+            cursor = cursor.substring(token[0].length);
+            if (cursor.length && token[3] !== ",") { featureReject("SOURCE_REFERENCES"); }
+        }
+        if (n !== texts.length || layerRefsExpression(refs) !== match[1]) { featureReject("SOURCE_REFERENCES"); }
+        // Stored indices can age as unrelated layers are inserted; names and membership
+        // are verified above, then the entire original literal body is matched exactly.
+        return [featureTextPositionExpression(match[1], itemIndex), legacyFeatureTextPositionExpression(match[1], itemIndex)];
+    }
+
+    function featureCreateSourcesEnvelope(texts, comp) {
+        var i, j, layer, prop, data, ctrl, ctrlData, checked = [], found, count;
+        for (i = 0; i < texts.length; i++) {
+            layer = texts[i]; prop = positionProp(layer);
+            count = 0;
+            for (j = 1; j <= comp.numLayers; j++) { if (comp.layer(j).name === layer.name) { count++; } }
+            if (count !== 1 || /[\r\n\u2028\u2029]/.test(layer.name)) { featureReject("AMBIGUOUS_SOURCE_NAME"); }
+            if (prop && (prop.expression || prop.expressionEnabled)) {
+                // Retain the existing exact tool rebind path. A signature prefix alone
+                // cannot admit a Position driver: its entire owning Feature must pass.
+                data = parseMetadata(layer); ctrl = layer.parent; ctrlData = ctrl && parseMetadata(ctrl);
+                if (!data || data.role !== "sourceLayerBinding" || !ctrlData || ctrlData.role !== "controller" ||
+                        data.componentType !== "featureStack" || ctrlData.componentType !== "featureStack" ||
+                        data.artifactId !== ctrlData.artifactId || data.componentId !== ctrlData.componentId) { featureReject("SOURCE_POSITION_EXPRESSION"); }
+                found = false;
+                for (j = 0; j < checked.length; j++) { if (checked[j] === ctrl) { found = true; } }
+                if (!found) { planFeatureRefresh(comp, ctrl, ctrlData); checked[checked.length] = ctrl; }
+                featureSourceEnvelope(layer, ctrl);
+            } else { featureSourceEnvelope(layer, null); }
+        }
+    }
+
     AEToolbox.tools.adComponentKit.createFeatureStack = function (paramsJson) {
         var comp = getComp();
         var p = paramsFromJson(paramsJson);
@@ -1642,6 +1893,7 @@
         var ctrl;
         var bg;
         var textBounds = [];
+        var measuredTexts;
         var pillWidths = [];
         var pillHeights = [];
         var totalHeight = 0;
@@ -1661,7 +1913,7 @@
         for (i = 0; i < selected.length; i++) {
             if (isTextLayer(selected[i])) {
                 if (selected[i].threeDLayer) {
-                    skipped++;
+                    return jsonResult(false, "Create feature stack preflight failed; no changes made: ACK_MEASUREMENT_FEATURE_UNSUPPORTED_LAYER_SPACE");
                 } else {
                     texts[texts.length] = selected[i];
                 }
@@ -1670,24 +1922,35 @@
         if (!texts.length) {
             return jsonResult(false, "Select one or more text layers first.");
         }
-        sortTexts(texts, p.sortMode, comp);
-        originalInfo = unionOriginalFeatureTextBounds(texts, comp);
-        selectionBounds = originalInfo.bounds;
-        warning = originalInfo.warning;
-        for (i = 0; i < texts.length; i++) {
-            farthestPosition = Math.max(farthestPosition, layerPositionDistanceFromOrigin(texts[i]));
-        }
-        if (Math.abs(selectionBounds.centerX) < 0.001 && Math.abs(selectionBounds.centerY) < 0.001 && farthestPosition > 50) {
-            warning = warning ? warning + " Original center calculation failed." : "Original center calculation failed.";
-        }
-        for (i = 0; i < texts.length; i++) {
-            textBounds[i] = getLayerVisualBoundsInComp(texts[i], comp.time);
-            pillWidths[i] = p.pillWidthMode === "fixed" ? p.fixedWidth : textBounds[i].width + p.paddingX * 2;
-            pillHeights[i] = textBounds[i].height + p.paddingY * 2;
-            totalHeight += pillHeights[i];
-            if (i > 0) {
-                totalHeight += p.gap;
+        try {
+            measuredTexts = measuredFeatureTexts(texts, p.sortMode, comp.time);
+            featureParameterEnvelope(p, null);
+            featureCreateSourcesEnvelope(texts, comp);
+            for (i = 0; i < measuredTexts.length; i++) { texts[i] = measuredTexts[i].layer; }
+            originalInfo = unionOriginalFeatureTextBounds(texts, comp, measuredTexts);
+            selectionBounds = originalInfo.bounds;
+            warning = originalInfo.warning;
+            for (i = 0; i < texts.length; i++) {
+                farthestPosition = Math.max(farthestPosition, layerPositionDistanceFromOrigin(texts[i]));
             }
+            if (Math.abs(selectionBounds.centerX) < 0.001 && Math.abs(selectionBounds.centerY) < 0.001 && farthestPosition > 50) {
+                warning = warning ? warning + " Original center calculation failed." : "Original center calculation failed.";
+            }
+            for (i = 0; i < texts.length; i++) {
+                textBounds[i] = measuredTexts[i].measurement.bounds;
+                pillWidths[i] = p.pillWidthMode === "fixed" ? p.fixedWidth : textBounds[i].width + p.paddingX * 2;
+                pillHeights[i] = textBounds[i].height + p.paddingY * 2;
+                if (!measurementNumber(pillWidths[i]) || !measurementNumber(pillHeights[i]) || pillWidths[i] <= 0 || pillHeights[i] <= 0) {
+                    throw measurementError("INVALID_FEATURE_GEOMETRY");
+                }
+                totalHeight += pillHeights[i];
+                if (i > 0) {
+                    totalHeight += p.gap;
+                }
+            }
+            if (!measurementNumber(totalHeight) || totalHeight <= 0) { throw measurementError("INVALID_FEATURE_GEOMETRY"); }
+        } catch (measurementFailure) {
+            return jsonResult(false, "Create feature stack preflight failed; no changes made: " + String(measurementFailure));
         }
         componentId = nextComponentId(comp, "featureStack");
         artifactId = createArtifactId("featureStack");
@@ -1724,7 +1987,7 @@
                     index: i + 1,
                     createdAt: createdAt
                 });
-                centerTextAnchor(texts[i], comp.time);
+                centerTextAnchor(texts[i], comp.time, measuredTexts[i].measurement.rect);
 
                 bg = createLocalPillLayer(comp, texts[i].name + "_PILL_BG", pillWidths[i], pillHeights[i], AEToolbox.hexToColorArray(p.fillColor), p.cornerRadius);
                 setLayerArtifactMetadata(bg, {
@@ -1790,7 +2053,7 @@
         };
     }
 
-    function refreshFeatureStack(comp, ctrl, data) {
+    function planFeatureRefresh(comp, ctrl, data) {
         var layers = componentLayers(comp, data.componentId);
         var texts = [];
         var bgs = [];
@@ -1800,6 +2063,73 @@
         var i;
         var item;
         var p = readFeatureParams(ctrl);
+        var measurements = [];
+        var textMeasurements = [];
+        var bgMeasurements = [];
+        var steps = [];
+        var templates = featurePillExpressions();
+        var legacyTemplates = legacyFeaturePillExpressions();
+        var allowedSource, allowedBackground, version = null, currentVersion;
+        var compactTexts = [];
+        var totalHeight = 0;
+        var y;
+        var width;
+        var height;
+        var offset;
+        var tr;
+        var anchor;
+        var position;
+        var newAnchor;
+        var nextPosition;
+        var root;
+        var group;
+        var vectors;
+        var rect;
+        var fill;
+        var equalRectCenter;
+        var artifactId = data.artifactId || data.componentId;
+
+        function vector(value) {
+            if (!value || (value.length !== 2 && (value.length !== 3 || value[2] !== 0)) || !measurementNumber(value[0]) || !measurementNumber(value[1])) {
+                throw measurementError("REFRESH_INVALID_2D_VALUE");
+            }
+            return [value[0], value[1]];
+        }
+        function writable(prop) {
+            if (!prop || typeof prop.setValue !== "function" || prop.numKeys !== 0) {
+                throw measurementError("REFRESH_PROPERTY_NOT_STATIC_WRITABLE");
+            }
+            return prop;
+        }
+        function requireTemplate(prop, allowed) {
+            var n, expression, expected;
+            writable(prop);
+            if (prop.canSetExpression !== true || prop.expressionEnabled !== true || prop.expressionError) { featureReject("EXACT_TEMPLATE"); }
+            expression = prop.expression;
+            for (n = 0; n < allowed.length; n++) {
+                expected = signedExpressionBody(allowed[n].body, { artifactId: artifactId, kind: "featureStack", role: allowed[n].role,
+                    previousExpression: decodeText(signedExpressionValue(expression, "previousExpressionEncoded")),
+                    previousExpressionEnabled: signedExpressionValue(expression, "previousExpressionEnabled") === "true" });
+                if (prop.matchName === allowed[n].name && expression === expected) { return n; }
+            }
+            featureReject("EXACT_TEMPLATE");
+        }
+        function knownExpressions(container, allowed, depth) {
+            var n;
+            if (!container || depth > 64) { throw measurementError("REFRESH_PROPERTY_TREE_UNAVAILABLE"); }
+            if (container.expression || container.expressionEnabled) { requireTemplate(container, allowed); }
+            for (n = 1; n <= (container.numProperties || 0); n++) { knownExpressions(container.property(n), allowed, depth + 1); }
+        }
+        function layerSpace(layer) {
+            var kind = layer.matchName;
+            if (layer.threeDLayer !== false || layer.locked ||
+                    (kind !== "ADBE Text Layer" && kind !== "ADBE Vector Layer" && kind !== "ADBE AV Layer")) {
+                throw measurementError("REFRESH_UNSUPPORTED_LAYER_SPACE");
+            }
+            if (kind === "ADBE AV Layer" && (layer.collapseTransformation || layer.continuouslyRasterize)) {
+                throw measurementError("REFRESH_UNSUPPORTED_LAYER_SPACE");
+            }
+        }
         for (i = 0; i < layers.length; i++) {
             item = layers[i];
             if (item.data.role === "itemText" || item.data.role === "sourceLayerBinding") {
@@ -1810,28 +2140,126 @@
         }
         for (i = 0; i < texts.length; i++) {
             if (texts[i]) {
+                textMeasurements[i] = measureLayerVisualBoundsInComp(texts[i], comp.time);
+                measurements[measurements.length] = { measurement: textMeasurements[i] };
                 stackLayers[stackLayers.length] = texts[i];
+                compactTexts[compactTexts.length] = texts[i];
             }
             if (bgs[i]) {
+                bgMeasurements[i] = measureLayerVisualBoundsInComp(bgs[i], comp.time);
+                measurements[measurements.length] = { measurement: bgMeasurements[i] };
                 stackLayers[stackLayers.length] = bgs[i];
             }
         }
-        stackBounds = unionBoundsForLayers(stackLayers, comp);
-        if (stackBounds.width <= 0 && stackBounds.height <= 0) {
-            return 0;
-        }
-        layoutFeatureItems(comp, texts, bgs, p, stackBounds.centerX, stackBounds.centerY);
+        if (!texts.length) { throw measurementError("NO_SOURCE_LAYERS"); }
+        stackBounds = unionBoundsForLayers(stackLayers, comp, measurements);
+        featureParameterEnvelope(p, ctrl);
+        offset = featureControllerOffset(ctrl);
+        if (layers.length !== texts.length * 2 + 1 || bgs.length !== texts.length) { featureReject("COMPONENT_MEMBERS"); }
         for (i = 0; i < texts.length; i++) {
-            if (texts[i] && bgs[i]) {
-                parentPairs[parentPairs.length] = {
-                    text: texts[i],
-                    bg: bgs[i]
-                };
+            if (!texts[i] || !bgs[i]) { throw measurementError("REFRESH_INCOMPLETE_COMPONENT"); }
+            layerSpace(texts[i]); layerSpace(bgs[i]);
+            featureSourceEnvelope(texts[i], ctrl);
+            currentVersion = featureRefreshSourceTemplates(texts[i], compactTexts, i);
+            allowedSource = [{ name: "ADBE Position", body: currentVersion[0], role: "sourceLayerBinding" },
+                { name: "ADBE Position", body: currentVersion[1], role: "sourceLayerBinding" }];
+            currentVersion = requireTemplate(positionProp(texts[i]), allowedSource);
+            if (version !== null && version !== currentVersion) { featureReject("MIXED_TEMPLATE_VERSION"); }
+            version = currentVersion;
+            allowedBackground = [{ name: "ADBE Position", body: templates[0], role: "generatedLayer" },
+                { name: "ADBE Position", body: legacyTemplates[0], role: "generatedLayer" },
+                { name: "ADBE Vector Rect Size", body: templates[1], role: "generatedLayer" },
+                { name: "ADBE Vector Rect Size", body: legacyTemplates[1], role: "generatedLayer" },
+                { name: "ADBE Vector Rect Roundness", body: templates[2], role: "generatedLayer" },
+                { name: "ADBE Vector Fill Color", body: templates[3], role: "generatedLayer" }];
+            knownExpressions(texts[i], allowedSource, 0);
+            knownExpressions(bgs[i], allowedBackground, 0);
+            featureBackgroundEnvelope(bgs[i], texts[i], comp);
+            root = bgs[i].property("ADBE Root Vectors Group");
+            vectors = root.property(1).property("ADBE Vectors Group");
+            rect = vectors.property("ADBE Vector Shape - Rect"); fill = vectors.property("ADBE Vector Graphic - Fill");
+            if (requireTemplate(positionProp(bgs[i]), allowedBackground.slice(0, 2)) !== version ||
+                    requireTemplate(rect.property("ADBE Vector Rect Size"), allowedBackground.slice(2, 4)) !== version) { featureReject("MIXED_TEMPLATE_VERSION"); }
+            requireTemplate(rect.property("ADBE Vector Rect Roundness"), allowedBackground.slice(4, 5));
+            requireTemplate(fill.property("ADBE Vector Fill Color"), allowedBackground.slice(5, 6));
+            width = p.pillWidthMode === "fixed" ? p.fixedWidth : textMeasurements[i].bounds.width + p.paddingX * 2;
+            height = textMeasurements[i].bounds.height + p.paddingY * 2;
+            if (!measurementNumber(width) || !measurementNumber(height) || width <= 0 || height <= 0) {
+                throw measurementError("INVALID_FEATURE_GEOMETRY");
             }
+            steps[i] = { layer: texts[i], bg: bgs[i], width: width, height: height };
+            totalHeight += height + (i > 0 ? p.gap : 0);
         }
-        parentBackgroundsToTextLayers(parentPairs, data.artifactId || data.componentId);
-        bindFeatureTextPositionsToController(texts, data.artifactId || data.componentId);
-        return texts.length;
+        if (!measurementNumber(totalHeight) || totalHeight <= 0) { throw measurementError("INVALID_FEATURE_GEOMETRY"); }
+        y = stackBounds.centerY - totalHeight / 2;
+        // Freeze source Anchor/Position targets before planning Text-local background centers.
+        for (i = 0; i < texts.length; i++) {
+            tr = texts[i].property("ADBE Transform Group");
+            anchor = writable(tr.property("ADBE Anchor Point"));
+            position = writable(tr.property("ADBE Position"));
+            vector(anchor.value); vector(position.value);
+            if (position.dimensionsSeparated) { throw measurementError("REFRESH_SEPARATED_POSITION_UNSUPPORTED"); }
+            offset = featureControllerOffset(ctrl);
+            rect = textMeasurements[i].rect;
+            newAnchor = vector([rect.left + rect.width / 2, rect.top + rect.height / 2]);
+            steps[i].center = vector([stackBounds.centerX, y + steps[i].height / 2]);
+            nextPosition = vector([steps[i].center[0] - offset[0], steps[i].center[1] - offset[1]]);
+            steps[i].anchor = anchor; steps[i].anchorValue = newAnchor;
+            steps[i].position = position; steps[i].positionValue = nextPosition;
+            y += steps[i].height + p.gap;
+        }
+        for (i = 0; i < texts.length; i++) {
+            root = bgs[i].property("ADBE Root Vectors Group");
+            group = root && root.property(1);
+            vectors = group && group.property("ADBE Vectors Group");
+            rect = vectors && vectors.property("ADBE Vector Shape - Rect");
+            fill = vectors && vectors.property("ADBE Vector Graphic - Fill");
+            if (!root || root.numProperties !== 1 || !vectors || vectors.numProperties !== 2 || !rect || !fill ||
+                    group.matchName !== "ADBE Vector Group" || rect.matchName !== "ADBE Vector Shape - Rect" ||
+                    fill.matchName !== "ADBE Vector Graphic - Fill") {
+                throw measurementError("REFRESH_UNKNOWN_RECTANGLE");
+            }
+            equalRectCenter = vector(rect.property("ADBE Vector Rect Position").value);
+            if (equalRectCenter[0] !== 0 || equalRectCenter[1] !== 0 ||
+                    bgMeasurements[i].rect.left + bgMeasurements[i].rect.width / 2 !== 0 ||
+                    bgMeasurements[i].rect.top + bgMeasurements[i].rect.height / 2 !== 0) {
+                throw measurementError("REFRESH_RECTANGLE_CENTER_UNSUPPORTED");
+            }
+            position = writable(positionProp(bgs[i]));
+            if (position.dimensionsSeparated) { throw measurementError("REFRESH_SEPARATED_POSITION_UNSUPPORTED"); }
+            nextPosition = vector(position.value);
+            // Canonical unit comp basis and centered Rect: the new source Anchor is the
+            // background's immediate Text-parent center. V2 then derives it dynamically.
+            steps[i].bgPosition = position;
+            steps[i].bgPositionValue = [steps[i].anchorValue[0], steps[i].anchorValue[1]];
+            steps[i].size = writable(rect.property("ADBE Vector Rect Size"));
+            steps[i].roundness = writable(rect.property("ADBE Vector Rect Roundness"));
+            steps[i].fill = writable(fill.property("ADBE Vector Fill Color"));
+            parentPairs[parentPairs.length] = { text: texts[i], bg: bgs[i] };
+        }
+        return { steps: steps, texts: texts, parentPairs: parentPairs, artifactId: artifactId,
+            color: AEToolbox.hexToColorArray(p.fillColor), roundness: p.cornerRadius };
+    }
+
+    function applyFeatureRefresh(plan) {
+        var i;
+        var step;
+        for (i = 0; i < plan.steps.length; i++) {
+            step = plan.steps[i];
+            step.anchor.setValue(step.anchorValue);
+            step.position.setValue(step.positionValue);
+        }
+        for (i = 0; i < plan.steps.length; i++) {
+            step = plan.steps[i];
+            step.size.setValue([step.width, step.height]);
+            step.roundness.setValue(plan.roundness || 0);
+            step.fill.setValue(plan.color);
+            step.bgPosition.setValue(step.bgPositionValue);
+        }
+        // Relationships and basis were admitted in preflight. Rebind only after every read succeeds.
+        for (i = 0; i < plan.parentPairs.length; i++) { bindFeaturePillToController(plan.parentPairs[i].bg, plan.artifactId); }
+        bindFeatureTextPositionsToController(plan.texts, plan.artifactId);
+        return plan.steps.length;
     }
 
     function shouldSkipGridLayer(layer) {
@@ -2391,6 +2819,7 @@
         var ctrl;
         var data;
         var count = 0;
+        var featurePlan = null;
         if (!comp) {
             return jsonResult(false, "Open a composition before refreshing a component.");
         }
@@ -2403,10 +2832,16 @@
         if (!data || data.role !== "controller") {
             return jsonResult(false, "Selected layer is not an AE Toolbox component controller.");
         }
+        if (data.componentType === "featureStack") {
+            try { featurePlan = planFeatureRefresh(comp, ctrl, data); }
+            catch (measurementFailure) {
+                return jsonResult(false, "Refresh component preflight failed; no changes made: " + String(measurementFailure));
+            }
+        }
         app.beginUndoGroup("AE Toolbox Refresh Component");
         try {
             if (data.componentType === "featureStack") {
-                count = refreshFeatureStack(comp, ctrl, data);
+                count = applyFeatureRefresh(featurePlan);
             } else if (data.componentType === "iconGrid") {
                 count = refreshIconGrid(comp, ctrl, data);
             } else {
@@ -2415,7 +2850,7 @@
             }
         } catch (err) {
             app.endUndoGroup();
-            return jsonResult(false, "Refresh component failed: " + err.toString());
+            return jsonResult(false, "Refresh component failed: " + err.toString() + (featurePlan ? "; changes may be partial; no rollback performed." : ""));
         }
         app.endUndoGroup();
         return jsonResult(true, "Component refreshed (" + count + " item(s)).");
@@ -2464,7 +2899,7 @@
     // Detach F1 is deliberately bounded to translation-only 2D parent chains.
     // Samples are post-expression at one comp time; metadata is retained until verification.
     function detachFeaturePlan(plan, ctrl, artifactId, time) {
-        var samples = [], edits = [], releases = [], templates = featurePillExpressions();
+        var samples = [], edits = [], releases = [], templates = featurePillExpressions(), legacyTemplates = legacyFeaturePillExpressions();
         var i, j, entry, layer, root, group, vectors, rect, fill, source, refs, text, match, names, cursor, token, resolved;
         var release, releaseLocator, plannedEdit;
         if (typeof time !== "number" || !isFinite(time) || !artifactId) { throw new Error("Unsupported Feature Detach time or legacy expression ownership."); }
@@ -2571,10 +3006,14 @@
                 fail(label + " not writable without changing keyframes/separated dimensions");
             }
         }
-        function expressionEdit(l, prop, body, role, size, label) {
+        function expressionEdit(l, prop, body, role, size, label, legacyBody) {
             var expected = signedExpressionBody(body, { artifactId: artifactId, kind: "featureStack", role: role,
                 previousExpression: "", previousExpressionEnabled: false });
             var value;
+            if (legacyBody && prop && prop.expression !== expected) {
+                expected = signedExpressionBody(legacyBody, { artifactId: artifactId, kind: "featureStack", role: role,
+                    previousExpression: "", previousExpressionEnabled: false });
+            }
             writable(prop, label);
             // Full signature and full body, including empty protected history. No prefix-only admission.
             if (l.locked || prop.canSetExpression !== true || prop.expression !== expected || prop.expressionEnabled !== true) {
@@ -2649,7 +3088,7 @@
                     if (cursor.length && token[3] !== ",") { fail("invalid source separator"); }
                 }
                 if (names[Number(match[2])] !== layer) { fail("source item identity mismatch"); }
-                expressionEdit(layer, positionProp(layer), featureTextPositionExpression(layerRefsExpression(refs), Number(match[2])), "sourceLayerBinding", -2, layer.name + "/Position");
+                expressionEdit(layer, positionProp(layer), featureTextPositionExpression(layerRefsExpression(refs), Number(match[2])), "sourceLayerBinding", -2, layer.name + "/Position", legacyFeatureTextPositionExpression(layerRefsExpression(refs), Number(match[2])));
             } else if (entry.data.role === "generatedLayer") {
                 source = member(entry.parent);
                 if (!source || source.data.role !== "sourceLayerBinding" || source.parent !== ctrl) { fail(layer.name + " background dependency outside artifact"); }
@@ -2657,8 +3096,8 @@
                 vectors = group ? group.property("ADBE Vectors Group") : null;
                 rect = vectors ? vectors.property("ADBE Vector Shape - Rect") : null;
                 fill = vectors ? vectors.property("ADBE Vector Graphic - Fill") : null;
-                expressionEdit(layer, positionProp(layer), templates[0], "generatedLayer", -2, layer.name + "/Position");
-                expressionEdit(layer, rect ? rect.property("ADBE Vector Rect Size") : null, templates[1], "generatedLayer", 2, layer.name + "/Rect Size");
+                expressionEdit(layer, positionProp(layer), templates[0], "generatedLayer", -2, layer.name + "/Position", legacyTemplates[0]);
+                expressionEdit(layer, rect ? rect.property("ADBE Vector Rect Size") : null, templates[1], "generatedLayer", 2, layer.name + "/Rect Size", legacyTemplates[1]);
                 expressionEdit(layer, rect ? rect.property("ADBE Vector Rect Roundness") : null, templates[2], "generatedLayer", 0, layer.name + "/Roundness");
                 expressionEdit(layer, fill ? fill.property("ADBE Vector Fill Color") : null, templates[3], "generatedLayer", 4, layer.name + "/Fill Color");
             } else if (layer !== ctrl || entry.data.role !== "controller") {
@@ -2860,13 +3299,11 @@
 
         for (i = 0; i < selected.length; i++) {
             layer = selected[i];
-            if (isTextLayer(layer) && !layer.threeDLayer) {
-                textLayerCount++;
-            }
             try {
-                if (!layer.threeDLayer && !layer.parent && !shouldSkipGridLayer(layer) && !hasTransformExpression(layer, "ADBE Position") && !hasTransformExpression(layer, "ADBE Scale")) {
+                if (!layer.threeDLayer) {
                     bounds = getLayerVisualBoundsInComp(layer, comp.time);
-                    if (bounds.width > 0 && bounds.height > 0) {
+                    if (isTextLayer(layer)) { textLayerCount++; }
+                    if (!layer.parent && !shouldSkipGridLayer(layer) && !hasTransformExpression(layer, "ADBE Position") && !hasTransformExpression(layer, "ADBE Scale")) {
                         twoDLayerCount++;
                     }
                 }

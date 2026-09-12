@@ -1,0 +1,242 @@
+{
+  "stage": "A09-M1 targeted real AE revalidation",
+  "status": "A09-M1 REAL AE REVALIDATION FAIL",
+  "recordedAt": "2026-09-11T09:50:20.227Z",
+  "baseline": {
+    "branch": "fix/host-coordinate-space-a09-0.3.12",
+    "head": "f5ea7a10b5633cdf972bf3bf2c7cacff6cffd14f",
+    "toolSha256": "090f9403fd2b9cc4f515c58384fd726569198e79a302f88d07a47d40af651bcb"
+  },
+  "environment": {
+    "ae": "26.3x87",
+    "cep": "12.0.1 (observed userAgent)",
+    "target": "2D30511D831D0D5B790B8742D1F02EAE",
+    "project": "D:\\Projects\\Vela Test\\Vela Test.aep",
+    "extensionMapsToWorkspace": true,
+    "publicFunctionsMatched": [
+      {
+        "name": "getLayerVisualBoundsInComp",
+        "match": true
+      },
+      {
+        "name": "createFeatureStack",
+        "match": true
+      },
+      {
+        "name": "refreshSelectedComponent",
+        "match": true
+      }
+    ],
+    "loadErrors": 0,
+    "privateHelpers": "No independent private source extraction; matching load source and actual strict rejection behavior."
+  },
+  "groups": [
+    {
+      "id": "AE-01",
+      "status": "PASS",
+      "scope": "Read-only capability collection, not successful coordinate conversion",
+      "samples": 6
+    },
+    {
+      "id": "AE-02",
+      "status": "FAIL",
+      "scope": "One actual registry Create on two valid 2D Text layers; required normal creation rejected"
+    },
+    {
+      "id": "AE-03",
+      "status": "NOT COVERED",
+      "reason": "Stopped after AE-02"
+    },
+    {
+      "id": "AE-04",
+      "status": "NOT COVERED",
+      "reason": "Stopped after AE-02"
+    },
+    {
+      "id": "AE-05",
+      "status": "NOT COVERED",
+      "reason": "Stopped after AE-02; empty sourceRect observation does not replace invalid action or Grid smoke"
+    }
+  ],
+  "groupCounts": {
+    "pass": 1,
+    "fail": 1,
+    "notCovered": 3
+  },
+  "capabilities": [
+    {
+      "id": 268,
+      "name": "A09_CAP_EMPTY_SHAPE",
+      "matchName": "ADBE Vector Layer",
+      "threeD": false,
+      "source": null,
+      "rect": {
+        "left": 0,
+        "top": 0,
+        "width": 0,
+        "height": 0
+      },
+      "toCompType": "undefined",
+      "toCompOutcome": "THREW",
+      "error": "ReferenceError: 函数 layer.toComp 未定义"
+    },
+    {
+      "id": 267,
+      "name": "A09_CAP_EMPTY_TEXT",
+      "matchName": "ADBE Text Layer",
+      "threeD": false,
+      "source": null,
+      "rect": {
+        "left": 0,
+        "top": 0,
+        "width": 0,
+        "height": 0
+      },
+      "toCompType": "undefined",
+      "toCompOutcome": "THREW",
+      "error": "ReferenceError: 函数 layer.toComp 未定义"
+    },
+    {
+      "id": 266,
+      "name": "A09_CAP_PRECOMP",
+      "matchName": "ADBE AV Layer",
+      "threeD": false,
+      "source": {
+        "id": 249,
+        "name": "A09_M1_PRECOMP_SOURCE",
+        "isComp": true,
+        "isFootage": false
+      },
+      "rect": {
+        "left": 0,
+        "top": 0,
+        "width": 160,
+        "height": 90
+      },
+      "toCompType": "undefined",
+      "toCompOutcome": "THREW",
+      "error": "ReferenceError: 函数 layer.toComp 未定义"
+    },
+    {
+      "id": 265,
+      "name": "A09_CAP_AV_PNG",
+      "matchName": "ADBE AV Layer",
+      "threeD": false,
+      "source": {
+        "id": 264,
+        "name": "fixture-footage.png",
+        "isComp": false,
+        "isFootage": true
+      },
+      "rect": {
+        "left": 0,
+        "top": 0,
+        "width": 388,
+        "height": 62
+      },
+      "toCompType": "undefined",
+      "toCompOutcome": "THREW",
+      "error": "ReferenceError: 函数 layer.toComp 未定义"
+    },
+    {
+      "id": 263,
+      "name": "A09_CAP_SHAPE",
+      "matchName": "ADBE Vector Layer",
+      "threeD": false,
+      "source": null,
+      "rect": {
+        "left": -50,
+        "top": -30,
+        "width": 100,
+        "height": 60
+      },
+      "toCompType": "undefined",
+      "toCompOutcome": "THREW",
+      "error": "ReferenceError: 函数 layer.toComp 未定义"
+    },
+    {
+      "id": 262,
+      "name": "A09_CAP_TEXT",
+      "matchName": "ADBE Text Layer",
+      "threeD": false,
+      "source": null,
+      "rect": {
+        "left": -78.9052503556013,
+        "top": -30.5032500252128,
+        "width": 154.44787568599,
+        "height": 37.2161251008511
+      },
+      "toCompType": "undefined",
+      "toCompOutcome": "THREW",
+      "error": "ReferenceError: 函数 layer.toComp 未定义"
+    }
+  ],
+  "create": {
+    "route": "AEToolbox.runRegisteredToolAction(\"ecommerceLayout\", \"createFeatureStack\", paramsJson); not UI end-to-end",
+    "attempts": 1,
+    "compId": 269,
+    "layerIds": [
+      282,
+      281
+    ],
+    "sourceRectsValid": true,
+    "cornerCalls": 8,
+    "cornerErrors": 8,
+    "compBounds": "UNAVAILABLE; no valid toComp result, no substitute bounds",
+    "raw": "{\"ok\":false,\"message\":\"Create feature stack preflight failed; no changes made: Error: ACK_MEASUREMENT_TO_COMP_FAILED\"}",
+    "parsed": {
+      "ok": false,
+      "message": "Create feature stack preflight failed; no changes made: Error: ACK_MEASUREMENT_TO_COMP_FAILED"
+    },
+    "readinessBefore": false,
+    "afterComparison": {
+      "fields": 138,
+      "differences": 0,
+      "layerCountBefore": 2,
+      "layerCountAfter": 2,
+      "time": 0
+    },
+    "visualConfirmation": "NOT COVERED: no successful creation",
+    "undo": "NOT EXECUTED; failed preflight, no observed changes"
+  },
+  "conclusion": "Current AE 26.3x87 Text/Shape/AV footage/precomp samples have no callable layer.toComp. Strict rejection removes fake bounds but prevents the required normal Feature Create. No generalization to all AE versions; no runtime API replacement.",
+  "additionalObservation": "These 2D Text Transform values expose three components (z/scale-z included). Refresh was not executed; no separate Refresh failure claimed.",
+  "limits": [
+    "AE-03 Refresh envelope, AE-04 boundary and AE-05 invalid action/Grid smoke unexecuted",
+    "No Undo or UI success evidence",
+    "TBB CONFIRMED / UNFIXED, A09 overall not TARGETED_ACCEPTED",
+    "Prior 108/548 and 189/189 remain implementation results, not rerun"
+  ],
+  "evidenceWorkspace": ".tmp/vela-evidence/0.3.12/a09/m1-real-ae/",
+  "evidence": {
+    "environment": ".tmp/vela-evidence/0.3.12/a09/m1-real-ae/environment.json",
+    "load": ".tmp/vela-evidence/0.3.12/a09/m1-real-ae/load-comparison.json",
+    "capabilities": ".tmp/vela-evidence/0.3.12/a09/m1-real-ae/ae01.json",
+    "before": ".tmp/vela-evidence/0.3.12/a09/m1-real-ae/c1-b0.json",
+    "action": ".tmp/vela-evidence/0.3.12/a09/m1-real-ae/c1-action.json",
+    "after": ".tmp/vela-evidence/0.3.12/a09/m1-real-ae/c1-b1.json",
+    "comparison": ".tmp/vela-evidence/0.3.12/a09/m1-real-ae/c1-comparison.json"
+  },
+  "exactRawSources": [
+    {
+      "file": "environment.json",
+      "sha256": "af6a0cef2fc38c89bd3322db5b67a9b6eb9a90e140651770708b89adc669bc32"
+    },
+    {
+      "file": "ae01.json",
+      "sha256": "946e127689b596ad419cf4ab2080a62b3c0ccf3e2e2898373af90d34753adfe2"
+    },
+    {
+      "file": "c1-b0.json",
+      "sha256": "821106a2b6b19cc7e8249c55bd17cd6f3ecc072519c7e8cb00ed64b64fa48d7f"
+    },
+    {
+      "file": "c1-action.json",
+      "sha256": "61261781040c2aa91d5f3924ddbadf8ee9b35a3b51872e0b7944ade616fbcc7b"
+    },
+    {
+      "file": "c1-b1.json",
+      "sha256": "0f5631b1d75c26105d2cba7f54f3e23120bfad44d29aa8c1c5e385d47cfe94bd"
+    }
+  ]
+}

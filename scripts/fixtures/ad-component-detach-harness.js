@@ -124,14 +124,20 @@ function makeLayer(kind, options) {
             return options.rect || { left: -50, top: -40, width: 100, height: 80 };
         },
         sourcePointToCompCalls: 0,
-        sourcePointToComp: options.noSourcePointToComp ? null : function (point) {
+        // Observed AE 26.0 Host shape: sourcePointToComp exists; toComp is absent.
+        // Explicit 2D affine substitute, not AE rendering or an expression interpreter.
+        sourcePointToComp: options.noSourcePointToComp ? undefined : function (point) {
             this.sourcePointToCompCalls += 1;
             if (options.sourcePointThrowsAt === this.sourcePointToCompCalls) { throw new Error("transport failed"); }
             if (options.sourcePointNull) { return null; }
             if (options.sourcePointShort) { return [1]; }
             if (options.sourcePointNaN) { return [NaN, 1]; }
             if (options.sourcePointInfinity) { return [Infinity, 1]; }
-            return [position.value[0] + (point[0] - anchor.value[0]) * scale.value[0] / 100, position.value[1] + (point[1] - anchor.value[1]) * scale.value[1] / 100];
+            const angle=rotation.value*Math.PI/180;
+            const x=(point[0]-anchor.value[0])*scale.value[0]/100;
+            const y=(point[1]-anchor.value[1])*scale.value[1]/100;
+            const result=[position.value[0]+Math.cos(angle)*x-Math.sin(angle)*y,position.value[1]+Math.sin(angle)*x+Math.cos(angle)*y];
+            return this.parent ? this.parent.sourcePointToComp(result) : result;
         }
     };
     Object.defineProperty(layer, "width", { get: function () { layer.sourceSizeReads += 1; if (options.sourceSizeThrows) { throw new Error("source size must not be read"); } return options.width === undefined ? 100 : options.width; } });
@@ -156,11 +162,24 @@ function harness(comments, kind, options) {
   layer.source=layerKind==='text'||layerKind==='shape'?null:layerKind==='precomp'?new host.sandbox.CompItem():new FootageItem();
   const faults={}; let raw=comment, parent=null;
   if(layerKind==='shape') {
-   function group(){
-    const children={}, order=[], p=property(0);
-    p.property=k=>typeof k==='number'?order[k-1]:(children[k]||p.addProperty(k));
-    p.addProperty=k=>{const child=group();order.push(child);linkProperty(p,child,order.length,k);if(!children[k])children[k]=child;return child;};
+   // Native canonical Shape properties exist before reads. Lookup itself never adds a property.
+   function group(kind){
+    const defaults={
+     'ADBE Vector Anchor':[0,0], 'ADBE Vector Position':[0,0], 'ADBE Vector Scale':[100,100],
+     'ADBE Vector Group Opacity':100, 'ADBE Vector Rect Position':[0,0], 'ADBE Vector Rect Size':[100,100],
+     'ADBE Vector Fill Color':[1,0,0,1], 'ADBE Vector Fill Opacity':100
+    };
+    const children={}, order=[], p=property(defaults[kind]===undefined?0:defaults[kind]);
+    p.property=k=>typeof k==='number'?(order[k-1]||null):(children[k]||null);
+    p.addProperty=k=>{const child=group(k);order.push(child);linkProperty(p,child,order.length,k);if(!children[k])children[k]=child;return child;};
     Object.defineProperty(p,'numProperties',{get:()=>order.length});
+    const builtins={
+     'ADBE Vector Group':['ADBE Vectors Group','ADBE Vector Transform Group'],
+     'ADBE Vector Transform Group':['ADBE Vector Anchor','ADBE Vector Position','ADBE Vector Scale','ADBE Vector Skew','ADBE Vector Skew Axis','ADBE Vector Rotation','ADBE Vector Group Opacity'],
+     'ADBE Vector Shape - Rect':['ADBE Vector Rect Position','ADBE Vector Rect Size','ADBE Vector Rect Roundness'],
+     'ADBE Vector Graphic - Fill':['ADBE Vector Fill Color','ADBE Vector Fill Opacity']
+    };
+    for(const child of builtins[kind]||[])p.addProperty(child);
     return p;
    }
    const root=group(), originalProperty=layer.property;
