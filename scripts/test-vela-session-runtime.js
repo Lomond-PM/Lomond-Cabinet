@@ -216,6 +216,215 @@ const wrongPublishAppender = sessionRuntime.createAuthorityEventAppender(wrongPu
 expectCode(() => wrongPublishAppender.publishCommitted(committedAuthorityEvent), sessionRuntime.ERROR_CODES.SESSION_AUTHORITY_EVENT_UNPUBLISHABLE, "wrong Session appender rejects a trusted event");
 expectCode(() => publishAppender.publishCommitted(Object.freeze({ kind: "delegation/granted", seq: 2, requestId: null, payload: Object.freeze({}) })), sessionRuntime.ERROR_CODES.SESSION_AUTHORITY_EVENT_UNPUBLISHABLE, "raw unappended event is rejected");
 
+// A04: exact receipts, synchronous FIFO publication and isolated audiences.
+// Exercise both real entry points; Authority append itself must stay silent.
+[false, true].forEach((authority) => {
+    const label = authority ? "authority" : "ordinary";
+    const errors = [];
+    const current = sessionRuntime.createSessionLog({ onListenerError(error, envelope) { errors.push({ error, envelope }); throw new Error("reporter"); } });
+    const writer = authority ? sessionRuntime.createAuthorityEventAppender(current) : current;
+    const make = (id) => ({ kind: authority ? "delegation/granted" : "user/message", requestId: id, payload: { id } });
+    const deliver = (event) => { if (authority) check(writer.publishCommitted(event) === true, label + " explicit publication succeeds"); };
+    const order = [];
+    let inner, late;
+    let second;
+    current.subscribe((event) => {
+        order.push("first:" + event.requestId);
+        if (event.requestId === "A") {
+            second.unsubscribe();
+            late = current.subscribe((next) => order.push("late:" + next.requestId));
+            inner = writer.append(make("B"));
+            check(current.getEventBySeq(2) === inner, label + " nested receipt is committed immediately");
+            deliver(inner);
+            deepEqual(order, ["first:A"], label + " nested notification waits for the current audience");
+            if (authority) expectCode(() => writer.publishCommitted(inner), sessionRuntime.ERROR_CODES.SESSION_AUTHORITY_EVENT_ALREADY_PUBLISHED, "queued Authority publication already consumes its one-shot guard");
+            throw new Error("first observer");
+        }
+    });
+    second = current.subscribe((event) => order.push("second:" + event.requestId));
+    const outer = writer.append(make("A"));
+    if (authority) deepEqual(order, [], "Authority append does not publish");
+    deliver(outer);
+    check(outer === current.getEventBySeq(1) && outer.requestId === "A", label + " outer receipt is exactly A");
+    check(inner === current.getEventBySeq(2) && inner.requestId === "B", label + " inner receipt is exactly B");
+    deepEqual(order, ["first:A", "second:A", "first:B", "late:B"], label + " snapshot audience / FIFO drain finishes synchronously");
+    check(errors.length === 1 && errors[0].envelope.event === outer, label + " listener error identifies the committed event");
+    check(errors[0].error.message === "first observer", label + " all callback assertions completed before the deliberate failure");
+    check(Object.isFrozen(errors[0].envelope), label + " diagnostic envelope is immutable");
+    check(errors[0].envelope.phase === (authority ? "authority-post-commit" : "session-post-commit"), label + " error uses the existing diagnostic port");
+    late.unsubscribe();
+    const third = writer.append(make("C")); deliver(third);
+    deepEqual(order.slice(4), ["first:C"], label + " removals affect future publications only");
+    deepEqual(current.getEvents().map(e => e.requestId), ["A", "B", "C"], label + " committed sequence stays intact after errors");
+});
+
+[false, true].forEach((authority) => {
+    const current = sessionRuntime.createSessionLog();
+    const writer = authority ? sessionRuntime.createAuthorityEventAppender(current) : current;
+    const publish = (id) => { const event = writer.append({ kind: authority ? "delegation/revoked" : "user/message", requestId: id }); if (authority) writer.publishCommitted(event); return event; };
+    const order = [];
+    let first;
+    first = current.subscribe(e => { order.push("first:" + e.requestId); first.unsubscribe(); first.unsubscribe(); });
+    const repeated = e => order.push("same:" + e.requestId);
+    const handleA = current.subscribe(repeated);
+    const handleB = current.subscribe(repeated);
+    publish("A");
+    handleA.unsubscribe(); handleA.unsubscribe(); publish("B");
+    handleB.unsubscribe(); publish("C");
+    deepEqual(order, ["first:A", "same:A", "same:A", "same:B"], "subscription tokens isolate duplicate functions and repeated unsubscribe");
+});
+
+[false, true].forEach((authority) => {
+    const current = sessionRuntime.createSessionLog();
+    const writer = authority ? sessionRuntime.createAuthorityEventAppender(current) : current;
+    const notified = [];
+    const make = id => ({ kind: authority ? "delegation/revoked" : "user/message", requestId: id });
+    let nested;
+    current.subscribe(e => {
+        notified.push(e.requestId);
+        nested = writer.append(make("B"));
+        if (authority) writer.publishCommitted(nested);
+        current.close(); current.close();
+    });
+    const later = current.subscribe(() => notified.push("later"));
+    const outer = writer.append(make("A"));
+    if (authority) check(writer.publishCommitted(outer) === true, "closing observer does not turn Authority publish into failure");
+    deepEqual(notified, ["A"], "close cancels remaining callbacks and queued publications");
+    check(outer === current.getEventBySeq(1) && nested === current.getEventBySeq(2), "close preserves both committed receipts");
+    deepEqual(current.project((acc, e) => acc.concat(e.requestId), []), ["A", "B"], "closed log remains readable for projection");
+    expectCode(() => current.subscribe(() => {}), sessionRuntime.ERROR_CODES.SESSION_CLOSED, "subscribe after close is rejected");
+    expectCode(() => writer.append(make("C")), sessionRuntime.ERROR_CODES.SESSION_CLOSED, "closed writer cannot append");
+    if (authority) expectCode(() => writer.publishCommitted(nested), sessionRuntime.ERROR_CODES.SESSION_CLOSED, "closed writer cannot republish");
+    later.unsubscribe();
+});
+
+// Audience capture happens at explicit publication, not Authority append time.
+{
+    const current = sessionRuntime.createSessionLog();
+    const writer = sessionRuntime.createAuthorityEventAppender(current);
+    const order = [];
+    const early = current.subscribe(() => order.push("early"));
+    const event = writer.append({ kind: "permission/decided" });
+    early.unsubscribe(); current.subscribe(() => order.push("late"));
+    writer.publishCommitted(event);
+    deepEqual(order, ["late"], "Authority publication samples its then-current subscribers");
+}
+
+// A diagnostic callback may reenter but cannot replace the committed receipt.
+{
+    let inner; const delivered = [];
+    const current = sessionRuntime.createSessionLog({ onListenerError() { inner = current.append({ kind: "user/message", requestId: "B" }); throw new Error("reporting failed"); } });
+    current.subscribe(e => { if (e.requestId === "A") throw new Error("observer failed"); });
+    current.subscribe(e => delivered.push(e));
+    const outer = current.append({ kind: "user/message", requestId: "A" });
+    deepEqual(delivered, [outer, inner], "diagnostic reentry is contained in publication order");
+    check(outer.seq === 1 && inner.seq === 2, "diagnostic reentry preserves receipts and seq");
+}
+
+// A04: data-only normalization, independent ownership and pre-commit rejection.
+[false, true].forEach((authority) => {
+    const current = sessionRuntime.createSessionLog();
+    const writer = authority ? sessionRuntime.createAuthorityEventAppender(current) : current;
+    const kind = authority ? "permission/decided" : "user/message";
+    const nested = { value: 1 };
+    const dictionary = Object.create(null); dictionary.entry = "data";
+    const payload = { nested, list: [nested, null, undefined, false, "text", 2], dictionary };
+    Object.defineProperty(payload, "hidden", { value: { value: 3 } });
+    Object.defineProperty(payload, "__proto__", { value: { value: 4 }, enumerable: true });
+    const input = { kind, requestId: "original", payload, seq: 99, family: "forged" };
+    const event = writer.append(input);
+    check(!Object.isFrozen(input) && !Object.isFrozen(payload) && !Object.isFrozen(nested), "normalization never freezes caller data");
+    check(event.payload !== payload && event.payload.nested !== nested && event.payload.list !== payload.list, "nested objects and arrays are independently owned");
+    check(event.payload.dictionary !== dictionary && Object.getPrototypeOf(event.payload.dictionary) === null, "null-prototype data is copied");
+    input.requestId = "changed"; nested.value = 9; payload.list.push("later"); payload.hidden.value = 8;
+    check(event.requestId === "original" && event.payload.nested.value === 1 && event.payload.list.length === 6 && event.payload.hidden.value === 3, "caller changes cannot change event facts");
+    check(event.seq === 1 && event.family === sessionRuntime.classifyEventKind(kind), "caller cannot set seq or classification");
+    check(Object.isFrozen(event) && Object.isFrozen(event.payload) && Object.isFrozen(event.payload.list[0]) && Object.isFrozen(event.payload.hidden), "all retained data is immutable including hidden fields");
+    check(Object.prototype.hasOwnProperty.call(event.payload, "__proto__") && event.payload.__proto__.value === 4 && Object.getPrototypeOf(event.payload) === Object.prototype, "special keys remain data, without prototype assignment");
+    check(event.payload.list[2] === undefined && Object.prototype.hasOwnProperty.call(event.payload.list, 2), "undefined data retains its optional-field meaning");
+    check(sessionRuntime.isTrustedAuthorityEvent(event) === authority, "copying payload does not change Authority ownership");
+    const frozen = Object.freeze({ leaf: Object.freeze({ value: 5 }) });
+    const fromFrozen = writer.append({ kind, payload: frozen });
+    check(fromFrozen.payload !== frozen && fromFrozen.payload.leaf !== frozen.leaf, "even frozen caller objects are copied");
+    const sparse = []; sparse.length = 3; sparse[2] = "end";
+    const sparseEvent = writer.append({ kind, payload: { sparse } });
+    check(sparseEvent.payload.sparse.length === 3 && !(0 in sparseEvent.payload.sparse) && sparseEvent.payload.sparse[2] === "end", "array holes are preserved");
+    [null, undefined, [], "payload", 3, false, new Date(0), function () {}].forEach(value => {
+        deepEqual(writer.append({ kind, payload: value }).payload, {}, "foundation non-plain root payload normalization is retained");
+    });
+    let calls = 0;
+    const getter = () => { calls += 1; throw new Error("must not execute"); };
+    const accessor = (name, value, enumerable = true) => Object.defineProperty(value, name, { enumerable, get: getter });
+    const cycle = {}; cycle.self = cycle;
+    const symbolKey = {}; symbolKey[Symbol("key")] = "value";
+    const invalid = [
+        accessor("kind", {}), accessor("payload", { kind }), accessor("requestId", { kind }), accessor("ignored", { kind }, false),
+        { kind, payload: accessor("live", {}) }, { kind, payload: { nested: accessor("live", {}, false) } },
+        { kind, payload: { list: [accessor("live", {})] } }, { kind, payload: { list: accessor("0", []) } },
+        { kind, payload: { nested: Object.defineProperty({}, "set", { set: getter }) } },
+        { kind, payload: { toJSON: getter } }, { kind, payload: { method: getter } },
+        { kind, payload: { bad: NaN } }, { kind, payload: { bad: Infinity } }, { kind, payload: { bad: Symbol("value") } },
+        { kind, payload: { bad: BigInt(1) } }, { kind, payload: { date: new Date(0) } },
+        { kind, payload: { instance: new (class Local {})() } }, { kind, payload: cycle }, { kind, payload: symbolKey },
+        accessor(Symbol.toStringTag, { kind }), { kind, payload: accessor(Symbol.toStringTag, {}) }
+    ];
+    invalid.forEach((input, index) => {
+        const before = current.getSnapshot();
+        expectCode(() => writer.append(input), sessionRuntime.ERROR_CODES.SESSION_EVENT_INVALID, "invalid data case " + index + " rejects through the real writer");
+        const after = current.getSnapshot();
+        check(after.lastSeq === before.lastSeq && after.events.length === before.events.length && after.events.every((e, i) => e === before.events[i]), "rejected input cannot change seq/log/identities");
+    });
+    check(calls === 0, "no getter, setter, toJSON or executable member ran");
+    const ignoredTopLevel = writer.append({ kind, toJSON: getter, payload: { value: 1 } });
+    check(calls === 0 && !Object.prototype.hasOwnProperty.call(ignoredTopLevel, "toJSON"), "unretained top-level extension data is never executed or frozen");
+    const nextSeq = current.getSnapshot().lastSeq + 1;
+    check(writer.append({ kind }).seq === nextSeq, "next valid event has no rejection-created seq gap");
+});
+
+// Reflection errors are validation failures. Reflection is not a sandbox for
+// hostile Proxies, but even reentrant reflection cannot commit another event.
+{
+    const current = sessionRuntime.createSessionLog(); let attempted = 0;
+    const payload = new Proxy({}, { ownKeys() { attempted += 1; current.append({ kind: "user/message" }); return []; } });
+    expectCode(() => current.append({ kind: "user/message", payload }), sessionRuntime.ERROR_CODES.SESSION_EVENT_INVALID, "reflection reentry is rejected before any commit");
+    check(attempted === 1 && current.getSnapshot().lastSeq === 0 && current.getEvents().length === 0, "reflection reentry leaves log and seq unchanged");
+    check(current.append({ kind: "user/message" }).seq === 1, "normalization guard releases after rejection");
+}
+
+// Legal push order agrees with replay / pure project. Explicit unpublished
+// Authority evidence is in the log, but is never auto-published by ordinary append.
+{
+    const current = sessionRuntime.createSessionLog();
+    const writer = sessionRuntime.createAuthorityEventAppender(current);
+    const pushed = [];
+    const fold = (acc, e) => acc.concat([e.seq + ":" + e.kind]);
+    current.subscribe(e => {
+        if (e.kind === "permission/requested") {
+            const terminal = writer.append({ kind: "permission/decided", requestId: e.requestId, payload: { decision: "approved" } });
+            writer.publishCommitted(terminal);
+        }
+    });
+    current.subscribe(e => pushed.push(e));
+    current.append({ kind: "permission/requested", requestId: "request_A" });
+    current.append({ kind: "task/completed" });
+    deepEqual(pushed.reduce(fold, []), current.project(fold, []), "published legal reentrant sequence equals log project");
+    deepEqual(sessionRuntime.projectPendingApprovalIds(pushed), sessionRuntime.projectPendingApprovalIds(current.getEvents()), "push and replay agree on approval projection");
+    const replay = sessionRuntime.createSessionLog({ sessionId: current.getSessionId() });
+    const replayWriter = sessionRuntime.createAuthorityEventAppender(replay);
+    current.getEvents().forEach(e => {
+        const copied = replay.append(e);
+        check(!sessionRuntime.isTrustedAuthorityEvent(copied), "event replay never restores Authority identity");
+        expectCode(() => replayWriter.publishCommitted(copied), sessionRuntime.ERROR_CODES.SESSION_AUTHORITY_EVENT_UNPUBLISHABLE, "authority-shaped replay cannot publish");
+    });
+    deepEqual(replay.project(fold, []), current.project(fold, []), "replay preserves data projection without authorization");
+    expectCode(() => replayWriter.publishCommitted(current.getEventBySeq(2)), sessionRuntime.ERROR_CODES.SESSION_AUTHORITY_EVENT_UNPUBLISHABLE, "same Session id string cannot cross exact Session ownership");
+    const deferred = writer.append({ kind: "delegation/granted" });
+    const publicEvent = current.append({ kind: "user/message" });
+    check(pushed[pushed.length - 1] === publicEvent && pushed.indexOf(deferred) === -1, "ordinary append cannot implicitly publish committed Authority evidence");
+    writer.publishCommitted(deferred);
+    check(pushed[pushed.length - 1] === deferred, "deferred event is delivered only at its explicit publication position");
+}
+
 // close semantics
 log.close();
 check(log.isClosed() === true, "close marks session closed");

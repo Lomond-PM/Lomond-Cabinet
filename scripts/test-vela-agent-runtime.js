@@ -279,4 +279,38 @@ externallyClosedAgent.activate();
 equal(externallyClosedAgent.getLifecycleStage(), "active", "external Session.close does not dispose Agent");
 equal(externalProjectionNotifications[externalProjectionNotifications.length - 1].changeKind, "agent", "Agent changes still notify after external Session.close");
 
+// Session diagnostics use the Agent's existing out-of-band reporter as well.
+const sessionDiagnostics = [];
+const reportingAgent = agentRuntime.createAgent({ onListenerError(error, envelope) { sessionDiagnostics.push({ error, envelope }); throw new Error("reporting"); } });
+const reportingSession = reportingAgent.getSession();
+const reportingProjection = [];
+reportingAgent.getProjection().subscribe(envelope => reportingProjection.push(envelope));
+reportingSession.subscribe(() => { throw new Error("session observer"); });
+const reportingEvent = reportingSession.append({ kind: "user/message" });
+equal(sessionDiagnostics.length, 1, "Session listener failure reaches the Agent reporter");
+equal(sessionDiagnostics[0].envelope.event, reportingEvent, "Agent diagnostic names the exact committed event");
+equal(reportingProjection[reportingProjection.length - 1].sessionSeq, reportingEvent.seq, "Agent projection still updates synchronously before append returns");
+equal(reportingSession.getEventBySeq(reportingEvent.seq), reportingEvent, "reporter failure cannot turn a committed append into failure");
+reportingAgent.dispose();
+
+const reentrantAgent = agentRuntime.createAgent();
+const reentrantProjection = reentrantAgent.getProjection();
+const reentrantSession = reentrantAgent.getSession();
+const projectionOrder = [];
+let reentrantReceipt;
+reentrantProjection.subscribe(envelope => {
+    if (envelope.changeKind !== "session") return;
+    projectionOrder.push("first:" + envelope.sessionSeq);
+    if (envelope.sessionSeq === 1) {
+        reentrantReceipt = reentrantSession.append({ kind: "tool/result" });
+        projectionOrder.push("returned:" + reentrantReceipt.seq);
+    }
+});
+reentrantProjection.subscribe(envelope => { if (envelope.changeKind === "session") projectionOrder.push("second:" + envelope.sessionSeq); });
+const firstReceipt = reentrantSession.append({ kind: "task/started" });
+deepEqual(projectionOrder, ["first:1", "returned:2", "second:1", "first:2", "second:2"], "actual Agent projection drains reentrant Session changes synchronously in publication order");
+equal(firstReceipt, reentrantSession.getEventBySeq(1), "Agent projection reentry preserves outer receipt");
+equal(reentrantReceipt, reentrantSession.getEventBySeq(2), "Agent projection reentry preserves inner receipt");
+reentrantAgent.dispose();
+
 console.log("test-vela-agent-runtime: " + assertions + " assertions passed");

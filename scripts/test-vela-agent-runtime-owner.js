@@ -20,6 +20,15 @@ function expectCode(fn, code, message) {
 }
 
 const owner = ownerModule.createOwner();
+const sessionFailures = [];
+const sessionReportingOwner = ownerModule.createOwner({ onListenerError(error, envelope) { sessionFailures.push({ error, envelope }); throw new Error("reporter"); } });
+const ownedSession = sessionReportingOwner.getSessionRuntime();
+ownedSession.subscribe(() => { throw new Error("owned Session observer"); });
+const ownedEvent = ownedSession.append({ kind: "user/message" });
+equal(sessionFailures.length, 1, "Owner receives Session errors through its existing reporter");
+equal(sessionFailures[0].envelope.event, ownedEvent, "Owner reporter receives the exact committed event");
+equal(sessionReportingOwner.getCurrentProjection().getSnapshot().sessionLastSeq, ownedEvent.seq, "Owner projection remains synchronous after observer failure");
+sessionReportingOwner.dispose();
 const agent = owner.getCurrentAgent();
 const projection = owner.getCurrentProjection();
 check(agent && projection, "Owner creates one current Agent and Projection");
