@@ -3,7 +3,7 @@
 **规划修订：R1-2026-09-09**
 **基准节点：0.3.11 — Multi-conversation Foundation，COMPLETE / SEALED**
 **核对仓库：`Lomond-PM/Lomond-Cabinet`，`dev@b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a`**
-**文档状态：保留 R1 规划来源；A01 已 TARGETED_ACCEPTED 并经 PR #202 合并 dev（覆盖限制保留）；A11含F1已通过PR #203合并dev，保持TARGETED_ACCEPTED及覆盖边界；G-02已通过PR #204合并dev，保持TARGETED_ACCEPTED；当前0.3.12-B2 / A08：TARGETED_ACCEPTED / READY FOR COMMIT / PR，仅修保留Host函数，注册/UI留待后续。其余条目不因本次裁定改变，整个 B1/0.3.12 未完成。**
+**文档状态：保留 R1 规划来源；A01 已 TARGETED_ACCEPTED 并经 PR #202 合并 dev（覆盖限制保留）；A11含F1已通过PR #203合并dev，保持TARGETED_ACCEPTED及覆盖边界；G-02已通过PR #204合并dev，保持TARGETED_ACCEPTED；当前0.3.12-B2 / A09（M1、M2/F1）：TARGETED_ACCEPTED — AE26.0x67 / READY FOR COMMIT / PR，见本文A09条目及主报告；26.3x87跨版本复验DEFERRED。其余条目不因本次裁定改变，整个 B1/0.3.12 未完成。**
 
 > **总目标：先修可信性与数据风险，再重建视觉和 UI 基础，随后泛化能力、形成可委托的完整 AE Agent。**
 > 项目处于早期阶段，允许替换旧实现、重组模块与页面结构；不以维护既有类名、旧 Renderer 或庞大主程序为目的。需要保留的是执行安全、用户资产、明确的所有权和经过验证的产品语义，而不是实现外形。
@@ -629,7 +629,7 @@ length 可被后续 stop 覆盖，finish_reason 后的 content delta 仍被拼�
 
 #### A08 — Detach 清空原始用户注释
 
-**当前实施：TARGETED_ACCEPTED / READY FOR COMMIT / PR。** [A08报告](../reports/vela-0.3.12-b2-a08-detach-comment-ownership.md)：基线PR #204；真实注册创建→保留Host Detach，注册Detach不存在，用户裁定本轮不新增。初始251项/186 suites及实机Grid PASS/Feature FAIL、Undo恢复保持历史；F1采用用户授权的当前帧定稿契约：精确属性/完整模板核对、统一comp.time采样、普通2D平移父链补偿，未知表达式/待写属性关键帧/受保护历史/非法求值在写入前拒绝，元数据最后清理。F1 421项、A08重跑251项、187/187 suites PASS（0 skip）；随后F1新装载PASS但普通Text被固有collapse标志误拒，B1/B2所查字段无差异，非零时间/Grid未执行，保留为历史失败。F1a历史修正：依Host matchName识别Text/Shape，其固有true/false标志不单独拒绝；AV依CompItem/FootageItem来源及nullLayer区分，collapsed预合成、其他连续栅格化素材、未知类型/不可读必要标志仍预检拒绝。F1a实施轮1134项定向、251项A08及187/187 suites PASS（0 skip）；随后F1a实机R1在额外依赖/属性扫描预检失败，所查B1/B2无差异，R2/R3及Undo未执行；该历史失败未改。D1已确认当前AE五个Property的结构locator一致而wrapper引用不等；F1b现以compId/layerId及完整propertyIndex+matchName路径作私有preflight匹配，并经用户追加授权预先关联Position release校验目标，不在执行阶段重新resolve。F1b 932项定向、重新执行F1/F1a 1134项及A08 251项通过；全量仅运行一次，188 discovered/executed、187 PASS、1 FAIL、0 skip，唯一失败为i18n生成报告过期，原脚本更新后该suite单独46项PASS，生产/测试未再变更；不表述为全量188/188 PASS。以上为F1b实施轮离线事实，本次实机未重跑。2026-09-11正常装载后，R1正常Feature、R2非零t=1秒定稿、R3原Grid小回验及三次用户原生Undo均PASS；独立B3所查字段均恢复B1。A08（含F1/F1a/F1b）现为TARGETED_ACCEPTED / READY FOR COMMIT / PR，仅覆盖普通2D、已识别类型/完整Feature模板和受支持平移父链的当前帧定稿；Detach注册/UI未交付，未来接入仍需回验。INTEGRATED_ACCEPTED / CLOSED留待0.3.12-G，B2/0.3.12未完成，不进入A09。
+**A09 开始前的 A08 阶段验收记录：TARGETED_ACCEPTED / READY FOR COMMIT / PR。** [A08报告](../reports/vela-0.3.12-b2-a08-detach-comment-ownership.md)：基线PR #204；真实注册创建→保留Host Detach，注册Detach不存在，用户裁定本轮不新增。初始251项/186 suites及实机Grid PASS/Feature FAIL、Undo恢复保持历史；F1采用用户授权的当前帧定稿契约：精确属性/完整模板核对、统一comp.time采样、普通2D平移父链补偿，未知表达式/待写属性关键帧/受保护历史/非法求值在写入前拒绝，元数据最后清理。F1 421项、A08重跑251项、187/187 suites PASS（0 skip）；随后F1新装载PASS但普通Text被固有collapse标志误拒，B1/B2所查字段无差异，非零时间/Grid未执行，保留为历史失败。F1a历史修正：依Host matchName识别Text/Shape，其固有true/false标志不单独拒绝；AV依CompItem/FootageItem来源及nullLayer区分，collapsed预合成、其他连续栅格化素材、未知类型/不可读必要标志仍预检拒绝。F1a实施轮1134项定向、251项A08及187/187 suites PASS（0 skip）；随后F1a实机R1在额外依赖/属性扫描预检失败，所查B1/B2无差异，R2/R3及Undo未执行；该历史失败未改。D1已确认当前AE五个Property的结构locator一致而wrapper引用不等；F1b现以compId/layerId及完整propertyIndex+matchName路径作私有preflight匹配，并经用户追加授权预先关联Position release校验目标，不在执行阶段重新resolve。F1b 932项定向、重新执行F1/F1a 1134项及A08 251项通过；全量仅运行一次，188 discovered/executed、187 PASS、1 FAIL、0 skip，唯一失败为i18n生成报告过期，原脚本更新后该suite单独46项PASS，生产/测试未再变更；不表述为全量188/188 PASS。以上为F1b实施轮离线事实，本次实机未重跑。2026-09-11正常装载后，R1正常Feature、R2非零t=1秒定稿、R3原Grid小回验及三次用户原生Undo均PASS；独立B3所查字段均恢复B1。A08（含F1/F1a/F1b）现为TARGETED_ACCEPTED / READY FOR COMMIT / PR，仅覆盖普通2D、已识别类型/完整Feature模板和受支持平移父链的当前帧定稿；Detach注册/UI未交付，未来接入仍需回验。INTEGRATED_ACCEPTED / CLOSED留待0.3.12-G，B2/0.3.12未完成；该历史阶段停止于A08、不进入A09。
 
 **分配：**主办 0.3.12；集成/回验 0.3.12；0.3.18。
 **原有证据：**原报告 E1：变更循环夹具；AE Undo 未实测。[S-A]
@@ -643,6 +643,10 @@ source binding 已保存 previousCommentEncoded，但 Detach 对所有组件层�
 
 
 #### A09 — 坐标转换失败被伪装为有效几何
+
+**0.3.12-B2 / A09（M1、M2/F1）：TARGETED_ACCEPTED — AE26.0x67 / READY FOR COMMIT / PR。** 见 [A09 主报告](../reports/vela-0.3.12-b2-a09-coordinate-space.md)。M1 与 M2/F1 均已在 AE26.0x67 定向接受；最新全量为 M2-F1 实施轮 **192/192 PASS（0 skip）**，实机轮及本轮文档收束未重跑。M2 七组 PASS、六次原生 Undo，**3451 个所查字段零差异**。
+
+支持包络保持：ACK Feature 当前 **auto/center** 与既有普通2D、受支持平移父链规则；TBB Text 使用 **source-local padding**，Shape/AV visual 使用 **comp-space padding**，仍限既有静态2D/类型/父链包络。不得推导为任意 Transform、父链或 AE 版本均已支持。 AE26.3x87 跨版本复验 **DEFERRED**；AV fallback 真实 AE **NOT COVERED**，已有离线覆盖保持。INTEGRATED_ACCEPTED / CLOSED 留待 **0.3.12-G**；B2 和整个 0.3.12 未完成，不自动开始下一项。 原始发现及各轮 FAIL 保留历史，不新增问题ID或并行路线。
 
 **分配：**主办 0.3.12；集成/回验 0.3.12；0.3.18–0.3.21。
 **原有证据：**原报告 E1：能力夹具；宿主/API/图层矩阵待验证。[S-A]

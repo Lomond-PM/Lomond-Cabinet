@@ -139,7 +139,7 @@ for(const key of ['sourcePosition','backgroundPosition','size','round','color'])
 }
 rejected('wrong-artifact',h=>{const p=h.fields[0].prop;p.expression=p.expression.replace(/artifactId=[^\n]+/,'artifactId=foreign');});
 rejected('wrong-role',h=>{h.fields[0].prop.expression=h.fields[0].prop.expression.replace('role=sourceLayerBinding','role=generatedLayer');});
-rejected('unknown-body',h=>{h.fields[0].prop.expression=h.fields[0].prop.expression.replace('var gap =','var modified =');});
+rejected('unknown-body',h=>{h.fields[0].prop.expression=h.fields[0].prop.expression.replace('var gap=','var modified=');});
 rejected('saved-disabled-user-expression',h=>{h.fields[0].prop.expression=h.fields[0].prop.expression.replace('previousExpressionEncoded=','previousExpressionEncoded=%25ZZ');});
 rejected('expression-disabled',h=>h.fields[0].prop.expressionEnabled=false);
 rejected('wrong-dimension',h=>h.fields[0].prop.evaluate=()=>[1,2,3]);

@@ -130,12 +130,29 @@ if (process.argv.includes("--observe")) {
         host.sandbox.app.beginUndoGroup = () => { boundaries++; throw new Error("A01 post-parse mutation boundary"); };
         for (const fn of [api.tools.textBackgroundBox.create, shape.createStrokeFillLayer]) {
             const before = calls;
-            checks++;
-            assert.throws(() => fn('{"strokeWidth":3,"fillColor":"#112233"}'), /A01 post-parse mutation boundary/);
+            const savedProject = host.sandbox.app.project;
+            if (fn === api.tools.textBackgroundBox.create) {
+                // M2 now preflights before Undo and contains execution errors in its JSON result.
+                // A valid no-selection native fixture reaches the same boundary; no Shape is created.
+                const comp = new host.sandbox.CompItem();
+                Object.assign(comp, { time: 0, width: 960, height: 540, selectedLayers: [], layers: {
+                    addShape() { throw new Error("Unexpected creation beyond JSON-entry boundary"); }
+                } });
+                host.sandbox.app.project = { activeItem: comp };
+                const count = boundaries;
+                const result = JSON.parse(fn('{"strokeWidth":3,"fillColor":"#112233"}'));
+                equal(result.ok, false, "TBB contains the post-parse execution failure");
+                equal(result.message.includes("A01 post-parse mutation boundary"), true, "same deliberate boundary reached");
+                equal(boundaries, count + 1, "valid TBB JSON reaches Undo after complete preflight");
+            } else {
+                checks++;
+                assert.throws(() => fn('{"strokeWidth":3,"fillColor":"#112233"}'), /A01 post-parse mutation boundary/);
+            }
             const count = boundaries;
             equal(JSON.parse(fn(expression)).ok, false, "invalid mutation params rejected");
             equal(boundaries, count, "invalid params never reach undo group");
             equal(calls - before, 2, "mutation parameter consumer reached");
+            host.sandbox.app.project = savedProject;
         }
         host.sandbox.app.beginUndoGroup = savedBegin;
         api.parseJson = parse;

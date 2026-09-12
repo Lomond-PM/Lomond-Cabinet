@@ -1,0 +1,169 @@
+{
+  "scope": "A09-M1b targeted real AE revalidation",
+  "date": "2026-09-12",
+  "host": "AE 26.0x67",
+  "branch": "fix/host-coordinate-space-a09-0.3.12",
+  "head": "6a7a417ec343ad6e566f4b9955686fe7e55dea6e",
+  "classification": "A09-M1 REAL AE REVALIDATION FAIL — AE 26.0x67",
+  "stopReason": "R1 evaluated pill geometry does not match independent comp AABB + padding; user-provided screenshot corroborates.",
+  "implementationOfflineStatus": "A09-M1b IMPLEMENTED / OFFLINE PASS (prior 201 scenarios / 993 assertions and single 189/189 full run; not rerun)",
+  "hostLoad": {
+    "pass": true,
+    "worktreeSha256": "0c7ed0fa5c22d91f4d5d29b479cf01bb0995bca81455a955cb34c7112e539638",
+    "hostFileSha256": "0c7ed0fa5c22d91f4d5d29b479cf01bb0995bca81455a955cb34c7112e539638",
+    "publicFunctionsMatch": {
+      "getLayerVisualBoundsInComp": true,
+      "createFeatureStack": true,
+      "refreshSelectedComponent": true
+    },
+    "loadErrors": []
+  },
+  "capabilitySmoke": {
+    "layerType": "Text",
+    "sourcePointToComp": "function",
+    "toComp": "undefined",
+    "calls": 1,
+    "result": [
+      186.223999023438,
+      142.951995849609
+    ],
+    "finite2D": true
+  },
+  "r1": {
+    "compId": 13,
+    "compName": "A09_M1B_R1_CREATE_26_0",
+    "action": "runRegisteredToolAction(ecommerceLayout, createFeatureStack, paramsJson)",
+    "actionCount": 1,
+    "returnedOk": true,
+    "measurementError": false,
+    "layerCount": [
+      2,
+      5
+    ],
+    "controllerId": 29,
+    "sourceIds": [
+      25,
+      26
+    ],
+    "backgroundIds": [
+      30,
+      31
+    ],
+    "toleranceAeUnits": 0.0001,
+    "padding": [
+      24,
+      12
+    ],
+    "b0MaxCornerError": 0.00003023147633030021,
+    "geometry": [
+      {
+        "sourceId": 26,
+        "sourceName": "A09_M1B_TEXT_B",
+        "backgroundId": 31,
+        "expectedCompSize": [
+          317.14993929893865,
+          90.24890603879783
+        ],
+        "storedRectSize": [
+          317.149963378906,
+          90.2489013671875
+        ],
+        "storedRectSizePass": true,
+        "evaluatedRectSize": [
+          315.679993897676,
+          53.2800021916628
+        ],
+        "evaluatedRectSizeDelta": [
+          -1.4699454012626347,
+          -36.968903847135024
+        ],
+        "actualCompSize": [
+          315.679962158203,
+          53.27999877929699
+        ],
+        "actualCompSizeDelta": [
+          -1.4699771407356366,
+          -36.96890725950084
+        ],
+        "pass": false
+      },
+      {
+        "sourceId": 25,
+        "sourceName": "A09_M1B_TEXT_A",
+        "backgroundId": 30,
+        "expectedCompSize": [
+          471.4159837663176,
+          50.35200197249648
+        ],
+        "storedRectSize": [
+          471.415954589844,
+          50.3520050048828
+        ],
+        "storedRectSizePass": true,
+        "evaluatedRectSize": [
+          336.725702690227,
+          55.9466688583295
+        ],
+        "evaluatedRectSizeDelta": [
+          -134.69028107609057,
+          5.594666885833021
+        ],
+        "actualCompSize": [
+          336.72570800781295,
+          55.94668579101602
+        ],
+        "actualCompSizeDelta": [
+          -134.69027575850464,
+          5.594683818519542
+        ],
+        "pass": false
+      }
+    ],
+    "expressionKinds": {
+      "sourcePosition": {
+        "count": 2,
+        "enabled": true,
+        "expressionErrors": 0
+      },
+      "backgroundPosition": {
+        "count": 2,
+        "enabled": true,
+        "expressionErrors": 0
+      },
+      "rectSize": {
+        "count": 2,
+        "enabled": true,
+        "expressionErrors": 0
+      },
+      "roundness": {
+        "count": 2,
+        "enabled": true,
+        "expressionErrors": 0
+      },
+      "fillColor": {
+        "count": 2,
+        "enabled": true,
+        "expressionErrors": 0
+      }
+    },
+    "nonfiniteValuesFound": 0,
+    "compTime": {
+      "requested": 0.5,
+      "before": 0.5,
+      "after": 0.5,
+      "unchanged": true
+    },
+    "visual": "FAIL; user screenshot corroborates visible wrapping error",
+    "undo": "NOT PERFORMED; B2 NOT COVERED"
+  },
+  "remaining": {
+    "R2": "NOT COVERED — R1 stop",
+    "R3": "NOT COVERED — R1 stop",
+    "R4_invalidGeometry": "NOT COVERED — R1 stop",
+    "R4_grid": "NOT COVERED — R1 stop",
+    "AE_26_3x87": "REVALIDATION PENDING",
+    "TBB": "CONFIRMED / UNFIXED",
+    "M2": "NOT STARTED"
+  },
+  "rawEvidenceDirectory": ".tmp/vela-evidence/0.3.12/a09/m1b-real-ae-26.0/"
+}
