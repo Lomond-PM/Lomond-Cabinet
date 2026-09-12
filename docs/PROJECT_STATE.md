@@ -2,45 +2,15 @@
 
 ## Vela development milestone
 
-**0.3.12-B2 / A09（M1、M2/F1）：TARGETED_ACCEPTED — AE26.0x67 / READY FOR COMMIT / PR。** 见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)。
+**0.3.12-C1 / A04 — Session Event Correctness：TARGETED_ACCEPTED — AdobeCEP 12.0.1 / Chrome 99（Windows Win64）/ READY FOR COMMIT / PR**。页面生产模块与临时 Agent 的有限 CEP 验收 R1–R4 通过、临时对象已清理；结果和覆盖边界见 [C1 阶段报告](reports/vela-0.3.12-c1-a04-session-events.md)。未重新验证完整 Provider→Authority→Host 任务链；C2、Provider 生命周期和 UI 重构不在本轮。
 
-M1 与 M2/F1 均已在 AE26.0x67 定向接受；最新全量为 M2-F1 实施轮 **192/192 PASS（0 skip）**，实机轮及本轮文档收束未重跑。M2 七组 PASS、六次原生 Undo，**3451 个所查字段零差异**。
+**A09 已通过 PR #207 合并 dev**；M1、M2/F1 与 A09 均为 **TARGETED_ACCEPTED — AE26.0x67**，不重新打开其验收。ACK Feature 保持 auto/center 与既有有界2D/平移父链规则；TBB Text 使用 source-local padding，Shape/AV visual 使用 comp-space padding。AE26.3x87 跨版本复验 DEFERRED；AV fallback 真实 AE NOT COVERED、离线覆盖保持。完整结果、历史失败及边界见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)。INTEGRATED_ACCEPTED / CLOSED 留待 **0.3.12-G**，整个 0.3.12 未完成。
 
-支持包络保持：ACK Feature 当前 **auto/center** 与既有普通2D、受支持平移父链规则；TBB Text 使用 **source-local padding**，Shape/AV visual 使用 **comp-space padding**，仍限既有静态2D/类型/父链包络。不得推导为任意 Transform、父链或 AE 版本均已支持。
+当前支持多条独立 live conversation records、全局最多一个 active objective；默认创建并选择一条，支持 selector/New/Close、最多八条记录及各自临时草稿。PresentationModel 由 Conversation 持有，命令/流/完成事件绑定来源 conversation。持久化、历史注入、Authority 恢复、并发目标和目标队列/调度器均未实现。
 
-AE26.3x87 跨版本复验 **DEFERRED**；AV fallback 真实 AE **NOT COVERED**，已有离线覆盖保持。INTEGRATED_ACCEPTED / CLOSED 留待 **0.3.12-G**；B2 和整个 0.3.12 未完成，不自动开始下一项。
+历史事实保留在原报告：[0.3.11 综合封存](reports/vela-0.3.11-integrated-acceptance.md)、[0.3.10 Context 封存](reports/vela-0.3.10-context-closure.md)、[0.3.9 封存](reports/vela-0.3.9-c2-closure.md)、[A01](reports/vela-0.3.12-b1-a01-host-json-entry.md)、[A11/F1](reports/vela-0.3.12-b1-a11-host-json-serialization.md)、[G-02](reports/vela-0.3.12-b1-g02-layer-name-unicode.md)、[A08](reports/vela-0.3.12-b2-a08-detach-comment-ownership.md)。历史 UNKNOWN、Host 限制及 A08 Detach 注册/UI 未交付仍保留，不由当前摘要升级。
 
-G-02历史实施轮：contracts 587、生产E2E 342 assertions、185/185离线suite通过（0 skip）；该阶段验收未重跑。A08初始实施轮186 suites及其随后实机验收均为历史；A08-F1a实施轮重跑187 suites，其随后实机阶段未重跑；F1b实施轮重新执行结果及本次实机结果见下文。真实验收四组PASS：CEP参数84/84、IntentGate4/4；合法rename取得Agent verified-match/completed及用户原生Undo恢复。TARGETED_ACCEPTED，INTEGRATED_ACCEPTED / CLOSED留待0.3.12-G。
-
-**0.3.11 — Multi-conversation Foundation：COMPLETE / SEALED**。0.3.12-A0 文档规划 COMPLETE，已合并 dev。A09 开始前的历史阶段 **0.3.12-B2 / A08：TARGETED_ACCEPTED / READY FOR COMMIT / PR**，见 [A08 报告](reports/vela-0.3.12-b2-a08-detach-comment-ownership.md)。仅修保留 Host Detach，注册/UI 留待后续；A08初始251项/186 suites、Grid PASS/Feature FAIL及Undo记录保留历史；F1按当前帧定稿契约实现精确模板准入、统一采样和有界2D空间补偿，F1实施轮421项、重跑A08 251项及187/187 suites PASS（0 skip）；随后F1实机装载PASS，但普通Text被collapse准入误拒，所查B1/B2未变；该失败保留历史。F1a已补齐Text/Shape真实标志factory，并修正成员/父链类型准入；F1a实施轮1134项定向、251项A08及187/187 suites PASS（0 skip）；F1a实机R1曾越过旧类型拒绝，但在额外依赖/属性扫描预检失败，独立B1/B2所查字段未变，R2/R3未执行、无Undo；这第三次Feature失败保持历史。D1已确认当前AE五个Property的结构locator一致而wrapper引用不等；F1b现以compId/layerId及完整propertyIndex+matchName路径作私有preflight匹配，并经用户追加授权预先关联Position release校验目标，不在执行阶段重新resolve。F1b 932项定向、重新执行F1/F1a 1134项及A08 251项通过；全量仅运行一次，188 discovered/executed、187 PASS、1 FAIL、0 skip，唯一失败为i18n生成报告过期，原脚本更新后该suite单独46项PASS，生产/测试未再变更；不表述为全量188/188 PASS。以上为F1b实施轮离线事实，本次实机未重跑。2026-09-11正常装载后，R1正常Feature、R2非零t=1秒定稿、R3原Grid小回验及三次用户原生Undo均PASS；独立B3所查字段均恢复B1。A08（含F1/F1a/F1b）现为TARGETED_ACCEPTED / READY FOR COMMIT / PR，仅覆盖普通2D、已识别类型/完整Feature模板和受支持平移父链的当前帧定稿；Detach注册/UI未交付，未来接入仍需回验。INTEGRATED_ACCEPTED / CLOSED留待0.3.12-G，B2/0.3.12未完成；该历史阶段停止于A08、不进入A09。G-02 已通过 PR #204 合并 dev，保持 TARGETED_ACCEPTED 与原验收边界，见 [G-02报告](reports/vela-0.3.12-b1-g02-layer-name-unicode.md)。A11含F1已通过PR #203合并dev，保持TARGETED_ACCEPTED及原覆盖边界，完整公共字符串转义及F1输入准入已获有界实机接受，见 [A11 报告](reports/vela-0.3.12-b1-a11-host-json-serialization.md)。A01 已通过 PR #202 合并 dev，保留 TARGETED_ACCEPTED 与剩余覆盖裁定：公共 `AEToolbox.parseJson` 已移除执行输入的回退，缺少原生 JSON.parse 时使用严格 JSON 解析，实际注册状态链与其他直接消费者的离线验证通过，六组有界真实 AE 验收已接受；覆盖限制保留，INTEGRATED_ACCEPTED / CLOSED 留待 0.3.12-G，B1/0.3.12 未完成。当前排期唯一来源为 [VELA_ROADMAP](VELA_ROADMAP.md)，A01 历史证据及宿主边界见 [A01 阶段报告](reports/vela-0.3.12-b1-a01-host-json-entry.md)，资料与覆盖规划保留在 [A0 阶段报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)。
-
-A11-F1 已补强公共 parseJson：解码后含 U+0000 的对象成员名在属性建立前拒绝（Host兼容性契约）；F1 224项、A01 1122项、serializer 2307项、registry 27项及185/185离线套件通过（0 skip），A11（含F1）真实复验：入口20/20、编码310/310、公共返回3/3 PASS；10项含NUL对象键按用户预授权接受为Host支持范围限制，不计编码PASS。INTEGRATED_ACCEPTED / CLOSED 留待0.3.12-G。首次3 PASS / 1 FAIL / 316 NOT COVERED保留为历史。
-
-首次 A11 真实验收：AE-01 装载 PASS；AE-02 在 U+0000 的 toJson 字符串键返回空键时内容断言 FAIL，矩阵停止（3 PASS / 1 FAIL / 316 NOT COVERED）；AE-03 完整组 NOT COVERED。当时未裁定TARGETED_ACCEPTED；A11以其后F1复验结论为准，详见A11报告。
-
-当前已实现：多条独立 live conversation records，全局最多一个 active objective；默认启动创建并选择一条；selector/New/Close、最多八条记录及各记录临时草稿。Conversation 拥有 PresentationModel，Surface 通过显式注入使用它；命令、流与完成事件绑定来源 conversation。持久化、历史注入、Authority 恢复、并发目标和队列/调度器均未实现。
-
-最新封存证据见 [0.3.11 综合验收](reports/vela-0.3.11-integrated-acceptance.md)：182/182 离线套件 PASS（0 skipped），94/94 每个 forward/reverse/forward 顺序 PASS，A5 focused 66 与 11 个实际产品 CEP/AE 用例 PASS。综合验收保留实际运行与继承离线证据的边界及全部 UNKNOWN；无 raw wire archive 声明。A01 实施轮1122 focused assertions、最终代码全量离线183/183 PASS（0 skipped）是 A01 历史结果；原A11轮重跑A01 1122项/全量184，F1轮重跑224/1122/2307/27项及全量185；A11真实验收阶段未重跑离线；A01 历史六组有界真实 AE 验收已 TARGETED_ACCEPTED，architecture amendment NONE。
-
-历史切片证据：[A1](reports/vela-0.3.11-a1-conversation-ownership.md) 177/177、真实 AE 5/5；[A2](reports/vela-0.3.11-a2-conversation-presentation.md) / F1 179/179；[A3](reports/vela-0.3.11-a3-source-routing.md) 180/180；[A4](reports/vela-0.3.11-a4-runtime-composition.md) 181/181；[A5](reports/vela-0.3.11-a5-conversation-selection.md) 182/182。以上均 COMPLETE / SEALED，不是并列的当前基线。此前 [0.3.10](reports/vela-0.3.10-context-closure.md) 176/176、A4 real AE PASS、A6R 15/15、A1 U11 CLOSED 保留为历史封存事实。
-
-Historical **0.3.9 — Streaming Response & Reasoning Surface: COMPLETE / SEALED / merged into dev**, PR #182, merge `91005f2`, retains its own 171/171 baseline.
-
-[A4a Verified Trajectory Source & Projection Contract](design/vela-verified-trajectory-0.3.10-a4a.md) and [A4b implementation evidence](reports/vela-0.3.10-a4b-verified-trajectory.md) define and implement bounded immutable active/last-terminal evidence. PR #190 is merged. A4b PASS / CLOSED; targeted real AE acceptance was user-observed and confirmed in the A5a request and integrated closure request. Per-case raw artifacts are externally retained/not present in the repository; offline fixtures are not real AE evidence. Cancellation seals available facts without late enrichment; dispose/reload clears both slots. Session/Provider/Authority semantics remain unchanged.
-
-[A5a Bounded Context Selection Policy Contract](design/vela-context-selection-0.3.10-a5a.md) resolves A1 U7: only eligible verified attempts from the most-recent terminal are optional historical candidates; active trajectory and conversation transcript selection are deferred. A3b currently always disables optional expansion, including synthetic full-fit decisions. [A5b implementation evidence](reports/vela-0.3.10-a5b-context-selection.md) records bounded immutable eligibility/omission evidence with zero model-visible optional history, 23 immutable pre-A5b production comparisons and full offline regression PASS. General conversation ownership remains 0.3.11; frozen architecture amendment NONE.
-
-[0.3.10-A1 Context Taxonomy, Ownership & Lifecycle Contract](design/vela-context-architecture-0.3.10-a1.md) records the design baseline and deferred decisions. `currentContext` remains a compatibility/read-only Observation projection with unchanged API/behavior. [A2 implementation evidence](reports/vela-0.3.10-a2-context-evidence.md) describes the opt-in local Controller/Adapter input snapshot and stateless Transport serialization projection. Current messages, captures, admission and execution semantics remain unchanged. No model-visible history inclusion or persistent trajectory store is implemented; multi-record runtime composition is now owned by 0.3.11-A4.
-
-[A3a Provider Capacity Source & Context Budget Policy Decision](design/vela-provider-capacity-budget-0.3.10-a3a.md) defines current-shape compatibility for unknown capacity/cost/reserve and conditional numeric fit checks. [A3b implementation evidence](reports/vela-0.3.10-a3b-capacity-budget.md) records the pure normalization/disposition seam and separate immutable decision projection. Production always evaluates unknown C/I/G/S with exact bytes and unchanged actual M/R, yielding `unassessed-capacity` / `allow-current-shape`, even with A2 debug evidence disabled. Current readiness contextLength remains advisory and is not consumed. No real capacity enforcement, tokenizer, discovery rewiring or generation tuning is implemented; qualified numeric decisions are synthetic-test evidence only. Empirical instance routing, full-input accounting and near-capacity reserve semantics remain explicit requirements before future live numeric integration.
-
-This file owns current implementation status and handoff facts. [VELA_ROADMAP](VELA_ROADMAP.md) is the only current roadmap. [Agent architecture](design/vela-agent-architecture.md) remains FROZEN FOR 0.3.x, architecture amendment NONE. The [C2 closure](reports/vela-0.3.9-c2-closure.md) is final historical evidence: 171/171 offline suites PASS, 0 skipped, USER-MANUAL REAL AE ACCEPTANCE PASS, no unresolved 0.3.9 correctness blocker. For that historical 0.3.9 acceptance, Codex did not operate or observe AE. A6R used the real CEP DevTools, with native AE value/Undo confirmation by the user.
-
-## Historical 0.3.11-A3 sealed acceptance
-
-A3 real AE used the built-in browser CEP DevTools with the existing local qwen3.5-4b instance. Core replacement used injected page lifecycle events executing the actual pagehide/pageshow handlers, not native panel close/reopen, yielding a fresh session and no restored Review; cross-conversation isolation is proven only by the production-focused multi-bundle harness. At the sealed A3 baseline, production had one conversation and no A4 composition. At its sealed baseline A4 supported multiple live records while default startup selected one. A5 adds user-facing switching; persistence remains absent and frozen architecture amendment NONE.
-
-Formal seal changed only authoritative documentation. 该 A3 文档封存当时复用了 180/180 离线结果；它不是当前最新基线，也不是本轮执行结果。 The [A3 report](reports/vela-0.3.11-a3-source-routing.md) retains the manually transcribed evidence limitation, inherited trajectory/A2 UNKNOWNs, and the safely blocked cleanup target-mismatch whose actual model value remains UNKNOWN; the explicit retry restored opacity to 100 through fresh Verify.
+本文件持有当前实现与交接事实；[VELA_ROADMAP](VELA_ROADMAP.md) 是唯一排期来源。[Agent architecture](design/vela-agent-architecture.md) 保持 FROZEN FOR 0.3.x，architecture amendment NONE。
 
 ## Package release metadata is separate
 
@@ -58,6 +28,7 @@ VERSION, both manifest fields and Host projectVersion remain **0.3.6**, release-
 | Transport | Valid SSE [DONE] ends protocol reading without waiting for CEP physical EOF. Terminal schema/finish validation still required; stream-completed is not authoritative success. Pre-DONE errors and finish_reason=length fail closed. |
 | Limits | Streaming ceiling 4 MiB includes reasoning/content/SSE framing. Nonstream/canonical JSON remains a separate 256 KiB limit. |
 | Exact qwen3.5-4b policy | Ordinary thinking 6144 / total max_tokens 8192; structured 2048 / 4096. Other model ids do not inherit these fields. |
+| Context budget | A3b 保持 unknown C/I/G/S、实际 M/R 不变，结果为 unassessed-capacity / allow-current-shape；readiness contextLength 仅为提示，不参与预算。未接入实时数字容量约束、tokenizer 或模型可见历史。约束来源见 [A3b 报告](reports/vela-0.3.10-a3b-capacity-budget.md)。 |
 
 ## 0.3.12 生产复核边界
 
@@ -79,11 +50,13 @@ qwen3.5 verbosity/repetition is model/provider tuning, not Vela correctness fail
 
 ## Verification and ownership
 
-最新完整功能封存基线为 **182/182 suites PASS，0 skipped（0.3.11-A5 / 综合封存继承）**，顺序测试 94/94 ×3。176/176 与 171/171 分别属于历史 0.3.10、0.3.9。A01 实施轮生产组合测试1122项断言、全量离线183/183 PASS（0 skipped），属于 A01 历史结果；原A11离线184/184、F1离线185/185 PASS（0 skipped）是历史结果，详见 A11 报告；G-02本轮另运行185/185 PASS（0 skip）；真实 AE 的六组有界验收另见报告；两者都不等于整个 B1/0.3.12 封存。Generated i18n content 由脚本拥有。[HANDOFF](HANDOFF.md) 是导航入口；[KNOWN_ISSUES](KNOWN_ISSUES.md) 持有既有问题；CHANGELOG 持有包发布历史。
+C1 本轮验证以 [C1 报告](reports/vela-0.3.12-c1-a04-session-events.md) 为准；A09 的 192/192 属于 M2-F1 实施轮，历史封存数据不计作本轮新测。Generated i18n content 由脚本拥有。[HANDOFF](HANDOFF.md) 是导航入口；[KNOWN_ISSUES](KNOWN_ISSUES.md) 持有既有问题；CHANGELOG 持有包发布历史。
 
 ## Context closure and 0.3.11 inheritance
 
 Current Provider input contains only current system/profile, response contract/grounding envelope and current user objective. A5 historical candidates are evidence-only; model-visible optional historical context = 0 and current A3 optionalExpansion=false. 未实现 transcript/model-visible history、raw reasoning history 注入或 persistent Memory；多会话 runtime 已由 0.3.11 实现。
+
+Trajectory 仅保留有界不可变 active / last-terminal 证据；取消封存已有事实，不做迟到补充，dispose/reload 清空两槽。`currentContext` 仍为兼容/只读 Observation projection。现有语义及原始覆盖限制见 [A4b](reports/vela-0.3.10-a4b-verified-trajectory.md) 和 [Context contract](design/vela-context-architecture-0.3.10-a1.md)。
 
 A6a found no accidental unbounded retention in bounded A2/A3/A4/A5 evidence structures. Presentation items may grow as UI history, Session events as canonical Session records, and Plan/replay/security bookkeeping under their security owners; these are not A2–A5 Context leaks and were not pruned. Runtime.resetSession() is not a new Agent Session, a new conversation or panel reload.
 
