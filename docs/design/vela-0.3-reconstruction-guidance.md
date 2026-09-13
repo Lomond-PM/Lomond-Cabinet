@@ -3,7 +3,7 @@
 **规划修订：R1-2026-09-09**
 **基准节点：0.3.11 — Multi-conversation Foundation，COMPLETE / SEALED**
 **核对仓库：`Lomond-PM/Lomond-Cabinet`，`dev@b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a`**
-**文档状态：保留 R1 规划来源；A01 已 TARGETED_ACCEPTED 并经 PR #202 合并 dev（覆盖限制保留）；A11含F1已通过PR #203合并dev，保持TARGETED_ACCEPTED及覆盖边界；G-02已通过PR #204合并dev，保持TARGETED_ACCEPTED；当前0.3.12-B2 / A09（M1、M2/F1）：TARGETED_ACCEPTED — AE26.0x67 / READY FOR COMMIT / PR，见本文A09条目及主报告；26.3x87跨版本复验DEFERRED。其余条目不因本次裁定改变，整个 B1/0.3.12 未完成。**
+**文档状态：保留 R1 规划与历史验收来源；B1–F 已合并 dev，当前 0.3.12-G INTEGRATED ACCEPTANCE PASS / READY FOR FINAL DISPOSITION。** 原ID逐项处置、当前整合结果及覆盖限制见 [G 综合报告](../reports/vela-0.3.12-integrated-acceptance.md)。G-09 是退出门定义治理，不代表全部0.3.x产品门已经通过；不批量CLOSED、不宣布本版SEALED。
 
 > **总目标：先修可信性与数据风险，再重建视觉和 UI 基础，随后泛化能力、形成可委托的完整 AE Agent。**
 > 项目处于早期阶段，允许替换旧实现、重组模块与页面结构；不以维护既有类名、旧 Renderer 或庞大主程序为目的。需要保留的是执行安全、用户资产、明确的所有权和经过验证的产品语义，而不是实现外形。
