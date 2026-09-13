@@ -78,7 +78,9 @@ async function run() {
         for (const baseline of ["105459b537d518a1199889f42059dcc1ba4f9282", undefined]) {
             const x = await create({ baseline, opacity: kind === "noop" ? 60 : 50 });
             if (kind === "text") await x.owner.startObjective(message); else { await x.start(kind === "logical"); await x.review(); if (kind === "logical") await x.review(); }
-            outputs.push(JSON.stringify({ wires: x.wires, canonical: x.evidence.canonical, requests: x.requests, events: x.events, mutations: x.state.mutations, verifies: x.state.verifies, terminal: x.owner.getAgentDriver().getSnapshot() })); x.dispose();
+            const { committed, ...terminal } = x.owner.getAgentDriver().getSnapshot();
+            if (!baseline) same(committed, kind === "mutation" || kind === "logical", "C2 latest attempt commit is explicit without changing observation ownership");
+            outputs.push(JSON.stringify({ wires: x.wires, canonical: x.evidence.canonical, requests: x.requests, events: x.events, mutations: x.state.mutations, verifies: x.state.verifies, terminal })); x.dispose();
         }
         same(outputs[0], outputs[1], kind + " immutable sequential equivalence including read counts");
     }

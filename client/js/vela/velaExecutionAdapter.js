@@ -67,7 +67,7 @@
                 expectedCapabilityId = request.capabilityId;
                 expectedValueKind = expectedCapabilityId === "set-layer-name-v1" ? "string" : "number";
                 expectedResultDigest = contextApi.digestPropertyValue(expectedValueKind, expectedValueKind === "string" ? request.scope.params.name : request.scope.params.opacity);
-            } catch (cause) { return Promise.reject(cause instanceof protocol.VelaProtocolError ? cause : error(protocol, protocol.ERROR_CODES.PLAN_FAILED)); }
+            } catch (cause) { var beforeHostError = cause instanceof protocol.VelaProtocolError ? cause : error(protocol, protocol.ERROR_CODES.PLAN_FAILED); beforeHostError.committed = false; return Promise.reject(beforeHostError); }
             return new Promise(function (resolve, reject) {
                 var settled = false;
                 function settleFailure(code, committed, validated) { if (!settled) { trajectory("host-result", committed === true ? true : committed === false ? false : null, validated ? committed : null, code, null, validated === true); settled = true; reject(error(protocol, code, committed)); } }

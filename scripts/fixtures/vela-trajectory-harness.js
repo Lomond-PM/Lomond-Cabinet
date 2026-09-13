@@ -53,6 +53,7 @@ function prepare(options = {}) {
         const execution = source.startsWith("AEToolbox.VelaExecution.handle(");
         const prefix = execution ? "AEToolbox.VelaExecution.handle(" : "AEToolbox.VelaContext.handle(";
         const request = JSON.parse(JSON.parse(source.slice(prefix.length, -1))); requests.push(request); events.push(request.operation);
+        if (options.onHostRequest) options.onHostRequest(request, state);
         function answer() {
             const response = { protocol: execution ? "vela.host-execution-result.v1" : "vela.host-context-result.v1", schemaVersion: "1.0", requestId: request.requestId, sessionId: request.sessionId, operation: request.operation, ok: true };
             if (execution) {
@@ -80,12 +81,25 @@ function prepare(options = {}) {
                     if (state.verifyMode === "error") { response.ok = false; delete response.snapshot; response.error = { code: "HOST_CONTEXT_UNAVAILABLE", message: "injected" }; }
                 } else response.snapshot = { hostInstanceId: base.hostInstanceId, hostReloadEpoch: base.hostReloadEpoch, tier: 0, capabilities: { maxTier: 3, nativeLayerIdAvailable: true, bindingContextAvailable: true, hostAdapterRevision: "vela-context-host-v4" } };
             }
+            if (options.transformHostResponse) options.transformHostResponse(request, response, state);
             callback(JSON.stringify(response));
         }
-        if (state.hold === "execution" && execution || state.hold === "verify" && request.operation.startsWith("observeCommitted")) waiting.push(answer); else answer();
+        if (state.hold === "execution" && execution || state.hold === "verify" && request.operation.startsWith("observeCommitted") || options.holdHostResponse && options.holdHostResponse(request, state)) waiting.push(answer); else answer();
     }
     const runtime = load("velaRuntime").createRuntime({ exactAgentSession: owner.getSessionRuntime(), environment: env, invokeHost });
-    async function initialize() { await runtime.initialize(); owner.attachObservationReadPort(runtime.getObservationReadPort()); owner.attachAgentDriverRuntimePort(runtime.getAgentDriverRuntimePort()); runtime.attachObjectiveReviewPort(owner.getObjectiveReviewPort()); owner.activate(); }
+    async function initialize() {
+        await runtime.initialize(); owner.attachObservationReadPort(runtime.getObservationReadPort());
+        let port = runtime.getAgentDriverRuntimePort();
+        if (options.onDriverResult) {
+            const original = port;
+            port = { ...original };
+            for (const method of ["submitIntent", "continueApprovedReview", "verifyAction", "verifyCommittedAction"]) {
+                port[method] = function (input) { return Promise.resolve(original[method](input)).then(result => { options.onDriverResult(method, result); return result; }); };
+            }
+            port = Object.freeze(port);
+        }
+        owner.attachAgentDriverRuntimePort(port); runtime.attachObjectiveReviewPort(owner.getObjectiveReviewPort()); owner.activate();
+    }
     function start(logical = false) { return owner.startObjective({ message: logical ? "把当前图层的不透明度改成 60%，然后把它重命名为 Vela Stream Test" : options.rename ? "把当前图层重命名为 Vela Stream Test" : "Set opacity to 60%", endpoint: "http://127.0.0.1:1234", model: "m" }); }
     function review(outcome = "approved") { const r = owner.getAgentDriver().getSnapshot().suspendedReview; return owner.resolveObjectiveReview({ reviewId: r.reviewId, revision: r.revision, outcome }); }
     return { initialize, load, owner, runtime, state, events, requests, wires, waiting, start, review, release() { const f = waiting.shift(); if (f) f(); }, dispose() { owner.dispose(); runtime.dispose(); } };

@@ -1,8 +1,8 @@
 # Vela / Lomond Cabinet — Canonical Product Roadmap
 
 **Planning revision: R1-2026-09-09**
-**状态：R1 与 0.3.12-A0 文档规划已合并 dev；A0 COMPLETE。当前 0.3.12-B2 / A09（M1、M2/F1）：TARGETED_ACCEPTED — AE26.0x67 / READY FOR COMMIT / PR；INTEGRATED_ACCEPTED / CLOSED 留待0.3.12-G。其余新里程碑 PLANNED / NOT STARTED。**
-A09 当前结果见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)；AE26.3x87 跨版本复验 DEFERRED，不自动开始下一项。
+**状态：A04 已通过 PR #208 合并，保持 TARGETED_ACCEPTED；A02、A03 分别 TARGETED_ACCEPTED — AE26.0x67 / AdobeCEP 12.0.1 / Chrome 99，C2 READY FOR COMMIT / PR。** 有界实机结果与保留证据限制见 [C2 报告](reports/vela-0.3.12-c2-execution-facts-verification.md)及 [A04 报告](reports/vela-0.3.12-c1-a04-session-events.md)。INTEGRATED_ACCEPTED / CLOSED 留待0.3.12-G，不进入 D。
+A09 已通过 PR #207 合并，TARGETED_ACCEPTED — AE26.0x67，见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)；AE26.3x87 跨版本复验 DEFERRED，不重开验收。
 A08历史基线：`d7dd7356cccbb637ae01a7e9d0629b9bc184a388`（G-02 PR #204 合并）；[A08报告](reports/vela-0.3.12-b2-a08-detach-comment-ownership.md)。仅修保留Host函数，注册/UI留待后续，B2未完成。
 G-02历史实施基线：`787cef2c8315a7d5c8a208dae69473f488d4e559`（PR #203）；[G-02报告](reports/vela-0.3.12-b1-g02-layer-name-unicode.md)。B1/0.3.12未完成。
 

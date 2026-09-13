@@ -2,7 +2,9 @@
 
 ## Vela development milestone
 
-**0.3.12-C1 / A04 — Session Event Correctness：TARGETED_ACCEPTED — AdobeCEP 12.0.1 / Chrome 99（Windows Win64）/ READY FOR COMMIT / PR**。页面生产模块与临时 Agent 的有限 CEP 验收 R1–R4 通过、临时对象已清理；结果和覆盖边界见 [C1 阶段报告](reports/vela-0.3.12-c1-a04-session-events.md)。未重新验证完整 Provider→Authority→Host 任务链；C2、Provider 生命周期和 UI 重构不在本轮。
+**0.3.12-C2 / A02 + A03 — Execution Facts & Target-Bound Verification：A02、A03 分别 TARGETED_ACCEPTED — AE26.0x67 / AdobeCEP 12.0.1 / Chrome 99；C2 READY FOR COMMIT / PR**。原定 R3-3b、R4 补验已通过；旧 R3-3 采集准备失败及离线专属覆盖保留，见 [C2 报告](reports/vela-0.3.12-c2-execution-facts-verification.md)。不进入 D、Provider 生命周期或 UI 重构。
+
+**A04 已通过 PR #208 合并 dev**，保持 TARGETED_ACCEPTED — AdobeCEP 12.0.1 / Chrome 99（Windows Win64）；其有界页面/临时 Agent 验收见 [C1 报告](reports/vela-0.3.12-c1-a04-session-events.md)，不据此扩大完整 Provider→Authority→Host 覆盖。
 
 **A09 已通过 PR #207 合并 dev**；M1、M2/F1 与 A09 均为 **TARGETED_ACCEPTED — AE26.0x67**，不重新打开其验收。ACK Feature 保持 auto/center 与既有有界2D/平移父链规则；TBB Text 使用 source-local padding，Shape/AV visual 使用 comp-space padding。AE26.3x87 跨版本复验 DEFERRED；AV fallback 真实 AE NOT COVERED、离线覆盖保持。完整结果、历史失败及边界见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)。INTEGRATED_ACCEPTED / CLOSED 留待 **0.3.12-G**，整个 0.3.12 未完成。
 
@@ -32,7 +34,7 @@ VERSION, both manifest fields and Host projectVersion remain **0.3.6**, release-
 
 ## 0.3.12 生产复核边界
 
-R1原审计指出A02一次性授权最终Verify关联、A03 no-op的Session提交标记、A05/A06/A12启停生命周期等待复核路径。这些路径本轮未修复；下述控制路径与封存结果不应被扩写为所有新反例都已通过。详细条件/来源/生产模块验证计划见[A0报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)。R1总账的OPEN状态不是本轮新确诊；原封存UNKNOWN不升级。
+R1原审计的 A02 最终 Verify 关联与 A03 提交事实已由 [C2](reports/vela-0.3.12-c2-execution-facts-verification.md) 实施并完成离线及有界真实验收，分别 TARGETED_ACCEPTED；迟到 Verify、不确定 Host 返回等保留原离线证据等级。A05/A06/A12 启停生命周期不属于 C2。下述历史控制路径与封存结果不扩写为所有新反例均已通过；原审计来源见 [A0报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)，原封存 UNKNOWN 不升级。
 
 ## Agent execution and authority
 

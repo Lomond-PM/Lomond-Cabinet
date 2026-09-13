@@ -122,7 +122,7 @@
                         if (!armed || armed.taskState !== "active" || armed.executionArmed !== true) { fail("PLAN_INVALID"); }
                         record.phase = "authority-ready";
                         state = "authority-ready";
-                        return Object.freeze({ state: "authority-ready", code: null });
+                        return Object.freeze({ state: "authority-ready", code: null, executionPlanId: record.executionPlanId });
                     });
                 });
             }).then(function (result) { if (result && result.state === "cancelled" && record.executionPlanId === null) { finish(record); } return result; }, function (error) { if (!record.executionPlanId || officialCancel(record, "composition-failed")) { finish(record); } else { state = disposed ? "disposed" : "cancellation-failed"; } return Object.freeze({ state: record.cancelled || disposed ? "cancelled" : "blocked", code: record.cancelled || disposed ? "AGENT_DRIVER_CANCELLED" : stableCode(error) }); });
