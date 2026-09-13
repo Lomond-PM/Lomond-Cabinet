@@ -69,8 +69,8 @@ ok(harness.css["--text-primary"] === secondary, "Primary Text CSS projection ref
 
 // 5. Failure contract: an invalid secondary must NOT disturb Primary Text.
 const before = harness.resolver.getResolvedValue("text.primary");
-ok(!harness.resolver.commit("text.primary", ""), "invalid secondary commit returns false");
-ok(!harness.resolver.commit("text.primary", "not-a-color"), "malformed secondary commit returns false");
+ok(!harness.resolver.commit("text.primary", "").accepted, "invalid secondary commit returns false");
+ok(!harness.resolver.commit("text.primary", "not-a-color").accepted, "malformed secondary commit returns false");
 eq(harness.resolver.getResolvedValue("text.primary"), before, "Primary Text is unchanged after failed assignment");
 eq(harness.resolver.getOverride("text.primary"), before, "no invalid persisted state on failure");
 

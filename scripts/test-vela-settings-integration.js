@@ -69,7 +69,7 @@ function run() {
     const velaSettingsCss = cssSource.slice(cssSource.indexOf(".vela-settings-surface"), cssSource.indexOf("h1,"));
     check(/--space-surface-edge/.test(velaSettingsCss) && !/--space-card-inset|--vela-surface-inset/.test(velaSettingsCss) && /--radius-section-card/.test(cssSource) && /--surface-panel/.test(cssSource) && /--panel-border/.test(cssSource) && /--elevation-floating-surface/.test(cssSource), "The modal consumes Surface Edge plus shared radius, surface, border, and elevation authorities without Card Inset coupling.");
     check(/semanticMotionDuration\("viewContentEnter"\)[\s\S]*semanticMotionEasing\("viewContentEnter"\)/.test(sliceFunction("openVelaSettingsSurface", "closeVelaSettingsSurface")) && /semanticMotionDuration\("viewContentExit"\)[\s\S]*semanticMotionEasing\("viewContentExit"\)/.test(sliceFunction("closeVelaSettingsSurface", "openSettingsPanel")), "Open and close snapshot formal View Content motion roles.");
-    check(/backdrop\.addEventListener\("click", closeVelaSettingsSurface\)[\s\S]*close\.addEventListener\("click", closeVelaSettingsSurface\)/.test(mainSource) && /if \(closeVelaSettingsSurface\(\)\) return/.test(mainSource), "Close button, backdrop, and Escape share one animated close lifecycle.");
+    check(/backdrop\.addEventListener\("click", closeVelaSettingsSurface\)[\s\S]*close\.addEventListener\("click", closeVelaSettingsSurface\)/.test(mainSource) && /if \(closeVelaSettingsSurface\(\)\) \{ event\.preventDefault\(\); return; \}/.test(mainSource), "Close button, backdrop, and Escape share one animated close lifecycle.");
     console.log("test-vela-settings-integration: " + assertions + " assertions passed.");
 }
 

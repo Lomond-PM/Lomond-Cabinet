@@ -12,7 +12,7 @@
     if (root) {
         root.ProceduralPaletteWorkspace = api;
     }
-}(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this), function (root) {
+}(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this), function createWorkspace(root) {
     "use strict";
 
     var PaletteLibraryWidthStorageKey = "lomond.paletteEditor.libraryWidth.v1";
@@ -20,6 +20,8 @@
     var selectedPaletteId = "";
     var editorState = null;
     var pendingTransition = null;
+    var pendingCancel = null;
+    var leaveToken = 0;
     var previewRafs = [];
     var workspaceOpen = false;
     var resizeObserver = null;
@@ -410,7 +412,8 @@
         var restoreId = editorState && (editorState.editorMode === "new" || editorState.editorMode === "duplicate")
             ? editorState.previousSelectedPaletteId
             : selectedPaletteId;
-        pendingTransition = null;
+        var cancel = pendingCancel; pendingCancel = null; pendingTransition = null; leaveToken += 1;
+        if (cancel) cancel(false);
         deleteConfirmationId = "";
         editorState = null;
         if (store && restoreId && store.getResolvedPalette && store.getResolvedPalette(restoreId)) {
@@ -681,14 +684,19 @@
     function runTransition() {
         var transition = pendingTransition;
         pendingTransition = null;
+        pendingCancel = null;
+        leaveToken += 1;
         if (transition) {
             transition();
         }
     }
 
-    function requestTransition(transition) {
+    function requestTransition(transition, cancel) {
+        if (pendingTransition) { if (cancel) cancel(false); return false; }
         if (editorState && editorState.dirty) {
             pendingTransition = transition;
+            pendingCancel = cancel || null;
+            leaveToken += 1;
             renderActionBar();
             return;
         }
@@ -703,14 +711,19 @@
             setStatus(tr("paletteLibrary.invalidPalette"), "error");
             return false;
         }
+        var submittedState = editorState;
         draft = editorState.draft;
         editorState.saving = true;
-        result = editorState.editorMode === "new" || editorState.editorMode === "duplicate"
-            ? store.createV2Palette(draft)
-            : store.saveV2Palette(editorState.selectedPaletteId, draft);
+        try {
+            result = editorState.editorMode === "new" || editorState.editorMode === "duplicate"
+                ? store.createV2Palette(draft)
+                : store.saveV2Palette(editorState.selectedPaletteId, draft);
+        } catch (error) { result = { ok: false, persisted: false }; }
+        submittedState.saving = false;
+        if (editorState !== submittedState) { if (editorState) editorState.saving = false; return false; }
         editorState.saving = false;
-        if (!result || !result.ok) {
-            setStatus(tr("paletteLibrary.invalidPalette"), "error");
+        if (!result || !result.ok || result.persisted !== true) {
+            setStatus(tr("assets.notSaved"), "error");
             syncDirtyUi();
             return false;
         }
@@ -719,10 +732,9 @@
         clearTransientPreview();
         refreshPaletteDrivenHomeIcons();
         setStatus(tr("paletteLibrary.saved"), "ok");
+        refresh();
         if (afterSave) {
             afterSave();
-        } else {
-            refresh();
         }
         return true;
     }
@@ -838,23 +850,28 @@
             return;
         }
         if (pendingTransition) {
+            var token = leaveToken;
             var notice = createElement("span");
             notice.className = "palette-editor-unsaved-notice";
             notice.textContent = tr("paletteLibrary.unsavedChanges");
             actionBar.appendChild(notice);
             actionBar.appendChild(createButton("paletteLibrary.saveAndContinue", "palette-library-action is-primary", function () {
-                saveDraft(runTransition);
+                if (token === leaveToken && pendingTransition) saveDraft(runTransition);
             }));
             actionBar.appendChild(createButton("paletteLibrary.discardChanges", "palette-library-action", function () {
+                if (token !== leaveToken || !pendingTransition) return;
                 var transition = pendingTransition;
-                pendingTransition = null;
+                pendingTransition = null; pendingCancel = null; leaveToken += 1;
                 discardDraftForTransition();
                 if (transition) {
                     transition();
                 }
             }));
             actionBar.appendChild(createButton("paletteLibrary.cancel", "palette-library-action", function () {
-                pendingTransition = null;
+                if (token !== leaveToken || !pendingTransition) return;
+                var cancel = pendingCancel;
+                pendingTransition = null; pendingCancel = null; leaveToken += 1;
+                if (cancel) cancel(false);
                 renderActionBar();
             }));
             return;
@@ -1427,6 +1444,8 @@
 
     function teardown() {
         var store = getStore();
+        var cancel = pendingCancel; pendingCancel = null; pendingTransition = null; leaveToken += 1;
+        if (cancel) cancel(false);
         closeWorkspace({ reason: "panel-shutdown", animate: false });
         if (store && storeListener && typeof store.unsubscribe === "function") {
             store.unsubscribe(storeListener);
@@ -1435,19 +1454,22 @@
         initialized = false;
         selectedPaletteId = "";
         editorState = null;
-        pendingTransition = null;
+        var cancel = pendingCancel; pendingCancel = null; pendingTransition = null; leaveToken += 1;
+        if (cancel) cancel(false);
         deleteConfirmationId = "";
         return api;
     }
 
     var api = {
+        create: function () { return createWorkspace(root); },
+        requestLeave: function (settle) { requestTransition(function () { settle(true); }, settle); },
         initialize: initialize,
         open: function () {
             openWorkspace();
             return api;
         },
         close: function (closeOptions) {
-            closeWorkspace(closeOptions);
+            requestTransition(function () { closeWorkspace(closeOptions); });
             return api;
         },
         ensureClosedState: function () {
@@ -1470,7 +1492,7 @@
             return api;
         },
         selectPalette: function (id) {
-            selectPalette(id);
+            requestTransition(function () { selectPalette(id); });
             return api;
         },
         refreshToolMappings: function () {

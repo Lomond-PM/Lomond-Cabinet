@@ -33,7 +33,7 @@ const resolver = Resolver.create({ registry, store, rootStyle: { setProperty(key
 resolver.initialize();
 assert.strictEqual(resolver.setTransientOverride(primary.id, 96), true, "transient override accepts an above-track value");
 assert.strictEqual(projected[primary.cssProperty], "calc(96px * var(--ui-scale))", "transient override projects through the shared authority");
-assert.strictEqual(resolver.commitTransientOverride(primary.id, 96), true, "commit accepts the same open-domain value");
+assert.strictEqual(resolver.commitTransientOverride(primary.id, 96).persisted, true, "commit accepts the same open-domain value");
 assert.strictEqual(JSON.parse(memory.value).overrides[primary.id], 96, "persisted override preserves the value without shrinking");
 const reloaded = Store.create({ storage: memory, registry });
 reloaded.load();

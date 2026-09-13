@@ -24,6 +24,7 @@
         PALETTE_KIND_MISMATCH: "PALETTE_KIND_MISMATCH",
         STORAGE_READ_FAILED: "STORAGE_READ_FAILED",
         STORAGE_WRITE_FAILED: "STORAGE_WRITE_FAILED",
+        STORAGE_ROLLBACK_FAILED: "STORAGE_ROLLBACK_FAILED",
         INVALID_IMPORT_JSON: "INVALID_IMPORT_JSON",
         UNSUPPORTED_IMPORT: "UNSUPPORTED_IMPORT"
     });
@@ -211,24 +212,52 @@
             var checked;
             var serialized;
             var previous = null;
+            var transaction = { oldValueReadSucceeded: false, previousExists: null, writeAttempted: false, writeSucceeded: false, rollbackAttempted: false, rollbackSucceeded: null };
+            var current;
+            var failures;
             next = clone(next);
             next.updatedAt = clockValue(clock);
             checked = validate(next);
             if (!checked.ok) return checked;
             serialized = canonicalSerialize(checked.envelope);
             try {
-                if (!storage || typeof storage.setItem !== "function") throw new Error("Storage unavailable.");
-                previous = typeof storage.getItem === "function" ? storage.getItem(STORAGE_KEY) : null;
+                if (!storage || typeof storage.getItem !== "function") throw new Error("Storage unavailable.");
+                previous = storage.getItem(STORAGE_KEY);
+                if (previous !== null && typeof previous !== "string") throw new Error("Invalid storage read.");
+                transaction.oldValueReadSucceeded = true;
+                transaction.previousExists = previous !== null;
+            } catch (readError) {
+                return { ok: false, persisted: false, transaction: transaction, errors: [error(ERROR_CODES.STORAGE_READ_FAILED, STORAGE_KEY, "Previous Palette data is unknown; no write attempted.")] };
+            }
+            try {
+                if (typeof storage.setItem !== "function") throw new Error("Storage unavailable.");
+                transaction.writeAttempted = true;
                 storage.setItem(STORAGE_KEY, serialized);
+                transaction.writeSucceeded = true;
             } catch (exception) {
+                failures = [error(ERROR_CODES.STORAGE_WRITE_FAILED, STORAGE_KEY, "Unable to persist Palette Store v2.")];
+                // A throwing dependency may have written. Restore only our observed write,
+                // never an unknown value or an intervening writer's data.
                 try {
-                    if (storage && previous !== null && typeof storage.setItem === "function") storage.setItem(STORAGE_KEY, previous);
-                    else if (storage && typeof storage.removeItem === "function") storage.removeItem(STORAGE_KEY);
-                } catch (rollbackError) {}
-                return { ok: false, errors: [error(ERROR_CODES.STORAGE_WRITE_FAILED, STORAGE_KEY, "Unable to persist Palette Store v2.")] };
+                    current = storage.getItem(STORAGE_KEY);
+                    transaction.writeSucceeded = current === serialized && current !== previous ? true : (current === previous ? false : null);
+                    if (transaction.writeAttempted && transaction.writeSucceeded === true) {
+                        transaction.rollbackAttempted = true;
+                        if (previous !== null) storage.setItem(STORAGE_KEY, previous);
+                        else storage.removeItem(STORAGE_KEY);
+                        transaction.rollbackSucceeded = storage.getItem(STORAGE_KEY) === previous;
+                        if (!transaction.rollbackSucceeded) throw new Error("Restore readback mismatch.");
+                    }
+                } catch (rollbackError) {
+                    if (transaction.rollbackAttempted) {
+                        transaction.rollbackSucceeded = false;
+                        failures.push(error(ERROR_CODES.STORAGE_ROLLBACK_FAILED, STORAGE_KEY, "Palette write and restore both failed; stored data requires inspection."));
+                    } else transaction.writeSucceeded = null;
+                }
+                return { ok: false, persisted: false, transaction: transaction, errors: failures };
             }
             state = checked.envelope;
-            return { ok: true, envelope: clone(state) };
+            return { ok: true, accepted: true, applied: true, persisted: true, transaction: transaction, envelope: clone(state) };
         }
         function getPalette(id) {
             var builtIns = builtInIndex();

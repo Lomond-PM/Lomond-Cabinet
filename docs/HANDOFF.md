@@ -1,6 +1,8 @@
 # Development Handoff
 
-**当前 A02、A03 分别 TARGETED_ACCEPTED — AE26.0x67 / AdobeCEP 12.0.1 / Chrome 99；C2 READY FOR COMMIT / PR。** 原定三项补验 R3-3b、R4-A、R4-B 均通过，旧 R3-3 的 NOT COVERED 与离线专属覆盖保持，见 [C2 报告](reports/vela-0.3.12-c2-execution-facts-verification.md)。A04 已通过 PR #208 合并，保持 [TARGETED_ACCEPTED](reports/vela-0.3.12-c1-a04-session-events.md)；不进入 D。
+**当前 E 的 AP-01、AP-02、AP-03、UX-01、UX-02 均 TARGETED_ACCEPTED / E READY FOR COMMIT / PR。** 最终离线 196/196 PASS；真实 CEP 隔离生产组合及临时 Palette 的有限 UI 验收通过，测试资产、临时实例与观测已清理，Provider 保持禁用。契约、证据等级及限制见 [E 报告](reports/vela-0.3.12-e-user-assets-exit-safety.md)。不进入 F；INTEGRATED_ACCEPTED / CLOSED 留待 G。
+
+**D 已通过 PR #210 合并 dev**，四项保持有界接受，既有实机缺口与原 PROVIDER_TIMEOUT 见 [D 报告](reports/vela-0.3.12-d-provider-task-lifecycle.md)。C2 已通过 PR #209 合并，A02/A03 的接受及旧 R3-3 NOT COVERED 保留在 [C2 报告](reports/vela-0.3.12-c2-execution-facts-verification.md)；A04 已通过 PR #208 合并，保持 [有界接受](reports/vela-0.3.12-c1-a04-session-events.md)。
 
 以下保留历史阶段交接：A09 已通过 PR #207 合并，TARGETED_ACCEPTED — AE26.0x67，见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)。
 

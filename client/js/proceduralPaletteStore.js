@@ -9,7 +9,7 @@
         browser ? root.LegacyProceduralPaletteAdapter : (typeof module !== "undefined" && module.exports ? require("./palette/legacyProceduralPaletteAdapter.js") : root.LegacyProceduralPaletteAdapter));
     if (typeof module !== "undefined" && module.exports) module.exports = api;
     if (root) root.ProceduralPaletteStore = api;
-}(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this), function (root, Model, Derivations, Migration, StoreV2, Adapter) {
+}(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this), function createStore(root, Model, Derivations, Migration, StoreV2, Adapter) {
     "use strict";
     var LEGACY_KEY = "lomond.proceduralPaletteStore.v1";
     var TRANSIENT_ID = "paletteEditorPreview";
@@ -78,7 +78,7 @@
         converted = convert(source, "custom");
         if (!converted.ok) return { ok: false, errors: errors(converted, "Invalid Palette.") };
         result = authority.createCustomPalette(converted.palette);
-        if (!result.ok) return { ok: false, errors: errors(result, "Unable to create Palette.") };
+        if (!result.ok) return { ok: false, persisted: false, transaction: clone(result.transaction), errors: errors(result, "Unable to create Palette.") };
         notify({ type: "create", paletteId: source.id }); return { ok: true, palette: getResolvedPalette(source.id) };
     }
     function duplicatePalette(id) {
@@ -139,8 +139,8 @@
         id = generateId(); candidate.id = id; candidate.revision = 1;
         candidate.metadata = Object.assign({}, candidate.metadata, { origin: "custom", displayName: trim(candidate.metadata && candidate.metadata.displayName) || id });
         checked = validateV2Palette(candidate); if (!checked.ok) return checked;
-        result = authority.createCustomPalette(checked.palette); if (!result.ok) return { ok: false, errors: errors(result, "Unable to create Palette.") };
-        notify({ type: "create", paletteId: id }); return { ok: true, palette: getResolvedPalette(id), v2Palette: find(id) };
+        result = authority.createCustomPalette(checked.palette); if (!result.ok) return { ok: false, persisted: false, transaction: clone(result.transaction), errors: errors(result, "Unable to create Palette.") };
+        notify({ type: "create", paletteId: id }); return { ok: true, accepted: true, applied: true, persisted: result.persisted === true, palette: getResolvedPalette(id), v2Palette: find(id) };
     }
     function saveV2Palette(id, input) {
         var guard = blocked(); var source = find(id); var candidate = clone(input || {}); var checked; var result;
@@ -149,8 +149,8 @@
         candidate.revision = source.revision + 1;
         checked = validateV2Palette(candidate); if (!checked.ok) return checked;
         result = isBuiltIn(id) ? authority.setBuiltInOverride(id, checked.palette) : authority.updateCustomPalette(id, checked.palette);
-        if (!result.ok) return { ok: false, errors: errors(result, "Unable to save Palette.") };
-        notify({ type: "update", paletteId: id }); return { ok: true, palette: getResolvedPalette(id), v2Palette: find(id) };
+        if (!result.ok) return { ok: false, persisted: false, transaction: clone(result.transaction), errors: errors(result, "Unable to save Palette.") };
+        notify({ type: "update", paletteId: id }); return { ok: true, accepted: true, applied: true, persisted: result.persisted === true, palette: getResolvedPalette(id), v2Palette: find(id) };
     }
     function clearTransientPalette(id) { if (id) delete transients[id]; else transients = Object.create(null); }
     function deletePalette(id) {
@@ -204,6 +204,7 @@
     function getPaletteUsageCount(id) { var map = snapshot().toolPaletteMap; return Object.keys(map).filter(function (toolId) { return map[toolId] === id; }).length; }
     return Object.freeze({
         storageKey: StoreV2.storageKey, legacyStorageKey: LEGACY_KEY, schemaVersion: StoreV2.schemaVersion,
+        create: function () { return createStore(root, Model, Derivations, Migration, StoreV2, Adapter); },
         initialize: initialize, listResolvedPalettes: listResolvedPalettes, getResolvedPalette: getResolvedPalette, getResolvedPaletteSignature: getResolvedPaletteSignature,
         createPalette: createPalette, duplicatePalette: duplicatePalette, updatePalette: updatePalette, updateBuiltInOverride: updatePalette,
         getPaletteKind: function (id) { return transients[id] ? "transient" : (find(id) ? find(id).metadata.origin : "unknown"); }, hasBuiltInOverride: hasBuiltInOverride,

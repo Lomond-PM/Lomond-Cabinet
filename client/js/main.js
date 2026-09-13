@@ -553,7 +553,9 @@
     function saveStoredJson(key, value) {
         try {
             window.localStorage.setItem(key, JSON.stringify(value));
+            return true;
         } catch (err) {
+            return false;
         }
     }
 
@@ -1386,6 +1388,7 @@
             registry: registry,
             store: store,
             rootStyle: document.documentElement.style,
+            onPersistenceResult: function () { renderAssetPersistenceNotice(DesignTuning, "settingsDeveloperDesignTuningMount"); },
             readComputed: function (property) { return String(window.getComputedStyle(document.documentElement).getPropertyValue(property) || "").replace(/^\s+|\s+$/g, ""); },
             isProjectionSafe: function () { return !byId("appShell").classList.contains("is-animating"); },
             getCanonicalDuration: function (role) { return MotionDefaults.durations[role]; },
@@ -3420,8 +3423,8 @@
         var committed;
         if (!secondaryColor || typeof secondaryColor !== "string") return false;
         committed = CoreAppearance && CoreAppearance.commit("text.primary", secondaryColor);
-        if (committed) notifyAppearanceFieldBindings("text.primary");
-        return committed === true;
+        if (committed && committed.applied) notifyAppearanceFieldBindings("text.primary");
+        return !!(committed && committed.persisted);
     }
 
     function renderSettingsColorRamp(element) {
@@ -8856,6 +8859,7 @@
             registry: window.AppearanceParameterRegistry,
             store: store,
             rootStyle: document.documentElement.style,
+            onPersistenceResult: function () { renderAssetPersistenceNotice(CoreAppearance, "settingsAppearanceParametersMount"); },
             runtime: {
                 applyMotionSpeed: function (value) {
                     motionScale = clampNumber(value, DefaultSettings.motionSpeed, 0.75, 1.35);
@@ -9525,8 +9529,8 @@
 
     function saveSettings() {
         collectSettings();
-        if (SettingsState) SettingsState.save();
-        else saveStoredJson(StorageKeys.settings, collectSettings());
+        if (SettingsState) return SettingsState.save();
+        return saveStoredJson(StorageKeys.settings, collectSettings());
     }
 
     function applySettings(settings) {
@@ -9657,6 +9661,7 @@
         if (pageId === "appearance" && appearanceCategory && appearanceCategory._coreDisclosure) {
             appearanceCategory._coreDisclosure.setExpanded(true);
         }
+        closePaletteWorkspace({ reason: "route-change", animate: false });
         closeRegistryColorPicker("route-change");
         endSettingsPeekManipulation();
         root.hidden = false;
@@ -9713,7 +9718,7 @@
         cancelAppearancePreviewFrame(parameter.id);
         delete ActiveAppearancePreviews[parameter.id];
         changed = CoreAppearance && CoreAppearance.commit(parameter.id, value);
-        if (changed && parameter.persistence === "settings") saveSettings();
+        if (changed && changed.accepted && parameter.persistence === "settings") changed.persisted = saveSettings() === true;
         notifyAppearanceFieldBindings(parameter.id);
         return changed;
     }
@@ -9938,10 +9943,38 @@
         appearance.appendChild(advancedAppearance.root);
     }
 
+    function renderAssetPersistenceNotice(owner, mountId) {
+        if (!owner) return;
+        return window.CoreUI.renderAssetPersistenceNotice({
+            owner: owner, document: document, mount: byId(mountId), translate: tr,
+            onChange: function () {
+                if (owner === DesignTuning) refreshDesignTuningFields();
+                else Object.keys(AppearanceFieldBindings).forEach(notifyAppearanceFieldBindings);
+            }
+        });
+    }
+
+    function requestSettingsLeave(settle) {
+        if (byId("appShell").classList.contains("is-animating")) { settle(false); return; }
+        var palette = getPaletteWorkspaceController();
+        function afterPalette(allowed) {
+            if (!allowed) { settle(false); return; }
+            var unsaved = [CoreAppearance, DesignTuning].some(function (owner) {
+                if (!owner || !owner.getPersistenceState) return false;
+                var state = owner.getPersistenceState(); return state.dirty && !!state.error;
+            });
+            if (unsaved) { setStatus(tr("assets.notSaved"), "error"); settle(false); return; }
+            settle(true);
+        }
+        if (palette && palette.isOpen() && palette.requestLeave) palette.requestLeave(afterPalette);
+        else afterPalette(true);
+    }
+
     function initializeSystemRouter() {
         if (SystemRouter || !window.SystemSurfaceRouter) return;
         SystemRouter = window.SystemSurfaceRouter.create({
             catalog: toolCatalog,
+            beforeLeave: function (previous, next, settle) { requestSettingsLeave(settle); },
             diagnostics: function (code, detail) { if (window.console && console.warn) console.warn("[AE Toolbox System] " + code + ": " + detail); },
             callbacks: {
                 open: function (route) { ActiveRoute = route; ActiveSettingsSourceElement = route.sourceElement; showSettingsPage(route.pageId); openSettingsPanel(null, route.sourceElement); },
@@ -9953,7 +9986,7 @@
 
     function requestCloseSettings() {
         if (SystemRouter && SystemRouter.getActiveRoute()) SystemRouter.close();
-        else closeSettingsPanel();
+        else requestSettingsLeave(function (allowed) { if (allowed) closeSettingsPanel(); });
     }
 
     function requestSettingsBack() {
@@ -9963,7 +9996,7 @@
             return;
         }
         if (SystemRouter && SystemRouter.getActiveRoute()) SystemRouter.back();
-        else closeSettingsPanel();
+        else requestSettingsLeave(function (allowed) { if (allowed) closeSettingsPanel(); });
     }
 
     function ensureVelaSettingsSurface() {
@@ -10274,9 +10307,11 @@
             });
         }
         document.addEventListener("keydown", function (event) {
-            if (event.keyCode === 27) {
-                closeRegistryColorPicker();
-                if (closeVelaSettingsSurface()) return;
+            if (event.keyCode === 27 && !event.defaultPrevented) {
+                if (document.querySelector(".registry-color-picker-popover")) { event.preventDefault(); closeRegistryColorPicker("escape"); return; }
+                if (window.CoreUI.closeSelectComponents()) { event.preventDefault(); return; }
+                if (closeVelaSettingsSurface()) { event.preventDefault(); return; }
+                event.preventDefault();
                 requestCloseSettings();
             }
         });

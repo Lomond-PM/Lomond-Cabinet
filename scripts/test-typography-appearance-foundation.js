@@ -62,7 +62,7 @@ assert.deepStrictEqual(run.store.getOverrides(), { "surface.panel": "#101010", "
 assert.strictEqual(run.written["--appearance-type-body-scale"], "1.05");
 assert.strictEqual(run.written["--appearance-type-field-label-scale"], "1");
 assert.strictEqual(run.written["--ui-scale"], "1.18", "Resolver writes layout scale once and multiplier separately");
-assert.strictEqual(run.resolver.commit("typography.supporting.size", 1.05), true);
+assert.strictEqual(run.resolver.commit("typography.supporting.size", 1.05).persisted, true);
 assert.strictEqual(run.resolver.preview("typography.supporting.size", 1.12), true);
 assert.strictEqual(run.written["--appearance-type-supporting-scale"], "1.12", "preview wins over persisted override");
 run.resolver.clearPreview("typography.supporting.size");
@@ -70,7 +70,7 @@ assert.strictEqual(run.written["--appearance-type-supporting-scale"], "1.05", "c
 run.resolver.reset("typography.supporting.size");
 assert.strictEqual(run.written["--appearance-type-supporting-scale"], "1", "reset restores the neutral multiplier");
 assert.strictEqual(run.store.getOverride("typography.supporting.size"), null, "reset removes the persisted key");
-assert.strictEqual(run.resolver.commit("typography.title.size", 1), true, "explicit multiplier 1 remains a valid low-level override");
+assert.strictEqual(run.resolver.commit("typography.title.size", 1).persisted, true, "explicit multiplier 1 remains a valid low-level override");
 assert.strictEqual(run.store.getOverride("typography.title.size"), 1);
 run.resolver.reset("typography.title.size");
 assert.strictEqual(run.store.getOverride("typography.title.size"), null);

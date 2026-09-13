@@ -24,6 +24,12 @@ Element.prototype.select = function () {};
 var windowListeners = {};
 var win = { setTimeout: function (callback) { callback(); }, addEventListener: function (name, callback) { (windowListeners[name] || (windowListeners[name] = [])).push(callback); }, removeEventListener: function () {} };
 var doc = new Element("document", null);
+var keyboardPhases = [];
+var addDocumentListener = doc.addEventListener;
+doc.addEventListener = function (name, listener, capture) {
+    if (name === "keydown") keyboardPhases.push(capture);
+    addDocumentListener.call(this, name, listener);
+};
 doc.ownerDocument = doc;
 doc.activeElement = null;
 doc.body = { style: {} };
@@ -102,6 +108,7 @@ field.handles[0].dispatch("pointerdown", { pointerId: 4, preventDefault: functio
 doc.dispatch("pointermove", { clientX: 320, clientY: 30, preventDefault: function () {} });
 doc.dispatch("keydown", { keyCode: 27, preventDefault: function () {} });
 assert.deepStrictEqual(field.getValue(), beforeCancel, "Escape during graph drag restores the pre-drag value");
+assert.strictEqual(keyboardPhases[keyboardPhases.length - 1], true, "active graph edit consumes Escape in capture before outer document handlers");
 field.setValue({ x1: 0.25, y1: 0.5, x2: 0.75, y2: 0.5 });
 field.setView("speed");
 field.setValue({ x1: 0, y1: 0, x2: 1, y2: 1 });

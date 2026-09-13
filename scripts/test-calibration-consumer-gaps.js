@@ -120,7 +120,7 @@ Object.values(roles).forEach(role => assert.strictEqual(style.values[role.proper
 assert.strictEqual(style.values["--surface-panel"], undefined, "Action calibration does not project Panel Surface");
 assert.strictEqual(style.values["--field-surface"], undefined, "Action calibration does not project Field Surface");
 assert.strictEqual(memory.writes, writes, "transient calibration does not persist");
-Object.keys(roles).forEach(id => assert.strictEqual(resolver.commitTransientOverride(id, next), true, id + " commits through the shared store"));
+Object.keys(roles).forEach(id => assert.strictEqual(resolver.commitTransientOverride(id, next).persisted, true, id + " commits through the shared store"));
 store = Store.create({ storage: memory, registry: Registry });
 store.load();
 Object.keys(roles).forEach(id => assert.deepStrictEqual(store.getOverride(id), next, id + " reloads its persisted structured value"));
