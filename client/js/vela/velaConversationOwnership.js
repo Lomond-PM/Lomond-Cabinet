@@ -115,13 +115,16 @@
             var candidate = typeof runtime.getUiState === "function" ? runtime.getUiState() : null;
             return candidate && candidate.state === "pending-confirmation" && typeof candidate.candidateId === "string" ? "candidate:" + candidate.candidateId : null;
         }
-        function captureReviewCommands() {
+        function captureReviewCommands(displayed) {
             requireSource();
             var identity = reviewIdentity();
+            var projection = confirmationState();
+            var displayedMatches = !displayed || displayed.reviewId === projection.reviewId && displayed.revision === projection.revision;
             var consumed = false;
             function resolve(method) {
                 requireSource();
                 if (consumed || !identity || reviewIdentity() !== identity) { fail("CONVERSATION_REVIEW_STALE"); }
+                if (method === "approveActiveCandidate" && (!displayedMatches || confirmationState().canApprove !== true)) { fail("CONVERSATION_REVIEW_STALE"); }
                 consumed = true;
                 // Synchronous validation precedes the existing Runtime/Review barrier.
                 return command(method)();

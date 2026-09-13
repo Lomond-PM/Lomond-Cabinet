@@ -403,7 +403,8 @@
                             state: plan.state,
                             nextStep: plan.nextStep,
                             createdAt: plan.createdAt,
-                            review: review
+                            review: review,
+                            reviewTarget: { compId: bindingCapture.snapshot.activeComp.compId, layerId: layerId }
                         });
                     });
                 });

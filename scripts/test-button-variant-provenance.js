@@ -19,6 +19,6 @@ assert.ok(!/document\.createElement\("button"\)/.test(schemaRenderer + toolActio
 assert.ok(/\.ui-button--utility,\s*\.ui-button--navigation,\s*\.utility-action\s*\{[^}]*box-shadow:\s*var\(--elevation-utility-action\)/.test(css), "Utility and Navigation share the Utility elevation authority");
 assert.ok(/\.ui-button--utility,\s*\.ui-button--navigation,\s*\.utility-action\s*\{[^}]*background:\s*var\(--surface-utility-action\)/.test(css), "Navigation is a semantic subvariant of the Utility presentation family");
 assert.ok(/buttonVariants:\s*\["utility",\s*"navigation"\]/.test(lab), "Control Lab exposes both shared semantic variants");
-assert.ok(/reject\.className = "panel-button utility-action[^"]*vela-reject-action"/.test(vela), "Reject preserves its Utility skeleton plus Danger-fill modifier");
+assert.ok(/button\("vela-reject-action"\)/.test(vela), "Reject retains shared Utility button factory and danger modifier");
 
 console.log("Button variant provenance contract tests passed.");

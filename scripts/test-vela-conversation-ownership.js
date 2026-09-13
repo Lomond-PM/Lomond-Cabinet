@@ -162,7 +162,19 @@ async function run() {
         const { committed, ...driver } = h.owner.getAgentDriver().getSnapshot();
         if (!baseline) same(committed, mode === "review", "C2 commit reflects this scenario's actual mutation");
         const events = h.owner.getSessionRuntime().getEvents().filter(e => e.kind !== "tool/result" && !(e.kind === "ae/state-observed" && e.payload.phase === "post-action")).map(({ seq, ...e }) => e);
-        const result = { wires: h.wires, canonical: h.evidence.canonical, requests: h.requests, events, driver, selection: h.runtime.getProviderSelectionEvidence(), state: h.state };
+        var requests = h.requests.slice();
+        if (mode === "review") {
+            // F uses the barrier's captured value instead of a second current-selection presentation read.
+            // Account for exactly that obsolete read pair; every execution/verification payload remains compared.
+            if (baseline) {
+                same(requests[6].operation, "captureContext", "historical presentation binding read");
+                same(requests[6].scope.selectionOrderMeaningful, false, "historical display-only ordering");
+                same(requests[7].operation, "capturePropertyValues", "historical presentation value read");
+                requests.splice(6, 2);
+            }
+            requests = requests.map(({requestId, ...request}) => request);
+        }
+        const result = { wires: h.wires, canonical: h.evidence.canonical, requests, events, driver, selection: h.runtime.getProviderSelectionEvidence(), state: h.state };
         const serialized = JSON.stringify(result);
         if (handle) ownership.dispose(handle);
         h.dispose(); return serialized;

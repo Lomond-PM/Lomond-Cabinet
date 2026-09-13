@@ -164,6 +164,9 @@
                     active.loopHealth.actionAttemptsUsed -= 1;
                     if (typeof outcome.reviewCorrelation !== "string" || outcome.reviewCorrelation.length === 0) { return terminal("blocked", ERROR_CODES.AGENT_DRIVER_EXECUTION_FAILED); }
                     active.suspendedReview = Object.freeze({ objectiveId: active.objectiveId, taskId: active.taskId, sessionId: active.turn.sessionId, turnId: active.turn.turnId, taskPlanId: active.taskPlan.planId, taskPlanRevision: active.taskPlan.revision, stepId: active.taskPlan.steps[0].stepId, capabilityId: active.intent.capabilityId, params: active.intent.params, localExpectation: active.intent.params, beforeValue: beforeValue, reviewId: "agent_review_" + serial + "_" + generation + "_" + (active.logicalCursor ? "logical_" + active.logicalCursor.currentStepIndex + "_attempt_" + active.logicalCursor.materializationAttempt : active.loopHealth.iterationIndex), revision: generation, reviewCorrelation: outcome.reviewCorrelation });
+                    var target = outcome.reviewTarget;
+                    var displayTarget = target && typeof target.compId === "string" && typeof target.layerId === "string" && target.revision === generation ? Object.freeze({ compId: target.compId, layerId: target.layerId, revision: target.revision }) : null;
+                    active.suspendedReview = Object.freeze(Object.assign({}, active.suspendedReview, { reviewTarget: displayTarget }));
                     trajectory("review", { review: "pending" }); transition("awaiting-review");
                     event("task/review-required", { taskId: active.taskId, taskPlanId: active.taskPlan.planId, stepId: active.taskPlan.steps[0].stepId, reviewId: active.suspendedReview.reviewId, reviewRevision: active.suspendedReview.revision, code: outcome.code || "REVIEW_REQUIRED" });
                     return snapshot();
@@ -255,6 +258,7 @@
             if (disposed) { throw error(ERROR_CODES.AGENT_DRIVER_DISPOSED); }
             review = active && active.suspendedReview;
             if (state !== "awaiting-review" || !review || !plain(input) || Object.keys(input).sort().join(",") !== "outcome,reviewId,revision" || input.reviewId !== review.reviewId || input.revision !== review.revision || (input.outcome !== "approved" && input.outcome !== "rejected")) { throw error(ERROR_CODES.AGENT_DRIVER_REVIEW_INVALID); }
+            if (input.outcome === "approved" && (!review.reviewTarget || review.reviewTarget.revision !== review.revision || !/^ae-project-[1-9][0-9]*-item-[1-9][0-9]*$/.test(review.reviewTarget.compId) || review.reviewTarget.layerId.indexOf(review.reviewTarget.compId + "-layer-") !== 0 || !/^[1-9][0-9]*$/.test(review.reviewTarget.layerId.slice(review.reviewTarget.compId.length + 7)) || review.beforeValue === null)) { throw error(ERROR_CODES.AGENT_DRIVER_REVIEW_INVALID); }
             outcome = input.outcome;
             active.suspendedReview = null;
             active.reviewResolution = Object.freeze({ reviewId: review.reviewId, revision: review.revision, outcome: outcome, objectiveId: review.objectiveId, taskId: review.taskId, taskPlanId: review.taskPlanId, stepId: review.stepId });

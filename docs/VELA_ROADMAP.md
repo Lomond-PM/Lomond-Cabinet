@@ -1,7 +1,7 @@
 # Vela / Lomond Cabinet — Canonical Product Roadmap
 
 **Planning revision: R1-2026-09-09**
-**状态：D 已通过 PR #210 合并，四项有界接受及覆盖限制保留；E（AP-01、AP-02、AP-03、UX-01、UX-02）均 TARGETED_ACCEPTED / E READY FOR COMMIT / PR。** 见 [E 报告](reports/vela-0.3.12-e-user-assets-exit-safety.md)；最终离线 196/196、真实 CEP 隔离组合及临时 Palette 有限 UI 验收通过。[D](reports/vela-0.3.12-d-provider-task-lifecycle.md)、[C2](reports/vela-0.3.12-c2-execution-facts-verification.md) 和 [A04](reports/vela-0.3.12-c1-a04-session-events.md) 的已接受边界不重开。不进入 F；INTEGRATED_ACCEPTED / CLOSED 留待 0.3.12-G。
+**状态：E 已通过 PR #211 合并，五项保持 TARGETED_ACCEPTED；F / UX-03 TARGETED_ACCEPTED — 有界混合证据 / F READY FOR COMMIT / PR。** 见 [F 报告](reports/vela-0.3.12-f-ux03-readable-review.md)及 [E 报告](reports/vela-0.3.12-e-user-assets-exit-safety.md)。真实 Provider 两步端到端仍 NOT COVERED，原 PROVIDER_TIMEOUT 未解释/未修复，G 必须重新处置该覆盖欠项与可用性风险。既有接受及覆盖限制保持，本轮不进入 G；INTEGRATED_ACCEPTED / CLOSED 留待 0.3.12-G。
 A09 已通过 PR #207 合并，TARGETED_ACCEPTED — AE26.0x67，见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)；AE26.3x87 跨版本复验 DEFERRED，不重开验收。
 A08历史基线：`d7dd7356cccbb637ae01a7e9d0629b9bc184a388`（G-02 PR #204 合并）；[A08报告](reports/vela-0.3.12-b2-a08-detach-comment-ownership.md)。仅修保留Host函数，注册/UI留待后续，B2未完成。
 G-02历史实施基线：`787cef2c8315a7d5c8a208dae69473f488d4e559`（PR #203）；[G-02报告](reports/vela-0.3.12-b1-g02-layer-name-unicode.md)。B1/0.3.12未完成。
