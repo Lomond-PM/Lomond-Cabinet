@@ -60,7 +60,10 @@ async function run() {
             const session = value.session.filter(e => e.kind !== "tool/result" && !(e.kind === "ae/state-observed" && e.payload.phase === "post-action")).map(({ seq, ...e }) => e);
             return { ...value, driver, session };
         }
-        same(unaffected(b), unaffected(a), c.name + " exact canonical/A2/messages/wire/schema/generation/capture/admission/Session/Driver/Review/Authority/Host/Verify baseline"); comparisons++;
+        const reconciled=require("./fixtures/vela-review-read-equivalence").reconcile(b.requests,a.requests);
+        b.requests=reconciled[0];a.requests=reconciled[1];
+        const normalize = require("./fixtures/vela-review-read-equivalence").normalizeRequestCorrelations;
+        same(normalize(unaffected(b)), normalize(unaffected(a)), c.name + " exact canonical/A2/messages/wire/schema/generation/capture/admission/Session/Driver/Review/Authority/Host/Verify baseline"); comparisons++;
         same(after.evidence.canonical.length, after.wires.length, c.name + " canonical recorder covers every dispatched invocation, including debug off");
         const evidence = after.runtime.getProviderSelectionEvidence();
         if (!c.evaluatorThrows) zero(evidence);

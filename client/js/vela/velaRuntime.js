@@ -441,8 +441,12 @@
                 record.state = "ready";
                 record.contextFingerprint = captures.bindingCapture.fingerprint;
                 record.valueDigest = target.valueDigest;
-                record.beforeValue = capabilityId === "set-layer-name-v1" ? target.value : target.value;
-                return Object.freeze({ reviewCorrelation: correlation, beforeValue: record.beforeValue });
+                record.beforeValue = capabilityId === "set-layer-name-v1" ? target.value : reviewPort.summarize(captures.bindingCapture, captures.valueCapture).beforeValue;
+                var comp = captures.bindingCapture.snapshot.activeComp;
+                var selected = captures.bindingCapture.snapshot.selection[0];
+                if (!comp || !selected || target.layerId !== selected.layerId || captures.valueCapture.snapshot.activeComp.compId !== comp.compId) { throw reviewBarrierError("CONTEXT_STALE"); }
+                record.reviewTarget = Object.freeze({ compId: comp.compId, layerId: target.layerId, revision: input.reviewRevision });
+                return Object.freeze({ reviewCorrelation: correlation, beforeValue: record.beforeValue, reviewTarget: record.reviewTarget });
             }, function (error) { reviewBarriers.delete(correlation); throw error; });
         }
         function continueApprovedReview(input) {
@@ -710,13 +714,6 @@
             } catch (error) { authorityRouting = false; authorityErrorCode = error && error.code || "RUNTIME_CAPABILITY_UNAVAILABLE"; latestAuthorityFailure = Object.freeze({ stage: failureStage, sourceStage: error && typeof error.stage === "string" ? error.stage : null, code: authorityErrorCode, field: error && error.details && typeof error.details.field === "string" ? error.details.field : null }); if (proposal) { authorityPlane.proposalPort.finalizeReview({ requestId: proposal.requestId, generation: proposal.generation, outcome: "failed", errorCode: stableErrorCode(error) }); } return Promise.reject(error); }
         }
         function createAgentDriverRuntimePort() {
-            function captureReviewPresentationBaseline() {
-                // Presentation only: any future approved continuation must still obtain fresh Observe, binding and Preflight evidence.
-                return Promise.resolve(opacityVerificationPort.observe()).then(function (observation) {
-                    var opacity = observation && observation.opacity;
-                    return typeof opacity === "number" && isFinite(opacity) && opacity >= 0 && opacity <= 100 ? opacity : null;
-                }, function () { return null; });
-            }
             function settleAgentDriverProposal(outcome, errorCode, handled) {
                 var proposal = agentDriverProposal;
                 agentDriverProposal = null;
@@ -802,7 +799,7 @@
                         latestAuthorityDecision = Object.freeze({ decision: decision.decision, reasonCode: decision.reasonCode, candidateId: candidate.candidateId });
                         if (decision.decision === "REVIEW_REQUIRED") {
                             if (!logicalAdmission) { settleAgentDriverProposal("completed", null, true); }
-                            return captureReviewBarrier(input, candidate, decision).then(function (barrier) { return input.capabilityIntent.capabilityId === "set-layer-name-v1" ? Object.freeze({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: barrier.beforeValue, reviewCorrelation: barrier.reviewCorrelation }) : captureReviewPresentationBaseline().then(function (beforeValue) { return Object.freeze({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: beforeValue, reviewCorrelation: barrier.reviewCorrelation }); }); }).catch(function (error) { error.committed = false; throw error; });
+                            return captureReviewBarrier(input, candidate, decision).then(function (barrier) { return Object.freeze({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: barrier.beforeValue, reviewCorrelation: barrier.reviewCorrelation, reviewTarget: barrier.reviewTarget }); }).catch(function (error) { error.committed = false; throw error; });
                         }
                         if (decision.decision !== "ALLOW") {
                             if (!logicalAdmission) { settleAgentDriverProposal("failed", "PERMISSION_DENIED", false); }
@@ -972,6 +969,7 @@
         function approveActiveCandidate() {
             try {
                 if (objectiveReviewRuntimePort && objectiveReviewRuntimePort.getProjection().state === "active") { return Promise.resolve(objectiveReviewRuntimePort.resolve("approved")); }
+                if (getConfirmationSurfaceState().canApprove !== true) { throw safeError("CANDIDATE_STATE_INVALID"); }
                 return ensureReadyController().approveCandidate(activeCandidateInput());
             }
             catch (error) { return Promise.reject(error); }
@@ -1021,7 +1019,7 @@
         }
         function getConfirmationSurfaceState() {
             var objectiveReview = objectiveReviewRuntimePort ? objectiveReviewRuntimePort.getProjection() : null;
-            if (objectiveReview && objectiveReview.state === "active") { return Object.freeze({ state: "confirmation-ready", capabilityId: objectiveReview.capabilityId, valueKind: objectiveReview.valueKind, beforeValue: objectiveReview.beforeValue, proposedValue: objectiveReview.proposedValue, errorCode: null, moduleRevision: "vela-objective-review-surface-v1" }); }
+            if (objectiveReview && objectiveReview.state === "active") { return Object.freeze({ state: "confirmation-ready", reviewId: objectiveReview.reviewId, revision: objectiveReview.revision, target: objectiveReview.target, approvalScope: "current-step", stepNumber: objectiveReview.stepNumber, stepCount: objectiveReview.stepCount, canApprove: objectiveReview.canApprove, capabilityId: objectiveReview.capabilityId, valueKind: objectiveReview.valueKind, beforeValue: objectiveReview.beforeValue, proposedValue: objectiveReview.proposedValue, errorCode: objectiveReview.canApprove ? null : "REVIEW_DISPLAY_UNAVAILABLE", moduleRevision: "vela-objective-review-surface-v1" }); }
             if (objectiveReview && objectiveReview.state === "resolved" && objectiveReview.outcome === "approved") { return Object.freeze({ state: "review-approved", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "vela-objective-review-surface-v1" }); }
             if (objectiveReview && objectiveReview.state === "resolved" && objectiveReview.outcome === "rejected") { return Object.freeze({ state: "rejected", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "vela-objective-review-surface-v1" }); }
             var source = getUiState();
@@ -1030,6 +1028,9 @@
             var hasConfirmation = state !== "idle";
             var beforeValue = hasConfirmation && source && typeof source.beforeValue === "number" && isFinite(source.beforeValue) && source.beforeValue >= 0 && source.beforeValue <= 100 ? source.beforeValue : null;
             var proposedValue = hasConfirmation && source && typeof source.proposedValue === "number" && isFinite(source.proposedValue) && source.proposedValue >= 0 && source.proposedValue <= 100 ? source.proposedValue : null;
+            var displayTarget = source && source.reviewTarget;
+            var readable = displayTarget && typeof displayTarget.compId === "string" && /^ae-project-[1-9][0-9]*-item-[1-9][0-9]*$/.test(displayTarget.compId) && typeof displayTarget.layerId === "string" && displayTarget.layerId.indexOf(displayTarget.compId + "-layer-") === 0 && /^[1-9][0-9]*$/.test(displayTarget.layerId.slice(displayTarget.compId.length + 7));
+            if (state === "confirmation-ready") { return Object.freeze({ state: state, reviewId: source.candidateId, revision: source.reviewRevision, target: readable ? Object.freeze({ compId: displayTarget.compId, layerId: displayTarget.layerId }) : null, approvalScope: "single-action", stepNumber: 1, stepCount: 1, capabilityId: "set-opacity-v1", valueKind: "number", beforeValue: beforeValue, proposedValue: proposedValue, canApprove: !!readable && Number.isInteger(source.reviewRevision) && beforeValue !== null && proposedValue !== null, errorCode: readable ? null : "REVIEW_DISPLAY_UNAVAILABLE", moduleRevision: "vela-confirmation-surface-v1" }); }
             return Object.freeze({ state: state, beforeValue: beforeValue, proposedValue: proposedValue, errorCode: source && typeof source.errorCode === "string" ? source.errorCode : null, moduleRevision: "vela-confirmation-surface-v1" });
         }
         return Object.freeze({ initialize: initialize, attachObjectiveReviewPort: attachObjectiveReviewPort, getStatus: safeStatus, getAuthorityProjection: authorityProjection, getAuthorityDiagnostics: authorityDiagnostics, grantNextOpacityMutation: grantNextOpacityMutation, revokeOpacityDelegation: revokeOpacityDelegation, getObservationReadPort: function () { return initialized && !disposed ? observationReadPort : null; }, getAgentDriverRuntimePort: function () { return initialized && !disposed ? createAgentDriverRuntimePort() : null; }, subscribePresentationEvents: subscribePresentationEvents, suspend: suspend, resume: resume, resetSession: resetSession, dispose: dispose, approveActiveCandidate: approveActiveCandidate, rejectActiveCandidate: rejectActiveCandidate, reviewProviderProposal: reviewProviderProposal, getUiState: getUiState, checkProviderReadiness: checkProviderReadiness, sendProviderMessage: sendProviderMessage, cancelProviderRequest: cancelProviderRequest, getProviderUiState: getProviderUiState, getProviderDiagnostics: getProviderDiagnostics, getProviderSelectionEvidence: getProviderSelectionEvidence, getProviderSurfaceState: getProviderSurfaceState, getConfirmationSurfaceState: getConfirmationSurfaceState });

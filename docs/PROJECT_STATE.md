@@ -2,7 +2,9 @@
 
 ## Vela development milestone
 
-**0.3.12-E — User Assets & Exit Safety：AP-01、AP-02、AP-03、UX-01、UX-02 均 TARGETED_ACCEPTED / E READY FOR COMMIT / PR**，见 [E 阶段报告](reports/vela-0.3.12-e-user-assets-exit-safety.md)。最终离线 196/196 PASS；真实 CEP 隔离生产组合及临时 Palette 的有限 UI 验收通过，临时资产已清理。不进入 F。
+**0.3.12-F / UX-03 — Minimum Readable Review：TARGETED_ACCEPTED — 有界混合证据 / F READY FOR COMMIT / PR**，见 [F 阶段报告](reports/vela-0.3.12-f-ux03-readable-review.md)。接受基于真实单步 Provider/AE、长名称 Review、当前 CEP 受控完整两步生产组合及最终 197/197 离线结果；补验未改代码、未重跑 suites。真实 Provider 两步仍 NOT COVERED，原 PROVIDER_TIMEOUT 未解释/未修复，G 必须重新处置覆盖欠项与可用性风险，本轮不进入 G。
+
+**E 已通过 PR #211 合并 dev**，AP-01、AP-02、AP-03、UX-01、UX-02 保持 TARGETED_ACCEPTED，见 [E 报告](reports/vela-0.3.12-e-user-assets-exit-safety.md)。
 
 **D 已通过 PR #210 合并 dev**，A05/A06/A07/A12 保持有界接受；自然 Host/Verify 在途 UIDisable、同 Surface checking 的正常 UI suspend/resume 等欠项及原 PROVIDER_TIMEOUT 保留在 [D 报告](reports/vela-0.3.12-d-provider-task-lifecycle.md)。
 

@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 485 |
+| A | Core / Global; keep | 494 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 3 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -636,8 +636,17 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.conversationOtherRunning | vela | Another conversation is running | 另一对话正在运行 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.conversationRunning | vela | Running | 运行中 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.conversationSelect | vela | Select conversation | 选择对话 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| vela.planReviewCapabilitySetLayerName | vela | Rename layer | 重命名图层 | client/js/vela/velaPlanReviewProjection.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.planReviewCapabilitySetLayerName | vela | Rename layer | 重命名图层 | client/js/vela/velaConfirmationView.js, client/js/vela/velaPlanReviewProjection.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.planReviewCapabilitySetOpacity | vela | Layer opacity | 图层不透明度 | client/js/vela/velaConfirmationView.js, client/js/vela/velaPlanReviewProjection.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.planReviewParameterLayerName | vela | Layer name | 图层名称 | client/js/vela/velaPlanReviewProjection.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewBefore | vela | Before (strings use quoted notation) | 修改前（字符串使用引号表示） | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewCurrentStepScope | vela | Approve only this step ({current}/{total}). Later steps are not autho... | 仅批准本步骤（{current}/{total}）。本次批准不授权后续步骤。 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewHideDetails | vela | Hide full change | 收起完整变化 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewProposed | vela | Proposed | 拟修改为 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewShowDetails | vela | Read full change | 阅读完整变化 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewTargetIds | vela | Composition ID: {comp} Layer ID: {layer} | 合成 ID：{comp} 图层 ID：{layer} | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewUnavailable | vela | The captured target or change cannot be verified for this review. App... | 无法核实本次 Review 捕获的目标或变化，已阻断批准。请拒绝后重新发起 Review。 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewUnavailableValue | vela | Unavailable | 无法取得 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceApprove | vela | Approve | 批准 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceAuthorityStatus.active | vela | The next opacity change is allowed | 已允许下一次不透明度修改 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceAuthorityStatus.consumed | vela | The one-time automatic change permission was used | 本次自动修改权限已使用 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -648,11 +657,11 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.surfaceCancel | vela | Cancel | 取消 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceComposerLabel | vela | Vela message | Vela 消息 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceComposerPlaceholder | vela | Message Vela | 输入给 Vela 的消息 | client/js/vela/velaComposerView.js, client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| vela.surfaceConfirmationLayerName | vela | Layer name: {before} → {proposed} | 图层名称：{before} → {proposed} | client/js/vela/velaConfirmationView.js, client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceConfirmationLayerName | vela | Layer name: {before} → {proposed} | 图层名称：{before} → {proposed} | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceConfirmationLayerNameReady | vela | A local layer rename is ready for confirmation. | 一个本地图层重命名已准备待确认。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceConfirmationReady | vela | A local opacity change is ready for confirmation. | 一个本地不透明度更改已准备待确认。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceConfirmationRejected | vela | The local action suggestion was rejected. No change was made. | 已拒绝本地操作建议。未发生更改。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| vela.surfaceConfirmationValue | vela | Opacity {before}% → {proposed}% | 不透明度 {before}% → {proposed}% | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceConfirmationValue | vela | Opacity {before}% → {proposed}% | 不透明度 {before}% → {proposed}% | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceContextUnavailable | vela | Unable to read the available After Effects context. Open a compositio... | 无法读取可用的 AE 上下文。请打开合成并选中至少一个图层后重试。 | client/js/vela/velaPresentationModel.js, client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceExecutionCompleted | vela | The local opacity change was completed. | 本地不透明度更改已完成。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceExperimentalStatus | vela | Experimental · Not qualified · Manual opt-in required | 实验性 · 未通过资格认证 · 需手动选择加入 | client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |

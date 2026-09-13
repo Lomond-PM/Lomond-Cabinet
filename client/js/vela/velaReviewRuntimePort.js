@@ -12,6 +12,12 @@
 }(typeof self !== "undefined" ? self : this, function () {
     "use strict";
 
+    // Display-only scalar copy. Names are not present in this binding capture.
+    function readableTarget(target, revision) {
+        if (!target || target.revision !== revision || typeof target.compId !== "string" || typeof target.layerId !== "string" || !/^ae-project-[1-9][0-9]*-item-[1-9][0-9]*$/.test(target.compId) || target.layerId.indexOf(target.compId + "-layer-") !== 0 || !/^[1-9][0-9]*$/.test(target.layerId.slice(target.compId.length + 7))) { return null; }
+        return Object.freeze({ compId: target.compId, layerId: target.layerId });
+    }
+
     function createReviewRuntimePort(options) {
         var protocol = options && options.protocol;
         if (!protocol || !protocol.isPlainObject(options)) { throw new Error("RUNTIME_CAPABILITY_UNAVAILABLE"); }
@@ -82,14 +88,17 @@
             var value;
             value = ownerPort.getProjection();
             if (!value || (value.state !== "inactive" && value.state !== "active" && value.state !== "resolved")) { protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "Objective review projection is invalid."); }
-            if (value.state === "active" && (typeof value.reviewId !== "string" || !Number.isInteger(value.revision) || value.revision < 1 || (value.capabilityId !== "set-opacity-v1" && value.capabilityId !== "set-layer-name-v1") || (value.capabilityId === "set-opacity-v1" ? ((value.beforeValue !== null && (typeof value.beforeValue !== "number" || !isFinite(value.beforeValue) || value.beforeValue < 0 || value.beforeValue > 100)) || typeof value.proposedValue !== "number" || !isFinite(value.proposedValue) || value.proposedValue < 0 || value.proposedValue > 100) : (typeof value.beforeValue !== "string" || typeof value.proposedValue !== "string" || value.valueKind !== "string")) || value.outcome !== null)) { protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "Active objective review projection is invalid."); }
+            if (value.state === "active" && (typeof value.reviewId !== "string" || !Number.isInteger(value.revision) || value.revision < 1 || (value.capabilityId !== "set-opacity-v1" && value.capabilityId !== "set-layer-name-v1") || (value.capabilityId === "set-opacity-v1" ? ((value.beforeValue !== null && (typeof value.beforeValue !== "number" || !isFinite(value.beforeValue) || value.beforeValue < 0 || value.beforeValue > 100)) || typeof value.proposedValue !== "number" || !isFinite(value.proposedValue) || value.proposedValue < 0 || value.proposedValue > 100) : ((value.beforeValue !== null && typeof value.beforeValue !== "string") || typeof value.proposedValue !== "string" || value.valueKind !== "string")) || value.outcome !== null)) { protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "Active objective review projection is invalid."); }
             if (value.state === "resolved" && value.outcome !== "approved" && value.outcome !== "rejected") { protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "Resolved objective review projection is invalid."); }
             if (value.state === "active" && value.reviewId === invalidatedReviewId && value.revision === invalidatedRevision) { return protocol.deepFreeze({ state: "inactive", reviewId: null, revision: null, capabilityId: null, beforeValue: null, proposedValue: null, outcome: null }); }
-            return protocol.deepFreeze({ state: value.state, reviewId: value.reviewId || null, revision: Number.isInteger(value.revision) ? value.revision : null, capabilityId: value.capabilityId || null, valueKind: value.state === "active" ? (value.capabilityId === "set-layer-name-v1" ? "string" : "number") : null, beforeValue: typeof value.beforeValue === "number" || typeof value.beforeValue === "string" ? value.beforeValue : null, proposedValue: typeof value.proposedValue === "number" || typeof value.proposedValue === "string" ? value.proposedValue : null, outcome: value.outcome || null });
+            var target = value.state === "active" ? readableTarget(value.target, value.revision) : null;
+            var stepsValid = Number.isInteger(value.stepNumber) && Number.isInteger(value.stepCount) && value.stepNumber >= 1 && value.stepNumber <= value.stepCount;
+            return protocol.deepFreeze({ state: value.state, reviewId: value.reviewId || null, revision: Number.isInteger(value.revision) ? value.revision : null, target: target, stepNumber: stepsValid ? value.stepNumber : null, stepCount: stepsValid ? value.stepCount : null, canApprove: value.state === "active" && !!target && value.beforeValue !== null && stepsValid, capabilityId: value.capabilityId || null, valueKind: value.state === "active" ? (value.capabilityId === "set-layer-name-v1" ? "string" : "number") : null, beforeValue: typeof value.beforeValue === "number" || typeof value.beforeValue === "string" ? value.beforeValue : null, proposedValue: typeof value.proposedValue === "number" || typeof value.proposedValue === "string" ? value.proposedValue : null, outcome: value.outcome || null });
         }
         function resolve(outcome) {
             var current = projection();
             if (current.state !== "active" || (outcome !== "approved" && outcome !== "rejected")) { protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "Objective review is not active."); }
+            if (outcome === "approved" && current.canApprove !== true) { protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "Review target or change is unavailable; reject and request a new review."); }
             return ownerPort.resolve({ reviewId: current.reviewId, revision: current.revision, outcome: outcome });
         }
         function invalidate() { var current = projection(); if (current.state !== "active") { return false; } invalidatedReviewId = current.reviewId; invalidatedRevision = current.revision; return true; }

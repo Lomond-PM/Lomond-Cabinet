@@ -78,7 +78,7 @@ async function run() {
     expectCode(function () { freshPort.port.resolve(oldToken); }, protocol.ERROR_CODES.PLAN_INVALID, "Fresh port cannot resolve a prior lifetime token.");
     check(oldPort.controller.getProgress(oldWaiting.executionPlanId).executionArmed === false, "Registration and resolution never arm TaskRun.");
 
-    let objectiveState = Object.freeze({ state: "active", reviewId: "agent_review_1", revision: 1, capabilityId: "set-opacity-v1", beforeValue: 100, proposedValue: 47, outcome: null });
+    let objectiveState = Object.freeze({ state: "active", reviewId: "agent_review_1", revision: 1, target: {compId: "ae-project-1-item-1", layerId: "ae-project-1-item-1-layer-2", revision: 1}, stepNumber: 1, stepCount: 1, capabilityId: "set-opacity-v1", beforeValue: 100, proposedValue: 47, outcome: null });
     let objectiveResolutions = 0;
     const objectivePort = portModule.createObjectiveReviewRuntimePort({ protocol, ownerPort: Object.freeze({
         getProjection() { return objectiveState; },

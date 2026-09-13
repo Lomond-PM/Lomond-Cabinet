@@ -41,8 +41,8 @@ assert.ok(/panel-button utility-action vela-settings-button/.test(fs.readFileSyn
 assert.ok(/panel-button utility-action vela-surface-action/.test(fs.readFileSync(path.join(root, "client/js/vela/velaComposerView.js"), "utf8")), "Vela Send/Cancel consume Utility Action Surface");
 assert.ok(/panel-button utility-action vela-surface-action/.test(fs.readFileSync(path.join(root, "client/js/vela/velaConfirmationView.js"), "utf8")), "Vela Review/Approve/Reject consume Utility Action Surface");
 const velaConfirmation = fs.readFileSync(path.join(root, "client/js/vela/velaConfirmationView.js"), "utf8");
-assert.ok(/approve\.className = "panel-button utility-action vela-surface-action vela-compact-action"/.test(velaConfirmation), "Vela Approve retains the unchanged Utility Action presentation");
-assert.ok(/reject\.className = "panel-button utility-action vela-surface-action vela-compact-action vela-reject-action"/.test(velaConfirmation), "Vela Reject retains Utility structure and adds only its destructive fill modifier");
+assert.ok(/approve = button\(\)/.test(velaConfirmation) && /panel-button utility-action vela-surface-action vela-compact-action/.test(velaConfirmation), "Approve retains shared Utility presentation");
+assert.ok(/button\("vela-reject-action"\)/.test(velaConfirmation), "Reject retains shared Utility button factory and danger modifier");
 assert.ok(/\.vela-reject-action\s*\{[^}]*background:\s*var\(--danger-surface\);[^}]*\}/.test(velaCss), "Vela Reject resting fill consumes Danger Action Surface");
 assert.ok(/\.vela-reject-action:not\(:disabled\):hover\s*\{[^}]*background:\s*var\(--action-danger-hover-surface\);[^}]*\}/.test(velaCss), "Vela Reject hover fill consumes the existing Danger hover authority");
 const rejectRule = (/\.vela-reject-action\s*\{([^}]*)\}/.exec(velaCss) || ["", ""])[1];

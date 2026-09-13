@@ -48,11 +48,12 @@ function fixture(options) {
         cancel() { calls.cancel += 1; providerState = { state: "cancelled", text: null, errorCode: "PROVIDER_REQUEST_ABORTED" }; if (options.clearConfirmationOnCancel) { confirmationState = { state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }; } },
         getState() { return Object.freeze(Object.assign({}, providerState)); }
     };
+    function readable(state) { return state.state === "confirmation-ready" ? {reviewId:"fixture_review",revision:1,target:{compId:"ae-project-1-item-1",layerId:"ae-project-1-item-1-layer-2"},stepNumber:1,stepCount:1,approvalScope:"current-step",canApprove:true,valueKind:"number",...state} : state; }
     const confirmation = {
         review() { calls.review += 1; if (options.reviewFailure) { providerState = { state: "idle", text: null, errorCode: options.reviewFailure }; confirmationState = { state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }; return Promise.reject(Object.assign(new Error(options.reviewFailure), { code: options.reviewFailure })); } providerState = { state: "idle", text: null, errorCode: null }; confirmationState = { state: "confirmation-ready", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }; return Promise.resolve(); },
         approve() { calls.approve += 1; confirmationState = { state: "executing", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }; return confirmationRequest.promise; },
         reject() { calls.reject += 1; confirmationState = { state: "rejected", beforeValue: 20, proposedValue: 57.5, errorCode: null, moduleRevision: "test" }; return Promise.resolve(); },
-        getState() { return Object.freeze(Object.assign({}, confirmationState)); }
+        getState() { return Object.freeze(Object.assign({}, readable(confirmationState))); }
     };
     const runtimeBridge = runtime || { subscribePresentationEvents() { return null; } };
     if (runtime) { runtimeBridge.subscribePresentationEvents = function (listener) { presentationListeners.push(listener); let active = true; return { unsubscribe() { if (!active) return false; active = false; const index = presentationListeners.indexOf(listener); if (index >= 0) presentationListeners.splice(index, 1); return true; }, dispose() { return this.unsubscribe(); } }; }; }
@@ -194,7 +195,7 @@ async function run() {
     matrix.setConfirmation({ state: "review-approved", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
     matrix.setConfirmation({ state: "confirmation-ready", capabilityId: "set-layer-name-v1", valueKind: "string", beforeValue: "Layer A", proposedValue: "Vela Stream Test", errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
     equal(matrix.elements.statusText.textContent, "t:vela.surfaceStatusLayerNameConfirmation", "step 1 rename confirmation cannot reuse the opacity status");
-    equal(m[2].textContent, "t:vela.surfaceConfirmationLayerName", "step 1 rename confirmation renders the typed layer-name summary");
+    equal(m[2].children[0].textContent, "t:vela.planReviewCapabilitySetLayerName", "step 1 rename confirmation renders the typed layer-name summary");
     equal(matrix.elements.transcriptScroll.children[1].children[matrix.elements.transcriptScroll.children[1].children.length - 1].textContent, "t:vela.surfaceConfirmationLayerNameReady", "step 1 rename confirmation cannot append a second opacity notice");
     matrix.setProvider({ state: "pending", text: null, errorCode: null }); matrix.setConfirmation({ state: "review-approved", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }); matrix.controller.refreshLocale();
     check(m[0].hidden && !m[1].hidden && m[3].hidden && m[4].hidden && m[5].hidden, "approved B2 review closes Confirmation and exposes only objective Cancel while awaiting continuation");
@@ -237,7 +238,7 @@ async function run() {
     review.emit("click"); await flush();
     equal(test.calls.review, 1, "Review is explicit and invoked once without Surface identifiers");
     check(send.hidden && review.hidden && !approve.hidden && !reject.hidden, "confirmation exposes only Approve and Reject");
-    equal(summary.textContent, "t:vela.surfaceConfirmationValue", "confirmation uses the bounded value summary key");
+    equal(summary.children[0].textContent, "t:vela.planReviewCapabilitySetOpacity", "confirmation card identifies the reviewed property");
     approve.emit("click"); approve.emit("click");
     equal(test.calls.approve, 1, "double Approve is blocked while executing");
     check(send.hidden && approve.hidden && reject.hidden && e.composer.readOnly, "executing exposes no clickable mutation");
@@ -273,7 +274,7 @@ async function run() {
     const beforeChildren = e.actionSlot.children.slice(); test.controller.suspend(); e.composer.value = "suspended"; test.setProvider({ state: "completed", text: "late", errorCode: null }); test.controller.refreshLocale(); equal(e.composer.value, "suspended", "suspension blocks patches"); test.controller.resume(); check(e.actionSlot.children.every((node, index) => node === beforeChildren[index]), "resume preserves controls DOM identity");
     check(!/errorCode|PROVIDER_|VERIFICATION_UNAVAILABLE/.test(TranscriptView.create.toString()), "Transcript does not map internal codes");
     check(!/requestId|candidateId|planId|rawGrant|grantSpec|PolicyDecision|reservation|nonce|digest/.test(SurfaceController.create.toString()), "Surface controller receives only fixed consent/revoke operations and no trusted identity or raw authority material");
-    check(!/candidateId|planId|authority|target|context|nonce|digest/.test(ConfirmationView.create.toString()), "confirmation view receives no trusted execution data");
+    check(!/candidateId|planId|authority|nativeBinding|BoundPlan|nonce|digest/.test(ConfirmationView.create.toString()), "confirmation view receives only display target scalars, no trusted execution data");
     function runtimeEvent(invocation, type, text, presentationMode) { const providerEvent = { type, requestId: "req_surface", generation: 1, providerId: "lmstudio", modelId: "model" }; if (text !== undefined) providerEvent.text = text; return Object.freeze({ type: "provider-stream-event", runtimeGeneration: 1, reasoningInvocationId: invocation, presentationMode: presentationMode || "assistant-text", providerEvent: Object.freeze(providerEvent) }); }
     const streamingSurface = fixture({ runtime: {} });
     await mountEnabled(streamingSurface);

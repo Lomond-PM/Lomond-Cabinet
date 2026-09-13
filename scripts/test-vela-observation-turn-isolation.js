@@ -80,9 +80,13 @@ async function run() {
             if (kind === "text") await x.owner.startObjective(message); else { await x.start(kind === "logical"); await x.review(); if (kind === "logical") await x.review(); }
             const { committed, ...terminal } = x.owner.getAgentDriver().getSnapshot();
             if (!baseline) same(committed, kind === "mutation" || kind === "logical", "C2 latest attempt commit is explicit without changing observation ownership");
-            outputs.push(JSON.stringify({ wires: x.wires, canonical: x.evidence.canonical, requests: x.requests, events: x.events, mutations: x.state.mutations, verifies: x.state.verifies, terminal })); x.dispose();
+            outputs.push({ wires: x.wires, canonical: x.evidence.canonical, requests: x.requests, events: x.events, mutations: x.state.mutations, verifies: x.state.verifies, terminal }); x.dispose();
         }
-        same(outputs[0], outputs[1], kind + " immutable sequential equivalence including read counts");
+        outputs.forEach(output => same(JSON.stringify(output.events), JSON.stringify(output.requests.map(r => r.operation)), "operation trace covers every original Host request"));
+        const requests=require("./fixtures/vela-review-read-equivalence").reconcile(outputs[1].requests,outputs[0].requests);
+        outputs[0].requests=requests[1];outputs[1].requests=requests[0];
+        outputs.forEach(output=>{output.events=output.requests.map(r=>r.operation);});
+        same(JSON.stringify(outputs[0]), JSON.stringify(outputs[1]), kind + " immutable sequential equivalence except the exact obsolete display read pair");
     }
     console.log("PASS Vela observation turn isolation: " + assertions + " assertions; 4 immutable pre-A6b production comparisons.");
 }

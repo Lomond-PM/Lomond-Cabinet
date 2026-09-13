@@ -180,7 +180,7 @@
             if (availability.busy && !experimentalEnabled) { action = "cancel"; }
             else if (!experimentalEnabled) { action = "send"; }
             composer.render(action, experimentalEnabled, availability.busy);
-            renderedReviewCommands = sourcePort && action === "confirm" ? confirmation.captureReviewCommands() : null;
+            renderedReviewCommands = sourcePort && action === "confirm" ? confirmation.captureReviewCommands(confirmationState) : null;
             confirmationView.render(action, confirmationState);
             if (authorityButton) {
                 authorityState = authority.getState();
@@ -279,7 +279,7 @@
             synchronize(); notifyExperimental(); return true;
         }
         function review() { var operation; if (disposed || suspended || !mounted || !experimentalEnabled) { return; } generation += 1; try { operation = confirmation.review(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
-        function approve() { var operation; if (disposed || suspended || !mounted || !experimentalEnabled) { return; } generation += 1; try { operation = sourcePort ? (renderedReviewCommands && renderedReviewCommands.approve()) : confirmation.approve(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
+        function approve() { var operation; if (disposed || suspended || !mounted || !experimentalEnabled || confirmation.getState().canApprove !== true) { return; } generation += 1; try { operation = sourcePort ? (renderedReviewCommands && renderedReviewCommands.approve()) : confirmation.approve(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
         function reject() { var operation; if (disposed || suspended || !mounted || !experimentalEnabled) { return; } generation += 1; try { operation = sourcePort ? (renderedReviewCommands && renderedReviewCommands.reject()) : confirmation.reject(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
         function authorityClick() {
             var state;
