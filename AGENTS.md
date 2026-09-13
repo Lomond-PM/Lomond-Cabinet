@@ -19,7 +19,9 @@ The product uses two runtimes:
 
 ## Current Vela milestone
 
-**0.3.12-D — Provider & Active Task Lifecycle：IMPLEMENTED / OFFLINE PASS / REAL CEP/AE ACCEPTANCE PENDING**，见 [D 阶段报告](docs/reports/vela-0.3.12-d-provider-task-lifecycle.md)。A05/A06/A12 与独立子项 A07 已完成离线验证；真实 CEP/AE 待验，不进入 E。
+**0.3.12-E — User Assets & Exit Safety：AP-01、AP-02、AP-03、UX-01、UX-02 均 TARGETED_ACCEPTED / E READY FOR COMMIT / PR**，见 [E 阶段报告](docs/reports/vela-0.3.12-e-user-assets-exit-safety.md)。最终离线 196/196 PASS；真实 CEP 隔离生产组合及临时 Palette 的有限 UI 验收通过，临时资产已清理。不进入 F。
+
+**D 已通过 PR #210 合并 dev**，A05/A06/A07/A12 保持有界接受；自然 Host/Verify 在途 UIDisable、同 Surface checking 的正常 UI suspend/resume 等欠项及原 PROVIDER_TIMEOUT 保留在 [D 报告](docs/reports/vela-0.3.12-d-provider-task-lifecycle.md)，不由 E 升级。
 
 **C2 已通过 PR #209 合并 dev**，A02、A03 保持 TARGETED_ACCEPTED — AE26.0x67 / AdobeCEP 12.0.1 / Chrome 99；原有覆盖限制见 [C2 报告](docs/reports/vela-0.3.12-c2-execution-facts-verification.md)。
 
@@ -249,9 +251,19 @@ Typical focused gate:
 - `git diff --check`;
 - `git status -sb`.
 
-Before a PR or release, run the full offline suite once. Run Vela forward/reverse/forward order testing only when loader/global/cache/order semantics change. Real qualification runs require their separately frozen clean-worktree/evidence process and must not be triggered by ordinary development.
+Before a PR or release, run the full offline suite once against the final production/test state; an existing pass for that unchanged state need not be repeated. Run Vela forward/reverse/forward order testing only when loader/global/cache/order semantics change. Real qualification runs require their separately frozen clean-worktree/evidence process and must not be triggered by ordinary development.
 
 AE smoke should verify the active path, not merely file presence. When behavior appears unchanged, confirm CEP cache, the active frontend module, `evalScript` routing and the loaded JSX before changing algorithms.
+
+默认采用连续修复与验证流程；具体任务约定的范围、授权、验收标准及停止点优先：
+
+- 获得具体实施任务后，连续完成生产复核、修复、focused、关联回归及必要的最终全量，不固定停在 OFFLINE PASS 等待二次指令。工具可达且可安全隔离时，继续验证真实 CEP 页面模块、临时生产实例和受控 I/O。
+- 真实 UI / AE / Provider 测试仅在本轮明确授权的资产、动作和配置范围内执行。已确认且未变化的前提不重复询问；重载可能丢失草稿、重启 AE、操作用户真实资产或需要人工 Undo / 视觉确认时，只暂停请求必要操作，不要求重新批准整个测试阶段。
+- 范围内发生失败，先保留证据，再自行诊断、修复并复测。不删除负向测试、不放宽容差、不隐瞒失败、不盲目重发 mutation；遇到未知副作用、无法安全恢复、架构或产品契约冲突、持续无进展时停止并说明。
+- 代码再次修改后，旧测试结果仅保留历史归属；复跑受影响验证，确保最终结论对应最终代码。
+- 分别标明离线、真实 CEP 受控组合、真实 Provider / Host 与人工确认的证据等级。不可达或未发生的条件记为 NOT COVERED，不自行豁免必需验收项。
+- 清理临时实例、订阅、断点和测试状态；每个工作包只维护一份短报告，raw 放既有 `.tmp` 证据路径，不生成全仓 hash 或逐轮大型流水账。
+- 满足事先约定的验收标准后，直接汇报 READY FOR COMMIT / PR；否则明确列出失败、未覆盖项或需要用户完成的操作。不自动进入下一工作包，不自动暂存、提交、推送、创建 PR、合并或 tag。
 
 ## Known issues and sensitive areas
 

@@ -116,9 +116,9 @@ assert.strictEqual(projected[parameter.cssProperty], undefined);
 assert.strictEqual(projected[blockParameter.cssProperty], undefined);
 resolver.clearTransientOverride(surfaceParameter.id);
 assert.strictEqual(store.getOverride(surfaceParameter.id), null, "Surface transient leaves persisted overrides clean.");
-assert.strictEqual(resolver.setOverride(parameter.id, 17), true, "Commit uses the ordinary typed Design Tuning path.");
+assert.strictEqual(resolver.setOverride(parameter.id, 17).persisted, true, "Commit uses the ordinary typed Design Tuning path.");
 assert.strictEqual(store.getOverride(parameter.id), 17);
-assert.strictEqual(resolver.resetParameter(parameter.id), true, "Reset uses the ordinary Design Tuning path.");
+assert.strictEqual(resolver.resetParameter(parameter.id).persisted, true, "Reset uses the ordinary Design Tuning path.");
 assert.strictEqual(store.getOverride(parameter.id), null);
 assert.strictEqual(projected[parameter.cssProperty], undefined);
 

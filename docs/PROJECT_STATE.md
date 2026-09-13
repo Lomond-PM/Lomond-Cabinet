@@ -2,7 +2,9 @@
 
 ## Vela development milestone
 
-**0.3.12-D — Provider & Active Task Lifecycle：IMPLEMENTED / OFFLINE PASS / REAL CEP/AE ACCEPTANCE PENDING**，见 [D 阶段报告](reports/vela-0.3.12-d-provider-task-lifecycle.md)。A05/A06/A12 与独立子项 A07 已完成离线验证；真实 CEP/AE 待验，不进入 E。
+**0.3.12-E — User Assets & Exit Safety：AP-01、AP-02、AP-03、UX-01、UX-02 均 TARGETED_ACCEPTED / E READY FOR COMMIT / PR**，见 [E 阶段报告](reports/vela-0.3.12-e-user-assets-exit-safety.md)。最终离线 196/196 PASS；真实 CEP 隔离生产组合及临时 Palette 的有限 UI 验收通过，临时资产已清理。不进入 F。
+
+**D 已通过 PR #210 合并 dev**，A05/A06/A07/A12 保持有界接受；自然 Host/Verify 在途 UIDisable、同 Surface checking 的正常 UI suspend/resume 等欠项及原 PROVIDER_TIMEOUT 保留在 [D 报告](reports/vela-0.3.12-d-provider-task-lifecycle.md)。
 
 **C2 已通过 PR #209 合并 dev**，A02、A03 保持 TARGETED_ACCEPTED — AE26.0x67 / AdobeCEP 12.0.1 / Chrome 99；原有覆盖限制见 [C2 报告](reports/vela-0.3.12-c2-execution-facts-verification.md)。
 
@@ -54,7 +56,7 @@ qwen3.5 verbosity/repetition is model/provider tuning, not Vela correctness fail
 
 ## Verification and ownership
 
-C1 本轮验证以 [C1 报告](reports/vela-0.3.12-c1-a04-session-events.md) 为准；A09 的 192/192 属于 M2-F1 实施轮，历史封存数据不计作本轮新测。Generated i18n content 由脚本拥有。[HANDOFF](HANDOFF.md) 是导航入口；[KNOWN_ISSUES](KNOWN_ISSUES.md) 持有既有问题；CHANGELOG 持有包发布历史。
+当前 E 验证以 [E 报告](reports/vela-0.3.12-e-user-assets-exit-safety.md) 为准；最终 196/196 对应最终生产/测试代码，历史及中间版本结果不混用。Generated i18n content 由脚本拥有。[HANDOFF](HANDOFF.md) 是导航入口；[KNOWN_ISSUES](KNOWN_ISSUES.md) 持有既有问题；CHANGELOG 持有包发布历史。
 
 ## Context closure and 0.3.11 inheritance
 

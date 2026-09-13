@@ -60,11 +60,17 @@
             registry.list().some(function (parameter) { var override; if (parameter.motionRole !== role) return false; if (Object.prototype.hasOwnProperty.call(transientOverrides, parameter.id)) result = transientOverrides[parameter.id]; else { override = store.getOverride(parameter.id); if (override !== null) result = override; } return true; });
             return result;
         }
-        function mutate(action) { var changed = action(); if (changed !== false) { store.save(); requestProjection(); } return changed; }
+        function publishResult(accepted, saved, applied) {
+            var result = { accepted: accepted, applied: applied, persisted: !!(saved && saved.persisted), error: saved && saved.error || null };
+            if (typeof options.onPersistenceResult === "function") options.onPersistenceResult(result);
+            return result;
+        }
+        function persist() { var saved = store.save(); requestProjection(); return publishResult(true, saved, appliedRevision === pendingRevision); }
+        function mutate(action) { if (action() === false) return publishResult(false, null, false); return persist(); }
         function evidence(domain) {
             var canonical = {}; var overrides = store.getOverrides(); var resolved = {}; var patch = {};
             var scopedOverrides = {};
-            registry.list().forEach(function (parameter) { var base; var value; if (domain && parameter.domain !== domain) return; base = canonicals[parameter.id]; value = Object.prototype.hasOwnProperty.call(overrides, parameter.id) ? overrides[parameter.id] : base; canonical[parameter.id] = base; resolved[parameter.id] = value; if (Object.prototype.hasOwnProperty.call(overrides, parameter.id)) { scopedOverrides[parameter.id] = overrides[parameter.id]; patch[parameter.id] = { from: base, to: overrides[parameter.id] }; } });
+            registry.list().forEach(function (parameter) { var base; var value; if (domain && parameter.domain !== domain) return; base = canonicals[parameter.id]; value = Object.prototype.hasOwnProperty.call(overrides, parameter.id) ? overrides[parameter.id] : base; canonical[parameter.id] = registry.cloneValue(base); resolved[parameter.id] = registry.cloneValue(value); if (Object.prototype.hasOwnProperty.call(overrides, parameter.id)) { scopedOverrides[parameter.id] = overrides[parameter.id]; patch[parameter.id] = { from: registry.cloneValue(base), to: registry.cloneValue(overrides[parameter.id]) }; } });
             return { scope: domain || "all", canonical: canonical, overrides: scopedOverrides, resolved: resolved, promotionPatch: patch };
         }
         return Object.freeze({
@@ -75,12 +81,15 @@
             setTransientOverride: function (id, value) { var checked = registry.validate(id, value); if (!checked.valid) return false; transientOverrides[id] = checked.value; requestProjection(); return true; },
             clearTransientOverride: function (id) { if (!Object.prototype.hasOwnProperty.call(transientOverrides, id)) return false; delete transientOverrides[id]; requestProjection(); return true; },
             clearTransientOverrides: function () { transientOverrides = {}; requestProjection(); },
-            commitTransientOverride: function (id, value) { var checked = registry.validate(id, value); if (!checked.valid) return false; store.setOverride(id, checked.value); store.save(); delete transientOverrides[id]; requestProjection(); return true; },
+            commitTransientOverride: function (id, value) { var checked = registry.validate(id, value); if (!checked.valid) return publishResult(false, null, false); store.setOverride(id, checked.value); delete transientOverrides[id]; return persist(); },
             getTransientOverrides: function () { var out = {}; var key; for (key in transientOverrides) if (Object.prototype.hasOwnProperty.call(transientOverrides, key)) out[key] = registry.cloneValue(transientOverrides[key]); return out; },
-            resetParameter: function (id) { return mutate(function () { return store.removeOverride(id); }); },
-            resetMotion: function () { return mutate(function () { return store.clearDomain("motion"); }); },
-            resetDomain: function (domain) { return mutate(function () { return store.clearDomain(domain); }); },
-            resetAll: function () { store.clearAll(); store.save(); requestProjection(); },
+            resetParameter: function (id) { return mutate(function () { if (!registry.get(id)) return false; store.removeOverride(id); return true; }); },
+            resetMotion: function () { return mutate(function () { store.clearDomain("motion"); return true; }); },
+            resetDomain: function (domain) { return mutate(function () { store.clearDomain(domain); return true; }); },
+            resetAll: function () { store.clearAll(); return persist(); },
+            retrySave: persist,
+            getPersistenceState: function () { return store.getPersistenceState(); },
+            restoreSaved: function () { var saved = store.restoreSaved(); if (saved.accepted) { transientOverrides = {}; requestProjection(); } return publishResult(saved.accepted, saved, saved.accepted && appliedRevision === pendingRevision); },
             getEvidence: evidence,
             getProjectionState: function () { return { pendingRevision: pendingRevision, appliedRevision: appliedRevision }; }
         });

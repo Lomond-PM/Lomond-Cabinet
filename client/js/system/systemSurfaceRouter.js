@@ -12,6 +12,27 @@
         var diagnostics = options.diagnostics || function () {};
         var callbacks = options.callbacks || {};
         var active = null;
+        var pending = null;
+        var disposed = false;
+        function transition(next, kind) {
+            if (disposed || pending) return false;
+            var previous = active;
+            var ticket = {};
+            var accepted = false;
+            pending = ticket;
+            function settle(allowed) {
+                if (disposed || pending !== ticket || active !== previous) return;
+                pending = null;
+                if (allowed !== true) return;
+                accepted = true; active = next;
+                if (callbacks[kind]) callbacks[kind](next || previous);
+            }
+            if (previous && typeof options.beforeLeave === "function") {
+                try { options.beforeLeave(previous, next, settle); }
+                catch (error) { settle(false); diagnostics("SYSTEM_LEAVE_FAILED", String(error.message || error)); }
+            } else settle(true);
+            return accepted;
+        }
 
         function route(surfaceId, pageId, sourceElement) {
             var entry = catalog && catalog.getSystemSurface(surfaceId);
@@ -25,18 +46,14 @@
         function open(surfaceId, pageId, sourceElement) {
             var next = route(surfaceId, pageId, sourceElement);
             if (!next) return false;
-            active = next;
-            if (callbacks.open) callbacks.open(next);
-            return true;
+            return transition(next, "open");
         }
         function navigate(pageId) {
             var next;
             if (!active) return false;
             next = route(active.surfaceId, pageId, active.sourceElement);
             if (!next) return false;
-            active = next;
-            if (callbacks.navigate) callbacks.navigate(next);
-            return true;
+            return transition(next, "navigate");
         }
         function back() {
             var definition;
@@ -48,11 +65,9 @@
         function close() {
             var previous = active;
             if (!previous) return false;
-            active = null;
-            if (callbacks.close) callbacks.close(previous);
-            return true;
+            return transition(null, "close");
         }
-        return Object.freeze({ open: open, navigate: navigate, back: back, close: close, getActiveRoute: function () { return active; } });
+        return Object.freeze({ open: open, navigate: navigate, back: back, close: close, dispose: function () { disposed = true; pending = null; active = null; }, getActiveRoute: function () { return active; } });
     }
     return { create: create };
 }));

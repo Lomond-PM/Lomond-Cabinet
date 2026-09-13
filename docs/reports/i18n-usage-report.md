@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 482 |
+| A | Core / Global; keep | 485 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 3 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -85,6 +85,9 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | appearance.typography.supportingSize.label | appearance | Supporting Size | 辅助文本大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.typography.titleSize.description | appearance | Adjusts Page and Surface titles together while preserving their relat... | 同时调整页面与表面标题，并保持它们的原有层级。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.typography.titleSize.label | appearance | Title Size | 标题大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| assets.noSavedBaseline | assets | No reliable saved values to restore | 没有可靠的已保存值可供还原 | client/js/ui/coreUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| assets.notSaved | assets | Changes are not saved. Retry or restore the saved values before leaving. | 更改未保存。请重试或还原已保存值后再离开。 | client/js/main.js, client/js/proceduralPaletteWorkspace.js, client/js/ui/coreUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| assets.restoreSaved | assets | Restore saved values | 还原已保存值 | client/js/ui/coreUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | bootstrap.loadFailed | bootstrap | Tools failed to load. | 工具加载失败。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | bootstrap.loadingTools | bootstrap | Loading tools... | 正在加载工具... | client/index.html, client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | bootstrap.partialFailure | bootstrap | Some tools failed to load. | 部分工具加载失败。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -122,7 +125,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | common.reset | common | Reset | 重置 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.resetDefaults | common | Reset Defaults | 恢复默认值 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.restoreDefaults | common | Restore Defaults | 恢复默认 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.retry | common | Retry | 重试 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.retry | common | Retry | 重试 | client/js/main.js, client/js/ui/coreUi.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.right | common | Right | 右对齐 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.rowMajor | common | Row-Major | 行优先 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.saved | common | Saved | 已保存 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |

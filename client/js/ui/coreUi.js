@@ -281,11 +281,35 @@
     }
 
     function closeSelectComponents(exceptComponent) {
+        var wasOpen = !!activeSelectComponent && activeSelectComponent !== exceptComponent;
         var components = selectComponents.slice(0);
         var i;
         for (i = 0; i < components.length; i++) {
             if (components[i] !== exceptComponent) components[i].close();
         }
+        return wasOpen;
+    }
+
+    // Store/Resolver receipts drive this shared feedback; no storage is owned here.
+    function renderAssetPersistenceNotice(options) {
+        var owner = options.owner; var mount = options.mount; var doc = options.document;
+        if (!owner || !mount) return;
+        var state = owner.getPersistenceState();
+        var notice = mount.querySelector(".asset-persistence-notice");
+        if (notice && notice.parentNode) notice.parentNode.removeChild(notice);
+        if (!state.dirty || !state.error) return;
+        notice = doc.createElement("div"); notice.className = "asset-persistence-notice"; notice.setAttribute("role", "status");
+        var label = doc.createElement("span"); label.setAttribute("data-i18n", "assets.notSaved"); label.textContent = options.translate("assets.notSaved"); notice.appendChild(label);
+        function button(key, action, disabled) {
+            var control = createButton({ document: doc, variant: "neutral", text: options.translate(key), classNames: "panel-button panel-local-action", onClick: function () {
+                action(); renderAssetPersistenceNotice(options);
+                if (options.onChange) options.onChange();
+            } });
+            control.setAttribute("data-i18n", key); control.disabled = !!disabled; notice.appendChild(control);
+        }
+        button("common.retry", owner.retrySave);
+        button(state.canRestore ? "assets.restoreSaved" : "assets.noSavedBaseline", owner.restoreSaved, !state.canRestore);
+        mount.insertBefore(notice, mount.firstChild);
     }
 
     function enhanceSelect(options) {
@@ -464,8 +488,9 @@
                 event.preventDefault();
                 if (control.classList.contains("is-open")) close();
                 else open();
-            } else if (event.keyCode === 27) {
+            } else if (event.keyCode === 27 && control.classList.contains("is-open")) {
                 event.preventDefault();
+                event.stopPropagation();
                 close(true);
             } else if (event.keyCode === 38 || event.keyCode === 40) {
                 event.preventDefault();
@@ -875,7 +900,7 @@
             }
             if (event.currentTarget && event.currentTarget.setPointerCapture && event.pointerId !== undefined) try { event.currentTarget.setPointerCapture(event.pointerId); } catch (ignored) {}
             if (event.preventDefault) event.preventDefault();
-            doc.addEventListener("pointermove", dragMove); doc.addEventListener("pointerup", dragEnd); doc.addEventListener("pointercancel", dragCancel); doc.addEventListener("keydown", dragKeydown);
+            doc.addEventListener("pointermove", dragMove); doc.addEventListener("pointerup", dragEnd); doc.addEventListener("pointercancel", dragCancel); doc.addEventListener("keydown", dragKeydown, true);
         }
         function dragMove(event) {
             var rect;
@@ -920,7 +945,7 @@
             if (event.preventDefault) event.preventDefault();
         }
         function dragKeydown(event) { if (activeDrag && event.keyCode === 27) { if (event.preventDefault) event.preventDefault(); dragCancel(); } }
-        function clearDrag() { doc.removeEventListener("pointermove", dragMove); doc.removeEventListener("pointerup", dragEnd); doc.removeEventListener("pointercancel", dragCancel); doc.removeEventListener("keydown", dragKeydown); activeDrag = null; }
+        function clearDrag() { doc.removeEventListener("pointermove", dragMove); doc.removeEventListener("pointerup", dragEnd); doc.removeEventListener("pointercancel", dragCancel); doc.removeEventListener("keydown", dragKeydown, true); activeDrag = null; }
         function dragEnd() { if (!activeDrag) return; clearDrag(); render(); emit("change", { source: view + "-graph" }); }
         function dragCancel() { if (!activeDrag) return; clearDrag(); applyValue(editSnapshot, null); if (typeof options.onCancel === "function") options.onCancel(cloneValue(value), { source: "pointercancel" }); }
         function handleKey(event, index) {
@@ -1184,6 +1209,7 @@
         createBezierCurveField: createBezierCurveField,
         createDisclosureController: createDisclosureController,
         createButton: createButton,
+        renderAssetPersistenceNotice: renderAssetPersistenceNotice,
         createColorField: createColorField,
         parseColorAlphaValue: parseColorAlphaValue,
         isValidColorAlphaValue: isValidColorAlphaValue,

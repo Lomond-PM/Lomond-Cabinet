@@ -573,7 +573,7 @@ function run() {
     assert.strictEqual(doc.querySelector(".palette-editor-scroll"), scrollBefore);
     assert.strictEqual(doc.querySelector(".palette-editor-scroll").scrollTop, 240, "Rename Slot must preserve the scroll position.");
 
-    Workspace.close({ reason: "settings-close", animate: false });
+    Workspace.teardown(); // Forced fixture disposal; user close is now negotiated.
     assert.strictEqual(Workspace.isOpen(), false);
 
     console.log("PASS Palette Workspace continuity: scroll identity, live derived preview, dependency propagation, live oklchAdjust, select lifecycle.");
@@ -586,7 +586,9 @@ function makeDraftWithAColor(aColor, amount) {
     return draft;
 }
 
-try {
+module.exports = { FakeDocument, makeWindow, makeCoreUI, makeAppearance, makeDraft };
+
+if (require.main === module) try {
     run();
 } catch (error) {
     console.error("FAIL Palette Workspace continuity - " + (error && error.stack ? error.stack : error.message));
