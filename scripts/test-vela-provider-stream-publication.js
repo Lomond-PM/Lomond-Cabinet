@@ -58,7 +58,7 @@ function assertCanonical(events) { events.forEach((event) => { check(Object.isFr
     const malformed = harness({ streaming: true }); const malformedHandle = await start(malformed); const malformedCall = malformed.calls[0];
     try { malformedCall.request.onChunk("data: {bad}\n\n"); } catch (error) { malformedCall.pending.reject(new malformed.protocol.VelaProtocolError(malformed.protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID)); }
     await malformedHandle.promise;
-    check(malformed.events.map((event) => event.type).join(",") === "stream-started,stream-failed" && malformed.events[1].failureBoundary === "transport-read", "Malformed streams publish one bounded failure without raw transport data");
+    check(malformed.events.map((event) => event.type).join(",") === "stream-started,stream-failed" && malformed.events[1].failureBoundary === "stream-assembly", "Malformed streams publish one bounded failure without raw transport data");
 
     const parserRejected = harness({ streaming: true, profile: policy.PROFILES.EXPLICIT_EDIT_ELIGIBLE }); const parserHandle = await start(parserRejected); const parserCall = parserRejected.calls[0];
     parserCall.request.onChunk(frame({ content: "complete but not a structured terminal response" }) + done()); parserCall.pending.resolve(snapshot());

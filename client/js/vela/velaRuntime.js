@@ -336,9 +336,9 @@
             if (activeProductionContinuation === record) { activeProductionContinuation = null; }
             return true;
         }
-        function invalidateProductionContinuation() {
+        function invalidateProductionContinuation(preserveSettlement) {
             if (trajectoryAssociation && !trajectoryAssociation.executionEntered) { reportTrajectory({ kind: "not-executed", producer: "VelaRuntime", code: "LIFECYCLE_BLOCKED" }); }
-            trajectoryAssociation = null;
+            if (!preserveSettlement || !trajectoryAssociation || !trajectoryAssociation.executionEntered) { trajectoryAssociation = null; }
             var record = activeProductionContinuation;
             if (record) { closeProductionContinuation(record); }
             if (preflight) { try { preflight.invalidateAllCommittedVerifications(); } catch (ignored) {} }
@@ -362,7 +362,7 @@
             var satisfied = execution && execution.state === "satisfied" && committed === false;
             var disposition = executionDisposition(committed, satisfied);
             record.committed = committed;
-            if (!currentProductionContinuation(record)) { closeProductionContinuation(record); return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED", committed: committed, disposition: disposition }); }
+            if (!currentProductionContinuation(record)) { closeProductionContinuation(record); if (trajectoryAssociation && trajectoryAssociation.planId === record.executionPlanId) { trajectoryAssociation = null; } return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED", committed: committed, disposition: disposition }); }
             if (execution && execution.state === "cancelled") { closeProductionContinuation(record); return Object.freeze({ state: "cancelled", code: execution.code || "AGENT_DRIVER_CANCELLED", committed: committed, disposition: disposition }); }
             if (committed === true || satisfied) {
                 if (record.verificationPlanId) { record.phase = "awaiting-verification"; return Object.freeze({ state: successState, code: null, committed: committed, disposition: disposition }); }
@@ -381,12 +381,12 @@
             record.verificationPlanId = null;
             record.phase = "verifying";
             return preflight.verifyCommittedValue({ planId: planId, capabilityId: record.capabilityId, expectedValue: record.expectedValue.data }).then(function (verification) {
-                if (activeProductionContinuation !== record || record.generation !== reviewBarrierGeneration || disposed || state !== "ready") { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
+                if (activeProductionContinuation !== record || record.generation !== reviewBarrierGeneration || disposed || state !== "ready") { if (trajectoryAssociation && trajectoryAssociation.planId === planId) { trajectoryAssociation = null; } return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
                 closeProductionContinuation(record);
                 var matches = verification && verification.fresh === true && verification.matches === true;
                 return Object.freeze({ state: matches ? "verified" : "unverified", fresh: verification.fresh === true, matches: verification.matches === true, targetRelation: "committed-target", valueKind: verification.valueKind, value: verification.value, observationRevision: verification.observationRevision, code: matches ? null : "AGENT_DRIVER_TASK_UNVERIFIED" });
             }, function (error) {
-                if (activeProductionContinuation !== record || record.generation !== reviewBarrierGeneration || disposed || state !== "ready") { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
+                if (activeProductionContinuation !== record || record.generation !== reviewBarrierGeneration || disposed || state !== "ready") { if (trajectoryAssociation && trajectoryAssociation.planId === planId) { trajectoryAssociation = null; } return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
                 if (trajectoryAssociation && trajectoryAssociation.planId === planId && !trajectoryAssociation.verificationSettled) {
                     reportTrajectory({ kind: "verify-result", producer: "VelaRuntime", planId: planId, scope: "committed-target", fresh: null, matches: null, actual: null, digest: null, sourceRequestId: null, code: "VERIFICATION_UNAVAILABLE" });
                 }
@@ -824,16 +824,17 @@
                         continuation.committed = null;
                         return authorityPlane.atomicCoordinator.run(handle).then(function (result) {
                             var actual = result && result.result;
-                            if (!currentProductionContinuation(continuation)) { return settleProductionExecution(continuation, actual, "executed"); }
+                            var execution = { committed: actual && actual.committed, state: actual && actual.ok === true && actual.committed === false && actual.summary && actual.summary.disposition === "already-satisfied" ? "satisfied" : "executed" };
+                            if (!currentProductionContinuation(continuation)) { reportTrajectory({ kind: "execution-receipt", producer: "VelaRuntime", planId: handle.executionPlanId, committed: actual && actual.committed === true ? true : actual && actual.committed === false ? false : null }); }
+                            if (!currentProductionContinuation(continuation)) { return settleProductionExecution(continuation, execution, "executed"); }
                             var settlementSucceeded = true;
                             activeDelegatedTask = null; activePilot = null; authorityRemainingActions = 0; authorityState = "consumed";
                             try { if (!logicalAdmission) { settleAgentDriverProposal("completed", null, true); } }
                             catch (ignoredSettlement) { settlementSucceeded = false; }
-                            var execution = { committed: actual && actual.committed, state: actual && actual.ok === true && actual.committed === false && actual.summary && actual.summary.disposition === "already-satisfied" ? "satisfied" : "executed" };
                             reportTrajectory({ kind: "execution-receipt", producer: "VelaRuntime", planId: handle.executionPlanId, committed: execution.committed === true ? true : execution.committed === false ? false : null });
                             return Object.freeze(Object.assign({}, settleProductionExecution(continuation, execution, "executed"), { transcriptSettled: settlementSucceeded }));
                         }, function (runError) {
-                            if (!currentProductionContinuation(continuation)) { return settleProductionExecution(continuation, runError, "executed"); }
+                            if (!currentProductionContinuation(continuation)) { reportTrajectory({ kind: "execution-receipt", producer: "VelaRuntime", planId: handle.executionPlanId, committed: runError && runError.committed === true ? true : runError && runError.committed === false ? false : null }); return settleProductionExecution(continuation, runError, "executed"); }
                             settleDelegatedExecutionFailure(stableErrorCode(runError), true);
                             var outcome = settleProductionExecution(continuation, runError, "executed");
                             reportTrajectory({ kind: "execution-receipt", producer: "VelaRuntime", planId: handle.executionPlanId, committed: outcome.committed });
@@ -850,11 +851,11 @@
                 verifyAction: verifyCommittedAction,
                 verifyCommittedAction: verifyCommittedAction,
                 continueApprovedReview: continueApprovedReview,
-                cancel: function () {
+                cancel: function (options) {
                     var providerState;
                     var cancelledReasoning = activeAgentReasoning;
                     invalidateReviewBarriers();
-                    invalidateProductionContinuation();
+                    invalidateProductionContinuation(options && options.settleInFlight === true);
                     if (confirmedAuthorityComposer) { try { confirmedAuthorityComposer.cancel(); } catch (ignoredComposer) {} }
                     if (agentDriverProposal && authorityPlane) { try { settleAgentDriverProposal("failed", "AGENT_DRIVER_CANCELLED", false); } catch (ignored) {} }
                     agentDriverLogicalAdmission = null;

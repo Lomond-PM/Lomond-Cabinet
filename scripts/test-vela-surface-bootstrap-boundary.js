@@ -133,6 +133,7 @@ function harness(options) {
     context.window.VelaComposerView = { create() {} };
     if (!options.missingConfirmationView) context.window.VelaConfirmationView = { create() {} };
     vm.createContext(context);
+    vm.runInContext(source.slice(source.indexOf("    function stopVelaExperimentalSession() {"), source.indexOf("    function configureVelaExperimentalSession() {")), context);
     vm.runInContext(source.slice(start, end) + "\nwindow.__testHooks = { initializeRuntime: initializeVelaRuntime, invalidateForCore: invalidateVelaRuntimeInitForCoreSnapshot, initializeSurface: initializeVelaSurfaceController, runtime: function () { return velaRuntimeController; }, runtimeError: function () { return velaRuntimeLastErrorCode; }, agentOwner: function () { return velaAgentRuntimeOwner; }, agentError: function () { return velaAgentRuntimeLastErrorCode; }, surfaceState: function () { return velaSurfaceBootstrapState; }, surfaceRevision: function () { return velaSurfaceBootstrapRevision; }, controller: function () { return velaSurfaceController; } };", context, { filename: "main-vela-bootstrap-boundary.js" });
     vm.runInContext("window.__testHooks.conversation = currentVelaConversation; window.__testHooks.disposeBundle = disposeCommittedVelaBundle;", context);
     return { context, slot, calls, warnings, runtime };

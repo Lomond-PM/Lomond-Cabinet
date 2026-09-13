@@ -19,7 +19,9 @@ The product uses two runtimes:
 
 ## Current Vela milestone
 
-**0.3.12-C2 / A02 + A03 — Execution Facts & Target-Bound Verification：A02、A03 分别 TARGETED_ACCEPTED — AE26.0x67 / AdobeCEP 12.0.1 / Chrome 99；C2 READY FOR COMMIT / PR**。原定 R3-3b、R4 补验已通过；旧 R3-3 采集准备失败及离线专属覆盖保留，见 [C2 报告](docs/reports/vela-0.3.12-c2-execution-facts-verification.md)。不进入 D、Provider 生命周期或 UI 重构。
+**0.3.12-D — Provider & Active Task Lifecycle：IMPLEMENTED / OFFLINE PASS / REAL CEP/AE ACCEPTANCE PENDING**，见 [D 阶段报告](docs/reports/vela-0.3.12-d-provider-task-lifecycle.md)。A05/A06/A12 与独立子项 A07 已完成离线验证；真实 CEP/AE 待验，不进入 E。
+
+**C2 已通过 PR #209 合并 dev**，A02、A03 保持 TARGETED_ACCEPTED — AE26.0x67 / AdobeCEP 12.0.1 / Chrome 99；原有覆盖限制见 [C2 报告](docs/reports/vela-0.3.12-c2-execution-facts-verification.md)。
 
 **A04 已通过 PR #208 合并 dev**，保持 TARGETED_ACCEPTED — AdobeCEP 12.0.1 / Chrome 99（Windows Win64）；其有界页面/临时 Agent 验收见 [C1 报告](docs/reports/vela-0.3.12-c1-a04-session-events.md)，不据此扩大完整 Provider→Authority→Host 覆盖。
 

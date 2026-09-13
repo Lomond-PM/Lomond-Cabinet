@@ -15,6 +15,8 @@
         var pending = new Set();
         var selected = null;
         var holder = null;
+        var providerStopped = false;
+        var suspended = false;
         var disposed = false;
         var listeners = new Set();
         function notify() { listeners.forEach(function (listener) { try { listener(); } catch (ignored) {} }); }
@@ -30,7 +32,7 @@
         function checkRelease(token) {
             if (disposed || holder !== token || token.pending !== 0) { return; }
             var state = token.entry.driver.getSnapshot();
-            if (state.state === "terminal" || state.state === "idle") { holder = null; notify(); }
+            if (state.state === "terminal" || state.state === "idle") { holder = null; if (suspended) { token.entry.association.runtime.suspend(); } notify(); }
         }
         function track(token, action) {
             token.pending += 1;
@@ -45,18 +47,39 @@
             Promise.resolve().then(done);
             return result;
         }
+        function requireProvider() {
+            if (suspended || providerStopped || typeof options.isProviderEnabled === "function" && options.isProviderEnabled() !== true) { fail("PROVIDER_SESSION_DISABLED"); }
+        }
+        function cancelActiveObjective() {
+            requireLive();
+            if (!holder) { return false; }
+            var token = holder;
+            return track(token, function () { return token.entry.association.agentOwner.cancelObjective({ settleInFlight: true }); });
+        }
+        function stopProviderActivity() {
+            requireLive(); providerStopped = true; notify();
+            cancelActiveObjective();
+            records.forEach(function (entry) {
+                var runtime = entry.association.runtime;
+                // Unused session-only consent must not survive a later re-enable.
+                if (runtime.getAuthorityProjection().active) { Promise.resolve(runtime.revokeOpacityDelegation()).catch(function () {}); }
+            });
+            notify();
+        }
         function admission(entry) {
             return Object.freeze({
                 start: function (action) {
                     entryFor(entry.record);
+                    requireProvider();
                     if (holder) { fail("CONVERSATION_OBJECTIVE_BUSY"); }
                     var token = { entry: entry, pending: 0 };
                     holder = token;
                     notify();
                     return track(token, action);
                 },
-                continue: function (action) {
+                continue: function (action, stopping) {
                     entryFor(entry.record);
+                    if (!stopping) { requireProvider(); }
                     if (holder && holder.entry !== entry) { fail("CONVERSATION_OBJECTIVE_BUSY"); }
                     return holder ? track(holder, action) : action();
                 }
@@ -145,15 +168,17 @@
             return true;
         }
         return Object.freeze({
+            stopProviderActivity: stopProviderActivity, cancelActiveObjective: cancelActiveObjective,
+            allowProviderRequests: function () { requireLive(); if (suspended || typeof options.isProviderEnabled === "function" && options.isProviderEnabled() !== true) { return false; } providerStopped = false; notify(); return true; },
             getActiveRecord: function () { requireLive(); return holder ? holder.entry.record : null; },
             subscribe: function (listener) { requireLive(); listeners.add(listener); return Object.freeze({ unsubscribe: function () { listeners.delete(listener); } }); },
             createRecord: createRecord, select: select, disposeRecord: disposeRecord, dispose: dispose,
             getRecords: function () { requireLive(); return Object.freeze(Array.from(records.keys())); },
             getSelected: function () { requireLive(); return selected; },
             getSourcePort: function (record) { return entryFor(record).association.sourcePort; },
-            getAdmissionState: function () { requireLive(); return Object.freeze({ busy: !!holder, conversationId: holder ? holder.entry.record.conversationId : null }); },
-            suspend: function () { requireLive(); records.forEach(function (entry) { entry.association.runtime.suspend(); }); },
-            resume: function () { requireLive(); records.forEach(function (entry) { entry.association.runtime.resume(); }); }
+            getAdmissionState: function () { requireLive(); return Object.freeze({ busy: !!holder, providerStopped: providerStopped, conversationId: holder ? holder.entry.record.conversationId : null }); },
+            suspend: function () { requireLive(); suspended = true; stopProviderActivity(); records.forEach(function (entry) { if (!holder || holder.entry !== entry) { entry.association.runtime.suspend(); } }); },
+            resume: function () { requireLive(); suspended = false; records.forEach(function (entry) { entry.association.runtime.resume(); }); }
         });
     }
     return { MODULE_REVISION: "vela-conversation-composition-0.3.11-a4-v1", createComposition: createComposition };
