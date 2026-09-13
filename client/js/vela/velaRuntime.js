@@ -346,21 +346,45 @@
         }
         function ownTerminalVerification(association) {
             var record = activeProductionContinuation;
-            if (!record || record.phase !== "executing" || record.generation !== reviewBarrierGeneration || disposed || state !== "ready" || !association || typeof association.planId !== "string" || association.planId.length === 0 || record.verificationPlanId !== null) { throw safeError("LIFECYCLE_BLOCKED"); }
+            if (!record || record.phase !== "executing" || record.generation !== reviewBarrierGeneration || disposed || state !== "ready" || !association || typeof association.planId !== "string" || association.planId !== record.executionPlanId || record.verificationPlanId !== null) { throw safeError("LIFECYCLE_BLOCKED"); }
             record.verificationPlanId = association.planId;
+        }
+        function currentProductionContinuation(record) { return activeProductionContinuation === record && record.generation === reviewBarrierGeneration && !disposed && state === "ready"; }
+        function createProductionContinuation(input, phase) {
+            if (activeProductionContinuation) { throw safeError("LIFECYCLE_BLOCKED"); }
+            var record = { generation: reviewBarrierGeneration, objectiveId: input.objectiveId, taskId: input.taskId, sessionId: input.sessionId, turnId: input.turnId, taskPlanId: input.taskPlanId, taskPlanRevision: input.taskPlanRevision, stepId: input.stepId, capabilityId: input.capabilityIntent.capabilityId, expectedValue: input.capabilityIntent.capabilityId === "set-layer-name-v1" ? Object.freeze({ kind: "string", data: input.capabilityIntent.params.name }) : Object.freeze({ kind: "number", data: input.capabilityIntent.params.opacity }), phase: phase, executionPlanId: null, verificationPlanId: null, committed: false };
+            activeProductionContinuation = record;
+            return record;
+        }
+        function executionDisposition(committed, satisfied) { return committed === true ? "mutated" : satisfied && committed === false ? "already-satisfied" : committed === false ? "not-mutated" : "unknown"; }
+        function settleProductionExecution(record, execution, successState) {
+            var committed = execution && execution.committed === true ? true : execution && execution.committed === false ? false : null;
+            var satisfied = execution && execution.state === "satisfied" && committed === false;
+            var disposition = executionDisposition(committed, satisfied);
+            record.committed = committed;
+            if (!currentProductionContinuation(record)) { closeProductionContinuation(record); return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED", committed: committed, disposition: disposition }); }
+            if (execution && execution.state === "cancelled") { closeProductionContinuation(record); return Object.freeze({ state: "cancelled", code: execution.code || "AGENT_DRIVER_CANCELLED", committed: committed, disposition: disposition }); }
+            if (committed === true || satisfied) {
+                if (record.verificationPlanId) { record.phase = "awaiting-verification"; return Object.freeze({ state: successState, code: null, committed: committed, disposition: disposition }); }
+                closeProductionContinuation(record);
+                return Object.freeze({ state: "blocked", code: "VERIFICATION_UNAVAILABLE", committed: committed, disposition: disposition });
+            }
+            closeProductionContinuation(record);
+            return Object.freeze({ state: "blocked", code: execution && execution.code || "PLAN_FAILED", committed: committed, disposition: disposition });
         }
         function verifyCommittedAction(input) {
             var record = activeProductionContinuation;
             var planId;
-            if (input && !input.expectedValue && typeof input.expectedOpacity === "number") { input = { objectiveId: input.objectiveId, taskId: input.taskId, capabilityId: "set-opacity-v1", expectedValue: { kind: "number", data: input.expectedOpacity } }; }
-            if (!input || typeof input.objectiveId !== "string" || typeof input.taskId !== "string" || !input.expectedValue || !record || record.phase !== "awaiting-verification" || record.generation !== reviewBarrierGeneration || input.objectiveId !== record.objectiveId || input.taskId !== record.taskId || input.capabilityId !== record.capabilityId || input.expectedValue.kind !== record.expectedValue.kind || input.expectedValue.data !== record.expectedValue.data || !record.verificationPlanId || disposed || state !== "ready") { return Promise.resolve(Object.freeze({ state: "blocked", code: record && !record.verificationPlanId ? "VERIFICATION_UNAVAILABLE" : "LIFECYCLE_BLOCKED" })); }
+            if (input && !input.expectedValue && typeof input.expectedOpacity === "number") { input = Object.assign({}, input, { capabilityId: "set-opacity-v1", expectedValue: { kind: "number", data: input.expectedOpacity } }); }
+            if (!input || typeof input.objectiveId !== "string" || typeof input.taskId !== "string" || !input.expectedValue || !record || record.phase !== "awaiting-verification" || record.generation !== reviewBarrierGeneration || input.objectiveId !== record.objectiveId || input.taskId !== record.taskId || input.sessionId !== record.sessionId || input.turnId !== record.turnId || input.taskPlanId !== record.taskPlanId || input.taskPlanRevision !== record.taskPlanRevision || input.stepId !== record.stepId || input.capabilityId !== record.capabilityId || input.expectedValue.kind !== record.expectedValue.kind || input.expectedValue.data !== record.expectedValue.data || !record.verificationPlanId || disposed || state !== "ready") { return Promise.resolve(Object.freeze({ state: "blocked", code: record && !record.verificationPlanId ? "VERIFICATION_UNAVAILABLE" : "LIFECYCLE_BLOCKED" })); }
             planId = record.verificationPlanId;
             record.verificationPlanId = null;
             record.phase = "verifying";
             return preflight.verifyCommittedValue({ planId: planId, capabilityId: record.capabilityId, expectedValue: record.expectedValue.data }).then(function (verification) {
                 if (activeProductionContinuation !== record || record.generation !== reviewBarrierGeneration || disposed || state !== "ready") { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
                 closeProductionContinuation(record);
-                return Object.freeze({ state: verification && verification.matches === true ? "verified" : "unverified", code: verification && verification.matches === true ? null : "AGENT_DRIVER_TASK_UNVERIFIED" });
+                var matches = verification && verification.fresh === true && verification.matches === true;
+                return Object.freeze({ state: matches ? "verified" : "unverified", fresh: verification.fresh === true, matches: verification.matches === true, targetRelation: "committed-target", valueKind: verification.valueKind, value: verification.value, observationRevision: verification.observationRevision, code: matches ? null : "AGENT_DRIVER_TASK_UNVERIFIED" });
             }, function (error) {
                 if (activeProductionContinuation !== record || record.generation !== reviewBarrierGeneration || disposed || state !== "ready") { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
                 if (trajectoryAssociation && trajectoryAssociation.planId === planId && !trajectoryAssociation.verificationSettled) {
@@ -425,9 +449,9 @@
             var record;
             var capturedGeneration;
             var opacityPath = ["named", "ADBE Transform Group", 0, "named", "ADBE Opacity", 0];
-            if (!input || typeof input.reviewCorrelation !== "string") { return Promise.resolve(Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED" })); }
+            if (!input || typeof input.reviewCorrelation !== "string") { return Promise.resolve(Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED", committed: false })); }
             record = reviewBarriers.get(input.reviewCorrelation);
-            if (!record || record.state !== "ready" || disposed || state !== "ready" || typeof input.reviewId !== "string" || input.reviewId.length === 0 || input.objectiveId !== record.objectiveId || input.taskId !== record.taskId || input.sessionId !== record.sessionId || input.turnId !== record.turnId || input.taskPlanId !== record.taskPlanId || input.taskPlanRevision !== record.taskPlanRevision || input.stepId !== record.stepId || input.reviewRevision !== record.reviewRevision || !planningContracts.isCapabilityIntent(input.capabilityIntent) || input.capabilityIntent !== record.capabilityIntent) { return Promise.resolve(Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED" })); }
+            if (!record || record.state !== "ready" || disposed || state !== "ready" || typeof input.reviewId !== "string" || input.reviewId.length === 0 || input.objectiveId !== record.objectiveId || input.taskId !== record.taskId || input.sessionId !== record.sessionId || input.turnId !== record.turnId || input.taskPlanId !== record.taskPlanId || input.taskPlanRevision !== record.taskPlanRevision || input.stepId !== record.stepId || input.reviewRevision !== record.reviewRevision || !planningContracts.isCapabilityIntent(input.capabilityIntent) || input.capabilityIntent !== record.capabilityIntent) { return Promise.resolve(Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED", committed: false })); }
             record.state = "continuing";
             record.reviewId = input.reviewId;
             capturedGeneration = reviewBarrierGeneration;
@@ -438,21 +462,11 @@
             }).then(function (captures) {
                 var current = reviewBarriers.get(input.reviewCorrelation);
                 var target = captures.valueCapture && captures.valueCapture.snapshot && (record.capabilityIntent.capabilityId === "set-layer-name-v1" ? captures.valueCapture.snapshot.target : captures.valueCapture.snapshot.targets && captures.valueCapture.snapshot.targets[0]);
-                if (!current || current !== record || disposed || state !== "ready" || reviewBarrierGeneration !== capturedGeneration) { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
+                if (!current || current !== record || disposed || state !== "ready" || reviewBarrierGeneration !== capturedGeneration) { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED", committed: false }); }
                 if (!captures.bindingCapture || captures.bindingCapture.fingerprint !== record.contextFingerprint || !target || target.valueDigest !== record.valueDigest) { reportTrajectory({ kind: "not-executed", producer: "VelaRuntime", code: "CONTEXT_STALE" }); record.state = "terminal"; reviewBarriers.delete(input.reviewCorrelation); return Object.freeze({ state: "blocked", code: "CONTEXT_STALE", committed: false, observation: Object.freeze({ targetAvailable: Boolean(target), targetClass: target ? (record.capabilityIntent.capabilityId === "set-layer-name-v1" ? "layer-name" : "layer-opacity") : null, observedValueKind: record.valueKind, observedValueDigest: target && target.valueDigest || record.valueDigest }) }); }
                 record.state = "claimable";
-                if (activeProductionContinuation) { record.state = "terminal"; reviewBarriers.delete(input.reviewCorrelation); return Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED" }); }
-                activeProductionContinuation = {
-                    generation: capturedGeneration,
-                    objectiveId: record.objectiveId,
-                    taskId: record.taskId,
-                    capabilityId: record.capabilityIntent.capabilityId,
-                    expectedValue: record.capabilityIntent.capabilityId === "set-layer-name-v1" ? Object.freeze({ kind: "string", data: record.capabilityIntent.params.name }) : Object.freeze({ kind: "number", data: record.capabilityIntent.params.opacity }),
-                    phase: "composing",
-                    verificationPlanId: null,
-                    committed: false
-                };
-                var continuation = activeProductionContinuation;
+                if (activeProductionContinuation) { record.state = "terminal"; reviewBarriers.delete(input.reviewCorrelation); return Object.freeze({ state: "blocked", code: "LIFECYCLE_BLOCKED", committed: false }); }
+                var continuation = createProductionContinuation(record, "composing");
                 return confirmedAuthorityComposer.compose({
                     capabilityIntent: record.capabilityIntent,
                     reviewedSemantics: record.reviewedSemantics,
@@ -471,21 +485,13 @@
                     },
                     policyContext: { sessionId: record.sessionId, taskId: record.taskId }
                 }).then(function (composition) {
-                    if (activeProductionContinuation !== continuation || continuation.generation !== reviewBarrierGeneration || disposed || state !== "ready") { closeProductionContinuation(continuation); return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
-                    if (!composition || composition.state !== "authority-ready") { closeProductionContinuation(continuation); return Object.freeze({ state: composition && composition.state === "cancelled" ? "cancelled" : "blocked", code: composition && composition.code || "LIFECYCLE_BLOCKED" }); }
+                    if (activeProductionContinuation !== continuation || continuation.generation !== reviewBarrierGeneration || disposed || state !== "ready") { closeProductionContinuation(continuation); return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED", committed: false }); }
+                    if (!composition || composition.state !== "authority-ready") { closeProductionContinuation(continuation); return Object.freeze({ state: composition && composition.state === "cancelled" ? "cancelled" : "blocked", code: composition && composition.code || "LIFECYCLE_BLOCKED", committed: false }); }
+                    continuation.executionPlanId = composition.executionPlanId;
                     continuation.phase = "executing";
+                    continuation.committed = null;
                     return confirmedAuthorityComposer.executeConfirmed().then(function (execution) {
-                        var cancelled = execution && execution.state === "cancelled";
-                        if (activeProductionContinuation !== continuation || continuation.generation !== reviewBarrierGeneration || disposed || state !== "ready") { closeProductionContinuation(continuation); return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
-                        continuation.committed = execution && execution.committed === true ? true : execution && execution.committed === false ? false : null;
-                        if (cancelled) { closeProductionContinuation(continuation); return Object.freeze({ state: "cancelled", code: execution.code || "AGENT_DRIVER_CANCELLED" }); }
-                        if (continuation.committed === true || execution && execution.state === "satisfied") {
-                            if (!continuation.verificationPlanId) { closeProductionContinuation(continuation); return Object.freeze({ state: "blocked", code: "VERIFICATION_UNAVAILABLE" }); }
-                            continuation.phase = "awaiting-verification";
-                            return Object.freeze({ state: "verification-required", code: null });
-                        }
-                        closeProductionContinuation(continuation);
-                        return Object.freeze({ state: "blocked", code: execution && execution.code || "PLAN_FAILED" });
+                        return settleProductionExecution(continuation, execution, "verification-required");
                     });
                 }).then(function (result) {
                     if (result.state !== "verification-required") { reportTrajectory({ kind: "verification-skipped", producer: "VelaRuntime", objectiveId: record.objectiveId, taskPlanId: record.taskPlanId, planId: continuation.verificationPlanId }); reviewBarriers.delete(record.reviewCorrelation); }
@@ -493,12 +499,12 @@
                 }, function (error) {
                     closeProductionContinuation(continuation);
                     reviewBarriers.delete(record.reviewCorrelation);
-                    return Object.freeze({ state: "blocked", code: stableErrorCode(error) });
+                    return Object.freeze({ state: "blocked", code: stableErrorCode(error), committed: continuation.committed, disposition: executionDisposition(continuation.committed, false) });
                 });
             }, function (error) {
                 reviewBarriers.delete(input.reviewCorrelation);
-                if (reviewBarrierGeneration !== capturedGeneration || disposed || state !== "ready") { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
-                return Object.freeze({ state: "blocked", code: stableErrorCode(error) });
+                if (reviewBarrierGeneration !== capturedGeneration || disposed || state !== "ready") { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED", committed: false }); }
+                return Object.freeze({ state: "blocked", code: stableErrorCode(error), committed: false });
             });
         }
         function disposeAuthorityPlane() {
@@ -698,8 +704,8 @@
                     activeDelegatedTask = handle;
                     var armedEvent = exactAgentSession.getEventBySeq(handle.armedEvidenceSeq);
                     authorityPlane.authorityAppender.publishCommitted(armedEvent);
-                    latestAuthorityExecution = Object.freeze({ taskId: handle.taskId, planId: handle.planId, activationId: handle.activationId, committed: false });
-                    return authorityPlane.atomicCoordinator.run(handle).then(function (result) { latestAuthorityExecution = Object.freeze({ taskId: handle.taskId, planId: handle.planId, activationId: handle.activationId, committed: true }); activeDelegatedTask = null; activePilot = null; authorityRemainingActions = 0; authorityState = "consumed"; authorityRouting = false; authorityPlane.proposalPort.finalizeReview({ requestId: proposal.requestId, generation: proposal.generation, outcome: "completed", errorCode: null, handled: true }); return result; }, function (error) { var p = authorityProjection(); activeDelegatedTask = null; latestAuthorityExecution = Object.freeze({ taskId: handle.taskId, planId: handle.planId, activationId: handle.activationId, committed: p.remainingActions === 0 }); if (p.remainingActions === 0 || !p.active) { activePilot = null; authorityRemainingActions = 0; authorityState = "failed"; } else { authorityState = "active"; } authorityErrorCode = error && error.code || "PLAN_FAILED"; authorityRouting = false; authorityPlane.proposalPort.finalizeReview({ requestId: proposal.requestId, generation: proposal.generation, outcome: "failed", errorCode: stableErrorCode(error) }); throw error; });
+                    latestAuthorityExecution = Object.freeze({ taskId: handle.taskId, planId: handle.planId, activationId: handle.activationId, committed: null });
+                    return authorityPlane.atomicCoordinator.run(handle).then(function (result) { latestAuthorityExecution = Object.freeze({ taskId: handle.taskId, planId: handle.planId, activationId: handle.activationId, committed: result && result.result && result.result.committed === true ? true : result && result.result && result.result.committed === false ? false : null }); activeDelegatedTask = null; activePilot = null; authorityRemainingActions = 0; authorityState = "consumed"; authorityRouting = false; authorityPlane.proposalPort.finalizeReview({ requestId: proposal.requestId, generation: proposal.generation, outcome: "completed", errorCode: null, handled: true }); return result; }, function (error) { var p = authorityProjection(); activeDelegatedTask = null; latestAuthorityExecution = Object.freeze({ taskId: handle.taskId, planId: handle.planId, activationId: handle.activationId, committed: error && error.committed === true ? true : error && error.committed === false ? false : null }); if (p.remainingActions === 0 || !p.active) { activePilot = null; authorityRemainingActions = 0; authorityState = "failed"; } else { authorityState = "active"; } authorityErrorCode = error && error.code || "PLAN_FAILED"; authorityRouting = false; authorityPlane.proposalPort.finalizeReview({ requestId: proposal.requestId, generation: proposal.generation, outcome: "failed", errorCode: stableErrorCode(error) }); throw error; });
                 }, function (error) { authorityState = activePilot && authorityProjection().active ? "active" : authorityState; authorityErrorCode = error && error.code || "PLAN_FAILED"; latestAuthorityFailure = Object.freeze({ stage: failureStage, sourceStage: error && typeof error.stage === "string" ? error.stage : null, code: authorityErrorCode, field: error && error.details && typeof error.details.field === "string" ? error.details.field : null }); authorityRouting = false; authorityPlane.proposalPort.finalizeReview({ requestId: proposal.requestId, generation: proposal.generation, outcome: "failed", errorCode: stableErrorCode(error) }); throw error; });
             } catch (error) { authorityRouting = false; authorityErrorCode = error && error.code || "RUNTIME_CAPABILITY_UNAVAILABLE"; latestAuthorityFailure = Object.freeze({ stage: failureStage, sourceStage: error && typeof error.stage === "string" ? error.stage : null, code: authorityErrorCode, field: error && error.details && typeof error.details.field === "string" ? error.details.field : null }); if (proposal) { authorityPlane.proposalPort.finalizeReview({ requestId: proposal.requestId, generation: proposal.generation, outcome: "failed", errorCode: stableErrorCode(error) }); } return Promise.reject(error); }
         }
@@ -780,6 +786,7 @@
                     var candidate;
                     var decision;
                     var plan;
+                    var continuation;
                     var proposal = agentDriverProposal;
                     var logicalAdmission = false;
                     if (!proposal && agentDriverLogicalAdmission && planningContracts.isCapabilityIntent(input && input.capabilityIntent)) {
@@ -788,14 +795,14 @@
                         logicalAdmission = logicalAdmission && agentDriverLogicalObjectiveId === input.objectiveId;
                         if (logicalAdmission) { proposal = Object.freeze({ capabilityId: input.capabilityIntent.capabilityId, params: input.capabilityIntent.params }); }
                     }
-                    if (disposed || state !== "ready" || !authorityPlane || !proposal || !planningContracts.isCapabilityIntent(input && input.capabilityIntent) || input.sessionId !== exactAgentSession.getSessionId() || input.capabilityIntent.capabilityId !== proposal.capabilityId || (input.capabilityIntent.capabilityId !== "set-opacity-v1" && input.capabilityIntent.capabilityId !== "set-layer-name-v1")) { if (!logicalAdmission) { settleAgentDriverProposal("failed", "LIFECYCLE_BLOCKED", false); } return Promise.reject(safeError("LIFECYCLE_BLOCKED")); }
+                    if (disposed || state !== "ready" || !authorityPlane || !proposal || !planningContracts.isCapabilityIntent(input && input.capabilityIntent) || input.sessionId !== exactAgentSession.getSessionId() || input.capabilityIntent.capabilityId !== proposal.capabilityId || (input.capabilityIntent.capabilityId !== "set-opacity-v1" && input.capabilityIntent.capabilityId !== "set-layer-name-v1")) { if (!logicalAdmission) { settleAgentDriverProposal("failed", "LIFECYCLE_BLOCKED", false); } return Promise.reject(Object.assign(safeError("LIFECYCLE_BLOCKED"), { committed: false })); }
                     try {
                         candidate = authorityPlane.compiler.compile(input.capabilityIntent);
                         decision = authorityPlane.policyEngine.evaluate(candidate, { sessionId: exactAgentSession.getSessionId(), taskId: activePilot ? activePilot.taskId : input.taskId });
                         latestAuthorityDecision = Object.freeze({ decision: decision.decision, reasonCode: decision.reasonCode, candidateId: candidate.candidateId });
                         if (decision.decision === "REVIEW_REQUIRED") {
                             if (!logicalAdmission) { settleAgentDriverProposal("completed", null, true); }
-                            return captureReviewBarrier(input, candidate, decision).then(function (barrier) { return input.capabilityIntent.capabilityId === "set-layer-name-v1" ? Object.freeze({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: barrier.beforeValue, reviewCorrelation: barrier.reviewCorrelation }) : captureReviewPresentationBaseline().then(function (beforeValue) { return Object.freeze({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: beforeValue, reviewCorrelation: barrier.reviewCorrelation }); }); });
+                            return captureReviewBarrier(input, candidate, decision).then(function (barrier) { return input.capabilityIntent.capabilityId === "set-layer-name-v1" ? Object.freeze({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: barrier.beforeValue, reviewCorrelation: barrier.reviewCorrelation }) : captureReviewPresentationBaseline().then(function (beforeValue) { return Object.freeze({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: beforeValue, reviewCorrelation: barrier.reviewCorrelation }); }); }).catch(function (error) { error.committed = false; throw error; });
                         }
                         if (decision.decision !== "ALLOW") {
                             if (!logicalAdmission) { settleAgentDriverProposal("failed", "PERMISSION_DENIED", false); }
@@ -803,38 +810,44 @@
                         }
                         if (!activePilot) { throw safeError("LIFECYCLE_BLOCKED"); }
                         plan = authorityPlane.producer.produce({ candidate: candidate, context: { sessionId: exactAgentSession.getSessionId(), taskId: activePilot.taskId }, delegationGrantedEvidence: activePilot.evidence });
-                    } catch (error) { if (!logicalAdmission) { settleAgentDriverProposal("failed", stableErrorCode(error), false); } return Promise.reject(error); }
+                        continuation = createProductionContinuation(input, "activating");
+                    } catch (error) { if (!logicalAdmission) { settleAgentDriverProposal("failed", stableErrorCode(error), false); } error.committed = false; return Promise.reject(error); }
                     authorityState = "executing";
                     return authorityPlane.atomicCoordinator.activate(plan, { selectionOrderMeaningful: false }).then(function (handle) {
+                        if (!currentProductionContinuation(continuation)) { try { authorityPlane.atomicCoordinator.cancel(handle); } catch (ignoredCancel) {} return Object.freeze({ state: "cancelled", committed: false, code: "AGENT_DRIVER_CANCELLED" }); }
                         activeDelegatedTask = handle;
+                        continuation.executionPlanId = handle.executionPlanId;
+                        continuation.phase = "executing";
                         reportTrajectory({ kind: "association", producer: "VelaRuntime", planId: handle.executionPlanId, authorizedPlanId: handle.planId, taskRunId: handle.taskRunId });
                         authorityPlane.authorityAppender.publishCommitted(exactAgentSession.getEventBySeq(handle.armedEvidenceSeq));
+                        if (!currentProductionContinuation(continuation)) { return Object.freeze({ state: "cancelled", committed: false, code: "AGENT_DRIVER_CANCELLED" }); }
+                        continuation.committed = null;
                         return authorityPlane.atomicCoordinator.run(handle).then(function (result) {
+                            var actual = result && result.result;
+                            if (!currentProductionContinuation(continuation)) { return settleProductionExecution(continuation, actual, "executed"); }
                             var settlementSucceeded = true;
                             activeDelegatedTask = null; activePilot = null; authorityRemainingActions = 0; authorityState = "consumed";
                             try { if (!logicalAdmission) { settleAgentDriverProposal("completed", null, true); } }
                             catch (ignoredSettlement) { settlementSucceeded = false; }
-                            return Object.freeze({ state: "executed", committed: true, executionResult: result, transcriptSettled: settlementSucceeded });
+                            var execution = { committed: actual && actual.committed, state: actual && actual.ok === true && actual.committed === false && actual.summary && actual.summary.disposition === "already-satisfied" ? "satisfied" : "executed" };
+                            reportTrajectory({ kind: "execution-receipt", producer: "VelaRuntime", planId: handle.executionPlanId, committed: execution.committed === true ? true : execution.committed === false ? false : null });
+                            return Object.freeze(Object.assign({}, settleProductionExecution(continuation, execution, "executed"), { transcriptSettled: settlementSucceeded }));
                         }, function (runError) {
+                            if (!currentProductionContinuation(continuation)) { return settleProductionExecution(continuation, runError, "executed"); }
                             settleDelegatedExecutionFailure(stableErrorCode(runError), true);
-                            throw runError;
+                            var outcome = settleProductionExecution(continuation, runError, "executed");
+                            reportTrajectory({ kind: "execution-receipt", producer: "VelaRuntime", planId: handle.executionPlanId, committed: outcome.committed });
+                            if (outcome.state !== "executed") { reportTrajectory({ kind: "verification-skipped", producer: "VelaRuntime", planId: handle.executionPlanId }); }
+                            return outcome;
                         });
-                    }, function (activationError) { settleDelegatedExecutionFailure(stableErrorCode(activationError), true); throw activationError; });
+                    }, function (activationError) { if (!currentProductionContinuation(continuation)) { return Object.freeze({ state: "cancelled", committed: false, code: "AGENT_DRIVER_CANCELLED" }); } settleDelegatedExecutionFailure(stableErrorCode(activationError), true); return settleProductionExecution(continuation, { committed: false, code: stableErrorCode(activationError) }, "executed"); });
                 },
                 verifyOpacity: function (input) {
                     return opacityVerificationPort.observe().then(function (observation) {
                         return Object.freeze({ fresh: observation.fresh === true, opacity: observation.opacity, matches: observation.opacity === input.expectedOpacity, observationRevision: observation.observationId });
                     });
                 },
-                verifyAction: function (input) {
-                    var reportingPlanId = trajectoryAssociation && trajectoryAssociation.planId;
-                    reportTrajectory({ kind: "verify-entered", producer: "VelaRuntime", planId: reportingPlanId, scope: "current-selection" });
-                    if (input.capabilityId !== "set-opacity-v1") { return Promise.resolve(Object.freeze({ fresh: false, matches: false, observationRevision: null })); }
-                    return opacityVerificationPort.observe().then(function (observation) {
-                        reportTrajectory({ kind: "verify-result", producer: "VelaRuntime", planId: reportingPlanId, scope: "current-selection", fresh: observation.fresh === true, matches: observation.opacity === input.expectedValue.data, actual: { kind: "number", data: observation.opacity }, digest: observation.valueDigest || null, sourceRequestId: observation.observationId, code: null });
-                        return Object.freeze({ fresh: observation.fresh === true, value: observation.opacity, matches: observation.opacity === input.expectedValue.data, observationRevision: observation.observationId });
-                    }, function (error) { reportTrajectory({ kind: "verify-result", producer: "VelaRuntime", planId: reportingPlanId, scope: "current-selection", fresh: null, matches: null, actual: null, digest: null, sourceRequestId: null, code: "VERIFICATION_UNAVAILABLE" }); throw error; });
-                },
+                verifyAction: verifyCommittedAction,
                 verifyCommittedAction: verifyCommittedAction,
                 continueApprovedReview: continueApprovedReview,
                 cancel: function () {

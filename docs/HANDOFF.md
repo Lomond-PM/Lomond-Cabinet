@@ -1,6 +1,8 @@
 # Development Handoff
 
-**0.3.12-B2 / A09（M1、M2/F1）：TARGETED_ACCEPTED — AE26.0x67 / READY FOR COMMIT / PR。** 见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)。
+**当前 A02、A03 分别 TARGETED_ACCEPTED — AE26.0x67 / AdobeCEP 12.0.1 / Chrome 99；C2 READY FOR COMMIT / PR。** 原定三项补验 R3-3b、R4-A、R4-B 均通过，旧 R3-3 的 NOT COVERED 与离线专属覆盖保持，见 [C2 报告](reports/vela-0.3.12-c2-execution-facts-verification.md)。A04 已通过 PR #208 合并，保持 [TARGETED_ACCEPTED](reports/vela-0.3.12-c1-a04-session-events.md)；不进入 D。
+
+以下保留历史阶段交接：A09 已通过 PR #207 合并，TARGETED_ACCEPTED — AE26.0x67，见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)。
 
 最新全量沿用 M2-F1 实施轮 192/192 PASS；M2 七组 PASS、六次 Undo、3451 所查字段零差异。支持包络保持：ACK Feature 当前 **auto/center** 与既有普通2D、受支持平移父链规则；TBB Text 使用 **source-local padding**，Shape/AV visual 使用 **comp-space padding**，仍限既有静态2D/类型/父链包络。不得推导为任意 Transform、父链或 AE 版本均已支持。 AE26.3x87 跨版本复验 **DEFERRED**；AV fallback 真实 AE **NOT COVERED**，已有离线覆盖保持。INTEGRATED_ACCEPTED / CLOSED 留待 **0.3.12-G**；B2 和整个 0.3.12 未完成，不自动开始下一项。
 

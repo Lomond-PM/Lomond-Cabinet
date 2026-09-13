@@ -120,9 +120,9 @@ async function coldStartRegression() {
     check(coldOwner.attachAgentDriverRuntimePort(Object.freeze({
         reason() { reasons += 1; return Promise.resolve(reasonMode === "logical" ? logicalPlanContracts.validateLogicalPlanProposal({ type: "logicalPlanProposal", steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 47 } }, { capabilityId: "set-layer-name-v1", params: { name: "Hero" } }] }) : Object.freeze({ capabilityId: "set-opacity-v1", params: Object.freeze({ opacity: 63 }) })); },
         submitIntent(input) { submissions += 1; return Promise.resolve(Object.freeze(submissionMode === "review" ? { state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: input.capabilityIntent.capabilityId === "set-layer-name-v1" ? "Layer A" : 100, reviewCorrelation: "owner_review_correlation_" + submissions } : submissionMode === "denied" ? { state: "denied", committed: false, code: "PERMISSION_DENIED" } : { state: "executed", committed: true })); },
-        continueApprovedReview() { return Promise.resolve(Object.freeze(continuationMode === "stale" ? { state: "blocked", code: "CONTEXT_STALE", committed: false, observation: Object.freeze({ targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:owner_stale" }) } : { state: "verification-required", code: null })); },
-        verifyCommittedAction() { return Promise.resolve(Object.freeze({ state: "verified", code: null })); },
-        verifyOpacity() { return Promise.resolve(Object.freeze({ fresh: true, matches: true, opacity: 63 })); },
+        continueApprovedReview() { return Promise.resolve(Object.freeze(continuationMode === "stale" ? { state: "blocked", code: "CONTEXT_STALE", committed: false, observation: Object.freeze({ targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:owner_stale" }) } : { state: "verification-required", committed: true, disposition: "mutated", code: null })); },
+        verifyCommittedAction() { return Promise.resolve(Object.freeze({ state: "verified", fresh: true, matches: true, targetRelation: "committed-target", code: null })); },
+        verifyAction() { return Promise.resolve(Object.freeze({ fresh: true, matches: true, targetRelation: "committed-target", valueKind: "number", value: 63 })); },
         cancel() { return false; }
     })), "late Runtime action port attaches to the Owner-held Driver");
     const result = await coldOwner.startObjective({ message: "Set opacity to 63", endpoint: "http://127.0.0.1:1234", model: "m" });

@@ -81,7 +81,7 @@
         var generation = 0;
         var listeners = [];
         if (!planning || typeof planning.createTaskPlan !== "function" || typeof planning.createCapabilityIntent !== "function" || typeof beginTurn !== "function" || typeof observe !== "function" || typeof getObservation !== "function" || typeof append !== "function") { throw error(ERROR_CODES.AGENT_DRIVER_INVALID_OPTIONS); }
-        function snapshot() { return Object.freeze({ state: state, objectiveId: active ? active.objectiveId : null, taskId: active ? active.taskId : null, taskPlan: active ? active.taskPlan : null, turn: active ? active.turn : null, logicalPlan: active ? active.logicalPlanProjection : null, suspendedReview: active ? active.suspendedReview : null, reviewResolution: active ? active.reviewResolution : null, terminal: active ? active.terminal : null, counters: Object.freeze(active ? { observations: active.observations, reasoningTurns: active.reasoningTurns, actions: active.actions, replans: active.replans } : { observations: 0, reasoningTurns: 0, actions: 0, replans: 0 }), loop: Object.freeze(active ? { iterationIndex: active.loopHealth.iterationIndex, budgets: Object.freeze({ iterationsUsed: active.loopHealth.iterationsUsed, providerCallsUsed: active.loopHealth.providerCallsUsed, actionAttemptsUsed: active.loopHealth.actionAttemptsUsed }), noProgressCount: active.loopHealth.noProgressCount } : { iterationIndex: 0, budgets: Object.freeze({ iterationsUsed: 0, providerCallsUsed: 0, actionAttemptsUsed: 0 }), noProgressCount: 0 }), disposed: disposed }); }
+        function snapshot() { return Object.freeze({ state: state, committed: active ? active.committed : false, objectiveId: active ? active.objectiveId : null, taskId: active ? active.taskId : null, taskPlan: active ? active.taskPlan : null, turn: active ? active.turn : null, logicalPlan: active ? active.logicalPlanProjection : null, suspendedReview: active ? active.suspendedReview : null, reviewResolution: active ? active.reviewResolution : null, terminal: active ? active.terminal : null, counters: Object.freeze(active ? { observations: active.observations, reasoningTurns: active.reasoningTurns, actions: active.actions, replans: active.replans } : { observations: 0, reasoningTurns: 0, actions: 0, replans: 0 }), loop: Object.freeze(active ? { iterationIndex: active.loopHealth.iterationIndex, budgets: Object.freeze({ iterationsUsed: active.loopHealth.iterationsUsed, providerCallsUsed: active.loopHealth.providerCallsUsed, actionAttemptsUsed: active.loopHealth.actionAttemptsUsed }), noProgressCount: active.loopHealth.noProgressCount } : { iterationIndex: 0, budgets: Object.freeze({ iterationsUsed: 0, providerCallsUsed: 0, actionAttemptsUsed: 0 }), noProgressCount: 0 }), disposed: disposed }); }
         function notify() { var current = snapshot(); listeners.slice().forEach(function (listener) { try { listener(current); } catch (listenerError) { try { onListenerError(listenerError, Object.freeze({ phase: "driver-listener" })); } catch (ignored) {} } }); }
         function transition(next) { var legal = { idle: ["observing"], observing: ["reasoning", "terminal"], reasoning: ["awaiting-outcome", "terminal"], "awaiting-outcome": ["awaiting-review", "observing", "verifying", "terminal"], "awaiting-review": ["awaiting-outcome", "terminal"], verifying: ["observing", "terminal"] }; if (!legal[state] || legal[state].indexOf(next) === -1) { throw error(ERROR_CODES.AGENT_DRIVER_ILLEGAL_TRANSITION); } state = next; notify(); }
         function trajectory(kind, fields) {
@@ -89,6 +89,16 @@
             try { settings.onTrajectoryFact(Object.freeze(Object.assign({ kind: kind, producer: "VelaAgentDriver", objectiveId: active.objectiveId, taskId: active.taskId, sessionId: active.turn.sessionId, taskPlanId: active.taskPlan ? active.taskPlan.planId : null }, fields || {}))); } catch (ignoredTrajectory) {}
         }
         function event(kind, payload) { append({ kind: kind, requestId: active.objectiveId, payload: payload || {} }); }
+        function recordExecution(result) {
+            active.committed = result && result.committed === true ? true : result && result.committed === false ? false : null;
+            event("tool/result", { taskId: active.taskId, taskPlanId: active.taskPlan.planId, stepId: active.taskPlan.steps[0].stepId, capabilityId: active.intent.capabilityId, committed: active.committed, disposition: active.committed === true ? "mutated" : active.committed === false ? (result && result.disposition === "already-satisfied" ? "already-satisfied" : "not-mutated") : "unknown" });
+        }
+        function verificationInput() { return { objectiveId: active.objectiveId, taskId: active.taskId, sessionId: active.turn.sessionId, turnId: active.turn.turnId, taskPlanId: active.taskPlan.planId, taskPlanRevision: active.taskPlan.revision, stepId: active.taskPlan.steps[0].stepId, capabilityId: active.intent.capabilityId, expectedValue: active.intent.capabilityId === "set-opacity-v1" ? { kind: "number", data: active.intent.params.opacity } : { kind: "string", data: active.intent.params.name } }; }
+        function recordVerification(verification) {
+            active.observations += 1;
+            event("ae/state-observed", { taskId: active.taskId, taskPlanId: active.taskPlan.planId, stepId: active.taskPlan.steps[0].stepId, phase: "post-action", fresh: verification && typeof verification.fresh === "boolean" ? verification.fresh : null, matches: verification && typeof verification.matches === "boolean" ? verification.matches : null, targetRelation: verification && verification.targetRelation === "committed-target" ? "committed-target" : "unproven", observedOpacity: verification && verification.valueKind === "number" && typeof verification.value === "number" ? verification.value : null });
+        }
+        function verifiedTarget(verification) { return verification && verification.fresh === true && verification.matches === true && verification.targetRelation === "committed-target"; }
         function projectLogicalCursor(status) { var cursor = active && active.logicalCursor; var projectedStatus; if (!cursor) { return active ? active.logicalPlanProjection : null; } projectedStatus = status || cursor.status; active.logicalPlanProjection = Object.freeze({ logicalPlanId: cursor.logicalPlanId, planSemanticSignature: cursor.plan.planSemanticSignature, currentStepIndex: cursor.currentStepIndex, stepCount: cursor.plan.declaredStepCount, currentStepId: cursor.currentStepId, materializedTaskPlanId: cursor.materializedTaskPlanId, materializedStepId: cursor.materializedStepId, completedStepCount: cursor.completedStepCount, remainingStepCount: cursor.plan.declaredStepCount - cursor.completedStepCount, partialCompletion: cursor.completedStepCount > 0 && cursor.completedStepCount < cursor.plan.declaredStepCount && (projectedStatus === "blocked" || projectedStatus === "cancelled" || projectedStatus === "rejected"), status: projectedStatus }); return active.logicalPlanProjection; }
         function createLogicalCursor(plan) { return { plan: plan, logicalPlanId: "logical_plan_agent_" + serial, currentStepIndex: 0, currentStepId: "logical_step_agent_" + serial + "_0", materializationAttempt: 0, completedStepCount: 0, materializedTaskPlanId: null, materializedStepId: null, status: "active" }; }
         function terminal(outcome, code) { if (!active || active.terminal) { return snapshot(); } active.suspendedReview = null; if (active.logicalCursor) { active.logicalCursor.status = outcome; projectLogicalCursor(outcome); active.logicalCursor = null; } active.terminal = Object.freeze({ outcome: outcome, code: code || null }); trajectory("terminal", { outcome: outcome, code: code || null, completedStepCount: active.logicalPlanProjection ? active.logicalPlanProjection.completedStepCount : null, remainingStepCount: active.logicalPlanProjection ? active.logicalPlanProjection.remainingStepCount : null }); transition("terminal"); event(outcome === "completed" ? "task/completed" : outcome === "cancelled" ? "task/cancelled" : outcome === "rejected" ? "task/review-rejected" : "task/blocked", { taskId: active.taskId, taskPlanId: active.taskPlan ? active.taskPlan.planId : null, code: code || null }); return snapshot(); }
@@ -113,7 +123,7 @@
             if (active.logicalCursor) { active.logicalCursor.materializedTaskPlanId = active.taskPlan.planId; active.logicalCursor.materializedStepId = active.taskPlan.steps[0].stepId; projectLogicalCursor("materialized"); }
             return intent;
         }
-        function fail(captured, failure) { if (!current(captured)) { return snapshot(); } active.loopHealth.lastFailureClass = stableCode(failure, ERROR_CODES.AGENT_DRIVER_EXECUTION_FAILED); return terminal("blocked", active.loopHealth.lastFailureClass); }
+        function fail(captured, failure) { if (!current(captured)) { return snapshot(); } if (state === "awaiting-outcome" && active.intent) { recordExecution(failure); } else if (state === "verifying") { recordVerification(null); } if (!current(captured)) { return snapshot(); } active.loopHealth.lastFailureClass = stableCode(failure, ERROR_CODES.AGENT_DRIVER_EXECUTION_FAILED); return terminal("blocked", active.loopHealth.lastFailureClass); }
         function runIteration(captured, advanceLogicalAfterObservation) {
             var reasonInput;
             var reasonObservationRevision;
@@ -141,10 +151,13 @@
                 active.loopHealth.actionAttemptsUsed += 1;
                 trajectory("attempt", { taskPlanRevision: active.taskPlan.revision, stepId: active.taskPlan.steps[0].stepId, intentId: intent.intentId, capabilityId: intent.capabilityId, logicalPlanId: active.logicalCursor ? active.logicalCursor.logicalPlanId : null, logicalStepId: active.logicalCursor ? active.logicalCursor.currentStepId : null, logicalStepIndex: active.logicalCursor ? active.logicalCursor.currentStepIndex : null, materializationAttempt: active.logicalCursor ? active.logicalCursor.materializationAttempt : active.loopHealth.iterationIndex, turnId: active.turn.turnId, stepCount: active.logicalCursor ? active.logicalCursor.plan.declaredStepCount : 1, expectedValue: intent.capabilityId === "set-layer-name-v1" ? { kind: "string", data: intent.params.name } : { kind: "number", data: intent.params.opacity } });
                 event("agent/action-performed", { taskId: active.taskId, taskPlanId: active.taskPlan.planId, stepId: active.taskPlan.steps[0].stepId, capabilityId: intent.capabilityId, phase: "submitted" });
+                if (!current(captured)) { return snapshot(); }
+                active.committed = null;
                 return runtimePort.submitIntent({ objectiveId: active.objectiveId, sessionId: active.turn.sessionId, turnId: active.turn.turnId, taskId: active.taskId, taskPlanId: active.taskPlan.planId, taskPlanRevision: active.taskPlan.revision, stepId: active.taskPlan.steps[0].stepId, reviewRevision: captured, capabilityIntent: intent });
             }).then(function (outcome) {
                 if (!current(captured) || !outcome) { return snapshot(); }
                 if (outcome.state === "review-required") {
+                    active.committed = false;
                     var beforeValue = typeof outcome.beforeValue === "number" && isFinite(outcome.beforeValue) || typeof outcome.beforeValue === "string" ? outcome.beforeValue : null;
                     active.loopHealth.actionAttemptsUsed -= 1;
                     if (typeof outcome.reviewCorrelation !== "string" || outcome.reviewCorrelation.length === 0) { return terminal("blocked", ERROR_CODES.AGENT_DRIVER_EXECUTION_FAILED); }
@@ -153,14 +166,18 @@
                     event("task/review-required", { taskId: active.taskId, taskPlanId: active.taskPlan.planId, stepId: active.taskPlan.steps[0].stepId, reviewId: active.suspendedReview.reviewId, reviewRevision: active.suspendedReview.revision, code: outcome.code || "REVIEW_REQUIRED" });
                     return snapshot();
                 }
-                if (outcome.state === "denied") { active.loopHealth.actionAttemptsUsed -= 1; return terminal("blocked", outcome.code || "PERMISSION_DENIED"); }
-                if (outcome.state !== "executed" || outcome.committed !== true) { return terminal("blocked", outcome.code || ERROR_CODES.AGENT_DRIVER_EXECUTION_FAILED); }
-                active.committed = true; event("tool/result", { taskId: active.taskId, capabilityId: active.intent.capabilityId, committed: true }); transition("verifying");
-                return runtimePort.verifyAction({ taskId: active.taskId, capabilityId: active.intent.capabilityId, expectedValue: active.intent.capabilityId === "set-opacity-v1" ? { kind: "number", data: active.intent.params.opacity } : { kind: "string", data: active.intent.params.name } });
+                if (outcome.state === "denied") { active.committed = false; active.loopHealth.actionAttemptsUsed -= 1; return terminal("blocked", outcome.code || "PERMISSION_DENIED"); }
+                recordExecution(outcome);
+                if (!current(captured)) { return snapshot(); }
+                if (outcome.state !== "executed" || (outcome.committed !== true && !(outcome.committed === false && outcome.disposition === "already-satisfied"))) { return terminal(outcome.state === "cancelled" ? "cancelled" : "blocked", outcome.code || ERROR_CODES.AGENT_DRIVER_EXECUTION_FAILED); }
+                transition("verifying");
+                if (!current(captured)) { return snapshot(); }
+                return runtimePort.verifyAction(verificationInput());
             }).then(function (verification) {
                 if (!current(captured) || state !== "verifying") { return snapshot(); }
-                active.observations += 1; event("ae/state-observed", { taskId: active.taskId, phase: "post-action", fresh: verification && verification.fresh === true, observedOpacity: verification && typeof verification.opacity === "number" ? verification.opacity : null });
-                if (!verification || verification.fresh !== true || verification.matches !== true) { return terminal("blocked", ERROR_CODES.AGENT_DRIVER_TASK_UNVERIFIED); }
+                recordVerification(verification);
+                if (!current(captured)) { return snapshot(); }
+                if (!verifiedTarget(verification)) { return terminal(verification && verification.state === "cancelled" ? "cancelled" : "blocked", verification && verification.code || ERROR_CODES.AGENT_DRIVER_TASK_UNVERIFIED); }
                 if (active.logicalCursor) { return advanceLogicalAfterVerify(captured); }
                 trajectory("step-completed"); return terminal("completed", null);
             }, function (failure) { return fail(captured, failure); });
@@ -241,16 +258,20 @@
             transition("awaiting-outcome");
             captured = generation;
             if (active.loopHealth.actionAttemptsUsed >= LOOP_DEFAULT_LIMITS.maxActionAttempts) { return terminal("blocked", ERROR_CODES.AGENT_DRIVER_EXECUTION_FAILED); }
+            active.committed = null;
             active.loopHealth.actionAttemptsUsed += 1;
             return Promise.resolve(runtimePort.continueApprovedReview({ objectiveId: review.objectiveId, taskId: review.taskId, sessionId: review.sessionId, turnId: review.turnId, taskPlanId: review.taskPlanId, taskPlanRevision: review.taskPlanRevision, stepId: review.stepId, capabilityIntent: active.intent, localExpectation: review.localExpectation, reviewId: review.reviewId, reviewRevision: review.revision, reviewCorrelation: review.reviewCorrelation })).then(function (continuation) {
                 if (!current(captured)) { return snapshot(); }
-                if (continuation && continuation.state === "verification-required") {
-                    active.committed = true; event("tool/result", { taskId: active.taskId, capabilityId: active.intent.capabilityId, committed: true }); transition("verifying");
-                    return runtimePort.verifyCommittedAction({ objectiveId: active.objectiveId, taskId: active.taskId, capabilityId: active.intent.capabilityId, expectedValue: active.intent.capabilityId === "set-opacity-v1" ? { kind: "number", data: active.intent.params.opacity } : { kind: "string", data: active.intent.params.name } }).then(function (verification) {
+                recordExecution(continuation);
+                if (!current(captured)) { return snapshot(); }
+                if (continuation && continuation.state === "verification-required" && (continuation.committed === true || continuation.committed === false && continuation.disposition === "already-satisfied")) {
+                    transition("verifying");
+                    if (!current(captured)) { return snapshot(); }
+                    return runtimePort.verifyCommittedAction(verificationInput()).then(function (verification) {
                         if (!current(captured) || state !== "verifying") { return snapshot(); }
-                        active.observations += 1;
-                        event("ae/state-observed", { taskId: active.taskId, phase: "post-action", fresh: verification && verification.state === "verified", observedOpacity: null });
-                        if (verification && verification.state === "verified") { if (active.logicalCursor) { return advanceLogicalAfterVerify(captured); } trajectory("step-completed"); return terminal("completed", null); }
+                        recordVerification(verification);
+                        if (!current(captured)) { return snapshot(); }
+                        if (verifiedTarget(verification)) { if (active.logicalCursor) { return advanceLogicalAfterVerify(captured); } trajectory("step-completed"); return terminal("completed", null); }
                         if (verification && verification.state === "cancelled") { return terminal("cancelled", verification.code || "AGENT_DRIVER_CANCELLED"); }
                         return terminal("blocked", verification && verification.code || ERROR_CODES.AGENT_DRIVER_TASK_UNVERIFIED);
                     }, function (failure) { return fail(captured, failure); });

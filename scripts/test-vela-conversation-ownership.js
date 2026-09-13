@@ -157,7 +157,12 @@ async function run() {
             if (mode === "cancel") { await real.flush(); h.owner.cancelObjective(); h.release(); }
             await pending;
         }
-        const result = { wires: h.wires, canonical: h.evidence.canonical, requests: h.requests, events: h.owner.getSessionRuntime().getEvents(), driver: h.owner.getAgentDriver().getSnapshot(), selection: h.runtime.getProviderSelectionEvidence(), state: h.state };
+        // C2 adds an explicit Driver commit and corrects execution/Verify Session facts.
+        // Preserve all other sealed ownership outputs and their relative event order.
+        const { committed, ...driver } = h.owner.getAgentDriver().getSnapshot();
+        if (!baseline) same(committed, mode === "review", "C2 commit reflects this scenario's actual mutation");
+        const events = h.owner.getSessionRuntime().getEvents().filter(e => e.kind !== "tool/result" && !(e.kind === "ae/state-observed" && e.payload.phase === "post-action")).map(({ seq, ...e }) => e);
+        const result = { wires: h.wires, canonical: h.evidence.canonical, requests: h.requests, events, driver, selection: h.runtime.getProviderSelectionEvidence(), state: h.state };
         const serialized = JSON.stringify(result);
         if (handle) ownership.dispose(handle);
         h.dispose(); return serialized;

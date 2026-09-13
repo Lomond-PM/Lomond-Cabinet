@@ -53,7 +53,14 @@ async function run() {
         const opts = { ...c, name: c.nameValue || "Layer A" };
         const before = await create({ ...opts, baseline: BASE }), after = await create(opts);
         const a = await scenario(before, c), b = await scenario(after, c);
-        same(b, a, c.name + " exact canonical/A2/messages/wire/schema/generation/capture/admission/Session/Driver/Review/Authority/Host/Verify baseline"); comparisons++;
+        // C2 intentionally enriches the latest Driver fact and execution/Verify Session events.
+        // Keep the immutable A5 comparison exact for every other input, wire and Host operation.
+        function unaffected(value) {
+            const { committed, ...driver } = value.driver;
+            const session = value.session.filter(e => e.kind !== "tool/result" && !(e.kind === "ae/state-observed" && e.payload.phase === "post-action")).map(({ seq, ...e }) => e);
+            return { ...value, driver, session };
+        }
+        same(unaffected(b), unaffected(a), c.name + " exact canonical/A2/messages/wire/schema/generation/capture/admission/Session/Driver/Review/Authority/Host/Verify baseline"); comparisons++;
         same(after.evidence.canonical.length, after.wires.length, c.name + " canonical recorder covers every dispatched invocation, including debug off");
         const evidence = after.runtime.getProviderSelectionEvidence();
         if (!c.evaluatorThrows) zero(evidence);

@@ -502,7 +502,9 @@
                     var candidateId = view.candidateIds[view.nextStep < view.actionCount ? view.nextStep : view.actionCount - 1];
                     markStale(record, candidateId, error.code === protocol.ERROR_CODES.UNKNOWN_TARGET ? "target-drift" : "context-drift");
                 }
-                return protocolError(protocol, error.code === protocol.ERROR_CODES.UNKNOWN_TARGET ? protocol.ERROR_CODES.UNKNOWN_TARGET : protocol.ERROR_CODES.CONTEXT_STALE);
+                var stale = protocolError(protocol, error.code === protocol.ERROR_CODES.UNKNOWN_TARGET ? protocol.ERROR_CODES.UNKNOWN_TARGET : protocol.ERROR_CODES.CONTEXT_STALE);
+                if (Object.prototype.hasOwnProperty.call(error, "committed")) { stale.committed = error.committed; }
+                return stale;
             }
             return error;
         }
@@ -538,6 +540,7 @@
         }
 
         function executeStep(input) {
+            var committed = false;
             return withActive(function () {
                 if (!protocol.isPlainObject(input)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Execution step input is invalid."); }
                 protocol.assertNoUnknownKeys(input, ["planId", "stepIndex", "commitPort"], "executionPreflight.executeStep");
@@ -712,8 +715,10 @@
 
                     function failTerminal(error) {
                         var stableError = stableExecutorError(error);
+                        if (committed !== true && error && Object.prototype.hasOwnProperty.call(error, "committed")) { committed = error.committed === true ? true : error.committed === false ? false : null; }
+                        stableError.committed = committed;
                         if (terminalized) { throw stableError; }
-                        settleVerification(error && error.committed === true ? true : null);
+                        settleVerification(committed === true ? true : null);
                         try {
                             guard.fail(reserved.reservation, stableError);
                             terminalized = true;
@@ -752,7 +757,7 @@
 
                     function completeReturned(value) {
                         var result;
-                        try { result = normalizeExecutorResult(value); }
+                        try { result = normalizeExecutorResult(value); committed = result.committed; }
                         catch (error) { return failTerminal(error); }
                         return completeTerminal(result);
                     }
@@ -760,6 +765,7 @@
                     if (fresh.alreadySatisfied) { trajectory({ kind: "already-satisfied", producer: "VelaExecutionPreflight", planId: planId }); return completeReturned({ ok: true, committed: false, summary: { disposition: "already-satisfied" } }); }
 
                     var returned;
+                    committed = null;
                     try { returned = executeValidatedAction(action, metadata, trustedExecutionContext); }
                     catch (error) { return failTerminal(error); }
                     return Promise.resolve(returned).then(completeReturned, failTerminal);
@@ -767,6 +773,9 @@
                     stepRecord.transient = null;
                     throw staleFromError(record, error);
                 });
+            }).catch(function (error) {
+                if (!Object.prototype.hasOwnProperty.call(error, "committed")) { error.committed = committed; }
+                throw error;
             });
         }
 

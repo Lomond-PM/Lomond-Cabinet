@@ -19,7 +19,9 @@ The product uses two runtimes:
 
 ## Current Vela milestone
 
-当前 **0.3.12-C1 / A04 — Session Event Correctness：TARGETED_ACCEPTED — AdobeCEP 12.0.1 / Chrome 99（Windows Win64）/ READY FOR COMMIT / PR**，见 [C1 阶段报告](docs/reports/vela-0.3.12-c1-a04-session-events.md)。接受仅覆盖页面生产 Session 模块与临时 Agent 的事件收据、同步通知、订阅隔离和 data-only 快照；不等于完整 Provider→Authority→Host 任务链复验，不进入 C2、Provider 生命周期或 UI 重构。
+**0.3.12-C2 / A02 + A03 — Execution Facts & Target-Bound Verification：A02、A03 分别 TARGETED_ACCEPTED — AE26.0x67 / AdobeCEP 12.0.1 / Chrome 99；C2 READY FOR COMMIT / PR**。原定 R3-3b、R4 补验已通过；旧 R3-3 采集准备失败及离线专属覆盖保留，见 [C2 报告](docs/reports/vela-0.3.12-c2-execution-facts-verification.md)。不进入 D、Provider 生命周期或 UI 重构。
+
+**A04 已通过 PR #208 合并 dev**，保持 TARGETED_ACCEPTED — AdobeCEP 12.0.1 / Chrome 99（Windows Win64）；其有界页面/临时 Agent 验收见 [C1 报告](docs/reports/vela-0.3.12-c1-a04-session-events.md)，不据此扩大完整 Provider→Authority→Host 覆盖。
 
 **A09 已通过 PR #207 合并 dev**，M1、M2/F1 与 A09 均为 TARGETED_ACCEPTED — AE26.0x67；支持包络及历史证据见 [A09 报告](docs/reports/vela-0.3.12-b2-a09-coordinate-space.md)。ACK Feature 保持 auto/center 与有界2D规则；TBB Text-local padding 与 visual comp-space padding 不混用。AE26.3x87 跨版本复验 DEFERRED，AV fallback 真实 AE NOT COVERED。
 

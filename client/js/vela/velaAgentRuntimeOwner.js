@@ -194,9 +194,9 @@
                 } else if (a) {
                     if (fact.kind === "review") { a.intent.admitted = true; a.intent.review = fact.review; source(a, fact, ["intent.admitted", "intent.review"], "local-control-occurrence"); }
                     else if (fact.kind === "not-executed") {
-                        a.execution.executionAttempted = false; a.execution.hostInvocationAttempted = false; a.execution.mutationDisposition = "not-mutated"; a.execution.resultCode = fact.code || null;
+                        a.execution.executionAttempted = false; a.execution.hostInvocationAttempted = false; a.execution.mutationDisposition = "not-mutated"; a.execution.reportedCommitted = false; a.execution.resultCode = fact.code || null;
                         a.verification.attempted = false; a.verification.disposition = "verification-not-run";
-                        source(a, fact, ["execution.executionAttempted", "execution.hostInvocationAttempted", "execution.mutationDisposition", "verification.attempted", "verification.disposition"], "local-control-occurrence");
+                        source(a, fact, ["execution.executionAttempted", "execution.hostInvocationAttempted", "execution.mutationDisposition", "execution.reportedCommitted", "verification.attempted", "verification.disposition"], "local-control-occurrence");
                     } else if (fact.kind === "association") {
                         a.correlation.executionPlanId = fact.planId; a.correlation.authorizedPlanId = fact.authorizedPlanId; a.correlation.taskRunId = fact.taskRunId; a.correlation.actionIndex = 0;
                         source(a, fact, ["correlation.executionPlanId", "correlation.authorizedPlanId", "correlation.taskRunId", "correlation.actionIndex"], "local-control-occurrence");

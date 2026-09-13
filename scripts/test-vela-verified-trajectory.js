@@ -51,11 +51,17 @@ async function run() {
         }
         if (c.logical) { same(projection.attempts.length, 2, "separate logical attempts"); same(projection.completion.verifiedEvidenceStepCount, 2, "retained verified count"); }
         const prior = await create({ ...c, baseline: BASE }); const baselineResult = await finish(prior, c.logical);
-        same(result, baselineResult, c.id + " pre/post complete Driver snapshot equivalence");
+        const { committed: currentCommitted, ...unchangedSnapshot } = result;
+        same(unchangedSnapshot, baselineResult, c.id + " historical Driver fields unchanged; C2 adds the explicit latest-attempt commit");
+        same(currentCommitted, c.mutation === "already-satisfied" ? false : c.commit, c.id + " C2 Driver fact matches actual disposition");
         same(h.requests, prior.requests, c.id + " exact Host request sequence/payload equivalence");
         same(h.wires, prior.wires, c.id + " exact wire/schema/generation/admission equivalence");
         same(h.state, prior.state, c.id + " same setter/Undo/Verify counts and actual state");
-        same(h.owner.getSessionRuntime().getSnapshot(), prior.owner.getSessionRuntime().getSnapshot(), c.id + " unchanged Session events");
+        // C2 deliberately corrects tool/result and post-action Verify facts, including absent error receipts.
+        // All other historical event payloads and their relative order remain exact.
+        function unaffectedEvents(session) { return session.getEvents().filter(e => e.kind !== "tool/result" && !(e.kind === "ae/state-observed" && e.payload.phase === "post-action")).map(({ seq, ...e }) => e); }
+        same(unaffectedEvents(h.owner.getSessionRuntime()), unaffectedEvents(prior.owner.getSessionRuntime()), c.id + " unchanged non-execution Session facts/order");
+        same(h.owner.getSessionRuntime().getEvents().filter(e => e.kind === "tool/result").map(e => e.payload.committed), projection.attempts.map(a => a.execution.reportedCommitted), c.id + " C2 Session and trajectory receipts agree per attempt");
         if (!example) example = projection;
         h.dispose(); prior.dispose();
     }
@@ -103,10 +109,10 @@ async function run() {
     const delegated = await create(); delegated.runtime.grantNextOpacityMutation(); const delegatedResult = await delegated.start();
     same(delegatedResult.terminal.outcome, "completed", "retained delegated progression unchanged");
     e = delegated.owner.getTrajectoryEvidence().terminal;
-    same(e.attempts[0].verification.scope, "current-selection", "legacy Verify scope explicit");
-    same(e.attempts[0].verification.targetRelation, "unproven", "no target continuity repair");
-    same(e.attempts[0].verification.disposition, "unknown", "comparison not executed-target verification");
-    same(e.completion.verifiedEvidenceStepCount, 0, "Driver completion does not upgrade verified evidence count"); delegated.dispose();
+    same(e.attempts[0].verification.scope, "committed-target", "C2 delegated Verify uses the privately retained target");
+    same(e.attempts[0].verification.targetRelation, "committed-target", "C2 target continuity is proven by Preflight/Bridge");
+    same(e.attempts[0].verification.disposition, "verified-match", "C2 delegated evidence uses exact-target comparison");
+    same(e.completion.verifiedEvidenceStepCount, 1, "C2 verified count follows actual target proof"); delegated.dispose();
 
     const h = await create(); await finish(h); const saved = h.owner.getTrajectoryEvidence().terminal;
     for (const method of ["resetSession", "suspend"]) { h.runtime[method](); same(h.owner.getTrajectoryEvidence().terminal, saved, method + " preserves copied history"); if (method === "suspend") h.runtime.resume(); }
