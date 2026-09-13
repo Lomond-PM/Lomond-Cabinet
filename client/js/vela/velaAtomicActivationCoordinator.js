@@ -82,7 +82,9 @@
             catch (authorityError) { cleanup(record, "authority-stale-before-run"); return Promise.reject(authorityError); }
             var commitPort = preflight.createExecutionCommitPort({ planId: record.executionPlanId, stepIndex: 0, commit: function () { gate.assertPending(record.activation); gate.consume(record.activation); record.committed = true; } });
             return Promise.resolve(preflight.executeStep({ planId: record.executionPlanId, stepIndex: 0, commitPort: commitPort })).then(function (result) {
-                record.taskRun.complete(); record.settled = true; return result;
+                // Cancellation cannot erase the result of an already dispatched Host operation.
+                if (record.taskRun.snapshot().state === "active") { record.taskRun.complete(); }
+                record.settled = true; return result;
             }, function (runError) {
                 if (record.taskRun.snapshot().state === "active") { try { record.taskRun.block(runError && runError.code ? runError.code : "PLAN_FAILED"); } catch (ignoredBlock) {} }
                 if (!record.committed) { try { gate.release(record.activation); } catch (ignoredRelease) {} }

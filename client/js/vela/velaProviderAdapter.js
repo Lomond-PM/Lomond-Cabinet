@@ -1231,7 +1231,8 @@
             if (options.streaming === true) {
                 requestForTransportValue.onChunk = function (decodedText) {
                     if (!isCurrentPending(record, capturedGeneration)) { return false; }
-                    privateAssembler.feed(decodedText);
+                    try { privateAssembler.feed(decodedText); }
+                    catch (streamError) { finishWithError(record, capturedGeneration, "failed", protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, null, true, "stream-assembly"); return true; }
                     return privateAssembler.getState().done === true;
                 };
                 if (debugTerminalDiagnostics) {
@@ -1289,6 +1290,7 @@
                         record.assemblerFinishEntered = true;
                         var streamResult = privateAssembler.finish();
                         var assemblerState = privateAssembler.getState();
+                        if (assemblerState.finishReasonObserved && assemblerState.finishReasonObserved !== "stop") { throw new Error("Non-success streaming termination."); }
                         snapshot = Object.freeze({ status: snapshot.status, contentType: "application/json", bodyText: JSON.stringify({ choices: [{ message: { role: "assistant", content: streamResult.text, reasoning_content: streamResult.reasoning || null }, finish_reason: assemblerState.finishReasonObserved || "stop" }] }), redirected: snapshot.redirected, finalUrl: snapshot.finalUrl });
                         finishPresentation(record, "stream-completed");
                     } catch (streamError) {

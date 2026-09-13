@@ -100,12 +100,12 @@
         function settle(operation) {
             return Promise.resolve(operation).then(function (result) { requireSource(); synchronize(); return result; }, function (error) { requireSource(); synchronize(); throw error; });
         }
-        function continuation(action) { return objectiveAdmission ? objectiveAdmission.continue(action) : action(); }
+        function continuation(action, stopping) { return objectiveAdmission ? objectiveAdmission.continue(action, stopping) : action(); }
         function command(method) {
             return function () {
                 requireSource();
                 function action() { var result = runtime[method](); synchronize(); return settle(result); }
-                return /^(reviewProviderProposal|approveActiveCandidate|rejectActiveCandidate)$/.test(method) ? continuation(action) : action();
+                return /^(reviewProviderProposal|approveActiveCandidate|rejectActiveCandidate|grantNextOpacityMutation)$/.test(method) ? continuation(action, method === "rejectActiveCandidate") : action();
             };
         }
         function reviewIdentity() {
@@ -162,7 +162,7 @@
                         return settle(operation);
                     });
                 },
-                cancel: function () { requireSource(); return continuation(function () { var result = typeof owner.cancelObjective === "function" ? owner.cancelObjective() : runtime.cancelProviderRequest(); synchronize(); return result; }); }
+                cancel: function () { requireSource(); return continuation(function () { var result = typeof owner.cancelObjective === "function" ? owner.cancelObjective({ settleInFlight: true }) : runtime.cancelProviderRequest(); synchronize(); return result; }, true); }
             }),
             confirmation: Object.freeze({ getState: confirmationState, review: command("reviewProviderProposal"), captureReviewCommands: captureReviewCommands,
                 approve: function () { fail("CONVERSATION_REVIEW_BINDING_REQUIRED"); }, reject: function () { fail("CONVERSATION_REVIEW_BINDING_REQUIRED"); } }),

@@ -31,6 +31,7 @@
         var experimentalDisabledReason = "qualification-required";
         var experimentalConfig = { endpoint: "", model: "", acknowledged: false };
         var readiness = null;
+        var readinessGeneration = 0;
         var elements;
         var presentation = options && options.presentation;
         var transcript;
@@ -175,8 +176,9 @@
             transcript.render(snapshot, presentation.getTransientSnapshot());
             action = actionState(providerState, confirmationState);
             projection = PresentationModel.projectSurfaceState(providerState, confirmationState, elements.composer.value, experimentalEnabled, experimentalState, activationPolicy, experimentalDisabledReason);
-            if (!experimentalEnabled) { action = "send"; }
             var availability = conversationAvailability();
+            if (availability.busy && !experimentalEnabled) { action = "cancel"; }
+            else if (!experimentalEnabled) { action = "send"; }
             composer.render(action, experimentalEnabled, availability.busy);
             renderedReviewCommands = sourcePort && action === "confirm" ? confirmation.captureReviewCommands() : null;
             confirmationView.render(action, confirmationState);
@@ -191,6 +193,8 @@
             }
             elements.statusText.textContent = authorityState && ["active", "executing", "consumed", "revoked", "expired", "failed"].indexOf(authorityState.state) !== -1 && projection.state !== "blocked" && projection.state !== "cancelled" && projection.state !== "completed" && projection.state !== "error" ? t("vela.surfaceAuthorityStatus." + authorityState.state) : projectedStatusText(projection.state, providerState && providerState.errorCode, confirmationState);
             if (availability.other) { elements.statusText.textContent = t("vela.conversationOtherRunning"); }
+            if (availability.busy && !experimentalEnabled) { elements.statusText.textContent = t("vela.surfaceStoppingTask"); elements.root.setAttribute("data-vela-task-settling", "true"); }
+            else { elements.root.setAttribute("data-vela-task-settling", "false"); }
             elements.root.setAttribute("data-vela-other-conversation-active", availability.other ? "true" : "false");
             elements.root.setAttribute("data-vela-surface-state", projection.state);
             elements.statusSlot.setAttribute("data-tone", projection.tone);
@@ -212,25 +216,29 @@
             synchronize();
             complete(operation, generation);
         }
-        function cancel() { if (disposed || suspended || !mounted || (sourcePort && !sourcePort.isLive())) { return; } generation += 1; provider.cancel(); synchronize(); }
+        function cancel() { if (disposed || suspended || !mounted || (sourcePort && !sourcePort.isLive())) { return; } generation += 1; if (typeof options.onCancelActiveTask === "function") { options.onCancelActiveTask(); } else { provider.cancel(); } synchronize(); }
         function experimentalSnapshot() { return Object.freeze({ state: experimentalState, enabled: experimentalEnabled, acknowledged: experimentalConfig.acknowledged === true, endpoint: experimentalConfig.endpoint, model: experimentalConfig.model, readiness: readiness }); }
         function supersededSnapshot() { var snapshot = experimentalSnapshot(); return Object.freeze({ state: snapshot.state, enabled: snapshot.enabled, acknowledged: snapshot.acknowledged, endpoint: snapshot.endpoint, model: snapshot.model, readiness: snapshot.readiness, code: "readiness-superseded" }); }
         function notifyExperimental() { onExperimentalStateChange(experimentalSnapshot()); }
         function normalizeEndpoint(value) { var match = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):([1-9][0-9]{0,4})(?:\/|\/v1\/chat\/completions)?$/.exec(value); return match && Number(match[2]) <= 65535 ? "http://" + match[1] + ":" + match[2] : ""; }
+        function invalidateReadiness(nextState) {
+            readinessGeneration += 1;
+            experimentalEnabled = false; readiness = null; experimentalState = nextState;
+        }
+        function stopProviderActivity(reason) {
+            // Availability is revoked before synchronous cancellation callbacks can reenter.
+            if (typeof options.onExperimentalInvalidated === "function") { options.onExperimentalInvalidated(reason); }
+            else { var pending = provider.getState(); if (pending && pending.state === "pending") { provider.cancel(); } }
+        }
         function configureExperimental(input) {
             var endpoint = input && typeof input.endpoint === "string" ? input.endpoint.replace(/^\s+|\s+$/g, "") : "";
             var model = input && typeof input.model === "string" ? input.model.replace(/^\s+|\s+$/g, "") : "";
             var canonicalEndpoint = normalizeEndpoint(endpoint);
             var changed = (canonicalEndpoint || endpoint) !== experimentalConfig.endpoint || model !== experimentalConfig.model;
-            var providerState;
-            if (changed && (experimentalEnabled || experimentalState === "checking")) {
-                generation += 1;
-                providerState = provider.getState();
-                if (providerState && providerState.state === "pending") { provider.cancel(); }
-                experimentalEnabled = false;
-                readiness = null;
-            }
+            var withdrew = experimentalConfig.acknowledged && !(input && input.acknowledged === true);
+            var invalidated = withdrew || changed && !!(experimentalConfig.endpoint || experimentalConfig.model);
             experimentalConfig = { endpoint: canonicalEndpoint || endpoint, model: model, acknowledged: !!(input && input.acknowledged === true) };
+            if (invalidated) { invalidateReadiness("configuring"); stopProviderActivity(withdrew ? "acknowledgement-withdrawn" : "configuration-changed"); }
             experimentalDisabledReason = "qualification-required";
             if (!experimentalEnabled && (experimentalState !== "checking" || changed)) { experimentalState = endpoint && !canonicalEndpoint ? "endpoint-invalid" : canonicalEndpoint && model ? "configuring" : "disabled"; readiness = null; }
             if (mounted) { synchronize(); }
@@ -242,38 +250,37 @@
             if (disposed || suspended || !mounted || activationPolicy.experimentalOptInAllowed !== true || activationPolicy.productionEnabled === true || experimentalEnabled || experimentalState === "checking") { return Promise.resolve(experimentalSnapshot()); }
             if (!normalizeEndpoint(experimentalConfig.endpoint)) { experimentalState = "endpoint-invalid"; synchronize(); notifyExperimental(); return Promise.resolve(experimentalSnapshot()); }
             if (!experimentalConfig.acknowledged || !experimentalConfig.model || typeof provider.check !== "function") { experimentalState = "experimental-unavailable"; synchronize(); notifyExperimental(); return Promise.resolve(experimentalSnapshot()); }
-            generation += 1;
-            capturedGeneration = generation;
+            readinessGeneration += 1;
+            capturedGeneration = readinessGeneration;
             experimentalState = "checking";
             readiness = null;
             synchronize();
             notifyExperimental();
-            return Promise.resolve(provider.check({ endpoint: experimentalConfig.endpoint, model: experimentalConfig.model })).then(function (result) {
-                if (disposed || (sourcePort && !sourcePort.isLive()) || capturedGeneration !== generation || experimentalState !== "checking") { return supersededSnapshot(); }
+            var checkConfig = { endpoint: experimentalConfig.endpoint, model: experimentalConfig.model };
+            var checking;
+            try { checking = provider.check(checkConfig); } catch (checkError) { checking = Promise.reject(checkError); }
+            return Promise.resolve(checking).then(function (result) {
+                if (disposed || (sourcePort && !sourcePort.isLive()) || capturedGeneration !== readinessGeneration || !experimentalConfig.acknowledged || experimentalState !== "checking") { return supersededSnapshot(); }
                 if (!result || result.ready !== true || result.modelId !== experimentalConfig.model) { experimentalState = result && result.code || "readiness-response-invalid"; readiness = result || null; }
                 else { experimentalState = "experimental-ready"; experimentalEnabled = true; readiness = result; }
                 synchronize(); notifyExperimental(); return experimentalSnapshot();
             }, function (error) {
-                if (!disposed && (!sourcePort || sourcePort.isLive()) && capturedGeneration === generation && experimentalState === "checking") { experimentalState = error && error.localReadinessCode || "readiness-network-failed"; experimentalEnabled = false; readiness = null; synchronize(); notifyExperimental(); }
-                return capturedGeneration !== generation ? supersededSnapshot() : experimentalSnapshot();
+                if (!disposed && (!sourcePort || sourcePort.isLive()) && capturedGeneration === readinessGeneration && experimentalState === "checking") { experimentalState = error && error.localReadinessCode || "readiness-network-failed"; experimentalEnabled = false; readiness = null; synchronize(); notifyExperimental(); }
+                return capturedGeneration !== readinessGeneration ? supersededSnapshot() : experimentalSnapshot();
             });
         }
         function disableExperimental() {
-            var providerState;
             if (disposed || !mounted) { return false; }
-            generation += 1;
-            providerState = provider.getState();
-            if (providerState && providerState.state === "pending") { provider.cancel(); }
-            experimentalEnabled = false;
-            experimentalState = "disabled";
+            invalidateReadiness("disabled");
+            stopProviderActivity("user-disabled");
             experimentalDisabledReason = "user-disabled";
             experimentalConfig = { endpoint: experimentalConfig.endpoint, model: experimentalConfig.model, acknowledged: experimentalConfig.acknowledged };
             readiness = null;
             synchronize(); notifyExperimental(); return true;
         }
-        function review() { var operation; if (disposed || suspended || !mounted) { return; } generation += 1; try { operation = confirmation.review(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
-        function approve() { var operation; if (disposed || suspended || !mounted) { return; } generation += 1; try { operation = sourcePort ? (renderedReviewCommands && renderedReviewCommands.approve()) : confirmation.approve(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
-        function reject() { var operation; if (disposed || suspended || !mounted) { return; } generation += 1; try { operation = sourcePort ? (renderedReviewCommands && renderedReviewCommands.reject()) : confirmation.reject(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
+        function review() { var operation; if (disposed || suspended || !mounted || !experimentalEnabled) { return; } generation += 1; try { operation = confirmation.review(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
+        function approve() { var operation; if (disposed || suspended || !mounted || !experimentalEnabled) { return; } generation += 1; try { operation = sourcePort ? (renderedReviewCommands && renderedReviewCommands.approve()) : confirmation.approve(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
+        function reject() { var operation; if (disposed || suspended || !mounted || !experimentalEnabled) { return; } generation += 1; try { operation = sourcePort ? (renderedReviewCommands && renderedReviewCommands.reject()) : confirmation.reject(); } catch (ignored) { return; } synchronize(); complete(operation, generation); }
         function authorityClick() {
             var state;
             var operation;
@@ -299,10 +306,10 @@
             }
             mounted = true; subscribeAgentProjection(); subscribePresentationEvents(); subscribeSource(); if (sourcePort) { sourcePort.synchronize(); } synchronize(); return true;
         }
-        function suspend() { if (disposed || !mounted || suspended) { return false; } suspended = true; generation += 1; unsubscribeAgentProjection(); unsubscribePresentationEvents(); unsubscribeSource(); return true; }
+        function suspend() { if (disposed || !mounted || suspended) { return false; } suspended = true; generation += 1; invalidateReadiness("configuring"); notifyExperimental(); unsubscribeAgentProjection(); unsubscribePresentationEvents(); unsubscribeSource(); return true; }
         function resume() { if (disposed || !mounted || !suspended) { return false; } suspended = false; subscribeAgentProjection(); subscribePresentationEvents(); subscribeSource(); if (sourcePort) { sourcePort.synchronize(); } synchronize(); return true; }
         function refreshLocale() { if (disposed || !mounted) { return; } transcript.refreshLocale(); composer.refreshLocale(); confirmationView.refreshLocale(); synchronize(); }
-        function dispose() { if (disposed) { return false; } disposed = true; generation += 1; unsubscribeAgentProjection(); unsubscribePresentationEvents(); unsubscribeSource(); if (authorityButton) { authorityButton.removeEventListener("click", authorityClick); } if (transcript) { transcript.dispose(); } if (composer) { composer.dispose(); } if (confirmationView) { confirmationView.dispose(); } return true; }
+        function dispose() { if (disposed) { return false; } disposed = true; generation += 1; invalidateReadiness("disabled"); unsubscribeAgentProjection(); unsubscribePresentationEvents(); unsubscribeSource(); if (authorityButton) { authorityButton.removeEventListener("click", authorityClick); } if (transcript) { transcript.dispose(); } if (composer) { composer.dispose(); } if (confirmationView) { confirmationView.dispose(); } return true; }
         return Object.freeze({ refreshConversationState: synchronize, mount: mount, suspend: suspend, resume: resume, refreshLocale: refreshLocale, configureExperimental: configureExperimental, enableExperimental: enableExperimental, disableExperimental: disableExperimental, getExperimentalState: experimentalSnapshot, getElementsForTest: function () { return elements; }, getAgentProjectionSnapshotForTest: function () { return latestAgentProjectionSnapshot; }, dispose: dispose });
     }
     return Object.freeze({ create: create });

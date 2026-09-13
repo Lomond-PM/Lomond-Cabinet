@@ -374,6 +374,10 @@
     function normalizeVelaExperimentalModel(value) { var normalized = typeof value === "string" ? value.replace(/^\s+|\s+$/g, "") : ""; return normalized.length <= 256 ? normalized : ""; }
     function normalizeVelaProviderEndpoint(value) { var normalized = typeof value === "string" ? value.replace(/^\s+|\s+$/g, "") : ""; var match; if (normalized.length > 512) { return ""; } match = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):([1-9][0-9]{0,4})(?:\/|\/v1\/chat\/completions)?$/.exec(normalized); return match && Number(match[2]) <= 65535 ? "http://" + match[1] + ":" + match[2] : normalized; }
     function velaExperimentalStatusKey(state) { var keys = { "experimental-ready": "settings.vela.ready", "checking": "settings.vela.checking", "endpoint-invalid": "settings.vela.endpointInvalid", "readiness-network-failed": "settings.vela.networkFailed", "readiness-http-failed": "settings.vela.httpFailed", "readiness-response-invalid": "settings.vela.responseInvalid", "configured-model-not-found": "settings.vela.modelNotFound", "configured-model-not-loaded": "settings.vela.modelNotLoaded" }; return keys[state] || "settings.vela.disabled"; }
+    function stopVelaExperimentalSession() {
+        velaExperimentalSessionRequested = false;
+        if (velaConversationComposition) { velaConversationComposition.stopProviderActivity(); }
+    }
     function configureVelaExperimentalSession() {
         if (velaSurfaceController && typeof velaSurfaceController.configureExperimental === "function") {
             velaSurfaceController.configureExperimental({ endpoint: VelaProviderEndpoint, model: VelaProviderModel, acknowledged: VelaExperimentalAcknowledged });
@@ -388,7 +392,7 @@
         if (acknowledgement) { acknowledgement.checked = VelaExperimentalAcknowledged === true; }
         if (status) { status.textContent = tr(!current && velaRuntimeLastErrorCode ? "vela.surfaceRuntimeUnavailable" : velaExperimentalStatusKey(current && current.state)); }
         if (enableButton) { enableButton.disabled = !velaSurfaceController || !VelaExperimentalAcknowledged || !VelaProviderEndpoint || !VelaProviderModel || !!(current && (current.enabled || current.state === "checking")); }
-        if (disableButton) { disableButton.disabled = !(current && (current.enabled || current.state === "checking" || current.state === "unavailable")); }
+        if (disableButton) { disableButton.disabled = !(velaExperimentalSessionRequested || velaConversationComposition && velaConversationComposition.getActiveRecord() || current && (current.enabled || current.state === "checking" || current.state === "unavailable")); }
     }
     var BackgroundEngine = {
         defaults: {
@@ -2391,9 +2395,9 @@
         enableButton = window.CoreUI.createButton({ document: document, id: "velaExperimentalEnable", variant: "neutral", classNames: "panel-button panel-local-action", text: tr("settings.vela.enableSession") });
         disableButton = window.CoreUI.createButton({ document: document, id: "velaExperimentalDisable", variant: "neutral", classNames: "panel-button panel-local-action", text: tr("settings.vela.disableSession") });
         status = document.createElement("p"); status.id = "velaExperimentalStatus"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
-        acknowledgement.addEventListener("change", function () { VelaExperimentalAcknowledged = acknowledgement.checked === true; configureSession(); refreshSession(); });
-        enableButton.addEventListener("click", function () { velaExperimentalSessionRequested = true; saveEndpoint(); saveModel(); if (velaSurfaceController && typeof velaSurfaceController.enableExperimental === "function") { velaSurfaceController.enableExperimental().then(refreshSession, refreshSession); } });
-        disableButton.addEventListener("click", function () { velaExperimentalSessionRequested = false; if (velaSurfaceController && typeof velaSurfaceController.disableExperimental === "function") { velaSurfaceController.disableExperimental(); } refreshSession(); });
+        acknowledgement.addEventListener("change", function () { VelaExperimentalAcknowledged = acknowledgement.checked === true; if (!VelaExperimentalAcknowledged) { stopVelaExperimentalSession(); } configureSession(); refreshSession(); });
+        enableButton.addEventListener("click", function () { saveEndpoint(); saveModel(); velaExperimentalSessionRequested = true; if (velaSurfaceController && typeof velaSurfaceController.enableExperimental === "function") { velaSurfaceController.enableExperimental().then(refreshSession, refreshSession); } });
+        disableButton.addEventListener("click", function () { stopVelaExperimentalSession(); if (velaSurfaceController && typeof velaSurfaceController.disableExperimental === "function") { velaSurfaceController.disableExperimental(); } refreshSession(); });
         mount.appendChild(acknowledgementLabel.root); mount.appendChild(enableButton); mount.appendChild(disableButton); mount.appendChild(status);
         configureSession(); refreshSession();
     }
@@ -4225,6 +4229,7 @@
                 createRuntime: function (exactAgentSession) { return window.VelaRuntime.createRuntime({ invokeHost: invokeVelaHost, exactAgentSession: exactAgentSession }); },
                 fillRandomValues: function (bytes) { window.crypto.getRandomValues(bytes); },
                 getConfig: function () { return { endpoint: VelaProviderEndpoint, model: VelaProviderModel }; },
+                isProviderEnabled: function () { return VelaExperimentalAcknowledged && velaExperimentalSessionRequested && !!(velaSurfaceController && velaSurfaceController.getExperimentalState().enabled); },
                 unbindSurface: function () { if (velaConversationComposition === composition) { unbindVelaConversationSurface(); } },
                 onSelectionChanged: function (record, association) {
                     if (velaConversationComposition !== composition) { return; }
@@ -4267,6 +4272,7 @@
         if (!elements.conversationSlot || !window.VelaConversationSwitcher) { return; }
         velaConversationSwitcher = window.VelaConversationSwitcher.create({ composition: velaConversationComposition, mount: elements.conversationSlot, t: tr, onChange: function () {
             if (velaSurfaceController && velaSurfaceController.refreshConversationState) { velaSurfaceController.refreshConversationState(); }
+            refreshVelaExperimentalSettings();
             if (velaSurfaceShell.refreshLayout) { velaSurfaceShell.refreshLayout(); }
         } });
     }
@@ -4332,7 +4338,9 @@
                 ActivationPolicy: window.VelaActivationPolicy,
                 sourcePort: sourcePort,
                 getConversationAvailability: function () { var active = velaConversationComposition && velaConversationComposition.getActiveRecord(); return { busy: !!active, other: !!active && active !== (velaConversationBinding && velaConversationBinding.record) }; },
-                onExperimentalStateChange: function (snapshot) { if (velaSurfaceController === controller && sourcePort.isLive()) { refreshVelaExperimentalSettings(snapshot); } },
+                onExperimentalInvalidated: stopVelaExperimentalSession,
+                onCancelActiveTask: function () { if (velaConversationComposition) { velaConversationComposition.cancelActiveObjective(); } },
+                onExperimentalStateChange: function (snapshot) { if (velaSurfaceController === controller && sourcePort.isLive()) { if (snapshot.enabled && velaConversationComposition) { velaConversationComposition.allowProviderRequests(); } refreshVelaExperimentalSettings(snapshot); } },
                 agentProjection: sourcePort.agentProjection,
                 onAgentProjectionError: function (error, phase) { if (velaSurfaceController === controller && sourcePort.isLive()) { reportVelaAgentRuntimeError(error, phase || "surface"); } },
                 provider: sourcePort.provider,
@@ -4347,7 +4355,7 @@
             velaSurfaceBootstrapState = "ready";
             velaSurfaceBootstrapRevision += 1;
             configureVelaExperimentalSession();
-            if (velaExperimentalSessionRequested) { controller.enableExperimental().then(function () {}, function () {}); }
+            // A rebuilt Surface requires explicit readiness retry; never auto-resume Provider work.
             refreshVelaExperimentalSettings();
         } catch (error) {
             if (controller && typeof controller.dispose === "function") {
