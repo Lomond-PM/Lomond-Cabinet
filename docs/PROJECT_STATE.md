@@ -2,29 +2,21 @@
 
 ## Vela development milestone
 
-**0.3.12-G：INTEGRATED_ACCEPTED / READY FOR COMMIT / PR**（2026-09-16最终裁定），见 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)。0.3.12技术关闭与封存裁定已通过：20项原缺陷/治理条目按有界证据CLOSED，5项持续覆盖OPEN，其余29项不变，54个原ID保留。D/F旧超时残余风险已接受，原FAIL、原因及tokens unknown保留；实验限制与120000ms整个请求截止不变，后续观测/资格复核及立即重新处置条件由G报告持有。**仓库封存待承载本裁定的G PR通过CI并合并dev后生效**，当前文档修改尚未提交，不宣称远端已封存。最终198/198基线不变，本轮仅文档检查，不进入0.3.13。
+**0.3.12 — Baseline Safety & Fact-chain Closure：COMPLETE / SEALED。** 最终 G 综合验收已经通过 PR #213 合并到 `dev@ce8a73646cb01859d0f258101bee39f547081615`，对应 Project checks 成功；最终生产/测试基线为 **198/198 PASS，0 FAIL，0 skip**。20 项原缺陷/治理条目按有界证据 CLOSED，G-10 / COV-03～06 五个持续覆盖工作面保持 OPEN，其余 29 项沿后续路线；全部 54 个原 ID 保留。D/F 历史 Provider timeout 的 FAIL、原因及实际 token 统计 unknown 保留，残余可用性风险已按 G 裁定接受；Experimental Preview、默认禁用、readiness≠qualification 与现有 120000 ms 整个请求截止保持。完整整合证据、Remove 最小修复、真实两步代表和风险边界见 [0.3.12 G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)。
 
-以下B1–F条目保留阶段验收基线与覆盖边界；其原缺陷的当前关闭状态以G最终裁定和机器总账为准。G中新增Remove修复及85项/真实Grid与Feature证据见G报告，历史A08“当时未修复”记录保持。
+当前支持多条独立 live conversation records、全局最多一个 active objective；默认创建并选择一条，支持 selector/New/Close、最多八条记录及各自临时草稿。PresentationModel 由 Conversation 持有，命令/流/完成事件绑定来源 conversation。持久化、模型可见历史注入、Authority 恢复、并发目标和目标队列/调度器均未实现。
 
-**E 已通过 PR #211 合并 dev**，AP-01、AP-02、AP-03、UX-01、UX-02 保持 TARGETED_ACCEPTED，见 [E 报告](reports/vela-0.3.12-e-user-assets-exit-safety.md)。
-
-**D 已通过 PR #210 合并 dev**，A05/A06/A07/A12 保持有界接受；自然 Host/Verify 在途 UIDisable、同 Surface checking 的正常 UI suspend/resume 等欠项及原 PROVIDER_TIMEOUT 保留在 [D 报告](reports/vela-0.3.12-d-provider-task-lifecycle.md)。
-
-**C2 已通过 PR #209 合并 dev**，A02、A03 保持 TARGETED_ACCEPTED — AE26.0x67 / AdobeCEP 12.0.1 / Chrome 99；原有覆盖限制见 [C2 报告](reports/vela-0.3.12-c2-execution-facts-verification.md)。
-
-**A04 已通过 PR #208 合并 dev**，保持 TARGETED_ACCEPTED — AdobeCEP 12.0.1 / Chrome 99（Windows Win64）；其有界页面/临时 Agent 验收见 [C1 报告](reports/vela-0.3.12-c1-a04-session-events.md)，不据此扩大完整 Provider→Authority→Host 覆盖。
-
-**A09 已通过 PR #207 合并 dev**；M1、M2/F1 与 A09 均为 **TARGETED_ACCEPTED — AE26.0x67**，不重新打开其验收。ACK Feature 保持 auto/center 与既有有界2D/平移父链规则；TBB Text 使用 source-local padding，Shape/AV visual 使用 comp-space padding。AE26.3x87 跨版本复验 DEFERRED；AV fallback 真实 AE NOT COVERED、离线覆盖保持。完整结果、历史失败及边界见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)。原缺陷已按G裁定有界CLOSED；阶段支持包络不变，仓库封存待G PR通过CI并合并dev。
-
-当前支持多条独立 live conversation records、全局最多一个 active objective；默认创建并选择一条，支持 selector/New/Close、最多八条记录及各自临时草稿。PresentationModel 由 Conversation 持有，命令/流/完成事件绑定来源 conversation。持久化、历史注入、Authority 恢复、并发目标和目标队列/调度器均未实现。
-
-历史事实保留在原报告：[0.3.11 综合封存](reports/vela-0.3.11-integrated-acceptance.md)、[0.3.10 Context 封存](reports/vela-0.3.10-context-closure.md)、[0.3.9 封存](reports/vela-0.3.9-c2-closure.md)、[A01](reports/vela-0.3.12-b1-a01-host-json-entry.md)、[A11/F1](reports/vela-0.3.12-b1-a11-host-json-serialization.md)、[G-02](reports/vela-0.3.12-b1-g02-layer-name-unicode.md)、[A08](reports/vela-0.3.12-b2-a08-detach-comment-ownership.md)。历史 UNKNOWN、Host 限制及 A08 Detach 注册/UI 未交付仍保留，不由当前摘要升级。
+0.3.12 各 focused 报告继续持有阶段事实与历史失败，不因最终封存重写；当前关闭状态和跨阶段风险以 G 报告及总账为准。历史事实入口：[0.3.11 综合封存](reports/vela-0.3.11-integrated-acceptance.md)、[0.3.10 Context 封存](reports/vela-0.3.10-context-closure.md)、[0.3.9 封存](reports/vela-0.3.9-c2-closure.md)、[A01](reports/vela-0.3.12-b1-a01-host-json-entry.md)、[A11/F1](reports/vela-0.3.12-b1-a11-host-json-serialization.md)、[G-02](reports/vela-0.3.12-b1-g02-layer-name-unicode.md)、[A08](reports/vela-0.3.12-b2-a08-detach-comment-ownership.md)、[A09](reports/vela-0.3.12-b2-a09-coordinate-space.md)、[C1](reports/vela-0.3.12-c1-a04-session-events.md)、[C2](reports/vela-0.3.12-c2-execution-facts-verification.md)、[D](reports/vela-0.3.12-d-provider-task-lifecycle.md)、[E](reports/vela-0.3.12-e-user-assets-exit-safety.md)、[F](reports/vela-0.3.12-f-ux03-readable-review.md)。历史 UNKNOWN、Host 限制及 A08 retained Detach 注册/UI 未交付仍保留，不由封存摘要升级。
 
 本文件持有当前实现与交接事实；[VELA_ROADMAP](VELA_ROADMAP.md) 是唯一排期来源。[Agent architecture](design/vela-agent-architecture.md) 保持 FROZEN FOR 0.3.x，architecture amendment NONE。
 
 ## Package release metadata is separate
 
-VERSION, both manifest fields and Host projectVersion remain **0.3.6**, release-prepared but unpublished; latest recorded published tag is **v0.3.5**. Sealing a Vela feature milestone does not publish 0.3.6 or 0.3.9, alter CHANGELOG release sections, or authorize main/tag operations. Historical release scope remains in [0.3.6 closure](design/vela-agent-0.3.6-closure.md).
+`VERSION`、manifest 两个版本字段和 Host projectVersion 当前仍为 **0.3.6**；最新已发布 tag 仍记录为 **v0.3.5**。用户已决定在 0.3.13/0.3.14 的重大 UI 重构前，将当前 sealed 0.3.12 基线切为 **`v0.3.12 — Legacy`** 发布节点。该发布仍需独立 release-prep 同步版本源、CHANGELOG 与 maintained current-version docs，再执行 `dev → main → v0.3.12`；当前文档同步不冒充该 Release 已经发布。历史 0.3.6 release scope 保留在 [0.3.6 closure](design/vela-agent-0.3.6-closure.md)。
+
+## 0.3.13 UI platform handoff
+
+下一开发里程碑为 **0.3.13 — Visual Baseline & UI Platform Rebuild**。当前 UI Lab 的基础视觉方向已经获得用户认可，因此 0.3.13 不重新发散一套审美：先审计真实页面的生效样式、inline 写入、配置覆盖与交互 owner，再把 UI Lab 已认可的布局、排版、控件和 motion contract 变成可运行参考页面与共享平台。Liquid Glass 仍是 UI Lab 中独立的材质实验层；继续探索 CSS Surface Glass + capability-gated optical treatment / graceful fallback，但它不是共享平台、非玻璃页面或 0.3.13 其他工作包的前置条件。全产品 Home / Registry / Settings / Palette / Vela 迁移与旧路径退出属于 0.3.14。
 
 ## Current Provider and presentation behavior
 
@@ -40,9 +32,9 @@ VERSION, both manifest fields and Host projectVersion remain **0.3.6**, release-
 | Exact qwen3.5-4b policy | Ordinary thinking 6144 / total max_tokens 8192; structured 2048 / 4096. Other model ids do not inherit these fields. |
 | Context budget | A3b 保持 unknown C/I/G/S、实际 M/R 不变，结果为 unassessed-capacity / allow-current-shape；readiness contextLength 仅为提示，不参与预算。未接入实时数字容量约束、tokenizer 或模型可见历史。约束来源见 [A3b 报告](reports/vela-0.3.10-a3b-capacity-budget.md)。 |
 
-## 0.3.12 生产复核边界
+## 0.3.12 sealed production boundaries
 
-R1原审计的 A02 最终 Verify 关联与 A03 提交事实已由 [C2](reports/vela-0.3.12-c2-execution-facts-verification.md) 实施并完成离线及有界真实验收，阶段分别 TARGETED_ACCEPTED，现原缺陷已按G裁定有界CLOSED；迟到 Verify、不确定 Host 返回等保留原离线证据等级。A05/A06/A12 启停生命周期不属于 C2。下述历史控制路径与封存结果不扩写为所有新反例均已通过；原审计来源见 [A0报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)，原封存 UNKNOWN 不升级。
+0.3.12 已将公共 Host 数据边界、Session 事件、执行事实/原目标 Verify、Provider/后台任务收束、用户资产保存/离开保护和最小 Review 可读性按 G 的有界证据关闭。关闭不等于所有环境和分支均自然实机覆盖：A09 AE26.3 复验、AV fallback、D 自然 Host/Verify 在途 UI 窗口、特殊 Host 环境、IME/DPI/长时运行及 retained Detach 注册/UI 等限制继续按原报告保留；G-10 / COV-03～06 继续作为后续版本的覆盖工作面。
 
 ## Agent execution and authority
 
@@ -56,11 +48,13 @@ The explicit one-shot opacity delegation retains process-local Session/task/scop
 
 Historical workstation ordinary/multi-step refusal is NON-REPRODUCED HISTORICAL OBSERVATION, not a current blocker. F9 real Provider evidence accepted 22/22 requests including 12/12 exact logical plans; user-manual AE acceptance confirmed reasoning OFF/ON, no-op progression, real mutation, correct second Review and objective completion.
 
-qwen3.5 verbosity/repetition is model/provider tuning, not Vela correctness failure. Cross-turn reasoning UI history and model-context consumption are separate future decisions. Future live numeric budget integration, capability generalization/completeness, mixed response, cards/activity, telemetry and rendering refinements are assigned in the [roadmap](VELA_ROADMAP.md), not 0.3.9 TODOs.
+0.3.12 G additionally obtained a real supported two-step representative under the current local configuration: first-step write and fresh Verify completed, the second step formed an independent Review and was rejected, preserving partial-completion facts. This proves that representative can complete the intended review chain; it does not establish general model qualification or erase the older D/F timeouts. qwen3.5 verbosity/repetition and the unresolved timeout/latency distribution remain model/provider qualification or observability concerns rather than reasons to rewrite sealed 0.3.12 execution facts.
+
+Cross-turn reasoning UI history and model-context consumption are separate future decisions. Future live numeric budget integration, capability generalization/completeness, mixed response, cards/activity, telemetry and rendering refinements are assigned in the [roadmap](VELA_ROADMAP.md), not historical 0.3.9 TODOs.
 
 ## Verification and ownership
 
-当前 G 验证以 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md) 为准；最终 198/198 对应 G 的最终生产/测试代码，历史及中间版本结果不混用。Generated i18n content 由脚本拥有。[HANDOFF](HANDOFF.md) 是导航入口；[KNOWN_ISSUES](KNOWN_ISSUES.md) 持有既有问题；CHANGELOG 持有包发布历史。
+0.3.12 当前封存验证以 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md) 为准；最终 **198/198** 对应 G 的最终生产/测试代码，历史及中间版本结果不混用。PR #213 的 Project checks 已成功并合并 dev。Generated i18n content 由脚本拥有。[HANDOFF](HANDOFF.md) 是导航入口；[KNOWN_ISSUES](KNOWN_ISSUES.md) 持有既有问题；CHANGELOG 持有包发布历史。
 
 ## Context closure and 0.3.11 inheritance
 
