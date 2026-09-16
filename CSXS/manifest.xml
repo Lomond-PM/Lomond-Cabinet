@@ -49,7 +49,7 @@
                         </MaxSize>
                     </Geometry>
                 </UI>
-            </DispatchInfoList>
+            </DispatchInfo>
         </Extension>
     </DispatchInfoList>
 </ExtensionManifest>
