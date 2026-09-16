@@ -1,3 +1,3 @@
 # Development Handoff
 
-**0.3.12-G：INTEGRATED ACCEPTANCE PASS / READY FOR FINAL DISPOSITION**，见 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)。F 已通过 PR #212 合并 dev，B1–F 有界接受与历史失败保留。当前真实Provider两步已完成首步写入/原目标Verify、第二步独立Review后拒绝及Undo；G Remove修复通过AE恢复核对，最终完整离线198/198 PASS。旧D/F超时原因未确认，残余可用性风险仍待封存裁定。未批量CLOSED、未宣布0.3.12 SEALED，不自动进入下一版本。
+**0.3.12-G：INTEGRATED_ACCEPTED / READY FOR COMMIT / PR**（2026-09-16最终裁定），见 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)。0.3.12技术关闭与封存裁定已通过：20项原缺陷/治理条目按有界证据CLOSED，5项持续覆盖OPEN，其余29项不变，54个原ID保留。D/F旧超时残余风险已接受，原FAIL、原因及tokens unknown保留；实验限制与120000ms整个请求截止不变，后续观测/资格复核及立即重新处置条件由G报告持有。**仓库封存待承载本裁定的G PR通过CI并合并dev后生效**，当前文档修改尚未提交，不宣称远端已封存。最终198/198基线不变，本轮仅文档检查，不进入0.3.13。

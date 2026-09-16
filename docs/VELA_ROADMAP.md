@@ -1,7 +1,7 @@
 # Vela / Lomond Cabinet — Canonical Product Roadmap
 
 **Planning revision: R1-2026-09-09**
-**0.3.12-G：INTEGRATED ACCEPTANCE PASS / READY FOR FINAL DISPOSITION**，见 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)。F 已通过 PR #212 合并 dev，B1–F 有界接受与历史失败保留。当前真实Provider两步已完成首步写入/原目标Verify、第二步独立Review后拒绝及Undo；G Remove修复通过AE恢复核对，最终完整离线198/198 PASS。旧D/F超时原因未确认，残余可用性风险仍待封存裁定。未批量CLOSED、未宣布0.3.12 SEALED，不自动进入下一版本。
+**0.3.12-G：INTEGRATED_ACCEPTED / READY FOR COMMIT / PR**（2026-09-16最终裁定），见 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)。0.3.12技术关闭与封存裁定已通过：20项原缺陷/治理条目按有界证据CLOSED，5项持续覆盖OPEN，其余29项不变，54个原ID保留。D/F旧超时残余风险已接受，原FAIL、原因及tokens unknown保留；实验限制与120000ms整个请求截止不变，后续观测/资格复核及立即重新处置条件由G报告持有。**仓库封存待承载本裁定的G PR通过CI并合并dev后生效**，当前文档修改尚未提交，不宣称远端已封存。最终198/198基线不变，本轮仅文档检查，不进入0.3.13。
 A09 已通过 PR #207 合并，TARGETED_ACCEPTED — AE26.0x67，见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)；AE26.3x87 跨版本复验 DEFERRED，不重开验收。
 A08历史基线：`d7dd7356cccbb637ae01a7e9d0629b9bc184a388`（G-02 PR #204 合并）；[A08报告](reports/vela-0.3.12-b2-a08-detach-comment-ownership.md)。仅修保留Host函数，注册/UI留待后续，B2未完成。
 G-02历史实施基线：`787cef2c8315a7d5c8a208dae69473f488d4e559`（PR #203）；[G-02报告](reports/vela-0.3.12-b1-g02-layer-name-unicode.md)。B1/0.3.12未完成。
@@ -119,7 +119,7 @@ G-02历史实施基线：`787cef2c8315a7d5c8a208dae69473f488d4e559`（PR #203）
 
 ## 九、当前规划状态与下一项
 
-当前工作为0.3.12-G；整合结果、25项处置与剩余覆盖以 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md) 为准。没有自动下一项；封存裁定前不进入0.3.13。以下保留B1/B2阶段的历史状态及测试归属，不代表当前最新结果。
+当前工作为0.3.12-G；整合结果、25项处置与剩余覆盖以 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md) 为准。技术关闭与封存裁定已通过，仓库生效须G PR通过CI并合并dev；不自动进入0.3.13。以下保留B1/B2阶段的历史状态及测试归属，不代表当前最新结果。
 
 **历史阶段：0.3.12-B2 / A09（M1、M2/F1）：TARGETED_ACCEPTED — AE26.0x67 / READY FOR COMMIT / PR。** 见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)。M1 与 M2/F1 均已在 AE26.0x67 定向接受；最新全量为 M2-F1 实施轮 **192/192 PASS（0 skip）**，实机轮及本轮文档收束未重跑。M2 七组 PASS、六次原生 Undo，**3451 个所查字段零差异**。 AE26.3x87 跨版本复验 **DEFERRED**；AV fallback 真实 AE **NOT COVERED**，已有离线覆盖保持。INTEGRATED_ACCEPTED / CLOSED 留待 **0.3.12-G**；B2 和整个 0.3.12 未完成，不自动开始下一项。
 

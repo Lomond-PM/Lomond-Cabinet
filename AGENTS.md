@@ -19,7 +19,9 @@ The product uses two runtimes:
 
 ## Current Vela milestone
 
-**0.3.12-G：INTEGRATED ACCEPTANCE PASS / READY FOR FINAL DISPOSITION**，见 [G 综合报告](docs/reports/vela-0.3.12-integrated-acceptance.md)。F 已通过 PR #212 合并 dev，B1–F 有界接受与历史失败保留。当前真实Provider两步已完成首步写入/原目标Verify、第二步独立Review后拒绝及Undo；G Remove修复通过AE恢复核对，最终完整离线198/198 PASS。旧D/F超时原因未确认，残余可用性风险仍待封存裁定。未批量CLOSED、未宣布0.3.12 SEALED，不自动进入下一版本。
+**0.3.12-G：INTEGRATED_ACCEPTED / READY FOR COMMIT / PR**（2026-09-16最终裁定），见 [G 综合报告](docs/reports/vela-0.3.12-integrated-acceptance.md)。0.3.12技术关闭与封存裁定已通过：20项原缺陷/治理条目按有界证据CLOSED，5项持续覆盖OPEN，其余29项不变，54个原ID保留。D/F旧超时残余风险已接受，原FAIL、原因及tokens unknown保留；实验限制与120000ms整个请求截止不变，后续观测/资格复核及立即重新处置条件由G报告持有。**仓库封存待承载本裁定的G PR通过CI并合并dev后生效**，当前文档修改尚未提交，不宣称远端已封存。最终198/198基线不变，本轮仅文档检查，不进入0.3.13。
+
+以下B1–F条目保留阶段验收基线与覆盖边界；其原缺陷的当前关闭状态以G最终裁定和机器总账为准。G中新增Remove修复及85项/真实Grid与Feature证据见G报告，历史A08“当时未修复”记录保持。
 
 **E 已通过 PR #211 合并 dev**，AP-01、AP-02、AP-03、UX-01、UX-02 保持 TARGETED_ACCEPTED，见 [E 报告](docs/reports/vela-0.3.12-e-user-assets-exit-safety.md)。
 
@@ -31,7 +33,7 @@ The product uses two runtimes:
 
 **A09 已通过 PR #207 合并 dev**，M1、M2/F1 与 A09 均为 TARGETED_ACCEPTED — AE26.0x67；支持包络及历史证据见 [A09 报告](docs/reports/vela-0.3.12-b2-a09-coordinate-space.md)。ACK Feature 保持 auto/center 与有界2D规则；TBB Text-local padding 与 visual comp-space padding 不混用。AE26.3x87 跨版本复验 DEFERRED，AV fallback 真实 AE NOT COVERED。
 
-0.3.11 COMPLETE / SEALED，历史基线与限制保留在 [综合验收](docs/reports/vela-0.3.11-integrated-acceptance.md)。0.3.12 的 INTEGRATED_ACCEPTED / CLOSED 留待 0.3.12-G，不据单项接受宣布整个版本完成。历史修复及排期由既有报告和路线图持有，不在本入口重复流水账。
+0.3.11 COMPLETE / SEALED，历史基线与限制保留在 [综合验收](docs/reports/vela-0.3.11-integrated-acceptance.md)。0.3.12 的INTEGRATED_ACCEPTED及20项有界CLOSED已获最终裁定；仓库封存仍须G PR通过CI并合并dev，不据本地文档宣称远端生效。历史修复及排期由既有报告和路线图持有，不在本入口重复流水账。
 
 Current roadmap: [docs/VELA_ROADMAP.md](docs/VELA_ROADMAP.md). Current implementation/handoff: [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md). Normative architecture: [docs/design/vela-agent-architecture.md](docs/design/vela-agent-architecture.md), frozen and unchanged. Feature milestones are independent of package VERSION/release tags.
 

@@ -2,7 +2,9 @@
 
 ## Vela development milestone
 
-**0.3.12-G：INTEGRATED ACCEPTANCE PASS / READY FOR FINAL DISPOSITION**，见 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)。F 已通过 PR #212 合并 dev，B1–F 有界接受与历史失败保留。当前真实Provider两步已完成首步写入/原目标Verify、第二步独立Review后拒绝及Undo；G Remove修复通过AE恢复核对，最终完整离线198/198 PASS。旧D/F超时原因未确认，残余可用性风险仍待封存裁定。未批量CLOSED、未宣布0.3.12 SEALED，不自动进入下一版本。
+**0.3.12-G：INTEGRATED_ACCEPTED / READY FOR COMMIT / PR**（2026-09-16最终裁定），见 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)。0.3.12技术关闭与封存裁定已通过：20项原缺陷/治理条目按有界证据CLOSED，5项持续覆盖OPEN，其余29项不变，54个原ID保留。D/F旧超时残余风险已接受，原FAIL、原因及tokens unknown保留；实验限制与120000ms整个请求截止不变，后续观测/资格复核及立即重新处置条件由G报告持有。**仓库封存待承载本裁定的G PR通过CI并合并dev后生效**，当前文档修改尚未提交，不宣称远端已封存。最终198/198基线不变，本轮仅文档检查，不进入0.3.13。
+
+以下B1–F条目保留阶段验收基线与覆盖边界；其原缺陷的当前关闭状态以G最终裁定和机器总账为准。G中新增Remove修复及85项/真实Grid与Feature证据见G报告，历史A08“当时未修复”记录保持。
 
 **E 已通过 PR #211 合并 dev**，AP-01、AP-02、AP-03、UX-01、UX-02 保持 TARGETED_ACCEPTED，见 [E 报告](reports/vela-0.3.12-e-user-assets-exit-safety.md)。
 
@@ -12,7 +14,7 @@
 
 **A04 已通过 PR #208 合并 dev**，保持 TARGETED_ACCEPTED — AdobeCEP 12.0.1 / Chrome 99（Windows Win64）；其有界页面/临时 Agent 验收见 [C1 报告](reports/vela-0.3.12-c1-a04-session-events.md)，不据此扩大完整 Provider→Authority→Host 覆盖。
 
-**A09 已通过 PR #207 合并 dev**；M1、M2/F1 与 A09 均为 **TARGETED_ACCEPTED — AE26.0x67**，不重新打开其验收。ACK Feature 保持 auto/center 与既有有界2D/平移父链规则；TBB Text 使用 source-local padding，Shape/AV visual 使用 comp-space padding。AE26.3x87 跨版本复验 DEFERRED；AV fallback 真实 AE NOT COVERED、离线覆盖保持。完整结果、历史失败及边界见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)。INTEGRATED_ACCEPTED / CLOSED 留待 **0.3.12-G**，整个 0.3.12 未完成。
+**A09 已通过 PR #207 合并 dev**；M1、M2/F1 与 A09 均为 **TARGETED_ACCEPTED — AE26.0x67**，不重新打开其验收。ACK Feature 保持 auto/center 与既有有界2D/平移父链规则；TBB Text 使用 source-local padding，Shape/AV visual 使用 comp-space padding。AE26.3x87 跨版本复验 DEFERRED；AV fallback 真实 AE NOT COVERED、离线覆盖保持。完整结果、历史失败及边界见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)。原缺陷已按G裁定有界CLOSED；阶段支持包络不变，仓库封存待G PR通过CI并合并dev。
 
 当前支持多条独立 live conversation records、全局最多一个 active objective；默认创建并选择一条，支持 selector/New/Close、最多八条记录及各自临时草稿。PresentationModel 由 Conversation 持有，命令/流/完成事件绑定来源 conversation。持久化、历史注入、Authority 恢复、并发目标和目标队列/调度器均未实现。
 
@@ -40,7 +42,7 @@ VERSION, both manifest fields and Host projectVersion remain **0.3.6**, release-
 
 ## 0.3.12 生产复核边界
 
-R1原审计的 A02 最终 Verify 关联与 A03 提交事实已由 [C2](reports/vela-0.3.12-c2-execution-facts-verification.md) 实施并完成离线及有界真实验收，分别 TARGETED_ACCEPTED；迟到 Verify、不确定 Host 返回等保留原离线证据等级。A05/A06/A12 启停生命周期不属于 C2。下述历史控制路径与封存结果不扩写为所有新反例均已通过；原审计来源见 [A0报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)，原封存 UNKNOWN 不升级。
+R1原审计的 A02 最终 Verify 关联与 A03 提交事实已由 [C2](reports/vela-0.3.12-c2-execution-facts-verification.md) 实施并完成离线及有界真实验收，阶段分别 TARGETED_ACCEPTED，现原缺陷已按G裁定有界CLOSED；迟到 Verify、不确定 Host 返回等保留原离线证据等级。A05/A06/A12 启停生命周期不属于 C2。下述历史控制路径与封存结果不扩写为所有新反例均已通过；原审计来源见 [A0报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)，原封存 UNKNOWN 不升级。
 
 ## Agent execution and authority
 

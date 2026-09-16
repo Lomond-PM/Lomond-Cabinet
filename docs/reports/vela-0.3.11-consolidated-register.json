@@ -4,7 +4,7 @@
   "baseline_repository": "Lomond-PM/Lomond-Cabinet",
   "baseline_commit": "b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a",
   "new_plan_not_implemented": false,
-  "implementation_scope": "B1–F已合并并保持各项有界TARGETED_ACCEPTED；0.3.12-G INTEGRATED ACCEPTANCE PASS / READY FOR FINAL DISPOSITION。G新增Remove恢复保护、85断言及真实Grid/Feature/4次Undo通过；最终全量198/198 PASS。真实Provider两步达到首步写入/Verify、第二步拒绝终态；D/F旧timeout原因仍未确认，残余风险待封存裁定。54个原ID保留，5个持续覆盖工作面保持OPEN；不自动CLOSED/SEALED或进入0.3.13。详见docs/reports/vela-0.3.12-integrated-acceptance.md",
+  "implementation_scope": "2026-09-16用户最终裁定：0.3.12-G INTEGRATED_ACCEPTED / READY FOR COMMIT / PR；技术关闭与封存裁定已通过，18项产品原缺陷及G-01/G-09共20项有界CLOSED，G-10/COV-03–06共5项OPEN，其余29项不变。D/F旧timeout残余风险已接受，原FAIL/原因unknown/tokens unknown与实验限制保留。最终198/198基线不变，本轮只改文档、未重跑。仓库封存待承载本裁定的G PR通过CI并合并dev；不预填PR号或合并SHA，不将17e1b67或已有WIP ccad367冒充本轮裁定提交。详见docs/reports/vela-0.3.12-integrated-acceptance.md",
   "remote_modified": false,
   "inherited_probes_rerun_in_this_task": false,
   "counts": {
@@ -31,7 +31,7 @@
       "version": "0.3.12",
       "title_zh": "基线安全与事实链收口",
       "title_en": "Baseline Safety & Truth Closure",
-      "status": "INTEGRATED ACCEPTANCE PASS / READY FOR FINAL DISPOSITION",
+      "status": "INTEGRATED_ACCEPTED / READY FOR COMMIT / PR",
       "scope": "修复高风险数据入口、提交目标验证、Session 事实、后台任务控制、用户资产保存及最小 Review/退出保护。",
       "exit": "已报告风险逐项经生产模块重验；关键修复通过对应 AE/CEP 验收；未覆盖代码形成正式台账。",
       "dependency": "0.3.11",
@@ -206,7 +206,7 @@
       "description": "缺少原生 JSON.parse 时公共解析器把工程 comment 元数据作为 JavaScript 表达式执行；元数据字段校验在执行之后，状态读取也可触及入口。",
       "closure": "换为不执行代码的严格解析；原生/无原生 JSON、合法/坏元数据与状态轮询负向回归；确认无效输入无副作用。",
       "guard": "条件是无原生 JSON.parse 且元数据入口被调用；不能写成打开任意工程就执行代码。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "readiness": "MERGED TO DEV",
       "acceptance": {
         "decision_date": "2026-09-09",
@@ -221,7 +221,7 @@
           "AE-05 仅覆盖实际检查字段、指定 Undo 观察和有限时间；无效夹具逐组 Undo 与完整轮询 trace 未覆盖",
           "两个普通工具动作自身原始回调未捕获，保持未知；已有 JSON.parse 不等于已证实原生实现"
         ],
-        "integration_gate": "0.3.12-G：INTEGRATED_ACCEPTED / CLOSED 待裁定",
+        "integration_gate": "2026-09-16：G INTEGRATED_ACCEPTED，原缺陷按既有有界证据CLOSED；仓库封存待承载本裁定的G PR通过CI并合并dev生效。原阶段的待G事项已由g_reconciliation.final_closure落实，历史验收与覆盖限制不变。",
         "reopen_on": "若出现回退解析错误、安全属性处理失效或相关回归，立即重新打开对应修复，不等待整合阶段"
       },
       "implementation_baseline": "cd96e0cd65fd485a8f00ac506ee74c0f97fc5e75",
@@ -249,8 +249,8 @@
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "[B1 A01](vela-0.3.12-b1-a01-host-json-entry.md)，#202 `9dee61e`",
         "subsequent_impact_and_current_checks": "A11成员名准入影响解析；G完整Host三JSON环境1128项，既有AE六组reused",
-        "disposition_and_follow_up": "原缺陷可关闭；真实无JSON.parse环境未自然取得，Host owner / 0.3.25",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 原缺陷；真实无JSON.parse环境未自然取得，Host owner / 0.3.25",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       }
     },
     {
@@ -266,13 +266,13 @@
       "description": "一次性授权执行后的 fresh Verify 读取当前选择，只比较数值；显式 Review 使用 committed-target 路径。Owner 承认 current-selection 的关联 unproven，Driver 仍可据 fresh/matches 完成。",
       "closure": "两条最终验证都须证明实际提交目标关联；换同值/不同值层、目标变化或删除、切合成、迟到 Verify 均有生产与实机证据。",
       "guard": "不是已证明写错目标；提交时仍有 digest 验证。不得混同已接受的发送至 Review 前重新绑定。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "g_reconciliation": {
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "[C2](vela-0.3.12-c2-execution-facts-verification.md)，#209 `2b380d9`",
         "subsequent_impact_and_current_checks": "D停止/F显示接入；G597项＋真实原目标Verify",
-        "disposition_and_follow_up": "有界可关闭；晚到/删除故障保留受控等级，Runtime owner / 0.3.17、0.3.25",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 有界原缺陷；晚到/删除故障保留受控等级，Runtime owner / 0.3.17、0.3.25",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       },
       "readiness": "MERGED TO DEV"
     },
@@ -289,13 +289,13 @@
       "description": "真实提交和已满足状态都被约化为 verification-required；Driver 随后统一记录 committed:true，使 Session 与 trajectory 可能矛盾。",
       "closure": "明确 mutation disposition 与 committed 三态；比较 mutation/no-op/失败/不确定时的 Session、trajectory、Host 次数、Undo 和 Verify。",
       "guard": "no-op 仍需 fresh Verify；不通过强制写入或跳过验证统一记录。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "g_reconciliation": {
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "C2，#209 `2b380d9`",
         "subsequent_impact_and_current_checks": "G mutation/第二步拒绝事实、no-op与unknown正式组合",
-        "disposition_and_follow_up": "有界可关闭；未知Host真实故障未制造，Runtime/trajectory owner / 0.3.17",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 有界原缺陷；未知Host真实故障未制造，Runtime/trajectory owner / 0.3.17",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       },
       "readiness": "MERGED TO DEV"
     },
@@ -312,13 +312,13 @@
       "description": "append 使用日志末项而非本次 event 通知/返回；重入会投递另一个事件，异常阻断后续订阅，退订使遍历跳项，getter 使冻结记录仍可变化。",
       "closure": "稳定事件收据身份、确定重入顺序、订阅快照及观察者异常隔离、严格 data-only 快照；push 与 replay 对照。",
       "guard": "本地 getter 不是模型 JSON 注入；不得因此宣布 Authority event 可伪造。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "g_reconciliation": {
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "[C1](vela-0.3.12-c1-a04-session-events.md)，#208 `cacc25e`",
         "subsequent_impact_and_current_checks": "C2/D消费链；G279项＋真实Session/trajectory",
-        "disposition_and_follow_up": "可关闭原事件问题；不扩展持久历史，Session owner / 0.3.16、0.3.23",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 原事件问题；不扩展持久历史，Session owner / 0.3.16、0.3.23",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       },
       "readiness": "MERGED TO DEV"
     },
@@ -335,13 +335,13 @@
       "description": "配置变更仅检查 endpoint/model；撤回确认既不失效已启用状态，也不作废同配置在途 readiness。",
       "closure": "本方案将“当前 acknowledgement=true”定为实验启用条件；撤回后禁止新请求、作废旧 readiness，并按 A06 的已存在任务控制语义收束。",
       "guard": "Provider 启用确认不等于 mutation grant；不得将二者合并为一个布尔权限。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "g_reconciliation": {
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "[D](vela-0.3.12-d-provider-task-lifecycle.md)，#210 `c80ef96`",
         "subsequent_impact_and_current_checks": "E/F共享main；G后台真实UI停用/撤回，重新装载无权限恢复",
-        "disposition_and_follow_up": "有界可关闭；既有readiness/Grant真实结果reused，Provider owner / 0.3.13",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 有界原缺陷；既有readiness/Grant真实结果reused，Provider owner / 0.3.13",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       },
       "readiness": "MERGED TO DEV"
     },
@@ -358,13 +358,13 @@
       "description": "全局启用意愿被关闭，但取消仅到达 selected Surface；后台 Review 可以继续占 holder，返回时 disabled 又把操作投影成 send。",
       "closure": "面板级 Provider 启用由面板级 owner 决议；停用禁入新请求，并向真实 active owner 发出停止后续工作的命令，保留取消/拒绝与收束反馈。",
       "guard": "停用不是强制中断不可中断 Host 写入；不得提前清 holder、丢迟到结果或暗示回滚。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "g_reconciliation": {
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "D，#210 `c80ef96`",
         "subsequent_impact_and_current_checks": "G真实后台Review＋当前CEP六个受控在途组合",
-        "disposition_and_follow_up": "有界可关闭；自然Host/Verify在途UIDisable未取得，Composition/Runtime owner / 0.3.17、0.3.25",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 有界原缺陷；自然Host/Verify在途UIDisable未取得，Composition/Runtime owner / 0.3.17、0.3.25",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       },
       "readiness": "MERGED TO DEV"
     },
@@ -381,13 +381,13 @@
       "description": "length 可被后续 stop 覆盖，finish_reason 后的 content delta 仍被拼接；后续正常终态检查无法看见已经丢失的错误。",
       "closure": "终态单调；矛盾 finish、终止后内容、截断/错误帧等有严格规则和生产模块对抗回归。",
       "guard": "保留合法 DONE 提前结束读取；不把异常 Provider 帧风险扩写成任意部分 JSON 直接执行。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "g_reconciliation": {
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "D，#210 `c80ef96`",
         "subsequent_impact_and_current_checks": "G真实正常stop/DONE/Parser与正式异常流组合",
-        "disposition_and_follow_up": "有界可关闭终态单调问题；自然异常/迟到chunk未制造，Provider owner / 0.3.25；timeout另列",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 终态单调原缺陷，有界；自然异常/迟到chunk未制造，Provider owner / 0.3.25；timeout另列；D/F旧超时残余风险已于2026-09-16接受（FAIL/原因unknown/tokens unknown不变），完整条件见G报告Provider段及最终裁定。Provider/Context owner：0.3.16有来源延迟/token观测，0.3.25固定配置/预定标准资格复核；持续阻断已声明任务、错误写入、旧结果复活、holder不收束或提交事实错误时立即重新处置。",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       },
       "readiness": "MERGED TO DEV"
     },
@@ -404,7 +404,7 @@
       "description": "source binding 已保存 previousCommentEncoded，但 Detach 对所有组件层直接清空 comment；Remove 与 Detach 的数据归属处理不一致。",
       "closure": "分别处理 generated layer 与 source binding；恢复原注释，只移除工具拥有的数据；真实 AE 值与 Undo 验收。",
       "guard": "不宣称永久不可恢复；不趁机清理无归属证据的表达式或其他用户数据。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "implementation": {
         "baseline": "d7dd7356cccbb637ae01a7e9d0629b9bc184a388",
         "report": "docs/reports/vela-0.3.12-b2-a08-detach-comment-ownership.md",
@@ -544,10 +544,10 @@
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "[B2 A08](vela-0.3.12-b2-a08-detach-comment-ownership.md)，#205 `f5ea7a1`",
         "subsequent_impact_and_current_checks": "A09 V2模板影响，M1c已双版本回验；G251/1134/932项及Remove最小修复",
-        "disposition_and_follow_up": "Detach原问题有界可关闭；Remove focused85及当前AE Grid/Feature/4次Undo通过；retained注册/UI未交付，工具owner / 0.3.18",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — Detach原问题，有界；G Remove修复已验证；Remove focused85及当前AE Grid/Feature/4次Undo通过；retained注册/UI未交付，工具owner / 0.3.18",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       },
-      "readiness": "MERGED BASELINE; G REMOVE FIX UNCOMMITTED"
+      "readiness": "MERGED BASELINE; G REMOVE FIX IN EXISTING WIP ccad367; FINAL DISPOSITION READY FOR COMMIT / PR"
     },
     {
       "id": "A09",
@@ -562,7 +562,7 @@
       "description": "旧路径 toComp 失败后直接使用局部点，另一条背景路径则返回 null；严格 Grid 路径已有 sourcePointToComp 对照。",
       "closure": "定义受支持的坐标空间与 Host 转换；不可转换明确失败；父级、旋转、缩放、时间、2D/3D 和表达式条件做矩阵。",
       "guard": "不声称所有 AE 都没有 toComp；禁止只替换 API 名字而不验证空间语义。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "readiness": "MERGED TO DEV",
       "acceptance": {
         "decision_date": "2026-09-12",
@@ -577,15 +577,15 @@
           "AV fallback REAL AE NOT COVERED；已有正式离线覆盖保持",
           "不泛化任意Transform、parent rotation/scale chain、复杂Shape或其他AE版本"
         ],
-        "integration_gate": "0.3.12-G：INTEGRATED_ACCEPTED / CLOSED待裁定；B2/0.3.12未完成",
+        "integration_gate": "2026-09-16：G INTEGRATED_ACCEPTED，原缺陷按既有有界证据CLOSED；仓库封存待承载本裁定的G PR通过CI并合并dev生效。原阶段的待G事项已由g_reconciliation.final_closure落实，历史验收与覆盖限制不变。",
         "historical_evidence": "原26.3旧M1/toComp FAIL、26.0 M1b V1几何FAIL、M2 R1 identity误拒及2555字段零差异均保留于主报告，不改写历史"
       },
       "g_reconciliation": {
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "[B2 A09](vela-0.3.12-b2-a09-coordinate-space.md)，#207 `af6f89a`",
         "subsequent_impact_and_current_checks": "G测量201场景1001断言、Feature139/749、TBB162/906＋身份70/352",
-        "disposition_and_follow_up": "保持AE26.0接受，可按既有包络关闭；AE26.3 DEFERRED、AVfallback真实NOT COVERED，Host owner / 0.3.18–21",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — AE26.0既有包络；AE26.3 DEFERRED、AVfallback真实NOT COVERED，Host owner / 0.3.18–21",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       }
     },
     {
@@ -616,7 +616,7 @@
       "description": "公共字符串转义漏掉部分 U+0000–U+001F，可能输出无效 JSON；私有 Vela JSON 路径不自动补救公共返回。",
       "closure": "完整字符串转义与严格往返；覆盖所有 C0、多语言、引号/反斜线、异常信息及既有结果形状。",
       "guard": "与 G-02 的参数代理项校验是不同问题；具体工程发生频率未知。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "implementation": {
         "baseline": "9dee61ee2d2a3ce2f8dd90107fe5343299063eb8",
         "report": "docs/reports/vela-0.3.12-b1-a11-host-json-serialization.md",
@@ -652,8 +652,8 @@
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "[B1 A11/F1](vela-0.3.12-b1-a11-host-json-serialization.md)，#203 `787cef2`",
         "subsequent_impact_and_current_checks": "G2307编码＋224成员名及公共Host组合",
-        "disposition_and_follow_up": "可关闭；NUL键明确不支持，真实特殊键限制不改写，Host owner / 0.3.25",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 原缺陷；NUL键明确不支持，真实特殊键限制不改写，Host owner / 0.3.25",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       },
       "readiness": "MERGED TO DEV"
     },
@@ -670,13 +670,13 @@
       "description": "generation 失效旧检查但状态仍 checking，resume 不退出，再次 enable 又提前返回，形成不可重试状态。",
       "closure": "失效检查必须进入明确可重试态；恢复后自动重试或提示重试有契约；不接受旧 generation 结果。",
       "guard": "面板 suspend 与切会话重建 Surface 是不同路径，分别测试。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "g_reconciliation": {
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "D，#210 `c80ef96`",
         "subsequent_impact_and_current_checks": "E/F Surface接线；G同实例10项、真实切会话后明确重试",
-        "disposition_and_follow_up": "有界可关闭；正常UI checking时同实例suspend/resume仍未取得，Surface owner / 0.3.13–14",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 有界原缺陷；正常UI checking时同实例suspend/resume仍未取得，Surface owner / 0.3.13–14",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       },
       "readiness": "MERGED TO DEV"
     },
@@ -693,13 +693,13 @@
       "description": "previous=null 混淆读取失败与确认无旧值；getItem 抛异常且 removeItem 可用时，未写入新值也会删除原资产。",
       "closure": "独立记录 oldValueReadSucceeded/previousValue/writeAttempted；未知旧状态不删除；写入/回滚双失败和迁移证据保留测试。",
       "guard": "不是所有配额失败都会丢色卡；不得坏数据自动恢复默认覆盖旧资产。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "g_reconciliation": {
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "[E](vela-0.3.12-e-user-assets-exit-safety.md)，#211 `ba383a4`",
         "subsequent_impact_and_current_checks": "G隔离storage读取失败无写/删、正常UI临时资产",
-        "disposition_and_follow_up": "可关闭；自然坏存储不制造、原schema不扩展，Palette owner / 0.3.14",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 原缺陷；自然坏存储不制造、原schema不扩展，Palette owner / 0.3.14",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       },
       "readiness": "MERGED TO DEV"
     },
@@ -716,13 +716,13 @@
       "description": "Resolver 忽略保存失败仍返回成功；无 storage 也可报告 persisted:true，显示值与重启恢复值分离。",
       "closure": "本方案采用 accepted/applied/persisted 分离；失败可保留当前外观但必须标为未保存，并提供重试和还原至已保存值；reset 同契约。",
       "guard": "基础 Settings 由 main wrapper 保存不是本项缺陷；不擅自将临时值变成持久化事实。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "g_reconciliation": {
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "E，#211 `ba383a4`",
         "subsequent_impact_and_current_checks": "G保存失败→dirty→retry/restore→leave完整组合",
-        "disposition_and_follow_up": "可关闭；同步保存合同，任意异步storage不在范围，Store/main owner / 0.3.13–14",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 原缺陷；同步保存合同，任意异步storage不在范围，Store/main owner / 0.3.13–14",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       },
       "readiness": "MERGED TO DEV"
     },
@@ -739,13 +739,13 @@
       "description": "浅拷贝和直接返回 colorAlpha 嵌套对象使读接口成为写接口；外层冻结不足以保护工厂默认值。",
       "closure": "入库独立规范化、对外深快照、默认值深冻结；跨实例与绕过校验负向测试。",
       "guard": "本地 JS API 风险，不是用户拖动必现，也不是远程模型注入。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "g_reconciliation": {
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "E，#211 `ba383a4`",
         "subsequent_impact_and_current_checks": "G输入/读快照/嵌套默认值隔离",
-        "disposition_and_follow_up": "可关闭；遵循原模块schema，Appearance owner / 0.3.13–14",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 原缺陷；遵循原模块schema，Appearance owner / 0.3.13–14",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       },
       "readiness": "MERGED TO DEV"
     },
@@ -837,13 +837,13 @@
       "description": "菜单仅 preventDefault，外层不尊重消费结果，单次 Escape 同时退出两层。",
       "closure": "先修事件消费，后由统一 overlay/input owner 调度；菜单/picker/文本编辑/模态每次只结束应结束的一层。",
       "guard": "不依靠同时 close 所有层获得表面干净；与 UX-02 联合验收但保留独立 ID。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "g_reconciliation": {
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "E，#211 `ba383a4`",
         "subsequent_impact_and_current_checks": "G后台Review并存时真实菜单Escape与外层消费",
-        "disposition_and_follow_up": "有界可关闭；其他IME/overlay矩阵后续，CoreUI owner / 0.3.13–14",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 有界原缺陷；其他IME/overlay矩阵后续，CoreUI owner / 0.3.13–14",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       },
       "readiness": "MERGED TO DEV"
     },
@@ -860,13 +860,13 @@
       "description": "内部返回受保护，外层 Escape/背景关闭直接 discardDraft；Router 又先清 active 再回调，阻碍取消离开。",
       "closure": "所有用户主动离开先 negotiate leave 再改 route/dispose；保存/丢弃/继续编辑一致；强制卸载与用户离开分开。",
       "guard": "不是已保存 Palette 资产丢失；不能使 AE/面板卸载等待确认而挂起。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "g_reconciliation": {
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "E，#211 `ba383a4`",
         "subsequent_impact_and_current_checks": "G内部保存、外层继续/丢弃、重复/竞态正式测试",
-        "disposition_and_follow_up": "有界可关闭；强制卸载不是主动离开，Router/Workspace owner / 0.3.13–14",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 有界原缺陷；强制卸载不是主动离开，Router/Workspace owner / 0.3.13–14",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       },
       "readiness": "MERGED TO DEV"
     },
@@ -883,13 +883,13 @@
       "description": "仅数值/名称 before→proposed 的单行摘要，长文本可被截断且缺展开入口；未呈现目标合成/图层与步骤范围。",
       "closure": "0.3.12 先保障完整本地变化与可靠可显示目标说明；0.3.17 形成正式 Review 卡，显示步骤与已完成部分；信息不足须阻断或明确重新取得。",
       "guard": "不是 Authority 绕过。显示快照不能代替 JIT/Preflight，不得让模型描述充当受信目标。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "g_reconciliation": {
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "[F](vela-0.3.12-f-ux03-readable-review.md)，#212 `17e1b67`",
         "subsequent_impact_and_current_checks": "G真实1/2→2/2与截图；F宽窄/中英/旧命令reused，G78项",
-        "disposition_and_follow_up": "有界可关闭；可靠ID不是捏造名称，原生停靠窗口矩阵未扩展；Review owner / 0.3.14、0.3.17、0.3.24",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 有界原缺陷；可靠ID不是捏造名称，原生停靠窗口矩阵未扩展；Review owner / 0.3.14、0.3.17、0.3.24；D/F旧超时残余风险已于2026-09-16接受（FAIL/原因unknown/tokens unknown不变），完整条件见G报告Provider段及最终裁定。Provider/Context owner：0.3.16有来源延迟/token观测，0.3.25固定配置/预定标准资格复核；持续阻断已声明任务、错误写入、旧结果复活、holder不收束或提交事实错误时立即重新处置。",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       },
       "readiness": "MERGED TO DEV"
     },
@@ -996,13 +996,13 @@
       "description": "入口历史节点、当前/最新测试数字及已实现多会话语义互相冲突；Codex/DSH 可能读到两套现状。",
       "closure": "一份当前实现状态、一份当前路线；历史报告不改写；入口只留短摘要并链接；版本对账检查拒绝矛盾 current。",
       "guard": "0.3.11 功能封存不自动 bump 包版本、不自动发布。",
-      "status": "IMPLEMENTED / FINAL DISPOSITION PENDING",
+      "status": "CLOSED",
       "g_reconciliation": {
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "A0/#201及当前入口",
         "subsequent_impact_and_current_checks": "G同步当前状态、总账与唯一报告链接",
-        "disposition_and_follow_up": "本版治理可关闭；每次封存由项目owner复核",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 本版入口一致性治理，收尾检查通过；每次封存由项目owner复核",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；当前入口一致性检查通过；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       }
     },
     {
@@ -1018,7 +1018,7 @@
       "description": "字符串末尾 charCodeAt(index+1) 为 NaN，现有范围比较未拒绝孤立高代理项。",
       "closure": "生产原模块复验并补边界；合法代理对、孤立高/低代理项、ASCII/多语言与 UTF-8 byte limit 对照。",
       "guard": "不把未归档的旧最小复现升级成当前完整执行链证据；不是已证权限绕过。",
-      "status": "TARGETED_ACCEPTED",
+      "status": "CLOSED",
       "implementation": {
         "baseline": "787cef2c8315a7d5c8a208dae69473f488d4e559",
         "report": "docs/reports/vela-0.3.12-b1-g02-layer-name-unicode.md",
@@ -1039,8 +1039,8 @@
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "[B1 Unicode](vela-0.3.12-b1-g02-layer-name-unicode.md)，#204 `d7dd735`",
         "subsequent_impact_and_current_checks": "F未改256-byte/代理对合同，G相关完整回归",
-        "disposition_and_follow_up": "原校验缺陷可关闭；不新增Unicode能力域，Capability owner / 0.3.15",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 原校验缺陷；不新增Unicode能力域，Capability owner / 0.3.15",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅原缺陷及G逐项有界证据；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       },
       "readiness": "MERGED TO DEV"
     },
@@ -1147,13 +1147,13 @@
       "description": "现有来源支持若干硬要求，但不支持重建原来的逐条八项内容。",
       "closure": "本次新定义 GATE-01…08 并在规划 PR 中采纳；保留新旧来源说明，建立任务/证据映射。",
       "guard": "这是新制定而非找回原清单；不替代冻结架构 13 invariants。",
-      "status": "IMPLEMENTED / FINAL DISPOSITION PENDING",
+      "status": "CLOSED",
       "g_reconciliation": {
         "report": "docs/reports/vela-0.3.12-integrated-acceptance.md",
         "merged_baseline_and_reused_evidence": "R1规划/#201，新定义GATE01–08及来源说明",
         "subsequent_impact_and_current_checks": "G核对映射：01→B1/C1/C2，02→D/F，05→E/F，06→Provider限制，07→本报告，08→资产/文档；03/04仍属后续能力/Context/History",
-        "disposition_and_follow_up": "治理定义可关闭，不等于八项产品门通过；项目owner / 0.3.26",
-        "final_closure": "PENDING USER DISPOSITION"
+        "disposition_and_follow_up": "CLOSED — 定义/来源治理，不等于八项产品门通过；项目owner / 0.3.26",
+        "final_closure": "CLOSED — 2026-09-16用户最终裁定；仅定义/来源治理，不代表八项产品Gate通过；仓库封存待承载本裁定的G PR通过CI并合并dev生效。"
       }
     },
     {
@@ -1175,7 +1175,7 @@
         "merged_baseline_and_reused_evidence": "A0源码inventory与54项总账",
         "subsequent_impact_and_current_checks": "G新增/变更文件映射，证据等级和未知保留",
         "disposition_and_follow_up": "本版对账完成后继续OPEN；全审非本轮完成，审计owner / 每版本、0.3.25–26",
-        "final_closure": "PENDING USER DISPOSITION"
+        "final_closure": "OPEN — 持续覆盖工作面，既有owner与后续里程碑保持；不随0.3.12技术关闭而关闭。"
       }
     },
     {
@@ -1362,7 +1362,7 @@
         "merged_baseline_and_reused_evidence": "A0安全链候选范围",
         "subsequent_impact_and_current_checks": "G当前生产组合/负向、真实链与变更覆盖",
         "disposition_and_follow_up": "OPEN持续工作面；未审分支由Vela安全owner / 0.3.15–17、0.3.26",
-        "final_closure": "PENDING USER DISPOSITION"
+        "final_closure": "OPEN — 持续覆盖工作面，既有owner与后续里程碑保持；不随0.3.12技术关闭而关闭。"
       }
     },
     {
@@ -1384,7 +1384,7 @@
         "merged_baseline_and_reused_evidence": "A0普通Host/tools",
         "subsequent_impact_and_current_checks": "G公共JSON、ACK/TBB/Remove及小smoke",
         "disposition_and_follow_up": "OPEN；不等全部工具/AE Action覆盖，Host owner / 0.3.18–22、0.3.26",
-        "final_closure": "PENDING USER DISPOSITION"
+        "final_closure": "OPEN — 持续覆盖工作面，既有owner与后续里程碑保持；不随0.3.12技术关闭而关闭。"
       }
     },
     {
@@ -1406,7 +1406,7 @@
         "merged_baseline_and_reused_evidence": "A0测试/CI/helper",
         "subsequent_impact_and_current_checks": "G实际发现/执行/skip，受控边界标注与现有PR CI",
         "disposition_and_follow_up": "OPEN；helper/供应链全审未完成，测试/CI owner / 每版本、0.3.25–26",
-        "final_closure": "PENDING USER DISPOSITION"
+        "final_closure": "OPEN — 持续覆盖工作面，既有owner与后续里程碑保持；不随0.3.12技术关闭而关闭。"
       }
     },
     {
@@ -1428,7 +1428,7 @@
         "merged_baseline_and_reused_evidence": "A0实机工作面",
         "subsequent_impact_and_current_checks": "G真实Provider/AE/CEP/UI与受控组合分列",
         "disposition_and_follow_up": "OPEN；D自然短窗口、AE版本、IME/DPI/长时仍明确未测，实机owner / 每版本、0.3.25–26",
-        "final_closure": "PENDING USER DISPOSITION"
+        "final_closure": "OPEN — 持续覆盖工作面，既有owner与后续里程碑保持；不随0.3.12技术关闭而关闭。"
       }
     }
   ],
