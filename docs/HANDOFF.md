@@ -1,3 +1,3 @@
 # Development Handoff
 
-**E 已通过 PR #211 合并 dev，五项保持 TARGETED_ACCEPTED；当前 F / UX-03 TARGETED_ACCEPTED — 有界混合证据 / F READY FOR COMMIT / PR。** 见 [F 报告](reports/vela-0.3.12-f-ux03-readable-review.md)与 [E 报告](reports/vela-0.3.12-e-user-assets-exit-safety.md)。真实单步 Provider/AE、长名称 Review、当前 CEP 受控完整两步生产组合与最终 197/197 离线结果分列；补验未改代码、未重跑 suites。真实 Provider 两步端到端仍 NOT COVERED，原 PROVIDER_TIMEOUT 未解释/未修复，G 必须重新处置覆盖欠项与可用性风险。既有接受与限制保持，本轮不进入 G。
+**0.3.12-G：INTEGRATED_ACCEPTED / READY FOR COMMIT / PR**（2026-09-16最终裁定），见 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)。0.3.12技术关闭与封存裁定已通过：20项原缺陷/治理条目按有界证据CLOSED，5项持续覆盖OPEN，其余29项不变，54个原ID保留。D/F旧超时残余风险已接受，原FAIL、原因及tokens unknown保留；实验限制与120000ms整个请求截止不变，后续观测/资格复核及立即重新处置条件由G报告持有。**仓库封存待承载本裁定的G PR通过CI并合并dev后生效**，当前文档修改尚未提交，不宣称远端已封存。最终198/198基线不变，本轮仅文档检查，不进入0.3.13。

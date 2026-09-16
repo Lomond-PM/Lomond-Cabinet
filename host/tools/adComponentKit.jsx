@@ -1127,35 +1127,10 @@
         return signedExpressionValue(text, "tool") === "adComponentKit";
     }
 
-    function restoreOrClearSignedExpression(prop, artifactId) {
-        var expression = "";
-        var previousExpression = "";
-        var previousEnabled = false;
-        if (!prop) {
-            return "skipped";
-        }
-        try {
-            expression = prop.expression || "";
-        } catch (err1) {
-            return "skipped";
-        }
-        if (!isToolOwnedExpression(expression, artifactId)) {
-            return "skipped";
-        }
-        previousEnabled = signedExpressionValue(expression, "previousExpressionEnabled") === "true";
-        previousExpression = decodeText(signedExpressionValue(expression, "previousExpressionEncoded"));
-        try {
-            if (previousExpression) {
-                prop.expression = previousExpression;
-                prop.expressionEnabled = previousEnabled;
-                return "restored";
-            }
-            prop.expression = "";
-            prop.expressionEnabled = false;
-            return "cleared";
-        } catch (err2) {
-            return "skipped";
-        }
+    function restoreOrClearSignedExpression(entry) {
+        entry.prop.expression = entry.previousExpression;
+        entry.prop.expressionEnabled = entry.previousExpression ? entry.previousEnabled : false;
+        return entry.previousExpression ? "restored" : "cleared";
     }
 
     function expressionString(value) {
@@ -1524,70 +1499,65 @@
         return layers;
     }
 
-    function scanSignedExpressionsInGroup(group, artifactId, result) {
-        var i;
-        var child;
-        var action;
+    function collectRemoveExpressionRecovery(group, artifactId, entries) {
+        var i, expression, encoded, enabled, previous;
         if (!group) {
-            return;
+            throw new Error("Property unavailable while checking Remove recovery.");
         }
-        try {
-            action = restoreOrClearSignedExpression(group, artifactId);
-            if (action === "restored") {
-                result.restoredExpressions++;
-            } else if (action === "cleared") {
-                result.clearedExpressions++;
-            }
-        } catch (propErr) {
-            result.skippedItems++;
-        }
-        try {
-            if (!group.numProperties) {
-                return;
-            }
-            for (i = 1; i <= group.numProperties; i++) {
-                try {
-                    child = group.property(i);
-                    scanSignedExpressionsInGroup(child, artifactId, result);
-                } catch (childErr) {
-                    result.skippedItems++;
+        if (group.canSetExpression === true) {
+            expression = group.expression;
+            if (isToolOwnedExpression(expression, artifactId)) {
+                // Presence is distinct from the valid empty original expression.
+                encoded = /^\/\/ previousExpressionEncoded=(.*)$/m.exec(expression);
+                enabled = /^\/\/ previousExpressionEnabled=(true|false)$/m.exec(expression);
+                if (!encoded || !enabled) {
+                    throw new Error("Original expression recovery fields are missing or invalid.");
                 }
+                try { previous = decodeURIComponent(encoded[1]); }
+                catch (decodeError) { throw new Error("Original expression recovery encoding is invalid."); }
+                entries[entries.length] = { prop: group, previousExpression: previous, previousEnabled: enabled[1] === "true" };
             }
-        } catch (err) {
+        }
+        for (i = 1; i <= group.numProperties; i++) {
+            collectRemoveExpressionRecovery(group.property(i), artifactId, entries);
         }
     }
 
-    function restoreOrClearArtifactExpressions(comp, artifactId, result) {
-        var i;
-        for (i = 1; i <= comp.numLayers; i++) {
-            try {
-                scanSignedExpressionsInGroup(comp.layer(i), artifactId, result);
-            } catch (err) {
-                result.skippedItems++;
+    function prepareRemoveRecovery(comp, artifactId) {
+        var plan = { layers: findLayersByArtifactId(comp, artifactId), expressions: [] };
+        var i, item;
+        for (i = 0; i < plan.layers.length; i++) {
+            item = plan.layers[i];
+            if (item.data.role === "sourceLayerBinding") {
+                item.previousComment = restoredDetachComment(item.data);
             }
+        }
+        for (i = 1; i <= comp.numLayers; i++) {
+            collectRemoveExpressionRecovery(comp.layer(i), artifactId, plan.expressions);
+        }
+        return plan;
+    }
+
+    function restoreOrClearArtifactExpressions(entries, result) {
+        var i, action;
+        for (i = 0; i < entries.length; i++) {
+            action = restoreOrClearSignedExpression(entries[i]);
+            if (action === "restored") { result.restoredExpressions++; }
+            else { result.clearedExpressions++; }
         }
     }
 
     function restoreSourceLayerBinding(item, result) {
-        var previousComment;
-        try {
-            item.layer.parent = null;
-        } catch (err1) {
-        }
-        previousComment = decodeText(item.data.previousCommentEncoded || "");
-        try {
-            item.layer.comment = previousComment;
-        } catch (err2) {
-            result.skippedItems++;
-        }
+        item.layer.parent = null;
+        item.layer.comment = item.previousComment;
     }
 
     function shouldDeleteArtifactLayer(role) {
         return role === "controller" || role === "generatedLayer" || role === "helperLayer" || role === "item" || role === "itemBg" || role === "icon";
     }
 
-    function removeArtifactById(comp, artifactId) {
-        var layers = findLayersByArtifactId(comp, artifactId);
+    function removeArtifactById(comp, artifactId, plan) {
+        var layers = plan.layers;
         var result = {
             removedLayers: 0,
             restoredExpressions: 0,
@@ -1613,18 +1583,14 @@
             }
         }
 
-        restoreOrClearArtifactExpressions(comp, artifactId, result);
+        restoreOrClearArtifactExpressions(plan.expressions, result);
 
         deleteItems.sort(function (a, b) {
             return b.index - a.index;
         });
         for (i = 0; i < deleteItems.length; i++) {
-            try {
-                deleteItems[i].remove();
-                result.removedLayers++;
-            } catch (err) {
-                result.skippedItems++;
-            }
+            deleteItems[i].remove();
+            result.removedLayers++;
         }
         return result;
     }
@@ -1633,6 +1599,7 @@
         var comp = getComp();
         var selectedInfo;
         var result;
+        var plan;
         if (!comp) {
             return jsonResult(false, "Open a composition before removing a generated component.");
         }
@@ -1640,12 +1607,17 @@
         if (!selectedInfo || !selectedInfo.artifactId) {
             return jsonResult(false, "Select a new Ad Component Kit generated layer or controller with Lomond metadata.");
         }
+        try {
+            plan = prepareRemoveRecovery(comp, selectedInfo.artifactId);
+        } catch (preflightError) {
+            return jsonResult(false, "Remove preflight failed: " + preflightError.toString());
+        }
         app.beginUndoGroup("AE Toolbox Remove Generated Component");
         try {
-            result = removeArtifactById(comp, selectedInfo.artifactId);
+            result = removeArtifactById(comp, selectedInfo.artifactId, plan);
         } catch (err) {
             app.endUndoGroup();
-            return jsonResult(false, "Remove generated component failed: " + err.toString());
+            return jsonResult(false, "Remove execution partial failure; no rollback: " + err.toString());
         }
         app.endUndoGroup();
         if (!result.removedLayers && !result.restoredExpressions && !result.clearedExpressions) {

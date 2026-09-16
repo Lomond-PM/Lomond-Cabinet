@@ -402,3 +402,112 @@
 ## 新增材料边界
 
 R1指导书、54项JSON、audit-baseline-0.3.11下12份材料（manifest含11项）及1份局部归档.gitignore、本报告及A0报告共17个新增未跟踪文件；导入/哈希与zip内部索引见A0报告。它们不是388基线中的新生产源码，后续正式提交后需要以新commit刷新覆盖快照。
+
+## G：本版源码差异覆盖增量（2026-09-13）
+
+本节追加于A0历史388文件快照之后，不改历史blob/审阅数。范围为 `b93d0d8` → 合并基线 `17e1b67` 加G工作树：**33个生产文件、60个scripts文件**（含新Remove suite）。没有生成新全仓hash；原始54项及25项当前映射见 [G综合报告](vela-0.3.12-integrated-acceptance.md)。
+
+下表明确区分：B1–F局部源码审阅为 **reused**；G当前suite执行为 **198/198 PASS、0 skip**；当前CEP/Provider/AE结果按报告分级。加载/执行通过不等于整文件源码审计完成。G完整追踪的是Remove新增恢复预检与相关写入链，其他文件只核对受影响入口/交界；未全审分支保留owner与里程碑。没有把COV-03–06关闭。
+
+| 生产文件 | 原ID/owner范围 | 源码审阅/方法 | G验证及继承证据 | 剩余覆盖/完成点 |
+|---|---|---|---|---|
+| `client/css/velaSurface.css` | UX-03、AP/UX | E/F文案/样式审阅reused；G真实Review两步骤内容/可达性 | i18n freshness、readable Review78；F中英宽窄reused | 不是全局视觉重构/全部DPI验收；UI owner /0.3.13–14 |
+| `client/js/appearance/appearanceResolver.js` | AP-01–03/UX-01–02 | E保存/所有权/离开链审阅reused；G实际消费链局部复核 | E190及相关UI/store suite；当前CEP隔离storage26；真实Palette/Settings | 其余overlay/IME/异步storage分支未全审；UI/Store owner /0.3.13–14 |
+| `client/js/appearance/appearanceStateStore.js` | AP-01–03/UX-01–02 | E保存/所有权/离开链审阅reused；G实际消费链局部复核 | E190及相关UI/store suite；当前CEP隔离storage26；真实Palette/Settings | 其余overlay/IME/异步storage分支未全审；UI/Store owner /0.3.13–14 |
+| `client/js/designTuning/designTuningResolver.js` | AP-01–03/UX-01–02 | E保存/所有权/离开链审阅reused；G实际消费链局部复核 | E190及相关UI/store suite；当前CEP隔离storage26；真实Palette/Settings | 其余overlay/IME/异步storage分支未全审；UI/Store owner /0.3.13–14 |
+| `client/js/designTuning/designTuningStateStore.js` | AP-01–03/UX-01–02 | E保存/所有权/离开链审阅reused；G实际消费链局部复核 | E190及相关UI/store suite；当前CEP隔离storage26；真实Palette/Settings | 其余overlay/IME/异步storage分支未全审；UI/Store owner /0.3.13–14 |
+| `client/js/i18n.js` | UX-03、AP/UX | E/F文案/样式审阅reused；G真实Review两步骤内容/可达性 | i18n freshness、readable Review78；F中英宽窄reused | 不是全局视觉重构/全部DPI验收；UI owner /0.3.13–14 |
+| `client/js/main.js` | A05/A06/A12、AP/UX、UX-03 | D/E/F接线审阅reused；G后台Owner＋Settings＋真实Review入口核对 | source routing、settings、lifecycle、assets、readable review；实际UI | 自然短窗口/全main逐行审阅未完成；Composition/UI owner /0.3.13–17 |
+| `client/js/palette/paletteStore.js` | AP-01–03/UX-01–02 | E保存/所有权/离开链审阅reused；G实际消费链局部复核 | E190及相关UI/store suite；当前CEP隔离storage26；真实Palette/Settings | 其余overlay/IME/异步storage分支未全审；UI/Store owner /0.3.13–14 |
+| `client/js/proceduralPaletteStore.js` | AP-01–03/UX-01–02 | E保存/所有权/离开链审阅reused；G实际消费链局部复核 | E190及相关UI/store suite；当前CEP隔离storage26；真实Palette/Settings | 其余overlay/IME/异步storage分支未全审；UI/Store owner /0.3.13–14 |
+| `client/js/proceduralPaletteWorkspace.js` | AP-01–03/UX-01–02 | E保存/所有权/离开链审阅reused；G实际消费链局部复核 | E190及相关UI/store suite；当前CEP隔离storage26；真实Palette/Settings | 其余overlay/IME/异步storage分支未全审；UI/Store owner /0.3.13–14 |
+| `client/js/system/systemSurfaceRouter.js` | AP-01–03/UX-01–02 | E保存/所有权/离开链审阅reused；G实际消费链局部复核 | E190及相关UI/store suite；当前CEP隔离storage26；真实Palette/Settings | 其余overlay/IME/异步storage分支未全审；UI/Store owner /0.3.13–14 |
+| `client/js/ui/coreUi.js` | AP-01–03/UX-01–02 | E保存/所有权/离开链审阅reused；G实际消费链局部复核 | E190及相关UI/store suite；当前CEP隔离storage26；真实Palette/Settings | 其余overlay/IME/异步storage分支未全审；UI/Store owner /0.3.13–14 |
+| `client/js/vela/velaAgentDriver.js` | A02/A03/A06、UX-03 | C2/D/F目标关联/事实/停止/Review局部审阅reused；G交界复核 | execution facts597、D lifecycle208、Review78；CEP六个在途组合及真实链 | 晚到/unknown用受控边界；Runtime owner /0.3.17、0.3.25 |
+| `client/js/vela/velaAgentRuntime.js` | A04、A02/A03、A06 | C1/C2/D事件与事实消费审阅reused；G Session/trajectory观测 | Session279、execution facts597、D受控CEP；真实Provider执行 | 持久历史、其余消费者全分支；Session owner /0.3.16–17、0.3.23 |
+| `client/js/vela/velaAgentRuntimeOwner.js` | A02/A03/A06、UX-03 | C2/D/F目标关联/事实/停止/Review局部审阅reused；G交界复核 | execution facts597、D lifecycle208、Review78；CEP六个在途组合及真实链 | 晚到/unknown用受控边界；Runtime owner /0.3.17、0.3.25 |
+| `client/js/vela/velaAtomicActivationCoordinator.js` | A04/A05/A06/A12 | D唯一holder/Authority后发布审阅reused；G当前组合调用核对 | D当前CEP162、C1/C2回归；后台selectedB/holderA真实UI | 自然在途UIDisable/所有分支未全审；Composition/Authority owner /0.3.13–17 |
+| `client/js/vela/velaCapabilityContracts.js` | G-02、UX-03 | G-02合法名称/UTF-8预算审阅reused；F显示不改参数 | capability contracts、Unicode、readable Review；G完整回归 | 不扩展能力/名称预算；Capability owner /0.3.15 |
+| `client/js/vela/velaConfirmationView.js` | UX-03、A05/A12 | F当前objective及兼容Review来源审阅reused；G source/UI/lifecycle接口核对 | Review78、Surface239等；真实两个Review、CEP同实例10 | 兼容入口与自然UI生命周期仍有限；Surface/Review owner /0.3.13–14、0.3.17 |
+| `client/js/vela/velaConfirmedAuthorityComposer.js` | A04/A05/A06/A12 | D唯一holder/Authority后发布审阅reused；G当前组合调用核对 | D当前CEP162、C1/C2回归；后台selectedB/holderA真实UI | 自然在途UIDisable/所有分支未全审；Composition/Authority owner /0.3.13–17 |
+| `client/js/vela/velaController.js` | UX-03、A05/A12 | F当前objective及兼容Review来源审阅reused；G source/UI/lifecycle接口核对 | Review78、Surface239等；真实两个Review、CEP同实例10 | 兼容入口与自然UI生命周期仍有限；Surface/Review owner /0.3.13–14、0.3.17 |
+| `client/js/vela/velaConversationComposition.js` | A04/A05/A06/A12 | D唯一holder/Authority后发布审阅reused；G当前组合调用核对 | D当前CEP162、C1/C2回归；后台selectedB/holderA真实UI | 自然在途UIDisable/所有分支未全审；Composition/Authority owner /0.3.13–17 |
+| `client/js/vela/velaConversationOwnership.js` | A04/A05/A06/A12 | D唯一holder/Authority后发布审阅reused；G当前组合调用核对 | D当前CEP162、C1/C2回归；后台selectedB/holderA真实UI | 自然在途UIDisable/所有分支未全审；Composition/Authority owner /0.3.13–17 |
+| `client/js/vela/velaExecutionAdapter.js` | A02/A03/A06、UX-03 | C2/D/F目标关联/事实/停止/Review局部审阅reused；G交界复核 | execution facts597、D lifecycle208、Review78；CEP六个在途组合及真实链 | 晚到/unknown用受控边界；Runtime owner /0.3.17、0.3.25 |
+| `client/js/vela/velaExecutionPreflight.js` | A02/A03/A06、UX-03 | C2/D/F目标关联/事实/停止/Review局部审阅reused；G交界复核 | execution facts597、D lifecycle208、Review78；CEP六个在途组合及真实链 | 晚到/unknown用受控边界；Runtime owner /0.3.17、0.3.25 |
+| `client/js/vela/velaProviderAdapter.js` | A07/A12 | D终态/失效审阅reused；G截止计时/请求分支/流终态读取 | stream lifecycle/monotonicity/publication、D；G真实3次正常流 | 实际token/偶发延迟原因未知；Provider owner /0.3.16、0.3.25 |
+| `client/js/vela/velaProviderStreamAssembler.js` | A07/A12 | D终态/失效审阅reused；G截止计时/请求分支/流终态读取 | stream lifecycle/monotonicity/publication、D；G真实3次正常流 | 实际token/偶发延迟原因未知；Provider owner /0.3.16、0.3.25 |
+| `client/js/vela/velaReviewRuntimePort.js` | UX-03、A05/A12 | F当前objective及兼容Review来源审阅reused；G source/UI/lifecycle接口核对 | Review78、Surface239等；真实两个Review、CEP同实例10 | 兼容入口与自然UI生命周期仍有限；Surface/Review owner /0.3.13–14、0.3.17 |
+| `client/js/vela/velaRuntime.js` | A02/A03/A06、UX-03 | C2/D/F目标关联/事实/停止/Review局部审阅reused；G交界复核 | execution facts597、D lifecycle208、Review78；CEP六个在途组合及真实链 | 晚到/unknown用受控边界；Runtime owner /0.3.17、0.3.25 |
+| `client/js/vela/velaSessionRuntime.js` | A04、A02/A03、A06 | C1/C2/D事件与事实消费审阅reused；G Session/trajectory观测 | Session279、execution facts597、D受控CEP；真实Provider执行 | 持久历史、其余消费者全分支；Session owner /0.3.16–17、0.3.23 |
+| `client/js/vela/velaSurfaceController.js` | UX-03、A05/A12 | F当前objective及兼容Review来源审阅reused；G source/UI/lifecycle接口核对 | Review78、Surface239等；真实两个Review、CEP同实例10 | 兼容入口与自然UI生命周期仍有限；Surface/Review owner /0.3.13–14、0.3.17 |
+| `host/index.jsx` | A01/A11 | B1严格JSON入口/序列化审阅reused；G当前完整Host装载 | Host JSON入口/成员名/serialization、registry；当前AE正常返回 | 无JSON.parse/特殊键自然环境；Host owner /0.3.25 |
+| `host/tools/adComponentKit.jsx` | A08/A09、G Remove | B2几何/定稿局部审阅reused；G完整Remove恢复读→预检→写/删调用链复核 | Detach三suite、Feature/Grid/measurement；新Remove85；AE Grid/Feature Remove及4次Undo | 未改其他工具分支；Detach注册/UI与26.3；Host owner /0.3.18–22 |
+| `host/tools/textBackgroundBox.jsx` | A09 | M2/F1身份与转换审阅reused；G关联检查 | TBB coordinate/identity完整生产Host fixture；原AE证据reused | AVfallback/其他版本自然条件；Host owner /0.3.18–21 |
+
+以下60个测试/fixture/采集与生成脚本分别列出。`test-*.js`由原runner在当前全量实际执行；fixtures随消费者加载，不计独立suite；诊断/采集器不是产品入口，其历史使用不能算本次重新运行。源码未全审的测试/helper分支由测试/CI owner在后续变更及0.3.25–26完成。其他未变更文件仍按A0/各阶段既有覆盖记录，不自行升级。
+
+| scripts文件 | 实际角色与G证据 | 审阅边界/后续 |
+|---|---|---|
+| `scripts/capture-a08-detach.js` | 历史A08采集器；G未运行本文件，有限Host采集用本地脚本 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/diagnostics/velaLayerNameUnicodeCases.js` | 既有Unicode案例集，由名称/Host相关消费者使用 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/fixtures/ad-component-detach-harness.js` | 既有生产组合fixture，由相关正式suite加载；不是实际AE/Provider | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/fixtures/extendscript-logical-returns.js` | 既有生产组合fixture，由相关正式suite加载；不是实际AE/Provider | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/fixtures/feature-expression-contract.js` | 既有生产组合fixture，由相关正式suite加载；不是实际AE/Provider | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/fixtures/host-json-entry-harness.js` | 既有生产组合fixture，由相关正式suite加载；不是实际AE/Provider | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/fixtures/tbb-coordinate-harness.js` | 既有生产组合fixture，由相关正式suite加载；不是实际AE/Provider | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/fixtures/vela-execution-facts-harness.js` | 既有生产组合fixture，由相关正式suite加载；不是实际AE/Provider | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/fixtures/vela-provider-lifecycle-harness.js` | 既有生产组合fixture，由相关正式suite加载；不是实际AE/Provider | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/fixtures/vela-review-read-equivalence.js` | 既有生产组合fixture，由相关正式suite加载；不是实际AE/Provider | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/fixtures/vela-trajectory-harness.js` | 既有生产组合fixture，由相关正式suite加载；不是实际AE/Provider | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/report-i18n-usage.js` | 原生成脚本freshness检查执行；不手工生成报告 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-ad-component-coordinate-measurement.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-ad-component-detach-finalize.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-ad-component-detach-locator.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-ad-component-detach.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-appearance-runtime-stability.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-button-variant-provenance.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-calibration-authority-convergence.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-calibration-consumer-gaps.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-core-ui-bezier-curve-field.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-design-tuning-infrastructure.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-feature-dynamic-geometry.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-generated-report-guard.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-host-json-entry.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-host-json-member-admission.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-host-json-serialization.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-palette-workspace-continuity.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-primary-text-palette-assignment.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-shared-select-lifecycle.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-tbb-coordinate-safety.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-tbb-identity-safety.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-typography-appearance-foundation.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-user-assets-exit-safety.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-agent-driver.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-agent-production-lifecycle.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-agent-runtime-owner.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-agent-runtime.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-capability-contracts.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-context-selection.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-conversation-ownership.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-execution-facts-verification.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-observation-turn-isolation.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-provider-production-e2e.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-provider-stream-assembler.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-provider-stream-lifecycle.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-provider-stream-publication.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-provider-task-lifecycle.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-provider-terminal-monotonicity.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-readable-review.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-review-runtime-seam.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-runtime.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-session-runtime.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-settings-integration.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-source-bound-routing.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-spacing-authority.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-surface-bootstrap-boundary.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-surface-controller.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-vela-verified-trajectory.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | B1–F变更证据reused；G执行/依赖映射，不宣称全部测试源码深审 |
+| `scripts/test-ad-component-remove-recovery.js` | 当前198个suite中的正式测试；生产模块/受控边界依该suite声明 | G新增反例与恢复失败边界逐项复核；85断言PASS |
+
+文档、历史证据JSON/归档与当前入口变化不算新增生产源码；其角色由A0导入记录和各阶段报告持有。当前G仅更新既有报告/总账/覆盖入口及一份综合报告，不递归重核历史raw。CI workflow/runner的发现与隔离规则未由G修改；已合并PR的成功CI与G本地198/198、未来G PR CI三者分开。
