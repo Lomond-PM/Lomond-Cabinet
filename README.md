@@ -2,15 +2,16 @@
 
 Lomond Cabinet is an After Effects CEP extension that combines a registry-driven tool system, procedural Home visuals, and the experimental Vela local-assistant surface.
 
-- **Current product version metadata:** `0.3.6` (unpublished)
-- **Latest published tag:** `v0.3.5`
+- **Current product version metadata:** `0.3.12`
+- **Release identity:** `v0.3.12 — Legacy`
+- **Publication authority:** the immutable GitHub `v0.3.12` tag / Release
 - **Current sealed feature baseline:** `0.3.12`
 - **Default development branch:** `dev`
 - **Extension bundle id:** `com.kevin.aetoolbox`
 - **Manifest menu name:** `AE Toolbox`
 - **Visible panel name:** `Lomond Cabinet`
 
-The **0.3.12 — Baseline Safety & Fact-chain Closure** milestone is COMPLETE / SEALED on `dev` after PR #213 and its successful Project checks. The repository's package metadata still reports `0.3.6`; a dedicated release-prep will synchronize the package version and cut the sealed pre-rebuild baseline as **`v0.3.12 — Legacy`** before the 0.3.13 / 0.3.14 UI rebuild. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default.
+The **0.3.12 — Baseline Safety & Fact-chain Closure** milestone is COMPLETE / SEALED on `dev` after PR #213 and its successful Project checks. Package metadata is aligned to `0.3.12` for the **Legacy** cut that freezes the product immediately before the 0.3.13 / 0.3.14 UI rebuild. Maintained current-state docs intentionally do not duplicate a transient published/unpublished flag: whether the Legacy cut has been published is determined by the immutable GitHub `v0.3.12` tag / Release. Vela remains an **Experimental Preview**, and production Provider activation remains locked because no model is qualified or selected as the default.
 
 当前 Vela 的 0.3.12 最终开发基线为 **198/198 PASS，0 FAIL，0 skip**。20 项原缺陷/治理条目按 G 的有界证据 CLOSED，G-10 / COV-03～06 持续 OPEN，其余原 ID 沿后续路线；Provider 历史超时的原 FAIL 和 unknown 原因保持。下一开发里程碑是 **0.3.13 — Visual Baseline & UI Platform Rebuild**。UI Lab 的基础视觉方向已经获得用户认可，0.3.13 不重新发散审美；Liquid Glass 继续作为独立、capability-gated、可降级的材质实验，不阻塞共享平台和非玻璃页面工作。见 [唯一当前排期](docs/VELA_ROADMAP.md)、[已实现事实](docs/PROJECT_STATE.md) 和 [0.3.12 综合验收](docs/reports/vela-0.3.12-integrated-acceptance.md)。
 
@@ -167,10 +168,8 @@ task branch → dev → main → annotated version tag
 - Promote only accepted `dev` to `main`.
 - Create release tags from the accepted release commit on `main`.
 - Published tags are immutable and must never be moved.
-- After publication, perform a **mandatory post-release state reconciliation** so `README.md`, `docs/PROJECT_STATE.md`, and `docs/HANDOFF.md` identify the newly published version/tag rather than the preceding release candidate.
-- After that reconciliation, keep `main` and `dev` on the same post-release documentation commit before new development starts.
-
-This post-publication step is part of the release workflow, not optional cleanup. Release-preparation documents may legitimately describe a candidate before publication; publication is not considered administratively closed until the maintained current-state documents are reconciled.
+- Release-prep documents describe the intended durable release identity before publication; publication itself is represented by the GitHub tag / Release and does not require a second documentation-only commit when the released contents match the prepared state.
+- Reconcile maintained docs after publication only when the actual tag, release contents, version identity, or support boundary differs from what was prepared.
 
 Before modifying the project, read:
 
@@ -183,7 +182,7 @@ docs/HANDOFF.md
 
 ## Version and release status
 
-The package currently still reports **0.3.6**, and the latest published release remains immutable **`v0.3.5`**. The sealed 0.3.12 feature baseline on `dev` is the next intended release cut and will be published as **`v0.3.12 — Legacy`** before the major UI rebuild. A dedicated release-prep must synchronize the version sources and CHANGELOG before `dev → main`; do not tag the current `0.3.6` package as `v0.3.12` without that synchronization.
+The current package identity is **`0.3.12 — Legacy`**. `VERSION`, both manifest fields, and Host `projectVersion` are synchronized to `0.3.12`. The immutable GitHub **`v0.3.12` tag / Release** is the authoritative publication marker; this README intentionally remains valid both immediately before and immediately after that publication event.
 
 Keep these synchronized for the Legacy release and future releases:
 
@@ -197,7 +196,7 @@ Keep these synchronized for the Legacy release and future releases:
 
 `AEToolbox.hostApiVersion` is an independent Host contract version and remains `1.0.0`; it is not the product version.
 
-The next development milestone after the Legacy cut is **0.3.13 — Visual Baseline & UI Platform Rebuild**. The accepted UI Lab visual direction is the starting baseline; Liquid Glass remains an exploratory material capability rather than a prerequisite for the platform rebuild. See the [canonical roadmap](docs/VELA_ROADMAP.md).
+The next development milestone is **0.3.13 — Visual Baseline & UI Platform Rebuild**. The accepted UI Lab visual direction is the starting baseline; Liquid Glass remains an exploratory material capability rather than a prerequisite for the platform rebuild. See the [canonical roadmap](docs/VELA_ROADMAP.md).
 
 ## Known issues and release history
 
