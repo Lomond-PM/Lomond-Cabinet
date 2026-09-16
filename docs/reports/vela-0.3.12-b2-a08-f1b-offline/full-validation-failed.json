@@ -1,0 +1,10 @@
+[
+  {
+    "label": "full-offline",
+    "command": "node scripts/run-all-tests.js",
+    "started": "2026-09-11T02:15:54.320Z",
+    "ended": "2026-09-11T02:16:21.354Z",
+    "exit": 1,
+    "log": "full-offline.log"
+  }
+]

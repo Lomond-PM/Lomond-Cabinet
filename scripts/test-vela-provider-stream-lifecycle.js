@@ -56,7 +56,7 @@ async function started(provider) { const handle = provider.start(input); await P
 
     const failed = harness(); const failureHandle = await started(failed.provider); const failureCall = failed.calls[0]; try { failureCall.request.onChunk("data: {bad}\n\n"); failureCall.pending.resolve(snapshot()); } catch (streamError) { failureCall.pending.reject(new failed.protocol.VelaProtocolError(failed.protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID)); }
     const failureResult = await failureHandle.promise;
-    check(failureResult.envelope.error.code === "PROVIDER_RESPONSE_INVALID" && failed.provider.getDiagnostics().terminalFailureBoundary === "transport-read", "Malformed partial stream fails before terminal parser admission");
+    check(failureResult.envelope.error.code === "PROVIDER_RESPONSE_INVALID" && failed.provider.getDiagnostics().terminalFailureBoundary === "stream-assembly", "Malformed partial stream fails before terminal parser admission");
     const recovered = await started(failed.provider); const recoveredCall = failed.calls[1]; await complete(recoveredCall, failed.protocol, "ok");
     check((await recovered.promise).envelope.text === "ok", "Failed stream releases activeRequest for the next request");
 

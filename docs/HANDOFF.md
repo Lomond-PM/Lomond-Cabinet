@@ -1,13 +1,3 @@
 # Development Handoff
 
-Current Vela milestone: **0.3.9 — Streaming Response & Reasoning Surface, COMPLETE / SEALED / merged into dev** (PR #182). Next: **0.3.10 — Context Architecture**; this handoff does not begin its implementation.
-
-- [Current project state](PROJECT_STATE.md): implementation defaults, limitations and acceptance status.
-- [Canonical Vela roadmap](VELA_ROADMAP.md): sole current milestone/future-scope authority.
-- [Frozen Agent architecture](design/vela-agent-architecture.md): normative boundaries, unchanged; amendment NONE.
-- [0.3.9 C2 closure](reports/vela-0.3.9-c2-closure.md): 171/171 offline PASS, user-manual real AE PASS, no correctness blocker. Historical refusal is non-reproduced, not pending acceptance.
-- [AGENTS.md](../AGENTS.md): development and validation rules.
-
-Package metadata remains **0.3.6**, latest recorded published tag **v0.3.5**. Feature completion is not a package release. The [0.3.6 closure](design/vela-agent-0.3.6-closure.md) retains that release-preparation history; no release/main/tag operation is authorized by this handoff.
-
-Do not reopen sealed 0.3.9 for provider verbosity, cross-turn history, cards/activity/telemetry or Context implementation. Consult the roadmap for their future ownership. Raw reasoning remains untrusted presentation data and must not become model context, Observation or Authority. Keep historical evidence intact and require separate authorization for commit/push or new implementation work.
+**0.3.12-G：INTEGRATED_ACCEPTED / READY FOR COMMIT / PR**（2026-09-16最终裁定），见 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)。0.3.12技术关闭与封存裁定已通过：20项原缺陷/治理条目按有界证据CLOSED，5项持续覆盖OPEN，其余29项不变，54个原ID保留。D/F旧超时残余风险已接受，原FAIL、原因及tokens unknown保留；实验限制与120000ms整个请求截止不变，后续观测/资格复核及立即重新处置条件由G报告持有。**仓库封存待承载本裁定的G PR通过CI并合并dev后生效**，当前文档修改尚未提交，不宣称远端已封存。最终198/198基线不变，本轮仅文档检查，不进入0.3.13。

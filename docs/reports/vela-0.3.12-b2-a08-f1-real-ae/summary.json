@@ -1,0 +1,68 @@
+{
+  "phase": "A08-F1 limited real AE revalidation",
+  "status": "REAL AE REVALIDATION FAIL; A08 not TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+  "groups": [
+    {
+      "id": "F1-AE-01",
+      "status": "PASS",
+      "evidence": [
+        "ae01-environment.json",
+        "ae01-comparison.json",
+        "ae01-inventory.json"
+      ]
+    },
+    {
+      "id": "F1-AE-02",
+      "status": "FAIL",
+      "reason": "Actual ordinary 2D Feature text source rejected by collapseTransformation guard before finalization",
+      "evidence": [
+        "feature-normal-detach-action.json",
+        "feature-normal-refusal-flags.json",
+        "feature-normal-refusal-comparison.json"
+      ]
+    },
+    {
+      "id": "F1-AE-03",
+      "status": "NOT COVERED",
+      "reason": "Stopped after F1-AE-02 failure; one-frame comp needs separately confirmed new longer disposable comp if resumed"
+    },
+    {
+      "id": "F1-AE-04",
+      "status": "NOT COVERED",
+      "reason": "Stopped after F1-AE-02 failure; original Grid remains bound"
+    }
+  ],
+  "counts": {
+    "requiredGroups": 4,
+    "pass": 1,
+    "fail": 1,
+    "notCovered": 2,
+    "actualDetachInvocations": 1,
+    "successfulFinalizations": 0,
+    "nativeUndoOperations": 0
+  },
+  "attribution": {
+    "observed": "Source 213: locked=false, threeDLayer=false, collapseTransformation=true, canSetCollapseTransformation=false. Generated shape 218 has the same flags. All sampled scales 100/100/100 and rotations 0.",
+    "workspaceCondition": "if (layer.locked || layer.threeDLayer || layer.collapseTransformation) { fail(layer.name + \" unsupported/locked layer\"); }",
+    "conclusion": "Actual public error + source flags match the over-broad guard in the workspace private helper. Background would meet the same rejection condition (source-only execution stop; inference for background). Private helper not independently exported/source-compared.",
+    "boundary": "No engine-internals investigation, no claim every AE Text/Shape always has identical flags; this actual supported scene is blocked.",
+    "next": "Separately authorize correction of the Text/Shape versus switchable precomp-collapse admission distinction and harness flag coverage; preserve current-frame contract and fixed tolerances; no in-acceptance production edits"
+  },
+  "postState": {
+    "snapshotComparison": "B1 versus independent B2 no differences at text/identity exact and numeric abs1e-6",
+    "evidence": "feature-normal-refusal-comparison.json",
+    "limit": "Observed recorded fields and preflight path; no global Host write counters or actual Undo evidence"
+  },
+  "historicalOffline": {
+    "focused": 421,
+    "a08": 251,
+    "suites": "187/187",
+    "rerunThisAcceptance": false
+  },
+  "boundaries": [
+    "No Create, animation preparation, project save/close/cleanup, Provider or Remove performed",
+    "No production/test edits, function replacement, registry/UI additions or Git writes",
+    "Original 63 historical files and F1 offline files preserved",
+    "User screenshot is B1 only; no B2 visual/Undo success claimed"
+  ]
+}

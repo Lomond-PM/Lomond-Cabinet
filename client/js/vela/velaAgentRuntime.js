@@ -137,7 +137,7 @@
         agentSequence += 1;
         scopeSequence += 1;
         agentId = "agent_" + String(agentSequence);
-        session = sessionRuntime.createSessionLog();
+        session = sessionRuntime.createSessionLog({ onListenerError: onListenerError });
         sessionId = session.getSessionId();
         scopeId = "scope_" + String(scopeSequence);
 

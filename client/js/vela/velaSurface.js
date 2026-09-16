@@ -210,6 +210,8 @@
             grip = node("span", "vela-resize-grip");
             grip.setAttribute("aria-hidden", "true");
             handle.appendChild(grip);
+            var conversationSlot = node("div", "vela-conversation-slot");
+            rootElement.appendChild(conversationSlot);
             rootElement.appendChild(transcriptSlot);
             rootElement.appendChild(composerSlot);
             controls.appendChild(statusSlot);
@@ -217,10 +219,10 @@
             rootElement.appendChild(controls);
             rootElement.appendChild(handle);
             mountElement.appendChild(rootElement);
-            elements = { root: rootElement, transcriptSlot: transcriptSlot, transcriptScroll: transcriptScroll, transcriptMessage: transcriptMessage, composerSlot: composerSlot, composer: composer, statusSlot: statusSlot, statusDot: statusDot, statusText: statusText, experimentalText: experimentalText, controls: controls, settingsSlot: settingsSlot, settingsButton: settingsButton, actionSlot: actionSlot, handle: handle, grip: grip };
+            elements = { conversationSlot: conversationSlot, root: rootElement, transcriptSlot: transcriptSlot, transcriptScroll: transcriptScroll, transcriptMessage: transcriptMessage, composerSlot: composerSlot, composer: composer, statusSlot: statusSlot, statusDot: statusDot, statusText: statusText, experimentalText: experimentalText, controls: controls, settingsSlot: settingsSlot, settingsButton: settingsButton, actionSlot: actionSlot, handle: handle, grip: grip };
             settingsHandler = function () { openSettings(settingsButton); };
             settingsButton.addEventListener("click", settingsHandler);
-            resizeController = ResizeController.create({ root: rootElement, handle: handle, transcript: transcriptScroll, composer: composerSlot, status: statusSlot, controls: controls, settings: settingsSlot, homeContainer: homeContainer, headerElement: headerElement, toolPoolElement: toolPoolElement, getUiScale: getUiScale, loadHeightPreference: loadHeightPreference, saveHeightPreference: saveHeightPreference, eventTarget: eventTarget });
+            resizeController = ResizeController.create({ conversations: conversationSlot, root: rootElement, handle: handle, transcript: transcriptScroll, composer: composerSlot, status: statusSlot, controls: controls, settings: settingsSlot, homeContainer: homeContainer, headerElement: headerElement, toolPoolElement: toolPoolElement, getUiScale: getUiScale, loadHeightPreference: loadHeightPreference, saveHeightPreference: saveHeightPreference, eventTarget: eventTarget });
             resizeController.start();
             mounted = true;
             bindSizeSignals();

@@ -48,6 +48,25 @@ async function run() {
     ["", "   ", "Hero\nTwo", "Hero\tTwo", "Hero\u0000", "Hero\u007f", "x".repeat(257), "中".repeat(86)].forEach((name) => rejects(() => contracts.validateRepresentationCapabilityParams("set-layer-name-v1", { name }), "Invalid or over-budget layer name is rejected."));
     rejects(() => contracts.validateRepresentationCapabilityParams("set-layer-name-v1", { name: "Hero", extra: true }), "Layer-name params reject extra keys.");
     rejects(() => contracts.validateRepresentationCapabilityParams("set-layer-name-v1", { name: { nested: true } }), "Layer-name params reject nested values.");
+    // G-02: code-unit fixtures call both actual public validators, not copies.
+    const intentGate = require("../client/js/vela/velaProviderIntentGate");
+    const unicodeCases = require("./diagnostics/velaLayerNameUnicodeCases");
+    for (const row of unicodeCases.observe()) {
+        check(row.accepted === row.valid, "G-02 " + row.entry + "/" + row.id + " acceptance");
+        check(row.codeUnits.length === row.name.length && row.codeUnits.every((c,i)=>c === row.name.charCodeAt(i)), "G-02 input UTF-16 identity retained");
+        if (row.bytes !== undefined) check(Buffer.byteLength(row.name,"utf8") === row.bytes && unescape(encodeURIComponent(row.name)).length === row.bytes, "G-02 exact byte boundary independently checked including over-limit strings");
+        if (/^(d800|dbff|dc00|dfff|reverse|two-high|pair-high|pair-low)/.test(row.id)) check(Array.from(row.name).some(c=>c.length === 1 && c.charCodeAt(0) >= 0xD800 && c.charCodeAt(0) <= 0xDFFF), "G-02 malformed fixture contains an actual lone UTF-16 surrogate, not replacement text");
+        if (row.valid) {
+            check(row.result.name === row.name && row.frozen && Object.keys(row.result).join(",") === "name", "G-02 exact frozen public result");
+            check(Buffer.byteLength(row.name,"utf8") === row.bytes && unescape(encodeURIComponent(row.name)).length === row.bytes, "G-02 independent UTF-8 references agree for valid scalar strings");
+        } else {
+            check(intentGate.evaluate({message:"将当前图层重命名为 Hero", capabilityId:"set-layer-name-v1",params:{name:row.name}}).reason === "invalid-proposal", "G-02 real Intent Gate rejects invalid params before target-name matching");
+            check(/^CAPABILITY_CONTRACT_INVALID:/.test(row.error.message), "G-02 existing public error code retained");
+        }
+    }
+    for (const entry of [params=>contracts.validateCapabilityParams(contracts.getLocalProjection("set-layer-name-v1"),params), params=>contracts.validateRepresentationCapabilityParams("set-layer-name-v1",params)]) {
+        for(const params of [{},{name:3},{name:null},{name:"Hero",extra:true},{name:[]},null]) rejects(()=>entry(params), "G-02 existing field/type rejection");
+    }
     const dormantSchema = adapterModule.buildDormantLocalProposalRepresentationSchema();
     check(Object.isFrozen(dormantSchema) && dormantSchema.oneOf.length === 2 && dormantSchema.oneOf[0].properties.proposal.properties.capabilityId.enum[0] === "set-opacity-v1" && dormantSchema.oneOf[1].properties.proposal.properties.capabilityId.enum[0] === "set-layer-name-v1", "ProviderAdapter exposes an isolated closed two-variant localProposal representation schema.");
     check(dormantSchema.oneOf[1].properties.proposal.properties.params.additionalProperties === false && dormantSchema.oneOf[1].properties.proposal.properties.params.required.join(",") === "name", "Dormant rename Provider schema permits only required params.name.");

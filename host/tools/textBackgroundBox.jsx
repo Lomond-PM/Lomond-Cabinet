@@ -4,7 +4,6 @@ var AEToolbox = AEToolbox || {};
     var U = AEToolbox.Util;
     var MN = AEToolbox.MN;
     var AE = AEToolbox.AE;
-    var FXU = AEToolbox.Effects;
     var SH = AEToolbox.Shape;
 
     AEToolbox.tools.textBackgroundBox = AEToolbox.tools.textBackgroundBox || {};
@@ -47,38 +46,38 @@ var AEToolbox = AEToolbox || {};
     }
 
     function addControls(layer, rect, opt) {
-        FXU.addSlider(layer, FX.RECT_SIZE_X, rect.width + opt.paddingX * 2);
-        FXU.addSlider(layer, FX.RECT_SIZE_Y, rect.height + opt.paddingY * 2);
-        FXU.addSlider(layer, FX.ROUNDNESS, opt.roundness);
+        addControl(layer, FX.RECT_SIZE_X, rect.width + opt.paddingX * 2, "ADBE Slider Control");
+        addControl(layer, FX.RECT_SIZE_Y, rect.height + opt.paddingY * 2, "ADBE Slider Control");
+        addControl(layer, FX.ROUNDNESS, opt.roundness, "ADBE Slider Control");
 
         if (opt.fillMode === "Solid Fill") {
-            FXU.addColor(layer, FX.FILL_COLOR, opt.fillColor);
-            FXU.addSlider(layer, FX.FILL_OPACITY, opt.fillOpacity);
+            addControl(layer, FX.FILL_COLOR, opt.fillColor, "ADBE Color Control");
+            addControl(layer, FX.FILL_OPACITY, opt.fillOpacity, "ADBE Slider Control");
         } else if (opt.fillMode === "Gradient Fill") {
-            FXU.addSlider(layer, FX.FILL_OPACITY, opt.fillOpacity);
+            addControl(layer, FX.FILL_OPACITY, opt.fillOpacity, "ADBE Slider Control");
         }
 
         if (opt.strokeMode === "Solid Stroke") {
-            FXU.addColor(layer, FX.STROKE_COLOR, opt.strokeColor);
-            FXU.addSlider(layer, FX.STROKE_WIDTH, opt.strokeWidth);
-            FXU.addSlider(layer, FX.STROKE_OPACITY, opt.strokeOpacity);
+            addControl(layer, FX.STROKE_COLOR, opt.strokeColor, "ADBE Color Control");
+            addControl(layer, FX.STROKE_WIDTH, opt.strokeWidth, "ADBE Slider Control");
+            addControl(layer, FX.STROKE_OPACITY, opt.strokeOpacity, "ADBE Slider Control");
         } else if (opt.strokeMode === "Gradient Stroke") {
-            FXU.addSlider(layer, FX.STROKE_WIDTH, opt.strokeWidth);
-            FXU.addSlider(layer, FX.STROKE_OPACITY, opt.strokeOpacity);
+            addControl(layer, FX.STROKE_WIDTH, opt.strokeWidth, "ADBE Slider Control");
+            addControl(layer, FX.STROKE_OPACITY, opt.strokeOpacity, "ADBE Slider Control");
         }
 
         if (opt.fillMode === "Gradient Fill" || opt.strokeMode === "Gradient Stroke") {
             var cx = rect.left + rect.width / 2;
             var cy = rect.top + rect.height / 2;
             var w = rect.width + opt.paddingX * 2;
-            FXU.addPoint(layer, FX.GRADIENT_START, [cx - w / 2, cy]);
-            FXU.addPoint(layer, FX.GRADIENT_END, [cx + w / 2, cy]);
+            addControl(layer, FX.GRADIENT_START, [cx - w / 2, cy], "ADBE Point Control");
+            addControl(layer, FX.GRADIENT_END, [cx + w / 2, cy], "ADBE Point Control");
         }
     }
 
     function bindGradientGraphic(item, isFill, opacityDefault) {
         if (!item) {
-            return;
+            fail("TBB_EXECUTION_FAILED", "Gradient property could not be created.");
         }
 
         var opacityProp = U.prop(item, isFill ? MN.FILL_OPACITY : MN.STROKE_OPACITY);
@@ -86,25 +85,25 @@ var AEToolbox = AEToolbox || {};
         var startProp = U.prop(item, MN.GRAD_START);
         var endProp = U.prop(item, MN.GRAD_END);
 
-        U.setValueSafe(opacityProp, opacityDefault);
+        strictValue(opacityProp, opacityDefault);
 
         if (isFill) {
-            U.setExpressionSafe(opacityProp, U.lines([
+            strictExpression(opacityProp, U.lines([
                 "effect(\"" + FX.FILL_OPACITY + "\")(1);"
             ]));
         } else {
-            U.setExpressionSafe(widthProp, "effect(\"" + FX.STROKE_WIDTH + "\")(1);");
-            U.setExpressionSafe(opacityProp, U.lines([
+            strictExpression(widthProp, "effect(\"" + FX.STROKE_WIDTH + "\")(1);");
+            strictExpression(opacityProp, U.lines([
                 "effect(\"" + FX.STROKE_OPACITY + "\")(1);"
             ]));
         }
 
-        U.setExpressionSafe(startProp, U.lines([
+        strictExpression(startProp, U.lines([
             "var p = effect(\"" + FX.GRADIENT_START + "\")(1);",
             "[p[0], p[1]];"
         ]));
 
-        U.setExpressionSafe(endProp, U.lines([
+        strictExpression(endProp, U.lines([
             "var p = effect(\"" + FX.GRADIENT_END + "\")(1);",
             "[p[0], p[1]];"
         ]));
@@ -113,15 +112,15 @@ var AEToolbox = AEToolbox || {};
     function bindSolidFill(fill, opt) {
         var fillColor = U.prop(fill, MN.FILL_COLOR);
         var fillOpacity = U.prop(fill, MN.FILL_OPACITY);
-        U.setColorSafe(fillColor, opt.fillColor);
-        U.setValueSafe(fillOpacity, opt.fillOpacity);
+        strictColor(fillColor, opt.fillColor);
+        strictValue(fillOpacity, opt.fillOpacity);
 
-        U.setExpressionSafe(fillColor, U.lines([
+        strictExpression(fillColor, U.lines([
             "var c = effect(\"" + FX.FILL_COLOR + "\")(1);",
             "[c[0], c[1], c[2], 1];"
         ]));
 
-        U.setExpressionSafe(fillOpacity, U.lines([
+        strictExpression(fillOpacity, U.lines([
             "effect(\"" + FX.FILL_OPACITY + "\")(1);"
         ]));
     }
@@ -130,18 +129,18 @@ var AEToolbox = AEToolbox || {};
         var strokeColor = U.prop(stroke, MN.STROKE_COLOR);
         var strokeWidth = U.prop(stroke, MN.STROKE_WIDTH);
         var strokeOpacity = U.prop(stroke, MN.STROKE_OPACITY);
-        U.setColorSafe(strokeColor, opt.strokeColor);
-        U.setValueSafe(strokeWidth, opt.strokeWidth);
-        U.setValueSafe(strokeOpacity, opt.strokeOpacity);
+        strictColor(strokeColor, opt.strokeColor);
+        strictValue(strokeWidth, opt.strokeWidth);
+        strictValue(strokeOpacity, opt.strokeOpacity);
 
-        U.setExpressionSafe(strokeColor, U.lines([
+        strictExpression(strokeColor, U.lines([
             "var c = effect(\"" + FX.STROKE_COLOR + "\")(1);",
             "[c[0], c[1], c[2], 1];"
         ]));
 
-        U.setExpressionSafe(strokeWidth, "effect(\"" + FX.STROKE_WIDTH + "\")(1);");
+        strictExpression(strokeWidth, "effect(\"" + FX.STROKE_WIDTH + "\")(1);");
 
-        U.setExpressionSafe(strokeOpacity, U.lines([
+        strictExpression(strokeOpacity, U.lines([
             "effect(\"" + FX.STROKE_OPACITY + "\")(1);"
         ]));
     }
@@ -156,17 +155,17 @@ var AEToolbox = AEToolbox || {};
         var rectPos = U.prop(rectPath, MN.RECT_POS);
         var rectRound = U.prop(rectPath, MN.RECT_ROUND);
 
-        U.setValueSafe(rectSize, [rect.width + opt.paddingX * 2, rect.height + opt.paddingY * 2]);
-        U.setValueSafe(rectPos, [rect.left + rect.width / 2, rect.top + rect.height / 2]);
-        U.setValueSafe(rectRound, opt.roundness);
+        strictValue(rectSize, [rect.width + opt.paddingX * 2, rect.height + opt.paddingY * 2]);
+        strictValue(rectPos, [rect.left + rect.width / 2, rect.top + rect.height / 2]);
+        strictValue(rectRound, opt.roundness);
 
-        U.setExpressionSafe(rectSize, U.lines([
+        strictExpression(rectSize, U.lines([
             "var x = effect(\"" + FX.RECT_SIZE_X + "\")(1);",
             "var y = effect(\"" + FX.RECT_SIZE_Y + "\")(1);",
             "[x, y];"
         ]));
 
-        U.setExpressionSafe(rectRound, "effect(\"" + FX.ROUNDNESS + "\")(1);");
+        strictExpression(rectRound, "effect(\"" + FX.ROUNDNESS + "\")(1);");
 
         if (opt.fillMode === "Solid Fill") {
             bindSolidFill(SH.addVectorItem(vectors, MN.FILL, "Solid Fill"), opt);
@@ -181,339 +180,451 @@ var AEToolbox = AEToolbox || {};
         }
     }
 
-    function layerVisualBoundsInComp(layer, t) {
-        var rect = null;
-        var points = [];
-        var compPoints = [];
-        var left;
-        var right;
-        var top;
-        var bottom;
-        var i;
-        var p;
+    // Private TBB contract. These are Host conversions, never expression APIs or affine substitutes.
+    var TIME_EPSILON = 1e-9;
+    var VALUE_EPSILON = 1e-4;
 
+    function fail(code, detail) {
+        throw new Error(code + ": " + detail);
+    }
+
+    function finite(value) {
+        return typeof value === "number" && isFinite(value);
+    }
+
+    function point2(value, code, detail) {
+        if (!value || typeof value !== "object" || typeof value.length !== "number" || value.length < 2 || !finite(value[0]) || !finite(value[1])) {
+            fail(code, detail);
+        }
+        return [value[0], value[1]];
+    }
+
+    function measurementTime(comp) {
+        var current;
         try {
-            if (layer.sourceRectAtTime) {
-                rect = layer.sourceRectAtTime(t, false);
-            }
-        } catch (e1) {
-            rect = null;
+            current = comp.time;
+        } catch (error) {
+            fail("TBB_TIME_MISMATCH", "comp.time is unavailable.");
         }
+        if (!finite(current)) {
+            fail("TBB_TIME_MISMATCH", "comp.time must be finite.");
+        }
+        return current;
+    }
 
-        if (!rect || rect.width <= 0 || rect.height <= 0) {
-            try {
-                if (layer.width && layer.height) {
-                    rect = {
-                        left: 0,
-                        top: 0,
-                        width: layer.width,
-                        height: layer.height
-                    };
-                }
-            } catch (e2) {
-                rect = null;
+    function checkTime(comp, time) {
+        if (!finite(time) || Math.abs(time - measurementTime(comp)) > TIME_EPSILON) {
+            fail("TBB_TIME_MISMATCH", "Measurement requires the current comp.time.");
+        }
+    }
+
+    function convert(comp, time, layer, method, input, code) {
+        checkTime(comp, time);
+        var p = point2(input, "TBB_INVALID_SOURCE_GEOMETRY", "Invalid conversion input.");
+        var result;
+        try {
+            if (!layer || typeof layer[method] !== "function") {
+                throw new Error("Host method unavailable.");
+            }
+            result = layer[method](p);
+        } catch (error) {
+            fail(code, method + " unavailable or threw.");
+        }
+        checkTime(comp, time);
+        return point2(result, "TBB_INVALID_CONVERSION_RETURN", method + " must return at least two finite numbers.");
+    }
+
+    function validRect(rect) {
+        if (!rect || !finite(rect.left) || !finite(rect.top) || !finite(rect.width) || !finite(rect.height) || rect.width <= 0 || rect.height <= 0 || !finite(rect.left + rect.width) || !finite(rect.top + rect.height)) {
+            fail("TBB_INVALID_SOURCE_GEOMETRY", "Expected finite, positive source geometry.");
+        }
+        return {left: rect.left, top: rect.top, width: rect.width, height: rect.height};
+    }
+
+    function sourceGeometry(layer, kind, comp, time) {
+        checkTime(comp, time);
+        var rect;
+        var unavailable = false;
+        try {
+            if (typeof layer.sourceRectAtTime !== "function") {
+                unavailable = true;
+            } else {
+                rect = layer.sourceRectAtTime(time, false);
+                unavailable = rect === null || typeof rect === "undefined";
+            }
+        } catch (error) {
+            unavailable = true;
+        }
+        checkTime(comp, time);
+        // Only ordinary footage with unavailable sourceRect may use source dimensions.
+        // A returned malformed/zero rect is invalid; Text/Shape dimensions cannot hide it.
+        if (unavailable && kind === "AV") {
+            rect = {left: 0, top: 0, width: layer.width, height: layer.height};
+        }
+        return validRect(rect);
+    }
+
+    function staticValue(group, name, dimensions) {
+        var p = U.prop(group, name);
+        if (!p || p.numKeys !== 0 || p.expressionEnabled === true || p.expression || p.dimensionsSeparated === true) {
+            fail("TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "Static, unseparated Transform required: " + name);
+        }
+        var value;
+        try {
+            value = p.value;
+        } catch (error) {
+            fail("TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "Unreadable Transform: " + name);
+        }
+        if (dimensions === 2) {
+            return point2(value, "TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "Nonfinite Transform: " + name);
+        }
+        if (!finite(value)) {
+            fail("TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "Nonfinite Transform: " + name);
+        }
+        return value;
+    }
+
+    function ordinaryKind(layer, comp) {
+        var identity = layerIdentity(layer, false, "TBB_UNSUPPORTED_COORDINATE_ENVELOPE");
+        if (identity.compId !== compIdentity(comp, "TBB_UNSUPPORTED_COORDINATE_ENVELOPE") || layer.threeDLayer !== false || layer.locked !== false || layer.adjustmentLayer !== false) {
+            fail("TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "An unlocked ordinary 2D layer in this comp is required.");
+        }
+        if (layer.matchName === "ADBE Text Layer" && U.prop(layer, MN.TEXT_PROPS)) {
+            return "TEXT";
+        }
+        if (layer.matchName === "ADBE Vector Layer" && U.prop(layer, MN.ROOT_VECTORS)) {
+            return "SHAPE";
+        }
+        if (layer.matchName === "ADBE AV Layer" && layer.nullLayer === true) {
+            return "NULL";
+        }
+        if (layer.matchName === "ADBE AV Layer" && typeof FootageItem !== "undefined" && layer.source instanceof FootageItem && layer.collapseTransformation === false) {
+            return "AV";
+        }
+        fail("TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "Layer type/collapse has not been admitted for M2.");
+    }
+
+    function snapshotTransform(layer) {
+        var tr = U.prop(layer, MN.TRANSFORM);
+        var result = {
+            anchor: staticValue(tr, MN.ANCHOR, 2),
+            position: staticValue(tr, MN.POSITION, 2),
+            scale: staticValue(tr, MN.SCALE, 2),
+            rotation: staticValue(tr, MN.ROT_Z, 1)
+        };
+        if (result.scale[0] <= 0 || result.scale[1] <= 0 || (result.rotation !== 0 && result.scale[0] !== result.scale[1])) {
+            fail("TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "M2 requires positive Scale; combined nonuniform Scale and Rotation is unverified.");
+        }
+        return result;
+    }
+
+    function canonicalShape(layer) {
+        var root = U.prop(layer, MN.ROOT_VECTORS);
+        var group = root && root.numProperties === 1 ? root.property(1) : null;
+        var tr = U.prop(group, "ADBE Vector Transform Group");
+        var vectors = U.prop(group, MN.VECTORS_GROUP);
+        if (!group || group.matchName !== MN.VECTOR_GROUP || !vectors) {
+            fail("TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "M2 Shape requires one canonical rectangle group.");
+        }
+        var a = staticValue(tr, "ADBE Vector Anchor", 2);
+        var p = staticValue(tr, "ADBE Vector Position", 2);
+        var s = staticValue(tr, "ADBE Vector Scale", 2);
+        if (a[0] !== 0 || a[1] !== 0 || p[0] !== 0 || p[1] !== 0 || s[0] !== 100 || s[1] !== 100 || staticValue(tr, "ADBE Vector Rotation", 1) !== 0 || staticValue(tr, "ADBE Vector Skew", 1) !== 0) {
+            fail("TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "Nonidentity Shape group Transform is unverified.");
+        }
+        var rectangles = 0;
+        var i;
+        for (i = 1; i <= vectors.numProperties; i++) {
+            var item = vectors.property(i);
+            if (item.matchName === MN.RECT) {
+                rectangles++;
+            } else if (item.matchName !== MN.FILL && item.matchName !== MN.STROKE) {
+                fail("TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "Nested/complex Shape geometry is unverified.");
             }
         }
+        if (rectangles !== 1) {
+            fail("TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "Exactly one rectangle is required.");
+        }
+    }
 
-        if (!rect || rect.width <= 0 || rect.height <= 0) {
+    function layerVisualBoundsInComp(comp, layer, rect, time) {
+        var points = [[rect.left, rect.top], [rect.left + rect.width, rect.top], [rect.left + rect.width, rect.top + rect.height], [rect.left, rect.top + rect.height]];
+        var left, right, top, bottom;
+        var i;
+        for (i = 0; i < points.length; i++) {
+            var p = convert(comp, time, layer, "sourcePointToComp", points[i], "TBB_SOURCE_TO_COMP_FAILED");
+            left = i === 0 ? p[0] : Math.min(left, p[0]);
+            right = i === 0 ? p[0] : Math.max(right, p[0]);
+            top = i === 0 ? p[1] : Math.min(top, p[1]);
+            bottom = i === 0 ? p[1] : Math.max(bottom, p[1]);
+        }
+        return validRect({left: left, top: top, width: right - left, height: bottom - top});
+    }
+
+    function planLayer(comp, source, opt, time) {
+        // Copy scalar identities before measurement; operation references remain separate.
+        var sourceIdentity = layerIdentity(source, false, "TBB_UNSUPPORTED_COORDINATE_ENVELOPE");
+        var kind = ordinaryKind(source, comp);
+        if (kind === "NULL") {
+            fail("TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "Null is a parent representative, not visual input.");
+        }
+        var snapshot = snapshotTransform(source);
+        var parent = parentReference(source, "TBB_UNSUPPORTED_COORDINATE_ENVELOPE");
+        var parentIdentity = layerIdentity(parent, true, "TBB_UNSUPPORTED_COORDINATE_ENVELOPE");
+        if (parent) {
+            var parentKind = ordinaryKind(parent, comp);
+            var parentSnapshot = snapshotTransform(parent);
+            if (kind !== "TEXT" || parentReference(parent, "TBB_UNSUPPORTED_COORDINATE_ENVELOPE") !== null || (parentKind !== "NULL" && parentKind !== "TEXT") || parentSnapshot.scale[0] !== 100 || parentSnapshot.scale[1] !== 100 || parentSnapshot.rotation !== 0) {
+                fail("TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "M2 admits one static translation-only Null/Text parent for Text.");
+            }
+        }
+        if (kind === "SHAPE") {
+            canonicalShape(source);
+        }
+        if (kind !== "TEXT" && (snapshot.rotation !== 0 || snapshot.scale[0] !== 100 || snapshot.scale[1] !== 100)) {
+            fail("TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "M2 visual representatives require Scale 100 and Rotation 0.");
+        }
+        var rect = sourceGeometry(source, kind, comp, time);
+        var center = [rect.left + rect.width / 2, rect.top + rect.height / 2];
+        var compCenter;
+        var position;
+        if (kind === "TEXT") {
+            compCenter = convert(comp, time, source, "sourcePointToComp", center, "TBB_SOURCE_TO_COMP_FAILED");
+            position = parent ? convert(comp, time, parent, "compPointToSource", compCenter, "TBB_COMP_TO_PARENT_FAILED") : compCenter.slice(0);
+        } else {
+            var bounds = layerVisualBoundsInComp(comp, source, rect, time);
+            compCenter = point2([bounds.left + bounds.width / 2, bounds.top + bounds.height / 2], "TBB_INVALID_SOURCE_GEOMETRY", "Invalid AABB center.");
+            position = compCenter.slice(0);
+            rect = {left: -bounds.width / 2, top: -bounds.height / 2, width: bounds.width, height: bounds.height};
+            center = [0, 0];
+        }
+        if (!finite(rect.width + opt.paddingX * 2) || !finite(rect.height + opt.paddingY * 2)) {
+            fail("TBB_INVALID_SOURCE_GEOMETRY", "Invalid padded size.");
+        }
+        var plan = {source: source, sourceIdentity: sourceIdentity, kind: kind, time: time, parent: parent, parentIdentity: parentIdentity,
+            snapshot: snapshot, rect: rect, localCenter: center, compVisualCenter: compCenter,
+            targetPosition: position, targetPositionSpace: parent ? "PARENT_LAYER" : "COMP",
+            startTime: source.startTime, inPoint: source.inPoint, outPoint: source.outPoint,
+            name: source.name + "_BG"};
+        if (!finite(plan.startTime) || !finite(plan.inPoint) || !finite(plan.outPoint) || plan.outPoint <= plan.inPoint) {
+            fail("TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "Invalid layer timing.");
+        }
+        checkTime(comp, time);
+        return plan;
+    }
+
+    function validIdentityId(value) {
+        return finite(value) && value > 0 && Math.floor(value) === value;
+    }
+
+    function compIdentity(comp, code) {
+        var id;
+        try {
+            id = comp.id;
+        } catch (error) {
+            fail(code, "Unreadable containingComp identity.");
+        }
+        if (!validIdentityId(id)) {
+            fail(code, "Invalid containingComp identity.");
+        }
+        return id;
+    }
+
+    function layerIdentity(layer, allowNull, code) {
+        if (layer === null && allowNull) {
             return null;
         }
-
-        points[0] = [rect.left, rect.top, 0];
-        points[1] = [rect.left + rect.width, rect.top, 0];
-        points[2] = [rect.left + rect.width, rect.top + rect.height, 0];
-        points[3] = [rect.left, rect.top + rect.height, 0];
-
-        for (i = 0; i < points.length; i++) {
-            try {
-                compPoints[i] = layer.toComp(points[i]);
-            } catch (e3) {
-                return null;
-            }
-        }
-
-        left = compPoints[0][0];
-        right = compPoints[0][0];
-        top = compPoints[0][1];
-        bottom = compPoints[0][1];
-
-        for (i = 1; i < compPoints.length; i++) {
-            p = compPoints[i];
-            left = Math.min(left, p[0]);
-            right = Math.max(right, p[0]);
-            top = Math.min(top, p[1]);
-            bottom = Math.max(bottom, p[1]);
-        }
-
-        return {
-            left: left,
-            top: top,
-            width: right - left,
-            height: bottom - top,
-            centerX: (left + right) / 2,
-            centerY: (top + bottom) / 2
-        };
-    }
-
-    function createCenteredRoundedRect(comp, name, centerX, centerY, width, height, opt, sourceLayer) {
-        var rect = {
-            left: -width / 2,
-            top: -height / 2,
-            width: width,
-            height: height
-        };
-        var bg = comp.layers.addShape();
-        var tr = U.prop(bg, MN.TRANSFORM);
-        var pos = U.prop(tr, MN.POSITION);
-        var anchor = U.prop(tr, MN.ANCHOR);
-
-        bg.name = AE.uniqueLayerName(comp, name);
-
-        if (sourceLayer) {
-            try {
-                bg.startTime = sourceLayer.startTime;
-                bg.inPoint = sourceLayer.inPoint;
-                bg.outPoint = sourceLayer.outPoint;
-            } catch (e1) {}
-        }
-
-        U.setValueSafe(anchor, AE.fitValueToTarget([0, 0, 0], anchor));
-        U.setValueSafe(pos, AE.fitValueToTarget([centerX, centerY, 0], pos));
-
-        addControls(bg, rect, opt);
-        buildShapeContents(bg, rect, opt);
-
-        if (sourceLayer) {
-            try {
-                bg.moveAfter(sourceLayer);
-            } catch (e2) {}
-        }
-
-        return bg;
-    }
-
-    function createForVisualLayer(comp, sourceLayer, opt) {
-        var t = comp.time;
-        var bounds = layerVisualBoundsInComp(sourceLayer, t);
-        if (!bounds) {
-            throw new Error("Unable to read visual bounds.");
-        }
-        return createCenteredRoundedRect(
-            comp,
-            sourceLayer.name + "_BG",
-            bounds.centerX,
-            bounds.centerY,
-            bounds.width,
-            bounds.height,
-            opt,
-            sourceLayer
-        );
-    }
-
-    function createDefaultRoundedRect(comp, opt) {
-        var defaultOpt = {};
-        var k;
-        for (k in opt) {
-            if (opt.hasOwnProperty(k)) {
-                defaultOpt[k] = opt[k];
-            }
-        }
-        defaultOpt.paddingX = 0;
-        defaultOpt.paddingY = 0;
-        defaultOpt.roundness = 15;
-        return createCenteredRoundedRect(
-            comp,
-            "Background Rounded Rectangle",
-            comp.width / 2,
-            comp.height / 2,
-            100,
-            100,
-            defaultOpt,
-            null
-        );
-    }
-
-    function setLayerPositionAtVisualCenter(layer, textLayer, center, t) {
-        var tr = U.prop(layer, MN.TRANSFORM);
-        var anchor = U.prop(tr, MN.ANCHOR);
-        var position = U.prop(tr, MN.POSITION);
-        var posX = U.prop(tr, MN.POS_X);
-        var posY = U.prop(tr, MN.POS_Y);
-        var posZ = U.prop(tr, MN.POS_Z);
-        var compPoint;
-        var targetPos;
-
-        if (!tr) {
-            return;
-        }
-
-        U.setValueSafe(anchor, AE.fitValueToTarget([center[0], center[1], 0], anchor));
-
+        var id, comp;
         try {
-            compPoint = textLayer.sourcePointToComp([center[0], center[1]]);
-        } catch (e1) {
-            try {
-                compPoint = textLayer.toComp([center[0], center[1], 0]);
-            } catch (e2) {
-                compPoint = null;
-            }
+            id = layer.id;
+            comp = layer.containingComp;
+        } catch (error) {
+            fail(code, "Unreadable layer identity.");
         }
-
-        if (!compPoint) {
-            return;
+        if (!validIdentityId(id)) {
+            fail(code, "Invalid layer identity.");
         }
+        return {layerId: id, compId: compIdentity(comp, code)};
+    }
 
-        if (layer.parent) {
-            try {
-                targetPos = layer.parent.compPointToSource(compPoint);
-            } catch (e3) {
-                try {
-                    targetPos = layer.parent.fromComp(compPoint);
-                } catch (e4) {
-                    targetPos = compPoint;
-                }
+    function parentReference(layer, code) {
+        try {
+            return layer.parent;
+        } catch (error) {
+            fail(code, "Unreadable parent reference.");
+        }
+    }
+
+    function sameIdentity(current, expected) {
+        // AE 26.0 mis-evaluates the former ungrouped mixed ||/&& null-parent chain.
+        // Only an explicit null denotes no parent; missing/invalid reads fail above.
+        if (current === null) {
+            return expected === null;
+        }
+        if (expected === null) {
+            return false;
+        }
+        return current.layerId === expected.layerId && current.compId === expected.compId;
+    }
+
+    function strictValue(p, value) {
+        if (!p || typeof p.setValue !== "function") {
+            fail("TBB_EXECUTION_FAILED", "Required property is not writable.");
+        }
+        p.setValue(value);
+        var actual = p.value;
+        var count = typeof value === "number" ? 0 : value.length;
+        if (!count) {
+            if (!finite(actual) || !finite(value) || Math.abs(actual - value) > VALUE_EPSILON) {
+                fail("TBB_EXECUTION_FAILED", "Property write did not take effect.");
             }
         } else {
-            targetPos = compPoint;
-        }
-
-        if (position) {
-            U.setValueSafe(position, AE.fitValueToTarget(targetPos, position));
-        }
-
-        if (posX) {
-            U.setValueSafe(posX, targetPos[0]);
-        }
-        if (posY) {
-            U.setValueSafe(posY, targetPos[1]);
-        }
-        if (posZ && targetPos.length > 2) {
-            U.setValueSafe(posZ, targetPos[2]);
-        }
-    }
-
-    function createForTextLayer(comp, textLayer, opt) {
-        var t = comp.time;
-        var rect = textLayer.sourceRectAtTime(t, false);
-        var center = [rect.left + rect.width / 2, rect.top + rect.height / 2];
-        var bg = comp.layers.addShape();
-
-        bg.name = AE.uniqueLayerName(comp, textLayer.name + "_BG");
-
-        try {
-            bg.startTime = textLayer.startTime;
-            bg.inPoint = textLayer.inPoint;
-            bg.outPoint = textLayer.outPoint;
-        } catch (e) {}
-
-        AE.copyTransformSnapshot(textLayer, bg, t);
-        setLayerPositionAtVisualCenter(bg, textLayer, center, t);
-        addControls(bg, rect, opt);
-        buildShapeContents(bg, rect, opt);
-
-        try {
-            bg.moveAfter(textLayer);
-        } catch (e1) {}
-
-        return bg;
-    }
-
-    function createForSelectedLayer(comp, layer, opt) {
-        if (AE.isTextLayer(layer)) {
-            return createForTextLayer(comp, layer, opt);
-        }
-        return createForVisualLayer(comp, layer, opt);
-    }
-
-    function parentBackgroundsToSources(pairs) {
-        var i;
-        for (i = 0; i < pairs.length; i++) {
-            try {
-                if (pairs[i].bg && pairs[i].source) {
-                    pairs[i].bg.parent = pairs[i].source;
+            if (!actual || actual.length !== count) {
+                fail("TBB_EXECUTION_FAILED", "Property dimensions changed.");
+            }
+            for (var i = 0; i < count; i++) {
+                if (!finite(actual[i]) || !finite(value[i]) || Math.abs(actual[i] - value[i]) > VALUE_EPSILON) {
+                    fail("TBB_EXECUTION_FAILED", "Property write did not take effect.");
                 }
-            } catch (e) {}
+            }
         }
+    }
+
+    function strictExpression(p, expression) {
+        if (!p || !p.canSetExpression) {
+            fail("TBB_EXECUTION_FAILED", "Required expression property is unavailable.");
+        }
+        p.expression = expression;
+        if (p.expression !== expression || p.expressionEnabled !== true || p.expressionError) {
+            fail("TBB_EXECUTION_FAILED", "Expression installation failed.");
+        }
+    }
+
+    function strictColor(p, color) {
+        strictValue(p, [color[0], color[1], color[2], 1]);
+    }
+
+    function addControl(layer, name, value, type) {
+        var fx = U.prop(layer, MN.EFFECTS);
+        var item = fx.addProperty(type);
+        item.name = name;
+        strictValue(item.property(1), value);
+    }
+
+    function applyPlan(comp, plan, opt) {
+        // No decisive conversion or source snapshot reads after the first project write.
+        var bg = comp.layers.addShape();
+        bg.name = AE.uniqueLayerName(comp, plan.name);
+        if (plan.source) {
+            bg.startTime = plan.startTime;
+            bg.inPoint = plan.inPoint;
+            bg.outPoint = plan.outPoint;
+        }
+        bg.threeDLayer = false;
+        if (plan.targetPositionSpace === "PARENT_LAYER") {
+            bg.setParentWithJump(plan.parent);
+        }
+        if (!sameIdentity(layerIdentity(parentReference(bg, "TBB_EXECUTION_FAILED"), true, "TBB_EXECUTION_FAILED"), plan.parentIdentity) || bg.threeDLayer !== false || (plan.targetPositionSpace === "COMP" && bg.parent)) {
+            fail("TBB_EXECUTION_FAILED", "Destination Position space does not match the plan.");
+        }
+        var tr = U.prop(bg, MN.TRANSFORM);
+        if (plan.kind === "TEXT") {
+            strictValue(U.prop(tr, MN.SCALE), AE.fitValueToTarget([plan.snapshot.scale[0], plan.snapshot.scale[1], 100], U.prop(tr, MN.SCALE)));
+            strictValue(U.prop(tr, MN.ROT_Z), plan.snapshot.rotation);
+        }
+        strictValue(U.prop(tr, MN.ANCHOR), AE.fitValueToTarget(plan.localCenter, U.prop(tr, MN.ANCHOR)));
+        strictValue(U.prop(tr, MN.POSITION), AE.fitValueToTarget(plan.targetPosition, U.prop(tr, MN.POSITION)));
+        addControls(bg, plan.rect, opt);
+        buildShapeContents(bg, plan.rect, opt);
+        if (plan.source) {
+            bg.moveAfter(plan.source);
+            // Separate AE compensating reparent; it must not mask an earlier wrong-space Position.
+            bg.parent = plan.source;
+            if (!sameIdentity(layerIdentity(parentReference(bg, "TBB_EXECUTION_FAILED"), false, "TBB_EXECUTION_FAILED"), plan.sourceIdentity)) {
+                fail("TBB_EXECUTION_FAILED", "Final source parent assignment failed.");
+            }
+            point2(U.prop(tr, MN.POSITION).value, "TBB_EXECUTION_FAILED", "Nonfinite Position after parenting.");
+            point2(U.prop(tr, MN.SCALE).value, "TBB_EXECUTION_FAILED", "Nonfinite Scale after parenting.");
+            if (!finite(U.prop(tr, MN.ROT_Z).value)) {
+                fail("TBB_EXECUTION_FAILED", "Nonfinite Rotation after parenting.");
+            }
+        }
+        return bg;
     }
 
     AEToolbox.tools.textBackgroundBox.create = function (paramsJson) {
         var comp = AE.getActiveComp();
         if (!comp) {
-            return AEToolbox.toJson({
-                ok: false,
-                message: "Error: Please open or select a composition first.",
-                selectionLabel: "No comp"
-            });
+            return AEToolbox.toJson({ok: false, message: "Error: Please open or select a composition first.", selectionLabel: "No comp"});
         }
-
         var opt;
         try {
             opt = sanitizeOptions(AEToolbox.parseJson(paramsJson));
         } catch (parseError) {
-            return AEToolbox.toJson({
-                ok: false,
-                message: "Error: Invalid parameters JSON.",
-                selectionLabel: "Invalid params"
-            });
+            return AEToolbox.toJson({ok: false, message: "Error: Invalid parameters JSON.", selectionLabel: "Invalid params"});
         }
-
         var selectedLayers = comp.selectedLayers || [];
-        var errors = [];
-        var created = 0;
-        var parentPairs = [];
-        var bgLayer;
+        var plans = [];
+        var time;
         var i;
-
-        app.beginUndoGroup("Create Background Rounded Rectangle");
+        // All selected members are preflighted before even opening the undo group.
         try {
-            if (selectedLayers.length === 0) {
-                createDefaultRoundedRect(comp, opt);
-                created = 1;
+            time = measurementTime(comp);
+            checkTime(comp, time);
+            if (!comp.layers || typeof comp.layers.addShape !== "function") {
+                fail("TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "Shape creation is unavailable.");
             }
-            for (i = 0; i < selectedLayers.length; i++) {
-                try {
-                    bgLayer = createForSelectedLayer(comp, selectedLayers[i], opt);
-                    parentPairs[parentPairs.length] = {
-                        source: selectedLayers[i],
-                        bg: bgLayer
-                    };
-                    created++;
-                } catch (e1) {
-                    errors[errors.length] = selectedLayers[i].name + ": " + e1.toString();
+            var optionNumbers = [opt.paddingX, opt.paddingY, opt.roundness, opt.strokeWidth, opt.fillOpacity, opt.strokeOpacity];
+            for (i = 0; i < optionNumbers.length; i++) {
+                if (!finite(optionNumbers[i])) {
+                    fail("TBB_INVALID_SOURCE_GEOMETRY", "Nonfinite geometry/style parameter.");
                 }
             }
-            parentBackgroundsToSources(parentPairs);
-        } catch (e2) {
-            errors[errors.length] = e2.toString();
+            for (i = 0; i < selectedLayers.length; i++) {
+                plans[plans.length] = planLayer(comp, selectedLayers[i], opt, time);
+            }
+            if (!selectedLayers.length) {
+                var center = point2([comp.width / 2, comp.height / 2], "TBB_INVALID_SOURCE_GEOMETRY", "Invalid comp size.");
+                opt.paddingX = 0;
+                opt.paddingY = 0;
+                opt.roundness = 15;
+                plans[0] = {name: "Background Rounded Rectangle", kind: "DEFAULT", source: null, sourceIdentity: null, parent: null, parentIdentity: null, targetPositionSpace: "COMP", targetPosition: center,
+                    localCenter: [0, 0], rect: {left: -50, top: -50, width: 100, height: 100}};
+            }
+            for (i = 0; i < plans.length; i++) {
+                var plan = plans[i];
+                if (plan.source && (!sameIdentity(layerIdentity(plan.source, false, "TBB_UNSUPPORTED_COORDINATE_ENVELOPE"), plan.sourceIdentity) || !sameIdentity(layerIdentity(parentReference(plan.source, "TBB_UNSUPPORTED_COORDINATE_ENVELOPE"), true, "TBB_UNSUPPORTED_COORDINATE_ENVELOPE"), plan.parentIdentity))) {
+                    fail("TBB_UNSUPPORTED_COORDINATE_ENVELOPE", "Source identity/parent changed during preflight.");
+                }
+            }
+            checkTime(comp, time);
+        } catch (preflightError) {
+            return AEToolbox.toJson({ok: false, message: "TBB preflight: " + preflightError.toString(), count: 0, selectionLabel: selectedLayers.length + " layer(s)"});
+        }
+        var created = 0;
+        var error = null;
+        var began = false;
+        try {
+            app.beginUndoGroup("Create Background Rounded Rectangle");
+            began = true;
+            for (i = 0; i < plans.length; i++) {
+                applyPlan(comp, plans[i], opt);
+                created++;
+            }
+        } catch (executionError) {
+            error = executionError;
         } finally {
-            app.endUndoGroup();
+            if (began) {
+                app.endUndoGroup();
+            }
         }
-
-        if (errors.length > 0) {
-            return AEToolbox.toJson({
-                ok: false,
-                message: "Created " + created + " rounded rectangle(s), with " + errors.length + " error(s).",
-                count: created,
-                selectionLabel: selectedLayers.length ? selectedLayers.length + " layer(s)" : "No selection"
-            });
+        if (error) {
+            return AEToolbox.toJson({ok: false, message: "TBB_EXECUTION_FAILED: Created " + created + " complete background(s); partial changes may remain. " + error.toString(), count: created,
+                selectionLabel: selectedLayers.length ? selectedLayers.length + " layer(s)" : "No selection"});
         }
-
-        if (selectedLayers.length === 0) {
-            return AEToolbox.toJson({
-                ok: true,
-                messageKey: "tools.textBackgroundBox.status.noLayerSelected",
-                message: "Created default 100x100 rounded rectangle.",
-                count: created,
-                selectionLabel: "Default 100x100"
-            });
+        if (!selectedLayers.length) {
+            return AEToolbox.toJson({ok: true, messageKey: "tools.textBackgroundBox.status.noLayerSelected", message: "Created default 100x100 rounded rectangle.", count: created, selectionLabel: "Default 100x100"});
         }
-
-        return AEToolbox.toJson({
-            ok: true,
-            messageKey: "tools.textBackgroundBox.status.created",
-            message: "Created " + created + " background rounded rectangle(s).",
-            count: created,
-            selectionLabel: selectedLayers.length + " layer(s)"
-        });
+        return AEToolbox.toJson({ok: true, messageKey: "tools.textBackgroundBox.status.created", message: "Created " + created + " background rounded rectangle(s).", count: created, selectionLabel: selectedLayers.length + " layer(s)"});
     };
 })();

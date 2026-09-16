@@ -1,0 +1,32 @@
+{
+  "phase": "A08-F1",
+  "status": "F1 IMPLEMENTED / OFFLINE PASS / REAL AE REVALIDATION PENDING",
+  "baseline": "d7dd7356cccbb637ae01a7e9d0629b9bc184a388",
+  "branch": "fix/ad-component-detach-a08-0.3.12",
+  "results": {
+    "focused": 421,
+    "a08Regression": 251,
+    "suites": {
+      "discovered": 187,
+      "executed": 187,
+      "passed": 187,
+      "failed": 0,
+      "skipped": 0
+    },
+    "realAE": "NOT RUN; pre-F1 Feature FAIL, Grid PASS and Undo retained"
+  },
+  "retention": {
+    "task": "A08-H0",
+    "changed": "Index only; retained historical summaries, callbacks, comparisons and confirmations keep original bytes. Phase status/counts above are historical, not recertified by H0.",
+    "currentAcceptance": "TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+    "archiveWorkspaceRelative": ".tmp/vela-evidence/0.3.12/a08/h0-20260911",
+    "archiveManifest": "manifest.json",
+    "originalIndex": {
+      "path": "docs/reports/vela-0.3.12-b2-a08-f1-offline/index.json",
+      "sha256": "db7c758da71108e480ce84d43798e947c256d8c91c92f305e2982387563cce83"
+    },
+    "referencePolicy": "Historical filenames, command strings, JSON pointers and checksums retain their original meaning. Files absent from the retained set resolve as archiveWorkspaceRelative + original repository path; bare names resolve against this evidence directory. They are local-only, unavailable in a fresh clone. Original file counts/hashes describe the complete collection, not this retained subset.",
+    "archivedReferences": []
+  },
+  "files": []
+}

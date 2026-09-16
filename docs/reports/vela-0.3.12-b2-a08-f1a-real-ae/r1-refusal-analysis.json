@@ -1,0 +1,69 @@
+{
+  "recordedAt": "2026-09-11T01:22:04.351Z",
+  "source": "derived from raw action and independent B1/B2 snapshots; no new Host diagnostic execution",
+  "action": {
+    "ok": false,
+    "message": "Detach preflight failed; no changes made: Error: Feature Detach: unknown dependency or tool binding on an unsupported property"
+  },
+  "comparison": {
+    "tolerance": 0.000001,
+    "textAndIdentity": "strict",
+    "numericFields": 4682,
+    "strictFields": 1704,
+    "differences": [],
+    "allObservedFieldsUnchanged": true
+  },
+  "observedExpressions": [
+    {
+      "path": "A08_FEATURE_SOURCE/transform/位置",
+      "matchName": "ADBE Position",
+      "enabled": true,
+      "error": "",
+      "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260910_142239_903961\n// kind=featureStack\n// role=sourceLayerBinding\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar ctrl = parent;\nif (ctrl) {\n  var refs = [{i:3,n:\"A08_FEATURE_SOURCE\"}];\n  var itemIndex = 0;\n  function layerFromRef(ref) {\n    try {\n      var byIndex = thisComp.layer(ref.i);\n      if (byIndex && byIndex.name == ref.n) { return byIndex; }\n    } catch (e1) {}\n    try { return thisComp.layer(ref.n); } catch (e2) {}\n    return null;\n  }\n  var gap = ctrl.effect(\"Gap\")(1);\n  var px = ctrl.effect(\"Padding X\")(1);\n  var py = ctrl.effect(\"Padding Y\")(1);\n  var fixedW = ctrl.effect(\"Fixed Width\")(1);\n  var mode = Math.round(ctrl.effect(\"Pill Width Mode\")(1));\n  var align = Math.round(ctrl.effect(\"Text Align\")(1));\n  function rectForLayer(l) {\n    if (!l) { return {left:0, top:0, width:0, height:0}; }\n    return l.sourceRectAtTime(time, false);\n  }\n  function scaleForLayer(l, axis) {\n    try {\n      var s = Math.abs(l.transform.scale[axis]) / 100;\n      return s > 0.0001 ? s : 1;\n    } catch (e) {\n      return 1;\n    }\n  }\n  function pillHeightForLayer(l) {\n    var r = rectForLayer(l);\n    var sy = scaleForLayer(l, 1);\n    return Math.max(0, r.height * sy + py * 2);\n  }\n  var totalH = 0;\n  for (var i = 0; i < refs.length; i++) {\n    totalH += pillHeightForLayer(layerFromRef(refs[i]));\n    if (i > 0) { totalH += gap; }\n  }\n  var y = -totalH / 2;\n  for (var j = 0; j < itemIndex; j++) {\n    y += pillHeightForLayer(layerFromRef(refs[j])) + gap;\n  }\n  var ownRect = rectForLayer(thisLayer);\n  var ownScaleX = scaleForLayer(thisLayer, 0);\n  var ownScaleY = scaleForLayer(thisLayer, 1);\n  var ownTextW = ownRect.width * ownScaleX;\n  var ownH = Math.max(0, ownRect.height * ownScaleY + py * 2);\n  var ownW = (mode == 1) ? fixedW : ownTextW + px * 2;\n  y += ownH / 2;\n  var x = 0;\n  if (align == 0) {\n    x = -ownW / 2 + px + ownTextW / 2;\n  }\n  [x, y];\n} else {\n  value;\n}"
+    },
+    {
+      "path": "A08_FEATURE_SOURCE_PILL_BG/transform/位置",
+      "matchName": "ADBE Position",
+      "enabled": true,
+      "error": "",
+      "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260910_142239_903961\n// kind=featureStack\n// role=generatedLayer\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar txt = thisLayer.parent;\nvar ctrl = txt ? txt.parent : null;\nif (txt && ctrl && txt.sourceRectAtTime) {\n  txt.fromComp(ctrl.toComp([0, txt.position[1]]));\n} else {\n  value;\n}"
+    },
+    {
+      "path": "A08_FEATURE_SOURCE_PILL_BG/vectorProperties/Pill/内容/矩形路径 1/大小",
+      "matchName": "ADBE Vector Rect Size",
+      "enabled": true,
+      "error": "",
+      "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260910_142239_903961\n// kind=featureStack\n// role=generatedLayer\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar txt = thisLayer.parent;\nvar ctrl = txt ? txt.parent : null;\nif (!ctrl && thisLayer.parent) { ctrl = thisLayer.parent; }\nif (txt && ctrl && txt.sourceRectAtTime) {\n  var r = txt.sourceRectAtTime(time, false);\n  var px = ctrl.effect(\"Padding X\")(1);\n  var py = ctrl.effect(\"Padding Y\")(1);\n  var fixedW = ctrl.effect(\"Fixed Width\")(1);\n  var mode = Math.round(ctrl.effect(\"Pill Width Mode\")(1));\n  function scaleForLayer(l, axis) {\n    try {\n      var s = Math.abs(l.transform.scale[axis]) / 100;\n      return s > 0.0001 ? s : 1;\n    } catch (e) {\n      return 1;\n    }\n  }\n  var sx = scaleForLayer(txt, 0);\n  var sy = scaleForLayer(txt, 1);\n  var w = (mode == 1) ? fixedW : r.width * sx + px * 2;\n  var h = r.height * sy + py * 2;\n  [Math.max(0, w / sx), Math.max(0, h / sy)];\n} else {\n  value;\n}"
+    },
+    {
+      "path": "A08_FEATURE_SOURCE_PILL_BG/vectorProperties/Pill/内容/矩形路径 1/圆度",
+      "matchName": "ADBE Vector Rect Roundness",
+      "enabled": true,
+      "error": "",
+      "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260910_142239_903961\n// kind=featureStack\n// role=generatedLayer\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar txt = thisLayer.parent;\nvar ctrl = txt ? txt.parent : null;\nif (!ctrl && thisLayer.parent) { ctrl = thisLayer.parent; }\nctrl ? ctrl.effect(\"Corner Radius\")(1) : value;"
+    },
+    {
+      "path": "A08_FEATURE_SOURCE_PILL_BG/vectorProperties/Pill/内容/填充 1/颜色",
+      "matchName": "ADBE Vector Fill Color",
+      "enabled": true,
+      "error": "",
+      "expression": "// LOMOND_CABINET_BINDING_V1\n// tool=adComponentKit\n// artifactId=ack_20260910_142239_903961\n// kind=featureStack\n// role=generatedLayer\n// previousExpressionEnabled=false\n// previousExpressionEncoded=\nvar txt = thisLayer.parent;\nvar ctrl = txt ? txt.parent : null;\nif (!ctrl && thisLayer.parent) { ctrl = thisLayer.parent; }\nctrl ? ctrl.effect(\"Fill Color\")(1) : value;"
+    }
+  ],
+  "observedExpressionCount": 5,
+  "location": "host/tools/adComponentKit.jsx::detachFeaturePlan/checkAdditionalBindings",
+  "facts": [
+    "Runtime returned a preflight refusal from additional dependency/property scan, not the previous unsupported/locked admission message.",
+    "Only the five tool expressions were nonempty in the captured member transform/text/vector/effect trees.",
+    "No B3 or native Undo was performed after this refusal."
+  ],
+  "inferences": [
+    "Given the current source order, this error is consistent with passing member type/template checks; it does not independently expose private function source or prove parent translation coverage."
+  ],
+  "unresolved": [
+    "The rejected property path was not included in the production message.",
+    "The scan compares edits[k].prop === prop. Native AE Property wrapper identity is a candidate requiring separate diagnosis, not an observed cause here.",
+    "Snapshot trees cover named groups; they are not an exhaustive trace of every property visited by production enumeration."
+  ],
+  "next": "Stop R2/R3. Separate bounded investigation of actual rejected property/path and identity comparison before any production repair."
+}

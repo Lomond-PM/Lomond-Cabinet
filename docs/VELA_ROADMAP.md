@@ -1,57 +1,143 @@
-# Vela — Canonical Product Roadmap
+# Vela / Lomond Cabinet — Canonical Product Roadmap
 
-Status: current roadmap; reconciled after Vela 0.3.9 merged into dev (PR #182, `91005f2`).
+**Planning revision: R1-2026-09-09**
+**0.3.12-G：INTEGRATED_ACCEPTED / READY FOR COMMIT / PR**（2026-09-16最终裁定），见 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)。0.3.12技术关闭与封存裁定已通过：20项原缺陷/治理条目按有界证据CLOSED，5项持续覆盖OPEN，其余29项不变，54个原ID保留。D/F旧超时残余风险已接受，原FAIL、原因及tokens unknown保留；实验限制与120000ms整个请求截止不变，后续观测/资格复核及立即重新处置条件由G报告持有。**仓库封存待承载本裁定的G PR通过CI并合并dev后生效**，当前文档修改尚未提交，不宣称远端已封存。最终198/198基线不变，本轮仅文档检查，不进入0.3.13。
+A09 已通过 PR #207 合并，TARGETED_ACCEPTED — AE26.0x67，见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)；AE26.3x87 跨版本复验 DEFERRED，不重开验收。
+A08历史基线：`d7dd7356cccbb637ae01a7e9d0629b9bc184a388`（G-02 PR #204 合并）；[A08报告](reports/vela-0.3.12-b2-a08-detach-comment-ownership.md)。仅修保留Host函数，注册/UI留待后续，B2未完成。
+G-02历史实施基线：`787cef2c8315a7d5c8a208dae69473f488d4e559`（PR #203）；[G-02报告](reports/vela-0.3.12-b1-g02-layer-name-unicode.md)。B1/0.3.12未完成。
 
-This is the single current milestone roadmap. [Project state](PROJECT_STATE.md) owns implemented behavior; [frozen Agent architecture](design/vela-agent-architecture.md) owns normative boundaries; [C2 closure](reports/vela-0.3.9-c2-closure.md) owns historical acceptance evidence. Roadmap milestones are not package releases: package metadata remains 0.3.6 and the recorded published tag remains v0.3.5.
+**R1 规划核对基线：`dev@b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a`，0.3.11 COMPLETE / SEALED。A11 实施基线：`dev@9dee61ee2d2a3ce2f8dd90107fe5343299063eb8`（PR #202）。A01 历史实施基线：`dev@cd96e0cd65fd485a8f00ac506ee74c0f97fc5e75`。**
 
-## 0.3.x — Build the Complete AE Agent Product
+本文件是唯一当前版本排程，已替代旧版当前排程；历史报告、既有封存状态和包发布记录不被改写。详细问题、证据限定、重构边界和工作包见[0.3.x 产品重构与完成指导书](design/vela-0.3-reconstruction-guidance.md)。实际实现事实仍由 PROJECT_STATE 持有，Agent normative 边界由冻结 architecture 持有。
 
-Version numbers follow architecture completion boundaries, not a fixed minor-version ceiling. 0.3.10, 0.3.20+ and further milestones are valid. Completing streaming does not mean the complete Agent product is finished.
+## 一、产品目标
 
-| Milestone | Status / scope |
-| --- | --- |
-| 0.3.7 — Agent Loop Foundation | COMPLETE |
-| 0.3.8 — Multi-step Agent | COMPLETE |
-| 0.3.9 — Streaming Response & Reasoning Surface | COMPLETE / SEALED / merged into dev; 171/171 offline PASS, user-manual real AE PASS, architecture amendment NONE, no unresolved correctness blocker |
-| 0.3.10 — Context Architecture | NEXT; scope only, not an implemented or completed design |
-| 0.3.11 — Multi-conversation Foundation | Planned |
-| 0.3.12 — Capability Model Generalization | Planned |
-| 0.3.13+ — AE Capability Completeness Program | Planned, continuing until formal AE Action Coverage Matrix closure; no artificial version ceiling |
-| User History Observation Foundation | Required after capability completeness; version assigned at the actual architecture boundary |
-| Vela Agent UI Completion | Required; version not assigned |
-| Integrated AE Agent Acceptance | Required; version not assigned |
-| Product / Architecture Stabilization | Required; version not assigned |
+**0.3.x：Build the Complete AE Agent Product。** 形成真正可委托、可验证、完整覆盖目标 AE 工作、界面清楚且可靠的 Agent 产品。
 
-## Context and conversation boundaries
+**0.4.x：Refine and Deepen the Complete Agent。** 在产品形成后提升时间历史理解、规划质量、深层恢复/性能、Memory 和专精模型等方向。不把 0.3 的安全、能力、基础 UI 或历史观察缺项拖到 0.4。
 
-0.3.10 scope includes context item typing/ownership, assembly, bounded selection, budgeting, trusted/untrusted boundaries, Provider/Agent/conversation context relationships and generation budgets with long context. This roadmap does not choose schemas, APIs or implementation algorithms.
+版本号服从实际工程完成边界，允许 0.3.10、0.3.20+；没有人工上限。原来源是[项目路线摘要](reports/audit-baseline-0.3.11/roadmap-foundation-summary.txt)及[旧 canonical roadmap（固定提交）][R-OLD]。
 
-Raw Provider reasoning must not directly enter LLM context by default. It is not Observation, a trusted fact, Authority input or execution justification. Any future treatment requires its own reviewed design; history display never grants authority.
+## 二、已经完成的历史基线
 
-0.3.11 owns Multi-conversation Foundation. In current 0.3.9, reasoning is retained only for the current turn/objective; a new objective clears old raw reasoning. Cross-turn reasoning presentation/history is deferred to conversation/history architecture. Whether UI history retains reasoning and whether model context consumes it are separate decisions; the former does not imply the latter.
+| 版本 | 已完成语义 |
+|---|---|
+| 0.3.7 | Agent Loop Foundation — COMPLETE |
+| 0.3.8 | Multi-step Agent — COMPLETE；有界多步，不等于完整能力覆盖 |
+| 0.3.9 | Streaming Response & Reasoning Surface — COMPLETE / SEALED |
+| 0.3.10 | Context Architecture — COMPLETE / SEALED；typing/ownership/evidence/budget-policy，不包含实际历史注入 |
+| 0.3.11 | Multi-conversation Foundation — COMPLETE / SEALED；多会话、全局单 active objective、临时草稿 |
 
-## Capability completeness
+历史 0.3.11 报告基线为 182/182 全量离线、94/94 Vela 三种顺序，并有保留限定的真实 AE 验收。它们是历史记录，**本次文档编制没有重跑**。[R-STATE]
 
-0.3.12 generalizes the capability model and metadata. 0.3.13+ must account for **every target AE Action** in a formal AE Action Coverage Matrix: either explicit capability coverage, or formal evidence such as `AE_PLATFORM_UNREACHABLE` explaining why the platform cannot support it. “Common actions are sufficient” is not closure. The program continues as many milestones as required.
+包版本与功能里程碑仍分开：当前状态记载 package metadata 0.3.6、最近发布 tag v0.3.5；本方案不会自动更改 VERSION/manifest/Host projectVersion，也不创建 main/tag/release。[R-STATE]
 
-User History Observation Foundation follows that program. User-action inferences must remain distinct from observed state and must not acquire Authority. A rich Observation Window is a later 0.4.x refinement, not a renamed 0.3.x completeness gate or a way to inject reasoning into Observation.
+## 三、新路线总表
 
-## Agent UI completion and deferred refinements
+| 版本 | 主目标 | 本版交付 | 前置 |
+|---|---|---|---|
+| 0.3.12 | 基线安全与事实链收口 | 修复高风险数据入口、提交目标验证、Session 事实、后台任务控制、用户资产保存及最小 Review/退出保护。 | 0.3.11 |
+| 0.3.13 | 视觉基线与 UI 平台重建 | 先批准真实页面视觉基线，再重建样式决议、共享交互、弹层/焦点/手势、预览提交和 UI 生命周期。 | 0.3.12 |
+| 0.3.14 | 产品 UI 迁移与外观一致性 | 将 Home、Registry、Settings、Palette、Vela 全面迁移；完成排版层级、容器减法、状态呈现和程序化参数语义。 | 0.3.13 |
+| 0.3.15 | 能力模型泛化 | 泛化能力描述、参数/结果、注册映射、计划表达与受控模型可见集合；建立 AE Action Coverage Matrix。 | 0.3.14 |
+| 0.3.16 | 有界上下文消费与容量预算 | 将 0.3.10 的证据基础接到真实跨轮上下文消费；接入合格容量来源、完整输入核算与超限策略。 | 0.3.15 |
+| 0.3.17 | 通用任务委托与 Agent 任务体验 | 通用 scope/risk/budget 授权；有界多步执行；Proposal/Review/Execution/Result 卡片与混合响应分离。 | 0.3.16 |
+| 0.3.18 | AE 能力完整性 I：工程、合成、图层 | 覆盖工程/素材组织、合成与图层生命周期、结构观察和目标解析。 | 0.3.17 |
+| 0.3.19 | AE 能力完整性 II：属性、关键帧、时间 | 覆盖属性寻址、值维度、关键帧、插值及时间相关动作。 | 0.3.18 |
+| 0.3.20 | AE 能力完整性 III：文字、形状、路径、表达式 | 覆盖文字与形状结构、路径/蒙版数据及受控表达式操作；不得以任意脚本代替能力边界。 | 0.3.19 |
+| 0.3.21 | AE 能力完整性 IV：效果与合成关系 | 覆盖效果参数、遮罩/轨道遮罩关系、预合成、父子结构和跨合成引用。 | 0.3.20 |
+| 0.3.22 | AE 能力完整性 V：媒体、输出及全矩阵收口 | 覆盖媒体/音频/导入输出、渲染队列等目标动作并完成全域缺口回扫；必要时追加后续覆盖版本。 | 0.3.21 |
+| 0.3.23 | 用户历史观察基础 | 在能力完整性之后交付 typed、bounded、queryable 的历史观察；区分世界变化、Vela 执行和用户动作推断。 | CC（能力完整性门） |
+| 0.3.24 | Agent UI 完整收口 | 让通用任务 UI 覆盖全部已完成能力；完善跨轮/多会话呈现、全文审阅、结果摘要和有界展示观测。 | 0.3.23 |
+| 0.3.25 | 整合 AE 验收与模型资格 | 真实产品任务矩阵、Provider/模型/配置资格、失败与恢复路径、端到端回归。 | 0.3.24 |
+| 0.3.26 | 产品与架构稳定化及发布收口 | 全源码覆盖台账最终对账、长期资源/性能、迁移回退、死代码清理、文档与发布准备。 | 0.3.25 |
 
-Future Agent UI Completion must cover Proposal Card, Execution Card, Agent Activity presentation, complete reasoning/action/result turn composition, capability-aware action presentation and richer assistant text + validated proposal/action composition. Response Parts and a tool-action channel require future evaluation; none shipped in 0.3.9.
 
-Per-invocation TTFT, reasoning/output/total tokens, TPS and total duration belong to presentation observability, never Agent state, Observation or Authority. Reasoning truncation/summarization/virtualization is future UI work with explicit omission semantics.
+## 四、原路线迁移关系
 
-Model/provider qualification refinement and qwen3.5-4b excessive/repetitive reasoning tuning are separately scoped provider work, not 0.3.9 correctness failures. Long-context generation budget management belongs with future Context budgeting. Complete capability coverage, metadata generalization, mixed response composition and the UI above remain future work, not reopened 0.3.9 TODOs.
+**原 0.3.12 Capability Model Generalization → 新 0.3.15。** 中间新增 0.3.12 安全/事实、0.3.13 视觉/UI平台、0.3.14 产品页面迁移。不是把泛化删除，也不是只延长补丁阶段。
 
-## Hard exit and architecture ownership
+**原 0.3.13+ AE Capability Completeness → 新 0.3.18 起。** 泛化之后，0.3.16 将上下文证据变成真实有界消费，0.3.17 将一次性示范权限变成通用委托及任务呈现。
 
-Entry into 0.4.x requires all applicable 0.3.x hard exit requirements: full capability accounting, User History Observation Foundation, Agent UI Completion, integrated real AE acceptance, and product/architecture stabilization, while preserving the frozen normative boundaries. No numbered milestone alone grants exit.
+原未编号的 User History Observation、Agent UI Completion、Integrated Acceptance、Stabilization，在参考排程中分别为 0.3.23–0.3.26。UI 不等这些尾部版本才开始做：0.3.13–14 重建基础并迁移全部当前产品页面，0.3.17 落地通用任务体验，每波能力跟进 UI，最后才整体收口。
 
-The user confirmed that earlier planning discussions used the expression “8 hard exit gates”, but no precise enumeration was preserved in the repository. This first canonicalization uses the explicit hard exit requirements above, without inventing or reconstructing a numbered list. The frozen document's **13 invariants** remain intact and are a different concept from roadmap exit criteria; neither replaces the other. Missing historical enumeration is not a blocker for this reconciliation.
+## 五、能力覆盖与尾部版本顺延规则
 
-The frozen architecture's section 12 is a dependency baseline, explicitly not a mechanical mapping to minor version numbers. Its old 0.3.8/0.3.9 labels do not declare current milestones or implementation completion. Current scheduling is owned here; no dependency, trust boundary or invariant is weakened. This document does not amend the frozen architecture or treat its old schedule as a competing current roadmap.
+**CC = AE Capability Completeness Gate。** 0.3.18–22 是初始五波分组，不是“最多五波”。能力矩阵须逐项证明目标动作已覆盖，或有正式 `AE_PLATFORM_UNREACHABLE` 证据；未研究、未实现或未实测不算关闭。“常用动作足够”不是退出。
 
-## 0.4.x — Refine and Deepen the Complete Agent
+若能力完整性最后一个版本是 `0.3.N`，后四项实际编号为：
 
-0.4.x refines an already complete Agent product: planning quality, richer observation presentation (including Observation Window), UX, performance, recovery and related depth. It must not be used to defer baseline Agent product formation or incomplete AE Action Coverage Matrix accounting.
+| 稳定语义里程碑 | 版本规则 | 本轮 N=22 的参考编号 |
+|---|---|---|
+| User History Observation Foundation | 0.3.(N+1) | 0.3.23 |
+| Agent UI Completion | 0.3.(N+2) | 0.3.24 |
+| Integrated AE Acceptance & Model Qualification | 0.3.(N+3) | 0.3.25 |
+| Product / Architecture Stabilization | 0.3.(N+4) | 0.3.26 |
+
+例：若需要 0.3.23、0.3.24 两个追加覆盖版本，尾部顺延为 0.3.25–28。前面尚未启动的版本若再拆分，同样显式重排，不更改已封存历史编号。
+
+## 六、版本分配索引
+
+下表只表示主办/开始版本。每个原问题的原始证据、限定、关闭条件和后续回验在[完整总账](design/vela-0.3-reconstruction-guidance.md#section-8)；COV 工作面不是缺陷，也不意味着在开始版本一次审完所有源码。
+
+| 主办版本 | 工作面 | 条目 |
+|---|---|---|
+| 0.3.12 | 基线安全与事实链收口 | A01、A02、A03、A04、A05、A06、A07、A08、A09、A11、A12、AP-01、AP-02、AP-03、UX-01、UX-02、UX-03、G-01、G-02、G-09、G-10、COV-03、COV-04、COV-05、COV-06 |
+| 0.3.13 | 视觉基线与 UI 平台重建 | A10、AP-05、AP-06、AP-07、UX-05、UX-06、UX-07、UX-08、UX-09、G-11、V-01、V-02、V-03、V-04、V-05、V-06、V-07、COV-01、COV-02 |
+| 0.3.14 | 产品 UI 迁移与外观一致性 | AP-04、AP-08 |
+| 0.3.15 | 能力模型泛化 | G-03、G-08 |
+| 0.3.16 | 有界上下文消费与容量预算 | G-04、G-05 |
+| 0.3.17 | 通用任务委托与 Agent 任务体验 | UX-04、G-06、G-12 |
+| 0.3.25 | 整合 AE 验收与模型资格 | G-07 |
+
+三份审计的原始 ID 共 29 个（A 12、AP 8、UX 9）；加入首轮/路线 G 12、视觉 V 7、审计覆盖 COV 6，共 54 个工作项。**这不是 54 个已确诊漏洞。** 原报告明确存在转录、替身、局部 CSS 与实机未验证边界。[R-A]；[R-AP][R-UX]
+
+## 七、重构原则
+
+可重写 UI/Renderer/DOM/CSS决议、拆 main/CoreUI、替换内部 API 和删除旧实现；旧视觉封存不阻止新产品设计。**先真实页面视觉基线，再重构基础，再迁移消费者**；不以新 token 数量、文件数量或框架更换作为成功标准。
+
+保留模型无执行权、TaskPlan 非执行对象、JIT/fresh/CAS/replay/Host边界、read/analyze 与 mutation 分层、用户资产、会话隔离及权限不恢复。真正改变 normative Agent 边界时，先提 Architecture Amendment；本文不自行修改 frozen v2.2。[R-ARCH]
+
+原报告里“不编号、不改风格”的当轮范围，已由本次用户新要求扩展；原始发现和证据仍保留，不将任何报告重写为全量审计或新视觉已经验收。
+
+## 八、八项新退出门
+
+原项目只保存“曾有八项”的摘要，未保存精确枚举。本 R1 **新制定**以下清单，不声称找回原八条，也不替代冻结架构的 13 invariants。[R-OLD]
+
+| Gate | 退出要求 |
+|---|---|
+| GATE-01 | 安全、Authority 与事实可信；输入/提交/目标验证与 Session 不夸大事实。 |
+| GATE-02 | 完整可委托 Agent；有界连续执行、Review、失败/取消/恢复可控。 |
+| GATE-03 | 正式 AE Action Coverage Matrix 完整关闭或有审核平台不可达证据。 |
+| GATE-04 | 实际跨轮上下文与容量、多会话隔离、typed/bounded/queryable User History 基础。 |
+| GATE-05 | UI 产品形成：视觉层级可复现、Review可读、状态结果准确、草稿/键盘/响应式可靠。 |
+| GATE-06 | Provider/模型配置级资格与本地运行兼容；readiness 不等资格。 |
+| GATE-07 | 全产品整合 AE 验收、生产回归与实际源码覆盖台账闭合。 |
+| GATE-08 | 资源/性能、迁移/回退、用户资产、文档和可发布状态稳定。 |
+
+详细证据见[指导书第 10 节](design/vela-0.3-reconstruction-guidance.md#section-10)。关键安全、数据、事实或知情批准风险不能用一个 known issue 标签绕过；关键能力/资格仍 UNKNOWN 时不能退出。**任何编号本身都不授予进入 0.4 的资格。**
+
+## 九、当前规划状态与下一项
+
+当前工作为0.3.12-G；整合结果、25项处置与剩余覆盖以 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md) 为准。技术关闭与封存裁定已通过，仓库生效须G PR通过CI并合并dev；不自动进入0.3.13。以下保留B1/B2阶段的历史状态及测试归属，不代表当前最新结果。
+
+**历史阶段：0.3.12-B2 / A09（M1、M2/F1）：TARGETED_ACCEPTED — AE26.0x67 / READY FOR COMMIT / PR。** 见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)。M1 与 M2/F1 均已在 AE26.0x67 定向接受；最新全量为 M2-F1 实施轮 **192/192 PASS（0 skip）**，实机轮及本轮文档收束未重跑。M2 七组 PASS、六次原生 Undo，**3451 个所查字段零差异**。 AE26.3x87 跨版本复验 **DEFERRED**；AV fallback 真实 AE **NOT COVERED**，已有离线覆盖保持。INTEGRATED_ACCEPTED / CLOSED 留待 **0.3.12-G**；B2 和整个 0.3.12 未完成，不自动开始下一项。
+
+A11-F1 已补强公共 parseJson：解码后含 U+0000 的对象成员名在属性建立前拒绝（Host兼容性契约）；F1 224项、A01 1122项、serializer 2307项、registry 27项及185/185离线套件通过（0 skip），A11（含F1）真实复验：入口20/20、编码310/310、公共返回3/3 PASS；10项含NUL对象键按用户预授权接受为Host支持范围限制，不计编码PASS。INTEGRATED_ACCEPTED / CLOSED 留待0.3.12-G。首次3 PASS / 1 FAIL / 316 NOT COVERED保留为历史。
+
+首次 A11 真实验收：AE-01 装载 PASS；AE-02 在 U+0000 的 toJson 字符串键返回空键时内容断言 FAIL，矩阵停止（3 PASS / 1 FAIL / 316 NOT COVERED）；AE-03 完整组 NOT COVERED。当时未裁定TARGETED_ACCEPTED；A11以其后F1复验结论为准，详见A11报告。
+
+**历史条目：0.3.12-B1 / A11 — 公共 Host JSON serializer 完整字符串转义。**
+
+[A0 报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)保留已完成的资料/哈希、入口对账、完整源码清单与25项生产复核计划。[A01 阶段报告](reports/vela-0.3.12-b1-a01-host-json-entry.md)记录实际生产模块反例、严格解析修复、复用实施轮1122 focused assertions/183/183 suites PASS（0 skipped），以及六组有界真实 AE 验收与用户风险裁定。A01 已 TARGETED_ACCEPTED 并通过 PR #202 合并 dev，原覆盖裁定保留。当前 [A11 公共 serializer 修复](reports/vela-0.3.12-b1-a11-host-json-serialization.md) 原实施轮2307项断言及184/184离线套件通过（0 skipped），F1轮新增准入并重跑224/1122/2307/27项及185/185套件；上述为A11/F1历史结果，G-02历史回归另见报告。A11真实复验通过并经PR #203合并dev。G-02已通过PR #204合并dev并保留TARGETED_ACCEPTED。历史A08-F1按实际comp.time定稿，精确模板准入后统一采样、有界2D补偿，421项定向及187/187离线套件通过；原251项/186 suites、Grid PASS/Feature FAIL及Undo保持历史；随后F1装载PASS但普通Feature被collapse准入拒绝，后续两组未执行，保留该历史失败。F1a按Text/Shape与AV来源区分成员及父链准入，历史实施轮1134项定向、251项A08及187/187离线通过；随后R1在额外依赖/属性扫描预检失败，所查B1/B2未变，R2/R3及Undo未执行。D1已确认当前AE五个Property的结构locator一致而wrapper引用不等；F1b现以compId/layerId及完整propertyIndex+matchName路径作私有preflight匹配，并经用户追加授权预先关联Position release校验目标，不在执行阶段重新resolve。F1b 932项定向、重新执行F1/F1a 1134项及A08 251项通过；全量仅运行一次，188 discovered/executed、187 PASS、1 FAIL、0 skip，唯一失败为i18n生成报告过期，原脚本更新后该suite单独46项PASS，生产/测试未再变更；不表述为全量188/188 PASS。以上为F1b实施轮离线事实，本次实机未重跑。2026-09-11正常装载后，R1正常Feature、R2非零t=1秒定稿、R3原Grid小回验及三次用户原生Undo均PASS；独立B3所查字段均恢复B1。A08（含F1/F1a/F1b）现为TARGETED_ACCEPTED / READY FOR COMMIT / PR，仅覆盖普通2D、已识别类型/完整Feature模板和受支持平移父链的当前帧定稿；Detach注册/UI未交付，未来接入仍需回验。INTEGRATED_ACCEPTED / CLOSED留待0.3.12-G，B2/0.3.12未完成；该历史阶段停止于A08、不进入A09。注册/UI留待后续。INTEGRATED_ACCEPTED / CLOSED 留待 0.3.12-G；该历史阶段未自动进入A09或UI重构。
+
+A01 已实施并获有界验收接受，其剩余覆盖限制保留至 0.3.12-G 重新裁定；A11含F1已完成有界真实复验并TARGETED_ACCEPTED；整个 B1/0.3.12 未完成，其余生产修复与后续重构未由本切片实施。实际开发遵循 focused branch → 实施/回归 → AE/CEP → 用户 commit/push → PR 到 dev；正式版本发布另行处理。
+
+## 十、来源
+
+[R-OLD]: https://github.com/Lomond-PM/Lomond-Cabinet/blob/b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a/docs/VELA_ROADMAP.md
+[R-STATE]: https://github.com/Lomond-PM/Lomond-Cabinet/blob/b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a/docs/PROJECT_STATE.md
+[R-ARCH]: https://github.com/Lomond-PM/Lomond-Cabinet/blob/b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a/docs/design/vela-agent-architecture.md
+[R-A]: reports/audit-baseline-0.3.11/source-audit.md
+[R-AP]: reports/audit-baseline-0.3.11/appearance-audit.md
+[R-UX]: reports/audit-baseline-0.3.11/uiux-audit.md

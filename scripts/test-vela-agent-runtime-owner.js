@@ -20,6 +20,15 @@ function expectCode(fn, code, message) {
 }
 
 const owner = ownerModule.createOwner();
+const sessionFailures = [];
+const sessionReportingOwner = ownerModule.createOwner({ onListenerError(error, envelope) { sessionFailures.push({ error, envelope }); throw new Error("reporter"); } });
+const ownedSession = sessionReportingOwner.getSessionRuntime();
+ownedSession.subscribe(() => { throw new Error("owned Session observer"); });
+const ownedEvent = ownedSession.append({ kind: "user/message" });
+equal(sessionFailures.length, 1, "Owner receives Session errors through its existing reporter");
+equal(sessionFailures[0].envelope.event, ownedEvent, "Owner reporter receives the exact committed event");
+equal(sessionReportingOwner.getCurrentProjection().getSnapshot().sessionLastSeq, ownedEvent.seq, "Owner projection remains synchronous after observer failure");
+sessionReportingOwner.dispose();
 const agent = owner.getCurrentAgent();
 const projection = owner.getCurrentProjection();
 check(agent && projection, "Owner creates one current Agent and Projection");
@@ -110,10 +119,10 @@ async function coldStartRegression() {
     check(coldOwner.getObservationRuntime(), "late attachment creates the real ObservationRuntime");
     check(coldOwner.attachAgentDriverRuntimePort(Object.freeze({
         reason() { reasons += 1; return Promise.resolve(reasonMode === "logical" ? logicalPlanContracts.validateLogicalPlanProposal({ type: "logicalPlanProposal", steps: [{ capabilityId: "set-opacity-v1", params: { opacity: 47 } }, { capabilityId: "set-layer-name-v1", params: { name: "Hero" } }] }) : Object.freeze({ capabilityId: "set-opacity-v1", params: Object.freeze({ opacity: 63 }) })); },
-        submitIntent(input) { submissions += 1; return Promise.resolve(Object.freeze(submissionMode === "review" ? { state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: input.capabilityIntent.capabilityId === "set-layer-name-v1" ? "Layer A" : 100, reviewCorrelation: "owner_review_correlation_" + submissions } : submissionMode === "denied" ? { state: "denied", committed: false, code: "PERMISSION_DENIED" } : { state: "executed", committed: true })); },
-        continueApprovedReview() { return Promise.resolve(Object.freeze(continuationMode === "stale" ? { state: "blocked", code: "CONTEXT_STALE", committed: false, observation: Object.freeze({ targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:owner_stale" }) } : { state: "verification-required", code: null })); },
-        verifyCommittedAction() { return Promise.resolve(Object.freeze({ state: "verified", code: null })); },
-        verifyOpacity() { return Promise.resolve(Object.freeze({ fresh: true, matches: true, opacity: 63 })); },
+        submitIntent(input) { submissions += 1; return Promise.resolve(Object.freeze(submissionMode === "review" ? { state: "review-required", reviewTarget: {compId: "ae-project-1-item-1", layerId: "ae-project-1-item-1-layer-2", revision: input.reviewRevision}, committed: false, code: "REVIEW_REQUIRED", beforeValue: input.capabilityIntent.capabilityId === "set-layer-name-v1" ? "Layer A" : 100, reviewCorrelation: "owner_review_correlation_" + submissions } : submissionMode === "denied" ? { state: "denied", committed: false, code: "PERMISSION_DENIED" } : { state: "executed", committed: true })); },
+        continueApprovedReview() { return Promise.resolve(Object.freeze(continuationMode === "stale" ? { state: "blocked", code: "CONTEXT_STALE", committed: false, observation: Object.freeze({ targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:owner_stale" }) } : { state: "verification-required", committed: true, disposition: "mutated", code: null })); },
+        verifyCommittedAction() { return Promise.resolve(Object.freeze({ state: "verified", fresh: true, matches: true, targetRelation: "committed-target", code: null })); },
+        verifyAction() { return Promise.resolve(Object.freeze({ fresh: true, matches: true, targetRelation: "committed-target", valueKind: "number", value: 63 })); },
         cancel() { return false; }
     })), "late Runtime action port attaches to the Owner-held Driver");
     const result = await coldOwner.startObjective({ message: "Set opacity to 63", endpoint: "http://127.0.0.1:1234", model: "m" });
@@ -128,7 +137,7 @@ async function coldStartRegression() {
     equal(suspended.state, "awaiting-review", "Owner preserves the Driver suspended review state");
     const ownerReviewPort = coldOwner.getObjectiveReviewPort();
     const reviewProjection = ownerReviewPort.getProjection();
-    check(Object.isFrozen(ownerReviewPort) && Object.isFrozen(reviewProjection) && Object.keys(reviewProjection).sort().join(",") === "beforeValue,capabilityId,outcome,proposedValue,reviewId,revision,state,valueKind", "Owner exposes only a frozen bounded typed objective review port and projection");
+    check(Object.isFrozen(ownerReviewPort) && Object.isFrozen(reviewProjection) && Object.keys(reviewProjection).sort().join(",") === "beforeValue,capabilityId,outcome,proposedValue,reviewId,revision,state,stepCount,stepNumber,target,valueKind", "Owner exposes only a frozen bounded typed objective review port and projection");
     equal(reviewProjection.reviewId, suspended.suspendedReview.reviewId, "Owner projection correlates the exact Driver review identity");
     equal(reviewProjection.beforeValue, 100, "Owner projects the Driver-owned scalar presentation baseline without reading AE");
     const approved = await ownerReviewPort.resolve({ reviewId: reviewProjection.reviewId, revision: reviewProjection.revision, outcome: "approved" });

@@ -16,8 +16,8 @@
         "motion.speed": 1,
         "surface.panel": "#0b0a08",
         "text.primary": "#f6f0df",
-        "text.secondary": { color: "#f6f0df", alpha: 0.66 },
-        "text.tertiary": { color: "#f6f0df", alpha: 0.42 },
+        "text.secondary": Object.freeze({ color: "#f6f0df", alpha: 0.66 }),
+        "text.tertiary": Object.freeze({ color: "#f6f0df", alpha: 0.42 }),
         "select.trigger.surface": "#0b0a08",
         "select.menu.surface": "#0b0a08",
         "typography.title.size": 1,
@@ -85,10 +85,11 @@
         if (!normalized) return "";
         return rgba(normalized.color, normalized.alpha);
     }
+    function clone(value) { return value && typeof value === "object" ? copy(value) : value; }
     function copy(source) {
         var result = {};
         var key;
-        for (key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { result[key] = source[key]; } }
+        for (key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { result[key] = clone(source[key]); } }
         return result;
     }
 
@@ -192,30 +193,29 @@
             return true;
         }
 
+        function outcome(accepted, applied, saved) {
+            var result = { accepted: accepted, applied: applied, persisted: !!(saved && saved.persisted), error: saved && saved.error || null };
+            if (typeof options.onPersistenceResult === "function") options.onPersistenceResult(result);
+            return result;
+        }
+        function persist() { var saved = store && store.save(); resolveAndApply(); return outcome(!!store, !!store, saved); }
         function commit(id, value) {
             var parameter = registry && registry.get(id);
             var checked = registry && registry.validate(id, value);
-            if (!parameter || !checked || !checked.valid) { return false; }
+            if (!parameter || !checked || !checked.valid) return outcome(false, false);
             if (parameter.persistence === "settings") {
-                delete previewOverrides[id];
-                if (typeof runtime.commitBaseInput !== "function" || runtime.commitBaseInput(id, checked.value) !== true) { return false; }
-                baseInputs[id] = checked.value;
-                resolveAndApply();
-                return true;
+                if (typeof runtime.commitBaseInput !== "function" || runtime.commitBaseInput(id, checked.value) !== true) return outcome(false, false);
+                delete previewOverrides[id]; baseInputs[id] = clone(checked.value); resolveAndApply();
+                // main owns the Settings write; acceptance here is not a storage receipt.
+                return { accepted: true, applied: true, persisted: false, persistenceOwner: "settings" };
             }
-            if (!store || !store.setOverride(id, checked.value)) { return false; }
+            if (!store || !store.setOverride(id, checked.value)) return outcome(false, false);
             delete previewOverrides[id];
-            store.save();
-            resolveAndApply();
-            return true;
+            return persist();
         }
-
         function reset(id) {
-            delete previewOverrides[id];
-            if (!store || !store.removeOverride(id)) { resolveAndApply(); return false; }
-            store.save();
-            resolveAndApply();
-            return true;
+            if (!store || !registry.isAppearanceOverride(id)) return outcome(false, false);
+            delete previewOverrides[id]; store.removeOverride(id); return persist();
         }
 
         return Object.freeze({
@@ -227,15 +227,18 @@
                 return resolveAndApply();
             },
             getParameter: function (id) { return registry ? registry.get(id) : null; },
-            getResolvedValue: function (id) { return Object.prototype.hasOwnProperty.call(resolved, id) ? resolved[id] : null; },
+            getResolvedValue: function (id) { return Object.prototype.hasOwnProperty.call(resolved, id) ? clone(resolved[id]) : null; },
             getOverride: function (id) { return store ? store.getOverride(id) : null; },
             setBaseInput: setBaseInput,
             preview: preview,
             clearPreview: function (id) { delete previewOverrides[id]; resolveAndApply(); },
             commit: commit,
             reset: reset,
-            resetCategory: function (category) { if (store) { store.resetCategory(category); store.save(); } previewOverrides = {}; return resolveAndApply(); },
-            resetAll: function () { if (store) { store.resetAll(); store.save(); } previewOverrides = {}; return resolveAndApply(); },
+            resetCategory: function (category) { if (store) store.resetCategory(category); previewOverrides = {}; return persist(); },
+            resetAll: function () { if (store) store.resetAll(); previewOverrides = {}; return persist(); },
+            retrySave: persist,
+            restoreSaved: function () { var result = store && store.restoreSaved(); if (result && result.accepted) { previewOverrides = {}; resolveAndApply(); } return outcome(!!(result && result.accepted), !!(result && result.accepted), result); },
+            getPersistenceState: function () { return store ? store.getPersistenceState() : { persisted: false, dirty: true, canRestore: false }; },
             resolve: resolveAndApply,
             getOverrides: function () { return store ? store.getOverrides() : {}; }
         });

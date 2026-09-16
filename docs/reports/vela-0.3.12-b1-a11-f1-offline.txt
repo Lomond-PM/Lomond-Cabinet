@@ -1,0 +1,189 @@
+Action Button contract tests passed.
+Appearance colorAlpha authority tests passed: 25 assertions.
+test-appearance-parameter-registry: 413 assertions passed.
+test-appearance-resolver: 23 assertions passed.
+Appearance runtime stability contract tests passed: 12 assertions.
+test-appearance-state-store: 11 assertions passed.
+Button variant provenance contract tests passed.
+Calibration authority convergence tests passed.
+Calibration consumer gap tests passed.
+Canonical Promotion contract tests passed: 37 A params promoted with typed parity, 3 Protected unchanged, reset parity verified.
+PASS color derivation registry: 29 assertions.
+Core bootstrap tests passed: 56 assertions.
+Core UI BezierCurveField tests passed.
+Core UI bootstrap namespace tests passed.
+Core UI component contract tests passed.
+CoreUI ShadowField contract tests passed.
+Core UI visual contract tests passed.
+Design Tuning Color + Alpha contract tests passed.
+Design Tuning coverage completeness tests passed.
+Design Tuning effectiveness contract tests passed.
+Design Tuning gesture boundary contract tests passed.
+Design Tuning infrastructure tests passed.
+Design Tuning Motion v1 UI tests passed.
+Design Tuning Shadow product-path integration tests passed.
+Design Tuning transient calibration contract tests passed.
+Developer Mode -> Settings -> Home transition continuation regression tests passed.
+Editable scroll contract tests passed.
+Elevation consumer coverage contract tests passed.
+Elevation contract tests passed.
+test-generated-report-guard: 46 assertions passed.
+test-global-status-i18n: 68 assertions passed.
+Grid Host contract tests passed: 120 assertions.
+Grid Refresh idempotence tests passed: 106 assertions.
+Host JSON entry: 1122 assertions PASS (3 JSON environments; actual Host/includes/registered state; no AE)
+Host JSON member admission: 224 assertions PASS (3 production-module VM environments)
+Host JSON serialization: 2307 assertions PASS (3 Host JSON modes)
+Host registry transaction tests passed: 27 assertions.
+test-interaction-semantic-contract: 99 assertions passed.
+PASS legacy palette migration: 47 assertions.
+Legacy procedural Palette adapter tests passed.
+Built-in parity count: 8
+Failures: 0
+Motion architecture contract tests passed.
+PASS Palette CEP browser bootstrap: CommonJS globals do not hijack browser dependency resolution.
+PASS Palette closure authority: v2 sole authority, v1 immutable, transient isolated, complex graph roundtrip, v1 migration, adapter projection-only.
+PASS palette model: 28 assertions.
+PASS Palette production integration: startup, migration, recovery, preview, lossless bridge, read-only guard.
+PASS palette resolver: 27 assertions.
+PASS palette store v2: 44 assertions.
+PASS Palette Workspace continuity: scroll identity, live derived preview, dependency propagation, live oklchAdjust, select lifecycle.
+PASS Palette Workspace v2: dynamic graph, dependency guard, derivations, native preview/save/reset.
+Primary Text palette one-shot assignment tests passed: 20 assertions.
+PASS procedural cache: 30 assertions.
+PASS procedural appearance determinism: 1646 assertions.
+Procedural Home Background tests passed: 56 assertions.
+PASS procedural Home icons: 44 assertions.
+PASS procedural palette editor: 87 assertions.
+PASS procedural palette library: 126 assertions.
+PASS procedural palette store: 40 assertions.
+PASS procedural palette workspace: 80 assertions.
+PASS procedural preview contract: 17 assertions.
+PASS procedural theme map: 71 assertions.
+Radius contract tests passed.
+RangeNumber layout contract tests passed.
+Registry Control Lab completeness contract tests passed.
+Registry FieldRow provenance contract tests passed.
+Registry number support contract tests passed.
+Registry Primitive Provenance Gate passed: LOCAL-UNREGISTERED = 0.
+Registry Tool Schema i18n resolution contract tests passed.
+Shared scroll-region contract tests passed.
+Final Settings IA Advanced Appearance disclosure contract tests passed: 20 assertions.
+Settings control contract convergence tests passed.
+Settings control follow-up contract tests passed.
+Settings Information Architecture tests passed: 49 assertions.
+Settings Peek contract tests passed: 25 assertions.
+Settings presentation session contract tests passed.
+Settings startup bootstrap regression tests passed: 12 assertions.
+Settings State Adapter tests passed: 6 assertions.
+Shared Select lifecycle contract tests passed.
+Spacing contract tests passed.
+Startup readiness contract tests passed.
+test-status-tone-contract: 47 assertions passed.
+Surface Identity contract tests passed: 37 assertions.
+Surface layout stability contract tests passed.
+System Settings integration tests passed: 23 assertions.
+System Surface Router tests passed: 9 assertions.
+PASS theme settings integration: 113 assertions.
+Tool Catalog tests passed: 61 assertions.
+Typography Appearance foundation contract tests passed.
+Typography Appearance UI contract tests passed.
+Typography contract tests passed.
+Typography stress contract tests passed.
+PASS UI token contract: 22 assertions.
+PASS Vela actions: 58 assertions.
+test-vela-activation-policy: 18 assertions passed.
+test-vela-active-composition-diagnostics: 72 assertions passed
+test-vela-active-composition-observation: 38 assertions passed
+test-vela-agent-capability-owner: 8 assertions passed
+test-vela-agent-capability-runtime: 36 assertions passed
+test-vela-agent-cep-hybrid-modules: 23 assertions passed
+test-vela-agent-driver: 223 assertions passed
+test-vela-agent-observation-context: 82 assertions passed
+test-vela-agent-production-lifecycle: 34 assertions passed
+test-vela-agent-runtime-owner: 70 assertions passed
+test-vela-agent-runtime: 151 assertions passed
+test-vela-agent-surface-projection: 29 assertions passed
+PASS Vela AtomicActivationCoordinator: 18 assertions.
+PASS Vela AuthorityActivationGate: 52 assertions.
+PASS Vela AuthorityEvidenceResolver: 24 assertions.
+test-vela-authority-production-composition: 18 assertions passed.
+PASS Vela AuthorizedPlan Authority Producer: 50 assertions.
+PASS Vela AuthorizedPlan materializer: 28 assertions.
+test-vela-browser-bootstrap: 39 assertions passed.
+PASS cancellation reasoning: 88 assertions (production Owner/Driver/Runtime/Provider/Surface/View)
+test-vela-capability-compiler: 54 assertions passed
+test-vela-capability-contracts: 167 assertions passed.
+PASS Vela capability prompt builder: 228 assertions.
+PASS Vela capacity/budget: 425 assertions; 9 pre-A3b canonical/wire/capture baselines.
+test-vela-cep-module-loader: 96 assertions passed.
+PASS Vela Confirmed Authority Composer E2: 93 assertions.
+PASS Vela context bridge: 262 assertions.
+PASS Vela context Host: 301 assertions.
+PASS Vela context property value: 60 assertions.
+PASS Vela context selection: 724 assertions; 23 immutable pre-A5b production equivalence cases.
+PASS Vela context target foundation: 19 assertions.
+PASS Vela context: 60 assertions.
+test-vela-controller: 19 assertions passed.
+PASS multi-record runtime composition: 89 assertions (A-R; actual factories, shared modules/Host, real Surface and main bootstrap)
+test-vela-conversation-ownership: 74 assertions passed.
+PASS conversation-owned presentation: 38 assertions
+PASS A5 conversation selection: 66 assertions; actual composition, Surface and controls; layout verified separately in CEP
+PASS Vela DelegationAuthorityCoordinator: 44 assertions.
+PASS Vela DelegationGrantStore: 49 assertions.
+PASS Vela DelegationPolicyEngine: 44 assertions.
+test-vela-execution-adapter: 13 assertions passed.
+test-vela-execution-host: 41 assertions passed.
+PASS Vela execution preflight: 581 assertions.
+PASS Vela guard: 143 assertions.
+PASS Vela JIT binding: 41 assertions.
+test-vela-legacy-authority-bridge: PASS (34 assertions)
+test-vela-local-provider-flow: 5 assertions passed.
+test-vela-local-transport: 30 assertions passed.
+Vela logical plan contracts: PASS
+PASS Vela multi-step presentation composition: 9 assertions.
+PASS Vela multi-step routing: 105 assertions.
+PASS Vela native assistant output: 67 assertions.
+PASS Vela observation turn isolation: 75 assertions; 4 immutable pre-A6b production comparisons.
+test-vela-persistent-surface-integration: 18 assertions passed.
+PASS Vela PlanController: 63 assertions.
+PASS Vela PlanReviewProjection: 32 assertions.
+PASS Vela plan: 45 assertions.
+test-vela-planning-contracts: 95 assertions passed
+PASS Vela PresentationModel streaming: 17 assertions.
+{"sharedGlobalPrefixBytes":898,"actualThreeProfileCommonPrefixBytes":0,"baseline":{"systemBytes":401,"systemSha256":"a97b9c367790eee8ae679e42005141d15cea7b8e4581fbc97dc0e5fb892f7045","assistantBytes":263,"assistantSha256":"ff45f89de01eb89568164ce2a7c7808fe5e7f8be0eca64092cf6f701a3ed17f3","messagesBytes":773,"messagesSha256":"a5d34641d1a54ac80c9862abd11aa736ae4f6e0ce4ad4d839456d7d7093e41d4","requestBodyBytes":831,"requestBodySha256":"83b38ae6b48c45bfa42c31769ea68a8a11b04a31e0254974435ce021fad93bfc","responseFormatBytes":4,"responseFormatSha256":"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"},"requestIdChanged":{"systemBytes":401,"systemSha256":"a97b9c367790eee8ae679e42005141d15cea7b8e4581fbc97dc0e5fb892f7045","assistantBytes":263,"assistantSha256":"ff45f89de01eb89568164ce2a7c7808fe5e7f8be0eca64092cf6f701a3ed17f3","messagesBytes":773,"messagesSha256":"a5d34641d1a54ac80c9862abd11aa736ae4f6e0ce4ad4d839456d7d7093e41d4","requestBodyBytes":831,"requestBodySha256":"83b38ae6b48c45bfa42c31769ea68a8a11b04a31e0254974435ce021fad93bfc","responseFormatBytes":4,"responseFormatSha256":"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"},"groundingChanged":{"systemBytes":401,"systemSha256":"a97b9c367790eee8ae679e42005141d15cea7b8e4581fbc97dc0e5fb892f7045","assistantBytes":325,"assistantSha256":"cdcbaaf8b7c0d8f85ef178133e8fcda5a93f52f4675c3b5fb9d4b41642e465a4","messagesBytes":843,"messagesSha256":"4de645237919ed8e59a02e58c2cc06341b80238fb76b67b8d7661eb35efb6607","requestBodyBytes":901,"requestBodySha256":"c5acbf37c1a5ebc602c68198a172bf94dee3972d3efb11321b6e2dd5d5dd3645","responseFormatBytes":4,"responseFormatSha256":"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"},"userChanged":{"systemBytes":401,"systemSha256":"a97b9c367790eee8ae679e42005141d15cea7b8e4581fbc97dc0e5fb892f7045","assistantBytes":263,"assistantSha256":"ff45f89de01eb89568164ce2a7c7808fe5e7f8be0eca64092cf6f701a3ed17f3","messagesBytes":790,"messagesSha256":"c554056333472da5f939fe0b74bbe25adb1f338d2b1f4a0981ad00336e0372e8","requestBodyBytes":848,"requestBodySha256":"6166f53e798c19033b9decc53f4cdefa0a362b09aaaa8d3e3a20b067e41b5703","responseFormatBytes":4,"responseFormatSha256":"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"},"modelChanged":{"systemBytes":401,"systemSha256":"a97b9c367790eee8ae679e42005141d15cea7b8e4581fbc97dc0e5fb892f7045","assistantBytes":263,"assistantSha256":"ff45f89de01eb89568164ce2a7c7808fe5e7f8be0eca64092cf6f701a3ed17f3","messagesBytes":773,"messagesSha256":"a5d34641d1a54ac80c9862abd11aa736ae4f6e0ce4ad4d839456d7d7093e41d4","requestBodyBytes":827,"requestBodySha256":"61e51540d2435accc7efc6d4fbe32fdd9f7cf41accf04b86ab36c67807de918c","responseFormatBytes":4,"responseFormatSha256":"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"}}
+PASS Vela prompt stability: 24 assertions.
+PASS Vela protocol: 198 assertions.
+test-vela-provider-branch-profiles: 70 assertions passed.
+PASS Vela Provider context evidence: 241 assertions; 9 immutable pre-A2 wire/capture baselines.
+test-vela-provider-controller: 157 assertions passed.
+test-vela-provider-intent-gate: 56 assertions passed.
+test-vela-provider-model-qualification: 217 assertions passed.
+test-vela-provider-production-e2e: 333 assertions passed.
+test-vela-provider-proposal-router: 37 assertions passed.
+test-vela-provider-qualification-rubric: 66 assertions passed.
+test-vela-provider-request-branch-policy: 78 assertions passed.
+PASS Vela provider stream assembler: 11 assertions.
+PASS Vela provider stream equivalence: 9 assertions.
+PASS Vela provider stream events: 31 assertions.
+PASS Vela provider stream lifecycle: 14 assertions.
+PASS Vela provider stream publication: 23 assertions.
+PASS Vela provider: 297 assertions.
+PASS Vela response budget: 38 assertions.
+PASS Vela ReviewRuntime seam: 27 assertions.
+test-vela-runtime-status-view: 14 assertions passed.
+test-vela-runtime: 93 assertions passed.
+test-vela-session-runtime: 92 assertions passed
+test-vela-settings-integration: 46 assertions passed.
+PASS source-bound routing: 54 assertions (A-L; real production bundles and main wiring)
+PASS Vela spacing authority convergence: 67-parameter Registry, axis canonical parity, consumer isolation, transient/commit/reset, UI Scale.
+test-vela-surface-bootstrap-boundary: 31 assertions passed.
+test-vela-surface-controller: 239 assertions passed.
+Vela Surface tests passed: 162 assertions.
+PASS Vela TaskRun: 23 assertions.
+PASS Vela TranscriptView reasoning UX: 12 assertions.
+test-vela-transcript-scroll: 28 assertions passed.
+PASS Vela TranscriptView streaming: 9 assertions.
+PASS Vela TranscriptView turn composition: 6 assertions.
+PASS Vela verified trajectory: 416 assertions; 14 pre-A4b production equivalence cases.
+Full offline regression: 185/185 runnable suites passed; 0/185 discovered suites skipped for missing local evidence.

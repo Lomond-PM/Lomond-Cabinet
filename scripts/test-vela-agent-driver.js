@@ -10,6 +10,7 @@ let assertions = 0;
 function check(value, message) { assertions += 1; assert.ok(value, message); }
 function equal(actual, expected, message) { assertions += 1; assert.strictEqual(actual, expected, message); }
 async function code(operation, expected, message) { let failure = null; try { await operation(); } catch (error) { failure = error; } assertions += 1; assert.ok(failure && failure.code === expected, message); }
+function reviewDefaults(input) { return {beforeValue: 100, reviewTarget: {compId: "ae-project-1-item-1", layerId: "ae-project-1-item-1-layer-2", revision: input.reviewRevision}}; }
 function harness(settings) {
     const options = settings || {};
     const events = [];
@@ -25,10 +26,10 @@ function harness(settings) {
     });
     const port = {
         reason() { calls.reason += 1; return Promise.resolve(options.reason || { capabilityId: "set-opacity-v1", params: { opacity: options.opacity === undefined ? 42 : options.opacity } }); },
-        submitIntent(input) { calls.submit += 1; calls.intent = input; calls.intents.push(input); return options.executionError ? Promise.reject(Object.assign(new Error(options.executionError), { code: options.executionError })) : Promise.resolve(options.outcome || { state: "executed", committed: true, transcriptSettled: options.transcriptSettled !== false }); },
-        continueApprovedReview(input) { calls.continue += 1; calls.continuation = input; calls.continuations.push(input); if (options.deferContinuation) return new Promise((resolve) => { calls.releaseContinuation = resolve; }); return options.continuationError ? Promise.reject(Object.assign(new Error(options.continuationError), { code: options.continuationError })) : Promise.resolve(options.continuation || { state: "verification-required", code: null }); },
-        verifyCommittedAction(input) { calls.committedVerify += 1; calls.committedVerificationInput = input; calls.committedVerifications.push(input); if (options.deferCommittedVerification) return new Promise((resolve) => { calls.releaseCommittedVerification = resolve; }); return Promise.resolve(options.committedVerification || { state: "verified", code: null }); },
-        verifyOpacity() { calls.verify += 1; return options.verifyError ? Promise.reject(Object.assign(new Error(options.verifyError), { code: options.verifyError })) : Promise.resolve(options.verification || { fresh: true, matches: true, opacity: options.opacity === undefined ? 42 : options.opacity }); },
+        submitIntent(input) { calls.submit += 1; calls.intent = input; calls.intents.push(input); return options.executionError ? Promise.reject(Object.assign(new Error(options.executionError), { code: options.executionError })) : Promise.resolve(options.outcome && options.outcome.state === "review-required" ? { ...reviewDefaults(input), ...options.outcome } : options.outcome || { state: "executed", committed: true, transcriptSettled: options.transcriptSettled !== false }); },
+        continueApprovedReview(input) { calls.continue += 1; calls.continuation = input; calls.continuations.push(input); if (options.deferContinuation) return new Promise((resolve) => { calls.releaseContinuation = resolve; }); return options.continuationError ? Promise.reject(Object.assign(new Error(options.continuationError), { code: options.continuationError })) : Promise.resolve(options.continuation || { state: "verification-required", committed: true, disposition: "mutated", code: null }); },
+        verifyCommittedAction(input) { calls.committedVerify += 1; calls.committedVerificationInput = input; calls.committedVerifications.push(input); if (options.deferCommittedVerification) return new Promise((resolve) => { calls.releaseCommittedVerification = resolve; }); return Promise.resolve(options.committedVerification || { state: "verified", fresh: true, matches: true, targetRelation: "committed-target", code: null }); },
+        verifyAction() { calls.verify += 1; return options.verifyError ? Promise.reject(Object.assign(new Error(options.verifyError), { code: options.verifyError })) : Promise.resolve(options.verification || { fresh: true, matches: true, targetRelation: "committed-target", valueKind: "number", value: options.opacity === undefined ? 42 : options.opacity }); },
         cancel() { calls.cancel += 1; return true; }
     };
     check(driver.attachRuntimePort(port), "runtime port attaches once");
@@ -46,10 +47,10 @@ function logicalReplanHarness(logicalPlanProposal, continuationResults, settings
     });
     driver.attachRuntimePort({
         reason() { throw new Error("unreachable"); },
-        submitIntent(input) { calls.submit += 1; calls.submissions.push(input); return Promise.resolve({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "logical_replan_review_" + calls.submit }); },
+        submitIntent(input) { calls.submit += 1; calls.submissions.push(input); return Promise.resolve({ ...reviewDefaults(input), state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "logical_replan_review_" + calls.submit }); },
         continueApprovedReview(input) { calls.continue += 1; calls.continuations.push(input); return Promise.resolve(continuationResults[calls.continue - 1]); },
-        verifyCommittedAction() { calls.verify += 1; return Promise.resolve({ state: "verified", code: null }); },
-        verifyOpacity() { throw new Error("unreachable"); },
+        verifyCommittedAction() { calls.verify += 1; return Promise.resolve({ state: "verified", fresh: true, matches: true, targetRelation: "committed-target", code: null }); },
+        verifyAction() { throw new Error("unreachable"); },
         cancel() { return true; }
     });
     return { driver, calls, proposal: logicalPlanProposal };
@@ -70,7 +71,7 @@ async function run() {
     browser.__beginTurn = function () { return Object.freeze({ sessionId: "session_cep", turnId: "turn_cep" }); }; browser.__observe = function () { return Promise.resolve(); }; browser.__getObservation = function () { return Object.freeze({ observationRevision: 1 }); }; browser.__appendSessionEvent = function () {};
     const browserDriver = vm.runInContext("VelaAgentDriver.createAgentDriver({beginTurn:__beginTurn,observe:__observe,getObservation:__getObservation,appendSessionEvent:__appendSessionEvent})", browserRealm);
     let browserSubmits = 0;
-    browserDriver.attachRuntimePort({ reason() { return Promise.resolve(browser.__validatedPlan); }, submitIntent() { browserSubmits += 1; return Promise.resolve({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: browserSubmits === 1 ? 100 : "Layer A", reviewCorrelation: "cep_review_" + browserSubmits }); }, continueApprovedReview() { return Promise.resolve({ state: "verification-required" }); }, verifyCommittedAction() { return Promise.resolve({ state: "verified" }); }, verifyAction() { return Promise.resolve({ fresh: true, matches: true }); }, cancel() { return true; } });
+    browserDriver.attachRuntimePort({ reason() { return Promise.resolve(browser.__validatedPlan); }, submitIntent(input) { browserSubmits += 1; return Promise.resolve({ ...reviewDefaults(input), state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: browserSubmits === 1 ? 100 : "Layer A", reviewCorrelation: "cep_review_" + browserSubmits }); }, continueApprovedReview() { return Promise.resolve({ state: "verification-required", committed: true, disposition: "mutated" }); }, verifyCommittedAction() { return Promise.resolve({ state: "verified", fresh: true, matches: true, targetRelation: "committed-target" }); }, verifyAction() { return Promise.resolve({ fresh: true, matches: true, targetRelation: "committed-target" }); }, cancel() { return true; } });
     browser.__driver = browserDriver;
     const browserReview = await vm.runInContext("__driver.startObjective({message:'把当前图层透明度改成47%，然后把它命名为Hero',endpoint:'e',model:'m'})", browserRealm);
     check(browserRequireCalls === 0 && browserReview.state === "awaiting-review" && browserReview.logicalPlan.currentStepIndex === 0 && browserReview.suspendedReview.capabilityId === "set-opacity-v1" && browserReview.suspendedReview.params.opacity === 47 && browserSubmits === 1, "CEP browser wiring ignores CommonJS-like globals, adopts the browser-owned validated plan, and reaches exact step 0 Review without mutation or step 1 materialization.");
@@ -142,7 +143,7 @@ async function run() {
     check(logicalDeniedTerminal.terminal.code === "PERMISSION_DENIED" && logicalDenied.calls.submit === 1 && logicalDenied.calls.observe === 1, "step 0 authority denial terminalizes without reaching step 1");
 
     const staleA = { state: "blocked", code: "CONTEXT_STALE", committed: false, observation: { targetAvailable: true, targetClass: "layer-opacity", observedValueKind: "number", observedValueDigest: "sha256:logical_a" } };
-    const verifiedContinuation = { state: "verification-required", code: null };
+    const verifiedContinuation = { state: "verification-required", committed: true, disposition: "mutated", code: null };
     const sharedReplan = logicalReplanHarness(logicalPlanProposal, [staleA, verifiedContinuation, verifiedContinuation]);
     const sharedStep0Attempt0 = await sharedReplan.driver.startObjective({ message: "shared replan completes", endpoint: "e", model: "m", logicalPlanProposal });
     const sharedStep0Token0 = { reviewId: sharedStep0Attempt0.suspendedReview.reviewId, revision: sharedStep0Attempt0.suspendedReview.revision, outcome: "approved" };
@@ -190,7 +191,7 @@ async function run() {
     let pendingStepSubmitCount = 0;
     let releasePendingStep1Submit;
     const pendingStep1Driver = driverModule.createAgentDriver({ beginTurn() { return Object.freeze({ sessionId: "pending_step_session", turnId: "pending_step_turn_" + (pendingStepSubmitCount + 1) }); }, observe() { return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: pendingStepSubmitCount + 1 }); }, appendSessionEvent() {} });
-    pendingStep1Driver.attachRuntimePort({ reason() { throw new Error("unreachable"); }, submitIntent() { pendingStepSubmitCount += 1; if (pendingStepSubmitCount === 2) return new Promise((resolve) => { releasePendingStep1Submit = resolve; }); return Promise.resolve({ state: "executed", committed: true }); }, continueApprovedReview() { throw new Error("unreachable"); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyOpacity() { return Promise.resolve({ fresh: true, matches: true, opacity: 47 }); }, cancel() { return true; } });
+    pendingStep1Driver.attachRuntimePort({ reason() { throw new Error("unreachable"); }, submitIntent(input) { pendingStepSubmitCount += 1; if (pendingStepSubmitCount === 2) return new Promise((resolve) => { releasePendingStep1Submit = resolve; }); return Promise.resolve({ state: "executed", committed: true }); }, continueApprovedReview() { throw new Error("unreachable"); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyAction() { return Promise.resolve({ fresh: true, matches: true, targetRelation: "committed-target", valueKind: "number", value: 47 }); }, cancel() { return true; } });
     const pendingStep1Result = pendingStep1Driver.startObjective({ message: "cancel materialized step 1", endpoint: "e", model: "m", logicalPlanProposal });
     for (let microtask = 0; microtask < 30 && !releasePendingStep1Submit; microtask += 1) await Promise.resolve();
     check(pendingStep1Driver.getSnapshot().logicalPlan.currentStepIndex === 1 && pendingStep1Driver.getSnapshot().state === "awaiting-outcome", "step 1 can be cancelled after materialization while submission is unsettled");
@@ -208,7 +209,7 @@ async function run() {
     const lifecycleEvents = [];
     const lifecycleDriver = driverModule.createAgentDriver({ beginTurn() { return Object.freeze({ sessionId: "logical_session", turnId: "logical_turn_" + lifecycleObservations }); }, observe() { lifecycleObservations += 1; if (lifecycleObservations === 1) { return new Promise((resolve) => { releaseLogicalObservation = resolve; }); } return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: lifecycleObservations }); }, appendSessionEvent(event) { lifecycleEvents.push(event); } });
     let lifecycleSubmit = 0;
-    lifecycleDriver.attachRuntimePort({ reason() { return Promise.resolve({ capabilityId: "set-opacity-v1", params: { opacity: 42 } }); }, submitIntent() { lifecycleSubmit += 1; return Promise.resolve({ state: "executed", committed: true }); }, continueApprovedReview() { throw new Error("unreachable"); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyOpacity() { return Promise.resolve({ fresh: true, matches: true, opacity: 42 }); }, cancel() { return true; } });
+    lifecycleDriver.attachRuntimePort({ reason() { return Promise.resolve({ capabilityId: "set-opacity-v1", params: { opacity: 42 } }); }, submitIntent(input) { lifecycleSubmit += 1; return Promise.resolve({ state: "executed", committed: true }); }, continueApprovedReview() { throw new Error("unreachable"); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyAction() { return Promise.resolve({ fresh: true, matches: true, targetRelation: "committed-target", valueKind: "number", value: 42 }); }, cancel() { return true; } });
     const cancelledLogicalPending = lifecycleDriver.startObjective({ message: "cancel logical", endpoint: "e", model: "m", logicalPlanProposal });
     check(lifecycleDriver.cancel(), "cancel clears active logical cursor ownership while Observe is pending");
     const replacementLogical = lifecycleDriver.startObjective({ message: "replacement single step", endpoint: "e", model: "m" });
@@ -224,7 +225,7 @@ async function run() {
     let releaseLogicalTransition;
     let transitionSubmitCount = 0;
     const logicalTransitionDriver = driverModule.createAgentDriver({ beginTurn() { return Object.freeze({ sessionId: "transition_session", turnId: "transition_turn_" + (transitionObserveCount + 1) }); }, observe() { transitionObserveCount += 1; if (transitionObserveCount === 2) { return new Promise((resolve) => { releaseLogicalTransition = resolve; }); } return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: transitionObserveCount }); }, appendSessionEvent() {} });
-    logicalTransitionDriver.attachRuntimePort({ reason() { throw new Error("unreachable"); }, submitIntent() { transitionSubmitCount += 1; return Promise.resolve({ state: "executed", committed: true }); }, continueApprovedReview() { throw new Error("unreachable"); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyOpacity() { return Promise.resolve({ fresh: true, matches: true, opacity: 47 }); }, cancel() { return true; } });
+    logicalTransitionDriver.attachRuntimePort({ reason() { throw new Error("unreachable"); }, submitIntent(input) { transitionSubmitCount += 1; return Promise.resolve({ state: "executed", committed: true }); }, continueApprovedReview() { throw new Error("unreachable"); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyAction() { return Promise.resolve({ fresh: true, matches: true, targetRelation: "committed-target", valueKind: "number", value: 47 }); }, cancel() { return true; } });
     const logicalTransitionPending = logicalTransitionDriver.startObjective({ message: "cancel between logical steps", endpoint: "e", model: "m", logicalPlanProposal });
     for (let microtask = 0; microtask < 20 && !releaseLogicalTransition; microtask += 1) await Promise.resolve();
     check(logicalTransitionDriver.getSnapshot().state === "observing" && logicalTransitionDriver.getSnapshot().logicalPlan.status === "observing-next", "step 0 Verify enters the fresh-Observe transition before cursor advance");
@@ -330,7 +331,7 @@ async function run() {
     let boundedVerify = 0;
     const boundedEvents = [];
     const boundedDriver = driverModule.createAgentDriver({ beginTurn() { boundedTurn += 1; return Object.freeze({ sessionId: "bounded_session", turnId: "bounded_turn_" + boundedTurn }); }, observe() { boundedObserve += 1; return Promise.resolve(); }, getObservation() { return Object.freeze({ observationRevision: boundedObserve }); }, appendSessionEvent(event) { boundedEvents.push(event); return event; } });
-    boundedDriver.attachRuntimePort({ reason() { boundedReason += 1; return Promise.resolve({ capabilityId: "set-opacity-v1", params: { opacity: boundedReason === 1 ? 47 : 48 } }); }, submitIntent() { boundedSubmit += 1; return Promise.resolve({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: 100, reviewCorrelation: "bounded_correlation_" + boundedSubmit }); }, continueApprovedReview() { boundedContinue += 1; return Promise.resolve(boundedContinue === 1 ? { state: "blocked", code: "CONTEXT_STALE", committed: false, observation: { targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:iteration_a" } } : { state: "verification-required", code: null }); }, verifyCommittedAction() { boundedVerify += 1; return Promise.resolve({ state: "verified", code: null }); }, verifyOpacity() { throw new Error("unreachable"); }, cancel() { return true; } });
+    boundedDriver.attachRuntimePort({ reason() { boundedReason += 1; return Promise.resolve({ capabilityId: "set-opacity-v1", params: { opacity: boundedReason === 1 ? 47 : 48 } }); }, submitIntent(input) { boundedSubmit += 1; return Promise.resolve({ ...reviewDefaults(input), state: "review-required", committed: false, code: "REVIEW_REQUIRED", beforeValue: 100, reviewCorrelation: "bounded_correlation_" + boundedSubmit }); }, continueApprovedReview() { boundedContinue += 1; return Promise.resolve(boundedContinue === 1 ? { state: "blocked", code: "CONTEXT_STALE", committed: false, observation: { targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:iteration_a" } } : { state: "verification-required", committed: true, disposition: "mutated", code: null }); }, verifyCommittedAction() { boundedVerify += 1; return Promise.resolve({ state: "verified", fresh: true, matches: true, targetRelation: "committed-target", code: null }); }, verifyAction() { throw new Error("unreachable"); }, cancel() { return true; } });
     const boundedFirst = await boundedDriver.startObjective({ message: "set", endpoint: "e", model: "m" });
     const boundedFirstReview = boundedFirst.suspendedReview;
     const boundedSecond = await boundedDriver.resolveReview({ reviewId: boundedFirstReview.reviewId, revision: boundedFirstReview.revision, outcome: "approved" });
@@ -346,7 +347,7 @@ async function run() {
     let exhaustedReason = 0;
     let exhaustedSubmit = 0;
     const exhausted = driverModule.createAgentDriver({ beginTurn() { return { sessionId: "exhausted_session", turnId: "exhausted_turn_" + (exhaustedReason + 1) }; }, observe() { return Promise.resolve(); }, getObservation() { return { observationRevision: exhaustedReason + 1 }; }, appendSessionEvent() {} });
-    exhausted.attachRuntimePort({ reason() { exhaustedReason += 1; return Promise.resolve({ capabilityId: "set-opacity-v1", params: { opacity: 47 } }); }, submitIntent() { exhaustedSubmit += 1; return Promise.resolve({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "exhausted_correlation_" + exhaustedSubmit }); }, continueApprovedReview() { return Promise.resolve({ state: "blocked", code: "CONTEXT_STALE", committed: false, observation: { targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:same" } }); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyOpacity() { throw new Error("unreachable"); }, cancel() { return true; } });
+    exhausted.attachRuntimePort({ reason() { exhaustedReason += 1; return Promise.resolve({ capabilityId: "set-opacity-v1", params: { opacity: 47 } }); }, submitIntent(input) { exhaustedSubmit += 1; return Promise.resolve({ ...reviewDefaults(input), state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "exhausted_correlation_" + exhaustedSubmit }); }, continueApprovedReview() { return Promise.resolve({ state: "blocked", code: "CONTEXT_STALE", committed: false, observation: { targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:same" } }); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyAction() { throw new Error("unreachable"); }, cancel() { return true; } });
     const exhaustedFirst = await exhausted.startObjective({ message: "set", endpoint: "e", model: "m" });
     const exhaustedSecond = await exhausted.resolveReview({ reviewId: exhaustedFirst.suspendedReview.reviewId, revision: exhaustedFirst.suspendedReview.revision, outcome: "approved" });
     const exhaustedTerminal = await exhausted.resolveReview({ reviewId: exhaustedSecond.suspendedReview.reviewId, revision: exhaustedSecond.suspendedReview.revision, outcome: "approved" });
@@ -356,7 +357,7 @@ async function run() {
     let releaseTransitionObserve;
     let transitionReason = 0;
     const transitionCancel = driverModule.createAgentDriver({ beginTurn() { return { sessionId: "cancel_session", turnId: "cancel_turn_" + (transitionObserve + 1) }; }, observe() { transitionObserve += 1; return transitionObserve === 1 ? Promise.resolve() : new Promise((resolve) => { releaseTransitionObserve = resolve; }); }, getObservation() { return { observationRevision: transitionObserve }; }, appendSessionEvent() {} });
-    transitionCancel.attachRuntimePort({ reason() { transitionReason += 1; return Promise.resolve({ capabilityId: "set-opacity-v1", params: { opacity: 47 } }); }, submitIntent() { return Promise.resolve({ state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "cancel_transition_review" }); }, continueApprovedReview() { return Promise.resolve({ state: "blocked", code: "CONTEXT_STALE", committed: false, observation: { targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:cancel" } }); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyOpacity() { throw new Error("unreachable"); }, cancel() { return true; } });
+    transitionCancel.attachRuntimePort({ reason() { transitionReason += 1; return Promise.resolve({ capabilityId: "set-opacity-v1", params: { opacity: 47 } }); }, submitIntent(input) { return Promise.resolve({ ...reviewDefaults(input), state: "review-required", committed: false, code: "REVIEW_REQUIRED", reviewCorrelation: "cancel_transition_review" }); }, continueApprovedReview() { return Promise.resolve({ state: "blocked", code: "CONTEXT_STALE", committed: false, observation: { targetAvailable: true, targetClass: "layer-opacity", observedOpacityDigest: "sha256:cancel" } }); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyAction() { throw new Error("unreachable"); }, cancel() { return true; } });
     const transitionFirst = await transitionCancel.startObjective({ message: "set", endpoint: "e", model: "m" });
     const transitionPending = transitionCancel.resolveReview({ reviewId: transitionFirst.suspendedReview.reviewId, revision: transitionFirst.suspendedReview.revision, outcome: "approved" });
     await Promise.resolve(); await Promise.resolve();
@@ -389,7 +390,7 @@ async function run() {
     equal(pendingCommitted.driver.getSnapshot().state, "verifying", "Driver remains verifying while committed-target observation is pending");
     await code(() => pendingCommitted.driver.startObjective({ message: "busy", endpoint: "e", model: "m" }), "AGENT_DRIVER_BUSY", "a pending committed-target Verify keeps the objective busy");
     check(pendingCommitted.driver.cancel(), "cancel wins while committed-target Verify is pending");
-    pendingCommitted.calls.releaseCommittedVerification({ state: "verified", code: null });
+    pendingCommitted.calls.releaseCommittedVerification({ state: "verified", fresh: true, matches: true, targetRelation: "committed-target", code: null });
     equal((await pendingCommittedResult).terminal.outcome, "cancelled", "late committed-target success cannot resurrect a cancelled objective");
     equal(pendingCommitted.events.filter((event) => event.kind === "task/cancelled").length, 1, "late committed-target success cannot duplicate the cancelled terminal event");
     equal(pendingCommitted.events.filter((event) => event.kind === "task/completed" || event.kind === "task/blocked").length, 0, "late committed-target success emits no conflicting terminal event");
@@ -415,7 +416,7 @@ async function run() {
     await code(() => pendingContinuation.driver.startObjective({ message: "busy", endpoint: "e", model: "m" }), "AGENT_DRIVER_BUSY", "pending continuation excludes a second objective");
     await code(() => Promise.resolve().then(() => pendingContinuation.driver.resolveReview({ reviewId: pendingContinuationReview.suspendedReview.reviewId, revision: pendingContinuationReview.suspendedReview.revision, outcome: "approved" })), "AGENT_DRIVER_REVIEW_INVALID", "duplicate Approve is rejected while the first continuation is pending");
     check(pendingContinuation.driver.cancel(), "cancel terminalizes a pending approved continuation");
-    pendingContinuation.calls.releaseContinuation({ state: "verification-required", code: null });
+    pendingContinuation.calls.releaseContinuation({ state: "verification-required", committed: true, disposition: "mutated", code: null });
     equal((await pendingContinuationResult).terminal.outcome, "cancelled", "late committed continuation cannot resurrect a cancelled Driver");
     equal(pendingContinuation.calls.continue, 1, "duplicate Approve cannot create a second continuation");
     equal(pendingContinuation.calls.committedVerify, 0, "cancelled pending continuation cannot start committed-target Verify");
@@ -450,13 +451,22 @@ async function run() {
     const listenerRejected = listenerReview.driver.resolveReview({ reviewId: listenerPending.suspendedReview.reviewId, revision: listenerPending.suspendedReview.revision, outcome: "rejected" });
     equal(listenerRejected.terminal.outcome, "rejected", "listener failures cannot change review terminal truth");
     check(reviewListenerFailures >= 2, "review listener failures are reported and contained");
+    const unproven = harness({ verification: { fresh: true, matches: true } });
+    const unprovenResult = await unproven.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
+    equal(unprovenResult.terminal.outcome, "blocked", "C2 fresh/matches alone does not prove execution target");
+    equal(unprovenResult.committed, true, "C2 missing target proof does not erase a known commit");
+    const missingFact = harness({ outcome: { state: "review-required", reviewCorrelation: "missing_fact" }, continuation: { state: "verification-required" } });
+    const missingReview = await missingFact.driver.startObjective({ message: "set", endpoint: "e", model: "m" });
+    const missingResult = await missingFact.driver.resolveReview({ reviewId: missingReview.suspendedReview.reviewId, revision: missingReview.suspendedReview.revision, outcome: "approved" });
+    equal(missingResult.committed, null, "C2 verification-required without commit evidence stays unknown");
+    equal(missingFact.calls.committedVerify, 0, "C2 unknown commit does not trigger an automatic Verify or mutation retry");
     const stale = harness({ observeError: "OBSERVATION_RESULT_STALE" });
     equal((await stale.driver.startObjective({ message: "set", endpoint: "e", model: "m" })).terminal.code, "OBSERVATION_RESULT_STALE", "stale observation fails closed");
     equal(stale.calls.submit, 0, "stale observation cannot reach mutation");
 
     let release;
     const cancelling = driverModule.createAgentDriver({ beginTurn() { return { sessionId: "s", turnId: "t" }; }, observe() { return new Promise((resolve) => { release = resolve; }); }, getObservation() { return null; }, appendSessionEvent() {} });
-    const cancellingPort = { reason() { throw new Error("unreachable"); }, submitIntent() { throw new Error("unreachable"); }, continueApprovedReview() { throw new Error("unreachable"); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyOpacity() { throw new Error("unreachable"); }, cancel() { return true; } };
+    const cancellingPort = { reason() { throw new Error("unreachable"); }, submitIntent(input) { throw new Error("unreachable"); }, continueApprovedReview() { throw new Error("unreachable"); }, verifyCommittedAction() { throw new Error("unreachable"); }, verifyAction() { throw new Error("unreachable"); }, cancel() { return true; } };
     cancelling.attachRuntimePort(cancellingPort);
     const pending = cancelling.startObjective({ message: "set", endpoint: "e", model: "m" });
     check(cancelling.cancel(), "in-flight observation can be cancelled"); release(null);

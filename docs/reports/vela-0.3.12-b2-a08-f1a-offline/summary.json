@@ -1,0 +1,31 @@
+{
+  "phase": "A08-F1a",
+  "status": "F1a IMPLEMENTED / OFFLINE PASS / REAL AE REVALIDATION PENDING",
+  "baseline": "d7dd7356cccbb637ae01a7e9d0629b9bc184a388",
+  "focusedAssertions": 1134,
+  "detachRecords": {
+    "total": 141,
+    "expectedSuccess": 11,
+    "expectedPreflightRefusal": 124,
+    "expectedExecutionFailure": 6,
+    "f1aLabelled": 72
+  },
+  "offline": {
+    "discovered": 187,
+    "executed": 187,
+    "passed": 187,
+    "failed": 0,
+    "skipped": 0
+  },
+  "relatedAssertions": {
+    "a08": 251,
+    "registry": 27,
+    "gridContract": 120,
+    "gridRefresh": 106,
+    "parseJson": 1122,
+    "memberAdmission": 224,
+    "serializer": 2307
+  },
+  "realAE": "NOT COVERED in F1a; two prior Feature failures, Grid and Undo remain historical",
+  "boundary": "Actual Host/registry modules in VM; simulated AE types, evaluation and parent behavior. No real AE/Undo or Provider."
+}

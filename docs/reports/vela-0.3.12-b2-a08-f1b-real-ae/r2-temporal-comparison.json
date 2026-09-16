@@ -1,0 +1,399 @@
+{
+  "recordedAt": "2026-09-11T03:48:20.398Z",
+  "source": "Saved independent Host B1/B2 and read-only valueAtTime observations; no current-time changes during reference reads",
+  "time": 1,
+  "referenceTimes": [
+    0,
+    2
+  ],
+  "checks": [
+    {
+      "label": "five temporal property observations",
+      "pass": true,
+      "count": 5
+    },
+    {
+      "label": "sourcePosition unique observation",
+      "pass": true,
+      "count": 1
+    },
+    {
+      "label": "sourcePosition no tool expression or error",
+      "pass": true,
+      "expression": "",
+      "enabled": false,
+      "error": "",
+      "errorAfter": ""
+    },
+    {
+      "label": "backgroundPosition unique observation",
+      "pass": true,
+      "count": 1
+    },
+    {
+      "label": "backgroundPosition no tool expression or error",
+      "pass": true,
+      "expression": "",
+      "enabled": false,
+      "error": "",
+      "errorAfter": ""
+    },
+    {
+      "label": "size unique observation",
+      "pass": true,
+      "count": 1
+    },
+    {
+      "label": "size no tool expression or error",
+      "pass": true,
+      "expression": "",
+      "enabled": false,
+      "error": "",
+      "errorAfter": ""
+    },
+    {
+      "label": "round unique observation",
+      "pass": true,
+      "count": 1
+    },
+    {
+      "label": "round no tool expression or error",
+      "pass": true,
+      "expression": "",
+      "enabled": false,
+      "error": "",
+      "errorAfter": ""
+    },
+    {
+      "label": "color unique observation",
+      "pass": true,
+      "count": 1
+    },
+    {
+      "label": "color no tool expression or error",
+      "pass": true,
+      "expression": "",
+      "enabled": false,
+      "error": "",
+      "errorAfter": ""
+    },
+    {
+      "label": "roundness equals this t and differs from t0/base",
+      "pass": true,
+      "beforeAtT0": 8,
+      "beforeAtT": 14,
+      "beforeBase": 28,
+      "after": 14
+    }
+  ],
+  "properties": [
+    {
+      "label": "sourcePosition",
+      "layerId": 231,
+      "expectedFromB1AtCurrentTime": [
+        364.3864842653277,
+        388.755493164062,
+        0
+      ],
+      "expectedSource": "independent B1 captured parent-chain translation, comp XY",
+      "tolerance": 0.0001,
+      "samples": [
+        {
+          "time": 0,
+          "evaluated": [
+            364.386474609375,
+            388.755493164062,
+            0
+          ],
+          "preExpression": [
+            364.386474609375,
+            388.755493164062,
+            0
+          ]
+        },
+        {
+          "time": 2,
+          "evaluated": [
+            364.386474609375,
+            388.755493164062,
+            0
+          ],
+          "preExpression": [
+            364.386474609375,
+            388.755493164062,
+            0
+          ]
+        },
+        {
+          "time": 1,
+          "evaluated": [
+            364.386474609375,
+            388.755493164062,
+            0
+          ],
+          "preExpression": [
+            364.386474609375,
+            388.755493164062,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "label": "backgroundPosition",
+      "layerId": 236,
+      "expectedFromB1AtCurrentTime": [
+        402.580993652344,
+        388.755493164062,
+        0
+      ],
+      "expectedSource": "independent B1 captured parent-chain translation, comp XY",
+      "tolerance": 0.0001,
+      "samples": [
+        {
+          "time": 0,
+          "evaluated": [
+            402.580993652344,
+            388.755493164062,
+            0
+          ],
+          "preExpression": [
+            402.580993652344,
+            388.755493164062,
+            0
+          ]
+        },
+        {
+          "time": 2,
+          "evaluated": [
+            402.580993652344,
+            388.755493164062,
+            0
+          ],
+          "preExpression": [
+            402.580993652344,
+            388.755493164062,
+            0
+          ]
+        },
+        {
+          "time": 1,
+          "evaluated": [
+            402.580993652344,
+            388.755493164062,
+            0
+          ],
+          "preExpression": [
+            402.580993652344,
+            388.755493164062,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "label": "size",
+      "layerId": 236,
+      "expectedFromB1AtCurrentTime": [
+        442,
+        68.0410004258156
+      ],
+      "expectedSource": "independent B1 evaluated at comp.time",
+      "tolerance": 0.0001,
+      "samples": [
+        {
+          "time": 0,
+          "evaluated": [
+            442,
+            68.0410003662109
+          ],
+          "preExpression": [
+            442,
+            68.0410003662109
+          ]
+        },
+        {
+          "time": 2,
+          "evaluated": [
+            442,
+            68.0410003662109
+          ],
+          "preExpression": [
+            442,
+            68.0410003662109
+          ]
+        },
+        {
+          "time": 1,
+          "evaluated": [
+            442,
+            68.0410003662109
+          ],
+          "preExpression": [
+            442,
+            68.0410003662109
+          ]
+        }
+      ]
+    },
+    {
+      "label": "round",
+      "layerId": 236,
+      "expectedFromB1AtCurrentTime": 14,
+      "expectedSource": "independent B1 evaluated at comp.time",
+      "tolerance": 0.0001,
+      "samples": [
+        {
+          "time": 0,
+          "evaluated": 14,
+          "preExpression": 14
+        },
+        {
+          "time": 2,
+          "evaluated": 14,
+          "preExpression": 14
+        },
+        {
+          "time": 1,
+          "evaluated": 14,
+          "preExpression": 14
+        }
+      ]
+    },
+    {
+      "label": "color",
+      "layerId": 236,
+      "expectedFromB1AtCurrentTime": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "expectedSource": "independent B1 evaluated at comp.time",
+      "tolerance": 0.000001,
+      "samples": [
+        {
+          "time": 0,
+          "evaluated": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "preExpression": [
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "time": 2,
+          "evaluated": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "preExpression": [
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "time": 1,
+          "evaluated": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "preExpression": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "controllerBefore": {
+    "id": 235,
+    "parameter": "Corner Radius",
+    "keys": [
+      {
+        "time": 0,
+        "value": 8,
+        "inInterpolation": "6612",
+        "outInterpolation": "6612"
+      },
+      {
+        "time": 2,
+        "value": 20,
+        "inInterpolation": "6612",
+        "outInterpolation": "6612"
+      }
+    ],
+    "samples": [
+      {
+        "time": 0,
+        "evaluated": 8,
+        "preExpression": 8
+      },
+      {
+        "time": 2,
+        "evaluated": 20,
+        "preExpression": 20
+      },
+      {
+        "time": 1,
+        "evaluated": 14,
+        "preExpression": 14
+      }
+    ]
+  },
+  "controllerAfter": {
+    "id": 235,
+    "parameter": "Corner Radius",
+    "keys": [
+      {
+        "time": 0,
+        "value": 8,
+        "inInterpolation": "6612",
+        "outInterpolation": "6612"
+      },
+      {
+        "time": 2,
+        "value": 20,
+        "inInterpolation": "6612",
+        "outInterpolation": "6612"
+      }
+    ],
+    "samples": [
+      {
+        "time": 0,
+        "evaluated": 8,
+        "preExpression": 8
+      },
+      {
+        "time": 2,
+        "evaluated": 20,
+        "preExpression": 20
+      },
+      {
+        "time": 1,
+        "evaluated": 14,
+        "preExpression": 14
+      }
+    ]
+  },
+  "differences": [],
+  "allTemporalHostChecksPassed": true,
+  "limits": "Only these five finalized tool properties are shown static at the sampled reference times. Controller animation and unrelated user animation are preserved, not required to become static. Host observations do not substitute for user visual/Undo confirmation.",
+  "userVisual": "PENDING after Detach confirmation",
+  "undo": "PENDING user native Undo and B3",
+  "R3": "NOT COVERED"
+}

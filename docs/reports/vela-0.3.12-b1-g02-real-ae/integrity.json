@@ -1,0 +1,21 @@
+{
+  "changedExistingFiles": [
+    "docs/reports/vela-0.3.12-b1-g02-layer-name-unicode.md",
+    "AGENTS.md",
+    "README.md",
+    "docs/HANDOFF.md",
+    "docs/PROJECT_STATE.md",
+    "docs/VELA_ROADMAP.md",
+    "docs/design/vela-0.3-reconstruction-guidance.md",
+    "docs/reports/vela-0.3.11-consolidated-register.json"
+  ],
+  "productionImplementationTestsHistoricalEvidenceUnchanged": true,
+  "comparedFiles": 495,
+  "jsonParsed": 16,
+  "localLinks": 109,
+  "newFilesFormatChecked": 25,
+  "i18n": "PASS",
+  "consistency": "PASS",
+  "diffCheck": "PASS",
+  "offlineRerun": false
+}

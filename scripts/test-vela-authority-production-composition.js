@@ -19,7 +19,7 @@ const authorityFiles = ["velaDelegationGrantStore.js", "velaDelegationPolicyEngi
 authorityFiles.forEach((file) => check(loader.indexOf(file) !== -1, "production loader includes " + file));
 check(authorityFiles.every((file) => index.indexOf(file) === -1), "Authority modules have no duplicate direct script tags");
 check(loader.indexOf("velaAtomicActivationCoordinator.js") < loader.indexOf("velaRuntime.js"), "Runtime is loaded after the complete Authority graph");
-check(main.indexOf("exactAgentSession: exactAgentSession") !== -1 && main.indexOf("owner = initializeVelaAgentRuntimeOwner();") !== -1, "main passes only the exact owner Session into Runtime composition");
+check(main.indexOf("exactAgentSession: exactAgentSession") !== -1 && main.includes("createOwner: initializeVelaAgentRuntimeOwner") && read("client/js/vela/velaConversationComposition.js").includes("candidate.runtime = options.createRuntime(candidate.session)"), "main passes only the exact owner Session into Runtime composition");
 check(!/DelegationGrantStore|DelegationPolicyEngine|AuthorityEvidenceResolver|DelegationAuthorityCoordinator|AuthorizedPlanAuthorityProducer|AuthorityActivationGate|AtomicActivationCoordinator/.test(main), "main owns no raw Authority Plane component");
 check(!/issueGrant|revokeGrant|produceAuthorized|reserveActivation|activateDelegated|runDelegated|grantSpec/.test(main + surface + router), "production orchestration and Surface expose no generic grant spec or raw delegated activation path");
 check(router.indexOf("DelegationPolicyEngine") === -1 && router.indexOf("policyEngine") === -1, "ProviderProposalRouter remains disconnected from DelegationPolicyEngine");

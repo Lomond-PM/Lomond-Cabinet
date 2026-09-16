@@ -1,0 +1,52 @@
+{
+  "source": "User conversation plus independent Host snapshot; not a clean native Undo trace",
+  "quote": "Grid 无异常跳位，已撤销，但我试图获取有变化的那个图层的名称时将撤销队列弄乱了，产生的变化是A08_GRID_SOURCE_1的父级链接",
+  "visualAfterDetach": "user confirmed no abnormal jump",
+  "undo": "CONTAMINATED / NOT ACCEPTED pending provenance clarification",
+  "comparisonRule": "numeric absolute tolerance 1e-6 predefined; text/identity/parent/expression exact",
+  "differencesFromB1": [],
+  "currentLayers": [
+    {
+      "id": 212,
+      "name": "ICON_GRID_CTRL",
+      "parentId": null,
+      "comment": "LOMOND_CABINET_ARTIFACT_V1:{\"owner\":\"Lomond Cabinet / AEToolbox\",\"tool\":\"adComponentKit\",\"kind\":\"iconGrid\",\"artifactId\":\"ack_20260910_122851_618743\",\"componentId\":\"iconGrid_001\",\"componentType\":\"iconGrid\",\"role\":\"controller\",\"index\":0,\"createdAt\":\"2026-09-10T12:28:51\"}",
+      "selected": true
+    },
+    {
+      "id": 210,
+      "name": "A08_GRID_UNRELATED_PARENT",
+      "parentId": null,
+      "comment": "unrelated 中文",
+      "selected": false
+    },
+    {
+      "id": 208,
+      "name": "A08_GRID_SOURCE_2",
+      "parentId": 212,
+      "comment": "User edited after binding 中文",
+      "selected": false
+    },
+    {
+      "id": 207,
+      "name": "A08_GRID_SOURCE_1",
+      "parentId": 212,
+      "comment": "LOMOND_CABINET_ARTIFACT_V1:{\"owner\":\"Lomond Cabinet / AEToolbox\",\"tool\":\"adComponentKit\",\"kind\":\"iconGrid\",\"artifactId\":\"ack_20260910_122851_618743\",\"componentId\":\"iconGrid_001\",\"componentType\":\"iconGrid\",\"role\":\"sourceLayerBinding\",\"index\":2,\"createdAt\":\"2026-09-10T12:28:51\",\"previousCommentEncoded\":\"\"}",
+      "selected": false
+    },
+    {
+      "id": 206,
+      "name": "A08_GRID_SOURCE_0",
+      "parentId": 210,
+      "comment": "LOMOND_CABINET_ARTIFACT_V1:{\"owner\":\"Lomond Cabinet / AEToolbox\",\"tool\":\"adComponentKit\",\"kind\":\"iconGrid\",\"artifactId\":\"ack_20260910_122851_618743\",\"componentId\":\"iconGrid_001\",\"componentType\":\"iconGrid\",\"role\":\"sourceLayerBinding\",\"index\":1,\"createdAt\":\"2026-09-10T12:28:51\",\"previousCommentEncoded\":\"%20%20%E4%B8%AD%E6%96%87%20%E6%97%A5%E6%9C%AC%E8%AA%9E%20%F0%9F%98%80%0A%22quote%22%20%5Cpath%20%25%20%2525%20literal%5Cu0000%20%20\"}",
+      "selected": false
+    },
+    {
+      "id": 203,
+      "name": "A01 中文 Smoke",
+      "parentId": null,
+      "comment": "",
+      "selected": false
+    }
+  ]
+}

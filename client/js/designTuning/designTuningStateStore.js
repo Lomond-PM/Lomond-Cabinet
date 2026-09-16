@@ -20,10 +20,50 @@
             for (key in source) if (Object.prototype.hasOwnProperty.call(source, key) && LEGACY_ID_MAP[key]) { target = LEGACY_ID_MAP[key]; if (!Object.prototype.hasOwnProperty.call(out, target)) { checked = registry.validate(target, source[key]); if (checked.valid) out[target] = checked.value; } }
             return { version: 1, overrides: out };
         }
-        function save() { try { if (storage) storage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, overrides: overrides })); return true; } catch (error) { return false; } }
+        var savedOverrides = null;
+        var lastError = null;
+        function readSaved() {
+            if (!storage || typeof storage.getItem !== "function") throw new Error("STORAGE_UNAVAILABLE");
+            var raw = storage.getItem(STORAGE_KEY);
+            if (raw !== null && typeof raw !== "string") throw new Error("STORAGE_READ_FAILED");
+            var parsed = raw === null ? null : JSON.parse(raw);
+            if (raw !== null && (!parsed || parsed.version !== 1 || !parsed.overrides || typeof parsed.overrides !== "object" || Array.isArray(parsed.overrides))) throw new Error("INVALID_STORED_DATA");
+            return normalize(parsed).overrides;
+        }
+        function persistenceState() {
+            return { persisted: !lastError && savedOverrides !== null && JSON.stringify(overrides) === JSON.stringify(savedOverrides),
+                dirty: !!lastError || savedOverrides === null || JSON.stringify(overrides) !== JSON.stringify(savedOverrides),
+                canRestore: savedOverrides !== null, error: lastError };
+        }
+        function load() {
+            try { savedOverrides = readSaved(); overrides = copy(savedOverrides); lastError = null; var raw = JSON.parse(storage.getItem(STORAGE_KEY) || "null"); if (raw && raw.overrides && Object.keys(LEGACY_ID_MAP).some(function (id) { return Object.prototype.hasOwnProperty.call(raw.overrides, id); })) save(); }
+            catch (error) { lastError = String(error.message || error); }
+            return copy(overrides);
+        }
+        function save() {
+            try {
+                // Confirm a readable, valid prior state before replacing this owned key.
+                var prior = readSaved();
+                savedOverrides = copy(prior);
+                if (!storage || typeof storage.setItem !== "function") throw new Error("STORAGE_UNAVAILABLE");
+                storage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, overrides: overrides }));
+                savedOverrides = copy(overrides); lastError = null;
+                return { accepted: true, persisted: true, version: 1, overrides: copy(overrides) };
+            } catch (error) {
+                lastError = String(error.message || error);
+                return { accepted: true, persisted: false, version: 1, overrides: copy(overrides), error: lastError };
+            }
+        }
+        function restoreSaved() {
+            try { var latest = readSaved(); savedOverrides = copy(latest); overrides = copy(latest); lastError = null; return { accepted: true, persisted: true }; }
+            catch (error) { lastError = String(error.message || error); return { accepted: false, persisted: false, error: lastError }; }
+        }
+
         return Object.freeze({
             storageKey: STORAGE_KEY,
-            load: function () { var parsed = null; var source; var key; var migrated = false; try { parsed = JSON.parse(storage && storage.getItem(STORAGE_KEY) || "null"); } catch (error) {} source = parsed && parsed.overrides && typeof parsed.overrides === "object" ? parsed.overrides : {}; for (key in LEGACY_ID_MAP) if (Object.prototype.hasOwnProperty.call(LEGACY_ID_MAP, key) && Object.prototype.hasOwnProperty.call(source, key)) migrated = true; overrides = normalize(parsed).overrides; if (migrated) save(); return copy(overrides); },
+            load: load,
+            getPersistenceState: persistenceState,
+            restoreSaved: restoreSaved,
             normalize: normalize,
             save: save,
             getOverride: function (id) { return Object.prototype.hasOwnProperty.call(overrides, id) ? registry.cloneValue(overrides[id]) : null; },

@@ -1,0 +1,74 @@
+{
+  "baseline_commit": "b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a",
+  "reports_date": "2026-09-08",
+  "consolidated_on": "2026-09-09",
+  "rerun_in_this_task": false,
+  "files": [
+    {
+      "file": "source-audit.md",
+      "bytes": 25970,
+      "sha256": "566be914745b9af7c78e8570b24c43db8000e9731ace4d0bc6ad70157ee3a0c4",
+      "kind": "inherited-evidence-not-rerun"
+    },
+    {
+      "file": "source-coverage.md",
+      "bytes": 4782,
+      "sha256": "8ac781573f1cf8e9fa319880c89814bc555799ccc0624ee509916143c9b70571",
+      "kind": "inherited-evidence-not-rerun"
+    },
+    {
+      "file": "appearance-audit.md",
+      "bytes": 17129,
+      "sha256": "3a42dea8aac40e79055a42a43a7398be097be3f8d2cf726cf82de08424f61a89",
+      "kind": "inherited-evidence-not-rerun"
+    },
+    {
+      "file": "appearance-coverage.md",
+      "bytes": 4230,
+      "sha256": "c1517870cbbc7c97ddc7349315768947827e31927c47b355fe18a1aa09f7c0a1",
+      "kind": "inherited-evidence-not-rerun"
+    },
+    {
+      "file": "uiux-audit.md",
+      "bytes": 12113,
+      "sha256": "bd6f296eee7fefc09228e947a32df67c893d1f47a956f11645a3aade4dcb0a00",
+      "kind": "inherited-evidence-not-rerun"
+    },
+    {
+      "file": "roadmap-foundation-summary.txt",
+      "bytes": 1873,
+      "sha256": "de26cd3421ed96f4c1c1b1bff1a8d9c4a66293624d5d200f5ea701a1c3ebb0e9",
+      "kind": "inherited-evidence-not-rerun"
+    },
+    {
+      "file": "source-evidence.zip",
+      "bytes": 32576,
+      "sha256": "a5ce4164bbfa720348da3ccf5241514cb4dacc62e4863df16dc7c47590f81a6e",
+      "kind": "inherited-evidence-not-rerun"
+    },
+    {
+      "file": "appearance-evidence.zip",
+      "bytes": 31847,
+      "sha256": "61ad8f3f10ca778ca147c3475e5aac658ef8dff9f6c860f76d1493f84b6d8bb5",
+      "kind": "inherited-evidence-not-rerun"
+    },
+    {
+      "file": "uiux-evidence.zip",
+      "bytes": 17857,
+      "sha256": "0753d374a320d8741352c79dd0917cd1f888f6a2dcc486915d5de88f7a352227",
+      "kind": "inherited-evidence-not-rerun"
+    },
+    {
+      "file": "uiux-coverage.md",
+      "bytes": 2058,
+      "sha256": "122042a89f3b900cc917871fc5f3be8cb7793868c7d9afc8f45854177e7cad6f",
+      "kind": "extracted-verbatim-from-inherited-uiux-archive"
+    },
+    {
+      "file": "conversation-decisions.md",
+      "bytes": 2435,
+      "sha256": "bb207260bc9c0ef50cc47a04e4366990b5df1ef1b34c921d21ecf0b9e7f29429",
+      "kind": "new-conversation-digest-clearly-labelled"
+    }
+  ]
+}

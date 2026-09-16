@@ -8,7 +8,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 
 | Class | Meaning | Count |
 | --- | --- | --- |
-| A | Core / Global; keep | 471 |
+| A | Core / Global; keep | 494 |
 | B | Tool-local duplicate; candidate migration/delete after checks | 0 |
 | C | Legacy fallback; temporarily keep | 3 |
 | D | Candidate delete; low-risk after AE test | 0 |
@@ -85,6 +85,9 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | appearance.typography.supportingSize.label | appearance | Supporting Size | 辅助文本大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.typography.titleSize.description | appearance | Adjusts Page and Surface titles together while preserving their relat... | 同时调整页面与表面标题，并保持它们的原有层级。 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | appearance.typography.titleSize.label | appearance | Title Size | 标题大小 | client/js/appearance/appearanceParameterRegistry.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| assets.noSavedBaseline | assets | No reliable saved values to restore | 没有可靠的已保存值可供还原 | client/js/ui/coreUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| assets.notSaved | assets | Changes are not saved. Retry or restore the saved values before leaving. | 更改未保存。请重试或还原已保存值后再离开。 | client/js/main.js, client/js/proceduralPaletteWorkspace.js, client/js/ui/coreUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| assets.restoreSaved | assets | Restore saved values | 还原已保存值 | client/js/ui/coreUi.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | bootstrap.loadFailed | bootstrap | Tools failed to load. | 工具加载失败。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | bootstrap.loadingTools | bootstrap | Loading tools... | 正在加载工具... | client/index.html, client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | bootstrap.partialFailure | bootstrap | Some tools failed to load. | 部分工具加载失败。 | client/js/main.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -122,7 +125,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | common.reset | common | Reset | 重置 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.resetDefaults | common | Reset Defaults | 恢复默认值 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.restoreDefaults | common | Restore Defaults | 恢复默认 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
-| common.retry | common | Retry | 重试 | client/js/main.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
+| common.retry | common | Retry | 重试 | client/js/main.js, client/js/ui/coreUi.js | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.right | common | Right | 右对齐 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.rowMajor | common | Row-Major | 行优先 | host/tools/adComponentKit.tool.jsx | no | A | Keep in client/js/i18n.js as core/global UI copy. |
 | common.saved | common | Saved | 已保存 | none | no | A | Keep in client/js/i18n.js as core/global UI copy. |
@@ -623,8 +626,27 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | tools.registryControlLab.fields.colorAlphaField | tools.registryControlLab | Color + Alpha | 颜色 + 透明度 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
 | tools.registryControlLab.fields.shadowField | tools.registryControlLab | Shadow | 阴影 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
 | tools.registryControlLab.sections.coreUiDirect | tools.registryControlLab | CoreUI Direct | CoreUI 直接路径 | client/js/main.js, host/tools/registryControlLab.tool.jsx | registryControlLab.tool.jsx:en, registryControlLab.tool.jsx:zh-CN | C | Keep for now as possible startup fallback, static Home anchor, or legacy adapter dependency. |
-| vela.planReviewCapabilitySetLayerName | vela | Rename layer | 重命名图层 | client/js/vela/velaPlanReviewProjection.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationActiveClose | vela | Finish or cancel this conversation before closing | 完成或取消此对话后才能关闭 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationClose | vela | Close conversation | 关闭对话 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationLabel | vela | Conversation {n} | 对话 {n} | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationLastClose | vela | Keep at least one conversation | 至少保留一个对话 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationLimit | vela | Up to 8 conversations. Close one to create another. | 最多 8 个对话，请先关闭一个。 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationNew | vela | New conversation | 新建对话 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationOperationFailed | vela | Conversation operation failed. Please try again. | 对话操作未完成，请重试。 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationOtherRunning | vela | Another conversation is running | 另一对话正在运行 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationRunning | vela | Running | 运行中 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.conversationSelect | vela | Select conversation | 选择对话 | client/js/vela/velaConversationSwitcher.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.planReviewCapabilitySetLayerName | vela | Rename layer | 重命名图层 | client/js/vela/velaConfirmationView.js, client/js/vela/velaPlanReviewProjection.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.planReviewCapabilitySetOpacity | vela | Layer opacity | 图层不透明度 | client/js/vela/velaConfirmationView.js, client/js/vela/velaPlanReviewProjection.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.planReviewParameterLayerName | vela | Layer name | 图层名称 | client/js/vela/velaPlanReviewProjection.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewBefore | vela | Before (strings use quoted notation) | 修改前（字符串使用引号表示） | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewCurrentStepScope | vela | Approve only this step ({current}/{total}). Later steps are not autho... | 仅批准本步骤（{current}/{total}）。本次批准不授权后续步骤。 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewHideDetails | vela | Hide full change | 收起完整变化 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewProposed | vela | Proposed | 拟修改为 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewShowDetails | vela | Read full change | 阅读完整变化 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewTargetIds | vela | Composition ID: {comp} Layer ID: {layer} | 合成 ID：{comp} 图层 ID：{layer} | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewUnavailable | vela | The captured target or change cannot be verified for this review. App... | 无法核实本次 Review 捕获的目标或变化，已阻断批准。请拒绝后重新发起 Review。 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.reviewUnavailableValue | vela | Unavailable | 无法取得 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceApprove | vela | Approve | 批准 | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceAuthorityStatus.active | vela | The next opacity change is allowed | 已允许下一次不透明度修改 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceAuthorityStatus.consumed | vela | The one-time automatic change permission was used | 本次自动修改权限已使用 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -635,11 +657,11 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.surfaceCancel | vela | Cancel | 取消 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceComposerLabel | vela | Vela message | Vela 消息 | client/js/vela/velaComposerView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceComposerPlaceholder | vela | Message Vela | 输入给 Vela 的消息 | client/js/vela/velaComposerView.js, client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| vela.surfaceConfirmationLayerName | vela | Layer name: {before} → {proposed} | 图层名称：{before} → {proposed} | client/js/vela/velaConfirmationView.js, client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceConfirmationLayerName | vela | Layer name: {before} → {proposed} | 图层名称：{before} → {proposed} | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceConfirmationLayerNameReady | vela | A local layer rename is ready for confirmation. | 一个本地图层重命名已准备待确认。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceConfirmationReady | vela | A local opacity change is ready for confirmation. | 一个本地不透明度更改已准备待确认。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceConfirmationRejected | vela | The local action suggestion was rejected. No change was made. | 已拒绝本地操作建议。未发生更改。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
-| vela.surfaceConfirmationValue | vela | Opacity {before}% → {proposed}% | 不透明度 {before}% → {proposed}% | client/js/vela/velaConfirmationView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceConfirmationValue | vela | Opacity {before}% → {proposed}% | 不透明度 {before}% → {proposed}% | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceContextUnavailable | vela | Unable to read the available After Effects context. Open a compositio... | 无法读取可用的 AE 上下文。请打开合成并选中至少一个图层后重试。 | client/js/vela/velaPresentationModel.js, client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceExecutionCompleted | vela | The local opacity change was completed. | 本地不透明度更改已完成。 | client/js/vela/velaPresentationModel.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceExperimentalStatus | vela | Experimental · Not qualified · Manual opt-in required | 实验性 · 未通过资格认证 · 需手动选择加入 | client/js/vela/velaSurface.js | no | A | Keep unless a future focused audit proves it is obsolete. |
@@ -698,6 +720,7 @@ This report is intentionally conservative. It does not delete keys and treats dy
 | vela.surfaceStatusReadinessResponseInvalid | vela | Local LM Studio returned an invalid readiness response | 本地 LM Studio 返回了无效 readiness 响应 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusRejected | vela | Local action suggestion rejected | 本地操作建议已拒绝 | none | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceStatusSetup | vela | Ready for a local message | 可以发送本地消息 | client/js/vela/velaSurface.js, client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
+| vela.surfaceStoppingTask | vela | The active task is still settling; sending is unavailable | 活动任务尚未收束，暂不能发送 | client/js/vela/velaSurfaceController.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 | vela.surfaceTranscriptIntro | vela | Start a local conversation with Vela. | 从本地模型开始与 Vela 对话。 | client/js/vela/velaSurface.js, client/js/vela/velaTranscriptView.js | no | A | Keep unless a future focused audit proves it is obsolete. |
 
 ## Duplicate Tool Key Table

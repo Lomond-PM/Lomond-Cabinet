@@ -1,0 +1,116 @@
+{
+  "kind": "H0 extract of existing implementation logs; not new execution",
+  "archiveRoot": ".tmp/vela-evidence/0.3.12/a08/h0-20260911",
+  "fullRunCount": 1,
+  "results": {
+    "discovered": 188,
+    "executed": 188,
+    "passed": 187,
+    "failed": 1,
+    "skip": 0,
+    "standaloneGeneratedGuardAssertions": 46
+  },
+  "warning": "Not 188/188 full PASS. Full raw output and all log bytes remain in local archive.",
+  "extracts": [
+    {
+      "originalFile": "focused.log",
+      "sha256": "f2238fbb078ddaded8319f5bd06e1bf44983495501a6d1471b56701e33e5f185",
+      "bytes": 123,
+      "selection": "Existing lines containing suite counts, assertion totals or failed-suite list; no test rerun.",
+      "lines": [
+        {
+          "line": 1,
+          "text": "A08-F1b Property locator focused: 932 assertions PASS (full production Host, synthetic AE wrappers/evaluation; no real AE)"
+        }
+      ]
+    },
+    {
+      "originalFile": "finalize.log",
+      "sha256": "c95bf1512257bd94ab570979047fe714d21146c0e0ba5b97521bcf408c0ae65f",
+      "bytes": 129,
+      "selection": "Existing lines containing suite counts, assertion totals or failed-suite list; no test rerun.",
+      "lines": [
+        {
+          "line": 1,
+          "text": "A08-F1/F1a current-frame Detach: 1134 assertions PASS (full production Host; synthetic evaluation/parent model, no real AE/Undo)"
+        }
+      ]
+    },
+    {
+      "originalFile": "a08.log",
+      "sha256": "1d57e4fa89f74939bf8f19c33202944f38a4b9cdd52d7be77ced868b8492158a",
+      "bytes": 116,
+      "selection": "Existing lines containing suite counts, assertion totals or failed-suite list; no test rerun.",
+      "lines": [
+        {
+          "line": 1,
+          "text": "A08 retained Host Detach: 251 assertions PASS (complete Host/registry modules; AE object substitutes, no real Undo)"
+        }
+      ]
+    },
+    {
+      "originalFile": "host-registry.log",
+      "sha256": "11f7bf959cb21197fb5ce907898b764c134477c6b36ad4a58e4f2d3b0c03683c",
+      "bytes": 55,
+      "selection": "Existing lines containing suite counts, assertion totals or failed-suite list; no test rerun.",
+      "lines": [
+        {
+          "line": 1,
+          "text": "Host registry transaction tests passed: 27 assertions."
+        }
+      ]
+    },
+    {
+      "originalFile": "grid-host.log",
+      "sha256": "71006704d97391313ee383c55ea7a3a6f6084cbe3cfba6dc3cc43c630539d190",
+      "bytes": 49,
+      "selection": "Existing lines containing suite counts, assertion totals or failed-suite list; no test rerun.",
+      "lines": [
+        {
+          "line": 1,
+          "text": "Grid Host contract tests passed: 120 assertions."
+        }
+      ]
+    },
+    {
+      "originalFile": "grid-refresh.log",
+      "sha256": "05a47b4019008f087782a1f6b2e1a139fd04d2ec0e575a2e9488dad5a5fcbf7e",
+      "bytes": 55,
+      "selection": "Existing lines containing suite counts, assertion totals or failed-suite list; no test rerun.",
+      "lines": [
+        {
+          "line": 1,
+          "text": "Grid Refresh idempotence tests passed: 106 assertions."
+        }
+      ]
+    },
+    {
+      "originalFile": "full-offline.log",
+      "sha256": "bff30254d04102b2ecee9f4cd4c459b6681f88aab6428148d683290266df2a22",
+      "bytes": 39047,
+      "selection": "Existing lines containing suite counts, assertion totals or failed-suite list; no test rerun.",
+      "lines": [
+        {
+          "line": 198,
+          "text": "Full offline regression: 187/188 runnable suites passed; 0/188 discovered suites skipped for missing local evidence."
+        },
+        {
+          "line": 367,
+          "text": "Failed suites: test-generated-report-guard.js"
+        }
+      ]
+    },
+    {
+      "originalFile": "generated-guard-recheck.log",
+      "sha256": "a4607732e2065df5ae0a8872bb8aa8e2a1f575b703ee83bad61e314c4717639f",
+      "bytes": 52,
+      "selection": "Existing lines containing suite counts, assertion totals or failed-suite list; no test rerun.",
+      "lines": [
+        {
+          "line": 1,
+          "text": "test-generated-report-guard: 46 assertions passed."
+        }
+      ]
+    }
+  ]
+}

@@ -18,11 +18,12 @@
     position: relative;
     display: grid;
     grid-template-areas:
+        "conversations"
         "transcript"
         "composer"
         "controls";
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto auto;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
     height: var(--vela-surface-height);
     min-height: 0;
     overflow: hidden;
@@ -224,12 +225,30 @@
 
 .vela-confirmation-summary {
     min-width: 0;
-    overflow: hidden;
     color: var(--text-secondary);
     font-size: var(--type-supporting-size);
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
+
+.vela-surface[data-layout] .vela-bottom-controls[data-review-active="true"] {
+    grid-template-areas: "status settings" "actions actions";
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+.vela-surface[data-layout] .vela-action-slot[data-review-active="true"] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    padding-inline: var(--vela-surface-inset);
+}
+.vela-review-card { flex: 1 0 100%; min-width: 0; color: var(--text-secondary); font-size: var(--type-supporting-size); }
+.vela-review-card[hidden], .vela-review-details[hidden], .vela-review-problem[hidden] { display: none; }
+.vela-review-card p { margin: 0 0 calc(4px * var(--ui-scale)); white-space: pre-wrap; overflow-wrap: anywhere; }
+.vela-review-target, .vela-review-scope { line-height: 1.4; }
+.vela-review-problem { color: var(--text-primary); }
+.vela-review-details { max-height: min(22vh, 150px); overflow: auto; margin-top: var(--vela-inline-gap); border: 1px solid var(--separator); padding: var(--vela-inline-gap); }
+.vela-review-value { margin: 0 0 var(--vela-inline-gap); white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; color: var(--text-primary); }
+.vela-review-toggle:focus-visible, .vela-review-details:focus-visible { outline: 1px solid var(--gold-soft); outline-offset: 1px; }
 
 .vela-surface-action[hidden] {
     display: none;
@@ -437,3 +456,9 @@
         animation: none;
     }
 }
+
+.vela-conversation-slot { grid-area: conversations; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--vela-inline-gap); align-items: center; min-width: 0; padding: var(--vela-surface-inset); padding-bottom: 0; }
+.vela-conversation-select { width: 100%; min-width: 0; max-width: 100%; height: var(--control-height); color: var(--text-primary); background: var(--surface-conversation); border: 1px solid var(--panel-border); border-radius: var(--radius-sm); font: inherit; text-overflow: ellipsis; }
+.vela-conversation-button { min-width: var(--control-height); padding-inline: var(--vela-inline-gap); }
+.vela-conversation-feedback { grid-column: 1 / -1; font-size: inherit; overflow-wrap: anywhere; }
+.vela-conversation-feedback[hidden] { display: none; }

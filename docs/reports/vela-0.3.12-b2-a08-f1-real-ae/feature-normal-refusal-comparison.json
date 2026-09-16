@@ -1,0 +1,50 @@
+{
+  "group": "F1-AE-02",
+  "status": "FAIL: normal Feature Detach rejected before mutation; no successful finalization journey",
+  "action": {
+    "ok": false,
+    "message": "Detach preflight failed; no changes made: Error: Feature Detach: A08_FEATURE_SOURCE unsupported/locked layer"
+  },
+  "comparison": {
+    "method": "Independent pre/post Host snapshots, text/identity exact, numeric abs 1e-6",
+    "differences": [],
+    "unchanged": true
+  },
+  "flags": [
+    {
+      "id": 217,
+      "name": "FEATURE_STACK_CTRL",
+      "matchName": "ADBE AV Layer",
+      "locked": false,
+      "threeDLayer": false,
+      "collapseTransformation": false,
+      "canSetCollapseTransformation": true,
+      "hasTextProperties": false,
+      "parentId": null
+    },
+    {
+      "id": 213,
+      "name": "A08_FEATURE_SOURCE",
+      "matchName": "ADBE Text Layer",
+      "locked": false,
+      "threeDLayer": false,
+      "collapseTransformation": true,
+      "canSetCollapseTransformation": false,
+      "hasTextProperties": true,
+      "parentId": 217
+    },
+    {
+      "id": 218,
+      "name": "A08_FEATURE_SOURCE_PILL_BG",
+      "matchName": "ADBE Vector Layer",
+      "locked": false,
+      "threeDLayer": false,
+      "collapseTransformation": true,
+      "canSetCollapseTransformation": false,
+      "hasTextProperties": false,
+      "parentId": 213
+    }
+  ],
+  "undo": "NOT EXECUTED / not requested after preflight refusal; would not prove Detach recovery",
+  "laterGroups": "F1-AE-03 and F1-AE-04 NOT COVERED; stopped at this failure; no retry"
+}

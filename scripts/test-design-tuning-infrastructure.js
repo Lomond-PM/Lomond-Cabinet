@@ -59,7 +59,7 @@ resolver.resetDomain("elevation");
 assert.strictEqual(css["--elevation-floating-surface"], undefined);
 resolver.setOverride("spacing.surface.edge", 20);
 assert.strictEqual(css["--space-surface-edge"], "calc(20px * var(--ui-scale))", "typed spacing projects through semantic property");
-assert.strictEqual(resolver.setOverride("radius.sectionCard", 12), false, "protected identity radius cannot project");
+assert.strictEqual(resolver.setOverride("radius.sectionCard", 12).accepted, false, "protected identity radius cannot project");
 assert.strictEqual(css["--radius-section-card"], undefined);
 resolver.resetDomain("spacing");
 assert.strictEqual(css["--space-surface-edge"], undefined, "domain reset restores stylesheet canonical");

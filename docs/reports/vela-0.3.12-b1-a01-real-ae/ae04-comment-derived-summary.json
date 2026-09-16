@@ -1,0 +1,273 @@
+{
+  "derivedFrom": "Saved actual Host callbacks; no re-execution",
+  "recordCount": 22,
+  "cases": [
+    {
+      "label": "ordinary-chinese",
+      "reads": 2,
+      "states": [
+        {
+          "hasComp": true,
+          "activeComp": "Test Comp",
+          "selectionCount": 1,
+          "textLayerCount": 0,
+          "twoDLayerCount": 1,
+          "selectedControllerType": null,
+          "canCreateFeatureStack": false,
+          "canCreateIconGrid": true,
+          "canRefresh": false,
+          "canSelectLayers": false,
+          "canDetach": false,
+          "canRemoveGeneratedComponent": false
+        },
+        {
+          "hasComp": true,
+          "activeComp": "Test Comp",
+          "selectionCount": 1,
+          "textLayerCount": 0,
+          "twoDLayerCount": 1,
+          "selectedControllerType": null,
+          "canCreateFeatureStack": false,
+          "canCreateIconGrid": true,
+          "canRefresh": false,
+          "canSelectLayers": false,
+          "canDetach": false,
+          "canRemoveGeneratedComponent": false
+        }
+      ],
+      "withinReadsUnchanged": true,
+      "betweenReadsUnchanged": true,
+      "resultStable": true,
+      "uiStable": true
+    },
+    {
+      "label": "empty-comment",
+      "reads": 2,
+      "states": [
+        {
+          "hasComp": true,
+          "activeComp": "Test Comp",
+          "selectionCount": 1,
+          "textLayerCount": 0,
+          "twoDLayerCount": 1,
+          "selectedControllerType": null,
+          "canCreateFeatureStack": false,
+          "canCreateIconGrid": true,
+          "canRefresh": false,
+          "canSelectLayers": false,
+          "canDetach": false,
+          "canRemoveGeneratedComponent": false
+        },
+        {
+          "hasComp": true,
+          "activeComp": "Test Comp",
+          "selectionCount": 1,
+          "textLayerCount": 0,
+          "twoDLayerCount": 1,
+          "selectedControllerType": null,
+          "canCreateFeatureStack": false,
+          "canCreateIconGrid": true,
+          "canRefresh": false,
+          "canSelectLayers": false,
+          "canDetach": false,
+          "canRemoveGeneratedComponent": false
+        }
+      ],
+      "withinReadsUnchanged": true,
+      "betweenReadsUnchanged": true,
+      "resultStable": true,
+      "uiStable": true
+    },
+    {
+      "label": "bad-json",
+      "reads": 2,
+      "states": [
+        {
+          "hasComp": true,
+          "activeComp": "Test Comp",
+          "selectionCount": 1,
+          "textLayerCount": 0,
+          "twoDLayerCount": 1,
+          "selectedControllerType": null,
+          "canCreateFeatureStack": false,
+          "canCreateIconGrid": true,
+          "canRefresh": false,
+          "canSelectLayers": false,
+          "canDetach": false,
+          "canRemoveGeneratedComponent": false
+        },
+        {
+          "hasComp": true,
+          "activeComp": "Test Comp",
+          "selectionCount": 1,
+          "textLayerCount": 0,
+          "twoDLayerCount": 1,
+          "selectedControllerType": null,
+          "canCreateFeatureStack": false,
+          "canCreateIconGrid": true,
+          "canRefresh": false,
+          "canSelectLayers": false,
+          "canDetach": false,
+          "canRemoveGeneratedComponent": false
+        }
+      ],
+      "withinReadsUnchanged": true,
+      "betweenReadsUnchanged": true,
+      "resultStable": true,
+      "uiStable": true
+    },
+    {
+      "label": "wrong-tool",
+      "reads": 2,
+      "states": [
+        {
+          "hasComp": true,
+          "activeComp": "Test Comp",
+          "selectionCount": 1,
+          "textLayerCount": 0,
+          "twoDLayerCount": 1,
+          "selectedControllerType": null,
+          "canCreateFeatureStack": false,
+          "canCreateIconGrid": true,
+          "canRefresh": false,
+          "canSelectLayers": false,
+          "canDetach": false,
+          "canRemoveGeneratedComponent": false
+        },
+        {
+          "hasComp": true,
+          "activeComp": "Test Comp",
+          "selectionCount": 1,
+          "textLayerCount": 0,
+          "twoDLayerCount": 1,
+          "selectedControllerType": null,
+          "canCreateFeatureStack": false,
+          "canCreateIconGrid": true,
+          "canRefresh": false,
+          "canSelectLayers": false,
+          "canDetach": false,
+          "canRemoveGeneratedComponent": false
+        }
+      ],
+      "withinReadsUnchanged": true,
+      "betweenReadsUnchanged": true,
+      "resultStable": true,
+      "uiStable": true
+    },
+    {
+      "label": "missing-artifact-id",
+      "reads": 2,
+      "states": [
+        {
+          "hasComp": true,
+          "activeComp": "Test Comp",
+          "selectionCount": 1,
+          "textLayerCount": 0,
+          "twoDLayerCount": 1,
+          "selectedControllerType": null,
+          "canCreateFeatureStack": false,
+          "canCreateIconGrid": true,
+          "canRefresh": false,
+          "canSelectLayers": false,
+          "canDetach": false,
+          "canRemoveGeneratedComponent": false
+        },
+        {
+          "hasComp": true,
+          "activeComp": "Test Comp",
+          "selectionCount": 1,
+          "textLayerCount": 0,
+          "twoDLayerCount": 1,
+          "selectedControllerType": null,
+          "canCreateFeatureStack": false,
+          "canCreateIconGrid": true,
+          "canRefresh": false,
+          "canSelectLayers": false,
+          "canDetach": false,
+          "canRemoveGeneratedComponent": false
+        }
+      ],
+      "withinReadsUnchanged": true,
+      "betweenReadsUnchanged": true,
+      "resultStable": true,
+      "uiStable": true
+    },
+    {
+      "label": "non-json-expression",
+      "reads": 2,
+      "states": [
+        {
+          "hasComp": true,
+          "activeComp": "Test Comp",
+          "selectionCount": 1,
+          "textLayerCount": 0,
+          "twoDLayerCount": 1,
+          "selectedControllerType": null,
+          "canCreateFeatureStack": false,
+          "canCreateIconGrid": true,
+          "canRefresh": false,
+          "canSelectLayers": false,
+          "canDetach": false,
+          "canRemoveGeneratedComponent": false
+        },
+        {
+          "hasComp": true,
+          "activeComp": "Test Comp",
+          "selectionCount": 1,
+          "textLayerCount": 0,
+          "twoDLayerCount": 1,
+          "selectedControllerType": null,
+          "canCreateFeatureStack": false,
+          "canCreateIconGrid": true,
+          "canRefresh": false,
+          "canSelectLayers": false,
+          "canDetach": false,
+          "canRemoveGeneratedComponent": false
+        }
+      ],
+      "withinReadsUnchanged": true,
+      "betweenReadsUnchanged": true,
+      "resultStable": true,
+      "uiStable": true
+    },
+    {
+      "label": "trailing-invalid",
+      "reads": 2,
+      "states": [
+        {
+          "hasComp": true,
+          "activeComp": "Test Comp",
+          "selectionCount": 1,
+          "textLayerCount": 0,
+          "twoDLayerCount": 1,
+          "selectedControllerType": null,
+          "canCreateFeatureStack": false,
+          "canCreateIconGrid": true,
+          "canRefresh": false,
+          "canSelectLayers": false,
+          "canDetach": false,
+          "canRemoveGeneratedComponent": false
+        },
+        {
+          "hasComp": true,
+          "activeComp": "Test Comp",
+          "selectionCount": 1,
+          "textLayerCount": 0,
+          "twoDLayerCount": 1,
+          "selectedControllerType": null,
+          "canCreateFeatureStack": false,
+          "canCreateIconGrid": true,
+          "canRefresh": false,
+          "canSelectLayers": false,
+          "canDetach": false,
+          "canRemoveGeneratedComponent": false
+        }
+      ],
+      "withinReadsUnchanged": true,
+      "betweenReadsUnchanged": true,
+      "resultStable": true,
+      "uiStable": true
+    }
+  ],
+  "restored": true
+}

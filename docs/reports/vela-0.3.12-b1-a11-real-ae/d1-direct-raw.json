@@ -1,0 +1,225 @@
+{
+  "records": [
+    {
+      "caseId": "D1-direct/NUL/toJson",
+      "input": "(function(){var c=[0],s=\"\",i,o={};for(i=0;i<c.length;i++)s+=String.fromCharCode(c[i]);o[s]=\"value\";return AEToolbox.toJson(o);})()",
+      "raw": "{\"\":\"value\"}",
+      "rawSignature": {
+        "type": "string",
+        "length": 12,
+        "units": [
+          123,
+          34,
+          34,
+          58,
+          34,
+          118,
+          97,
+          108,
+          117,
+          101,
+          34,
+          125
+        ]
+      },
+      "time": "2026-09-09T08:54:40.078Z",
+      "parsed": {
+        "": "value"
+      }
+    },
+    {
+      "caseId": "D1-direct/NUL/stringify",
+      "input": "(function(){var c=[0],s=\"\",i,o={};for(i=0;i<c.length;i++)s+=String.fromCharCode(c[i]);o[s]=\"value\";return AEToolbox.stringify(o);})()",
+      "raw": "{\"\":\"value\"}",
+      "rawSignature": {
+        "type": "string",
+        "length": 12,
+        "units": [
+          123,
+          34,
+          34,
+          58,
+          34,
+          118,
+          97,
+          108,
+          117,
+          101,
+          34,
+          125
+        ]
+      },
+      "time": "2026-09-09T08:54:40.078Z",
+      "parsed": {
+        "": "value"
+      }
+    },
+    {
+      "caseId": "D1-direct/A-NUL/toJson",
+      "input": "(function(){var c=[65,0],s=\"\",i,o={};for(i=0;i<c.length;i++)s+=String.fromCharCode(c[i]);o[s]=\"value\";return AEToolbox.toJson(o);})()",
+      "raw": "{\"A\":\"value\"}",
+      "rawSignature": {
+        "type": "string",
+        "length": 13,
+        "units": [
+          123,
+          34,
+          65,
+          34,
+          58,
+          34,
+          118,
+          97,
+          108,
+          117,
+          101,
+          34,
+          125
+        ]
+      },
+      "time": "2026-09-09T08:54:40.078Z",
+      "parsed": {
+        "A": "value"
+      }
+    },
+    {
+      "caseId": "D1-direct/A-NUL/stringify",
+      "input": "(function(){var c=[65,0],s=\"\",i,o={};for(i=0;i<c.length;i++)s+=String.fromCharCode(c[i]);o[s]=\"value\";return AEToolbox.stringify(o);})()",
+      "raw": "{\"A\":\"value\"}",
+      "rawSignature": {
+        "type": "string",
+        "length": 13,
+        "units": [
+          123,
+          34,
+          65,
+          34,
+          58,
+          34,
+          118,
+          97,
+          108,
+          117,
+          101,
+          34,
+          125
+        ]
+      },
+      "time": "2026-09-09T08:54:40.079Z",
+      "parsed": {
+        "A": "value"
+      }
+    },
+    {
+      "caseId": "D1-direct/NUL-B/toJson",
+      "input": "(function(){var c=[0,66],s=\"\",i,o={};for(i=0;i<c.length;i++)s+=String.fromCharCode(c[i]);o[s]=\"value\";return AEToolbox.toJson(o);})()",
+      "raw": "{\"\":\"value\"}",
+      "rawSignature": {
+        "type": "string",
+        "length": 12,
+        "units": [
+          123,
+          34,
+          34,
+          58,
+          34,
+          118,
+          97,
+          108,
+          117,
+          101,
+          34,
+          125
+        ]
+      },
+      "time": "2026-09-09T08:54:40.079Z",
+      "parsed": {
+        "": "value"
+      }
+    },
+    {
+      "caseId": "D1-direct/NUL-B/stringify",
+      "input": "(function(){var c=[0,66],s=\"\",i,o={};for(i=0;i<c.length;i++)s+=String.fromCharCode(c[i]);o[s]=\"value\";return AEToolbox.stringify(o);})()",
+      "raw": "{\"\":\"value\"}",
+      "rawSignature": {
+        "type": "string",
+        "length": 12,
+        "units": [
+          123,
+          34,
+          34,
+          58,
+          34,
+          118,
+          97,
+          108,
+          117,
+          101,
+          34,
+          125
+        ]
+      },
+      "time": "2026-09-09T08:54:40.079Z",
+      "parsed": {
+        "": "value"
+      }
+    },
+    {
+      "caseId": "D1-direct/A-NUL-B/toJson",
+      "input": "(function(){var c=[65,0,66],s=\"\",i,o={};for(i=0;i<c.length;i++)s+=String.fromCharCode(c[i]);o[s]=\"value\";return AEToolbox.toJson(o);})()",
+      "raw": "{\"A\":\"value\"}",
+      "rawSignature": {
+        "type": "string",
+        "length": 13,
+        "units": [
+          123,
+          34,
+          65,
+          34,
+          58,
+          34,
+          118,
+          97,
+          108,
+          117,
+          101,
+          34,
+          125
+        ]
+      },
+      "time": "2026-09-09T08:54:40.080Z",
+      "parsed": {
+        "A": "value"
+      }
+    },
+    {
+      "caseId": "D1-direct/A-NUL-B/stringify",
+      "input": "(function(){var c=[65,0,66],s=\"\",i,o={};for(i=0;i<c.length;i++)s+=String.fromCharCode(c[i]);o[s]=\"value\";return AEToolbox.stringify(o);})()",
+      "raw": "{\"A\":\"value\"}",
+      "rawSignature": {
+        "type": "string",
+        "length": 13,
+        "units": [
+          123,
+          34,
+          65,
+          34,
+          58,
+          34,
+          118,
+          97,
+          108,
+          117,
+          101,
+          34,
+          125
+        ]
+      },
+      "time": "2026-09-09T08:54:40.080Z",
+      "parsed": {
+        "A": "value"
+      }
+    }
+  ],
+  "note": "Independent calls from D1-observe signatures; raw signature recorded before CEP JSON.parse"
+}

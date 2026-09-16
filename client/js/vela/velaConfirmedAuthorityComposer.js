@@ -78,6 +78,7 @@
             record.terminalized = true; record.cancellationErrorCode = null; return true;
         }
         function finish(record) { if (activeRecord === record) { activeRecord = null; if (!disposed) { state = "idle"; } } }
+        function reportReceipt(record, committed) { try { if (typeof options.onTrajectoryAssociation === "function") { options.onTrajectoryAssociation(Object.freeze({ kind: "execution-receipt", producer: "VelaRuntime", planId: record.executionPlanId, committed: committed })); } } catch (ignoredTrajectory) {} }
         function cancelledResult() { return Object.freeze({ state: "cancelled", code: "AGENT_DRIVER_CANCELLED" }); }
         function compose(input) {
             var intent;
@@ -112,6 +113,7 @@
                 record.phase = "accept-pending";
                 return Promise.resolve(planController.accept(plan, { selectionOrderMeaningful: true })).then(function (waiting) {
                     record.executionPlanId = waiting && waiting.executionPlanId || null;
+                    try { if (current(record) && waiting && typeof options.onTrajectoryAssociation === "function") { options.onTrajectoryAssociation(Object.freeze({ kind: "association", producer: "VelaRuntime", planId: waiting.executionPlanId, authorizedPlanId: waiting.authorizedPlanId, taskRunId: waiting.taskRunId })); } } catch (ignoredTrajectory) {}
                     if (!current(record)) { if (officialCancel(record, disposed ? "disposed" : "composition-cancelled")) { finish(record); } else { state = disposed ? "disposed" : "cancellation-failed"; } return cancelledResult(); }
                     if (!waiting || waiting.taskState !== "waiting-approval" || waiting.executionArmed !== false) { fail("PLAN_INVALID"); }
                     record.phase = "confirm-pending";
@@ -120,7 +122,7 @@
                         if (!armed || armed.taskState !== "active" || armed.executionArmed !== true) { fail("PLAN_INVALID"); }
                         record.phase = "authority-ready";
                         state = "authority-ready";
-                        return Object.freeze({ state: "authority-ready", code: null });
+                        return Object.freeze({ state: "authority-ready", code: null, executionPlanId: record.executionPlanId });
                     });
                 });
             }).then(function (result) { if (result && result.state === "cancelled" && record.executionPlanId === null) { finish(record); } return result; }, function (error) { if (!record.executionPlanId || officialCancel(record, "composition-failed")) { finish(record); } else { state = disposed ? "disposed" : "cancellation-failed"; } return Object.freeze({ state: record.cancelled || disposed ? "cancelled" : "blocked", code: record.cancelled || disposed ? "AGENT_DRIVER_CANCELLED" : stableCode(error) }); });
@@ -137,7 +139,7 @@
             return Promise.resolve(running).then(function (progress) {
                 var receipt = progress && progress.executionReceipt;
                 var committed = receipt && receipt.committed === true ? true : receipt && receipt.committed === false ? false : null;
-                var satisfied = receipt && receipt.satisfied === true;
+                reportReceipt(record, committed); var satisfied = receipt && receipt.satisfied === true;
                 var cancelled = record.cancelled === true || disposed || progress && progress.taskState === "cancelled";
                 record.terminalized = true;
                 finish(record);
@@ -147,7 +149,7 @@
             }, function (error) {
                 var receipt = error && error.executionReceipt;
                 var committed = receipt && receipt.committed === true ? true : receipt && receipt.committed === false ? false : null;
-                var cancelled = record.cancelled === true || disposed;
+                reportReceipt(record, committed); var cancelled = record.cancelled === true || disposed;
                 record.terminalized = true;
                 finish(record);
                 return Object.freeze({ state: cancelled ? "cancelled" : "blocked", committed: committed, code: cancelled ? "AGENT_DRIVER_CANCELLED" : stableCode(error) });

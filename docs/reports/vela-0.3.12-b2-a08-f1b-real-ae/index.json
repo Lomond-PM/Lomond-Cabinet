@@ -1,0 +1,226 @@
+{
+  "phase": "0.3.12-B2 / A08-F1b targeted real AE revalidation",
+  "status": "A08 TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+  "summary": "summary.json",
+  "checks": "checks.txt",
+  "integrity": "integrity-after.json",
+  "note": "Per-group summaries/progress records retain their earlier checkpoints. summary.json is the final status for this run; historical directories are not rewritten.",
+  "retention": {
+    "task": "A08-H0",
+    "changed": "Index only; retained historical summaries, callbacks, comparisons and confirmations keep original bytes. Phase status/counts above are historical, not recertified by H0.",
+    "currentAcceptance": "TARGETED_ACCEPTED / READY FOR COMMIT / PR",
+    "archiveWorkspaceRelative": ".tmp/vela-evidence/0.3.12/a08/h0-20260911",
+    "archiveManifest": "manifest.json",
+    "originalIndex": {
+      "path": "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/index.json",
+      "sha256": "f02894654cc1b2b50b6c40747199eb3481d4c59e4cb07e279c54087663659b11"
+    },
+    "referencePolicy": "Historical filenames, command strings, JSON pointers and checksums retain their original meaning. Files absent from the retained set resolve as archiveWorkspaceRelative + original repository path; bare names resolve against this evidence directory. They are local-only, unavailable in a fresh clone. Original file counts/hashes describe the complete collection, not this retained subset.",
+    "archivedReferences": [
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/checks.txt",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/environment.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/integrity-after.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r1-b1-user.png",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r1-b1.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r1-b2-user.png",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r1-b2.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r1-b3.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-animation-preparation.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-b0.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-b1-user.png",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-b1.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-b2-user.png",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-b2.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-b3.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-create-ui.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-created.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-preparation.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-temporal-after.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-temporal-before.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-temporal-restored.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-ui-initial.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-ui-open-controls.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r2-ui-open.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r3-b1.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r3-b2.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r3-b3.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r3-original-before-preparation.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/r3-selection-preparation.json",
+      "docs/reports/vela-0.3.12-b2-a08-f1b-real-ae/workspace.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/feature-b0.json",
+      "docs/reports/vela-0.3.12-b2-a08-real-ae/grid-b0.json"
+    ]
+  },
+  "files": [
+    {
+      "file": "close-preconditions.json",
+      "bytes": 3016,
+      "sha256": "3a0004ae5dcdd2a6e7f5afdf38edff7fdfa268a17695eae341634bb447d9b063"
+    },
+    {
+      "file": "evidence-audit.json",
+      "bytes": 5349,
+      "sha256": "b3c470d6895d73fc08314bd4bc5672a3a79c0c5d45d470374f569cad63ceb07f"
+    },
+    {
+      "file": "load-comparison.json",
+      "bytes": 14399,
+      "sha256": "962bc73b4d82c40348a77242f50ed77a2ca6e6a943ef43692b6472a90f3bcdff"
+    },
+    {
+      "file": "r1-after-user-confirmation.json",
+      "bytes": 1208,
+      "sha256": "b2dca890cd2ae015124326ca1a653af0f1dc65b3396d120d73bc2b0d8c6f7638"
+    },
+    {
+      "file": "r1-b1-checks.json",
+      "bytes": 9134,
+      "sha256": "1f17dfd72582a1b20c185adb61380b6c01dd3adc6d1f05b6ef4249171ff0a97b"
+    },
+    {
+      "file": "r1-b1-screenshot-errors.json",
+      "bytes": 548,
+      "sha256": "33a9c7723d2b22e0c20dc95fc0e19a3cb500d0794fa27b3f17eeb5d5998dc452"
+    },
+    {
+      "file": "r1-b1-space.json",
+      "bytes": 3494,
+      "sha256": "e03d6ef4b5150981c873ef2b0c3d46970507443b2dc7b184d1da8b516d8a974e"
+    },
+    {
+      "file": "r1-b2-comparison.json",
+      "bytes": 15594,
+      "sha256": "81e93ada88e424d71ffd52bdba49c9a0bbabcbb0d09a35672ad38f3170438697"
+    },
+    {
+      "file": "r1-b3-comparison.json",
+      "bytes": 793,
+      "sha256": "a721f3d541c6cc0f53dd09f062062b89a60a0e7bf4782979834cdd46d0a0053b"
+    },
+    {
+      "file": "r1-before-user-confirmation.json",
+      "bytes": 769,
+      "sha256": "09cf15efc10ba3f1895ea3e5af295029b36e0dfc64945717bbec5b3dbbf1d582"
+    },
+    {
+      "file": "r1-detach-action.json",
+      "bytes": 7869,
+      "sha256": "06d9cecca6860c9372c1ef1e2916e2a6a72b6ec784b06c2cbb561ea0a068c80c"
+    },
+    {
+      "file": "r1-summary.json",
+      "bytes": 1153,
+      "sha256": "accb4f052f976aecf482057c22c6d47c5b124058deb5522b2d7fc2652ea43d84"
+    },
+    {
+      "file": "r1-undo-user-confirmation.json",
+      "bytes": 411,
+      "sha256": "ebe4785e7ff7a0df1f50a52f3137706e6b17b3b921ec2d5e934bf4b18640ae76"
+    },
+    {
+      "file": "r2-after-user-confirmation.json",
+      "bytes": 1213,
+      "sha256": "768b3d737ea9239f9904e51ff63d4c7db03d117d3be69d939dd2fb83410dd1ef"
+    },
+    {
+      "file": "r2-b1-checks.json",
+      "bytes": 13268,
+      "sha256": "765a569e6462367ffc87d4b77a86ba395d6ef49564acf8debf95787631ce9434"
+    },
+    {
+      "file": "r2-b1-space.json",
+      "bytes": 3434,
+      "sha256": "5ac593e4335c9a56c49f77c8ff24307f2452aef3b0af54e393268b04d7238ca6"
+    },
+    {
+      "file": "r2-b2-comparison.json",
+      "bytes": 15751,
+      "sha256": "b1516413795f5fbb01208f706661f8b26f1e2ca3d78e33f9c59e9b390d2afeec"
+    },
+    {
+      "file": "r2-b3-comparison.json",
+      "bytes": 931,
+      "sha256": "3a07555e4c12a9a38e640f2f030cbcb69248ace30c9cda85d1f9d2032a6c119b"
+    },
+    {
+      "file": "r2-before-user-confirmation.json",
+      "bytes": 945,
+      "sha256": "fe90431c4185222a8e2403b8f52053e3a05a24e92566af5d955738d460d2e6a6"
+    },
+    {
+      "file": "r2-collection-error.json",
+      "bytes": 835,
+      "sha256": "e8bfd100392348637ee80ca65fb76ac5fdb1d4fe5432be24c98aa84712896887"
+    },
+    {
+      "file": "r2-created-checks.json",
+      "bytes": 1751,
+      "sha256": "780c90188a025d6444700b8da8dc25aec7ca7e2db732b207556d95fda577c401"
+    },
+    {
+      "file": "r2-detach-action.json",
+      "bytes": 9163,
+      "sha256": "c6a9db0c4f76f0378a8f6e9d98bcb6408833df3fc193e2078ce86fe63ea0b7da"
+    },
+    {
+      "file": "r2-preparation-authorization.json",
+      "bytes": 397,
+      "sha256": "bd95c496749fb77646f8e2f38d44b0e23d3e7a9e53c72dbdf296a6af6478e5e4"
+    },
+    {
+      "file": "r2-summary.json",
+      "bytes": 1232,
+      "sha256": "1090be52702193e825e3a1b46ed7e1aadd09e0612b80494704be236dba28b5cc"
+    },
+    {
+      "file": "r2-temporal-comparison.json",
+      "bytes": 8328,
+      "sha256": "26c8fca6019c2e3706697bdcce3fe1cd92487c688f87e683452315a3693a37db"
+    },
+    {
+      "file": "r2-undo-user-confirmation.json",
+      "bytes": 416,
+      "sha256": "e8b6bb0a74513ceb582c159e3a8fae57e290c70d02ba5e61c19308e82cd7f9be"
+    },
+    {
+      "file": "r3-b1-checks.json",
+      "bytes": 3117,
+      "sha256": "89430790bb669ae7f42c173e8ba2e0e4e23fc0c2ba6c01abe171527a0a52a020"
+    },
+    {
+      "file": "r3-b2-comparison.json",
+      "bytes": 3908,
+      "sha256": "bebda3b10ba5c30556ab8e903cdd84796d6a9f6732bfff0198c167b4b99afd81"
+    },
+    {
+      "file": "r3-b3-comparison.json",
+      "bytes": 793,
+      "sha256": "726d4b883f81c7481510451e18cae8473e66ec2aeb5b812a0f505743ebaa4d18"
+    },
+    {
+      "file": "r3-detach-action.json",
+      "bytes": 8145,
+      "sha256": "178440266ae2b5bb840f2b71e3c55040e58aaa5cf688636e8cc581212b046003"
+    },
+    {
+      "file": "r3-reuse-checks.json",
+      "bytes": 3311,
+      "sha256": "f93612c490fd0e087a17368d0d1dea41d41d4d7e51e33b6d256ff6117b857132"
+    },
+    {
+      "file": "r3-summary.json",
+      "bytes": 1269,
+      "sha256": "32ea299df4d73d59537a9f4ec436c9bc23a143b806ac6f8b182f34f977949e32"
+    },
+    {
+      "file": "r3-undo-user-confirmation.json",
+      "bytes": 496,
+      "sha256": "e3f784e75017e717fcd705347004bc6087bb77869c79cdfa6e8a709c0e69c897"
+    },
+    {
+      "file": "summary.json",
+      "bytes": 4471,
+      "sha256": "392940da73c973adf43dcd080c3b2f55eee31d69b7a9a0368613e70e79f074a7"
+    }
+  ]
+}

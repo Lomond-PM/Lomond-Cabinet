@@ -1,0 +1,35 @@
+{
+  "source": "ae05-new-style-repeated-state.json",
+  "derivedOnly": true,
+  "samples": 3,
+  "timestamps": [
+    "2026-09-09T06:33:05.123Z",
+    "2026-09-09T06:33:06.461Z",
+    "2026-09-09T06:33:07.794Z"
+  ],
+  "withinUnchanged": true,
+  "acrossUnchanged": true,
+  "stateStable": true,
+  "uiStable": true,
+  "buttonsStable": true,
+  "state": {
+    "ok": true,
+    "messageKey": "tools.adComponentKit.state.noTextSelection",
+    "state": {
+      "hasComp": true,
+      "activeComp": "Test Comp",
+      "selectionCount": 1,
+      "textLayerCount": 0,
+      "twoDLayerCount": 0,
+      "selectedControllerType": "iconGrid",
+      "canCreateFeatureStack": false,
+      "canCreateIconGrid": false,
+      "canRefresh": true,
+      "canSelectLayers": true,
+      "canDetach": true,
+      "canRemoveGeneratedComponent": true
+    }
+  },
+  "layers": 27,
+  "undoAfter": "PENDING USER OBSERVATION"
+}

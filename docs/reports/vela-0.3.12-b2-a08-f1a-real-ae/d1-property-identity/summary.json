@@ -1,0 +1,58 @@
+{
+  "phase": "A08-F1a-D1",
+  "status": "F1a REAL AE REVALIDATION FAIL / D1 DIAGNOSED / FIX DECISION PENDING",
+  "classification": "A. SAME_PROPERTY_LOCATOR / REFERENCE_MISMATCH",
+  "aeVersion": "26.3x87",
+  "targetId": "1FBEA019488472ACDE40DB10C37F513F",
+  "targetSameAsR1": true,
+  "project": "D:\\Projects\\Vela Test\\Vela Test.aep",
+  "compId": 191,
+  "time": 0,
+  "artifactId": "ack_20260910_142239_903961",
+  "observed": {
+    "planned": 5,
+    "identityPairs": 30,
+    "strictEqual": 0,
+    "strictNotEqual": 30,
+    "sameLocatorAndContent": 30,
+    "scannedBindings": 5,
+    "uniqueMatchingPlannedLocators": 5,
+    "referenceMatches": 0,
+    "visited": 610,
+    "enumerationErrors": 0,
+    "beforeAfterFieldsIdentical": true
+  },
+  "conclusion": "For these five properties in the current AE 26.3x87 session, separately acquired native Property references do not compare equal even when the actual full structural locator and recorded content are identical. Reference equality is unsuitable as the sole stable planned-property matching key here.",
+  "limits": [
+    "No AE engine-bug assertion or cross-version/any-Property generalization",
+    "Diagnostic planned properties obtained via actual production paths, not captured internal edits array",
+    "No Detach rerun or historical failing property trace reconstruction",
+    "No collision/keyframe/template-conflict fix or real finalization/Undo acceptance in D1"
+  ],
+  "notObservedInTraversal": [
+    "B: extra same-artifact tool binding outside the five paths",
+    "C: user/unknown active expression outside the five paths",
+    "D: ambiguous/incomplete structural locator"
+  ],
+  "nextFixConstraints": [
+    "Bind locator to concrete layer identity and complete structural path",
+    "Use propertyIndex + matchName per level; names only diagnostic",
+    "Disambiguate repeated Effect/Shape groups; fail closed if path is unreadable or ambiguous",
+    "Require artifact and full known-template/property ownership in both planned and scanned views",
+    "Do not expand writable set beyond original five properties",
+    "Keep current-frame, sampling, tolerance, protected user data and failure semantics; no A09 general addressing system"
+  ],
+  "actions": {
+    "detach": 0,
+    "create": 0,
+    "refresh": 0,
+    "remove": 0,
+    "provider": 0,
+    "undo": 0,
+    "projectWritesInitiated": 0
+  },
+  "offline": "1134/251 and 187 suites not rerun",
+  "A08": "NOT TARGETED_ACCEPTED; NOT READY FOR COMMIT / PR",
+  "R2": "NOT COVERED",
+  "R3": "NOT COVERED"
+}

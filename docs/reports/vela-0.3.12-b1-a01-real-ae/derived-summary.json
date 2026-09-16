@@ -1,0 +1,20 @@
+{
+  "derivedFrom": "Saved real CSInterface callback strings; no Host/VM re-execution",
+  "timestamp": "2026-09-09T04:40:56.072Z",
+  "productionAndTestHashesUnchanged": true,
+  "samples": 3,
+  "withinCallsUnchanged": true,
+  "betweenCallsUnchanged": true,
+  "stateStable": true,
+  "uiTextStable": true,
+  "undo": "NOT COVERED",
+  "noSelection": "NOT COVERED",
+  "noActiveComp": "NOT COVERED",
+  "fixtureMutations": "NONE",
+  "AE01": "PASS",
+  "AE02": "PASS",
+  "AE03": "NOT COVERED",
+  "AE04": "NOT COVERED (empty-comment selected-layer subcase PASS)",
+  "AE05": "NOT COVERED (existing selection read stability PASS; fixture matrix and Undo missing)",
+  "AE06": "NOT COVERED"
+}

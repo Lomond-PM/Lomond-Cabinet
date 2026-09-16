@@ -1,0 +1,1013 @@
+{
+  "label": "AE-03-constructed-legacy",
+  "timestamp": "2026-09-09T06:09:26.126Z",
+  "hostInput": "(function(){var c=app.project.activeItem,l=c instanceof CompItem&&c.selectedLayers.length===1?c.selectedLayers[0]:null;if(!l||l.id!==190||l.name!==\"A01_METADATA_FIXTURE\")throw new Error(\"Unexpected selection\");var n=AEToolbox._registeredToolMap.ecommerceLayout.stateAction.hostFunction;if(n!==\"AEToolbox.tools.adComponentKit.getState\")throw new Error(\"Unexpected stateAction\");var before=l.comment,raw=AEToolbox.resolveFunction(n)();return AEToolbox.stringify({phase:\"READ_ONLY\",layerId:l.id,commentBefore:before,stateAction:n,stateRaw:raw,commentAfter:l.comment});})()",
+  "hostRaw": "{\"phase\":\"READ_ONLY\",\"layerId\":190,\"commentBefore\":\"{\\\"aetoolbox\\\":true,\\\"componentId\\\":\\\"legacy_fixture\\\",\\\"componentType\\\":\\\"featureStack\\\",\\\"role\\\":\\\"controller\\\",\\\"index\\\":0}\",\"stateAction\":\"AEToolbox.tools.adComponentKit.getState\",\"stateRaw\":\"{\\\"ok\\\":true,\\\"messageKey\\\":\\\"tools.adComponentKit.state.noTextSelection\\\",\\\"state\\\":{\\\"hasComp\\\":true,\\\"activeComp\\\":\\\"Test Comp\\\",\\\"selectionCount\\\":1,\\\"textLayerCount\\\":0,\\\"twoDLayerCount\\\":0,\\\"selectedControllerType\\\":\\\"featureStack\\\",\\\"canCreateFeatureStack\\\":false,\\\"canCreateIconGrid\\\":false,\\\"canRefresh\\\":true,\\\"canSelectLayers\\\":true,\\\"canDetach\\\":true,\\\"canRemoveGeneratedComponent\\\":false}}\",\"commentAfter\":\"{\\\"aetoolbox\\\":true,\\\"componentId\\\":\\\"legacy_fixture\\\",\\\"componentType\\\":\\\"featureStack\\\",\\\"role\\\":\\\"controller\\\",\\\"index\\\":0}\"}",
+  "uiText": "<\n主页\n电商组件工具箱\n\n创建卖点胶囊、图标网格，并维护已生成的电商组件。\n\n组件状态\n激活合成\nTest Comp\n选中数量\n1\n文本层\n0\n2D 图层\n0\n控制器\nfeatureStack\n可创建卖点胶囊\nfalse\n可创建图标网格\nfalse\n可移除生成组件\nfalse\n组件构建\n\n选择一种组件类型，只调整相关参数。\n\n组件类型\nF\n卖点胶囊\n将选中文本层创建为居中胶囊行。\nI\n图标网格\n将选中的 2D 图层排列为统一网格。\n图标网格保留在统一工具中，但仍属于进阶工作流。\n列数\n统一尺寸模式\n无\n适配框\n统一高度\n统一宽度\n统一宽度\n目标宽度\n目标高度\n单元格宽度\n单元格高度\n间距 X\n间距 Y\n最后一行对齐\n左对齐\n居中\n右对齐\n居中\n网格排序\n行优先\nX 位置\nY 位置\n时间线\n时间线\n创建图标网格\n刷新选中组件\n选择组件图层\n移除选中生成组件\n已选择 1 个图层",
+  "buttons": [
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "<\n主页",
+      "disabled": false
+    },
+    {
+      "text": "F\n卖点胶囊\n将选中文本层创建为居中胶囊行。",
+      "disabled": false
+    },
+    {
+      "text": "I\n图标网格\n将选中的 2D 图层排列为统一网格。",
+      "disabled": false
+    },
+    {
+      "text": "统一宽度",
+      "disabled": false
+    },
+    {
+      "text": "居中",
+      "disabled": false
+    },
+    {
+      "text": "时间线",
+      "disabled": false
+    },
+    {
+      "text": "创建图标网格",
+      "disabled": true
+    },
+    {
+      "text": "刷新选中组件",
+      "disabled": false
+    },
+    {
+      "text": "选择组件图层",
+      "disabled": false
+    },
+    {
+      "text": "移除选中生成组件",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": true
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    }
+  ]
+}

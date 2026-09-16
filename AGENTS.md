@@ -19,7 +19,21 @@ The product uses two runtimes:
 
 ## Current Vela milestone
 
-Vela **0.3.9 — Streaming Response & Reasoning Surface** is COMPLETE / SEALED / merged into dev. Full offline regression: 171/171 PASS; user-manual real AE acceptance: PASS; architecture amendment: NONE. Next: **0.3.10 — Context Architecture**, not yet implemented.
+**0.3.12-G：INTEGRATED_ACCEPTED / READY FOR COMMIT / PR**（2026-09-16最终裁定），见 [G 综合报告](docs/reports/vela-0.3.12-integrated-acceptance.md)。0.3.12技术关闭与封存裁定已通过：20项原缺陷/治理条目按有界证据CLOSED，5项持续覆盖OPEN，其余29项不变，54个原ID保留。D/F旧超时残余风险已接受，原FAIL、原因及tokens unknown保留；实验限制与120000ms整个请求截止不变，后续观测/资格复核及立即重新处置条件由G报告持有。**仓库封存待承载本裁定的G PR通过CI并合并dev后生效**，当前文档修改尚未提交，不宣称远端已封存。最终198/198基线不变，本轮仅文档检查，不进入0.3.13。
+
+以下B1–F条目保留阶段验收基线与覆盖边界；其原缺陷的当前关闭状态以G最终裁定和机器总账为准。G中新增Remove修复及85项/真实Grid与Feature证据见G报告，历史A08“当时未修复”记录保持。
+
+**E 已通过 PR #211 合并 dev**，AP-01、AP-02、AP-03、UX-01、UX-02 保持 TARGETED_ACCEPTED，见 [E 报告](docs/reports/vela-0.3.12-e-user-assets-exit-safety.md)。
+
+**D 已通过 PR #210 合并 dev**，A05/A06/A07/A12 保持有界接受；自然 Host/Verify 在途 UIDisable、同 Surface checking 的正常 UI suspend/resume 等欠项及原 PROVIDER_TIMEOUT 保留在 [D 报告](docs/reports/vela-0.3.12-d-provider-task-lifecycle.md)，不由 E 升级。
+
+**C2 已通过 PR #209 合并 dev**，A02、A03 保持 TARGETED_ACCEPTED — AE26.0x67 / AdobeCEP 12.0.1 / Chrome 99；原有覆盖限制见 [C2 报告](docs/reports/vela-0.3.12-c2-execution-facts-verification.md)。
+
+**A04 已通过 PR #208 合并 dev**，保持 TARGETED_ACCEPTED — AdobeCEP 12.0.1 / Chrome 99（Windows Win64）；其有界页面/临时 Agent 验收见 [C1 报告](docs/reports/vela-0.3.12-c1-a04-session-events.md)，不据此扩大完整 Provider→Authority→Host 覆盖。
+
+**A09 已通过 PR #207 合并 dev**，M1、M2/F1 与 A09 均为 TARGETED_ACCEPTED — AE26.0x67；支持包络及历史证据见 [A09 报告](docs/reports/vela-0.3.12-b2-a09-coordinate-space.md)。ACK Feature 保持 auto/center 与有界2D规则；TBB Text-local padding 与 visual comp-space padding 不混用。AE26.3x87 跨版本复验 DEFERRED，AV fallback 真实 AE NOT COVERED。
+
+0.3.11 COMPLETE / SEALED，历史基线与限制保留在 [综合验收](docs/reports/vela-0.3.11-integrated-acceptance.md)。0.3.12 的INTEGRATED_ACCEPTED及20项有界CLOSED已获最终裁定；仓库封存仍须G PR通过CI并合并dev，不据本地文档宣称远端生效。历史修复及排期由既有报告和路线图持有，不在本入口重复流水账。
 
 Current roadmap: [docs/VELA_ROADMAP.md](docs/VELA_ROADMAP.md). Current implementation/handoff: [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md). Normative architecture: [docs/design/vela-agent-architecture.md](docs/design/vela-agent-architecture.md), frozen and unchanged. Feature milestones are independent of package VERSION/release tags.
 
@@ -62,6 +76,8 @@ Normal flow:
 ```text
 task branch -> dev -> main -> version tag
 ```
+
+用户优先通过 Codex UI 提交、推送、创建面向 dev 的 PR 及确认合并；VS Code 项目终端负责分支创建、同步和远端/本地分支清理。项目内命令可以多行，单独在外运行的命令再考虑单行。这不授权实施任务自动提交或合并。
 
 Before work:
 
@@ -239,15 +255,25 @@ Typical focused gate:
 - `git diff --check`;
 - `git status -sb`.
 
-Before a PR or release, run the full offline suite once. Run Vela forward/reverse/forward order testing only when loader/global/cache/order semantics change. Real qualification runs require their separately frozen clean-worktree/evidence process and must not be triggered by ordinary development.
+Before a PR or release, run the full offline suite once against the final production/test state; an existing pass for that unchanged state need not be repeated. Run Vela forward/reverse/forward order testing only when loader/global/cache/order semantics change. Real qualification runs require their separately frozen clean-worktree/evidence process and must not be triggered by ordinary development.
 
 AE smoke should verify the active path, not merely file presence. When behavior appears unchanged, confirm CEP cache, the active frontend module, `evalScript` routing and the loaded JSX before changing algorithms.
+
+默认采用连续修复与验证流程；具体任务约定的范围、授权、验收标准及停止点优先：
+
+- 获得具体实施任务后，连续完成生产复核、修复、focused、关联回归及必要的最终全量，不固定停在 OFFLINE PASS 等待二次指令。工具可达且可安全隔离时，继续验证真实 CEP 页面模块、临时生产实例和受控 I/O。
+- 真实 UI / AE / Provider 测试仅在本轮明确授权的资产、动作和配置范围内执行。已确认且未变化的前提不重复询问；重载可能丢失草稿、重启 AE、操作用户真实资产或需要人工 Undo / 视觉确认时，只暂停请求必要操作，不要求重新批准整个测试阶段。
+- 范围内发生失败，先保留证据，再自行诊断、修复并复测。不删除负向测试、不放宽容差、不隐瞒失败、不盲目重发 mutation；遇到未知副作用、无法安全恢复、架构或产品契约冲突、持续无进展时停止并说明。
+- 代码再次修改后，旧测试结果仅保留历史归属；复跑受影响验证，确保最终结论对应最终代码。
+- 分别标明离线、真实 CEP 受控组合、真实 Provider / Host 与人工确认的证据等级。不可达或未发生的条件记为 NOT COVERED，不自行豁免必需验收项。
+- 清理临时实例、订阅、断点和测试状态；每个工作包只维护一份短报告，raw 放既有 `.tmp` 证据路径，不生成全仓 hash 或逐轮大型流水账。
+- 满足事先约定的验收标准后，直接汇报 READY FOR COMMIT / PR；否则明确列出失败、未覆盖项或需要用户完成的操作。不自动进入下一工作包，不自动暂存、提交、推送、创建 PR、合并或 tag。
 
 ## Known issues and sensitive areas
 
 Consult `docs/KNOWN_ISSUES.md` before opportunistic fixes.
 
-Accepted historical release work and the 0.3.9 feature milestone are closed. Do not reopen those scopes without a new focused regression and explicit authorization. Historical staging remains evidence in closure records; current development sequencing is owned only by the [canonical roadmap](docs/VELA_ROADMAP.md).
+Accepted historical release work and the sealed 0.3.9–0.3.11 feature milestones are closed. Do not reopen those scopes without a new focused regression and explicit authorization. Historical staging remains evidence in closure records; current development sequencing is owned only by the [canonical roadmap](docs/VELA_ROADMAP.md).
 
 Other sensitive areas:
 

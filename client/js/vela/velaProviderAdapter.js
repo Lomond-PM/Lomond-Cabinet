@@ -152,6 +152,255 @@
     var RESOURCE_POLICY = Object.freeze({ maxStreamResponseBytes: 4 * 1024 * 1024 });
     var QWEN35_4B_ASSISTANT_POLICY = Object.freeze({ thinkingBudgetTokens: 6144, maxOutputTokens: 8192 });
     var QWEN35_4B_STRUCTURED_POLICY = Object.freeze({ thinkingBudgetTokens: 2048, maxOutputTokens: 4096 });
+
+    // A3b pure seams, colocated to preserve the existing loader contract. Provider-side
+    // normalization, construction accounting and local policy remain separate functions.
+    // Qualified/reviewed inputs are local caller attestations, NOT self-authenticating
+    // Provider fields. Production supplies none until a source contract is qualified.
+    function budgetData(value, key) {
+        if (!value || typeof value !== "object") { return undefined; }
+        var descriptor;
+        try { descriptor = Object.getOwnPropertyDescriptor(value, key); } catch (ignored) { return undefined; }
+        return descriptor && Object.prototype.hasOwnProperty.call(descriptor, "value") ? descriptor.value : undefined;
+    }
+    function budgetLabel(value) { return typeof value === "string" && value.length > 0 && value.length <= 512 ? value : null; }
+    function budgetInteger(value) { return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null; }
+    function freezeBudget(value) {
+        Object.keys(value).forEach(function (key) { if (value[key] && typeof value[key] === "object") { freezeBudget(value[key]); } });
+        return Object.freeze(value);
+    }
+    var BUDGET_IDENTITY_FIELDS = Object.freeze(["endpoint", "model", "profile", "requestId", "providerGeneration", "instanceId", "instanceConfigId", "providerContractId", "samplingBoundary", "runtimeRevision", "configRevision"]);
+    var BUDGET_REQUIRED_IDENTITY = Object.freeze(["endpoint", "model", "profile", "requestId", "providerGeneration", "instanceId", "instanceConfigId", "providerContractId", "samplingBoundary"]);
+    function budgetIdentity(value) {
+        var result = {};
+        var invalid = budgetData(value, "invalid") === true;
+        BUDGET_IDENTITY_FIELDS.forEach(function (key) {
+            var raw = budgetData(value, key);
+            result[key] = key === "providerGeneration" ? (budgetInteger(raw) > 0 ? raw : null) :
+                (key === "runtimeRevision" || key === "configRevision") && budgetInteger(raw) !== null ? raw : budgetLabel(raw);
+            if (raw !== undefined && raw !== null && result[key] === null) { invalid = true; }
+        });
+        result.invalid = invalid;
+        return result;
+    }
+    function budgetCorrelationReason(identity, expected) {
+        if (identity.invalid || expected.invalid) { return "invalid-binding-identity"; }
+        if (BUDGET_REQUIRED_IDENTITY.some(function (key) { return identity[key] === null || expected[key] === null; })) { return "missing-binding-identity"; }
+        if (BUDGET_IDENTITY_FIELDS.some(function (key) { return identity[key] !== expected[key]; })) { return "correlation-mismatch"; }
+        return null;
+    }
+    function normalizeCapacityEvidence(raw, expectedIdentity) {
+        var source = budgetData(raw, "sourceClass");
+        if (["provider-reported", "operator-configured", "model-profile-known", "heuristic", "unknown"].indexOf(source) < 0) { source = "unknown"; }
+        var identity = budgetIdentity(budgetData(raw, "correlation"));
+        var value = budgetInteger(budgetData(raw, "value"));
+        var unit = budgetData(raw, "unit") === "tokens" ? "tokens" : null;
+        var basis = budgetLabel(budgetData(raw, "tokenBasis"));
+        var qualificationId = budgetLabel(budgetData(raw, "qualificationId"));
+        var instanceCount = budgetInteger(budgetData(raw, "instanceCount"));
+        var ambiguous = budgetData(raw, "ambiguous") === true || instanceCount > 1;
+        var stale = budgetData(raw, "stale") === true;
+        var invalidFlags = ["ambiguous", "stale"].some(function (key) { var value = budgetData(raw, key); return value !== undefined && typeof value !== "boolean"; });
+        var reason = ambiguous ? "ambiguous-capacity" : stale ? "stale-capacity" :
+            invalidFlags ? "invalid-source-flags" : budgetData(raw, "instanceCount") !== undefined && (instanceCount === null || instanceCount === 0) ? "invalid-instance-count" :
+            value === null || value === 0 ? "missing-or-invalid-capacity" : !unit ? "incompatible-unit" : !basis ? "missing-token-basis" :
+            budgetCorrelationReason(identity, budgetIdentity(expectedIdentity));
+        if (!reason && (budgetData(raw, "qualified") !== true || !qualificationId || ["provider-reported", "model-profile-known"].indexOf(source) < 0)) { reason = "unqualified-source"; }
+        return freezeBudget({ schema: "vela.provider-capacity-evidence.v1", sourceClass: source, correlation: identity,
+            value: value > 0 ? value : null, unit: unit, tokenBasis: basis, qualificationId: qualificationId,
+            instanceCount: instanceCount, ambiguous: ambiguous, stale: stale || reason === "correlation-mismatch",
+            status: !reason ? "known" : ambiguous ? "ambiguous" : stale || reason === "correlation-mismatch" ? "stale" : reason === "unqualified-source" ? "conditional" : "unknown",
+            usable: !reason, reason: reason });
+    }
+    function normalizeInputCost(raw, expected) {
+        var kind = budgetData(raw, "kind");
+        var low = budgetInteger(budgetData(raw, kind === "exact" ? "value" : "low"));
+        var high = budgetInteger(budgetData(raw, kind === "exact" ? "value" : "high"));
+        var basis = budgetLabel(budgetData(raw, "tokenBasis"));
+        var method = budgetLabel(budgetData(raw, "methodId"));
+        var identity = budgetIdentity(budgetData(raw, "correlation"));
+        var reason = ["exact", "bounded"].indexOf(kind) < 0 ? "unknown-token-cost" :
+            low === null || high === null || low > high ? "invalid-input-bounds" :
+            budgetData(raw, "unit") !== "tokens" ? "incompatible-unit" : !basis ? "missing-token-basis" :
+            budgetData(raw, "certified") !== true || budgetData(raw, "fullInput") !== true || !method ? "uncertified-full-input" :
+            budgetCorrelationReason(identity, expected);
+        return { kind: !reason ? kind : "unknown", low: !reason ? low : null, high: !reason ? high : null,
+            unit: budgetData(raw, "unit") === "tokens" ? "tokens" : null, tokenBasis: basis, methodId: method,
+            fullInput: !reason, usable: !reason, reason: reason };
+    }
+    function normalizeBudgetReserve(raw, expected) {
+        var value = budgetInteger(budgetData(raw, "value"));
+        var basis = budgetLabel(budgetData(raw, "tokenBasis"));
+        var reviewId = budgetLabel(budgetData(raw, "reviewId"));
+        var reason = value === null ? "unknown-reserve" : budgetData(raw, "unit") !== "tokens" ? "incompatible-unit" :
+            !basis ? "missing-token-basis" : budgetData(raw, "reviewed") !== true || !reviewId ? "unreviewed-reserve" :
+            budgetCorrelationReason(budgetIdentity(budgetData(raw, "correlation")), expected);
+        return { value: !reason ? value : null, unit: budgetData(raw, "unit") === "tokens" ? "tokens" : null,
+            tokenBasis: basis, reviewId: reviewId, status: !reason ? "known" : "unknown", usable: !reason, reason: reason };
+    }
+    function decideContextBudget(input) {
+        var correlation = budgetIdentity(budgetData(input, "correlation"));
+        var capacity = normalizeCapacityEvidence(budgetData(input, "capacity"), correlation);
+        var cost = normalizeInputCost(budgetData(input, "inputCost"), correlation);
+        var generationReserve = normalizeBudgetReserve(budgetData(input, "generationReserve"), correlation);
+        var safetyReserve = normalizeBudgetReserve(budgetData(input, "safetyReserve"), correlation);
+        var disposition = "unassessed-capacity", inputFit = false, inputOverflow = false, fullFit = false, inputBudget = null;
+        if (capacity.status === "ambiguous") { disposition = "ambiguous-capacity"; }
+        else if (capacity.status === "stale") { disposition = "stale-capacity"; }
+        else if (capacity.usable) {
+            if (!cost.usable) { disposition = cost.reason === "incompatible-unit" ? "incompatible-token-basis" : "unassessed-input-cost"; }
+            else if (capacity.tokenBasis !== cost.tokenBasis) { disposition = "incompatible-token-basis"; }
+            else {
+                inputFit = cost.high <= capacity.value;
+                inputOverflow = cost.low > capacity.value;
+                if (inputOverflow) { disposition = "required-input-overflow"; }
+                else if (!generationReserve.usable) { disposition = generationReserve.reason === "incompatible-unit" ? "incompatible-token-basis" : "unassessed-generation-reserve"; }
+                else if (!safetyReserve.usable) { disposition = safetyReserve.reason === "incompatible-unit" ? "incompatible-token-basis" : "unassessed-safety-reserve"; }
+                else if (capacity.tokenBasis !== generationReserve.tokenBasis || capacity.tokenBasis !== safetyReserve.tokenBasis) { disposition = "incompatible-token-basis"; }
+                else {
+                    // Compare before subtracting: no unsafe sum, negative budget or guessed zero.
+                    if (generationReserve.value <= capacity.value && safetyReserve.value <= capacity.value - generationReserve.value) {
+                        inputBudget = capacity.value - generationReserve.value - safetyReserve.value;
+                        fullFit = cost.high <= inputBudget;
+                    }
+                    disposition = fullFit ? "full-fit" : "fit-not-established-under-bound";
+                }
+            }
+        }
+        var bytes = budgetData(input, "bytes");
+        var controls = budgetData(input, "generationControls");
+        return freezeBudget({ schema: "vela.provider-budget-decision-evidence.v1", authorityCapable: false,
+            correlation: correlation, capacity: capacity, inputCost: cost, generationReserve: generationReserve, safetyReserve: safetyReserve,
+            bytes: { canonicalUtf8Bytes: budgetInteger(budgetData(bytes, "canonicalUtf8Bytes")), wireUtf8Bytes: budgetInteger(budgetData(bytes, "wireUtf8Bytes")), messageContentUtf8Bytes: budgetInteger(budgetData(bytes, "messageContentUtf8Bytes")), unit: "utf8-bytes", tokenConversion: null },
+            generationControls: { maxTokens: budgetInteger(budgetData(controls, "maxTokens")), thinkingBudgetTokens: budgetInteger(budgetData(controls, "thinkingBudgetTokens")), reserveDerived: false },
+            disposition: disposition, inputBudgetTokens: inputBudget,
+            proof: { fullFit: fullFit, inputFit: inputFit, inputOverflow: inputOverflow },
+            dispatch: inputOverflow || disposition === "fit-not-established-under-bound" ? "reject-required-construction" : fullFit ? "allow-proven-fit" : "allow-current-shape",
+            optionalExpansion: false });
+    }
+    // A5b data-only evaluator. Calling this pure function never authenticates a
+    // historical source; Controller obtains samples only from the Owner port.
+    var SELECTION_REASONS = ["prohibited-source", "deferred-source", "source-unavailable", "not-within-retention", "incomplete-evidence", "conflict", "superseded", "target-relation-unproven", "verification-not-match", "not-eligible", "representation-overflow", "budget-unassessed", "optional-expansion-disabled", "budget-omitted"];
+    function evaluateContextSelection(input, validateTrajectory) {
+        input = input || {};
+        function data(o, k) { return budgetData(o, k); }
+        function byteLength(s) { var n = 0; for (var i = 0; i < s.length; i++) { var c = s.charCodeAt(i); if (c < 128) { n++; } else if (c < 2048) { n += 2; } else if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length && s.charCodeAt(i + 1) >= 0xdc00 && s.charCodeAt(i + 1) <= 0xdfff) { n += 4; i++; } else { n += 3; } } return n; }
+        function id(v) { return typeof v === "string" && v.length && byteLength(v) <= 256 ? v : null; }
+        function integer(v) { return Number.isSafeInteger(v) && v >= 0 ? v : null; }
+        function reasons(values) { return SELECTION_REASONS.filter(function (r) { return values.indexOf(r) >= 0; }); }
+        var c = data(input, "correlation"), sample = data(input, "sample"), b = data(input, "budget");
+        var correlation = { requestId: id(data(c, "requestId")), controllerGeneration: integer(data(c, "controllerGeneration")), sessionId: id(data(sample, "sessionId")), objectiveId: id(data(sample, "objectiveId")), unavailableReason: null };
+        if (!correlation.requestId || !correlation.controllerGeneration || !correlation.sessionId || !correlation.objectiveId) { correlation.unavailableReason = "source-unavailable"; }
+        var budgetAvailable = data(b, "schema") === "vela.provider-budget-decision-evidence.v1" && data(b, "authorityCapable") === false && data(data(b, "correlation"), "requestId") === correlation.requestId;
+        var budgetDisposition = budgetAvailable ? id(data(b, "disposition")) : null;
+        var assessed = budgetAvailable && data(data(b, "proof"), "fullFit") === true && data(b, "optionalExpansion") === false;
+        var budgetReason = !budgetAvailable ? "source-unavailable" : assessed ? "optional-expansion-disabled" : "budget-unassessed";
+        var out = {
+            schema: "vela.provider-context-selection.v1", policyRevision: "vela-terminal-history-policy-v1", authorityCapable: false,
+            correlation: correlation, mode: "evidence-only", sampleBoundary: "invocation-construction",
+            source: { slot: "most-recent-terminal", projectionId: null, objectiveId: null, sessionId: null, state: "unavailable", reasons: ["source-unavailable"], bounds: null },
+            requiredCurrent: ["system-profile-instructions", "response-contract", "current-user-objective", "current-controller-grounding"].map(function (domain) { return { domain: domain, disposition: "preserve-current-construction" }; }),
+            candidates: [], selectedItems: [], omittedItems: [],
+            domainExclusions: [["agent-observation-currentContext", "deferred-source"], ["active-trajectory", "deferred-source"], ["session-history", "prohibited-source"], ["presentation-transcript", "prohibited-source"], ["prior-assistant-prose", "prohibited-source"], ["notices-errors", "prohibited-source"], ["raw-reasoning", "prohibited-source"], ["prior-provider-declarations", "prohibited-source"], ["a3-resource-evidence", "prohibited-source"], ["authority-native-material", "prohibited-source"]].map(function (entry) { return { domain: entry[0], reason: entry[1], omittedCount: null }; }),
+            budget: { schema: budgetAvailable ? "vela.provider-budget-decision-evidence.v1" : null, requestId: budgetAvailable ? correlation.requestId : null, disposition: budgetDisposition, optionalExpansion: budgetAvailable && typeof data(b, "optionalExpansion") === "boolean" ? data(b, "optionalExpansion") : null, basis: !budgetAvailable ? "unavailable" : assessed ? "qualified-full-input" : "unassessed", tokenBasis: budgetAvailable ? id(data(data(b, "inputCost"), "tokenBasis")) : null, omissionReason: budgetReason },
+            cost: { eligibleRepresentationUtf8Bytes: 0, selectedHistoricalUtf8Bytes: 0, fullSelectedInputTokenCost: null, tokenConversion: null },
+            counts: { inventoriedCount: 0, eligibleCount: 0, selectedCount: 0, omittedCount: 0, uninspectedCount: null, omittedBySourceCount: null },
+            bounds: { complete: true, reportingOverflowCount: 0 }
+        };
+        function unavailable(reason, overflow) {
+            out.source.state = reason === "incomplete-evidence" || overflow ? "incomplete" : "unavailable";
+            out.source.reasons = [reason]; out.candidates = []; out.omittedItems = [];
+            out.counts = { inventoriedCount: 0, eligibleCount: 0, selectedCount: 0, omittedCount: 0, uninspectedCount: null, omittedBySourceCount: out.source.bounds ? out.source.bounds.omittedAttemptCount : null };
+            out.cost.eligibleRepresentationUtf8Bytes = 0;
+            out.bounds.complete = false; out.bounds.reportingOverflowCount = overflow ? null : 0;
+            return freezeBudget(out);
+        }
+        if (!sample || correlation.unavailableReason || typeof validateTrajectory !== "function" || !data(sample, "terminal")) { return unavailable("source-unavailable"); }
+        var rawProjection = data(sample, "terminal"), rawBounds = data(rawProjection, "bounds");
+        if (data(rawProjection, "schema") !== "vela.verified-trajectory-evidence.v1" || data(rawProjection, "authorityCapable") !== false || data(data(rawProjection, "lifecycle"), "state") !== "terminal" || data(data(rawProjection, "lifecycle"), "lateEvidence") !== false) { return unavailable("source-unavailable"); }
+        if (typeof data(rawBounds, "complete") !== "boolean" || integer(data(rawBounds, "omittedAttemptCount")) === null || integer(data(rawBounds, "omittedValueCount")) === null) { return unavailable("source-unavailable"); }
+        out.source.bounds = { complete: data(rawBounds, "complete"), omittedAttemptCount: data(rawBounds, "omittedAttemptCount"), omittedValueCount: data(rawBounds, "omittedValueCount") };
+        if (!out.source.bounds.complete || out.source.bounds.omittedAttemptCount || out.source.bounds.omittedValueCount) { return unavailable("incomplete-evidence"); }
+        var rawAttempts = data(rawProjection, "attempts");
+        if (Array.isArray(rawAttempts) && rawAttempts.length <= 16) {
+            var seenIds = [];
+            for (var rawIndex = 0; rawIndex < rawAttempts.length; rawIndex++) {
+                var rawId = data(data(rawAttempts, String(rawIndex)), "attemptId");
+                if (typeof rawId === "string" && seenIds.indexOf(rawId) >= 0) { return unavailable("conflict"); }
+                seenIds.push(rawId);
+            }
+        }
+        var p;
+        try { p = validateTrajectory(data(sample, "terminal")); }
+        catch (invalidSource) { return unavailable("source-unavailable"); }
+        out.source.projectionId = p.projectionId; out.source.objectiveId = p.objective.objectiveId; out.source.sessionId = p.objective.sessionId;
+        out.source.bounds = { complete: p.bounds.complete, omittedAttemptCount: p.bounds.omittedAttemptCount, omittedValueCount: p.bounds.omittedValueCount };
+        if (!p.bounds.complete || p.bounds.omittedAttemptCount !== 0 || p.bounds.omittedValueCount !== 0) { return unavailable("incomplete-evidence"); }
+        if (p.lifecycle.state !== "terminal" || p.lifecycle.lateEvidence !== false || p.objective.sessionId !== correlation.sessionId || p.objective.objectiveId === correlation.objectiveId) { return unavailable("source-unavailable"); }
+        function covers(source, field) { return source.factPaths.some(function (path) { return path === field || field.indexOf(path + ".") === 0; }); }
+        function hasSource(record, producer, kind, strength, fields, requestId) {
+            return record.provenance.some(function (source) {
+                return source.producer === producer && source.class === kind && source.strength === strength && source.contractRevision === "vela-trajectory-source-v1" && !!source.occurrenceId && (requestId === undefined || source.sourceRequestId === requestId) && fields.every(function (field) { return covers(source, field); });
+            });
+        }
+        var completion = p.completion;
+        if (["completed", "rejected", "cancelled", "blocked"].indexOf(completion.outcome) < 0) { return unavailable("incomplete-evidence"); }
+        // An empty text terminal is a valid latest terminal, not a reason to search back.
+        if (p.attempts.length === 0 && completion.declaredStepCount === 0 && completion.completedStepCount === 0 && completion.remainingStepCount === 0) {
+            out.source.state = "available"; out.source.reasons = []; out.counts.uninspectedCount = 0; out.counts.omittedBySourceCount = 0; return freezeBudget(out);
+        }
+        if (["full", "partial"].indexOf(completion.coverage) < 0) { return unavailable("incomplete-evidence"); }
+        if (completion.declaredStepCount === null || completion.completedStepCount === null || completion.remainingStepCount === null) { return unavailable("incomplete-evidence"); }
+        if (completion.declaredStepCount !== completion.completedStepCount + completion.remainingStepCount || completion.completedStepCount < 1 || (completion.coverage === "full") !== (completion.remainingStepCount === 0)) { return unavailable("conflict"); }
+        if (!hasSource(p, "VelaAgentDriver", "derived-objective-summary", "derived", ["completion.outcome", "completion.completedStepCount", "completion.remainingStepCount"])) { return unavailable("incomplete-evidence"); }
+        if (p.unknowns.some(function (u) { return u.path === "completion" || ["completion.outcome", "completion.coverage", "completion.declaredStepCount", "completion.completedStepCount", "completion.remainingStepCount"].indexOf(u.path) >= 0; })) { return unavailable("incomplete-evidence"); }
+        if (p.attempts.filter(function (a) { return a.completion.outcome === "completed" && !a.completion.superseded; }).length !== completion.completedStepCount) { return unavailable("conflict"); }
+        out.source.state = "available"; out.source.reasons = []; out.counts.uninspectedCount = 0; out.counts.omittedBySourceCount = 0;
+        var eligibleOrdinal = 0;
+        p.attempts.forEach(function (a, index) {
+            var rejected = [], v = a.verification, e = a.execution;
+            var later = p.attempts.slice(index + 1);
+            var candidate = { candidateId: "candidate_" + index, sourceAttemptIndex: index, ordinal: index, attemptId: a.attemptId, logicalStepIndex: a.correlation.logicalStepIndex, materializationAttempt: a.correlation.materializationAttempt, sourceProjectionId: p.projectionId, domain: "terminal-verified-attempt", objectiveRelation: "previous-terminal", trust: null, freshness: null, eligibility: "ineligible", reasons: [], order: index, modelRepresentation: null, representationUtf8Bytes: null };
+            if (p.attempts.some(function (other, otherIndex) { return otherIndex !== index && (other.attemptId === a.attemptId || other.correlation.taskPlanId === a.correlation.taskPlanId || v.attemptId && other.verification.attemptId === v.attemptId); })) { rejected.push("conflict"); }
+            if (a.completion.superseded || later.some(function (next) { return next.correlation.supersedesAttemptId === a.attemptId; })) { rejected.push("superseded"); }
+            if (v.scope !== "committed-target" || v.targetRelation !== "committed-target") { rejected.push("target-relation-unproven"); }
+            if (v.attempted !== true || v.disposition !== "verified-match" || v.freshAtRead !== true || v.matches !== true) { rejected.push("verification-not-match"); }
+            if (a.completion.outcome !== "completed") { rejected.push("not-eligible"); }
+            if (!v.attemptId || !v.sourceObservationId || !v.expected || !v.actual) { rejected.push("incomplete-evidence"); }
+            if (v.expected && v.actual) {
+                if (v.expected.kind !== v.actual.kind || v.expected.data !== v.actual.data) { rejected.push("conflict"); }
+                try {
+                    if (a.capabilityId !== "set-opacity-v1" && a.capabilityId !== "set-layer-name-v1") { throw new Error(); }
+                    if (v.actual.kind !== (a.capabilityId === "set-opacity-v1" ? "number" : "string")) { throw new Error(); }
+                    capabilityContracts.validateRepresentationCapabilityParams(a.capabilityId, a.capabilityId === "set-opacity-v1" ? { opacity: v.actual.data } : { name: v.actual.data });
+                } catch (unsupportedValue) { rejected.push("not-eligible"); }
+            }
+            if (!hasSource(a, "VelaAgentDriver", "local-control-occurrence", "direct", ["correlation", "capabilityId", "verification.expected"])) { rejected.push("incomplete-evidence"); }
+            if (!hasSource(a, "VelaExecutionPreflight", "fresh-verify-evidence", "direct", ["verification.actual", "verification.disposition", "verification.scope", "verification.targetRelation", "verification.sourceObservationId"], v.sourceObservationId) || !hasSource(a, "VelaAgentDriver", "derived-objective-summary", "derived", ["completion"])) { rejected.push("incomplete-evidence"); }
+            if (e.mutationDisposition === "mutated") {
+                if (e.executionAttempted !== true || e.hostInvocationAttempted !== true || e.reportedCommitted !== true || e.hostCommitted !== true) { rejected.push("not-eligible"); }
+                if (!hasSource(a, "VelaExecutionAdapter", "host-commit-evidence", "direct", ["execution.hostCommitted", "execution.mutationDisposition", "execution.reportedCommitted"]) || !hasSource(a, "VelaExecutionPreflight", "execution-result", "direct", ["execution.executionAttempted"]) || !hasSource(a, "VelaExecutionAdapter", "execution-result", "direct", ["execution.hostInvocationAttempted"])) { rejected.push("incomplete-evidence"); }
+            } else if (e.mutationDisposition === "already-satisfied") {
+                if (e.executionAttempted !== true || e.hostInvocationAttempted !== false || e.reportedCommitted !== false || e.hostCommitted !== null) { rejected.push("not-eligible"); }
+                if (!a.unknowns.some(function (u) { return u.path === "execution.hostCommitted" && u.reason === "host-not-invoked"; }) || !hasSource(a, "VelaExecutionPreflight", "execution-result", "direct", ["execution"])) { rejected.push("incomplete-evidence"); }
+            } else { rejected.push("not-eligible"); }
+            var requiredPaths = ["capabilityId", "correlation.taskPlanId", "correlation.taskPlanRevision", "correlation.materializedStepId", "correlation.intentId", "completion", "execution.executionAttempted", "execution.hostInvocationAttempted", "execution.mutationDisposition", "execution.reportedCommitted", "execution.hostCommitted", "verification.attemptId", "verification.sourceObservationId", "verification.attempted", "verification.disposition", "verification.scope", "verification.targetRelation", "verification.freshAtRead", "verification.matches", "verification.expected", "verification.actual"];
+            if (a.unknowns.some(function (u) { return !(e.mutationDisposition === "already-satisfied" && u.path === "execution.hostCommitted" && u.reason === "host-not-invoked") && requiredPaths.some(function (path) { return u.path === path || path.indexOf(u.path + ".") === 0 || u.path.indexOf(path + ".") === 0; }); })) { rejected.push("incomplete-evidence"); }
+            if (!rejected.length) {
+                candidate.eligibility = "eligible"; candidate.trust = "locally-verified-outcome"; candidate.freshness = "D";
+                var preview = { kind: "historical-verified-operation", temporalClass: "historical-not-current", freshnessClass: "D", targetRelationToCurrent: "unproven", ordinal: eligibleOrdinal++, actionType: a.capabilityId, result: { kind: v.actual.kind, data: v.actual.data }, operationDisposition: e.mutationDisposition, verificationBasis: "local-committed-target-verified-match", objectiveRelation: "previous-terminal", objectiveOutcome: completion.outcome, objectiveCoverage: completion.coverage };
+                var size = byteLength(JSON.stringify(preview));
+                if (size > 1024 || out.cost.eligibleRepresentationUtf8Bytes + size > 16384) { rejected.push("representation-overflow"); out.bounds.complete = false; out.bounds.reportingOverflowCount++; }
+                else { candidate.modelRepresentation = preview; candidate.representationUtf8Bytes = size; out.cost.eligibleRepresentationUtf8Bytes += size; }
+                out.counts.eligibleCount++;
+            }
+            candidate.reasons = reasons(rejected);
+            out.candidates.push(candidate); out.omittedItems.push({ candidateId: candidate.candidateId, reasons: candidate.reasons.length ? candidate.reasons.slice() : [budgetReason] });
+        });
+        out.counts.inventoriedCount = out.candidates.length; out.counts.omittedCount = out.candidates.length;
+        if (byteLength(JSON.stringify(out)) > 65536) { return unavailable("representation-overflow", true); }
+        return freezeBudget(out);
+    }
     function getGenerationPolicy(modelId, requestProfile) {
         // Calibrated LM Studio model identity only; unknown/non-reasoning providers inherit their own defaults.
         if (modelId !== "qwen3.5-4b") { return null; }
@@ -445,6 +694,39 @@
         var usedRequestIds = new Set();
         var diagnostics = Object.freeze({ providerId: PROVIDER_ID, modelId: model, requestId: null, state: state, elapsedMs: 0, httpStatus: null, errorCode: null, terminalFailureBoundary: null });
         var terminalDebugEvidence = null;
+        var contextEvidenceEnabled = options.debugContextEvidence === true;
+        var contextEvidence = null;
+        var budgetDecision = null;
+
+        // Local, opt-in construction evidence. Never fed back to request/admission owners.
+        function recordContextEvidence(requestId, request, body, error) {
+            if (!contextEvidenceEnabled) { return; }
+            try {
+                var canonicalJson = request && body ? JSON.stringify(request) : null;
+                var serializeEvidence = ownDataFunction(transport, "getSerializedRequestEvidence");
+                var wireJson = body && serializeEvidence ? serializeEvidence(body) : null;
+                var budgetFailure = error && (error.code === protocol.ERROR_CODES.PAYLOAD_BUDGET_EXCEEDED);
+                var projected = {
+                    schema: "vela.provider-input-evidence.v1",
+                    authorityCapable: false,
+                    closure: body ? "closed" : budgetFailure ? "budget-rejected" : "construction-failed",
+                    correlation: { requestId: requestId, providerGeneration: generation + 1, model: model, profile: requestProfile, runtimeInvocationId: null, objectiveId: null, sessionId: null, turnId: null, unavailableReason: "not-supplied-through-local-wiring" },
+                    freshnessClass: "B-invocation-selected",
+                    canonicalRequestJson: canonicalJson,
+                    wireRequestJson: wireJson,
+                    wireEvidenceUnavailableReason: wireJson === null ? "transport-projection-unavailable-or-input-not-closed" : null,
+                    budget: { canonicalUtf8Bytes: canonicalJson === null ? null : protocol.utf8ByteLength(canonicalJson), wireUtf8Bytes: wireJson === null ? null : protocol.utf8ByteLength(wireJson), messageContentUtf8Bytes: request && body ? request.messages.map(function (message) { return protocol.utf8ByteLength(message.content); }) : null, requestByteCeiling: protocol.HARD_LIMITS.maxRequestJsonBytes, messageByteCeiling: protocol.HARD_LIMITS.maxMessageBytes, tokenCost: null, modelContextCapacity: null, unknownReason: "not-measured-by-byte-budget" },
+                    sources: body ? [
+                        { domain: "local-instruction", producer: "VelaCapabilityPromptBuilder.buildSystemPrompt", representation: "canonical.messages[0]", selectionReason: "current-profile-instructions", trustClass: "local-control-record", sourceFreshnessClass: null },
+                        { domain: "local-response-contract", producer: "VelaProviderAdapter.assembleMessages", representation: "canonical.messages[1]", selectionReason: "current-turn-contract-and-grounding-envelope", trustClass: "derived-record", sourceFreshnessClass: null },
+                        { domain: "user-input", producer: "VelaProviderAdapter.buildRequest", representation: "canonical.messages[2..]", selectionReason: "caller-supplied-current-input", trustClass: "untrusted-content", sourceFreshnessClass: null }
+                    ] : [],
+                    errorCode: error && typeof error.code === "string" ? error.code : null
+                };
+                if (protocol.utf8ByteLength(JSON.stringify(projected)) > 512 * 1024) { contextEvidence = null; return; }
+                contextEvidence = protocol.deepFreeze(projected);
+            } catch (ignoredEvidence) { contextEvidence = null; }
+        }
 
         function getCapabilityModelSpec() {
             var capability = capabilityContracts.getModelProjection("set-opacity-v1");
@@ -881,8 +1163,29 @@
                 protocol.fail(protocol.ERROR_CODES.PROVIDER_REQUEST_IN_FLIGHT, "A local provider request is already in flight.", { stage: "provider" });
             }
             var requestId = issueUniqueRequestId();
-            var request = buildRequest(input, requestId);
-            var body = buildOpenAiBody(request);
+            budgetDecision = null;
+            var request;
+            var body;
+            try { request = buildRequest(input, requestId); body = buildOpenAiBody(request); }
+            catch (constructionError) { recordContextEvidence(requestId, null, null, constructionError); throw constructionError; }
+            recordContextEvidence(requestId, request, body, null);
+            // Runs regardless of A2 debug exposure. No discovery/readiness/usage source
+            // is qualified here; real M/R controls never manufacture generation reserve.
+            var serializeBudgetWire = budgetData(transport, "getSerializedRequestEvidence");
+            var budgetWire = null;
+            // Older/custom transports need not expose observational serialization.
+            // Missing evidence remains unknown and cannot change dispatch behavior.
+            try { if (typeof serializeBudgetWire === "function") { budgetWire = serializeBudgetWire(body); } } catch (ignoredWireEvidence) { budgetWire = null; }
+            if (typeof budgetWire !== "string") { budgetWire = null; }
+            budgetDecision = decideContextBudget({
+                correlation: { endpoint: endpoint, model: model, profile: requestProfile, requestId: requestId, providerGeneration: generation + 1, samplingBoundary: requestId },
+                capacity: null, inputCost: null, generationReserve: null, safetyReserve: null,
+                bytes: { canonicalUtf8Bytes: protocol.utf8ByteLength(JSON.stringify(request)), wireUtf8Bytes: budgetWire === null ? null : protocol.utf8ByteLength(budgetWire), messageContentUtf8Bytes: request.messages.reduce(function (sum, message) { return sum + protocol.utf8ByteLength(message.content); }, 0) },
+                generationControls: { maxTokens: body.max_tokens, thinkingBudgetTokens: body.thinking_budget_tokens }
+            });
+            // A5 observes the existing decision before dispatch. Never request input
+            // or accept a replacement message/body from this reporting callback.
+            try { if (typeof options.onSelectionBudget === "function") { options.onSelectionBudget(budgetDecision); } } catch (ignoredSelectionEvidence) {}
             var startedAt = readNowMs();
             var controller;
             try { controller = validateAbortController(createAbortController()); }
@@ -928,7 +1231,8 @@
             if (options.streaming === true) {
                 requestForTransportValue.onChunk = function (decodedText) {
                     if (!isCurrentPending(record, capturedGeneration)) { return false; }
-                    privateAssembler.feed(decodedText);
+                    try { privateAssembler.feed(decodedText); }
+                    catch (streamError) { finishWithError(record, capturedGeneration, "failed", protocol.ERROR_CODES.PROVIDER_RESPONSE_INVALID, null, true, "stream-assembly"); return true; }
                     return privateAssembler.getState().done === true;
                 };
                 if (debugTerminalDiagnostics) {
@@ -986,6 +1290,7 @@
                         record.assemblerFinishEntered = true;
                         var streamResult = privateAssembler.finish();
                         var assemblerState = privateAssembler.getState();
+                        if (assemblerState.finishReasonObserved && assemblerState.finishReasonObserved !== "stop") { throw new Error("Non-success streaming termination."); }
                         snapshot = Object.freeze({ status: snapshot.status, contentType: "application/json", bodyText: JSON.stringify({ choices: [{ message: { role: "assistant", content: streamResult.text, reasoning_content: streamResult.reasoning || null }, finish_reason: assemblerState.finishReasonObserved || "stop" }] }), redirected: snapshot.redirected, finalUrl: snapshot.finalUrl });
                         finishPresentation(record, "stream-completed");
                     } catch (streamError) {
@@ -1057,6 +1362,8 @@
             start: start,
             cancel: cancel,
             getState: getState,
+            getContextEvidence: function () { return contextEvidence; },
+            getBudgetDecisionEvidence: function () { return contextEvidenceEnabled ? budgetDecision : null; },
             getDiagnostics: getDiagnostics
         });
     }
@@ -1067,6 +1374,9 @@
     }
     return Object.freeze({
         RESOURCE_POLICY: RESOURCE_POLICY,
+        normalizeCapacityEvidence: normalizeCapacityEvidence,
+        decideContextBudget: decideContextBudget,
+        evaluateContextSelection: evaluateContextSelection,
         getGenerationPolicy: getGenerationPolicy,
         getOutputDecision: getOutputDecision,
         createLocalOpenAICompatibleProvider: createLocalOpenAICompatibleProvider,

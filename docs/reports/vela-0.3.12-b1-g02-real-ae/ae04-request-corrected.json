@@ -1,0 +1,5 @@
+{
+  "command": "(function(){var e=Array.from(document.querySelectorAll(\"textarea\")).filter(function(e){return e.placeholder===\"输入给 Vela 的消息\";})[0];e.value=\"将当前图层重命名为 标题日本語 \"+String.fromCharCode(0xD83D,0xDE00);e.dispatchEvent(new Event(\"input\",{bubbles:true}));var b=Array.from(document.querySelectorAll(\"button\")).filter(function(b){return b.innerText===\"发送\";});if(b.length!==1||b[0].disabled)throw Error(\"Send unavailable\");b[0].click();})()",
+  "priorAttempt": "selector quoting produced SyntaxError before any input/send; no Provider request from that attempt",
+  "time": "2026-09-10T02:12:40.315Z"
+}

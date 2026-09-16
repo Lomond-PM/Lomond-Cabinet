@@ -18,6 +18,7 @@
         var structured = "";
         var buffer = "";
         var done = false;
+        var failure = null;
         var frameCount = 0;
         var finishReasonObserved = null;
         var lastValidFrameType = null;
@@ -37,10 +38,18 @@
             var value;
             try { value = JSON.parse(payload); } catch (error) { invalid("Malformed SSE JSON frame."); }
             if (!value || typeof value !== "object" || !Array.isArray(value.choices) || value.choices.length !== 1 || !value.choices[0] || typeof value.choices[0] !== "object") { invalid("Invalid streaming choice shape."); }
+            if (own(value, "error")) { invalid("Provider returned an error frame."); }
             frameCount += 1;
-            if (typeof value.choices[0].finish_reason === "string" && value.choices[0].finish_reason) { finishReasonObserved = value.choices[0].finish_reason; }
+            var reason = value.choices[0].finish_reason;
+            if (reason !== undefined && reason !== null && typeof reason !== "string") { invalid("Invalid streaming finish reason."); }
+            if (finishReasonObserved !== null && reason && reason !== finishReasonObserved) { invalid("Conflicting streaming finish reasons."); }
             var delta = value.choices[0].delta;
-            if (!delta || typeof delta !== "object") { invalid("Invalid streaming delta shape."); }
+            if (!delta || typeof delta !== "object" || Array.isArray(delta)) { invalid("Invalid streaming delta shape."); }
+            // Validate the entire frame before appending or publishing any of its deltas.
+            ["content", "reasoning_content", "reasoning", "thinking", "structured_content"].forEach(function (key) {
+                if (own(delta, key) && (typeof delta[key] !== "string" || finishReasonObserved !== null && delta[key].length > 0)) { invalid("Invalid content after streaming termination."); }
+            });
+            if (reason && finishReasonObserved === null) { finishReasonObserved = reason; }
             if (own(delta, "content")) { if (typeof delta.content !== "string") { invalid("Invalid streaming content delta."); } text += delta.content; if (delta.content) { onDelta("text", delta.content); } }
             ["reasoning_content", "reasoning", "thinking"].forEach(function (key) { if (own(delta, key)) { if (typeof delta[key] !== "string") { invalid("Invalid streaming reasoning delta."); } reasoning += delta[key]; if (delta[key]) { onDelta("reasoning", delta[key]); } } });
             if (own(delta, "structured_content")) { if (typeof delta.structured_content !== "string") { invalid("Invalid structured delta."); } structured += delta.structured_content; }
@@ -62,7 +71,8 @@
             if (!done) { invalid("Streaming response ended before [DONE]."); }
             return Object.freeze({ text: text, reasoning: reasoning, structured: structured });
         }
-        return Object.freeze({ feed: feed, finish: finish, getState: function () { return Object.freeze({ text: text, reasoning: reasoning, structured: structured, done: done, frameCount: frameCount, finishReasonObserved: finishReasonObserved, lastValidFrameType: lastValidFrameType, trailingBufferLength: buffer.length }); } });
+        return Object.freeze({ feed: function (chunk) { if (failure) { throw failure; } try { return feed(chunk); } catch (error) { failure = error; throw error; } },
+            finish: function () { if (failure) { throw failure; } try { return finish(); } catch (error) { failure = error; throw error; } }, getState: function () { return Object.freeze({ text: text, reasoning: reasoning, structured: structured, done: done, frameCount: frameCount, finishReasonObserved: finishReasonObserved, lastValidFrameType: lastValidFrameType, trailingBufferLength: buffer.length }); } });
     }
     return Object.freeze({ MODULE_REVISION: "vela-provider-stream-assembler-v1", EVENT_TYPES: TYPES, create: create });
 }));

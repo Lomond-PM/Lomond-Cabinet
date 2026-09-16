@@ -1,0 +1,27 @@
+{
+  "caseId": "A11-AE-01-source-comparison",
+  "pass": true,
+  "comparisons": [
+    {
+      "name": "jsonEscape",
+      "expected": "function (s) {\n        return String(s)\n            .replace(/\\\\/g, \"\\\\\\\\\")\n            .replace(/\"/g, \"\\\\\\\"\")\n            .replace(/\\r/g, \"\\\\r\")\n            .replace(/\\n/g, \"\\\\n\")\n            .replace(/\\t/g, \"\\\\t\")\n            .replace(/[\\x00-\\x1f]/g, function (ch) {\n                // CR/LF/TAB above retain their existing short escape spelling.\n                var hex = ch.charCodeAt(0).toString(16);\n                return \"\\\\u\" + (\"0000\" + hex).slice(-4);\n            });\n    }",
+      "normalization": "CRLF to LF; trim only source outer whitespace; no internal changes",
+      "match": true,
+      "normalizedSha256": "1121d0d9d85a290ca03bea55da268794ee4784462ad886ba53dc75696ab79c44"
+    },
+    {
+      "name": "toJson",
+      "expected": "function (obj) {\n        var parts = [];\n        var k;\n        for (k in obj) {\n            if (!obj.hasOwnProperty(k)) {\n                continue;\n            }\n            if (typeof obj[k] === \"number\") {\n                parts[parts.length] = \"\\\"\" + AEToolbox.jsonEscape(k) + \"\\\":\" + obj[k];\n            } else if (typeof obj[k] === \"boolean\") {\n                parts[parts.length] = \"\\\"\" + AEToolbox.jsonEscape(k) + \"\\\":\" + (obj[k] ? \"true\" : \"false\");\n            } else {\n                parts[parts.length] = \"\\\"\" + AEToolbox.jsonEscape(k) + \"\\\":\\\"\" + AEToolbox.jsonEscape(obj[k]) + \"\\\"\";\n            }\n        }\n        return \"{\" + parts.join(\",\") + \"}\";\n    }",
+      "normalization": "CRLF to LF; trim only source outer whitespace; no internal changes",
+      "match": true,
+      "normalizedSha256": "931546393770afe4f3eb413263f5106e1c9498de5348a1902c1e67015ece3a78"
+    },
+    {
+      "name": "stringify",
+      "expected": "function (value) {\n        var parts = [];\n        var k;\n        var i;\n\n        if (value === null || typeof value === \"undefined\") {\n            return \"null\";\n        }\n        if (typeof value === \"number\") {\n            return isFinite(value) ? String(value) : \"0\";\n        }\n        if (typeof value === \"boolean\") {\n            return value ? \"true\" : \"false\";\n        }\n        if (typeof value === \"string\") {\n            return \"\\\"\" + AEToolbox.jsonEscape(value) + \"\\\"\";\n        }\n        if (value instanceof Array) {\n            for (i = 0; i < value.length; i++) {\n                parts[parts.length] = AEToolbox.stringify(value[i]);\n            }\n            return \"[\" + parts.join(\",\") + \"]\";\n        }\n        if (typeof value === \"object\") {\n            for (k in value) {\n                if (value.hasOwnProperty(k) && typeof value[k] !== \"function\" && k.charAt(0) !== \"_\") {\n                    parts[parts.length] = \"\\\"\" + AEToolbox.jsonEscape(k) + \"\\\":\" + AEToolbox.stringify(value[k]);\n                }\n            }\n            return \"{\" + parts.join(\",\") + \"}\";\n        }\n        return \"\\\"\\\"\";\n    }",
+      "normalization": "CRLF to LF; trim only source outer whitespace; no internal changes",
+      "match": true,
+      "normalizedSha256": "506621dcd2a9a905aa2ebd869e053bcae64b7a7f9b9447f134f1bfe7718d1818"
+    }
+  ]
+}

@@ -78,7 +78,7 @@
             throw new protocolModule.VelaProtocolError(protocolModule.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE);
         }
         if (!protocol.isPlainObject(options)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Execution preflight options must be an object."); }
-        protocol.assertNoUnknownKeys(options, ["protocol", "actionValidator", "planStore", "contextBridge", "reviewPort", "getCurrentExecutionBinding", "executeValidatedAction", "onTerminalVerificationAvailable"], "executionPreflight.options");
+        protocol.assertNoUnknownKeys(options, ["protocol", "actionValidator", "planStore", "contextBridge", "reviewPort", "getCurrentExecutionBinding", "executeValidatedAction", "onTerminalVerificationAvailable", "onTrajectoryFact"], "executionPreflight.options");
 
         var actionValidator = protocol.getOwnDataProperty(options, "actionValidator");
         var planStore = protocol.getOwnDataProperty(options, "planStore");
@@ -106,6 +106,7 @@
         var getCurrentExecutionBinding = requireOwnFunction(protocol, options, "getCurrentExecutionBinding");
         var executeValidatedAction = requireOwnFunction(protocol, options, "executeValidatedAction");
         var onTerminalVerificationAvailable = options.onTerminalVerificationAvailable === undefined ? null : requireOwnFunction(protocol, options, "onTerminalVerificationAvailable");
+        function trajectory(fact) { try { if (typeof options.onTrajectoryFact === "function") { options.onTrajectoryFact(protocol.deepFreeze(fact)); } } catch (ignoredTrajectory) {} }
         var guard = guardModule.createExecutionGuard(planStore);
         if (!guard || typeof guard.check !== "function" || typeof guard.reserve !== "function" || typeof guard.complete !== "function" || typeof guard.fail !== "function" || typeof guard.abort !== "function") {
             protocol.fail(protocol.ERROR_CODES.RUNTIME_CAPABILITY_UNAVAILABLE, "Execution guard terminalization is unavailable.");
@@ -402,7 +403,8 @@
                             state: plan.state,
                             nextStep: plan.nextStep,
                             createdAt: plan.createdAt,
-                            review: review
+                            review: review,
+                            reviewTarget: { compId: bindingCapture.snapshot.activeComp.compId, layerId: layerId }
                         });
                     });
                 });
@@ -501,7 +503,9 @@
                     var candidateId = view.candidateIds[view.nextStep < view.actionCount ? view.nextStep : view.actionCount - 1];
                     markStale(record, candidateId, error.code === protocol.ERROR_CODES.UNKNOWN_TARGET ? "target-drift" : "context-drift");
                 }
-                return protocolError(protocol, error.code === protocol.ERROR_CODES.UNKNOWN_TARGET ? protocol.ERROR_CODES.UNKNOWN_TARGET : protocol.ERROR_CODES.CONTEXT_STALE);
+                var stale = protocolError(protocol, error.code === protocol.ERROR_CODES.UNKNOWN_TARGET ? protocol.ERROR_CODES.UNKNOWN_TARGET : protocol.ERROR_CODES.CONTEXT_STALE);
+                if (Object.prototype.hasOwnProperty.call(error, "committed")) { stale.committed = error.committed; }
+                return stale;
             }
             return error;
         }
@@ -537,11 +541,13 @@
         }
 
         function executeStep(input) {
+            var committed = false;
             return withActive(function () {
                 if (!protocol.isPlainObject(input)) { protocol.fail(protocol.ERROR_CODES.SCHEMA_VALIDATION_FAILED, "Execution step input is invalid."); }
                 protocol.assertNoUnknownKeys(input, ["planId", "stepIndex", "commitPort"], "executionPreflight.executeStep");
                 var planId = protocol.assertNonEmptyString(protocol.getOwnDataProperty(input, "planId"), "executionPreflight.planId", protocol.HARD_LIMITS.maxLocalIdBytes);
                 var stepIndex = protocol.getOwnDataProperty(input, "stepIndex");
+                trajectory({ kind: "execution-entered", producer: "VelaExecutionPreflight", planId: planId });
                 var record = recordForPlan(planId);
                 if (record.lifecycle !== "confirmed") { protocol.fail(protocol.ERROR_CODES.CANDIDATE_STATE_INVALID, "Bound plan is not confirmed."); }
                 var plan = planStore.getPlanView(planId);
@@ -710,8 +716,10 @@
 
                     function failTerminal(error) {
                         var stableError = stableExecutorError(error);
+                        if (committed !== true && error && Object.prototype.hasOwnProperty.call(error, "committed")) { committed = error.committed === true ? true : error.committed === false ? false : null; }
+                        stableError.committed = committed;
                         if (terminalized) { throw stableError; }
-                        settleVerification(error && error.committed === true ? true : null);
+                        settleVerification(committed === true ? true : null);
                         try {
                             guard.fail(reserved.reservation, stableError);
                             terminalized = true;
@@ -750,14 +758,15 @@
 
                     function completeReturned(value) {
                         var result;
-                        try { result = normalizeExecutorResult(value); }
+                        try { result = normalizeExecutorResult(value); committed = result.committed; }
                         catch (error) { return failTerminal(error); }
                         return completeTerminal(result);
                     }
 
-                    if (fresh.alreadySatisfied) { return completeReturned({ ok: true, committed: false, summary: { disposition: "already-satisfied" } }); }
+                    if (fresh.alreadySatisfied) { trajectory({ kind: "already-satisfied", producer: "VelaExecutionPreflight", planId: planId }); return completeReturned({ ok: true, committed: false, summary: { disposition: "already-satisfied" } }); }
 
                     var returned;
+                    committed = null;
                     try { returned = executeValidatedAction(action, metadata, trustedExecutionContext); }
                     catch (error) { return failTerminal(error); }
                     return Promise.resolve(returned).then(completeReturned, failTerminal);
@@ -765,6 +774,9 @@
                     stepRecord.transient = null;
                     throw staleFromError(record, error);
                 });
+            }).catch(function (error) {
+                if (!Object.prototype.hasOwnProperty.call(error, "committed")) { error.committed = committed; }
+                throw error;
             });
         }
 
@@ -802,10 +814,13 @@
             var verification = committedVerificationsByPlanId.get(planId);
             committedVerificationsByPlanId.delete(planId);
             if (!verification) { return Promise.reject(protocolError(protocol, protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE)); }
-            return committedTargetVerificationPort.observe(verification).then(function (observation) {
+            trajectory({ kind: "verify-entered", producer: "VelaExecutionPreflight", planId: planId, scope: "committed-target" });
+            var observationPromise = committedTargetVerificationPort.observe(verification);
+            return observationPromise.then(function (observation) {
                 if (observation.valueKind !== valueKind) { throw protocolError(protocol, protocol.ERROR_CODES.VERIFICATION_UNAVAILABLE); }
+                trajectory({ kind: "verify-result", producer: "VelaExecutionPreflight", planId: planId, scope: "committed-target", fresh: observation.fresh === true, matches: observation.value === input.expectedValue, actual: { kind: valueKind, data: observation.value }, digest: observation.valueDigest, sourceRequestId: observation.observationId, code: null });
                 return protocol.deepFreeze({ fresh: observation.fresh === true, valueKind: valueKind, value: observation.value, valueDigest: observation.valueDigest, matches: observation.value === input.expectedValue, observationRevision: observation.observationId, code: null });
-            });
+            }, function (error) { trajectory({ kind: "verify-result", producer: "VelaExecutionPreflight", planId: planId, scope: "committed-target", fresh: null, matches: null, actual: null, digest: null, sourceRequestId: null, code: error && error.code || "VERIFICATION_UNAVAILABLE" }); throw error; });
         }
 
         function verifyCommittedOpacity(input) {

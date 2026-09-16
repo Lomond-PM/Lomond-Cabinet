@@ -1,0 +1,19 @@
+{
+  "caseId": "A11-AE-01-load-info-parse",
+  "source": "ae01-environment-sources.json",
+  "raw": "{\"ok\":true,\"message\":\"Host load info ready.\",\"hostFile\":\"host/index.jsx\",\"registeredToolCount\":7,\"registeredToolLoadErrors\":\"\",\"registeredToolLoadErrorCount\":0,\"hasValidRegisteredToolCatalog\":true,\"registeredToolLastAttemptSucceeded\":true,\"registeredToolRegistryRevision\":1,\"includesAdComponentKit\":true,\"hasAdComponentKitCreateIconGrid\":true}",
+  "parsed": {
+    "ok": true,
+    "message": "Host load info ready.",
+    "hostFile": "host/index.jsx",
+    "registeredToolCount": 7,
+    "registeredToolLoadErrors": "",
+    "registeredToolLoadErrorCount": 0,
+    "hasValidRegisteredToolCatalog": true,
+    "registeredToolLastAttemptSucceeded": true,
+    "registeredToolRegistryRevision": 1,
+    "includesAdComponentKit": true,
+    "hasAdComponentKitCreateIconGrid": true
+  },
+  "parsedAt": "2026-09-09T08:30:41.602Z"
+}

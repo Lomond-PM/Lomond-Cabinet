@@ -1,0 +1,157 @@
+{
+  "recordedAt": "2026-09-11T04:26:17.173Z",
+  "target": "2EB1BDB5BE3E74534D3F0E80CB892B9B",
+  "hostCallbackCount": 22,
+  "cepUiRecordCount": 4,
+  "callbacks": [
+    {
+      "file": "environment.json",
+      "rawLength": 108802,
+      "receivedAt": "2026-09-11T02:50:23.490Z",
+      "rawSha256": "e6097c30615fe0c7e2d26078eb6f582f448a5ff4ff81942a863595d9ee3f21eb"
+    },
+    {
+      "file": "r1-b1.json",
+      "rawLength": 101989,
+      "receivedAt": "2026-09-11T02:51:39.265Z",
+      "rawSha256": "96c74483180258bff8209e862ad7e9cffa904d4c6e932f67cad2b89d7b5f9ef1"
+    },
+    {
+      "file": "r1-b2.json",
+      "rawLength": 93549,
+      "receivedAt": "2026-09-11T03:00:28.485Z",
+      "rawSha256": "ade5cfccd920e0e084e96a4c7958ad5782a945aa9a06ae8532912aae91515996"
+    },
+    {
+      "file": "r1-b3.json",
+      "rawLength": 101989,
+      "receivedAt": "2026-09-11T03:21:15.364Z",
+      "rawSha256": "96c74483180258bff8209e862ad7e9cffa904d4c6e932f67cad2b89d7b5f9ef1"
+    },
+    {
+      "file": "r1-detach-action.json",
+      "rawLength": 93,
+      "receivedAt": "2026-09-11T02:59:36.141Z",
+      "rawSha256": "3ffab67babcee135b7e1b5165d940f36d947f713cedaae811c9046c0d197a8b2"
+    },
+    {
+      "file": "r2-animation-preparation.json",
+      "rawLength": 339,
+      "receivedAt": "2026-09-11T03:38:01.403Z",
+      "rawSha256": "bfadd31d17022dfadd1e281290cf9a33d777345155466b239786a8a993a7fa7e"
+    },
+    {
+      "file": "r2-b0.json",
+      "rawLength": 9087,
+      "receivedAt": "2026-09-11T03:31:09.624Z",
+      "rawSha256": "9cb2321f465aacb5c114f073fe1b6395d3d37aa42bac1d3217d3bcf608f0e2d6"
+    },
+    {
+      "file": "r2-b1.json",
+      "rawLength": 41067,
+      "receivedAt": "2026-09-11T03:38:01.578Z",
+      "rawSha256": "bbd0f0218e99ac2c81d542c7e416c1397bb674bd23a4cf4e2979c9e60d876517"
+    },
+    {
+      "file": "r2-b2.json",
+      "rawLength": 32628,
+      "receivedAt": "2026-09-11T03:46:11.298Z",
+      "rawSha256": "889ae27281945c4af8e809e2db4a260af219b637f422edf1bf423a53dbd85e88"
+    },
+    {
+      "file": "r2-b3.json",
+      "rawLength": 41067,
+      "receivedAt": "2026-09-11T03:51:53.269Z",
+      "rawSha256": "bbd0f0218e99ac2c81d542c7e416c1397bb674bd23a4cf4e2979c9e60d876517"
+    },
+    {
+      "file": "r2-created.json",
+      "rawLength": 40621,
+      "receivedAt": "2026-09-11T03:33:37.928Z",
+      "rawSha256": "5b8b0e920b8d73314a733f86e54f1904ab8b77c4432b87d0afe53f17c548e8bd"
+    },
+    {
+      "file": "r2-detach-action.json",
+      "rawLength": 93,
+      "receivedAt": "2026-09-11T03:44:50.854Z",
+      "rawSha256": "3ffab67babcee135b7e1b5165d940f36d947f713cedaae811c9046c0d197a8b2"
+    },
+    {
+      "file": "r2-preparation.json",
+      "rawLength": 661,
+      "receivedAt": "2026-09-11T03:29:44.856Z",
+      "rawSha256": "d85ff821cf855eb91311cc11e72a10316c1599dadcbc2159a16f1a8b9e5329b3"
+    },
+    {
+      "file": "r2-temporal-after.json",
+      "rawLength": 2953,
+      "receivedAt": "2026-09-11T03:46:11.369Z",
+      "rawSha256": "ad9c38f0646960f7bb0790400b14453c745d6025419a28634e81937342e11586"
+    },
+    {
+      "file": "r2-temporal-before.json",
+      "rawLength": 6980,
+      "receivedAt": "2026-09-11T03:38:01.473Z",
+      "rawSha256": "9b95a76c8dabb8861226c354a384fb68f3c77ecbbc63a93244cc460edf112ec5"
+    },
+    {
+      "file": "r2-temporal-restored.json",
+      "rawLength": 6980,
+      "receivedAt": "2026-09-11T03:51:53.343Z",
+      "rawSha256": "9b95a76c8dabb8861226c354a384fb68f3c77ecbbc63a93244cc460edf112ec5"
+    },
+    {
+      "file": "r3-b1.json",
+      "rawLength": 101989,
+      "receivedAt": "2026-09-11T03:58:29.670Z",
+      "rawSha256": "5e615df6047f6610517c0b107d75ea5c23649736994e6cb2ed8e5212fd358116"
+    },
+    {
+      "file": "r3-b2.json",
+      "rawLength": 97693,
+      "receivedAt": "2026-09-11T03:59:47.100Z",
+      "rawSha256": "f1a1be21862718d23190a84277bfc04d510a3d3e7b68883a24f5a67073678e05"
+    },
+    {
+      "file": "r3-b3.json",
+      "rawLength": 101989,
+      "receivedAt": "2026-09-11T04:14:44.499Z",
+      "rawSha256": "5e615df6047f6610517c0b107d75ea5c23649736994e6cb2ed8e5212fd358116"
+    },
+    {
+      "file": "r3-detach-action.json",
+      "rawLength": 93,
+      "receivedAt": "2026-09-11T03:59:34.909Z",
+      "rawSha256": "3ffab67babcee135b7e1b5165d940f36d947f713cedaae811c9046c0d197a8b2"
+    },
+    {
+      "file": "r3-original-before-preparation.json",
+      "rawLength": 101989,
+      "receivedAt": "2026-09-11T03:56:38.996Z",
+      "rawSha256": "96c74483180258bff8209e862ad7e9cffa904d4c6e932f67cad2b89d7b5f9ef1"
+    },
+    {
+      "file": "r3-selection-preparation.json",
+      "rawLength": 230,
+      "receivedAt": "2026-09-11T03:58:29.067Z",
+      "rawSha256": "f62e325b8038f7fdef2ef0a41ed1c6e496b5a19fa8f7c8d43b132b6a287bfbc6"
+    }
+  ],
+  "cepUiRecords": [
+    "r2-create-ui.json",
+    "r2-ui-initial.json",
+    "r2-ui-open-controls.json",
+    "r2-ui-open.json"
+  ],
+  "commandSourceExactMatches": true,
+  "rawParsedValuesIndependentlyChecked": true,
+  "actionOrderAndUserUndoSnapshotsChecked": true,
+  "detachRawCallbacks": 3,
+  "userImagesOriginalByteHashesChecked": 4,
+  "R3Screenshot": "NOT CAPTURED; user combined visual/Undo reply kept",
+  "knownCollectionIssues": [
+    "r1-b1-screenshot-errors.json",
+    "r2-collection-error.json"
+  ],
+  "R2CreateRawCallback": "NOT CAPTURED; actual DOM click/independent created snapshot, no fake action raw"
+}

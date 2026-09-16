@@ -1,0 +1,8 @@
+{
+  "capturedAt": "2026-09-09T12:40:56.0219499+08:00",
+  "method": "PowerShell Get-Item junction metadata; .debug file read",
+  "extensionPath": "C:\\Users\\Administrator\\AppData\\Roaming\\Adobe\\CEP\\extensions\\com.kevin.aetoolbox",
+  "linkType": "Junction",
+  "target": "C:\\Users\\Administrator\\.openclaw\\workspace\\com.kevin.aetoolbox",
+  "debugConfiguration": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ExtensionList>\n    <Extension Id=\"com.kevin.aetoolbox.panel\">\n        <HostList>\n            <Host Name=\"AEFT\" Port=\"8088\"/>\n        </HostList>\n    </Extension>\n</ExtensionList>\n"
+}

@@ -146,7 +146,7 @@ const presentationSource = fs.readFileSync(path.join(ROOT, "client/js/vela/velaP
 const surfaceRule = (css.match(/\.vela-surface\s*\{([^}]*)\}/) || [])[1] || "";
 const slotRule = (css.match(/\.vela-transcript-slot\s*\{([^}]*)\}/) || [])[1] || "";
 const scrollRule = (css.match(/\.vela-transcript-scroll\s*\{([^}]*)\}/) || [])[1] || "";
-ok(/grid-template-rows:\s*minmax\(0, 1fr\) auto auto/.test(surfaceRule) && /min-height:\s*0/.test(surfaceRule) && /overflow:\s*hidden/.test(surfaceRule), "Surface constrains transcript row without becoming scrollable");
+ok(/grid-template-rows:\s*auto minmax\(0, 1fr\) auto auto/.test(surfaceRule) && /min-height:\s*0/.test(surfaceRule) && /overflow:\s*hidden/.test(surfaceRule), "Surface constrains transcript row without becoming scrollable");
 ok(/min-height:\s*0/.test(slotRule) && /min-width:\s*0/.test(slotRule) && /overflow:\s*hidden/.test(slotRule), "transcript outer slot cannot expand the Grid intrinsically");
 ok(/min-height:\s*0/.test(scrollRule) && /min-width:\s*0/.test(scrollRule) && /overflow-y:\s*auto/.test(scrollRule) && /overflow-x:\s*hidden/.test(scrollRule), "transcript is the bounded vertical scroller with no horizontal overflow");
 equal((css.match(/overflow-y:\s*auto/g) || []).length, 1, "transcript is the only Vela vertical auto-scroll area");

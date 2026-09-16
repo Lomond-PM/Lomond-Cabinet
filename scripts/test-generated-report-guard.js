@@ -27,6 +27,23 @@ const before = fs.readFileSync(REPORT_PATH, "utf8");
 const first = Report.buildReport().content;
 const second = Report.buildReport().content;
 equal(first, second, "report generation is deterministic across consecutive builds");
+
+// Local forensic workspaces must not affect a clean-checkout report. Use an
+// actual temporary source so this regression also works when CI has no .tmp.
+const ignoredWorkspace = path.join(ROOT, ".tmp");
+fs.mkdirSync(ignoredWorkspace, { recursive: true });
+const ignoredFixture = fs.mkdtempSync(path.join(ignoredWorkspace, "i18n-report-guard-"));
+const ignoredSource = path.join(ignoredFixture, "runtime.js");
+try {
+    fs.writeFileSync(ignoredSource, 'tr("status.ready");\n', "utf8");
+    const withIgnoredSource = Report.buildReport().content;
+    equal(withIgnoredSource, first, "repository-local .tmp source does not change report content");
+    ok(!withIgnoredSource.includes(".tmp/"), "generated report has no .tmp workspace references");
+} finally {
+    fs.unlinkSync(ignoredSource);
+    fs.rmdirSync(ignoredFixture);
+}
+
 equal(Report.normalizeLineEndings(before), first, "existing generated report content has no unrelated change");
 ok(Report.checkReport(REPORT_PATH, first).ok, "current report passes freshness check");
 equal(fs.readFileSync(REPORT_PATH, "utf8"), before, "freshness check does not modify the repository report");

@@ -1,0 +1,22 @@
+{
+  "changedExistingFiles": [
+    "AGENTS.md",
+    "README.md",
+    "docs/HANDOFF.md",
+    "docs/PROJECT_STATE.md",
+    "docs/VELA_ROADMAP.md",
+    "docs/design/vela-0.3-reconstruction-guidance.md",
+    "docs/reports/vela-0.3.11-consolidated-register.json",
+    "host/index.jsx",
+    "docs/reports/vela-0.3.12-b1-a11-host-json-serialization.md"
+  ],
+  "originalEvidenceAndImplementationTestsUnchanged": true,
+  "other52LedgerItemsAndA01AcceptanceUnchanged": true,
+  "planCounts": {
+    "total": 320,
+    "encodingMustPass": 310,
+    "nulKeyLimitations": 10,
+    "nulValueCases": 6
+  },
+  "checks": "JSON/links/all untracked text whitespace PASS"
+}

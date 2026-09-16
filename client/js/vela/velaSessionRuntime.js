@@ -14,11 +14,11 @@
     "use strict";
 
     // =========================================================================
-    // 0.3.3 Vela Agent Runtime Contract Foundation — minimal skeleton
+    // Vela Session runtime — append-only data and synchronous publication
     // Contract: docs/design/vela-agent-runtime-contract-foundation-0.3.3.md
     // Baseline: docs/design/vela-agent-architecture.md (FROZEN FOR 0.3.x, §5/§6)
-    // This module is intentionally NOT wired into velaCepModuleLoader or
-    // client/index.html. It is a standalone UMD module exercised by Node tests.
+    // Loaded by client/index.html and consumed by AgentRuntime / Runtime's
+    // Authority composition. The CommonJS entry exercises the same factory.
     // =========================================================================
 
     var MODULE_REVISION = "vela-session-runtime-0.3.3-v1";
@@ -48,7 +48,7 @@
     }
 
     function isPlainObject(value) {
-        if (!value || Object.prototype.toString.call(value) !== "[object Object]") { return false; }
+        if (!value || typeof value !== "object") { return false; }
         var prototype = Object.getPrototypeOf(value);
         return prototype === null || prototype === Object.prototype;
     }
@@ -66,6 +66,42 @@
             for (index = 0; index < keys.length; index += 1) { deepFreeze(value[keys[index]], values); }
         }
         return Object.freeze(value);
+    }
+
+    // Read descriptors, never accessors / toJSON. Only owned data is frozen.
+    function dataDescriptors(value) {
+        var descriptors = Object.create(null);
+        if (Object.getOwnPropertySymbols(value).length) { fail(ERROR_CODES.SESSION_EVENT_INVALID); }
+        Object.getOwnPropertyNames(value).forEach(function (key) {
+            var descriptor = Object.getOwnPropertyDescriptor(value, key);
+            if (!descriptor || !Object.prototype.hasOwnProperty.call(descriptor, "value")) { fail(ERROR_CODES.SESSION_EVENT_INVALID); }
+            descriptors[key] = descriptor;
+        });
+        return descriptors;
+    }
+
+    function copyData(value, ancestors) {
+        var array;
+        var descriptors;
+        var copy;
+        if (value === null || value === undefined || typeof value === "string" || typeof value === "boolean") { return value; }
+        if (typeof value === "number" && Number.isFinite(value)) { return value; }
+        array = Array.isArray(value);
+        if ((!array && !isPlainObject(value)) || ancestors.indexOf(value) !== -1) { fail(ERROR_CODES.SESSION_EVENT_INVALID); }
+        descriptors = dataDescriptors(value);
+        copy = array ? [] : Object.create(Object.getPrototypeOf(value));
+        ancestors.push(value);
+        Object.keys(descriptors).forEach(function (key) {
+            var descriptor = descriptors[key];
+            if (array && key === "length") { return; }
+            // Arrays retain holes and length; custom executable/object behavior
+            // is not part of the event data contract.
+            if (array && (!/^(0|[1-9][0-9]*)$/.test(key) || Number(key) >= descriptors.length.value)) { fail(ERROR_CODES.SESSION_EVENT_INVALID); }
+            Object.defineProperty(copy, key, { value: copyData(descriptor.value, ancestors), enumerable: descriptor.enumerable });
+        });
+        if (array) { copy.length = descriptors.length.value; }
+        ancestors.pop();
+        return Object.freeze(copy);
     }
 
     // -------------------------------------------------------------------------
@@ -216,6 +252,9 @@
         var lastSeq = 0;
         var closed = false;
         var subscribers = [];
+        var publications = [];
+        var notifying = false;
+        var normalizing = false;
         var onListenerError = typeof settings.onListenerError === "function" ? settings.onListenerError : function () {};
 
         function assertOpen() {
@@ -223,53 +262,88 @@
         }
 
         function normalizeEvent(input) {
-            var event;
+            var descriptors;
+            var kind;
+            var requestId;
+            var payload;
             var family;
             if (!isPlainObject(input)) { fail(ERROR_CODES.SESSION_EVENT_INVALID); }
-            family = classifyEventKind(input.kind);
+            descriptors = dataDescriptors(input);
+            kind = descriptors.kind && descriptors.kind.value;
+            requestId = descriptors.requestId && descriptors.requestId.value;
+            payload = descriptors.payload && descriptors.payload.value;
+            family = classifyEventKind(kind);
             if (!family) { fail(ERROR_CODES.SESSION_EVENT_INVALID); }
-            event = {
-                kind: input.kind,
+            return Object.freeze({
+                kind: kind,
                 family: family,
                 seq: lastSeq + 1,
-                requestId: typeof input.requestId === "string" ? input.requestId : null,
-                payload: Object.prototype.hasOwnProperty.call(input, "payload") && isPlainObject(input.payload) ? input.payload : {}
-            };
-            return event;
+                requestId: typeof requestId === "string" ? requestId : null,
+                // Preserve the foundation's missing / non-plain payload -> {}.
+                payload: isPlainObject(payload) ? copyData(payload, []) : Object.freeze({})
+            });
+        }
+
+        function publish(event, phase) {
+            var cursor = 0;
+            var publication;
+            var index;
+            publications.push({ event: event, phase: phase, listeners: subscribers.slice() });
+            if (notifying) { return; }
+            notifying = true;
+            try {
+                // FIFO within this synchronous drain; a nested append returns
+                // its committed receipt before its queued callbacks run.
+                while (!closed && cursor < publications.length) {
+                    publication = publications[cursor];
+                    cursor += 1;
+                    for (index = 0; !closed && index < publication.listeners.length; index += 1) {
+                        try { publication.listeners[index].listener(publication.event); }
+                        catch (error) {
+                            try { onListenerError(error, Object.freeze({ phase: publication.phase, event: publication.event })); }
+                            catch (ignored) { /* Diagnostics cannot turn a commit into failure. */ }
+                        }
+                    }
+                }
+            } finally {
+                publications = [];
+                notifying = false;
+            }
         }
 
         function appendInternal(input, authorityOwned) {
             var event;
-            var index;
             assertOpen();
-            event = normalizeEvent(input);
-            if (authorityOwned && !isAuthorityEvidenceKind(event.kind)) { fail(ERROR_CODES.SESSION_EVENT_INVALID); }
+            if (normalizing) { fail(ERROR_CODES.SESSION_EVENT_INVALID); }
+            normalizing = true;
+            try {
+                event = normalizeEvent(input);
+                if (authorityOwned && !isAuthorityEvidenceKind(event.kind)) { fail(ERROR_CODES.SESSION_EVENT_INVALID); }
+            } catch (invalidInput) {
+                fail(ERROR_CODES.SESSION_EVENT_INVALID);
+            } finally {
+                normalizing = false;
+            }
+            assertOpen();
             if (event.seq !== lastSeq + 1) { fail(ERROR_CODES.SESSION_SEQ_GAP); }
+            events.push(event);
             lastSeq = event.seq;
-            events.push(deepFreeze(event));
             if (authorityOwned) {
-                trustedAuthorityEvents.add(events[events.length - 1]);
-                authorityEventSessions.set(events[events.length - 1], sessionLog);
+                trustedAuthorityEvents.add(event);
+                authorityEventSessions.set(event, sessionLog);
             }
             // Authority transitions use a narrow append-and-return boundary.
-            // Publishing them to general subscribers is deferred until a future
-            // Runtime integration can do so after its authority transaction has
-            // completed; re-entrant listeners must not split that transaction.
-            if (!authorityOwned) {
-                for (index = 0; index < subscribers.length; index += 1) { subscribers[index](events[events.length - 1]); }
-            }
-            return events[events.length - 1];
+            // Runtime publishes explicitly after its authority transaction;
+            // re-entrant listeners must not split that transaction.
+            if (!authorityOwned) { publish(event, "session-post-commit"); }
+            return event;
         }
         function publishAuthorityInternal(event) {
-            var index;
             assertOpen();
             if (!trustedAuthorityEvents.has(event) || authorityEventSessions.get(event) !== sessionLog || sessionLog.getEventBySeq(event.seq) !== event) { fail(ERROR_CODES.SESSION_AUTHORITY_EVENT_UNPUBLISHABLE); }
             if (publishedAuthorityEvents.has(event)) { fail(ERROR_CODES.SESSION_AUTHORITY_EVENT_ALREADY_PUBLISHED); }
             publishedAuthorityEvents.add(event);
-            for (index = 0; index < subscribers.length; index += 1) {
-                try { subscribers[index](event); }
-                catch (error) { try { onListenerError(error, Object.freeze({ phase: "authority-post-commit", event: event })); } catch (ignored) {} }
-            }
+            publish(event, "authority-post-commit");
             return true;
         }
 
@@ -278,7 +352,7 @@
                 return appendInternal(input, false);
             },
             getEvents: function () {
-                return deepFreeze(events.slice());
+                return Object.freeze(events.slice());
             },
             getEventBySeq: function (seq) {
                 if (typeof seq !== "number" || !Number.isInteger(seq) || seq < 1) { fail(ERROR_CODES.SESSION_EVENT_INVALID); }
@@ -286,7 +360,7 @@
             },
             getSnapshot: function () {
                 assertOpen();
-                return deepFreeze({ sessionId: sessionId, events: events.slice(), lastSeq: lastSeq });
+                return Object.freeze({ sessionId: sessionId, events: Object.freeze(events.slice()), lastSeq: lastSeq });
             },
             project: function (fold, seed) {
                 var accumulator = seed;
@@ -298,16 +372,20 @@
                 return accumulator;
             },
             subscribe: function (listener) {
+                var subscription;
+                assertOpen();
                 if (typeof listener !== "function") { fail(ERROR_CODES.SESSION_EVENT_INVALID); }
-                subscribers.push(listener);
+                subscription = { listener: listener };
+                subscribers.push(subscription);
                 return Object.freeze({ unsubscribe: function () {
-                    var index = subscribers.indexOf(listener);
+                    var index = subscribers.indexOf(subscription);
                     if (index !== -1) { subscribers.splice(index, 1); }
                 } });
             },
             close: function () {
                 closed = true;
                 subscribers = [];
+                publications = [];
             },
             getSessionId: function () { return sessionId; },
             isClosed: function () { return closed; }

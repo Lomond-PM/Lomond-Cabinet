@@ -18,7 +18,12 @@ AEToolbox.ping = function () {
             .replace(/"/g, "\\\"")
             .replace(/\r/g, "\\r")
             .replace(/\n/g, "\\n")
-            .replace(/\t/g, "\\t");
+            .replace(/\t/g, "\\t")
+            .replace(/[\x00-\x1f]/g, function (ch) {
+                // CR/LF/TAB above retain their existing short escape spelling.
+                var hex = ch.charCodeAt(0).toString(16);
+                return "\\u" + ("0000" + hex).slice(-4);
+            });
     };
 
     AEToolbox.toJson = function (obj) {
@@ -29,11 +34,11 @@ AEToolbox.ping = function () {
                 continue;
             }
             if (typeof obj[k] === "number") {
-                parts[parts.length] = "\"" + k + "\":" + obj[k];
+                parts[parts.length] = "\"" + AEToolbox.jsonEscape(k) + "\":" + obj[k];
             } else if (typeof obj[k] === "boolean") {
-                parts[parts.length] = "\"" + k + "\":" + (obj[k] ? "true" : "false");
+                parts[parts.length] = "\"" + AEToolbox.jsonEscape(k) + "\":" + (obj[k] ? "true" : "false");
             } else {
-                parts[parts.length] = "\"" + k + "\":\"" + AEToolbox.jsonEscape(obj[k]) + "\"";
+                parts[parts.length] = "\"" + AEToolbox.jsonEscape(k) + "\":\"" + AEToolbox.jsonEscape(obj[k]) + "\"";
             }
         }
         return "{" + parts.join(",") + "}";
@@ -260,10 +265,166 @@ AEToolbox.ping = function () {
     };
 
     AEToolbox.parseJson = function (json) {
-        if (typeof JSON !== "undefined" && JSON.parse) {
-            return JSON.parse(json);
+        // Public tool data uses JSON grammar, without Vela protocol/schema limits.
+        // Never execute input, including after a native parser rejects it.
+        var text = String(json);
+        var position = 0;
+
+        function admitMemberName(key) {
+            if (key.indexOf(String.fromCharCode(0)) !== -1) {
+                throw new SyntaxError("Unsupported Host JSON member name: U+0000");
+            }
         }
-        return eval("(" + json + ")");
+
+        function fail() {
+            throw new SyntaxError("Invalid JSON at position " + position);
+        }
+
+        function whitespace() {
+            var c = text.charAt(position);
+            while (c === " " || c === "\t" || c === "\r" || c === "\n") {
+                position++;
+                c = text.charAt(position);
+            }
+        }
+
+        function stringValue() {
+            var result = "";
+            var c;
+            var hex;
+            position++;
+            while (position < text.length) {
+                c = text.charAt(position++);
+                if (c === '"') {
+                    return result;
+                }
+                if (c === "\\") {
+                    c = text.charAt(position++);
+                    if (c === '"' || c === "\\" || c === "/") {
+                        result += c;
+                    } else if (c === "b") {
+                        result += "\b";
+                    } else if (c === "f") {
+                        result += "\f";
+                    } else if (c === "n") {
+                        result += "\n";
+                    } else if (c === "r") {
+                        result += "\r";
+                    } else if (c === "t") {
+                        result += "\t";
+                    } else if (c === "u") {
+                        hex = text.substr(position, 4);
+                        if (!/^[0-9a-fA-F]{4}$/.test(hex)) { fail(); }
+                        result += String.fromCharCode(parseInt(hex, 16));
+                        position += 4;
+                    } else {
+                        fail();
+                    }
+                } else {
+                    if (c.charCodeAt(0) < 32) { fail(); }
+                    result += c;
+                }
+            }
+            fail();
+        }
+
+        function digit(c) {
+            return c >= "0" && c <= "9" && c !== "";
+        }
+
+        function numberValue() {
+            var start = position;
+            if (text.charAt(position) === "-") { position++; }
+            if (text.charAt(position) === "0") {
+                position++;
+            } else {
+                if (!digit(text.charAt(position))) { fail(); }
+                while (digit(text.charAt(position))) { position++; }
+            }
+            if (text.charAt(position) === ".") {
+                position++;
+                if (!digit(text.charAt(position))) { fail(); }
+                while (digit(text.charAt(position))) { position++; }
+            }
+            if (text.charAt(position) === "e" || text.charAt(position) === "E") {
+                position++;
+                if (text.charAt(position) === "+" || text.charAt(position) === "-") { position++; }
+                if (!digit(text.charAt(position))) { fail(); }
+                while (digit(text.charAt(position))) { position++; }
+            }
+            return Number(text.substring(start, position));
+        }
+
+        function setMember(object, key, value) {
+            // Preserve JSON's own-data-property semantics even on engines with a
+            // legacy __proto__ setter. ES3 engines without it use normal assignment.
+            if (key === "__proto__" && key in object) {
+                if (typeof Object.defineProperty !== "function") { fail(); }
+                Object.defineProperty(object, key, { value: value, enumerable: true, writable: true, configurable: true });
+            } else {
+                object[key] = value;
+            }
+        }
+
+        function value() {
+            var c;
+            var result;
+            var key;
+            whitespace();
+            c = text.charAt(position);
+            if (c === '"') { return stringValue(); }
+            if (c === "-" || digit(c)) { return numberValue(); }
+            if (c === "{" || c === "[") {
+                var isObject = c === "{";
+                var close = isObject ? "}" : "]";
+                result = isObject ? {} : [];
+                position++;
+                whitespace();
+                if (text.charAt(position) === close) { position++; return result; }
+                while (true) {
+                    whitespace();
+                    if (isObject) {
+                        if (text.charAt(position) !== '"') { fail(); }
+                        key = stringValue();
+                        admitMemberName(key);
+                        whitespace();
+                        if (text.charAt(position++) !== ":") { fail(); }
+                        setMember(result, key, value());
+                    } else {
+                        result[result.length] = value();
+                    }
+                    whitespace();
+                    c = text.charAt(position++);
+                    if (c === close) { return result; }
+                    if (c !== ",") { fail(); }
+                }
+            }
+            if (text.substr(position, 4) === "true") { position += 4; return true; }
+            if (text.substr(position, 5) === "false") { position += 5; return false; }
+            if (text.substr(position, 4) === "null") { position += 4; return null; }
+            fail();
+        }
+
+        if (typeof JSON !== "undefined" && JSON !== null && typeof JSON.parse === "function") {
+            // A string followed by ':' is a member name in valid JSON. Reuse
+            // the decoder without constructing objects; JSON.parse still owns
+            // the remaining grammar and its errors never enter the fallback.
+            while (position < text.length) {
+                if (text.charAt(position) === '"') {
+                    var token = stringValue();
+                    whitespace();
+                    if (text.charAt(position) === ":") { admitMemberName(token); }
+                } else {
+                    position++;
+                }
+            }
+            return JSON.parse(text);
+        }
+
+        var result = value();
+        whitespace();
+        if (position !== text.length) { fail(); }
+        return result;
     };
 
     AEToolbox.normalizeHexColor = function (hex) {

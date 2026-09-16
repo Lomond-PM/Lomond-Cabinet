@@ -1,0 +1,136 @@
+{
+  "recordedAt": "2026-09-11T02:56:18.720Z",
+  "source": "Derived only from independent Host B1 raw transforms and actual parent ids, not production finalization values or verifyDetachValue",
+  "method": "Position of layer anchor in composition XY; compose captured 2D translation-only parent transforms (parent Position minus Anchor); unit scale/zero rotation checked. Native sourcePointToComp captured separately in B1 and will be compared only when callable.",
+  "geometryTolerance": 0.0001,
+  "colorChannelTolerance": 0.000001,
+  "undoNumericTolerance": 0.000001,
+  "time": 0,
+  "positions": [
+    {
+      "layerId": 213,
+      "derivedCompPosition": [
+        597.448143005371,
+        490.984252929688
+      ],
+      "nativeSpace": {
+        "method": "actual layer.sourcePointToComp at unchanged comp.time; no injected expression",
+        "points": [
+          {
+            "sourcePoint": [
+              0,
+              0
+            ],
+            "compPoint": [
+              597.484008789062,
+              500
+            ]
+          },
+          {
+            "sourcePoint": [
+              -94.5199203491211,
+              -20.375244140625
+            ],
+            "compPoint": [
+              502.964111328125,
+              479.624755859375
+            ]
+          },
+          {
+            "sourcePoint": [
+              94.4481430053711,
+              -20.375244140625
+            ],
+            "compPoint": [
+              691.932189941406,
+              479.624755859375
+            ]
+          },
+          {
+            "sourcePoint": [
+              94.4481430053711,
+              2.34375
+            ],
+            "compPoint": [
+              691.932189941406,
+              502.34375
+            ]
+          },
+          {
+            "sourcePoint": [
+              -94.5199203491211,
+              2.34375
+            ],
+            "compPoint": [
+              502.964111328125,
+              502.34375
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "layerId": 218,
+      "derivedCompPosition": [
+        699.964111328125,
+        490.984252929688
+      ],
+      "nativeSpace": {
+        "method": "actual layer.sourcePointToComp at unchanged comp.time; no injected expression",
+        "points": [
+          {
+            "sourcePoint": [
+              0,
+              0
+            ],
+            "compPoint": [
+              699.964111328125,
+              490.984252929688
+            ]
+          },
+          {
+            "sourcePoint": [
+              -221,
+              -23.3594970703125
+            ],
+            "compPoint": [
+              478.964111328125,
+              467.624755859375
+            ]
+          },
+          {
+            "sourcePoint": [
+              221,
+              -23.3594970703125
+            ],
+            "compPoint": [
+              920.964111328125,
+              467.624755859375
+            ]
+          },
+          {
+            "sourcePoint": [
+              221,
+              23.3594970703125
+            ],
+            "compPoint": [
+              920.964111328125,
+              514.34375
+            ]
+          },
+          {
+            "sourcePoint": [
+              -221,
+              23.3594970703125
+            ],
+            "compPoint": [
+              478.964111328125,
+              514.34375
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "limits": "Not pixel comparison or arbitrary transformed-parent proof; no injected expressions or changing current time."
+}

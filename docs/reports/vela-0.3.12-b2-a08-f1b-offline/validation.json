@@ -1,0 +1,74 @@
+{
+  "runs": [
+    {
+      "label": "focused",
+      "command": "node scripts/test-ad-component-detach-locator.js docs/reports/vela-0.3.12-b2-a08-f1b-offline/after.json",
+      "started": "2026-09-11T02:15:36.981Z",
+      "ended": "2026-09-11T02:15:37.496Z",
+      "exit": 0,
+      "log": "focused.log"
+    },
+    {
+      "label": "finalize",
+      "command": "node scripts/test-ad-component-detach-finalize.js docs/reports/vela-0.3.12-b2-a08-f1b-offline/finalize-records.json",
+      "started": "2026-09-11T02:15:37.497Z",
+      "ended": "2026-09-11T02:15:38.188Z",
+      "exit": 0,
+      "log": "finalize.log"
+    },
+    {
+      "label": "a08",
+      "command": "node scripts/test-ad-component-detach.js docs/reports/vela-0.3.12-b2-a08-f1b-offline/a08-records.json",
+      "started": "2026-09-11T02:15:38.188Z",
+      "ended": "2026-09-11T02:15:38.398Z",
+      "exit": 0,
+      "log": "a08.log"
+    },
+    {
+      "label": "host-registry",
+      "command": "node scripts/test-host-registry-transaction.js",
+      "started": "2026-09-11T02:15:38.398Z",
+      "ended": "2026-09-11T02:15:38.442Z",
+      "exit": 0,
+      "log": "host-registry.log"
+    },
+    {
+      "label": "grid-host",
+      "command": "node scripts/test-grid-host-contract.js",
+      "started": "2026-09-11T02:15:38.442Z",
+      "ended": "2026-09-11T02:15:38.639Z",
+      "exit": 0,
+      "log": "grid-host.log"
+    },
+    {
+      "label": "grid-refresh",
+      "command": "node scripts/test-grid-refresh-idempotence.js",
+      "started": "2026-09-11T02:15:38.639Z",
+      "ended": "2026-09-11T02:15:38.679Z",
+      "exit": 0,
+      "log": "grid-refresh.log"
+    }
+  ],
+  "finalSourceHashes": [
+    {
+      "path": "host/tools/adComponentKit.jsx",
+      "sha256": "e36c1c16a70e3f36f9d8daa9e149c6315e12dbbe9439bf44150daa5bdce175c1"
+    },
+    {
+      "path": "scripts/fixtures/ad-component-detach-harness.js",
+      "sha256": "6729e20da4716013f4989da2313553706bd41388b5a122e3704a09697599c518"
+    },
+    {
+      "path": "scripts/test-ad-component-detach-locator.js",
+      "sha256": "804056da97c190a8d49b3d082776a7900c160b617f0473f5c239a44ad8f50e8f"
+    },
+    {
+      "path": "scripts/test-ad-component-detach-finalize.js",
+      "sha256": "daccc094e53a6b74d2ca393cd5f8a5dc191dd4f77c2736e22ef89e65c02e4225"
+    },
+    {
+      "path": "scripts/test-ad-component-detach.js",
+      "sha256": "9f4d05830f7cd568221a8ee3b3c61c5b402540a542e9da08b2c7d41a4911cbee"
+    }
+  ]
+}

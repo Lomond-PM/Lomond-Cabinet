@@ -1,0 +1,38 @@
+{
+  "recordedAt": "2026-09-11T04:15:27.409Z",
+  "group": "R3",
+  "status": "PASS",
+  "action": {
+    "ok": true,
+    "message": "Component detached. Layers will no longer refresh as a kit component."
+  },
+  "detachCalls": 1,
+  "detachCallEvidence": "r3-detach-action.json",
+  "environmentEvidence": [
+    "environment.json",
+    "load-comparison.json",
+    "workspace.json"
+  ],
+  "b1": "r3-b1.json",
+  "b2": "r3-b2.json",
+  "b3": "r3-b3.json",
+  "comparisons": [
+    "r3-reuse-checks.json",
+    "r3-b1-checks.json",
+    "r3-b2-comparison.json",
+    "r3-b3-comparison.json"
+  ],
+  "userConfirmations": [
+    "r3-undo-user-confirmation.json"
+  ],
+  "images": [],
+  "imageBoundary": "No R3 screenshot was captured or inferred; independent Host data and user confirmation are separate evidence sources",
+  "hostB2ChecksPass": true,
+  "userAfterVisual": "目前ae显示合成在A01_TOOL_SMOKE，执行一次undo无异常，画面也无任何变化",
+  "userUndo": "目前ae显示合成在A01_TOOL_SMOKE，执行一次undo无异常，画面也无任何变化",
+  "undoRestorationPass": true,
+  "R1": "PASS; r1-summary.json",
+  "R2": "PASS; r2-summary.json",
+  "allJourneysFinished": true,
+  "overallAcceptance": "Pending evidence integrity and conditional document close"
+}

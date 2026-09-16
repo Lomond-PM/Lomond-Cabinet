@@ -1,0 +1,17 @@
+{
+  "time": "2026-09-09T08:57:05.058Z",
+  "existingFilesChanged": [
+    "docs/reports/vela-0.3.12-b1-a11-host-json-serialization.md"
+  ],
+  "allOtherExistingFilesUnchanged": true,
+  "checks": "D1 JSON parse, local links, individual whitespace checks PASS",
+  "filesChecked": [
+    "d1-before.json",
+    "d1-command-error.json",
+    "d1-commands.json",
+    "d1-derived.json",
+    "d1-direct-raw.json",
+    "d1-observations.json",
+    "d1-source-check.json"
+  ]
+}

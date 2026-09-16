@@ -1,0 +1,6 @@
+{
+  "label": "AE-03-legacy-preparation-write",
+  "timestamp": "2026-09-09T06:09:02.722Z",
+  "hostInput": "(function(){var c=app.project.activeItem,l=c instanceof CompItem&&c.selectedLayers.length===1?c.selectedLayers[0]:null;if(!app.project.file||app.project.file.fsName.split(String.fromCharCode(92)).join(\"/\")!==\"D:/Projects/Vela Test/Vela Test.aep\"||!l||c.name!==\"Test Comp\"||l.id!==190||l.name!==\"A01_METADATA_FIXTURE\"||!l.nullLayer||l.comment!==\"\")throw new Error(\"Fixture guard rejected; no write\");var before=l.comment,metadata={aetoolbox:true,componentId:\"legacy_fixture\",componentType:\"featureStack\",role:\"controller\",index:0};app.beginUndoGroup(\"A01 Prepare Legacy Fixture\");try{l.comment=AEToolbox.stringify(metadata);}finally{app.endUndoGroup();}return AEToolbox.stringify({phase:\"PREPARATION_ONLY\",layerId:l.id,commentBefore:before,commentAfter:l.comment,undoGroup:\"A01 Prepare Legacy Fixture\"});})()",
+  "hostRaw": "{\"phase\":\"PREPARATION_ONLY\",\"layerId\":190,\"commentBefore\":\"\",\"commentAfter\":\"{\\\"aetoolbox\\\":true,\\\"componentId\\\":\\\"legacy_fixture\\\",\\\"componentType\\\":\\\"featureStack\\\",\\\"role\\\":\\\"controller\\\",\\\"index\\\":0}\",\"undoGroup\":\"A01 Prepare Legacy Fixture\"}"
+}

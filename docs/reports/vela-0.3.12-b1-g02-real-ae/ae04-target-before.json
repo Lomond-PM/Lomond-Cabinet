@@ -1,0 +1,30 @@
+{
+  "caseId": "G02-AE-04/baseline",
+  "raw": "{\"hasProject\":true,\"hasComp\":true,\"compId\":191,\"compName\":\"A01_TOOL_SMOKE\",\"selectedCount\":1,\"layerId\":203,\"layerIndex\":1,\"name\":\"A01 中文 Smoke\",\"codeUnits\":[65,48,49,32,20013,25991,32,83,109,111,107,101]}",
+  "time": "2026-09-10T02:08:37.376Z",
+  "parsed": {
+    "hasProject": true,
+    "hasComp": true,
+    "compId": 191,
+    "compName": "A01_TOOL_SMOKE",
+    "selectedCount": 1,
+    "layerId": 203,
+    "layerIndex": 1,
+    "name": "A01 中文 Smoke",
+    "codeUnits": [
+      65,
+      48,
+      49,
+      32,
+      20013,
+      25991,
+      32,
+      83,
+      109,
+      111,
+      107,
+      101
+    ]
+  },
+  "command": "(function(save){new CSInterface().evalScript(\"(function(){var p=app.project,c=p?p.activeItem:null;var o={hasProject:!!p,hasComp:!!c&&c instanceof CompItem};if(o.hasComp){o.compId=c.id;o.compName=c.name;o.selectedCount=c.selectedLayers.length;if(o.selectedCount===1){var l=c.selectedLayers[0];o.layerId=l.id;o.layerIndex=l.index;o.name=l.name;o.codeUnits=[];for(var i=0;i<l.name.length;i++)o.codeUnits.push(l.name.charCodeAt(i));}}return AEToolbox.stringify(o);})()\",function(raw){save(JSON.stringify({caseId:\"G02-AE-04/baseline\",raw:raw,time:new Date().toISOString()}));})})(copy)"
+}

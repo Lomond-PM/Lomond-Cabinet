@@ -443,7 +443,7 @@ function testSurface() {
     equal(nodes.grip, initialGrip, "resume preserves resize grip identity");
     const provider = { send: function () {}, cancel: function () {}, getState: function () { return { state: "idle", text: null, errorCode: null }; } };
     const confirmation = { review: function () {}, approve: function () {}, reject: function () {}, getState: function () { return { state: "idle", beforeValue: null, proposedValue: null, errorCode: null, moduleRevision: "test" }; } };
-    const controller = SurfaceController.create({ surface: surface, provider: provider, confirmation: confirmation, t: function (key) { return "t:" + key; }, PresentationModel: PresentationModel, TranscriptView: TranscriptView, ComposerView: ComposerView, ConfirmationView: ConfirmationView, ActivationPolicy: ActivationPolicy });
+    const controller = SurfaceController.create({ surface: surface, provider: provider, confirmation: confirmation, t: function (key) { return "t:" + key; }, presentation: PresentationModel.create(), PresentationModel: PresentationModel, TranscriptView: TranscriptView, ComposerView: ComposerView, ConfirmationView: ConfirmationView, ActivationPolicy: ActivationPolicy });
     controller.mount();
     const actionNodes = nodes.actionSlot.children.slice(-6);
     const idleSend = actionNodes[0];
