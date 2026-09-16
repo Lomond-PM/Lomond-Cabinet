@@ -4,8 +4,9 @@
 
 This repository is **Lomond Cabinet**, an After Effects CEP extension.
 
-- Product version metadata: `0.3.6` (release candidate, unpublished)
-- Latest published tag: `v0.3.5`
+- Product version metadata: `0.3.12`
+- Release identity: `v0.3.12 — Legacy`
+- Publication authority: the immutable GitHub `v0.3.12` tag / Release, not a duplicated published/unpublished flag in maintained docs
 - Visible panel title: `Lomond Cabinet`
 - Manifest menu name: `AE Toolbox`
 - Extension bundle id: `com.kevin.aetoolbox`
@@ -21,7 +22,7 @@ The product uses two runtimes:
 
 **0.3.12 — Baseline Safety & Fact-chain Closure：COMPLETE / SEALED。** 最终 G 综合验收已通过 PR #213 合并到 `dev@ce8a73646cb01859d0f258101bee39f547081615`，Project checks 成功，最终离线基线 **198/198 PASS，0 FAIL，0 skip**。20 项原缺陷/治理条目按有界证据 CLOSED，G-10 / COV-03～06 保持 OPEN，其余 29 项沿后续路线；D/F 历史 Provider timeout 的 FAIL、原因与 tokens unknown 保留，残余可用性风险按 G 裁定接受。见 [0.3.12 G 综合报告](docs/reports/vela-0.3.12-integrated-acceptance.md)。
 
-**发布交接：** 当前产品 metadata 仍为 `0.3.6`，最新已发布 tag 仍为 `v0.3.5`。用户已决定在 0.3.13/0.3.14 的重大 UI 重构前，将当前 0.3.12 基线切为 **`v0.3.12 — Legacy`** 发布节点；版本源、manifest、Host projectVersion、CHANGELOG、`dev → main` 与 tag/release 必须在独立 release-prep 中同步。本条不表示该 Release 已发布。
+**发行身份：`0.3.12 — Legacy`。** `VERSION`、manifest 与 Host `projectVersion` 统一为 `0.3.12`；该节点用于冻结 0.3.13/0.3.14 大型 UI 重构前的产品基线。是否已经完成 GitHub 发布只由不可变的 `v0.3.12` tag / Release 判断，维护中的 current docs 不再写一个会在发布瞬间过时的“尚未发布/已发布”状态。Legacy 不表示 Vela 已完成模型资格、完整 AE 能力覆盖或长期维护承诺。
 
 **当前/下一开发里程碑：0.3.13 — Visual Baseline & UI Platform Rebuild。** UI Lab 的基础视觉方向已经获得用户认可；不要重新发散另一套审美。先做真实页面/生效样式审计，再以现有 UI Lab 的布局、排版、组件与 motion contract 建立可运行生产参考并重构共享样式/交互平台。Liquid Glass 继续作为 UI Lab 中独立、capability-gated、可降级的材质实验，不是平台重建或非玻璃页面工作的前置门。0.3.14 才负责 Home、Registry、Settings、Palette、Vela 的全面迁移与旧路径退出。
 
@@ -276,14 +277,16 @@ Other sensitive areas:
 
 ## Release management
 
-Current product metadata remains `0.3.6`, and the latest published release/tag remains `0.3.5` / immutable `v0.3.5`. The 0.3.12 feature milestone is now COMPLETE / SEALED on `dev`; the next release operation is a dedicated **`v0.3.12 — Legacy`** cut before the 0.3.13/0.3.14 UI rebuild. Do not create a tag that says `v0.3.12` while the installed package still reports `0.3.6`: release-prep must first synchronize the product version sources and release documentation, then promote accepted `dev` to `main`, then create the immutable tag/release from the accepted `main` commit.
+Current product metadata is `0.3.12`; the release identity is **`v0.3.12 — Legacy`**. The immutable GitHub tag / Release is the publication authority. Maintained current-state docs intentionally do **not** mirror a temporary “published/unpublished” flag, so publication of the prepared release does not by itself require another documentation-only reconciliation commit.
 
-Future release version changes must keep synchronized:
+Release-prep must keep synchronized:
 
 - `VERSION`
 - both version fields in `CSXS/manifest.xml`
 - `AEToolbox.projectVersion` in `host/index.jsx`
 - `CHANGELOG.md`
 - maintained current-version documentation
+
+After release-prep is accepted on `dev`, promote `dev` to `main`, create the immutable `v0.3.12` tag / Release from the accepted `main` commit, then keep normal development on `dev`. Only update maintained docs after publication if the actual release contents or version identity differ from the prepared state—not merely to flip a publication-status sentence.
 
 `AEToolbox.hostApiVersion` is independent and remains `1.0.0` unless its contract changes deliberately.
