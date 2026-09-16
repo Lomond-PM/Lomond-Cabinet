@@ -10,9 +10,9 @@
 
 本文件持有当前实现与交接事实；[VELA_ROADMAP](VELA_ROADMAP.md) 是唯一排期来源。[Agent architecture](design/vela-agent-architecture.md) 保持 FROZEN FOR 0.3.x，architecture amendment NONE。
 
-## Package release metadata is separate
+## Package release identity
 
-`VERSION`、manifest 两个版本字段和 Host projectVersion 当前仍为 **0.3.6**；最新已发布 tag 仍记录为 **v0.3.5**。用户已决定在 0.3.13/0.3.14 的重大 UI 重构前，将当前 sealed 0.3.12 基线切为 **`v0.3.12 — Legacy`** 发布节点。该发布仍需独立 release-prep 同步版本源、CHANGELOG 与 maintained current-version docs，再执行 `dev → main → v0.3.12`；当前文档同步不冒充该 Release 已经发布。历史 0.3.6 release scope 保留在 [0.3.6 closure](design/vela-agent-0.3.6-closure.md)。
+当前产品 metadata 已统一为 **0.3.12**：`VERSION`、manifest 两个版本字段和 Host `projectVersion` 均应一致。当前发行身份为 **`v0.3.12 — Legacy`**，用于冻结 0.3.13/0.3.14 大型 UI 重构前的产品基线。GitHub 上不可变的 `v0.3.12` tag / Release 是“是否已经发布”的权威事实；维护中的仓库文档不再复制一个会在发布瞬间过时的 published/unpublished 状态，因此 release-prep 合并后无需仅为“发布完成”再修改本文件。历史 0.3.6 release scope 保留在 [0.3.6 closure](design/vela-agent-0.3.6-closure.md)。
 
 ## 0.3.13 UI platform handoff
 
