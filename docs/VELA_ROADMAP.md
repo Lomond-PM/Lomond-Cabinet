@@ -1,10 +1,10 @@
 # Vela / Lomond Cabinet — Canonical Product Roadmap
 
-**Planning revision: R1-2026-09-09 · Current status reconciled: 2026-09-16**
+**Planning revision: R1-2026-09-09 · Current status reconciled: 2026-09-17**
 
 **0.3.12 — Baseline Safety & Fact-chain Closure：COMPLETE / SEALED。** 最终 G 综合验收已通过 PR #213 合并到 `dev@ce8a73646cb01859d0f258101bee39f547081615`，Project checks 成功，最终离线基线 **198/198 PASS，0 FAIL，0 skip**。20 项原缺陷/治理条目按有界证据 CLOSED，G-10 / COV-03～06 五个持续覆盖工作面保持 OPEN，其余 29 项沿后续路线；D/F 历史 Provider timeout 的原 FAIL、原因与 tokens unknown 保留，残余可用性风险按 G 裁定接受。见 [0.3.12 G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)。
 
-**Release handoff：** 当前产品 metadata 仍为 `0.3.6`、最新已发布 tag 仍为 `v0.3.5`。用户已决定在重大 UI 重构前，将 sealed 0.3.12 基线切为 **`v0.3.12 — Legacy`**；独立 release-prep 负责同步版本源/CHANGELOG、`dev → main` 与 tag/release，本路线状态同步不冒充 Release 已发布。
+**Release identity：`0.3.12 — Legacy`。** `VERSION`、manifest 与 Host `projectVersion` 统一为 `0.3.12`。GitHub 上不可变的 `v0.3.12` tag / Release 是是否已经发布的权威事实；本路线不复制一个会在发布瞬间过时的 published/unpublished 标记。该 Legacy 节点只冻结 0.3.13/0.3.14 大型 UI 重构前的产品基线，不改变 0.3.12 功能证据，也不把 Experimental Preview 升级为正式模型资格。
 
 **Current / next development milestone：0.3.13 — Visual Baseline & UI Platform Rebuild。** UI Lab 的基础视觉方向已经获得用户认可，不重新发散另一套审美；0.3.13 从真实页面/生效样式审计开始，把 UI Lab 已认可的布局、排版、组件和 motion contract 对照生产页面并重建共享平台。Liquid Glass 继续作为独立、capability-gated、可降级的材质实验层，不是共享平台或非玻璃页面工作的前置门。0.3.14 再负责 Home、Registry、Settings、Palette、Vela 的全面迁移与旧路径退出。
 
@@ -33,7 +33,7 @@
 
 0.3.12 最终综合证据见 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)：198/198 最终全量，真实 AE/CEP/Provider 与受控组合按证据等级分列。历史阶段失败、NOT COVERED 与残余边界继续保留，不因 sealed 状态改写。
 
-包版本与功能里程碑仍分开：当前 package metadata 仍为 0.3.6，最近已发布 tag 仍为 v0.3.5；下一次 release-prep 将当前 0.3.12 sealed 基线同步为 v0.3.12 Legacy，不由路线文件直接修改 VERSION/manifest/Host projectVersion。[R-STATE]
+包版本与功能里程碑仍分开：当前 package metadata 为 **0.3.12**，发行身份为 **`v0.3.12 — Legacy`**；是否已经发布由 GitHub 不可变 tag / Release 决定，不由 roadmap 的瞬时文案决定。[R-STATE]
 
 ## 三、新路线总表
 
@@ -125,7 +125,7 @@
 
 **当前仓库里程碑：0.3.12 COMPLETE / SEALED。** 封存基线为 PR #213 合并后的 `dev@ce8a73646cb01859d0f258101bee39f547081615`；最终 G 结果、20/5/29 处置及残余风险见 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)。阶段报告继续保留各自历史失败、TARGETED_ACCEPTED 与 NOT COVERED，不再由 roadmap 重复列出。
 
-**发布前置：`v0.3.12 — Legacy`。** 由于 0.3.13/0.3.14 将重构 UI 平台和生产页面，先从 sealed 0.3.12 建立重构前 Legacy release。当前 package metadata 仍为 0.3.6，因此 release-prep 必须先统一 VERSION / manifest / Host projectVersion / CHANGELOG / maintained docs，再执行 `dev → main → tag/release`。该 release cut 不改变 0.3.12 的功能证据，也不把 Experimental Preview 升级为正式模型资格。
+**发行身份：`v0.3.12 — Legacy`。** 由于 0.3.13/0.3.14 将重构 UI 平台和生产页面，0.3.12 被固定为重构前 Legacy release identity。package metadata 已统一为 0.3.12；GitHub tag / Release 负责表达实际发布事件，因此 current docs 不需要在发布完成后再从“准备中”翻成“已发布”。发布时仍必须遵循 accepted `dev → main → immutable tag/release`，且不得移动既有 tag。
 
 **下一开发工作：0.3.13-A — 真实页面 / 生效样式审计。** 不重新发散审美，而是：
 
