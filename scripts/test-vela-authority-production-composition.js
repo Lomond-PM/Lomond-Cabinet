@@ -27,6 +27,10 @@ check(runtime.indexOf("providerProposalRouter = proposalRouterModule.createPropo
 check(runtime.indexOf("grantNextOpacityMutation") !== -1 && runtime.indexOf("revokeOpacityDelegation") !== -1 && runtime.indexOf("getAuthorityProjection") !== -1 && runtime.indexOf("getAuthorityDiagnostics") !== -1, "Runtime exposes only the fixed pilot operations plus bounded Authority observation seams");
 check(!/getGrantStore|getPolicyEngine|getEvidenceResolver|getAuthorityCoordinator|getAuthorityProducer|getActivationGate|getAtomicCoordinator/.test(runtime), "Runtime facade exposes no raw Authority dependency getter");
 check(surface.indexOf("vela.surfaceGrantOpacityConsent") !== -1 && surface.indexOf("vela.surfaceRevokeOpacityConsent") !== -1, "Surface contains the explicit one-shot consent and revoke action");
-check(read("VERSION").trim() === "0.3.6", "release metadata identifies the delegated authority release");
+
+const releaseVersion = read("VERSION").trim().split(".").map((part) => Number(part));
+const hasDelegatedAuthorityReleaseBaseline = releaseVersion.length === 3 && releaseVersion.every(Number.isInteger) &&
+    (releaseVersion[0] > 0 || releaseVersion[1] > 3 || (releaseVersion[1] === 3 && releaseVersion[2] >= 6));
+check(hasDelegatedAuthorityReleaseBaseline, "release metadata is at or beyond the delegated authority baseline");
 
 console.log("test-vela-authority-production-composition: " + assertions + " assertions passed.");
