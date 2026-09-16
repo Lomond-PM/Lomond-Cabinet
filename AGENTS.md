@@ -19,21 +19,11 @@ The product uses two runtimes:
 
 ## Current Vela milestone
 
-**0.3.12-G：INTEGRATED_ACCEPTED / READY FOR COMMIT / PR**（2026-09-16最终裁定），见 [G 综合报告](docs/reports/vela-0.3.12-integrated-acceptance.md)。0.3.12技术关闭与封存裁定已通过：20项原缺陷/治理条目按有界证据CLOSED，5项持续覆盖OPEN，其余29项不变，54个原ID保留。D/F旧超时残余风险已接受，原FAIL、原因及tokens unknown保留；实验限制与120000ms整个请求截止不变，后续观测/资格复核及立即重新处置条件由G报告持有。**仓库封存待承载本裁定的G PR通过CI并合并dev后生效**，当前文档修改尚未提交，不宣称远端已封存。最终198/198基线不变，本轮仅文档检查，不进入0.3.13。
+**0.3.12 — Baseline Safety & Fact-chain Closure：COMPLETE / SEALED。** 最终 G 综合验收已通过 PR #213 合并到 `dev@ce8a73646cb01859d0f258101bee39f547081615`，Project checks 成功，最终离线基线 **198/198 PASS，0 FAIL，0 skip**。20 项原缺陷/治理条目按有界证据 CLOSED，G-10 / COV-03～06 保持 OPEN，其余 29 项沿后续路线；D/F 历史 Provider timeout 的 FAIL、原因与 tokens unknown 保留，残余可用性风险按 G 裁定接受。见 [0.3.12 G 综合报告](docs/reports/vela-0.3.12-integrated-acceptance.md)。
 
-以下B1–F条目保留阶段验收基线与覆盖边界；其原缺陷的当前关闭状态以G最终裁定和机器总账为准。G中新增Remove修复及85项/真实Grid与Feature证据见G报告，历史A08“当时未修复”记录保持。
+**发布交接：** 当前产品 metadata 仍为 `0.3.6`，最新已发布 tag 仍为 `v0.3.5`。用户已决定在 0.3.13/0.3.14 的重大 UI 重构前，将当前 0.3.12 基线切为 **`v0.3.12 — Legacy`** 发布节点；版本源、manifest、Host projectVersion、CHANGELOG、`dev → main` 与 tag/release 必须在独立 release-prep 中同步。本条不表示该 Release 已发布。
 
-**E 已通过 PR #211 合并 dev**，AP-01、AP-02、AP-03、UX-01、UX-02 保持 TARGETED_ACCEPTED，见 [E 报告](docs/reports/vela-0.3.12-e-user-assets-exit-safety.md)。
-
-**D 已通过 PR #210 合并 dev**，A05/A06/A07/A12 保持有界接受；自然 Host/Verify 在途 UIDisable、同 Surface checking 的正常 UI suspend/resume 等欠项及原 PROVIDER_TIMEOUT 保留在 [D 报告](docs/reports/vela-0.3.12-d-provider-task-lifecycle.md)，不由 E 升级。
-
-**C2 已通过 PR #209 合并 dev**，A02、A03 保持 TARGETED_ACCEPTED — AE26.0x67 / AdobeCEP 12.0.1 / Chrome 99；原有覆盖限制见 [C2 报告](docs/reports/vela-0.3.12-c2-execution-facts-verification.md)。
-
-**A04 已通过 PR #208 合并 dev**，保持 TARGETED_ACCEPTED — AdobeCEP 12.0.1 / Chrome 99（Windows Win64）；其有界页面/临时 Agent 验收见 [C1 报告](docs/reports/vela-0.3.12-c1-a04-session-events.md)，不据此扩大完整 Provider→Authority→Host 覆盖。
-
-**A09 已通过 PR #207 合并 dev**，M1、M2/F1 与 A09 均为 TARGETED_ACCEPTED — AE26.0x67；支持包络及历史证据见 [A09 报告](docs/reports/vela-0.3.12-b2-a09-coordinate-space.md)。ACK Feature 保持 auto/center 与有界2D规则；TBB Text-local padding 与 visual comp-space padding 不混用。AE26.3x87 跨版本复验 DEFERRED，AV fallback 真实 AE NOT COVERED。
-
-0.3.11 COMPLETE / SEALED，历史基线与限制保留在 [综合验收](docs/reports/vela-0.3.11-integrated-acceptance.md)。0.3.12 的INTEGRATED_ACCEPTED及20项有界CLOSED已获最终裁定；仓库封存仍须G PR通过CI并合并dev，不据本地文档宣称远端生效。历史修复及排期由既有报告和路线图持有，不在本入口重复流水账。
+**当前/下一开发里程碑：0.3.13 — Visual Baseline & UI Platform Rebuild。** UI Lab 的基础视觉方向已经获得用户认可；不要重新发散另一套审美。先做真实页面/生效样式审计，再以现有 UI Lab 的布局、排版、组件与 motion contract 建立可运行生产参考并重构共享样式/交互平台。Liquid Glass 继续作为 UI Lab 中独立、capability-gated、可降级的材质实验，不是平台重建或非玻璃页面工作的前置门。0.3.14 才负责 Home、Registry、Settings、Palette、Vela 的全面迁移与旧路径退出。
 
 Current roadmap: [docs/VELA_ROADMAP.md](docs/VELA_ROADMAP.md). Current implementation/handoff: [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md). Normative architecture: [docs/design/vela-agent-architecture.md](docs/design/vela-agent-architecture.md), frozen and unchanged. Feature milestones are independent of package VERSION/release tags.
 
@@ -240,7 +230,7 @@ Detailed design: `docs/design/procedural-appearance.md`.
 
 Developer Mode controls lab/debug registry visibility generically. Production tools must not depend on it.
 
-Retained labs validate shared renderer, Settings and procedural capabilities. Do not delete them merely because normal users do not see them.
+Retained labs validate shared renderer, Settings and procedural capabilities. Do not delete them merely because normal users do not see them. For 0.3.13, the current UI Lab visual direction is the approved starting baseline; Liquid Glass remains an isolated experimental material layer until its rendering quality, CEP capability/fallback and interaction cost are validated.
 
 ## Validation expectations
 
@@ -273,7 +263,7 @@ AE smoke should verify the active path, not merely file presence. When behavior 
 
 Consult `docs/KNOWN_ISSUES.md` before opportunistic fixes.
 
-Accepted historical release work and the sealed 0.3.9–0.3.11 feature milestones are closed. Do not reopen those scopes without a new focused regression and explicit authorization. Historical staging remains evidence in closure records; current development sequencing is owned only by the [canonical roadmap](docs/VELA_ROADMAP.md).
+Accepted historical release work and the sealed 0.3.9–0.3.12 feature milestones are closed. Do not reopen those scopes without a new focused regression and explicit authorization. Historical staging remains evidence in closure records; current development sequencing is owned only by the [canonical roadmap](docs/VELA_ROADMAP.md).
 
 Other sensitive areas:
 
@@ -286,7 +276,7 @@ Other sensitive areas:
 
 ## Release management
 
-Product metadata is staged at `0.3.6`. The latest published release/tag remains `0.3.5` / immutable `v0.3.5` until final AE release smoke passes and the reviewed release-prep reaches `dev`, then `main`, and an annotated `v0.3.6` tag is created.
+Current product metadata remains `0.3.6`, and the latest published release/tag remains `0.3.5` / immutable `v0.3.5`. The 0.3.12 feature milestone is now COMPLETE / SEALED on `dev`; the next release operation is a dedicated **`v0.3.12 — Legacy`** cut before the 0.3.13/0.3.14 UI rebuild. Do not create a tag that says `v0.3.12` while the installed package still reports `0.3.6`: release-prep must first synchronize the product version sources and release documentation, then promote accepted `dev` to `main`, then create the immutable tag/release from the accepted `main` commit.
 
 Future release version changes must keep synchronized:
 
