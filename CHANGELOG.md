@@ -12,6 +12,37 @@ This project follows simple semantic versioning for development handoff:
 
 _No unreleased changes._
 
+## [0.3.12] - 2026-09-17
+
+### Legacy baseline
+
+- Prepared **Lomond Cabinet v0.3.12 — Legacy** as the durable product baseline immediately before the 0.3.13 / 0.3.14 UI platform rebuild and full product-page migration.
+- Synchronized `VERSION`, both CEP manifest version fields, and Host `AEToolbox.projectVersion` to `0.3.12` without changing the independent Host API contract version.
+- Kept the pre-rebuild production UI in this release. The accepted UI Lab visual direction and Liquid Glass experiments belong to the following UI rebuild work, not to the Legacy production surface.
+
+### Vela safety and execution facts
+
+- Completed the 0.3.12 safety/fact-chain closure across public Host input boundaries, Session receipts/snapshots, committed-target Verify, no-op and uncertain-commit facts, Provider/task lifecycle, user-asset persistence, dirty exit protection, and complete per-step Review details.
+- Preserved the local Review / Authority / fresh Preflight / Host / Verify separation. Model output, transcript text, reasoning and readiness do not gain execution authority.
+- Made Review show reliable target identity, complete before/proposed values and current-step approval scope; one step's approval does not authorize later steps.
+- Hardened Provider acknowledgement/readiness invalidation, active-owner stop routing, in-flight settlement and monotonic SSE terminal handling without treating cancellation as rollback.
+
+### Host and user-asset safety
+
+- Hardened public Host JSON parsing/serialization and Unicode / UTF-8 validation without converting data into executable input.
+- Reconciled Ad Component Kit / Text Background Box coordinate and geometry handling within the accepted bounded 2D support envelope.
+- Preserved user source comments and tool-owned expression restoration rules across Detach / Remove; Remove now validates restoration evidence before destructive cleanup and reports partial failure instead of inventing rollback.
+- Separated Appearance / Palette `accepted`, `applied` and `persisted` facts; failed storage reads/writes do not delete unknown prior assets or silently substitute defaults.
+- Closed active Palette exits through save / discard / continue-editing negotiation and made Escape consumption layer-aware.
+
+### Validation and boundaries
+
+- Final 0.3.12-G offline baseline: **198 / 198 suites PASS, 0 FAIL, 0 skip**.
+- Real acceptance included single-step Review → mutation → original-target Verify → native Undo; a supported two-step objective with first-step write + Verify, independent second Review and second-step Reject; and Grid / Feature Create→Remove recovery representatives.
+- Vela remains an **Experimental Preview**, disabled by default, with no qualified default model. Readiness is not qualification.
+- Historical `PROVIDER_TIMEOUT` failures remain recorded with unknown root cause/token counts; the existing 120000 ms whole-request deadline remains. Provider/context observability and formal model qualification stay scheduled for later roadmap stages.
+- Full release notes and evidence boundaries are in `docs/releases/v0.3.12-legacy.md` and `docs/reports/vela-0.3.12-integrated-acceptance.md`.
+
 ## [0.3.6] - 2026-08-30
 
 ### Delegated authority
