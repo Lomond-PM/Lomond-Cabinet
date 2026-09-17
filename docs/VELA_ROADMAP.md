@@ -1,14 +1,16 @@
 # Vela / Lomond Cabinet — Canonical Product Roadmap
 
-**Planning revision: R1-2026-09-09**
-**0.3.12-G：INTEGRATED_ACCEPTED / READY FOR COMMIT / PR**（2026-09-16最终裁定），见 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)。0.3.12技术关闭与封存裁定已通过：20项原缺陷/治理条目按有界证据CLOSED，5项持续覆盖OPEN，其余29项不变，54个原ID保留。D/F旧超时残余风险已接受，原FAIL、原因及tokens unknown保留；实验限制与120000ms整个请求截止不变，后续观测/资格复核及立即重新处置条件由G报告持有。**仓库封存待承载本裁定的G PR通过CI并合并dev后生效**，当前文档修改尚未提交，不宣称远端已封存。最终198/198基线不变，本轮仅文档检查，不进入0.3.13。
-A09 已通过 PR #207 合并，TARGETED_ACCEPTED — AE26.0x67，见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)；AE26.3x87 跨版本复验 DEFERRED，不重开验收。
-A08历史基线：`d7dd7356cccbb637ae01a7e9d0629b9bc184a388`（G-02 PR #204 合并）；[A08报告](reports/vela-0.3.12-b2-a08-detach-comment-ownership.md)。仅修保留Host函数，注册/UI留待后续，B2未完成。
-G-02历史实施基线：`787cef2c8315a7d5c8a208dae69473f488d4e559`（PR #203）；[G-02报告](reports/vela-0.3.12-b1-g02-layer-name-unicode.md)。B1/0.3.12未完成。
+**Planning revision: R1-2026-09-09 · Current status reconciled: 2026-09-17**
 
-**R1 规划核对基线：`dev@b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a`，0.3.11 COMPLETE / SEALED。A11 实施基线：`dev@9dee61ee2d2a3ce2f8dd90107fe5343299063eb8`（PR #202）。A01 历史实施基线：`dev@cd96e0cd65fd485a8f00ac506ee74c0f97fc5e75`。**
+**0.3.12 — Baseline Safety & Fact-chain Closure：COMPLETE / SEALED。** 最终 G 综合验收已通过 PR #213 合并到 `dev@ce8a73646cb01859d0f258101bee39f547081615`，Project checks 成功，最终离线基线 **198/198 PASS，0 FAIL，0 skip**。20 项原缺陷/治理条目按有界证据 CLOSED，G-10 / COV-03～06 五个持续覆盖工作面保持 OPEN，其余 29 项沿后续路线；D/F 历史 Provider timeout 的原 FAIL、原因与 tokens unknown 保留，残余可用性风险按 G 裁定接受。见 [0.3.12 G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)。
 
-本文件是唯一当前版本排程，已替代旧版当前排程；历史报告、既有封存状态和包发布记录不被改写。详细问题、证据限定、重构边界和工作包见[0.3.x 产品重构与完成指导书](design/vela-0.3-reconstruction-guidance.md)。实际实现事实仍由 PROJECT_STATE 持有，Agent normative 边界由冻结 architecture 持有。
+**Release identity：`0.3.12 — Legacy`。** `VERSION`、manifest 与 Host `projectVersion` 统一为 `0.3.12`。GitHub 上不可变的 `v0.3.12` tag / Release 是是否已经发布的权威事实；本路线不复制一个会在发布瞬间过时的 published/unpublished 标记。该 Legacy 节点只冻结 0.3.13/0.3.14 大型 UI 重构前的产品基线，不改变 0.3.12 功能证据，也不把 Experimental Preview 升级为正式模型资格。
+
+**Current / next development milestone：0.3.13 — Visual Baseline & UI Platform Rebuild。** UI Lab 的基础视觉方向已经获得用户认可，不重新发散另一套审美；0.3.13 从真实页面/生效样式审计开始，把 UI Lab 已认可的布局、排版、组件和 motion contract 对照生产页面并重建共享平台。Liquid Glass 继续作为独立、capability-gated、可降级的材质实验层，不是共享平台或非玻璃页面工作的前置门。0.3.14 再负责 Home、Registry、Settings、Palette、Vela 的全面迁移与旧路径退出。
+
+**R1 规划核对基线：`dev@b93d0d8e30b4bc5f3dfc1bed7476ca112cb7f89a`，0.3.11 COMPLETE / SEALED。** 历史 focused 基线及阶段失败继续由各报告持有，不在当前排期重复流水账。
+
+本文件是唯一当前版本排程，已替代旧版当前排程；历史报告、既有封存状态和包发布记录不被改写。详细问题、证据限定、重构边界和工作包见[0.3.x 产品重构与完成指导书](design/vela-0.3-reconstruction-guidance.md)。实际实现事实由 PROJECT_STATE 持有，Agent normative 边界由冻结 architecture 持有。
 
 ## 一、产品目标
 
@@ -27,17 +29,18 @@ G-02历史实施基线：`787cef2c8315a7d5c8a208dae69473f488d4e559`（PR #203）
 | 0.3.9 | Streaming Response & Reasoning Surface — COMPLETE / SEALED |
 | 0.3.10 | Context Architecture — COMPLETE / SEALED；typing/ownership/evidence/budget-policy，不包含实际历史注入 |
 | 0.3.11 | Multi-conversation Foundation — COMPLETE / SEALED；多会话、全局单 active objective、临时草稿 |
+| 0.3.12 | Baseline Safety & Fact-chain Closure — COMPLETE / SEALED；安全/事实/资产/退出/Review 收口，持续覆盖工作面保留 |
 
-历史 0.3.11 报告基线为 182/182 全量离线、94/94 Vela 三种顺序，并有保留限定的真实 AE 验收。它们是历史记录，**本次文档编制没有重跑**。[R-STATE]
+0.3.12 最终综合证据见 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)：198/198 最终全量，真实 AE/CEP/Provider 与受控组合按证据等级分列。历史阶段失败、NOT COVERED 与残余边界继续保留，不因 sealed 状态改写。
 
-包版本与功能里程碑仍分开：当前状态记载 package metadata 0.3.6、最近发布 tag v0.3.5；本方案不会自动更改 VERSION/manifest/Host projectVersion，也不创建 main/tag/release。[R-STATE]
+包版本与功能里程碑仍分开：当前 package metadata 为 **0.3.12**，发行身份为 **`v0.3.12 — Legacy`**；是否已经发布由 GitHub 不可变 tag / Release 决定，不由 roadmap 的瞬时文案决定。[R-STATE]
 
 ## 三、新路线总表
 
 | 版本 | 主目标 | 本版交付 | 前置 |
 |---|---|---|---|
 | 0.3.12 | 基线安全与事实链收口 | 修复高风险数据入口、提交目标验证、Session 事实、后台任务控制、用户资产保存及最小 Review/退出保护。 | 0.3.11 |
-| 0.3.13 | 视觉基线与 UI 平台重建 | 先批准真实页面视觉基线，再重建样式决议、共享交互、弹层/焦点/手势、预览提交和 UI 生命周期。 | 0.3.12 |
+| 0.3.13 | 视觉基线与 UI 平台重建 | 基于已认可 UI Lab 方向核对真实页面视觉基线，再重建样式决议、共享交互、弹层/焦点/手势、预览提交和 UI 生命周期。 | 0.3.12 |
 | 0.3.14 | 产品 UI 迁移与外观一致性 | 将 Home、Registry、Settings、Palette、Vela 全面迁移；完成排版层级、容器减法、状态呈现和程序化参数语义。 | 0.3.13 |
 | 0.3.15 | 能力模型泛化 | 泛化能力描述、参数/结果、注册映射、计划表达与受控模型可见集合；建立 AE Action Coverage Matrix。 | 0.3.14 |
 | 0.3.16 | 有界上下文消费与容量预算 | 将 0.3.10 的证据基础接到真实跨轮上下文消费；接入合格容量来源、完整输入核算与超限策略。 | 0.3.15 |
@@ -51,7 +54,6 @@ G-02历史实施基线：`787cef2c8315a7d5c8a208dae69473f488d4e559`（PR #203）
 | 0.3.24 | Agent UI 完整收口 | 让通用任务 UI 覆盖全部已完成能力；完善跨轮/多会话呈现、全文审阅、结果摘要和有界展示观测。 | 0.3.23 |
 | 0.3.25 | 整合 AE 验收与模型资格 | 真实产品任务矩阵、Provider/模型/配置资格、失败与恢复路径、端到端回归。 | 0.3.24 |
 | 0.3.26 | 产品与架构稳定化及发布收口 | 全源码覆盖台账最终对账、长期资源/性能、迁移回退、死代码清理、文档与发布准备。 | 0.3.25 |
-
 
 ## 四、原路线迁移关系
 
@@ -96,9 +98,11 @@ G-02历史实施基线：`787cef2c8315a7d5c8a208dae69473f488d4e559`（PR #203）
 
 可重写 UI/Renderer/DOM/CSS决议、拆 main/CoreUI、替换内部 API 和删除旧实现；旧视觉封存不阻止新产品设计。**先真实页面视觉基线，再重构基础，再迁移消费者**；不以新 token 数量、文件数量或框架更换作为成功标准。
 
+0.3.13 的视觉方向不从空白重新探索：当前 UI Lab 已经形成并获得用户认可的基础语言，应先确认它在复杂 Registry、Settings、Vela、Palette 等真实页面状态中的可复现性，再抽取共享 contract。Liquid Glass 属于可选择的材质增强与渲染实验；必须 capability-gated、可降级，不能让光学材质质量决定全部页面结构、焦点/输入 owner 或存储/任务行为。
+
 保留模型无执行权、TaskPlan 非执行对象、JIT/fresh/CAS/replay/Host边界、read/analyze 与 mutation 分层、用户资产、会话隔离及权限不恢复。真正改变 normative Agent 边界时，先提 Architecture Amendment；本文不自行修改 frozen v2.2。[R-ARCH]
 
-原报告里“不编号、不改风格”的当轮范围，已由本次用户新要求扩展；原始发现和证据仍保留，不将任何报告重写为全量审计或新视觉已经验收。
+原报告里“不编号、不改风格”的当轮范围，已由后续用户要求扩展；原始发现和证据仍保留，不将任何报告重写为全量审计或新视觉已经完成生产验收。
 
 ## 八、八项新退出门
 
@@ -119,19 +123,19 @@ G-02历史实施基线：`787cef2c8315a7d5c8a208dae69473f488d4e559`（PR #203）
 
 ## 九、当前规划状态与下一项
 
-当前工作为0.3.12-G；整合结果、25项处置与剩余覆盖以 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md) 为准。技术关闭与封存裁定已通过，仓库生效须G PR通过CI并合并dev；不自动进入0.3.13。以下保留B1/B2阶段的历史状态及测试归属，不代表当前最新结果。
+**当前仓库里程碑：0.3.12 COMPLETE / SEALED。** 封存基线为 PR #213 合并后的 `dev@ce8a73646cb01859d0f258101bee39f547081615`；最终 G 结果、20/5/29 处置及残余风险见 [G 综合报告](reports/vela-0.3.12-integrated-acceptance.md)。阶段报告继续保留各自历史失败、TARGETED_ACCEPTED 与 NOT COVERED，不再由 roadmap 重复列出。
 
-**历史阶段：0.3.12-B2 / A09（M1、M2/F1）：TARGETED_ACCEPTED — AE26.0x67 / READY FOR COMMIT / PR。** 见 [A09 主报告](reports/vela-0.3.12-b2-a09-coordinate-space.md)。M1 与 M2/F1 均已在 AE26.0x67 定向接受；最新全量为 M2-F1 实施轮 **192/192 PASS（0 skip）**，实机轮及本轮文档收束未重跑。M2 七组 PASS、六次原生 Undo，**3451 个所查字段零差异**。 AE26.3x87 跨版本复验 **DEFERRED**；AV fallback 真实 AE **NOT COVERED**，已有离线覆盖保持。INTEGRATED_ACCEPTED / CLOSED 留待 **0.3.12-G**；B2 和整个 0.3.12 未完成，不自动开始下一项。
+**发行身份：`v0.3.12 — Legacy`。** 由于 0.3.13/0.3.14 将重构 UI 平台和生产页面，0.3.12 被固定为重构前 Legacy release identity。package metadata 已统一为 0.3.12；GitHub tag / Release 负责表达实际发布事件，因此 current docs 不需要在发布完成后再从“准备中”翻成“已发布”。发布时仍必须遵循 accepted `dev → main → immutable tag/release`，且不得移动既有 tag。
 
-A11-F1 已补强公共 parseJson：解码后含 U+0000 的对象成员名在属性建立前拒绝（Host兼容性契约）；F1 224项、A01 1122项、serializer 2307项、registry 27项及185/185离线套件通过（0 skip），A11（含F1）真实复验：入口20/20、编码310/310、公共返回3/3 PASS；10项含NUL对象键按用户预授权接受为Host支持范围限制，不计编码PASS。INTEGRATED_ACCEPTED / CLOSED 留待0.3.12-G。首次3 PASS / 1 FAIL / 316 NOT COVERED保留为历史。
+**下一开发工作：0.3.13-A — 真实页面 / 生效样式审计。** 不重新发散审美，而是：
 
-首次 A11 真实验收：AE-01 装载 PASS；AE-02 在 U+0000 的 toJson 字符串键返回空键时内容断言 FAIL，矩阵停止（3 PASS / 1 FAIL / 316 NOT COVERED）；AE-03 完整组 NOT COVERED。当时未裁定TARGETED_ACCEPTED；A11以其后F1复验结论为准，详见A11报告。
+1. 固定当前生产页面在 Registry、Settings、Vela、Palette、Home 的真实 DOM/CSS/inline/config 最终来源和优先级；
+2. 将已经认可的 UI Lab 视觉语言与实际生产状态矩阵对照，确认哪些布局、排版、控件和 motion token 可以直接成为新 contract；
+3. 同时覆盖长内容、错误、disabled、pending Review、不同宽度和 UI Scale，避免只用宽屏理想状态定义平台；
+4. Liquid Glass 单独维护为 UI Lab 材质实验池，继续解决折射质量、抗锯齿、capability gate 与 fallback，不阻塞 A～F 其他平台任务；
+5. A 审计完成后进入 B 的可运行参考页面与视觉/行为确认，再进入 C/D 的样式平台与共享交互 owner 重构；0.3.14 才批量迁移正式页面和删除旧实现。
 
-**历史条目：0.3.12-B1 / A11 — 公共 Host JSON serializer 完整字符串转义。**
-
-[A0 报告](reports/vela-0.3.12-a0-baseline-reconciliation.md)保留已完成的资料/哈希、入口对账、完整源码清单与25项生产复核计划。[A01 阶段报告](reports/vela-0.3.12-b1-a01-host-json-entry.md)记录实际生产模块反例、严格解析修复、复用实施轮1122 focused assertions/183/183 suites PASS（0 skipped），以及六组有界真实 AE 验收与用户风险裁定。A01 已 TARGETED_ACCEPTED 并通过 PR #202 合并 dev，原覆盖裁定保留。当前 [A11 公共 serializer 修复](reports/vela-0.3.12-b1-a11-host-json-serialization.md) 原实施轮2307项断言及184/184离线套件通过（0 skipped），F1轮新增准入并重跑224/1122/2307/27项及185/185套件；上述为A11/F1历史结果，G-02历史回归另见报告。A11真实复验通过并经PR #203合并dev。G-02已通过PR #204合并dev并保留TARGETED_ACCEPTED。历史A08-F1按实际comp.time定稿，精确模板准入后统一采样、有界2D补偿，421项定向及187/187离线套件通过；原251项/186 suites、Grid PASS/Feature FAIL及Undo保持历史；随后F1装载PASS但普通Feature被collapse准入拒绝，后续两组未执行，保留该历史失败。F1a按Text/Shape与AV来源区分成员及父链准入，历史实施轮1134项定向、251项A08及187/187离线通过；随后R1在额外依赖/属性扫描预检失败，所查B1/B2未变，R2/R3及Undo未执行。D1已确认当前AE五个Property的结构locator一致而wrapper引用不等；F1b现以compId/layerId及完整propertyIndex+matchName路径作私有preflight匹配，并经用户追加授权预先关联Position release校验目标，不在执行阶段重新resolve。F1b 932项定向、重新执行F1/F1a 1134项及A08 251项通过；全量仅运行一次，188 discovered/executed、187 PASS、1 FAIL、0 skip，唯一失败为i18n生成报告过期，原脚本更新后该suite单独46项PASS，生产/测试未再变更；不表述为全量188/188 PASS。以上为F1b实施轮离线事实，本次实机未重跑。2026-09-11正常装载后，R1正常Feature、R2非零t=1秒定稿、R3原Grid小回验及三次用户原生Undo均PASS；独立B3所查字段均恢复B1。A08（含F1/F1a/F1b）现为TARGETED_ACCEPTED / READY FOR COMMIT / PR，仅覆盖普通2D、已识别类型/完整Feature模板和受支持平移父链的当前帧定稿；Detach注册/UI未交付，未来接入仍需回验。INTEGRATED_ACCEPTED / CLOSED留待0.3.12-G，B2/0.3.12未完成；该历史阶段停止于A08、不进入A09。注册/UI留待后续。INTEGRATED_ACCEPTED / CLOSED 留待 0.3.12-G；该历史阶段未自动进入A09或UI重构。
-
-A01 已实施并获有界验收接受，其剩余覆盖限制保留至 0.3.12-G 重新裁定；A11含F1已完成有界真实复验并TARGETED_ACCEPTED；整个 B1/0.3.12 未完成，其余生产修复与后续重构未由本切片实施。实际开发遵循 focused branch → 实施/回归 → AE/CEP → 用户 commit/push → PR 到 dev；正式版本发布另行处理。
+0.3.13 的完成条件仍按指导书：参考整页通过视觉与行为评审；共享平台能复现同一视觉并解释样式来源、可靠清理活动交互；迁移清单和 0.3.14 删除时点明确。自动化测试不能替代用户的整页视觉批准。
 
 ## 十、来源
 
