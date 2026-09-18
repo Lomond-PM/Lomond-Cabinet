@@ -1,0 +1,3202 @@
+{
+  "review": {
+    "provider": {
+      "state": "pending",
+      "text": null,
+      "errorCode": null
+    },
+    "confirmation": {
+      "state": "confirmation-ready",
+      "reviewId": "agent_review_1_1_logical_0_attempt_0",
+      "revision": 1,
+      "target": {
+        "compId": "ae-project-1-item-1",
+        "layerId": "ae-project-1-item-1-layer-2"
+      },
+      "approvalScope": "current-step",
+      "stepNumber": 1,
+      "stepCount": 2,
+      "canApprove": true,
+      "capabilityId": "set-opacity-v1",
+      "valueKind": "number",
+      "beforeValue": 20,
+      "proposedValue": 60,
+      "errorCode": null,
+      "moduleRevision": "vela-objective-review-surface-v1"
+    },
+    "driver": {
+      "state": "awaiting-review",
+      "committed": false,
+      "objectiveId": "objective_agent_1",
+      "taskId": "agent_task_1",
+      "taskPlan": {
+        "contractType": "task-plan",
+        "planId": "task_plan_agent_1_logical_0_attempt_0",
+        "taskId": "agent_task_1",
+        "revision": 0,
+        "steps": [
+          {
+            "stepId": "operate_opacity_1_logical_0_attempt_0",
+            "kind": "operate",
+            "capabilityIntent": {
+              "contractType": "capability-intent",
+              "intentId": "intent_agent_1_logical_0_attempt_0",
+              "capabilityId": "set-opacity-v1",
+              "requestedOperation": "mutate",
+              "params": {
+                "opacity": 60
+              }
+            },
+            "rationale": "Apply the bounded single-step mutation objective.",
+            "metadata": {
+              "expectedValue": {
+                "kind": "number",
+                "data": 60
+              }
+            }
+          }
+        ]
+      },
+      "turn": {
+        "sessionId": "session_1",
+        "turnId": "turn_1"
+      },
+      "logicalPlan": {
+        "logicalPlanId": "logical_plan_agent_1",
+        "planSemanticSignature": "{\"declaredStepCount\":2,\"stepSemanticSignatures\":[\"{\\\"capabilityId\\\":\\\"set-opacity-v1\\\",\\\"params\\\":{\\\"opacity\\\":60},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\",\"{\\\"capabilityId\\\":\\\"set-layer-name-v1\\\",\\\"params\\\":{\\\"name\\\":\\\"Vela Stream Test\\\"},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\"]}",
+        "currentStepIndex": 0,
+        "stepCount": 2,
+        "currentStepId": "logical_step_agent_1_0",
+        "materializedTaskPlanId": "task_plan_agent_1_logical_0_attempt_0",
+        "materializedStepId": "operate_opacity_1_logical_0_attempt_0",
+        "completedStepCount": 0,
+        "remainingStepCount": 2,
+        "partialCompletion": false,
+        "status": "materialized"
+      },
+      "suspendedReview": {
+        "objectiveId": "objective_agent_1",
+        "taskId": "agent_task_1",
+        "sessionId": "session_1",
+        "turnId": "turn_1",
+        "taskPlanId": "task_plan_agent_1_logical_0_attempt_0",
+        "taskPlanRevision": 0,
+        "stepId": "operate_opacity_1_logical_0_attempt_0",
+        "capabilityId": "set-opacity-v1",
+        "params": {
+          "opacity": 60
+        },
+        "localExpectation": {
+          "opacity": 60
+        },
+        "beforeValue": 20,
+        "reviewId": "agent_review_1_1_logical_0_attempt_0",
+        "revision": 1,
+        "reviewCorrelation": "req_00000000000000000000000000000008",
+        "reviewTarget": {
+          "compId": "ae-project-1-item-1",
+          "layerId": "ae-project-1-item-1-layer-2",
+          "revision": 1
+        }
+      },
+      "reviewResolution": null,
+      "terminal": null,
+      "counters": {
+        "observations": 1,
+        "reasoningTurns": 1,
+        "actions": 1,
+        "replans": 0
+      },
+      "loop": {
+        "iterationIndex": 0,
+        "budgets": {
+          "iterationsUsed": 1,
+          "providerCallsUsed": 1,
+          "actionAttemptsUsed": 0
+        },
+        "noProgressCount": 0
+      },
+      "disposed": false
+    },
+    "reviews": [
+      {
+        "state": "confirmation-ready",
+        "reviewId": "agent_review_1_1_logical_0_attempt_0",
+        "revision": 1,
+        "target": {
+          "compId": "ae-project-1-item-1",
+          "layerId": "ae-project-1-item-1-layer-2"
+        },
+        "approvalScope": "current-step",
+        "stepNumber": 1,
+        "stepCount": 2,
+        "canApprove": true,
+        "capabilityId": "set-opacity-v1",
+        "valueKind": "number",
+        "beforeValue": 20,
+        "proposedValue": 60,
+        "errorCode": null,
+        "moduleRevision": "vela-objective-review-surface-v1"
+      }
+    ],
+    "trajectory": {
+      "active": {
+        "schema": "vela.verified-trajectory-evidence.v1",
+        "authorityCapable": false,
+        "projectionId": "trajectory_projection_5",
+        "supersedesProjectionId": "trajectory_projection_4",
+        "objective": {
+          "sessionId": "session_1",
+          "objectiveId": "objective_agent_1",
+          "taskId": "agent_task_1",
+          "logicalPlanId": "logical_plan_agent_1"
+        },
+        "lifecycle": {
+          "state": "active",
+          "lateEvidence": false
+        },
+        "attempts": [
+          {
+            "attemptId": "trajectory_attempt_3",
+            "correlation": {
+              "taskPlanId": "task_plan_agent_1_logical_0_attempt_0",
+              "taskPlanRevision": 0,
+              "materializedStepId": "operate_opacity_1_logical_0_attempt_0",
+              "intentId": "intent_agent_1_logical_0_attempt_0",
+              "logicalStepId": "logical_step_agent_1_0",
+              "logicalStepIndex": 0,
+              "materializationAttempt": 0,
+              "turnId": "turn_1",
+              "taskRunId": null,
+              "authorizedPlanId": null,
+              "executionPlanId": null,
+              "actionIndex": null,
+              "providerRequestId": null,
+              "supersedesAttemptId": null
+            },
+            "capabilityId": "set-opacity-v1",
+            "target": {
+              "targetRef": null,
+              "targetKind": "property"
+            },
+            "intent": {
+              "submitted": true,
+              "admitted": true,
+              "review": "pending"
+            },
+            "execution": {
+              "executionAttempted": null,
+              "hostInvocationAttempted": null,
+              "mutationDisposition": "unknown",
+              "reportedCommitted": null,
+              "hostCommitted": null,
+              "resultCode": null,
+              "resultingValueDigest": null
+            },
+            "verification": {
+              "attemptId": null,
+              "sourceObservationId": null,
+              "attempted": null,
+              "disposition": "unknown",
+              "scope": "unknown",
+              "targetRelation": "unproven",
+              "freshAtRead": null,
+              "matches": null,
+              "expected": {
+                "kind": "number",
+                "data": 60
+              },
+              "actual": null,
+              "actualDigest": null,
+              "code": null
+            },
+            "completion": {
+              "outcome": "active",
+              "superseded": false
+            },
+            "provenance": [
+              {
+                "factPaths": [
+                  "correlation",
+                  "capabilityId",
+                  "intent.submitted",
+                  "verification.expected"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_2",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "intent.admitted",
+                  "intent.review"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_3",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              }
+            ],
+            "unknowns": [
+              {
+                "path": "correlation.providerRequestId",
+                "reason": "not-wired"
+              },
+              {
+                "path": "target.targetRef",
+                "reason": "not-wired"
+              },
+              {
+                "path": "correlation.taskRunId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "correlation.authorizedPlanId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "correlation.executionPlanId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "correlation.actionIndex",
+                "reason": "not-observed"
+              },
+              {
+                "path": "correlation.supersedesAttemptId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.executionAttempted",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.hostInvocationAttempted",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.mutationDisposition",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.reportedCommitted",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.hostCommitted",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.resultCode",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.resultingValueDigest",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.attemptId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.sourceObservationId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.attempted",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.disposition",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.scope",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.freshAtRead",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.matches",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.actual",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.actualDigest",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.code",
+                "reason": "not-observed"
+              }
+            ]
+          }
+        ],
+        "completion": {
+          "outcome": "active",
+          "code": null,
+          "coverage": "none",
+          "declaredStepCount": 2,
+          "completedStepCount": 0,
+          "remainingStepCount": 2,
+          "verifiedEvidenceStepCount": 0,
+          "sourceAttemptIds": [
+            "trajectory_attempt_3"
+          ]
+        },
+        "provenance": [
+          {
+            "factPaths": [
+              "objective"
+            ],
+            "class": "local-control-occurrence",
+            "producer": "VelaAgentDriver",
+            "contractRevision": "vela-trajectory-source-v1",
+            "occurrenceId": "trajectory_occurrence_1",
+            "sourceRequestId": null,
+            "sourceSessionSeq": null,
+            "strength": "direct"
+          }
+        ],
+        "unknowns": [
+          {
+            "path": "completion.code",
+            "reason": "not-observed"
+          }
+        ],
+        "bounds": {
+          "complete": true,
+          "omittedAttemptCount": 0,
+          "omittedValueCount": 0
+        }
+      },
+      "terminal": null
+    }
+  },
+  "executing": {
+    "provider": {
+      "state": "pending",
+      "text": null,
+      "errorCode": null
+    },
+    "confirmation": {
+      "state": "review-approved",
+      "beforeValue": null,
+      "proposedValue": null,
+      "errorCode": null,
+      "moduleRevision": "vela-objective-review-surface-v1"
+    },
+    "driver": {
+      "state": "awaiting-outcome",
+      "committed": null,
+      "objectiveId": "objective_agent_1",
+      "taskId": "agent_task_1",
+      "taskPlan": {
+        "contractType": "task-plan",
+        "planId": "task_plan_agent_1_logical_0_attempt_0",
+        "taskId": "agent_task_1",
+        "revision": 0,
+        "steps": [
+          {
+            "stepId": "operate_opacity_1_logical_0_attempt_0",
+            "kind": "operate",
+            "capabilityIntent": {
+              "contractType": "capability-intent",
+              "intentId": "intent_agent_1_logical_0_attempt_0",
+              "capabilityId": "set-opacity-v1",
+              "requestedOperation": "mutate",
+              "params": {
+                "opacity": 60
+              }
+            },
+            "rationale": "Apply the bounded single-step mutation objective.",
+            "metadata": {
+              "expectedValue": {
+                "kind": "number",
+                "data": 60
+              }
+            }
+          }
+        ]
+      },
+      "turn": {
+        "sessionId": "session_1",
+        "turnId": "turn_1"
+      },
+      "logicalPlan": {
+        "logicalPlanId": "logical_plan_agent_1",
+        "planSemanticSignature": "{\"declaredStepCount\":2,\"stepSemanticSignatures\":[\"{\\\"capabilityId\\\":\\\"set-opacity-v1\\\",\\\"params\\\":{\\\"opacity\\\":60},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\",\"{\\\"capabilityId\\\":\\\"set-layer-name-v1\\\",\\\"params\\\":{\\\"name\\\":\\\"Vela Stream Test\\\"},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\"]}",
+        "currentStepIndex": 0,
+        "stepCount": 2,
+        "currentStepId": "logical_step_agent_1_0",
+        "materializedTaskPlanId": "task_plan_agent_1_logical_0_attempt_0",
+        "materializedStepId": "operate_opacity_1_logical_0_attempt_0",
+        "completedStepCount": 0,
+        "remainingStepCount": 2,
+        "partialCompletion": false,
+        "status": "materialized"
+      },
+      "suspendedReview": null,
+      "reviewResolution": {
+        "reviewId": "agent_review_1_1_logical_0_attempt_0",
+        "revision": 1,
+        "outcome": "approved",
+        "objectiveId": "objective_agent_1",
+        "taskId": "agent_task_1",
+        "taskPlanId": "task_plan_agent_1_logical_0_attempt_0",
+        "stepId": "operate_opacity_1_logical_0_attempt_0"
+      },
+      "terminal": null,
+      "counters": {
+        "observations": 1,
+        "reasoningTurns": 1,
+        "actions": 1,
+        "replans": 0
+      },
+      "loop": {
+        "iterationIndex": 0,
+        "budgets": {
+          "iterationsUsed": 1,
+          "providerCallsUsed": 1,
+          "actionAttemptsUsed": 1
+        },
+        "noProgressCount": 0
+      },
+      "disposed": false
+    },
+    "reviews": [
+      {
+        "state": "confirmation-ready",
+        "reviewId": "agent_review_1_1_logical_0_attempt_0",
+        "revision": 1,
+        "target": {
+          "compId": "ae-project-1-item-1",
+          "layerId": "ae-project-1-item-1-layer-2"
+        },
+        "approvalScope": "current-step",
+        "stepNumber": 1,
+        "stepCount": 2,
+        "canApprove": true,
+        "capabilityId": "set-opacity-v1",
+        "valueKind": "number",
+        "beforeValue": 20,
+        "proposedValue": 60,
+        "errorCode": null,
+        "moduleRevision": "vela-objective-review-surface-v1"
+      }
+    ],
+    "trajectory": {
+      "active": {
+        "schema": "vela.verified-trajectory-evidence.v1",
+        "authorityCapable": false,
+        "projectionId": "trajectory_projection_9",
+        "supersedesProjectionId": "trajectory_projection_8",
+        "objective": {
+          "sessionId": "session_1",
+          "objectiveId": "objective_agent_1",
+          "taskId": "agent_task_1",
+          "logicalPlanId": "logical_plan_agent_1"
+        },
+        "lifecycle": {
+          "state": "active",
+          "lateEvidence": false
+        },
+        "attempts": [
+          {
+            "attemptId": "trajectory_attempt_3",
+            "correlation": {
+              "taskPlanId": "task_plan_agent_1_logical_0_attempt_0",
+              "taskPlanRevision": 0,
+              "materializedStepId": "operate_opacity_1_logical_0_attempt_0",
+              "intentId": "intent_agent_1_logical_0_attempt_0",
+              "logicalStepId": "logical_step_agent_1_0",
+              "logicalStepIndex": 0,
+              "materializationAttempt": 0,
+              "turnId": "turn_1",
+              "taskRunId": "task_run_1",
+              "authorizedPlanId": "confirmedPlan_3",
+              "executionPlanId": "plan_21c47f025144b6a32478126a53a03a8b6c8f90d5991294eb6ab31c5331d1e074",
+              "actionIndex": 0,
+              "providerRequestId": null,
+              "supersedesAttemptId": null
+            },
+            "capabilityId": "set-opacity-v1",
+            "target": {
+              "targetRef": null,
+              "targetKind": "property"
+            },
+            "intent": {
+              "submitted": true,
+              "admitted": true,
+              "review": "approved"
+            },
+            "execution": {
+              "executionAttempted": true,
+              "hostInvocationAttempted": true,
+              "mutationDisposition": "unknown",
+              "reportedCommitted": null,
+              "hostCommitted": null,
+              "resultCode": null,
+              "resultingValueDigest": null
+            },
+            "verification": {
+              "attemptId": null,
+              "sourceObservationId": null,
+              "attempted": null,
+              "disposition": "unknown",
+              "scope": "unknown",
+              "targetRelation": "unproven",
+              "freshAtRead": null,
+              "matches": null,
+              "expected": {
+                "kind": "number",
+                "data": 60
+              },
+              "actual": null,
+              "actualDigest": null,
+              "code": null
+            },
+            "completion": {
+              "outcome": "active",
+              "superseded": false
+            },
+            "provenance": [
+              {
+                "factPaths": [
+                  "correlation",
+                  "capabilityId",
+                  "intent.submitted",
+                  "verification.expected"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_2",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "intent.admitted",
+                  "intent.review"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_3",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "intent.admitted",
+                  "intent.review"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_4",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "correlation.executionPlanId",
+                  "correlation.authorizedPlanId",
+                  "correlation.taskRunId",
+                  "correlation.actionIndex"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaRuntime",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_5",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.executionAttempted"
+                ],
+                "class": "execution-result",
+                "producer": "VelaExecutionPreflight",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_6",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.hostInvocationAttempted"
+                ],
+                "class": "execution-result",
+                "producer": "VelaExecutionAdapter",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_7",
+                "sourceRequestId": "req_00000000000000000000000000000024",
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              }
+            ],
+            "unknowns": [
+              {
+                "path": "correlation.providerRequestId",
+                "reason": "not-wired"
+              },
+              {
+                "path": "target.targetRef",
+                "reason": "not-wired"
+              },
+              {
+                "path": "correlation.supersedesAttemptId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.mutationDisposition",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.reportedCommitted",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.hostCommitted",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.resultCode",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.resultingValueDigest",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.attemptId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.sourceObservationId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.attempted",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.disposition",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.scope",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.freshAtRead",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.matches",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.actual",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.actualDigest",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.code",
+                "reason": "not-observed"
+              }
+            ]
+          }
+        ],
+        "completion": {
+          "outcome": "active",
+          "code": null,
+          "coverage": "none",
+          "declaredStepCount": 2,
+          "completedStepCount": 0,
+          "remainingStepCount": 2,
+          "verifiedEvidenceStepCount": 0,
+          "sourceAttemptIds": [
+            "trajectory_attempt_3"
+          ]
+        },
+        "provenance": [
+          {
+            "factPaths": [
+              "objective"
+            ],
+            "class": "local-control-occurrence",
+            "producer": "VelaAgentDriver",
+            "contractRevision": "vela-trajectory-source-v1",
+            "occurrenceId": "trajectory_occurrence_1",
+            "sourceRequestId": null,
+            "sourceSessionSeq": null,
+            "strength": "direct"
+          }
+        ],
+        "unknowns": [
+          {
+            "path": "completion.code",
+            "reason": "not-observed"
+          }
+        ],
+        "bounds": {
+          "complete": true,
+          "omittedAttemptCount": 0,
+          "omittedValueCount": 0
+        }
+      },
+      "terminal": null
+    }
+  },
+  "partial": {
+    "provider": {
+      "state": "completed",
+      "text": null,
+      "errorCode": null,
+      "intentReason": null,
+      "moduleRevision": "vela-provider-surface-v1"
+    },
+    "confirmation": {
+      "state": "rejected",
+      "beforeValue": null,
+      "proposedValue": null,
+      "errorCode": null,
+      "moduleRevision": "vela-objective-review-surface-v1"
+    },
+    "driver": {
+      "state": "terminal",
+      "committed": false,
+      "objectiveId": "objective_agent_1",
+      "taskId": "agent_task_1",
+      "taskPlan": {
+        "contractType": "task-plan",
+        "planId": "task_plan_agent_1_logical_1_attempt_0",
+        "taskId": "agent_task_1",
+        "revision": 0,
+        "steps": [
+          {
+            "stepId": "operate_layer_name_1_logical_1_attempt_0",
+            "kind": "operate",
+            "capabilityIntent": {
+              "contractType": "capability-intent",
+              "intentId": "intent_agent_1_logical_1_attempt_0",
+              "capabilityId": "set-layer-name-v1",
+              "requestedOperation": "mutate",
+              "params": {
+                "name": "Vela Stream Test"
+              }
+            },
+            "rationale": "Apply the bounded single-step mutation objective.",
+            "metadata": {
+              "expectedValue": {
+                "kind": "string",
+                "data": "Vela Stream Test"
+              }
+            }
+          }
+        ]
+      },
+      "turn": {
+        "sessionId": "session_1",
+        "turnId": "turn_2"
+      },
+      "logicalPlan": {
+        "logicalPlanId": "logical_plan_agent_1",
+        "planSemanticSignature": "{\"declaredStepCount\":2,\"stepSemanticSignatures\":[\"{\\\"capabilityId\\\":\\\"set-opacity-v1\\\",\\\"params\\\":{\\\"opacity\\\":60},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\",\"{\\\"capabilityId\\\":\\\"set-layer-name-v1\\\",\\\"params\\\":{\\\"name\\\":\\\"Vela Stream Test\\\"},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\"]}",
+        "currentStepIndex": 1,
+        "stepCount": 2,
+        "currentStepId": "logical_step_agent_1_1",
+        "materializedTaskPlanId": "task_plan_agent_1_logical_1_attempt_0",
+        "materializedStepId": "operate_layer_name_1_logical_1_attempt_0",
+        "completedStepCount": 1,
+        "remainingStepCount": 1,
+        "partialCompletion": true,
+        "status": "rejected"
+      },
+      "suspendedReview": null,
+      "reviewResolution": {
+        "reviewId": "agent_review_1_1_logical_1_attempt_0",
+        "revision": 1,
+        "outcome": "rejected",
+        "objectiveId": "objective_agent_1",
+        "taskId": "agent_task_1",
+        "taskPlanId": "task_plan_agent_1_logical_1_attempt_0",
+        "stepId": "operate_layer_name_1_logical_1_attempt_0"
+      },
+      "terminal": {
+        "outcome": "rejected",
+        "code": "REVIEW_REJECTED"
+      },
+      "counters": {
+        "observations": 3,
+        "reasoningTurns": 2,
+        "actions": 2,
+        "replans": 0
+      },
+      "loop": {
+        "iterationIndex": 0,
+        "budgets": {
+          "iterationsUsed": 1,
+          "providerCallsUsed": 1,
+          "actionAttemptsUsed": 1
+        },
+        "noProgressCount": 0
+      },
+      "disposed": false
+    },
+    "reviews": [
+      {
+        "state": "confirmation-ready",
+        "reviewId": "agent_review_1_1_logical_0_attempt_0",
+        "revision": 1,
+        "target": {
+          "compId": "ae-project-1-item-1",
+          "layerId": "ae-project-1-item-1-layer-2"
+        },
+        "approvalScope": "current-step",
+        "stepNumber": 1,
+        "stepCount": 2,
+        "canApprove": true,
+        "capabilityId": "set-opacity-v1",
+        "valueKind": "number",
+        "beforeValue": 20,
+        "proposedValue": 60,
+        "errorCode": null,
+        "moduleRevision": "vela-objective-review-surface-v1"
+      },
+      {
+        "state": "confirmation-ready",
+        "reviewId": "agent_review_1_1_logical_1_attempt_0",
+        "revision": 1,
+        "target": {
+          "compId": "ae-project-1-item-1",
+          "layerId": "ae-project-1-item-1-layer-2"
+        },
+        "approvalScope": "current-step",
+        "stepNumber": 2,
+        "stepCount": 2,
+        "canApprove": true,
+        "capabilityId": "set-layer-name-v1",
+        "valueKind": "string",
+        "beforeValue": "Layer A",
+        "proposedValue": "Vela Stream Test",
+        "errorCode": null,
+        "moduleRevision": "vela-objective-review-surface-v1"
+      }
+    ],
+    "trajectory": {
+      "active": null,
+      "terminal": {
+        "schema": "vela.verified-trajectory-evidence.v1",
+        "authorityCapable": false,
+        "projectionId": "trajectory_projection_21",
+        "supersedesProjectionId": "trajectory_projection_20",
+        "objective": {
+          "sessionId": "session_1",
+          "objectiveId": "objective_agent_1",
+          "taskId": "agent_task_1",
+          "logicalPlanId": "logical_plan_agent_1"
+        },
+        "lifecycle": {
+          "state": "terminal",
+          "lateEvidence": false
+        },
+        "attempts": [
+          {
+            "attemptId": "trajectory_attempt_3",
+            "correlation": {
+              "taskPlanId": "task_plan_agent_1_logical_0_attempt_0",
+              "taskPlanRevision": 0,
+              "materializedStepId": "operate_opacity_1_logical_0_attempt_0",
+              "intentId": "intent_agent_1_logical_0_attempt_0",
+              "logicalStepId": "logical_step_agent_1_0",
+              "logicalStepIndex": 0,
+              "materializationAttempt": 0,
+              "turnId": "turn_1",
+              "taskRunId": "task_run_1",
+              "authorizedPlanId": "confirmedPlan_3",
+              "executionPlanId": "plan_21c47f025144b6a32478126a53a03a8b6c8f90d5991294eb6ab31c5331d1e074",
+              "actionIndex": 0,
+              "providerRequestId": null,
+              "supersedesAttemptId": null
+            },
+            "capabilityId": "set-opacity-v1",
+            "target": {
+              "targetRef": null,
+              "targetKind": "property"
+            },
+            "intent": {
+              "submitted": true,
+              "admitted": true,
+              "review": "approved"
+            },
+            "execution": {
+              "executionAttempted": true,
+              "hostInvocationAttempted": true,
+              "mutationDisposition": "mutated",
+              "reportedCommitted": true,
+              "hostCommitted": true,
+              "resultCode": null,
+              "resultingValueDigest": "sha256:f68c1b5924129c2acc17f412ec2e0532bbe46516e7b67e2fe7b8c6ee497cc31c"
+            },
+            "verification": {
+              "attemptId": "trajectory_verify_12",
+              "sourceObservationId": "req_00000000000000000000000000000025",
+              "attempted": true,
+              "disposition": "verified-match",
+              "scope": "committed-target",
+              "targetRelation": "committed-target",
+              "freshAtRead": true,
+              "matches": true,
+              "expected": {
+                "kind": "number",
+                "data": 60
+              },
+              "actual": {
+                "kind": "number",
+                "data": 60
+              },
+              "actualDigest": "sha256:f68c1b5924129c2acc17f412ec2e0532bbe46516e7b67e2fe7b8c6ee497cc31c",
+              "code": null
+            },
+            "completion": {
+              "outcome": "completed",
+              "superseded": false
+            },
+            "provenance": [
+              {
+                "factPaths": [
+                  "correlation",
+                  "capabilityId",
+                  "intent.submitted",
+                  "verification.expected"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_2",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "intent.admitted",
+                  "intent.review"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_3",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "intent.admitted",
+                  "intent.review"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_4",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "correlation.executionPlanId",
+                  "correlation.authorizedPlanId",
+                  "correlation.taskRunId",
+                  "correlation.actionIndex"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaRuntime",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_5",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.executionAttempted"
+                ],
+                "class": "execution-result",
+                "producer": "VelaExecutionPreflight",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_6",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.hostInvocationAttempted"
+                ],
+                "class": "execution-result",
+                "producer": "VelaExecutionAdapter",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_7",
+                "sourceRequestId": "req_00000000000000000000000000000024",
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.reportedCommitted",
+                  "execution.hostCommitted",
+                  "execution.mutationDisposition",
+                  "execution.resultCode",
+                  "execution.resultingValueDigest"
+                ],
+                "class": "host-commit-evidence",
+                "producer": "VelaExecutionAdapter",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_8",
+                "sourceRequestId": "req_00000000000000000000000000000024",
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.reportedCommitted"
+                ],
+                "class": "execution-result",
+                "producer": "VelaRuntime",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_9",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "reduced"
+              },
+              {
+                "factPaths": [
+                  "verification.attemptId",
+                  "verification.attempted",
+                  "verification.scope"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaExecutionPreflight",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_10",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "verification"
+                ],
+                "class": "fresh-verify-evidence",
+                "producer": "VelaExecutionPreflight",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_11",
+                "sourceRequestId": "req_00000000000000000000000000000025",
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "completion"
+                ],
+                "class": "derived-objective-summary",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_12",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "derived"
+              }
+            ],
+            "unknowns": [
+              {
+                "path": "correlation.providerRequestId",
+                "reason": "not-wired"
+              },
+              {
+                "path": "target.targetRef",
+                "reason": "not-wired"
+              },
+              {
+                "path": "correlation.supersedesAttemptId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.resultCode",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.code",
+                "reason": "not-observed"
+              }
+            ]
+          },
+          {
+            "attemptId": "trajectory_attempt_16",
+            "correlation": {
+              "taskPlanId": "task_plan_agent_1_logical_1_attempt_0",
+              "taskPlanRevision": 0,
+              "materializedStepId": "operate_layer_name_1_logical_1_attempt_0",
+              "intentId": "intent_agent_1_logical_1_attempt_0",
+              "logicalStepId": "logical_step_agent_1_1",
+              "logicalStepIndex": 1,
+              "materializationAttempt": 0,
+              "turnId": "turn_2",
+              "taskRunId": null,
+              "authorizedPlanId": null,
+              "executionPlanId": null,
+              "actionIndex": null,
+              "providerRequestId": null,
+              "supersedesAttemptId": null
+            },
+            "capabilityId": "set-layer-name-v1",
+            "target": {
+              "targetRef": null,
+              "targetKind": "layer-attribute"
+            },
+            "intent": {
+              "submitted": true,
+              "admitted": true,
+              "review": "rejected"
+            },
+            "execution": {
+              "executionAttempted": false,
+              "hostInvocationAttempted": false,
+              "mutationDisposition": "not-mutated",
+              "reportedCommitted": false,
+              "hostCommitted": null,
+              "resultCode": "REVIEW_REJECTED",
+              "resultingValueDigest": null
+            },
+            "verification": {
+              "attemptId": null,
+              "sourceObservationId": null,
+              "attempted": false,
+              "disposition": "verification-not-run",
+              "scope": "unknown",
+              "targetRelation": "unproven",
+              "freshAtRead": null,
+              "matches": null,
+              "expected": {
+                "kind": "string",
+                "data": "Vela Stream Test"
+              },
+              "actual": null,
+              "actualDigest": null,
+              "code": null
+            },
+            "completion": {
+              "outcome": "rejected",
+              "superseded": false
+            },
+            "provenance": [
+              {
+                "factPaths": [
+                  "correlation",
+                  "capabilityId",
+                  "intent.submitted",
+                  "verification.expected"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_13",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "intent.admitted",
+                  "intent.review"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_14",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "intent.admitted",
+                  "intent.review"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_15",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.executionAttempted",
+                  "execution.hostInvocationAttempted",
+                  "execution.mutationDisposition",
+                  "execution.reportedCommitted",
+                  "verification.attempted",
+                  "verification.disposition"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_16",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              }
+            ],
+            "unknowns": [
+              {
+                "path": "correlation.providerRequestId",
+                "reason": "not-wired"
+              },
+              {
+                "path": "target.targetRef",
+                "reason": "not-wired"
+              },
+              {
+                "path": "correlation.taskRunId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "correlation.authorizedPlanId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "correlation.executionPlanId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "correlation.actionIndex",
+                "reason": "not-observed"
+              },
+              {
+                "path": "correlation.supersedesAttemptId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.hostCommitted",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.resultingValueDigest",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.attemptId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.sourceObservationId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.scope",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.freshAtRead",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.matches",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.actual",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.actualDigest",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.code",
+                "reason": "not-observed"
+              }
+            ]
+          }
+        ],
+        "completion": {
+          "outcome": "rejected",
+          "code": "REVIEW_REJECTED",
+          "coverage": "partial",
+          "declaredStepCount": 2,
+          "completedStepCount": 1,
+          "remainingStepCount": 1,
+          "verifiedEvidenceStepCount": 1,
+          "sourceAttemptIds": [
+            "trajectory_attempt_3",
+            "trajectory_attempt_16"
+          ]
+        },
+        "provenance": [
+          {
+            "factPaths": [
+              "objective"
+            ],
+            "class": "local-control-occurrence",
+            "producer": "VelaAgentDriver",
+            "contractRevision": "vela-trajectory-source-v1",
+            "occurrenceId": "trajectory_occurrence_1",
+            "sourceRequestId": null,
+            "sourceSessionSeq": null,
+            "strength": "direct"
+          },
+          {
+            "factPaths": [
+              "completion.outcome",
+              "completion.completedStepCount",
+              "completion.remainingStepCount"
+            ],
+            "class": "derived-objective-summary",
+            "producer": "VelaAgentDriver",
+            "contractRevision": "vela-trajectory-source-v1",
+            "occurrenceId": "trajectory_occurrence_17",
+            "sourceRequestId": null,
+            "sourceSessionSeq": null,
+            "strength": "derived"
+          }
+        ],
+        "unknowns": [],
+        "bounds": {
+          "complete": true,
+          "omittedAttemptCount": 0,
+          "omittedValueCount": 0
+        }
+      }
+    }
+  },
+  "rejected": {
+    "provider": {
+      "state": "completed",
+      "text": null,
+      "errorCode": null,
+      "intentReason": null,
+      "moduleRevision": "vela-provider-surface-v1"
+    },
+    "confirmation": {
+      "state": "rejected",
+      "beforeValue": null,
+      "proposedValue": null,
+      "errorCode": null,
+      "moduleRevision": "vela-objective-review-surface-v1"
+    },
+    "driver": {
+      "state": "terminal",
+      "committed": false,
+      "objectiveId": "objective_agent_1",
+      "taskId": "agent_task_1",
+      "taskPlan": {
+        "contractType": "task-plan",
+        "planId": "task_plan_agent_1_logical_0_attempt_0",
+        "taskId": "agent_task_1",
+        "revision": 0,
+        "steps": [
+          {
+            "stepId": "operate_opacity_1_logical_0_attempt_0",
+            "kind": "operate",
+            "capabilityIntent": {
+              "contractType": "capability-intent",
+              "intentId": "intent_agent_1_logical_0_attempt_0",
+              "capabilityId": "set-opacity-v1",
+              "requestedOperation": "mutate",
+              "params": {
+                "opacity": 60
+              }
+            },
+            "rationale": "Apply the bounded single-step mutation objective.",
+            "metadata": {
+              "expectedValue": {
+                "kind": "number",
+                "data": 60
+              }
+            }
+          }
+        ]
+      },
+      "turn": {
+        "sessionId": "session_1",
+        "turnId": "turn_1"
+      },
+      "logicalPlan": {
+        "logicalPlanId": "logical_plan_agent_1",
+        "planSemanticSignature": "{\"declaredStepCount\":2,\"stepSemanticSignatures\":[\"{\\\"capabilityId\\\":\\\"set-opacity-v1\\\",\\\"params\\\":{\\\"opacity\\\":60},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\",\"{\\\"capabilityId\\\":\\\"set-layer-name-v1\\\",\\\"params\\\":{\\\"name\\\":\\\"Vela Stream Test\\\"},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\"]}",
+        "currentStepIndex": 0,
+        "stepCount": 2,
+        "currentStepId": "logical_step_agent_1_0",
+        "materializedTaskPlanId": "task_plan_agent_1_logical_0_attempt_0",
+        "materializedStepId": "operate_opacity_1_logical_0_attempt_0",
+        "completedStepCount": 0,
+        "remainingStepCount": 2,
+        "partialCompletion": false,
+        "status": "rejected"
+      },
+      "suspendedReview": null,
+      "reviewResolution": {
+        "reviewId": "agent_review_1_1_logical_0_attempt_0",
+        "revision": 1,
+        "outcome": "rejected",
+        "objectiveId": "objective_agent_1",
+        "taskId": "agent_task_1",
+        "taskPlanId": "task_plan_agent_1_logical_0_attempt_0",
+        "stepId": "operate_opacity_1_logical_0_attempt_0"
+      },
+      "terminal": {
+        "outcome": "rejected",
+        "code": "REVIEW_REJECTED"
+      },
+      "counters": {
+        "observations": 1,
+        "reasoningTurns": 1,
+        "actions": 1,
+        "replans": 0
+      },
+      "loop": {
+        "iterationIndex": 0,
+        "budgets": {
+          "iterationsUsed": 1,
+          "providerCallsUsed": 1,
+          "actionAttemptsUsed": 0
+        },
+        "noProgressCount": 0
+      },
+      "disposed": false
+    },
+    "reviews": [
+      {
+        "state": "confirmation-ready",
+        "reviewId": "agent_review_1_1_logical_0_attempt_0",
+        "revision": 1,
+        "target": {
+          "compId": "ae-project-1-item-1",
+          "layerId": "ae-project-1-item-1-layer-2"
+        },
+        "approvalScope": "current-step",
+        "stepNumber": 1,
+        "stepCount": 2,
+        "canApprove": true,
+        "capabilityId": "set-opacity-v1",
+        "valueKind": "number",
+        "beforeValue": 20,
+        "proposedValue": 60,
+        "errorCode": null,
+        "moduleRevision": "vela-objective-review-surface-v1"
+      }
+    ],
+    "trajectory": {
+      "active": null,
+      "terminal": {
+        "schema": "vela.verified-trajectory-evidence.v1",
+        "authorityCapable": false,
+        "projectionId": "trajectory_projection_8",
+        "supersedesProjectionId": "trajectory_projection_7",
+        "objective": {
+          "sessionId": "session_1",
+          "objectiveId": "objective_agent_1",
+          "taskId": "agent_task_1",
+          "logicalPlanId": "logical_plan_agent_1"
+        },
+        "lifecycle": {
+          "state": "terminal",
+          "lateEvidence": false
+        },
+        "attempts": [
+          {
+            "attemptId": "trajectory_attempt_3",
+            "correlation": {
+              "taskPlanId": "task_plan_agent_1_logical_0_attempt_0",
+              "taskPlanRevision": 0,
+              "materializedStepId": "operate_opacity_1_logical_0_attempt_0",
+              "intentId": "intent_agent_1_logical_0_attempt_0",
+              "logicalStepId": "logical_step_agent_1_0",
+              "logicalStepIndex": 0,
+              "materializationAttempt": 0,
+              "turnId": "turn_1",
+              "taskRunId": null,
+              "authorizedPlanId": null,
+              "executionPlanId": null,
+              "actionIndex": null,
+              "providerRequestId": null,
+              "supersedesAttemptId": null
+            },
+            "capabilityId": "set-opacity-v1",
+            "target": {
+              "targetRef": null,
+              "targetKind": "property"
+            },
+            "intent": {
+              "submitted": true,
+              "admitted": true,
+              "review": "rejected"
+            },
+            "execution": {
+              "executionAttempted": false,
+              "hostInvocationAttempted": false,
+              "mutationDisposition": "not-mutated",
+              "reportedCommitted": false,
+              "hostCommitted": null,
+              "resultCode": "REVIEW_REJECTED",
+              "resultingValueDigest": null
+            },
+            "verification": {
+              "attemptId": null,
+              "sourceObservationId": null,
+              "attempted": false,
+              "disposition": "verification-not-run",
+              "scope": "unknown",
+              "targetRelation": "unproven",
+              "freshAtRead": null,
+              "matches": null,
+              "expected": {
+                "kind": "number",
+                "data": 60
+              },
+              "actual": null,
+              "actualDigest": null,
+              "code": null
+            },
+            "completion": {
+              "outcome": "rejected",
+              "superseded": false
+            },
+            "provenance": [
+              {
+                "factPaths": [
+                  "correlation",
+                  "capabilityId",
+                  "intent.submitted",
+                  "verification.expected"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_2",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "intent.admitted",
+                  "intent.review"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_3",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "intent.admitted",
+                  "intent.review"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_4",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.executionAttempted",
+                  "execution.hostInvocationAttempted",
+                  "execution.mutationDisposition",
+                  "execution.reportedCommitted",
+                  "verification.attempted",
+                  "verification.disposition"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_5",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              }
+            ],
+            "unknowns": [
+              {
+                "path": "correlation.providerRequestId",
+                "reason": "not-wired"
+              },
+              {
+                "path": "target.targetRef",
+                "reason": "not-wired"
+              },
+              {
+                "path": "correlation.taskRunId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "correlation.authorizedPlanId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "correlation.executionPlanId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "correlation.actionIndex",
+                "reason": "not-observed"
+              },
+              {
+                "path": "correlation.supersedesAttemptId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.hostCommitted",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.resultingValueDigest",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.attemptId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.sourceObservationId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.scope",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.freshAtRead",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.matches",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.actual",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.actualDigest",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.code",
+                "reason": "not-observed"
+              }
+            ]
+          }
+        ],
+        "completion": {
+          "outcome": "rejected",
+          "code": "REVIEW_REJECTED",
+          "coverage": "none",
+          "declaredStepCount": 2,
+          "completedStepCount": 0,
+          "remainingStepCount": 2,
+          "verifiedEvidenceStepCount": 0,
+          "sourceAttemptIds": [
+            "trajectory_attempt_3"
+          ]
+        },
+        "provenance": [
+          {
+            "factPaths": [
+              "objective"
+            ],
+            "class": "local-control-occurrence",
+            "producer": "VelaAgentDriver",
+            "contractRevision": "vela-trajectory-source-v1",
+            "occurrenceId": "trajectory_occurrence_1",
+            "sourceRequestId": null,
+            "sourceSessionSeq": null,
+            "strength": "direct"
+          },
+          {
+            "factPaths": [
+              "completion.outcome",
+              "completion.completedStepCount",
+              "completion.remainingStepCount"
+            ],
+            "class": "derived-objective-summary",
+            "producer": "VelaAgentDriver",
+            "contractRevision": "vela-trajectory-source-v1",
+            "occurrenceId": "trajectory_occurrence_6",
+            "sourceRequestId": null,
+            "sourceSessionSeq": null,
+            "strength": "derived"
+          }
+        ],
+        "unknowns": [],
+        "bounds": {
+          "complete": true,
+          "omittedAttemptCount": 0,
+          "omittedValueCount": 0
+        }
+      }
+    }
+  },
+  "cancelled": {
+    "provider": {
+      "state": "cancelled",
+      "text": null,
+      "errorCode": null
+    },
+    "confirmation": {
+      "state": "idle",
+      "beforeValue": null,
+      "proposedValue": null,
+      "errorCode": null,
+      "moduleRevision": "vela-confirmation-surface-v1"
+    },
+    "driver": {
+      "state": "terminal",
+      "committed": false,
+      "objectiveId": "objective_agent_1",
+      "taskId": "agent_task_1",
+      "taskPlan": {
+        "contractType": "task-plan",
+        "planId": "task_plan_agent_1_logical_0_attempt_0",
+        "taskId": "agent_task_1",
+        "revision": 0,
+        "steps": [
+          {
+            "stepId": "operate_opacity_1_logical_0_attempt_0",
+            "kind": "operate",
+            "capabilityIntent": {
+              "contractType": "capability-intent",
+              "intentId": "intent_agent_1_logical_0_attempt_0",
+              "capabilityId": "set-opacity-v1",
+              "requestedOperation": "mutate",
+              "params": {
+                "opacity": 60
+              }
+            },
+            "rationale": "Apply the bounded single-step mutation objective.",
+            "metadata": {
+              "expectedValue": {
+                "kind": "number",
+                "data": 60
+              }
+            }
+          }
+        ]
+      },
+      "turn": {
+        "sessionId": "session_1",
+        "turnId": "turn_1"
+      },
+      "logicalPlan": {
+        "logicalPlanId": "logical_plan_agent_1",
+        "planSemanticSignature": "{\"declaredStepCount\":2,\"stepSemanticSignatures\":[\"{\\\"capabilityId\\\":\\\"set-opacity-v1\\\",\\\"params\\\":{\\\"opacity\\\":60},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\",\"{\\\"capabilityId\\\":\\\"set-layer-name-v1\\\",\\\"params\\\":{\\\"name\\\":\\\"Vela Stream Test\\\"},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\"]}",
+        "currentStepIndex": 0,
+        "stepCount": 2,
+        "currentStepId": "logical_step_agent_1_0",
+        "materializedTaskPlanId": "task_plan_agent_1_logical_0_attempt_0",
+        "materializedStepId": "operate_opacity_1_logical_0_attempt_0",
+        "completedStepCount": 0,
+        "remainingStepCount": 2,
+        "partialCompletion": false,
+        "status": "cancelled"
+      },
+      "suspendedReview": null,
+      "reviewResolution": null,
+      "terminal": {
+        "outcome": "cancelled",
+        "code": "AGENT_DRIVER_CANCELLED"
+      },
+      "counters": {
+        "observations": 1,
+        "reasoningTurns": 1,
+        "actions": 1,
+        "replans": 0
+      },
+      "loop": {
+        "iterationIndex": 0,
+        "budgets": {
+          "iterationsUsed": 1,
+          "providerCallsUsed": 1,
+          "actionAttemptsUsed": 0
+        },
+        "noProgressCount": 0
+      },
+      "disposed": false
+    },
+    "reviews": [
+      {
+        "state": "confirmation-ready",
+        "reviewId": "agent_review_1_1_logical_0_attempt_0",
+        "revision": 1,
+        "target": {
+          "compId": "ae-project-1-item-1",
+          "layerId": "ae-project-1-item-1-layer-2"
+        },
+        "approvalScope": "current-step",
+        "stepNumber": 1,
+        "stepCount": 2,
+        "canApprove": true,
+        "capabilityId": "set-opacity-v1",
+        "valueKind": "number",
+        "beforeValue": 20,
+        "proposedValue": 60,
+        "errorCode": null,
+        "moduleRevision": "vela-objective-review-surface-v1"
+      }
+    ],
+    "trajectory": {
+      "active": null,
+      "terminal": {
+        "schema": "vela.verified-trajectory-evidence.v1",
+        "authorityCapable": false,
+        "projectionId": "trajectory_projection_7",
+        "supersedesProjectionId": "trajectory_projection_6",
+        "objective": {
+          "sessionId": "session_1",
+          "objectiveId": "objective_agent_1",
+          "taskId": "agent_task_1",
+          "logicalPlanId": "logical_plan_agent_1"
+        },
+        "lifecycle": {
+          "state": "terminal",
+          "lateEvidence": false
+        },
+        "attempts": [
+          {
+            "attemptId": "trajectory_attempt_3",
+            "correlation": {
+              "taskPlanId": "task_plan_agent_1_logical_0_attempt_0",
+              "taskPlanRevision": 0,
+              "materializedStepId": "operate_opacity_1_logical_0_attempt_0",
+              "intentId": "intent_agent_1_logical_0_attempt_0",
+              "logicalStepId": "logical_step_agent_1_0",
+              "logicalStepIndex": 0,
+              "materializationAttempt": 0,
+              "turnId": "turn_1",
+              "taskRunId": null,
+              "authorizedPlanId": null,
+              "executionPlanId": null,
+              "actionIndex": null,
+              "providerRequestId": null,
+              "supersedesAttemptId": null
+            },
+            "capabilityId": "set-opacity-v1",
+            "target": {
+              "targetRef": null,
+              "targetKind": "property"
+            },
+            "intent": {
+              "submitted": true,
+              "admitted": true,
+              "review": "pending"
+            },
+            "execution": {
+              "executionAttempted": false,
+              "hostInvocationAttempted": false,
+              "mutationDisposition": "not-mutated",
+              "reportedCommitted": false,
+              "hostCommitted": null,
+              "resultCode": "LIFECYCLE_BLOCKED",
+              "resultingValueDigest": null
+            },
+            "verification": {
+              "attemptId": null,
+              "sourceObservationId": null,
+              "attempted": false,
+              "disposition": "verification-not-run",
+              "scope": "unknown",
+              "targetRelation": "unproven",
+              "freshAtRead": null,
+              "matches": null,
+              "expected": {
+                "kind": "number",
+                "data": 60
+              },
+              "actual": null,
+              "actualDigest": null,
+              "code": null
+            },
+            "completion": {
+              "outcome": "cancelled",
+              "superseded": false
+            },
+            "provenance": [
+              {
+                "factPaths": [
+                  "correlation",
+                  "capabilityId",
+                  "intent.submitted",
+                  "verification.expected"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_2",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "intent.admitted",
+                  "intent.review"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_3",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.executionAttempted",
+                  "execution.hostInvocationAttempted",
+                  "execution.mutationDisposition",
+                  "execution.reportedCommitted",
+                  "verification.attempted",
+                  "verification.disposition"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaRuntime",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_4",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              }
+            ],
+            "unknowns": [
+              {
+                "path": "correlation.providerRequestId",
+                "reason": "not-wired"
+              },
+              {
+                "path": "target.targetRef",
+                "reason": "not-wired"
+              },
+              {
+                "path": "correlation.taskRunId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "correlation.authorizedPlanId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "correlation.executionPlanId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "correlation.actionIndex",
+                "reason": "not-observed"
+              },
+              {
+                "path": "correlation.supersedesAttemptId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.hostCommitted",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.resultingValueDigest",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.attemptId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.sourceObservationId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.scope",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.freshAtRead",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.matches",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.actual",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.actualDigest",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.code",
+                "reason": "not-observed"
+              }
+            ]
+          }
+        ],
+        "completion": {
+          "outcome": "cancelled",
+          "code": "AGENT_DRIVER_CANCELLED",
+          "coverage": "none",
+          "declaredStepCount": 2,
+          "completedStepCount": 0,
+          "remainingStepCount": 2,
+          "verifiedEvidenceStepCount": 0,
+          "sourceAttemptIds": [
+            "trajectory_attempt_3"
+          ]
+        },
+        "provenance": [
+          {
+            "factPaths": [
+              "objective"
+            ],
+            "class": "local-control-occurrence",
+            "producer": "VelaAgentDriver",
+            "contractRevision": "vela-trajectory-source-v1",
+            "occurrenceId": "trajectory_occurrence_1",
+            "sourceRequestId": null,
+            "sourceSessionSeq": null,
+            "strength": "direct"
+          },
+          {
+            "factPaths": [
+              "completion.outcome",
+              "completion.completedStepCount",
+              "completion.remainingStepCount"
+            ],
+            "class": "derived-objective-summary",
+            "producer": "VelaAgentDriver",
+            "contractRevision": "vela-trajectory-source-v1",
+            "occurrenceId": "trajectory_occurrence_5",
+            "sourceRequestId": null,
+            "sourceSessionSeq": null,
+            "strength": "derived"
+          }
+        ],
+        "unknowns": [],
+        "bounds": {
+          "complete": true,
+          "omittedAttemptCount": 0,
+          "omittedValueCount": 0
+        }
+      }
+    }
+  },
+  "failed": {
+    "provider": {
+      "state": "objective-blocked",
+      "text": null,
+      "errorCode": "AGENT_DRIVER_TASK_UNVERIFIED"
+    },
+    "confirmation": {
+      "state": "idle",
+      "beforeValue": null,
+      "proposedValue": null,
+      "errorCode": null,
+      "moduleRevision": "vela-confirmation-surface-v1"
+    },
+    "driver": {
+      "state": "terminal",
+      "committed": true,
+      "objectiveId": "objective_agent_1",
+      "taskId": "agent_task_1",
+      "taskPlan": {
+        "contractType": "task-plan",
+        "planId": "task_plan_agent_1_logical_0_attempt_0",
+        "taskId": "agent_task_1",
+        "revision": 0,
+        "steps": [
+          {
+            "stepId": "operate_opacity_1_logical_0_attempt_0",
+            "kind": "operate",
+            "capabilityIntent": {
+              "contractType": "capability-intent",
+              "intentId": "intent_agent_1_logical_0_attempt_0",
+              "capabilityId": "set-opacity-v1",
+              "requestedOperation": "mutate",
+              "params": {
+                "opacity": 60
+              }
+            },
+            "rationale": "Apply the bounded single-step mutation objective.",
+            "metadata": {
+              "expectedValue": {
+                "kind": "number",
+                "data": 60
+              }
+            }
+          }
+        ]
+      },
+      "turn": {
+        "sessionId": "session_1",
+        "turnId": "turn_1"
+      },
+      "logicalPlan": {
+        "logicalPlanId": "logical_plan_agent_1",
+        "planSemanticSignature": "{\"declaredStepCount\":2,\"stepSemanticSignatures\":[\"{\\\"capabilityId\\\":\\\"set-opacity-v1\\\",\\\"params\\\":{\\\"opacity\\\":60},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\",\"{\\\"capabilityId\\\":\\\"set-layer-name-v1\\\",\\\"params\\\":{\\\"name\\\":\\\"Vela Stream Test\\\"},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\"]}",
+        "currentStepIndex": 0,
+        "stepCount": 2,
+        "currentStepId": "logical_step_agent_1_0",
+        "materializedTaskPlanId": "task_plan_agent_1_logical_0_attempt_0",
+        "materializedStepId": "operate_opacity_1_logical_0_attempt_0",
+        "completedStepCount": 0,
+        "remainingStepCount": 2,
+        "partialCompletion": false,
+        "status": "blocked"
+      },
+      "suspendedReview": null,
+      "reviewResolution": {
+        "reviewId": "agent_review_1_1_logical_0_attempt_0",
+        "revision": 1,
+        "outcome": "approved",
+        "objectiveId": "objective_agent_1",
+        "taskId": "agent_task_1",
+        "taskPlanId": "task_plan_agent_1_logical_0_attempt_0",
+        "stepId": "operate_opacity_1_logical_0_attempt_0"
+      },
+      "terminal": {
+        "outcome": "blocked",
+        "code": "AGENT_DRIVER_TASK_UNVERIFIED"
+      },
+      "counters": {
+        "observations": 2,
+        "reasoningTurns": 1,
+        "actions": 1,
+        "replans": 0
+      },
+      "loop": {
+        "iterationIndex": 0,
+        "budgets": {
+          "iterationsUsed": 1,
+          "providerCallsUsed": 1,
+          "actionAttemptsUsed": 1
+        },
+        "noProgressCount": 0
+      },
+      "disposed": false
+    },
+    "reviews": [
+      {
+        "state": "confirmation-ready",
+        "reviewId": "agent_review_1_1_logical_0_attempt_0",
+        "revision": 1,
+        "target": {
+          "compId": "ae-project-1-item-1",
+          "layerId": "ae-project-1-item-1-layer-2"
+        },
+        "approvalScope": "current-step",
+        "stepNumber": 1,
+        "stepCount": 2,
+        "canApprove": true,
+        "capabilityId": "set-opacity-v1",
+        "valueKind": "number",
+        "beforeValue": 20,
+        "proposedValue": 60,
+        "errorCode": null,
+        "moduleRevision": "vela-objective-review-surface-v1"
+      }
+    ],
+    "trajectory": {
+      "active": null,
+      "terminal": {
+        "schema": "vela.verified-trajectory-evidence.v1",
+        "authorityCapable": false,
+        "projectionId": "trajectory_projection_15",
+        "supersedesProjectionId": "trajectory_projection_14",
+        "objective": {
+          "sessionId": "session_1",
+          "objectiveId": "objective_agent_1",
+          "taskId": "agent_task_1",
+          "logicalPlanId": "logical_plan_agent_1"
+        },
+        "lifecycle": {
+          "state": "terminal",
+          "lateEvidence": false
+        },
+        "attempts": [
+          {
+            "attemptId": "trajectory_attempt_3",
+            "correlation": {
+              "taskPlanId": "task_plan_agent_1_logical_0_attempt_0",
+              "taskPlanRevision": 0,
+              "materializedStepId": "operate_opacity_1_logical_0_attempt_0",
+              "intentId": "intent_agent_1_logical_0_attempt_0",
+              "logicalStepId": "logical_step_agent_1_0",
+              "logicalStepIndex": 0,
+              "materializationAttempt": 0,
+              "turnId": "turn_1",
+              "taskRunId": "task_run_1",
+              "authorizedPlanId": "confirmedPlan_3",
+              "executionPlanId": "plan_21c47f025144b6a32478126a53a03a8b6c8f90d5991294eb6ab31c5331d1e074",
+              "actionIndex": 0,
+              "providerRequestId": null,
+              "supersedesAttemptId": null
+            },
+            "capabilityId": "set-opacity-v1",
+            "target": {
+              "targetRef": null,
+              "targetKind": "property"
+            },
+            "intent": {
+              "submitted": true,
+              "admitted": true,
+              "review": "approved"
+            },
+            "execution": {
+              "executionAttempted": true,
+              "hostInvocationAttempted": true,
+              "mutationDisposition": "mutated",
+              "reportedCommitted": true,
+              "hostCommitted": true,
+              "resultCode": null,
+              "resultingValueDigest": "sha256:f68c1b5924129c2acc17f412ec2e0532bbe46516e7b67e2fe7b8c6ee497cc31c"
+            },
+            "verification": {
+              "attemptId": "trajectory_verify_12",
+              "sourceObservationId": "req_00000000000000000000000000000025",
+              "attempted": true,
+              "disposition": "verified-mismatch",
+              "scope": "committed-target",
+              "targetRelation": "committed-target",
+              "freshAtRead": true,
+              "matches": false,
+              "expected": {
+                "kind": "number",
+                "data": 60
+              },
+              "actual": {
+                "kind": "number",
+                "data": 12
+              },
+              "actualDigest": "sha256:2ed1b4e629f16db96a9bbb3d7e174ae754c18df94628e1a11848f5cf329f1029",
+              "code": null
+            },
+            "completion": {
+              "outcome": "blocked",
+              "superseded": false
+            },
+            "provenance": [
+              {
+                "factPaths": [
+                  "correlation",
+                  "capabilityId",
+                  "intent.submitted",
+                  "verification.expected"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_2",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "intent.admitted",
+                  "intent.review"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_3",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "intent.admitted",
+                  "intent.review"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_4",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "correlation.executionPlanId",
+                  "correlation.authorizedPlanId",
+                  "correlation.taskRunId",
+                  "correlation.actionIndex"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaRuntime",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_5",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.executionAttempted"
+                ],
+                "class": "execution-result",
+                "producer": "VelaExecutionPreflight",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_6",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.hostInvocationAttempted"
+                ],
+                "class": "execution-result",
+                "producer": "VelaExecutionAdapter",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_7",
+                "sourceRequestId": "req_00000000000000000000000000000024",
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.reportedCommitted",
+                  "execution.hostCommitted",
+                  "execution.mutationDisposition",
+                  "execution.resultCode",
+                  "execution.resultingValueDigest"
+                ],
+                "class": "host-commit-evidence",
+                "producer": "VelaExecutionAdapter",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_8",
+                "sourceRequestId": "req_00000000000000000000000000000024",
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.reportedCommitted"
+                ],
+                "class": "execution-result",
+                "producer": "VelaRuntime",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_9",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "reduced"
+              },
+              {
+                "factPaths": [
+                  "verification.attemptId",
+                  "verification.attempted",
+                  "verification.scope"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaExecutionPreflight",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_10",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "verification"
+                ],
+                "class": "fresh-verify-evidence",
+                "producer": "VelaExecutionPreflight",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_11",
+                "sourceRequestId": "req_00000000000000000000000000000025",
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              }
+            ],
+            "unknowns": [
+              {
+                "path": "correlation.providerRequestId",
+                "reason": "not-wired"
+              },
+              {
+                "path": "target.targetRef",
+                "reason": "not-wired"
+              },
+              {
+                "path": "correlation.supersedesAttemptId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.resultCode",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.code",
+                "reason": "not-observed"
+              }
+            ]
+          }
+        ],
+        "completion": {
+          "outcome": "blocked",
+          "code": "AGENT_DRIVER_TASK_UNVERIFIED",
+          "coverage": "none",
+          "declaredStepCount": 2,
+          "completedStepCount": 0,
+          "remainingStepCount": 2,
+          "verifiedEvidenceStepCount": 0,
+          "sourceAttemptIds": [
+            "trajectory_attempt_3"
+          ]
+        },
+        "provenance": [
+          {
+            "factPaths": [
+              "objective"
+            ],
+            "class": "local-control-occurrence",
+            "producer": "VelaAgentDriver",
+            "contractRevision": "vela-trajectory-source-v1",
+            "occurrenceId": "trajectory_occurrence_1",
+            "sourceRequestId": null,
+            "sourceSessionSeq": null,
+            "strength": "direct"
+          },
+          {
+            "factPaths": [
+              "completion.outcome",
+              "completion.completedStepCount",
+              "completion.remainingStepCount"
+            ],
+            "class": "derived-objective-summary",
+            "producer": "VelaAgentDriver",
+            "contractRevision": "vela-trajectory-source-v1",
+            "occurrenceId": "trajectory_occurrence_12",
+            "sourceRequestId": null,
+            "sourceSessionSeq": null,
+            "strength": "derived"
+          }
+        ],
+        "unknowns": [],
+        "bounds": {
+          "complete": true,
+          "omittedAttemptCount": 0,
+          "omittedValueCount": 0
+        }
+      }
+    }
+  },
+  "completed": {
+    "provider": {
+      "state": "completed",
+      "text": null,
+      "errorCode": null,
+      "intentReason": null,
+      "moduleRevision": "vela-provider-surface-v1"
+    },
+    "confirmation": {
+      "state": "idle",
+      "beforeValue": null,
+      "proposedValue": null,
+      "errorCode": null,
+      "moduleRevision": "vela-confirmation-surface-v1"
+    },
+    "driver": {
+      "state": "terminal",
+      "committed": true,
+      "objectiveId": "objective_agent_1",
+      "taskId": "agent_task_1",
+      "taskPlan": {
+        "contractType": "task-plan",
+        "planId": "task_plan_agent_1_logical_1_attempt_0",
+        "taskId": "agent_task_1",
+        "revision": 0,
+        "steps": [
+          {
+            "stepId": "operate_layer_name_1_logical_1_attempt_0",
+            "kind": "operate",
+            "capabilityIntent": {
+              "contractType": "capability-intent",
+              "intentId": "intent_agent_1_logical_1_attempt_0",
+              "capabilityId": "set-layer-name-v1",
+              "requestedOperation": "mutate",
+              "params": {
+                "name": "Vela Stream Test"
+              }
+            },
+            "rationale": "Apply the bounded single-step mutation objective.",
+            "metadata": {
+              "expectedValue": {
+                "kind": "string",
+                "data": "Vela Stream Test"
+              }
+            }
+          }
+        ]
+      },
+      "turn": {
+        "sessionId": "session_1",
+        "turnId": "turn_2"
+      },
+      "logicalPlan": {
+        "logicalPlanId": "logical_plan_agent_1",
+        "planSemanticSignature": "{\"declaredStepCount\":2,\"stepSemanticSignatures\":[\"{\\\"capabilityId\\\":\\\"set-opacity-v1\\\",\\\"params\\\":{\\\"opacity\\\":60},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\",\"{\\\"capabilityId\\\":\\\"set-layer-name-v1\\\",\\\"params\\\":{\\\"name\\\":\\\"Vela Stream Test\\\"},\\\"targetScopeKind\\\":\\\"selected-layer\\\"}\"]}",
+        "currentStepIndex": 1,
+        "stepCount": 2,
+        "currentStepId": "logical_step_agent_1_1",
+        "materializedTaskPlanId": "task_plan_agent_1_logical_1_attempt_0",
+        "materializedStepId": "operate_layer_name_1_logical_1_attempt_0",
+        "completedStepCount": 2,
+        "remainingStepCount": 0,
+        "partialCompletion": false,
+        "status": "completed"
+      },
+      "suspendedReview": null,
+      "reviewResolution": {
+        "reviewId": "agent_review_1_1_logical_1_attempt_0",
+        "revision": 1,
+        "outcome": "approved",
+        "objectiveId": "objective_agent_1",
+        "taskId": "agent_task_1",
+        "taskPlanId": "task_plan_agent_1_logical_1_attempt_0",
+        "stepId": "operate_layer_name_1_logical_1_attempt_0"
+      },
+      "terminal": {
+        "outcome": "completed",
+        "code": null
+      },
+      "counters": {
+        "observations": 4,
+        "reasoningTurns": 2,
+        "actions": 2,
+        "replans": 0
+      },
+      "loop": {
+        "iterationIndex": 0,
+        "budgets": {
+          "iterationsUsed": 1,
+          "providerCallsUsed": 1,
+          "actionAttemptsUsed": 2
+        },
+        "noProgressCount": 0
+      },
+      "disposed": false
+    },
+    "reviews": [
+      {
+        "state": "confirmation-ready",
+        "reviewId": "agent_review_1_1_logical_0_attempt_0",
+        "revision": 1,
+        "target": {
+          "compId": "ae-project-1-item-1",
+          "layerId": "ae-project-1-item-1-layer-2"
+        },
+        "approvalScope": "current-step",
+        "stepNumber": 1,
+        "stepCount": 2,
+        "canApprove": true,
+        "capabilityId": "set-opacity-v1",
+        "valueKind": "number",
+        "beforeValue": 20,
+        "proposedValue": 60,
+        "errorCode": null,
+        "moduleRevision": "vela-objective-review-surface-v1"
+      },
+      {
+        "state": "confirmation-ready",
+        "reviewId": "agent_review_1_1_logical_1_attempt_0",
+        "revision": 1,
+        "target": {
+          "compId": "ae-project-1-item-1",
+          "layerId": "ae-project-1-item-1-layer-2"
+        },
+        "approvalScope": "current-step",
+        "stepNumber": 2,
+        "stepCount": 2,
+        "canApprove": true,
+        "capabilityId": "set-layer-name-v1",
+        "valueKind": "string",
+        "beforeValue": "Layer A",
+        "proposedValue": "Vela Stream Test",
+        "errorCode": null,
+        "moduleRevision": "vela-objective-review-surface-v1"
+      }
+    ],
+    "trajectory": {
+      "active": null,
+      "terminal": {
+        "schema": "vela.verified-trajectory-evidence.v1",
+        "authorityCapable": false,
+        "projectionId": "trajectory_projection_29",
+        "supersedesProjectionId": "trajectory_projection_28",
+        "objective": {
+          "sessionId": "session_1",
+          "objectiveId": "objective_agent_1",
+          "taskId": "agent_task_1",
+          "logicalPlanId": "logical_plan_agent_1"
+        },
+        "lifecycle": {
+          "state": "terminal",
+          "lateEvidence": false
+        },
+        "attempts": [
+          {
+            "attemptId": "trajectory_attempt_3",
+            "correlation": {
+              "taskPlanId": "task_plan_agent_1_logical_0_attempt_0",
+              "taskPlanRevision": 0,
+              "materializedStepId": "operate_opacity_1_logical_0_attempt_0",
+              "intentId": "intent_agent_1_logical_0_attempt_0",
+              "logicalStepId": "logical_step_agent_1_0",
+              "logicalStepIndex": 0,
+              "materializationAttempt": 0,
+              "turnId": "turn_1",
+              "taskRunId": "task_run_1",
+              "authorizedPlanId": "confirmedPlan_3",
+              "executionPlanId": "plan_21c47f025144b6a32478126a53a03a8b6c8f90d5991294eb6ab31c5331d1e074",
+              "actionIndex": 0,
+              "providerRequestId": null,
+              "supersedesAttemptId": null
+            },
+            "capabilityId": "set-opacity-v1",
+            "target": {
+              "targetRef": null,
+              "targetKind": "property"
+            },
+            "intent": {
+              "submitted": true,
+              "admitted": true,
+              "review": "approved"
+            },
+            "execution": {
+              "executionAttempted": true,
+              "hostInvocationAttempted": true,
+              "mutationDisposition": "mutated",
+              "reportedCommitted": true,
+              "hostCommitted": true,
+              "resultCode": null,
+              "resultingValueDigest": "sha256:f68c1b5924129c2acc17f412ec2e0532bbe46516e7b67e2fe7b8c6ee497cc31c"
+            },
+            "verification": {
+              "attemptId": "trajectory_verify_12",
+              "sourceObservationId": "req_00000000000000000000000000000025",
+              "attempted": true,
+              "disposition": "verified-match",
+              "scope": "committed-target",
+              "targetRelation": "committed-target",
+              "freshAtRead": true,
+              "matches": true,
+              "expected": {
+                "kind": "number",
+                "data": 60
+              },
+              "actual": {
+                "kind": "number",
+                "data": 60
+              },
+              "actualDigest": "sha256:f68c1b5924129c2acc17f412ec2e0532bbe46516e7b67e2fe7b8c6ee497cc31c",
+              "code": null
+            },
+            "completion": {
+              "outcome": "completed",
+              "superseded": false
+            },
+            "provenance": [
+              {
+                "factPaths": [
+                  "correlation",
+                  "capabilityId",
+                  "intent.submitted",
+                  "verification.expected"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_2",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "intent.admitted",
+                  "intent.review"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_3",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "intent.admitted",
+                  "intent.review"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_4",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "correlation.executionPlanId",
+                  "correlation.authorizedPlanId",
+                  "correlation.taskRunId",
+                  "correlation.actionIndex"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaRuntime",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_5",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.executionAttempted"
+                ],
+                "class": "execution-result",
+                "producer": "VelaExecutionPreflight",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_6",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.hostInvocationAttempted"
+                ],
+                "class": "execution-result",
+                "producer": "VelaExecutionAdapter",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_7",
+                "sourceRequestId": "req_00000000000000000000000000000024",
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.reportedCommitted",
+                  "execution.hostCommitted",
+                  "execution.mutationDisposition",
+                  "execution.resultCode",
+                  "execution.resultingValueDigest"
+                ],
+                "class": "host-commit-evidence",
+                "producer": "VelaExecutionAdapter",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_8",
+                "sourceRequestId": "req_00000000000000000000000000000024",
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.reportedCommitted"
+                ],
+                "class": "execution-result",
+                "producer": "VelaRuntime",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_9",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "reduced"
+              },
+              {
+                "factPaths": [
+                  "verification.attemptId",
+                  "verification.attempted",
+                  "verification.scope"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaExecutionPreflight",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_10",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "verification"
+                ],
+                "class": "fresh-verify-evidence",
+                "producer": "VelaExecutionPreflight",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_11",
+                "sourceRequestId": "req_00000000000000000000000000000025",
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "completion"
+                ],
+                "class": "derived-objective-summary",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_12",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "derived"
+              }
+            ],
+            "unknowns": [
+              {
+                "path": "correlation.providerRequestId",
+                "reason": "not-wired"
+              },
+              {
+                "path": "target.targetRef",
+                "reason": "not-wired"
+              },
+              {
+                "path": "correlation.supersedesAttemptId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.resultCode",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.code",
+                "reason": "not-observed"
+              }
+            ]
+          },
+          {
+            "attemptId": "trajectory_attempt_16",
+            "correlation": {
+              "taskPlanId": "task_plan_agent_1_logical_1_attempt_0",
+              "taskPlanRevision": 0,
+              "materializedStepId": "operate_layer_name_1_logical_1_attempt_0",
+              "intentId": "intent_agent_1_logical_1_attempt_0",
+              "logicalStepId": "logical_step_agent_1_1",
+              "logicalStepIndex": 1,
+              "materializationAttempt": 0,
+              "turnId": "turn_2",
+              "taskRunId": "task_run_2",
+              "authorizedPlanId": "confirmedPlan_6",
+              "executionPlanId": "plan_e0d74af3268e5ee6192ed27196b35f845999568c1c895b1cc0a654fc44f2587c",
+              "actionIndex": 0,
+              "providerRequestId": null,
+              "supersedesAttemptId": null
+            },
+            "capabilityId": "set-layer-name-v1",
+            "target": {
+              "targetRef": null,
+              "targetKind": "layer-attribute"
+            },
+            "intent": {
+              "submitted": true,
+              "admitted": true,
+              "review": "approved"
+            },
+            "execution": {
+              "executionAttempted": true,
+              "hostInvocationAttempted": true,
+              "mutationDisposition": "mutated",
+              "reportedCommitted": true,
+              "hostCommitted": true,
+              "resultCode": null,
+              "resultingValueDigest": "sha256:7454aacdf35d4c69feb24f4385133526a20ae6921554010d55df9e6349d2f74a"
+            },
+            "verification": {
+              "attemptId": "trajectory_verify_25",
+              "sourceObservationId": "req_00000000000000000000000000000044",
+              "attempted": true,
+              "disposition": "verified-match",
+              "scope": "committed-target",
+              "targetRelation": "committed-target",
+              "freshAtRead": true,
+              "matches": true,
+              "expected": {
+                "kind": "string",
+                "data": "Vela Stream Test"
+              },
+              "actual": {
+                "kind": "string",
+                "data": "Vela Stream Test"
+              },
+              "actualDigest": "sha256:7454aacdf35d4c69feb24f4385133526a20ae6921554010d55df9e6349d2f74a",
+              "code": null
+            },
+            "completion": {
+              "outcome": "completed",
+              "superseded": false
+            },
+            "provenance": [
+              {
+                "factPaths": [
+                  "correlation",
+                  "capabilityId",
+                  "intent.submitted",
+                  "verification.expected"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_13",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "intent.admitted",
+                  "intent.review"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_14",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "intent.admitted",
+                  "intent.review"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_15",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "correlation.executionPlanId",
+                  "correlation.authorizedPlanId",
+                  "correlation.taskRunId",
+                  "correlation.actionIndex"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaRuntime",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_16",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.executionAttempted"
+                ],
+                "class": "execution-result",
+                "producer": "VelaExecutionPreflight",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_17",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.hostInvocationAttempted"
+                ],
+                "class": "execution-result",
+                "producer": "VelaExecutionAdapter",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_18",
+                "sourceRequestId": "req_00000000000000000000000000000043",
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.reportedCommitted",
+                  "execution.hostCommitted",
+                  "execution.mutationDisposition",
+                  "execution.resultCode",
+                  "execution.resultingValueDigest"
+                ],
+                "class": "host-commit-evidence",
+                "producer": "VelaExecutionAdapter",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_19",
+                "sourceRequestId": "req_00000000000000000000000000000043",
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "execution.reportedCommitted"
+                ],
+                "class": "execution-result",
+                "producer": "VelaRuntime",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_20",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "reduced"
+              },
+              {
+                "factPaths": [
+                  "verification.attemptId",
+                  "verification.attempted",
+                  "verification.scope"
+                ],
+                "class": "local-control-occurrence",
+                "producer": "VelaExecutionPreflight",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_21",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "verification"
+                ],
+                "class": "fresh-verify-evidence",
+                "producer": "VelaExecutionPreflight",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_22",
+                "sourceRequestId": "req_00000000000000000000000000000044",
+                "sourceSessionSeq": null,
+                "strength": "direct"
+              },
+              {
+                "factPaths": [
+                  "completion"
+                ],
+                "class": "derived-objective-summary",
+                "producer": "VelaAgentDriver",
+                "contractRevision": "vela-trajectory-source-v1",
+                "occurrenceId": "trajectory_occurrence_23",
+                "sourceRequestId": null,
+                "sourceSessionSeq": null,
+                "strength": "derived"
+              }
+            ],
+            "unknowns": [
+              {
+                "path": "correlation.providerRequestId",
+                "reason": "not-wired"
+              },
+              {
+                "path": "target.targetRef",
+                "reason": "not-wired"
+              },
+              {
+                "path": "correlation.supersedesAttemptId",
+                "reason": "not-observed"
+              },
+              {
+                "path": "execution.resultCode",
+                "reason": "not-observed"
+              },
+              {
+                "path": "verification.code",
+                "reason": "not-observed"
+              }
+            ]
+          }
+        ],
+        "completion": {
+          "outcome": "completed",
+          "code": null,
+          "coverage": "full",
+          "declaredStepCount": 2,
+          "completedStepCount": 2,
+          "remainingStepCount": 0,
+          "verifiedEvidenceStepCount": 2,
+          "sourceAttemptIds": [
+            "trajectory_attempt_3",
+            "trajectory_attempt_16"
+          ]
+        },
+        "provenance": [
+          {
+            "factPaths": [
+              "objective"
+            ],
+            "class": "local-control-occurrence",
+            "producer": "VelaAgentDriver",
+            "contractRevision": "vela-trajectory-source-v1",
+            "occurrenceId": "trajectory_occurrence_1",
+            "sourceRequestId": null,
+            "sourceSessionSeq": null,
+            "strength": "direct"
+          },
+          {
+            "factPaths": [
+              "completion.outcome",
+              "completion.completedStepCount",
+              "completion.remainingStepCount"
+            ],
+            "class": "derived-objective-summary",
+            "producer": "VelaAgentDriver",
+            "contractRevision": "vela-trajectory-source-v1",
+            "occurrenceId": "trajectory_occurrence_24",
+            "sourceRequestId": null,
+            "sourceSessionSeq": null,
+            "strength": "derived"
+          }
+        ],
+        "unknowns": [
+          {
+            "path": "completion.code",
+            "reason": "not-observed"
+          }
+        ],
+        "bounds": {
+          "complete": true,
+          "omittedAttemptCount": 0,
+          "omittedValueCount": 0
+        }
+      }
+    }
+  }
+}

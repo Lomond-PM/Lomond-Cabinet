@@ -1,0 +1,8 @@
+const {serve,root}=require('./server.cjs');
+const {chromium}=require('playwright');
+const fs=require('node:fs');
+async function run(){const server=await serve(),browser=await chromium.launch({executablePath:process.env.UI_REFERENCE_BROWSER||'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});const evidence=[];
+ try{for(const before of [true,false]){const page=await browser.newPage({viewport:{width:720,height:700}});await page.addInitScript(()=>{window.observations=[];const Native=window.ResizeObserver;window.ResizeObserver=class extends Native{constructor(callback){super((entries,owner)=>{for(const entry of entries){const el=entry.target;if(observations.length<30&&el.matches('.reg-curve-graph,.reg-graph-viewport')){const bbox=el.getBBox?.();observations.push({tag:el.tagName,content:entry.contentRect.width,layout:el.clientWidth,viewBox:el.getAttribute('viewBox'),bbox:bbox?.width});}}callback(entries,owner);});}};});await page.goto(server.url+(before?'/.tmp/vela-evidence/0.3.13-b/f1/before/index.html':'/client/reference/index.html'));await page.locator('[data-variant=controls]').evaluate(el=>el.click());await page.waitForTimeout(600);evidence.push({before,ua:await page.evaluate(()=>navigator.userAgent),samples:await page.evaluate(()=>observations)});await page.close();}
+ fs.writeFileSync(root+'/.tmp/vela-evidence/0.3.13-b/f1/svg-observer.json',JSON.stringify(evidence,null,2));console.log(JSON.stringify(evidence.map(x=>({before:x.before,samples:x.samples.slice(0,6)})),null,2));
+ }finally{await browser.close();await server.close();}}
+run().catch(e=>{console.error(e);process.exitCode=1;});

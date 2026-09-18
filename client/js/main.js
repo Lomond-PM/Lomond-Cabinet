@@ -2435,6 +2435,13 @@
         mount.className = "settings-section";
         calibrationMount.innerHTML = "";
         calibrationMount.className = "settings-section settings-developer-only";
+        if (window.UIReferenceLauncher) {
+            var referenceButton = window.CoreUI.createButton({ document: document, variant: "neutral", text: tr("reference.launch"), classNames: "panel-button panel-local-action" });
+            referenceButton.setAttribute("data-i18n", "reference.launch");
+            referenceButton.id = "uiReferenceLaunch";
+            referenceButton.addEventListener("click", function () { window.UIReferenceLauncher.open(); });
+            calibrationMount.appendChild(referenceButton);
+        }
         proceduralMount.innerHTML = "";
         proceduralMount.className = "settings-section settings-developer-only";
 
