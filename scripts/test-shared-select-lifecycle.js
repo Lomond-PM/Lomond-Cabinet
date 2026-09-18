@@ -124,8 +124,14 @@ assert(!component.root.classList.contains("is-open") && secondComponent.root.cla
 secondComponent.dispose();
 component.dispose();
 assert.strictEqual(component.menu.parentNode, null); assert.strictEqual(component.root.parentNode, null); assert(!select.classList.contains("is-native-select-hidden"));
-const remounted = CoreUI.enhanceSelect({ document: doc, select });
+const remounted = CoreUI.enhanceSelect({ document: doc, select, getControlRect(control) {
+    assert.strictEqual(control, remounted.root);
+    return { left: 12, top: 18, right: 108, bottom: 37.2, width: 96, height: 19.2 };
+} });
 assert.notStrictEqual(remounted, component, "disposed Select can mount a fresh lifecycle without stale portal state");
+remounted.open();
+assert.strictEqual(remounted.menu.style.left, "12px", "zoom adapter supplies viewport coordinates to the one portal placement owner");
+assert.strictEqual(remounted.menu.style.top, "43.2px", "portal gap is applied once in viewport coordinates");
 remounted.dispose();
 
 assert.ok(/function enhanceSharedSelect[\s\S]*CoreUI\.enhanceSelect/.test(main), "Registry and Settings share one active adapter seam");

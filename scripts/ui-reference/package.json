@@ -1,0 +1,6 @@
+{
+  "name": "lomond-ui-reference-build",
+  "private": true,
+  "scripts": { "build": "node build.cjs", "browser": "node browser.cjs" },
+  "devDependencies": { "esbuild": "0.25.12", "playwright": "1.58.2" }
+}

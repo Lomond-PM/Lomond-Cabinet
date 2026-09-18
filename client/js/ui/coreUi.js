@@ -385,7 +385,9 @@
         }
 
         function position() {
-            var rect = control.getBoundingClientRect();
+            // Embedders using CSS zoom can normalize legacy CEF coordinates.
+            // The component still owns the sole portal placement calculation.
+            var rect = typeof options.getControlRect === "function" ? options.getControlRect(control) : control.getBoundingClientRect();
             var viewportWidth = win.innerWidth || doc.documentElement.clientWidth || 320;
             var viewportHeight = win.innerHeight || doc.documentElement.clientHeight || 480;
             var gap = 6;
