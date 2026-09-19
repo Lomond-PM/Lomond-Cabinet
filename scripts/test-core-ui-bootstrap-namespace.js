@@ -6,6 +6,8 @@ var path = require("path");
 var vm = require("vm");
 var rootDir = path.resolve(__dirname, "..");
 var scripts = [
+    "client/js/ui/semanticStyleResolver.js",
+    "client/js/ui/semanticStyleProjection.js",
     "client/js/ui/coreUi.js",
     "client/js/appearance/appearanceParameterRegistry.js",
     "client/js/appearance/appearanceStateStore.js",

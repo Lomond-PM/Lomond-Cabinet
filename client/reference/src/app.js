@@ -1,3 +1,4 @@
+import {projectShellBorders} from './style-projection.js';
 import {REGISTRY_SCHEMAS} from './lab/registry-schema.js';
 import {label as schemaLabel} from './lab/registry-model.js';
 import {SizeProbe} from './size-probe.js';
@@ -16,7 +17,7 @@ const root=document.querySelector('#reference-root'),snapshots={},abort=new Abor
 let view=null,route='registry',variant='kit',negotiating=false,exited=false,theme='dark',scale=.92;
 const stores=[settingsStore,paletteStore(),curveStore(),assetSettingsStore()];
 const overlay=new OverlayOwner(root),sizeProbe=new SizeProbe(root);
-function projectAppearance(){const html=document.documentElement;html.dataset.theme=theme;for(const property of ['--accent','--accent-fill','--on-accent','--focus-ring','--tool-fill'])html.style.removeProperty(property);const {accent,fill}=appearanceSelection();if(accent?.kind==='solid')for(const [key,value]of Object.entries(accentTokens(accent.rgb,theme)))html.style.setProperty(key,value);if(fill)html.style.setProperty('--tool-fill',paintCSS(fill));}
+function projectAppearance(){const html=document.documentElement;html.dataset.theme=theme;projectShellBorders();for(const property of ['--accent','--accent-fill','--on-accent','--focus-ring','--tool-fill'])html.style.removeProperty(property);const {accent,fill}=appearanceSelection();if(accent?.kind==='solid')for(const [key,value]of Object.entries(accentTokens(accent.rgb,theme)))html.style.setProperty(key,value);if(fill)html.style.setProperty('--tool-fill',paintCSS(fill));}
 function resize(){cancelNumberEdits();closeSelect();if(view?.drag){view instanceof ReferenceCurve?view.endDrag(false):view.endDrag(null,true);}view?.endStop?.(false);view?.picker?.endPlane?.(false);root.style.zoom=String(scale);root.style.width=innerWidth/scale+'px';root.style.height=innerHeight/scale+'px';root.dataset.paletteWide=String(innerWidth/scale>=620);root.dataset.curveWide=String(innerWidth/scale>=680);root.dataset.registryWide=String(innerWidth/scale>=800);view?.picker?.schedulePosition();}
 function status(text){root.querySelector('[data-reference-status]').textContent=text;}
 function updateStatus(){if(exited||!view)return;status(t(view.store?.status==='error'?'reference.failed':route==='vela'?'reference.conversationStatus':view.dirty?'reference.unsavedStatus':'reference.saved'));}

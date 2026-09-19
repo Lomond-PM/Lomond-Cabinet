@@ -1,18 +1,22 @@
 (function (root, factory) {
     "use strict";
-    var api = Object.freeze(factory());
+    var projection = root && root.SemanticStyleProjection;
+    if (!projection && (!root || !root.document) && typeof require === "function") projection = require("../ui/semanticStyleProjection.js");
+    var api = Object.freeze(factory(projection));
     if (root && root.document && !root.DesignTuningResolver) root.DesignTuningResolver = api;
     if ((!root || !root.document) && typeof module === "object" && module.exports) module.exports = api;
-}(typeof self !== "undefined" ? self : this, function () {
+}(typeof self !== "undefined" ? self : this, function (StyleProjection) {
     "use strict";
     function create(options) {
         options = options || {};
         var registry = options.registry;
         var store = options.store;
         var rootStyle = options.rootStyle;
+        var semanticStyle = rootStyle ? StyleProjection.forRoot(rootStyle) : null;
         var readComputed = options.readComputed;
         var isProjectionSafe = options.isProjectionSafe || function () { return true; };
         var onProjectionApplied = options.onProjectionApplied;
+        if (semanticStyle) semanticStyle.addProjectionGuard(isProjectionSafe);
         var canonicals = {};
         var transientOverrides = {};
         var pendingRevision = 0;
@@ -42,10 +46,17 @@
         }
         function applyProjection() {
             var overrides;
-            if (!isProjectionSafe()) return false;
             overrides = store.getOverrides();
+            var calibration = {}, preview = {};
             registry.list().forEach(function (parameter) {
-                if (!parameter.cssProperty || parameter.protection) return;
+                if (!semanticStyle || !semanticStyle.owns(parameter.id)) return;
+                if (Object.prototype.hasOwnProperty.call(overrides, parameter.id)) calibration[parameter.id] = overrides[parameter.id];
+                if (Object.prototype.hasOwnProperty.call(transientOverrides, parameter.id)) preview[parameter.id] = transientOverrides[parameter.id];
+            });
+            var semanticApplied = semanticStyle && semanticStyle.update({ calibration: calibration, calibrationPreview: preview });
+            if (!isProjectionSafe() || !semanticApplied) return false;
+            registry.list().forEach(function (parameter) {
+                if (!parameter.cssProperty || parameter.protection || semanticStyle.owns(parameter.id)) return;
                 if (Object.prototype.hasOwnProperty.call(transientOverrides, parameter.id)) rootStyle.setProperty(parameter.cssProperty, serializeCss(parameter, transientOverrides[parameter.id]));
                 else if (Object.prototype.hasOwnProperty.call(overrides, parameter.id)) rootStyle.setProperty(parameter.cssProperty, serializeCss(parameter, overrides[parameter.id]));
                 else rootStyle.removeProperty(parameter.cssProperty);
@@ -70,27 +81,28 @@
         function evidence(domain) {
             var canonical = {}; var overrides = store.getOverrides(); var resolved = {}; var patch = {};
             var scopedOverrides = {};
-            registry.list().forEach(function (parameter) { var base; var value; if (domain && parameter.domain !== domain) return; base = canonicals[parameter.id]; value = Object.prototype.hasOwnProperty.call(overrides, parameter.id) ? overrides[parameter.id] : base; canonical[parameter.id] = registry.cloneValue(base); resolved[parameter.id] = registry.cloneValue(value); if (Object.prototype.hasOwnProperty.call(overrides, parameter.id)) { scopedOverrides[parameter.id] = overrides[parameter.id]; patch[parameter.id] = { from: registry.cloneValue(base), to: registry.cloneValue(overrides[parameter.id]) }; } });
+            registry.list().forEach(function (parameter) { var base; var value; if (domain && parameter.domain !== domain) return; base = semanticStyle.owns(parameter.id) ? semanticStyle.getState().resolved.provenance[parameter.id].themeDerived : canonicals[parameter.id]; value = Object.prototype.hasOwnProperty.call(overrides, parameter.id) ? overrides[parameter.id] : base; canonical[parameter.id] = registry.cloneValue(base); resolved[parameter.id] = registry.cloneValue(value); if (Object.prototype.hasOwnProperty.call(overrides, parameter.id)) { scopedOverrides[parameter.id] = overrides[parameter.id]; patch[parameter.id] = { from: registry.cloneValue(base), to: registry.cloneValue(overrides[parameter.id]) }; } });
             return { scope: domain || "all", canonical: canonical, overrides: scopedOverrides, resolved: resolved, promotionPatch: patch };
         }
         return Object.freeze({
             initialize: function () { captureCanonicals(); requestProjection(); },
             resolveDuration: resolveDuration,
-            flushPendingProjection: function () { return appliedRevision === pendingRevision ? false : applyProjection(); },
+            flushPendingProjection: function () { return appliedRevision === pendingRevision ? semanticStyle.flush() : applyProjection(); },
             setOverride: function (id, value) { return mutate(function () { return store.setOverride(id, value); }); },
             setTransientOverride: function (id, value) { var checked = registry.validate(id, value); if (!checked.valid) return false; transientOverrides[id] = checked.value; requestProjection(); return true; },
             clearTransientOverride: function (id) { if (!Object.prototype.hasOwnProperty.call(transientOverrides, id)) return false; delete transientOverrides[id]; requestProjection(); return true; },
             clearTransientOverrides: function () { transientOverrides = {}; requestProjection(); },
             commitTransientOverride: function (id, value) { var checked = registry.validate(id, value); if (!checked.valid) return publishResult(false, null, false); store.setOverride(id, checked.value); delete transientOverrides[id]; return persist(); },
             getTransientOverrides: function () { var out = {}; var key; for (key in transientOverrides) if (Object.prototype.hasOwnProperty.call(transientOverrides, key)) out[key] = registry.cloneValue(transientOverrides[key]); return out; },
-            resetParameter: function (id) { return mutate(function () { if (!registry.get(id)) return false; store.removeOverride(id); return true; }); },
+            resetParameter: function (id) { return mutate(function () { if (!registry.get(id)) return false; delete transientOverrides[id]; store.removeOverride(id); return true; }); },
             resetMotion: function () { return mutate(function () { store.clearDomain("motion"); return true; }); },
-            resetDomain: function (domain) { return mutate(function () { store.clearDomain(domain); return true; }); },
-            resetAll: function () { store.clearAll(); return persist(); },
+            resetDomain: function (domain) { return mutate(function () { store.clearDomain(domain); registry.list().forEach(function (p) { if (p.domain === domain) delete transientOverrides[p.id]; }); return true; }); },
+            resetAll: function () { store.clearAll(); transientOverrides = {}; return persist(); },
             retrySave: persist,
             getPersistenceState: function () { return store.getPersistenceState(); },
             restoreSaved: function () { var saved = store.restoreSaved(); if (saved.accepted) { transientOverrides = {}; requestProjection(); } return publishResult(saved.accepted, saved, saved.accepted && appliedRevision === pendingRevision); },
             getEvidence: evidence,
+            getStyleProvenance: function () { return semanticStyle.getState(); },
             getProjectionState: function () { return { pendingRevision: pendingRevision, appliedRevision: appliedRevision }; }
         });
     }

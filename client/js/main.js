@@ -8893,9 +8893,7 @@
             root.style.setProperty("--gold-track", rgba(accent, 0.24));
             root.style.setProperty("--gold-focus", rgba(hot, 0.62));
             root.style.setProperty("--gold-button", rgba(accent, 0.86));
-            root.style.setProperty("--separator", rgba(accent, 0.16));
-            root.style.setProperty("--panel-border", rgba(accent, 0.22));
-            root.style.setProperty("--input-border", rgba(accent, 0.16));
+            window.SemanticStyleProjection.forRoot(root.style).update({ theme: { accent: accent } });
             root.style.setProperty("--selection-bg", dark);
         }
         setColorValue("themeAccent", accent);

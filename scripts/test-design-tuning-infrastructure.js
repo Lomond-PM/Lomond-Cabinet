@@ -11,6 +11,8 @@ vm.createContext(context);
 function load(file) { vm.runInContext(fs.readFileSync(path.join(root, file), "utf8"), context); }
 load("client/js/designTuning/designTuningParameterRegistry.js");
 load("client/js/designTuning/designTuningStateStore.js");
+load("client/js/ui/semanticStyleResolver.js");
+load("client/js/ui/semanticStyleProjection.js");
 load("client/js/designTuning/designTuningResolver.js");
 load("client/js/ui/motionDefaults.js");
 const registry = context.window.DesignTuningParameterRegistry;

@@ -1,3 +1,4 @@
+import {projectSettingsBorders,ownsBorder} from './style-projection.js';
 import {copy} from './copy.js';
 import {DATA} from './production-data.js';
 import {REGISTRY_SCHEMAS} from './lab/registry-schema.js';
@@ -31,13 +32,16 @@ export class SettingsView extends ReferenceRegistry {
  t(key){if(key?.includes(' · ')){const [base,part]=key.split(' · ');return super.t(base)+' · '+copy(part);}return super.t(key);}
  previewHTML(){return `<div class="ref-settings-preview"><strong>${esc(bilingual('Live appearance preview','外观实时预览'))}</strong><p>${esc(bilingual('Long supporting text remains readable in a compact field group.','紧凑字段分组中的长说明仍应清晰可读。'))}</p><button class="primary-button" data-settings-play>${esc(bilingual('Preview motion','预览动效'))}</button><span class="ref-motion-dot" aria-hidden="true"></span><input aria-label="${copy('Preview field')}" value="Lomond Cabinet"><span class="ref-state">${esc(bilingual('Selected · Focus · Error','已选择 · 焦点 · 错误'))}</span><output data-tuning-output></output></div>`;}
  paint(){super.paint();const root=this.root.querySelector('.ref-settings-preview');if(!root)return;const v=this.session.values,baseline=this.checkpoint?JSON.parse(this.checkpoint):{},changed=id=>settingsStore.data.overrides.includes(id)||this.checkpoint&&JSON.stringify(baseline[id])!==JSON.stringify(v[id]);const map={'base.accent':'--accent','base.canvas':'--stage','surface.panel':'--surface','text.primary':'--text'};for(const [id,property]of Object.entries(map))if(changed(id))root.style.setProperty(property,v[id]);else root.style.removeProperty(property);
+  const calibration={},preview={};
+  for(const p of DATA.tuning.filter(p=>ownsBorder(p.id))){const keys=[p.id+'.color',p.id+'.alpha'];if(keys.some(k=>settingsStore.data.overrides.includes(k)))calibration[p.id]={color:settingsStore.data.values[keys[0]],alpha:settingsStore.data.values[keys[1]]};if(keys.some(k=>this.checkpoint&&JSON.stringify(baseline[k])!==JSON.stringify(v[k])))preview[p.id]={color:v[keys[0]],alpha:v[keys[1]]};}
+  projectSettingsBorders(root,calibration,preview);
   const applied=[];for(const p of DATA.tuning){const compound=['shadow','colorAlpha'].includes(p.type),parts=compound?Object.keys(tuning.find(q=>q.id===p.id).value):[],value=compound?Object.fromEntries(parts.map(k=>[k,v[p.id+'.'+k]])):v[p.id],isChanged=compound?parts.some(k=>changed(p.id+'.'+k)):changed(p.id);if(!isChanged)continue;
    let css=String(value);if(p.type==='cubicBezier')css=`cubic-bezier(${value.x1},${value.y1},${value.x2},${value.y2})`;if(p.type==='lengthPx')css=value+'px';if(p.type==='percentage')css=value+'%';if(compound){const hex=value.color.slice(1),rgb=[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)),color=`rgba(${rgb},${value.alpha})`;css=p.type==='shadow'?`${value.offsetX}px ${value.offsetY}px ${value.blur}px ${value.spread}px ${color}`:color;}
-   if(p.cssProperty)root.style.setProperty(p.cssProperty,css);applied.push(p.id+' = '+css);
+   if(p.cssProperty&&!ownsBorder(p.id))root.style.setProperty(p.cssProperty,css);applied.push(p.id+' = '+css);
   }
   root.style.fontSize=(13*(v['typography.body.size']||1))+'px';root.style.setProperty('--ref-motion-ms',(v['motion.duration.viewContentEnter']||DATA.durations.viewContentEnter)+'ms');root.querySelector('[data-tuning-output]').textContent=applied.slice(-3).join('\n');
  }
- save(){super.save();settingsStore.change(d=>{d.overrides=Object.keys(this.session.values).filter(k=>this.session.values[k]!==schema.sections.flatMap(s=>s.fields).find(f=>f.key===k)?.defaultValue);d.values={...this.session.values};});const result=settingsStore.flush();if(!result.fixtureSaved)this.checkpoint=JSON.stringify(settingsStore.saved.values);return result.fixtureSaved;}
+ save(){super.save();settingsStore.change(d=>{d.overrides=Object.keys(this.session.values).filter(k=>this.session.values[k]!==schema.sections.flatMap(s=>s.fields).find(f=>f.key===k)?.defaultValue);d.values={...this.session.values};});const result=settingsStore.flush();if(!result.fixtureSaved)this.checkpoint=JSON.stringify(settingsStore.saved.values);this.paint();return result.fixtureSaved;}
  discard(){settingsStore.reload();this.session.values={...settingsStore.data.values};this.checkpoint=JSON.stringify(this.session.values);this.render();}
  reset(){this.session.values=Object.fromEntries(schema.sections.flatMap(s=>s.fields).map(f=>[f.key,f.defaultValue]));this.render();}
 }
