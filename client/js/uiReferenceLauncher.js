@@ -33,7 +33,7 @@
         active = { frame: frame }; frame.focus();
         if (typeof root.UIReferenceArtifact === "string") { frame.srcdoc = root.UIReferenceArtifact; }
         else {
-            loader = doc.createElement("script"); loader.charset = "utf-8"; loader.src = "reference/embedded.js?v=20260918-ui-reference-b-f3";
+            loader = doc.createElement("script"); loader.charset = "utf-8"; loader.src = "reference/embedded.js?v=20260919-style-resolution-c1";
             loader.onload = function () { if (active && active.frame === frame && typeof root.UIReferenceArtifact === "string") { frame.srcdoc = root.UIReferenceArtifact; } if (loader.parentNode) { loader.parentNode.removeChild(loader); } };
             loader.onerror = function () { close.textContent = t("reference.exit") + " (load failed)"; };
             doc.head.appendChild(loader);

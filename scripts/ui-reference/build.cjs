@@ -15,7 +15,7 @@ function schemas() {
 }
 function collect() {
   const c = { document: {} }; c.self = c; c.window = c; vm.createContext(c);
-  for (const file of ['i18n.js', 'settingsSchema.js', 'appearance/appearanceParameterRegistry.js', 'appearance/appearanceResolver.js', 'designTuning/designTuningParameterRegistry.js', 'ui/motionDefaults.js']) vm.runInContext(read('client/js/' + file), c, { filename: file });
+  for (const file of ['i18n.js', 'settingsSchema.js', 'appearance/appearanceParameterRegistry.js', 'ui/semanticStyleResolver.js', 'ui/semanticStyleProjection.js', 'appearance/appearanceResolver.js', 'designTuning/designTuningParameterRegistry.js', 'ui/motionDefaults.js']) vm.runInContext(read('client/js/' + file), c, { filename: file });
   const appearance = c.AppearanceParameterRegistry.list();
   const tuning = c.DesignTuningParameterRegistry.list();
   const css = read('client/css/style.css');

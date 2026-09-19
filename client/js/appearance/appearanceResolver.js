@@ -1,12 +1,14 @@
 (function (root, factory) {
     "use strict";
-    var exported = Object.freeze(factory());
+    var projection = root && root.SemanticStyleProjection;
+    if (!projection && (!root || !root.document) && typeof require === "function") projection = require("../ui/semanticStyleProjection.js");
+    var exported = Object.freeze(factory(projection));
     if (root && root.document && !Object.prototype.hasOwnProperty.call(root, "AppearanceResolver")) {
         Object.defineProperty(root, "AppearanceResolver", { configurable: false, enumerable: true, value: exported, writable: false });
     } else if ((!root || !root.document) && typeof module === "object" && module.exports) {
         module.exports.AppearanceResolver = exported;
     }
-}(typeof self !== "undefined" ? self : this, function () {
+}(typeof self !== "undefined" ? self : this, function (StyleProjection) {
     "use strict";
 
     var DESIGN_DEFAULTS = Object.freeze({
@@ -98,10 +100,12 @@
         var registry = options.registry;
         var store = options.store;
         var rootStyle = options.rootStyle;
+        var semanticStyle = rootStyle ? StyleProjection.forRoot(rootStyle) : null;
         var runtime = options.runtime || {};
         var baseInputs = copy(DESIGN_DEFAULTS);
         var previewOverrides = {};
         var resolved = {};
+        var semanticApplied = false;
 
         function themeDefaults() {
             var accent = normalizeHex(baseInputs["base.accent"], DESIGN_DEFAULTS["base.accent"]);
@@ -113,10 +117,7 @@
                 soft: rgba(accent, 0.72),
                 track: rgba(accent, 0.24),
                 focus: rgba(hot, 0.62),
-                button: rgba(accent, 0.86),
-                separator: rgba(accent, 0.16),
-                panelBorder: rgba(accent, 0.22),
-                inputBorder: rgba(accent, 0.16)
+                button: rgba(accent, 0.86)
             };
         }
 
@@ -158,9 +159,7 @@
             write("--gold-track", theme.track);
             write("--gold-focus", theme.focus);
             write("--gold-button", theme.button);
-            write("--separator", theme.separator);
-            write("--panel-border", theme.panelBorder);
-            write("--input-border", theme.inputBorder);
+            semanticApplied = !!semanticStyle && semanticStyle.update({ theme: { accent: theme.accent } });
             write("--selection-bg", theme.dark);
             write("--bg-main", values["base.canvas"]);
             write("--ui-scale", values["layout.scale"]);
@@ -198,7 +197,7 @@
             if (typeof options.onPersistenceResult === "function") options.onPersistenceResult(result);
             return result;
         }
-        function persist() { var saved = store && store.save(); resolveAndApply(); return outcome(!!store, !!store, saved); }
+        function persist() { var saved = store && store.save(); resolveAndApply(); return outcome(!!store, !!store && semanticApplied, saved); }
         function commit(id, value) {
             var parameter = registry && registry.get(id);
             var checked = registry && registry.validate(id, value);
@@ -207,7 +206,7 @@
                 if (typeof runtime.commitBaseInput !== "function" || runtime.commitBaseInput(id, checked.value) !== true) return outcome(false, false);
                 delete previewOverrides[id]; baseInputs[id] = clone(checked.value); resolveAndApply();
                 // main owns the Settings write; acceptance here is not a storage receipt.
-                return { accepted: true, applied: true, persisted: false, persistenceOwner: "settings" };
+                return { accepted: true, applied: semanticApplied, persisted: false, persistenceOwner: "settings" };
             }
             if (!store || !store.setOverride(id, checked.value)) return outcome(false, false);
             delete previewOverrides[id];
@@ -237,9 +236,10 @@
             resetCategory: function (category) { if (store) store.resetCategory(category); previewOverrides = {}; return persist(); },
             resetAll: function () { if (store) store.resetAll(); previewOverrides = {}; return persist(); },
             retrySave: persist,
-            restoreSaved: function () { var result = store && store.restoreSaved(); if (result && result.accepted) { previewOverrides = {}; resolveAndApply(); } return outcome(!!(result && result.accepted), !!(result && result.accepted), result); },
+            restoreSaved: function () { var result = store && store.restoreSaved(); if (result && result.accepted) { previewOverrides = {}; resolveAndApply(); } return outcome(!!(result && result.accepted), !!(result && result.accepted) && semanticApplied, result); },
             getPersistenceState: function () { return store ? store.getPersistenceState() : { persisted: false, dirty: true, canRestore: false }; },
             resolve: resolveAndApply,
+            getStyleProvenance: function () { return semanticStyle ? semanticStyle.getState() : null; },
             getOverrides: function () { return store ? store.getOverrides() : {}; }
         });
     }

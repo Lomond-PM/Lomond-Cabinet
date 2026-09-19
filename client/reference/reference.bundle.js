@@ -31,6 +31,170 @@
     mod
   ));
 
+  // client/js/ui/semanticStyleResolver.js
+  var require_semanticStyleResolver = __commonJS({
+    "client/js/ui/semanticStyleResolver.js"(exports, module) {
+      (function(root2, factory) {
+        "use strict";
+        var api = Object.freeze(factory());
+        if (root2 && root2.document) root2.SemanticStyleResolver = api;
+        if ((!root2 || !root2.document) && typeof module === "object" && module.exports) module.exports = api;
+      })(typeof self !== "undefined" ? self : exports, function() {
+        "use strict";
+        var definitions = Object.freeze({
+          "border.panel": Object.freeze({ cssProperty: "--panel-border", alpha: 0.22 }),
+          "border.input": Object.freeze({ cssProperty: "--input-border", alpha: 0.16 }),
+          "border.separator": Object.freeze({ cssProperty: "--separator", alpha: 0.16 })
+        });
+        function clone3(value2) {
+          return JSON.parse(JSON.stringify(value2));
+        }
+        function freeze(value2) {
+          if (value2 && typeof value2 === "object") {
+            Object.keys(value2).forEach(function(key) {
+              freeze(value2[key]);
+            });
+            Object.freeze(value2);
+          }
+          return value2;
+        }
+        function color(value2) {
+          if (!value2 || typeof value2.color !== "string" || !/^#[0-9a-f]{6}$/i.test(value2.color) || typeof value2.alpha !== "number" || !isFinite(value2.alpha) || value2.alpha < 0 || value2.alpha > 1) throw new TypeError("Invalid semantic color/alpha");
+          return { color: value2.color.toLowerCase(), alpha: value2.alpha };
+        }
+        function serialize(value2) {
+          value2 = color(value2);
+          return "rgba(" + [1, 3, 5].map(function(i) {
+            return parseInt(value2.color.slice(i, i + 2), 16);
+          }).join(", ") + ", " + value2.alpha + ")";
+        }
+        function legacyDefaults() {
+          var values = {};
+          Object.keys(definitions).forEach(function(id) {
+            values[id] = { color: "#d6b25e", alpha: definitions[id].alpha };
+          });
+          return values;
+        }
+        function owns(id) {
+          return Object.prototype.hasOwnProperty.call(definitions, id);
+        }
+        function select(source) {
+          var out = {};
+          Object.keys(source || {}).forEach(function(id) {
+            if (owns(id)) out[id] = color(source[id]);
+          });
+          return out;
+        }
+        function resolve(input) {
+          input = input || {};
+          var defaults2 = input.defaults || legacyDefaults();
+          var theme2 = input.themePreview !== null && input.themePreview !== void 0 ? input.themePreview : input.theme || {};
+          var calibration = select(input.calibration), preview = select(input.calibrationPreview);
+          var values = {}, provenance = {};
+          if (theme2.accent !== void 0 && !/^#[0-9a-f]{6}$/i.test(theme2.accent)) throw new TypeError("Invalid semantic theme accent");
+          Object.keys(definitions).forEach(function(id) {
+            var base = color(defaults2[id]), derived = theme2.accent ? color({ color: theme2.accent, alpha: definitions[id].alpha }) : base;
+            var explicit = Object.prototype.hasOwnProperty.call(calibration, id), transient = Object.prototype.hasOwnProperty.call(preview, id);
+            var value2 = transient ? preview[id] : explicit ? calibration[id] : derived;
+            values[id] = serialize(value2);
+            provenance[id] = {
+              defaultValue: base,
+              defaultSource: input.defaultSource || "legacy-design",
+              themeInput: clone3(input.theme || {}),
+              theme: clone3(theme2),
+              themeDerived: derived,
+              calibration: explicit ? calibration[id] : null,
+              preview: { theme: input.themePreview || null, calibration: transient ? preview[id] : null },
+              source: transient ? "design-tuning-preview" : explicit ? "design-tuning-override" : theme2.accent ? input.themePreview ? "settings-preview-derived" : "settings-derived" : "design-default",
+              value: value2,
+              cssValue: values[id],
+              persistenceOwner: explicit || transient ? "design-tuning" : theme2.accent ? "settings" : null
+            };
+          });
+          return freeze({ values, provenance });
+        }
+        return { definitions, owns, select, color, serialize, legacyDefaults, resolve, clone: clone3, freeze };
+      });
+    }
+  });
+
+  // client/js/ui/semanticStyleProjection.js
+  var require_semanticStyleProjection = __commonJS({
+    "client/js/ui/semanticStyleProjection.js"(exports, module) {
+      (function(root2, factory) {
+        "use strict";
+        var resolver = root2 && root2.SemanticStyleResolver;
+        if (!resolver && typeof __require === "function") resolver = require_semanticStyleResolver();
+        var api = Object.freeze(factory(resolver));
+        if (root2 && root2.document) root2.SemanticStyleProjection = api;
+        if ((!root2 || !root2.document) && typeof module === "object" && module.exports) module.exports = api;
+      })(typeof self !== "undefined" ? self : exports, function(Resolver2) {
+        "use strict";
+        var roots2 = /* @__PURE__ */ new WeakMap();
+        function forRoot(style, options) {
+          options = options || {};
+          if (!style || typeof style.setProperty !== "function") throw new TypeError("Style root required");
+          if (roots2.has(style)) {
+            if (Object.keys(options).length) throw new Error("Semantic root already configured");
+            return roots2.get(style);
+          }
+          var inputs = { defaults: Resolver2.clone(options.defaults || Resolver2.legacyDefaults()), defaultSource: options.defaultSource || "legacy-design", theme: {}, themePreview: null, calibration: {}, calibrationPreview: {} };
+          var targets = {}, guards = [], pending = 1, applied = 0, projected = null, resolved = Resolver2.resolve(inputs);
+          Object.keys(Resolver2.definitions).forEach(function(id) {
+            targets[id] = options.targets && options.targets[id] || Resolver2.definitions[id].cssProperty;
+          });
+          if (new Set(Object.keys(targets).map(function(id) {
+            return targets[id];
+          })).size !== 3) throw new Error("Semantic targets must be distinct");
+          function flush() {
+            if (guards.some(function(guard) {
+              return !guard();
+            })) return false;
+            Object.keys(targets).forEach(function(id) {
+              if (!projected || projected.values[id] !== resolved.values[id]) style.setProperty(targets[id], resolved.values[id]);
+            });
+            projected = resolved;
+            applied = pending;
+            return true;
+          }
+          function update(patch) {
+            var next = Object.assign({}, inputs);
+            Object.keys(patch).forEach(function(key) {
+              if (!Object.prototype.hasOwnProperty.call(inputs, key)) throw new Error("Unknown style layer: " + key);
+              next[key] = Resolver2.clone(patch[key]);
+            });
+            var result = Resolver2.resolve(next);
+            if (JSON.stringify(next) !== JSON.stringify(inputs)) {
+              inputs = next;
+              resolved = result;
+              pending += 1;
+            }
+            return flush();
+          }
+          function snapshot() {
+            return Resolver2.freeze(Resolver2.clone({ pendingRevision: pending, appliedRevision: applied, pending: pending !== applied, targets, resolved, projected }));
+          }
+          var api = Object.freeze({
+            update,
+            flush,
+            getState: snapshot,
+            owns: Resolver2.owns,
+            addProjectionGuard: function(guard) {
+              if (guards.indexOf(guard) < 0) guards.push(guard);
+              return function() {
+                var i = guards.indexOf(guard);
+                if (i >= 0) guards.splice(i, 1);
+              };
+            }
+          });
+          roots2.set(style, api);
+          return api;
+        }
+        return { forRoot };
+      });
+    }
+  });
+
   // client/js/ui/coreUi.js
   var require_coreUi = __commonJS({
     "client/js/ui/coreUi.js"(exports, module) {
@@ -1944,6 +2108,44 @@
         return Object.freeze({ create, errorDisplayKey, projectSurfaceState, statusTone });
       });
     }
+  });
+
+  // client/reference/src/style-projection.js
+  var import_semanticStyleResolver = __toESM(require_semanticStyleResolver(), 1);
+  var import_semanticStyleProjection = __toESM(require_semanticStyleProjection(), 1);
+  var Resolver = window.SemanticStyleResolver;
+  var Projection = window.SemanticStyleProjection;
+  var roots = /* @__PURE__ */ new WeakMap();
+  function defaultsFor(root2) {
+    const color = getComputedStyle(root2).getPropertyValue("--reference-border-default").trim();
+    return Object.fromEntries(Object.keys(Resolver.definitions).map((id) => [id, { color, alpha: 1 }]));
+  }
+  function projectShellBorders() {
+    const root2 = document.documentElement, defaults2 = defaultsFor(root2);
+    let projection = roots.get(root2);
+    if (!projection) {
+      projection = Projection.forRoot(root2.style, { defaults: defaults2, defaultSource: "accepted-v26-theme", targets: { "border.panel": "--border" } });
+      roots.set(root2, projection);
+    }
+    projection.update({ defaults: defaults2 });
+    const preview = document.querySelector(".ref-settings-preview");
+    if (preview && roots.has(preview)) roots.get(preview).update({ defaults: defaults2 });
+  }
+  function projectSettingsBorders(root2, calibration, preview) {
+    let projection = roots.get(root2);
+    if (!projection) {
+      projection = Projection.forRoot(root2.style, { defaults: defaultsFor(root2), defaultSource: "accepted-v26-theme" });
+      roots.set(root2, projection);
+    }
+    projection.update({ defaults: defaultsFor(root2), calibration, calibrationPreview: preview });
+  }
+  var ownsBorder = (id) => Resolver.owns(id);
+  window.ReferenceStyleProvenance = () => ({
+    shell: Projection.forRoot(document.documentElement.style).getState(),
+    settings: (() => {
+      const node2 = document.querySelector(".ref-settings-preview");
+      return node2 ? Projection.forRoot(node2.style).getState() : null;
+    })()
   });
 
   // client/reference/src/lab/registry-schema.js
@@ -5905,6 +6107,13 @@
       const map = { "base.accent": "--accent", "base.canvas": "--stage", "surface.panel": "--surface", "text.primary": "--text" };
       for (const [id, property] of Object.entries(map)) if (changed(id)) root2.style.setProperty(property, v[id]);
       else root2.style.removeProperty(property);
+      const calibration = {}, preview = {};
+      for (const p of DATA.tuning.filter((p2) => ownsBorder(p2.id))) {
+        const keys2 = [p.id + ".color", p.id + ".alpha"];
+        if (keys2.some((k) => settingsStore.data.overrides.includes(k))) calibration[p.id] = { color: settingsStore.data.values[keys2[0]], alpha: settingsStore.data.values[keys2[1]] };
+        if (keys2.some((k) => this.checkpoint && JSON.stringify(baseline[k]) !== JSON.stringify(v[k]))) preview[p.id] = { color: v[keys2[0]], alpha: v[keys2[1]] };
+      }
+      projectSettingsBorders(root2, calibration, preview);
       const applied = [];
       for (const p of DATA.tuning) {
         const compound = ["shadow", "colorAlpha"].includes(p.type), parts = compound ? Object.keys(tuning.find((q) => q.id === p.id).value) : [], value2 = compound ? Object.fromEntries(parts.map((k) => [k, v[p.id + "." + k]])) : v[p.id], isChanged = compound ? parts.some((k) => changed(p.id + "." + k)) : changed(p.id);
@@ -5917,7 +6126,7 @@
           const hex2 = value2.color.slice(1), rgb = [0, 2, 4].map((i) => parseInt(hex2.slice(i, i + 2), 16)), color = `rgba(${rgb},${value2.alpha})`;
           css = p.type === "shadow" ? `${value2.offsetX}px ${value2.offsetY}px ${value2.blur}px ${value2.spread}px ${color}` : color;
         }
-        if (p.cssProperty) root2.style.setProperty(p.cssProperty, css);
+        if (p.cssProperty && !ownsBorder(p.id)) root2.style.setProperty(p.cssProperty, css);
         applied.push(p.id + " = " + css);
       }
       root2.style.fontSize = 13 * (v["typography.body.size"] || 1) + "px";
@@ -5932,6 +6141,7 @@
       });
       const result = settingsStore.flush();
       if (!result.fixtureSaved) this.checkpoint = JSON.stringify(settingsStore.saved.values);
+      this.paint();
       return result.fixtureSaved;
     }
     discard() {
@@ -10801,6 +11011,7 @@
   function projectAppearance() {
     const html = document.documentElement;
     html.dataset.theme = theme;
+    projectShellBorders();
     for (const property of ["--accent", "--accent-fill", "--on-accent", "--focus-ring", "--tool-fill"]) html.style.removeProperty(property);
     const { accent, fill } = appearanceSelection();
     if (accent?.kind === "solid") for (const [key, value2] of Object.entries(accentTokens(accent.rgb, theme))) html.style.setProperty(key, value2);

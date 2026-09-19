@@ -60,7 +60,7 @@ for (const kind of ["appearance", "tuning"]) {
     const id = kind === "appearance" ? "text.secondary" : "motion.curve.enter";
     const value = kind === "appearance" ? { color: "#112233", alpha: 0.6 } : { x1: 0.2, y1: 1, x2: 0.4, y2: 1 };
     const storage = memory(); const store = module.create({ storage, registry }); store.load();
-    const resolver = kind === "appearance" ? Appearance.create({ store, registry }) : Tuning.create({ store, registry, rootStyle: { setProperty() {}, removeProperty() {} }, readComputed() { return ""; }, parseShadow() { return {}; }, parseColorAlpha() { return {}; }, getCanonicalDuration() { return 100; } });
+    const resolver = kind === "appearance" ? Appearance.create({ store, registry, rootStyle: { setProperty() {}, removeProperty() {} } }) : Tuning.create({ store, registry, rootStyle: { setProperty() {}, removeProperty() {} }, readComputed() { return ""; }, parseShadow() { return {}; }, parseColorAlpha() { return {}; }, getCanonicalDuration() { return 100; } });
     resolver.initialize();
     const commit = kind === "appearance" ? resolver.commit : resolver.setOverride;
     storage.control.writeFail = true;
